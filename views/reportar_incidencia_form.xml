@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="reportar_incidencia_form" name="Reportar Incidencia">
+        <t t-call="website.layout">
+            <div id="wrap" class="container mt-5 mb-5">
+                <h1 class="text-center">Reportar un Problema</h1>
+                <form id="ticket_form" action="/ticket/reportar_incidencia" method="post">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <!-- Información del cliente y del equipo -->
+                    <div class="form-group">
+                        <label for="partner_id">Empresa:</label>
+                        <input type="text" id="partner_id" name="partner_id" class="form-control" t-att-value="partner_id" />
+                    </div>
+                    <div class="form-group">
+                        <label for="direccion">Dirección:</label>
+                        <input type="text" id="direccion" name="direccion" class="form-control" t-att-value="direccion" />
+                    </div>
+                    <div class="form-group">
+                        <label for="contacto">Contacto:</label>
+                        <input type="text" id="contacto" name="contacto" class="form-control" t-att-value="contacto" />
+                    </div>
+                    <div class="form-group">
+                        <label for="celular">Celular:</label>
+                        <input type="text" id="celular" name="celular" class="form-control" t-att-value="celular" />
+                    </div>
+                    <div class="form-group">
+                        <label for="correo">Correo:</label>
+                        <input type="email" id="correo" name="correo" class="form-control" t-att-value="correo" />
+                    </div>
+                    <div class="form-group">
+                        <label for="product_id">ID del Producto:</label>
+                        <input type="text" id="product_id" name="product_id" class="form-control" t-att-value="product_id" />
+                    </div>
+                    <!-- Descripción del problema -->
+                    <div class="form-group">
+                        <label for="description">Descripción del problema:</label>
+                        <textarea id="description" name="description" class="form-control" required="required" placeholder="Describa el problema con detalle"></textarea>
+                    </div>
+                    <!-- Botón de envío -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary">Enviar Reporte</button>
+                    </div>
+                </form>
+            </div>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data noupdate="1">        <!-- noupdate="1" significa que los datos no se actualizarán cuando actualices tu módulo -->
+        <record id="cron_your_task" model="ir.cron">
+            <field name="name">Activador de maquinas con porblemas</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">weeks</field>
+            <field name="numbercall">-1</field>
+            <field name="doall" eval="False"/>
+            <field name="model_id" ref="model_sat_sat"/>
+            <field name="state">code</field>
+            <field name="code">model.execute_task()</field>
+            <field name="nextcall" eval="(datetime.now() + timedelta(days=-(datetime.today().weekday()-1)%7)).strftime('%Y-%m-%d') + ' 14:00:00'"/>
+        </record>
+        <record id="cron_update_fecha_recurrente" model="ir.cron">
+            <field name="name">Actualizar fecha recurrente</field>
+            <field name="model_id" ref="model_alquiler"/>
+            <field name="state">code</field>
+            <field name="code">model.update_fecha_recurrente()</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+        </record>
+        <record id="cron_send_maintenance_reminders" model="ir.cron">
+            <field name="name">Enviar recordatorios de mantenimiento</field>
+            <field name="model_id" ref="model_alquiler"/>
+            <field name="state">code</field>
+            <field name="code">model.send_maintenance_reminders()</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+        </record>
+    </data>
+</odoo>

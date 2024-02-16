@@ -1,0 +1,94 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <data>
+        <!-- Vista de lista -->
+        <record id="view_evaluacion_personal_tree" model="ir.ui.view">
+            <field name="name">evaluacion.personal.tree</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <!-- Definir las columnas de la vista -->
+                    <field name="name"/>
+                    <field name="usuario_id"/>
+                    <field name="observacion"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Vista de formulario -->
+        <record id="view_evaluacion_personal_form" model="ir.ui.view">
+            <field name="name">evaluacion.personal.form</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <form>
+                    <!-- Definir los campos del formulario -->
+                    <sheet>
+                        <group>
+                            <field name="name"/>
+                            <group>
+                                <field name="usuario_id"/>
+                                <field name="fecha"/>
+                                <field name="observacion"/>
+                            </group>
+                            <group>
+                                <field name="total_score_color" invisible="1"/>
+                                <field name="total_score" widget="progressbar"/>
+                                <field name="worker_level"/>
+                                <field name="fields_to_improve"/>
+                                <field name="cantidad_reparaciones"/>
+                                <field name="cantidad_alquileres"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group string="Productividad">
+                                <field name="productividad"/>
+                                <field name="productividad_1"/>
+                                <field name="productividad_2"/>
+                            </group>
+                            <group string="Eficiencia">
+                                <field name="eficiencia"/>
+                                <field name="eficiencia_1"/>
+                                <field name="eficiencia_2"/>
+                            </group>
+                            <group string="Habilidades de organización">
+                                <field name="habilidades"/>
+                                <field name="habilidades_1"/>
+                                <field name="habilidades_2"/>
+                            </group>
+                            <group string="Aprendizaje y desarrollo">
+                                <field name="aprendizaje"/>
+                                <field name="aprendizaje_1"/>
+                                <field name="aprendizaje_2"/>
+                            </group>
+                            <group string="Comunicación">
+                                <field name="comunicacion"/>
+                                <field name="comunicacion_1"/>
+                                <field name="comunicacion_2"/>
+                            </group>
+                            <group string="Realaciones interpersonales">
+                                <field name="relaciones"/>
+                                <field name="relaciones_1"/>
+                                <field name="relaciones_2"/>
+                            </group>
+                            <group string="Asistencia">
+                                <field name="asistencia"/>
+                                <field name="asistencia_1"/>
+                                <field name="asistencia_2"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Acciones -->
+        <record id="action_evaluacion_personal" model="ir.actions.act_window">
+            <field name="name">Evaluación Personal</field>
+            <field name="res_model">evaluacion.personal</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <!-- Menú -->
+        <menuitem id="menu_evaluacion_personal" name="Evaluación Personal" parent="sat.menu_root" action="action_evaluacion_personal" sequence="60"/>
+    </data>
+</odoo>

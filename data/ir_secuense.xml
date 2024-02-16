@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="seq_reparaciones" model="ir.sequence">
+            <field name="name">Reparacion</field>
+            <field name="code">reparaciones.reparaciones</field>
+            <field name="prefix">RP/</field>
+            <field name="padding">6</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>

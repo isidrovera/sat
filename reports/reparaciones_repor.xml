@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <report id="report_reparaciones_ventas" 
+        model="reparaciones.reparaciones" 
+        string="Reparación" 
+        name="sat.reparacion_view" 
+        file="reparaciones.reparaciones" 
+        report_type="qweb-pdf" 
+        print_report_name="object.name"/>
+
+
+        <template id="reparacion_view">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="reparaciones">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <div class="oe_structure"/>
+
+                            <h2>
+                                <span t-field="reparaciones.name"/>
+                            </h2>
+
+                            <div id="informationss" class="row mt32 mb32">
+                                <!--<div t-if="reparaciones.tipo_machine" class="col-3 bm-2">
+                                        <strong>Tipo de equipo:</strong>
+                                        <p t-field="reparaciones.tipo_machine" class="m-0"/>
+                                    </div>-->
+                                <div class="col-3 bm-2">
+                                    <strong>Tipo de equipo:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.tipo_machine" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Marca:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.marca" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Maquina:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.maquina_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informationss" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Contometro:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.contometrok_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informationss" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Calidad:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.calidad_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Tapas:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.tapas_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Panel:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.panel_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div>
+                                <h2>
+                                    <span/>
+                                </h2>
+                                <p>Informe Técnico : <span t-field="reparaciones.informe"/>
+                                </p>
+
+                            </div>
+                            <div class="oe_structure"/>
+
+                            <h2>
+                                <span/>
+                                <strong>ACCESORIOS</strong>
+                            </h2>
+
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Caseteras:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.tray_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>ADF simple:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.adf_simple_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>ADF dual sacn:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.adf_dual_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Finalizador interno:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.finalizador_interno_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Finalizador externo:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.finalizador_externo_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Mueble:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.mueble_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>LCT:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.lct_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Wi-Fi:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.wi_fi_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Cable de poder:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.cable_poder_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Panel normal:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.panel_normal_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Panel smart:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.panel_smart_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Bandeja OT:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.ot_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Disco duro:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.hdd_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+
+                            <div class="oe_structure"/>
+
+                            <h2>
+                                <span/>
+                                <strong>CHECK LIST</strong>
+                            </h2>
+
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Copia :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.copia_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Impresión :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.impresion_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Impresión USB :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.impresion_usb_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Scaner SMB:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.scaner_smb_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Scaner USB :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.scaner_usb_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Scaner FTP :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.scaner_ftp_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Scaner Mail :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.scaner_mail_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Bypass :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.bypass_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Tray 1 :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.tray1_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Tray 2 :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.tray2_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Tray 3 :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.tray3_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Tray 4 :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.tray4_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>ADF:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.adf_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Finalizador :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.finalizador_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Tacho residual :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.tacho_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Faja fusora :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.fusora_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Rodillo de presión:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.rodillo_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Rodillo de calor :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.calor_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Faja de transferencia :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.transfer_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Optico:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.optico_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Toner black :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.toner_black_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Toner magenta :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.toner_magenta_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Unidad Imagen cyan :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.cyan_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Toner yellow :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.toner_yellow_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Unidad Imagen black:  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.black_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Unidad Imagen magenta :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.magenta_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Toner cyan :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.toner_cyan_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Developer black :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.developerk_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Developer magenta :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.developerm_id" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>Developer cyan :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.developerc_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Developer yellow :  </strong>
+                                    <t>
+                                        <span t-field="reparaciones.developery_id" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <!--   <h2><span t-field="reparaciones.name"/></h2>
+                            <p>Cliente: <span t-field="reparaciones.cliente_id"/></p>
+                            <p>Tipo de equipo: <span t-field="reparaciones.tipo_machine"/></p>-->
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+    </data>
+</odoo>

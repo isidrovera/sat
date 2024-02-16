@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="template_confirmacion_ticket" name="Confirmación de Ticket">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <h1>Confirmación del Ticket</h1>
+                    <p>El ticket con número <t t-esc="ticket_id" />
+ ha sido creado correctamente. Nos pondremos en contacto con usted a la brevedad.</p>
+                </div>
+            </div>
+        </t>
+    </template>
+
+
+</odoo>
+
+

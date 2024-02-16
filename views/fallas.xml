@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="fallas_form_view" model="ir.ui.view">
+            <field name="name">Fallas_de_maquinas.form</field>
+            <field name="model">fallas</field>
+            <field name="arch" type="xml">
+                <form string="ModelTitle">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" placeholder="Modelo de maquina"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="name"/>
+                                <field name="importacion" />
+                                <field name="proveedor_id" />
+                                <field name="marca" />
+                                <field name="modelo_id" />
+                                <field name="serie" />                                                                
+                            </group>
+                            <group>
+                                <field name="foto" widget="image" 
+                                class="oe_avatar"
+                                />
+                                <field name="descripcion" />                                
+                                <field name="usuario_id" />                                 
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="fallas_maquina_tree_view" model="ir.ui.view">
+            <field name="name">Fallas_de_maquina.tree</field>
+            <field name="model">fallas</field>
+            <field name="arch" type="xml">
+                <tree string="ModelTitle">
+                    <field name="name"/>
+                    <field name="importacion" />
+                    <field name="proveedor_id" />
+                     <field name="marca" />
+                    <field name="modelo_id" />
+                    <field name="serie" />                     
+                    <field name="descripcion_procesada" />
+                    <field name="foto" widget="image" class="oe_avatar"/>                                
+                    <field name="usuario_id" />                  
+                </tree>
+            </field>
+        </record>
+
+        <record id="fallas_maquina_search_view" model="ir.ui.view">
+            <field name="name">Fallas_de_maquina.search</field>
+            <field name="model">fallas</field>
+            <field name="arch" type="xml">
+                <search string="ModelTitle">
+                    <group expand="1" string="Group By">
+                        <field name="name"/>
+                        <field name="importacion" />
+                        <field name="proveedor_id" />
+                        <field name="marca" />
+                        <field name="modelo_id" />
+                        <field name="serie" />
+                    </group>
+                </search>
+            </field>
+        </record>
+    </data>
+</odoo>

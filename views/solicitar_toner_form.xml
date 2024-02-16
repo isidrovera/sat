@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="solicitar_toner_form" name="Solicitar Tóner">
+        <t t-call="website.layout">
+            <div id="wrap" class="container mt-5 mb-5">
+                <h1 class="text-center">Solicitud de Tóner</h1>
+                <form id="toner_form" action="/toner/solicitar" method="post">
+                    <!-- campos del formulario -->
+                    <div class="form-group">
+                        <label for="toner_type">Seleccione el tipo de tóner:</label>
+                        <select id="toner_type" name="toner_type" class="form-control">
+                            <option value="black">Tóner Negro</option>
+                            <option value="cyan">Tóner Cian</option>
+                            <option value="magenta">Tóner Magenta</option>
+                            <option value="yellow">Tóner Amarillo</option>
+                        </select>
+                    </div>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary">Solicitar Tóner</button>
+                    </div>
+                </form>
+            </div>
+        </t>
+    </template>
+</odoo>

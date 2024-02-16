@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo> 
+    <record id="Opciones_pedido_tree_view" model="ir.ui.view">
+        <field name="name">Opciones_pedido.tree</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id"  ref="sale.view_order_form"/>
+        <field name="arch" type="xml">            
+            <xpath expr="//field[@name='order_line']//tree//field[@name='name']" position="after">               
+                <!--<field name="contometro"/>-->
+                <field name="contometroa" string="Contometro anterior"/>
+                <field name="contometro" string="Contometro "/>
+                <field name="estado_entrega" string="Estado de entrega" invisible="1"/>
+                <field name="total_copias_id"/>
+                <!--<field name="pedido_id" string="Pedido"/>
+                <field name="ticket_id" string="Pedido"/>-->
+
+            </xpath>
+        </field>
+    </record>
+    
+</odoo>
+
