@@ -38,7 +38,7 @@ class PublicTicketController(http.Controller):
         values = {
             'partner_id': registro.cliente_id.id if registro.cliente_id else '',
             'direccion': registro.direccion if registro.direccion else '',
-            'contacto_id': registro.correo_1 if registro.correo_1 else '',
+            'contacto_id': registro.contacto_id if registro.contacto_id else '',
             'celular': registro.celular if registro.celular else '',
             'correo': registro.correo_ if registro.correo_ else '',
             'product_id': registro.id,
