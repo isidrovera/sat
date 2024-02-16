@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="template_confirmacion_ticket" name="Confirmación de Ticket">
+    <template id="pagina_confirmacion" name="Confirmación de Ticket">
         <t t-call="website.layout">
             <div id="wrap" class="oe_structure oe_empty">
                 <div class="container">
