@@ -9,7 +9,7 @@
                     <!-- Información del cliente y del equipo -->
                     <div class="form-group">
                         <label for="partner_id">Empresa:</label>
-                        <input type="text" id="partner_id" name="partner_id" class="form-control" t-att-value="partner_id" />
+                        <input type="text" id="partner_id" name="partner_id" class="form-control" t-att-value="partner_id.name" />
                     </div>
                     <div class="form-group">
                         <label for="direccion">Dirección:</label>
