@@ -45,6 +45,9 @@ class PublicTicketController(http.Controller):
             # Otros campos que necesitas pasar al formulario
         }
         return request.render('sat.reportar_incidencia_form', values)
+    @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
+    def pagina_confirmacion(self, **kw):
+        return request.render('sat.pagina_confirmacion')
 
     # Ruta POST para procesar el formulario
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['POST'], website=True)

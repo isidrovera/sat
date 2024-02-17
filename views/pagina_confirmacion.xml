@@ -1,18 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <template id="pagina_confirmacion" name="Confirmación de Ticket">
+    <template id="pagina_confirmacion" name="Página de Confirmación">
         <t t-call="website.layout">
-            <div id="wrap" class="oe_structure oe_empty">
-                <div class="container">
-                    <h1>Confirmación del Ticket</h1>
-                    <p>El ticket con número <t t-esc="ticket_id" />
- ha sido creado correctamente. Nos pondremos en contacto con usted a la brevedad.</p>
+            <div class="container mt16 mb16">
+                <div class="jumbotron text-center">
+                    <h1 class="display-3">¡Gracias!</h1>
+                    <p class="lead">Hemos recibido tu solicitud y nos pondremos en contacto contigo pronto.</p>
+                    <hr class="my-4"/>
+                    <p>Si necesitas asistencia inmediata, por favor, llama a nuestro servicio al cliente.</p>
+                    <p class="lead">
+                        <a class="btn btn-primary btn-lg" href="/" role="button">Volver al inicio</a>
+                    </p>
                 </div>
             </div>
         </t>
     </template>
-
-
 </odoo>
-
-
