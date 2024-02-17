@@ -46,10 +46,6 @@ class PublicTicketController(http.Controller):
         }
         return request.render('sat.reportar_incidencia_form', values)
 
-
-    # Ruta POST para procesar el formulario
-   # Asumiendo que las rutas son las mismas que las anteriores
-
     # Ruta POST para procesar el formulario
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['POST'], website=True)
     def submit_reportar_incidencia(self, **post):
@@ -72,43 +68,3 @@ class PublicTicketController(http.Controller):
             return request.render('sat.error_page', {'error': str(e)})
 
 
-class AlquilerAPI(http.Controller):
-    @http.route('/api/alquiler/<int:alquiler_id>', auth='public', methods=['GET'], type='json')
-    def get_alquiler_data(self, alquiler_id):
-        record = request.env['alquiler'].sudo().browse(alquiler_id)
-        if record.exists():
-            return {
-                'id': record.id,
-                'modelo_maquina': record.name.name,
-                'serie': record.serie,
-                # Agrega todos los campos necesarios aquí
-            }
-        return {'error': 'Registro no encontrado'}
-    
-class AlquilerAPI(http.Controller):
-    @http.route('/api/alquiler/ticket', auth='user', methods=['POST'], type='json')
-    def create_alquiler_ticket(self, **post):
-        # Aquí debes asegurarte de validar los datos y manejar errores correctamente.
-        new_ticket = request.env['ticket.alquiler'].sudo().create(post)
-        return {'success': True, 'ticket_id': new_ticket.id}
-
-class AlquilerAPI(http.Controller):
-    @http.route('/api/alquiler/repuestos/<int:alquiler_id>', auth='user', methods=['GET'], type='json')
-    def list_alquiler_repuestos(self, alquiler_id):
-        repuestos = request.env['repuestos.alquiler'].sudo().search([('alquiler_id', '=', alquiler_id)])
-        repuestos_data = [{'id': repuesto.id, 'name': repuesto.name} for repuesto in repuestos]
-        return {'repuestos': repuestos_data}
-    
-class AlquilerAPI(http.Controller):
-    @http.route('/api/alquiler/pedido', auth='user', methods=['POST'], type='json')
-    def create_sale_order(self, **post):
-        # Crear el pedido de venta
-        sale_order = request.env['sale.order'].sudo().create(post)
-        
-        # Enviar correo electrónico (esto es solo un esquema, necesitarás una plantilla de correo real)
-        template = request.env.ref('tu_modulo.email_template_nuevo_pedido')
-        if template:
-            template.sudo().send_mail(sale_order.id, force_send=True)
-        
-        # Devolver la respuesta
-        return {'success': True, 'order_id': sale_order.id}

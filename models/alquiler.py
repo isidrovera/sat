@@ -321,13 +321,17 @@ class UnidadAlquiler(models.Model):
     qr_image = fields.Binary("Código QR", attachment=True)
 
     def generate_qr_code(self):
+        # Obtener la URL base de la configuración de Odoo
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        qr_url = f"{base_url}/api/escanear_qr?id_registro={self.id}"  # Construir la URL completa
+
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
             box_size=10,
             border=4,
         )
-        qr.add_data(self.id)
+        qr.add_data(qr_url)  # Añade la URL completa al QR
         qr.make(fit=True)
 
         img = qr.make_image(fill='black', back_color='white')
@@ -335,4 +339,5 @@ class UnidadAlquiler(models.Model):
         img.save(temp, format="PNG")
         qr_img = base64.b64encode(temp.getvalue())
         self.write({'qr_image': qr_img})
+
 
