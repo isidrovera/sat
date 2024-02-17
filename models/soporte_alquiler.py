@@ -28,8 +28,8 @@ class ticket_alquiler(models.Model):
         return super(ticket_alquiler,self).create(vals) 
       
     
-    reporter_name = fields.Text(string="Reporto")
-    reporter_phone = fields.Text(string="Nuemero de quien reporto")
+    reporter_name = fields.Char(string="Nombre de quien reporta")
+    reporter_phone = fields.Char(string="Numero de quien reporto")
     problem_photo = fields.Binary(string="Foto del problema")
 
     responsable = fields.Many2one("res.users", string="Técnico", tracking=True, index=True)
