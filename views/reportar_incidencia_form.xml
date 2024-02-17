@@ -16,11 +16,11 @@
                     <!-- Descripción del problema -->
                     <div class="form-group">
                         <label for="reporter_name">Tu Nombre:</label>
-                        <input type="text" id="reporter_name" name="reporter_name" class="form-control" placeholder="Ingresa tu nombre" required="required">
+                        <input type="text" id="reporter_name" name="reporter_name" class="form-control" placeholder="Ingresa tu nombre" required="required"/>
                     </div>
                     <div class="form-group">
                         <label for="reporter_phone">Número de Celular:</label>
-                        <input type="tel" id="reporter_phone" name="reporter_phone" class="form-control" placeholder="Ingresa tu número de celular" required="required">
+                        <input type="tel" id="reporter_phone" name="reporter_phone" class="form-control" placeholder="Ingresa tu número de celular" required="required"/>
                     </div>
                     <div class="form-group">
                         <label for="description">Descripción del problema:</label>
