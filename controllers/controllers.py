@@ -3,6 +3,10 @@ from odoo.http import request
 import json
 import logging
 from datetime import date
+import base64
+import logging
+_logger = logging.getLogger(__name__)
+
 
 
 class AlquilerQRController(http.Controller):
@@ -32,7 +36,6 @@ class PublicTicketController(http.Controller):
     # Ruta GET para mostrar el formulario
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['GET'], website=True)
     def display_reportar_incidencia(self, **kw):
-        # Suponiendo que obtienes el ID del registro a través de la URL
         id_registro = kw.get('id_registro')
         registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))])
         values = {
@@ -42,9 +45,9 @@ class PublicTicketController(http.Controller):
             'celular': registro.celular if registro.celular else '',
             'correo': registro.correo_ if registro.correo_ else '',
             'product_id': registro.id,
-            # Otros campos que necesitas pasar al formulario
         }
         return request.render('sat.reportar_incidencia_form', values)
+
     @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
     def pagina_confirmacion(self, **kw):
         return request.render('sat.pagina_confirmacion')
@@ -53,6 +56,17 @@ class PublicTicketController(http.Controller):
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['POST'], website=True)
     def submit_reportar_incidencia(self, **post):
         try:
+            # Manejo de la carga de archivo
+            if 'problem_photo' in post:
+                file_storage = post['problem_photo']
+                if file_storage:
+                    file_content = file_storage.read()
+                    file_base64 = base64.b64encode(file_content)
+                else:
+                    file_base64 = None
+            else:
+                file_base64 = None
+
             ticket_vals = {
                 'partner_id': int(post.get('partner_id')),
                 'direccion_id_r': post.get('direccion'),
@@ -63,14 +77,10 @@ class PublicTicketController(http.Controller):
                 'description': post.get('description'),
                 'reporter_name': post.get('reporter_name'),
                 'reporter_phone': post.get('reporter_phone'),
-                'problem_photo': post.get('problem_photo'),
+                'problem_photo': file_base64.decode('utf-8') if file_base64 else None,
             }
-            # Crear el ticket
             request.env['ticket.alquiler'].sudo().create(ticket_vals)
             return request.redirect('/pagina_confirmacion')
         except Exception as e:
-            # Log the error and redirect to an error page
             _logger.exception("Failed to create ticket: %s", e)
             return request.render('sat.error_page', {'error': str(e)})
-
-
