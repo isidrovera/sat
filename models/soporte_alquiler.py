@@ -317,3 +317,6 @@ class ticket_alquiler(models.Model):
         }  
 
       
+    reporter_name = fields.Text(string="Reporto")
+    reporter_phone = fields.Text(string="Nuemero de quien reporto")
+    problem_photo = fields.Binary(string="Foto del problema")

@@ -61,6 +61,9 @@ class PublicTicketController(http.Controller):
                 'corre_id_r': post.get('correo'),
                 'product_alquiler': int(post.get('product_id')),
                 'description': post.get('description'),
+                'reporter_name': post.get('reporter_name'),
+                'reporter_phone': post.get('reporter_phone'),
+                'problem_photo': post.get('problem_photo'),
             }
             # Crear el ticket
             request.env['ticket.alquiler'].sudo().create(ticket_vals)

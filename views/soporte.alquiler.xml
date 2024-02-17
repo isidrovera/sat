@@ -56,9 +56,16 @@
                         </group>
                         <notebook>
                             <page string="Problema Reportado">
-                                <group >
-                                    <field name="description" attrs="{'required':[('estado', '=', 'nuevo')]}"/>
-                                </group>
+                                <group>
+                                    <group >
+                                        <field name="description" attrs="{'required':[('estado', '=', 'nuevo')]}"/>
+                                    </group>
+                                    <group >
+                                        <field name="reporter_name" />
+                                        <field name="reporter_phone" widget="phone"/>
+                                        <field name="problem_photo" widget="image" />
+                                    </group>                                        
+                                </group>                                
                             </page>
                             <page string="Informe Técnico">
                                 <group >
