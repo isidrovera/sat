@@ -4,10 +4,11 @@
         <t t-call="website.layout">
             <div class="container mt16 mb16">
                 <div class="jumbotron text-center">
-                    <h1 class="display-3">¡Gracias!</h1>
-                    <p class="lead">Hemos recibido tu solicitud y nos pondremos en contacto contigo pronto.</p>
+                    <h1 class="display-3">¡Reporte de incidencia recibido!</h1>
+                    <p class="lead">Tu reporte de incidencia con la máquina fotocopiadora ha sido enviado con éxito a nuestro equipo de soporte técnico.</p>
                     <hr class="my-4"/>
-                    <p>Si necesitas asistencia inmediata, por favor, llama a nuestro servicio al cliente.</p>
+                    <p>Nuestro equipo está revisando tu caso y se pondrá en contacto contigo dentro de las próximas 24 horas para asistirte. Agradecemos tu paciencia y comprensión.</p>
+                    <p>Si tu incidencia es urgente o necesitas asistencia inmediata, no dudes en llamar a nuestro servicio al cliente al <strong>(número de teléfono)</strong>.</p>
                     <p class="lead">
                         <a class="btn btn-primary btn-lg" href="/" role="button">Volver al inicio</a>
                     </p>
