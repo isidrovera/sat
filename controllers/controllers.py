@@ -122,26 +122,38 @@ class TonerRequestController(http.Controller):
                 # ... otros campos que hayas incluido en tu formulario
             }
             
-            # Enviar correo electrónico
-            template = request.env.ref('sat.email_template_pedido_toner')
-            if template:
-                email_values = {
-                    'email_to': 'destinatario@ejemplo.com',
-                    'subject': 'Solicitud de Toner',
-                    # Puedes construir el cuerpo del correo aquí o en la plantilla directamente
-                    'body_html': "<p>Se ha realizado una solicitud de tóner con los siguientes detalles:</p>"
-                                 "<ul>"
-                                 f"<li>Cliente: {datos_formulario['nombre']}</li>"
-                                 # ... agregar más detalles
-                                 "</ul>",
-                }
-                template.sudo().send_mail(1, email_values=email_values, force_send=True)
+            # Construir el cuerpo del correo electrónico
+            body_html = f"""
+            <p>Hola,</p>
+            <p>Se ha realizado una solicitud de tóner con los siguientes detalles:</p>
+            <ul>
+                <li>Nombre del Cliente: {datos_formulario['nombre']}</li>
+                <li>Celular: {datos_formulario['celular']}</li>
+                <li>Modelo de Máquina: {datos_formulario['modelo_maquina']}</li>
+                <li>Serie: {datos_formulario['serie']}</li>
+                <li>Tóner Black: {datos_formulario.get('toner_black', 'N/A')}</li>
+                <li>Tóner Cyan: {datos_formulario.get('toner_cyan', 'N/A')}</li>
+                <li>Tóner Yellow: {datos_formulario.get('toner_yellow', 'N/A')}</li>
+                <li>Tóner Magenta: {datos_formulario.get('toner_magenta', 'N/A')}</li>
+                <li>Cantidad: {datos_formulario['cantidad']}</li>
+            </ul>
+            <p>Por favor, proceda con la preparación y envío del tóner.</p>
+            <p>Gracias,</p>
+            """
+
+            # Configurar los valores del correo electrónico
+            mail_values = {
+                'subject': "Solicitud de Toner - {0}".format(datos_formulario['modelo_maquina']),
+                'body_html': body_html,
+                'email_to': 'destinatario@ejemplo.com',  # Reemplaza por el correo del destinatario real
+            }
+
+            # Crear y enviar el correo electrónico
+            mail_id = request.env['mail.mail'].sudo().create(mail_values)
+            request.env['mail.mail'].sudo().send([mail_id])
 
             # Redirigir a la página de confirmación
             return request.redirect('/pagina_confirmacion')
         except Exception as e:
             _logger.exception("Failed to send toner request: %s", e)
-            return request.render('sat.tu_template_error', {'error': str(e)})
-
-# Asegúrate de reemplazar 'tu_modulo.tu_template_formulario_toner', 'tu_modulo.plantilla_correo_pedido_toner', y 'tu_modulo.tu_template_error'
-# con las rutas correctas de tus templates en Odoo
+            return request.redirect('/pagina_error')  # Asegúrate de tener una vista de error definida.
