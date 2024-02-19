@@ -102,7 +102,9 @@ class TonerRequestController(http.Controller):
             return request.render('sat.solicitar_toner_form_template', {'values': values})
         else:
             return request.redirect('/pagina_error')
-
+    @http.route('/pagina_confirmacion_toner', type='http', auth="public", website=True)
+    def pagina_confirmacion(self, **kw):
+        return request.render('sat.pagina_confirmacion_toner')
 
     @http.route('/toner/enviar_solicitud', type='http', auth="public", methods=['POST'], website=True)
     def send_toner_request(self, **post):
