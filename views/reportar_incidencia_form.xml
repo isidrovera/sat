@@ -5,7 +5,7 @@
             <style>
                 /* Aumenta el espacio entre los campos del formulario */
                 .form-group {
-                    margin-bottom: 20px;
+                    margin-bottom: 30px; /* Aumenta este valor para más espacio */
                 }
             </style>
             <div id="wrap" class="container mt-5 mb-5">
