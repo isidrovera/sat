@@ -4,7 +4,7 @@
             <div class="container mt-5 mb-5">
                 <h2>Repuestos para el Equipo</h2>
                 <h2>Modelo: <t t-esc="alquiler.name.name"/></h2>
-                <h2>Serie: <t t-esc="alquiler.serie_id"/></h2>
+                <h2>Serie: <t t-esc="alquiler.serie"/></h2>
                 <input type="text" id="searchRepuestos" placeholder="Buscar por descripción..." class="form-control mb-3"/>
                 <table class="table">
                     <thead>

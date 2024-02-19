@@ -204,7 +204,7 @@ class TonerRequestController(http.Controller):
             return request.redirect('/pagina_error')  # Asegúrate de tener una vista de error definida.
         
 class RepuestosAlquilerController(http.Controller):
-    @http.route('/alquiler/repuestos/<int:id_alquiler>', type='http', auth='public', website=True)
+    @http.route('/alquiler/repuestos/<int:id_alquiler>', type='http', auth='user', website=True)
     def listar_repuestos(self, id_alquiler, search='', **kw):
         domain = [('modelo_id', '=', id_alquiler)]
         if search:
@@ -221,7 +221,7 @@ class RepuestosAlquilerController(http.Controller):
                 'contometro_actual': repuesto.contometro_actual,
                 'rendimiento': repuesto.rendimiento,
                 'solicitante': repuesto.solicitante_id,
-                # Agrega más campos según necesites
+                'serie': repuesto.serie_id,
             } for repuesto in repuestos]
 
             return request.make_response(json.dumps(repuestos_data), headers={'Content-Type': 'application/json'})
