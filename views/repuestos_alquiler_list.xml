@@ -22,7 +22,7 @@
                     <tbody>
                         <t t-foreach="repuestos" t-as="repuesto">
                             <tr>
-                                <td><t t-esc="repuesto.create_date"/></td>
+                                <td><t t-esc="repuesto.create_date.strftime('%d/%m/%Y')"/></td>
                                 <td><t t-esc="repuesto.referencia_reparacion_id"/></td>
                                 <td><t t-esc="repuesto.name"/></td>
                                 <td><t t-esc="repuesto.cantidad"/></td>

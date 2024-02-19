@@ -213,7 +213,7 @@ class RepuestosAlquilerController(http.Controller):
 
         if request.httprequest.headers.get('X-Requested-With') == 'XMLHttpRequest':
             repuestos_data = [{
-                'fecha': repuesto.create_date.strftime('%Y-%m-%d %H:%M:%S') if repuesto.create_date else '',
+                'fecha': repuesto.create_date.strftime('%Y-%m-%d') if repuesto.create_date else '',
                 'pedido': repuesto.referencia_reparacion_id,
                 'descripcion': repuesto.name,
                 'cantidad': repuesto.cantidad,
