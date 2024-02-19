@@ -196,7 +196,7 @@ class TonerRequestController(http.Controller):
             request.env['mail.mail'].sudo().send([mail_id])
 
             # Redirigir a la página de confirmación
-            return request.redirect('/pagina_confirmacion')
+            return request.redirect('/pagina_confirmacion_toner')
         except Exception as e:
             _logger.exception("Failed to send toner request: %s", e)
             return request.redirect('/pagina_error')  # Asegúrate de tener una vista de error definida.
