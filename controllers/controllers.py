@@ -109,6 +109,7 @@ class TonerRequestController(http.Controller):
         try:
             # Recopilar los datos del formulario
             datos_formulario = {
+                'cliente': post.get('cliente'),
                 'nombre': post.get('nombre'),
                 'celular': post.get('celular'),
                 'modelo_maquina': post.get('modelo_maquina'),
@@ -127,16 +128,18 @@ class TonerRequestController(http.Controller):
             <p>Hola,</p>
             <p>Se ha realizado una solicitud de tóner con los siguientes detalles:</p>
             <ul>
-                <li>Nombre del Cliente: {datos_formulario['nombre']}</li>
-                <li>Celular: {datos_formulario['celular']}</li>
+                <li>Cliente: {datos_formulario['cliente']}</li>
+                <li>Nombre del Solicitante: {datos_formulario['nombre']}</li>
+                <li>Celular del Solicitante: {datos_formulario['celular']}</li>
                 <li>Modelo de Máquina: {datos_formulario['modelo_maquina']}</li>
                 <li>Serie: {datos_formulario['serie']}</li>
+                <li>Contometro Black: {datos_formulario['contometro_black']}</li>
+                <li>Contometro Color: {datos_formulario['contometro_color']}</li>
                 <li>Tóner Black: {datos_formulario.get('toner_black', 'N/A')}</li>
                 <li>Tóner Cyan: {datos_formulario.get('toner_cyan', 'N/A')}</li>
                 <li>Tóner Yellow: {datos_formulario.get('toner_yellow', 'N/A')}</li>
                 <li>Tóner Magenta: {datos_formulario.get('toner_magenta', 'N/A')}</li>
-                <li>Contometro Black: {datos_formulario['contometro_black']}</li>
-                <li>Contometro Color: {datos_formulario['contometro_color']}</li>
+                
             </ul>
             <p>Por favor, proceda con la preparación y envío del tóner.</p>
             <p>Gracias,</p>
