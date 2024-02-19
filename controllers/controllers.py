@@ -227,7 +227,7 @@ class RepuestosAlquilerController(http.Controller):
             return request.make_response(json.dumps(repuestos_data), headers={'Content-Type': 'application/json'})
 
         # Manejo normal sin AJAX
-        return request.render('tu_modulo.repuestos_alquiler_list', {
+        return request.render('sat.repuestos_alquiler_list', {
             'repuestos': repuestos,
             'alquiler': request.env['alquiler'].sudo().browse(id_alquiler),
         })
