@@ -110,7 +110,7 @@ class TonerRequestController(http.Controller):
         try:
             # Recopilar los datos del formulario
             datos_formulario = {
-                'nombre': post.get('nombre'),
+                'nombre': post.get('cliente'),
                 'celular': post.get('celular'),
                 'modelo_maquina': post.get('modelo_maquina'),
                 'serie': post.get('serie'),
