@@ -3,6 +3,12 @@
         <t t-call="website.layout">
             <div class="container mt-5 mb-5">
                 <h2>Repuestos para el Alquiler: <t t-esc="alquiler.name"/></h2>
+                <input type="text" id="search" placeholder="Buscar por descripción..." class="form-control mb-3" value=""/>
+                <script>
+                    document.getElementById('search').addEventListener('input', function(e){
+                        window.location.href = '/alquiler/repuestos/' + <t t-esc="alquiler.id"/> + '?search=' + e.target.value;
+                    });
+                </script>
                 <table class="table">
                     <thead>
                         <tr>

@@ -205,17 +205,19 @@ class TonerRequestController(http.Controller):
         
 class RepuestosAlquilerController(http.Controller):
     @http.route('/alquiler/repuestos/<int:id_alquiler>', auth='public', website=True)
-    def listar_repuestos(self, id_alquiler, **kw):
-        # Buscar el registro de alquiler por ID
+    def listar_repuestos(self, id_alquiler, search='', **kw):
         registro_alquiler = request.env['alquiler'].sudo().browse(id_alquiler)
         if not registro_alquiler.exists():
             return request.redirect('/pagina_error')
 
-        # Buscar todos los repuestos asociados a este registro de alquiler
-        repuestos = request.env['repuestos.alquiler'].sudo().search([('modelo_id', '=', id_alquiler)])
+        domain = [('modelo_id', '=', id_alquiler)]
+        if search:
+            domain.append(('name', 'ilike', search))
+
+        repuestos = request.env['repuestos.alquiler'].sudo().search(domain, order='create_date DESC')
         
-        # Pasar los repuestos a la vista
-        return request.render('sat.repuestos_alquiler_list', {
+        return request.render('tu_modulo.repuestos_alquiler_list', {
             'repuestos': repuestos,
             'alquiler': registro_alquiler,
+            'search': search,
         })
