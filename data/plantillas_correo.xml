@@ -368,8 +368,7 @@
     <record id="email_template_pedido_toner" model="mail.template">
             <field name="name">Solicitud de Tóner</field>
             <field name="email_from">${(user.email or '')|safe}</field>
-            <field name="subject">Solicitud de Tóner - ${object.modelo_maquina}</field>
-            <field name="model_id" ref="model_alquiler"/>
+            <field name="subject">Solicitud de Tóner - ${object.modelo_maquina}</field>            
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
                 <p>Hola,</p>
