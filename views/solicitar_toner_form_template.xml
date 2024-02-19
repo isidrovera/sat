@@ -5,24 +5,43 @@
             <div class="container mt-5 mb-5">
                 <h1 class="text-center">Solicitar Toner</h1>
                 <form action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
-                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>                   
-                    <input  name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
-                    <input  name="serie" t-att-value="values['serie']"/>
-
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
+                    <input type="hidden" name="serie" t-att-value="values['serie']"/>
                     <input type="hidden" name="id_registro" t-att-value="id_registro"/>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="nombre">Nombre</label>
-                            <input type="text" class="form-control" id="nombre" name="nombre" required="1"/>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="celular">Celular</label>
-                            <input type="tel" class="form-control" id="celular" name="celular" required="1"/>
-                        </div>
-                    </div>
-                    <!-- Más campos según sean necesarios -->
+                    <!-- Campos de información del cliente -->
+                    <!-- ... tus campos existentes ... -->
+
+                    <!-- Campos para la solicitud de toners -->
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Tipo de Toner</th>
+                                <th>Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Toner Black</td>
+                                <td><input type="number" name="toner_black" class="form-control" required="required"/></td>
+                            </tr>
+                            <tr>
+                                <td>Toner Cyan</td>
+                                <td><input type="number" name="toner_cyan" class="form-control" required="required"/></td>
+                            </tr>
+                            <tr>
+                                <td>Toner Yellow</td>
+                                <td><input type="number" name="toner_yellow" class="form-control" required="required"/></td>
+                            </tr>
+                            <tr>
+                                <td>Toner Magenta</td>
+                                <td><input type="number" name="toner_magenta" class="form-control" required="required"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Botón de envío -->
                     <button class="btn btn-primary btn-lg btn-block" type="submit">Enviar Solicitud</button>
                 </form>
             </div>
