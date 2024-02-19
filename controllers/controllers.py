@@ -209,7 +209,7 @@ class RepuestosAlquilerController(http.Controller):
         domain = [('modelo_id', '=', id_alquiler)]
         if search:
             domain.append(('name', 'ilike', search))
-        repuestos = request.env['repuestos.alquiler'].sudo().search(domain, order='create_date ASC')
+        repuestos = request.env['repuestos.alquiler'].sudo().search(domain, order='create_date DESC')
 
         if request.httprequest.headers.get('X-Requested-With') == 'XMLHttpRequest':
             repuestos_data = [{
