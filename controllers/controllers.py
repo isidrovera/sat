@@ -185,13 +185,15 @@ class TonerRequestController(http.Controller):
             </body>
             </html>
             """
-
+           
             # Configurar los valores del correo electrónico
             mail_values = {
                 'subject': "Solicitud de Toner - {0}".format(datos_formulario['modelo_maquina']),
                 'body_html': body_html,
+                'email_from': 'soporte@andescopiers.com.pe',  # Remitente del correo
                 'email_to': 'jamilet.roggero@andescopiers.com.pe',  # Reemplaza por el correo del destinatario real
-                'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',  # Agrega aquí la dirección de correo que recibirá la copia
+                'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',
+                'mail_server_id': 1,
             }
 
 
