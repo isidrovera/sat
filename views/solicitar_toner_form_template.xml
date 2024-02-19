@@ -47,15 +47,15 @@
                             </tr>
                             <tr>
                                 <td>Toner Cyan</td>
-                                <td><input type="number" name="toner_cyan" class="form-control" required="required"/></td>
+                                <td><input type="number" name="toner_cyan" class="form-control" /></td>
                             </tr>
                             <tr>
                                 <td>Toner Yellow</td>
-                                <td><input type="number" name="toner_yellow" class="form-control" required="required"/></td>
+                                <td><input type="number" name="toner_yellow" class="form-control"/></td>
                             </tr>
                             <tr>
                                 <td>Toner Magenta</td>
-                                <td><input type="number" name="toner_magenta" class="form-control" required="required"/></td>
+                                <td><input type="number" name="toner_magenta" class="form-control" /></td>
                             </tr>
                         </tbody>
                     </table>

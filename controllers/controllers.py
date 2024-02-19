@@ -124,6 +124,18 @@ class TonerRequestController(http.Controller):
             }
             
             # Construir el cuerpo del correo electrónico
+            toners = [
+                {'name': 'Tóner Black', 'qty': datos_formulario.get('toner_black')},
+                {'name': 'Tóner Cyan', 'qty': datos_formulario.get('toner_cyan')},
+                {'name': 'Tóner Yellow', 'qty': datos_formulario.get('toner_yellow')},
+                {'name': 'Tóner Magenta', 'qty': datos_formulario.get('toner_magenta')},
+            ]
+
+            toner_lines = ""
+            for toner in toners:
+                if toner['qty'] and int(toner['qty']) > 0:  # Asegúrate de que la cantidad es un número y es mayor que cero
+                    toner_lines += f"<tr><td>{toner['name']}</td><td>{toner['qty']}</td></tr>"
+
             body_html = f"""
             <p>Hola,</p>
             <p>Se ha realizado una solicitud de tóner con los siguientes detalles:</p>
@@ -135,12 +147,19 @@ class TonerRequestController(http.Controller):
                 <li>Serie: {datos_formulario['serie']}</li>
                 <li>Contometro Black: {datos_formulario['contometro_black']}</li>
                 <li>Contometro Color: {datos_formulario['contometro_color']}</li>
-                <li>Tóner Black: {datos_formulario.get('toner_black', 'N/A')}</li>
-                <li>Tóner Cyan: {datos_formulario.get('toner_cyan', 'N/A')}</li>
-                <li>Tóner Yellow: {datos_formulario.get('toner_yellow', 'N/A')}</li>
-                <li>Tóner Magenta: {datos_formulario.get('toner_magenta', 'N/A')}</li>
-                
             </ul>
+            <p>Los toners solicitados son:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo de Tóner</th>
+                        <th>Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {toner_lines}
+                </tbody>
+            </table>
             <p>Por favor, proceda con la preparación y envío del tóner.</p>
             <p>Gracias,</p>
             """
