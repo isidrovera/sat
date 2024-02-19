@@ -216,7 +216,7 @@ class RepuestosAlquilerController(http.Controller):
 
         repuestos = request.env['repuestos.alquiler'].sudo().search(domain, order='create_date DESC')
         
-        return request.render('tu_modulo.repuestos_alquiler_list', {
+        return request.render('sat.repuestos_alquiler_list', {
             'repuestos': repuestos,
             'alquiler': registro_alquiler,
             'search': search,
