@@ -58,6 +58,7 @@
         'views/solicitar_toner_form.xml',
         'views/pagina_confirmacion.xml',
         'views/solicitar_toner_form_template.xml',
+        'views/pagina_confirmacion_toner.xml',
     ],
     'demo': [
         'demo/demo_data.xml',
