@@ -2,8 +2,7 @@
     <template id="repuestos_alquiler_list" name="Lista de Repuestos">
         <t t-call="website.layout">
             <div class="container mt-5 mb-5">
-                <h2>Repuestos para el Alquiler: <t t-esc="alquiler.name"/></h2>
-                <!-- Campo de Búsqueda Dinámica -->
+                <h2>Repuestos para el Alquiler: <t t-esc="alquiler.name.name"/></h2>
                 <input type="text" id="searchRepuestos" placeholder="Buscar por descripción..." class="form-control mb-3"/>
                 <table class="table">
                     <thead>
@@ -19,36 +18,38 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Los datos se llenarán con AJAX -->
+                        <t t-foreach="repuestos" t-as="repuesto">
+                            <tr>
+                                <td><t t-esc="repuesto.create_date"/></td>
+                                <td><t t-esc="repuesto.referencia_reparacion_id"/></td>
+                                <td><t t-esc="repuesto.name"/></td>
+                                <td><t t-esc="repuesto.cantidad"/></td>
+                                <td><t t-esc="repuesto.contometro_ultimo"/></td>
+                                <td><t t-esc="repuesto.contometro_actual"/></td>
+                                <td><t t-esc="repuesto.duracion_repuesto"/></td>
+                                <td><t t-esc="repuesto.solicitante_id"/></td>
+                            </tr>
+                        </t>
                     </tbody>
                 </table>
             </div>
             <script>
-                document.getElementById('searchRepuestos').addEventListener('keyup', function() {
-                    const searchValue = this.value;
-                    fetch('/alquiler/repuestos/' + <t t-esc="alquiler.id"/> + '?search=' + encodeURIComponent(searchValue), {
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        const tbody = document.querySelector('table tbody');
-                        tbody.innerHTML = ''; // Limpiar las filas existentes
-                        data.forEach(repuesto => {
-                            const row = `<tr>
-                                <td>${repuesto.fecha}</td>
-                                <td>${repuesto.pedido}</td>
-                                <td>${repuesto.descripcion}</td>
-                                <td>${repuesto.cantidad}</td>
-                                <td>${repuesto.contometro_ultimo}</td>
-                                <td>${repuesto.contometro_actual}</td>
-                                <td>${repuesto.rendimiento}</td>
-                                <td>${repuesto.solicitante}</td>
-                            </tr>`;
-                            tbody.innerHTML += row; // Agregar fila a la tabla
+                document.addEventListener('DOMContentLoaded', function() {
+                    const searchInput = document.getElementById('searchRepuestos');
+                    const tableBody = document.querySelector('table tbody');
+                    function filterTable(event) {
+                        const searchTerm = event.target.value.toLowerCase();
+                        const rows = tableBody.getElementsByTagName('tr');
+                        Array.from(rows).forEach((row) => {
+                            const description = row.cells[2].textContent.toLowerCase();
+                            if(description.includes(searchTerm)) {
+                                row.style.display = '';
+                            } else {
+                                row.style.display = 'none';
+                            }
                         });
-                    });
+                    }
+                    searchInput.addEventListener('keyup', filterTable);
                 });
             </script>
         </t>
