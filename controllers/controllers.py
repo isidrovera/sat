@@ -90,20 +90,19 @@ class TonerRequestController(http.Controller):
     @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
     def display_toner_request_form(self, **kw):
         id_registro = kw.get('id_registro')
-        registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))])
-        if not registro:
+        registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))], limit=1)
+        if registro:
+            values = {
+                'id_registro': registro.id,
+                'cliente': registro.cliente_id.name if registro.cliente_id else "",
+                'modelo_maquina': registro.name.name if registro.name else "",
+                'serie': registro.serie if registro else "",
+                # ... otros campos según sea necesario
+            }
+            return request.render('sat.solicitar_toner_form_template', {'values': values})
+        else:
             return request.redirect('/pagina_error')
 
-        # Preparar los valores para prellenar el formulario
-        values = {
-            'id_registro': registro.id,
-            'cliente': registro.cliente_id.name,
-            'modelo_maquina': registro.name.name,
-            'serie': registro.serie,
-            # ... puedes agregar más valores si es necesario
-        }
-        # Renderizar el formulario con los valores
-        return request.render('sat.solicitar_toner_form_template', values)
 
     @http.route('/toner/enviar_solicitud', type='http', auth="public", methods=['POST'], website=True)
     def send_toner_request(self, **post):
