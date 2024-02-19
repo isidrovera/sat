@@ -145,7 +145,7 @@ class TonerRequestController(http.Controller):
             mail_values = {
                 'subject': "Solicitud de Toner - {0}".format(datos_formulario['modelo_maquina']),
                 'body_html': body_html,
-                'email_to': 'destinatario@ejemplo.com',  # Reemplaza por el correo del destinatario real
+                'email_to': 'verapolo@icloud.com',  # Reemplaza por el correo del destinatario real
             }
 
             # Crear y enviar el correo electrónico
