@@ -117,7 +117,8 @@ class TonerRequestController(http.Controller):
                 'toner_cyan': post.get('toner_cyan'),
                 'toner_yellow': post.get('toner_yellow'),
                 'toner_magenta': post.get('toner_magenta'),
-                'cantidad': post.get('cantidad'),
+                'contometro_black': post.get('contometro_black'),
+                'contometro_color': post.get('contometro_color'),
                 # ... otros campos que hayas incluido en tu formulario
             }
             
@@ -134,7 +135,8 @@ class TonerRequestController(http.Controller):
                 <li>Tóner Cyan: {datos_formulario.get('toner_cyan', 'N/A')}</li>
                 <li>Tóner Yellow: {datos_formulario.get('toner_yellow', 'N/A')}</li>
                 <li>Tóner Magenta: {datos_formulario.get('toner_magenta', 'N/A')}</li>
-                <li>Cantidad: {datos_formulario['cantidad']}</li>
+                <li>Contometro Black: {datos_formulario['contometro_black']}</li>
+                <li>Contometro Color: {datos_formulario['contometro_color']}</li>
             </ul>
             <p>Por favor, proceda con la preparación y envío del tóner.</p>
             <p>Gracias,</p>

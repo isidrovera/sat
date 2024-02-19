@@ -21,6 +21,17 @@
                             <input type="tel" class="form-control" id="celular" name="celular" required="1"/>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="contometro_black">Contometro Black</label>
+                            <input type="text" class="form-control" id="contometro_black" name="contometro_black" required="1"/>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="contometro_color">Contometro Color</label>
+                            <input type="tel" class="form-control" id="contometro_color" name="contometro_color" required="1"/>
+                        </div>
+                    </div>
                     <table class="table">
                         <thead>
                             <tr>
