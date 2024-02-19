@@ -39,6 +39,11 @@
                             Solicitar Toner
                         </a>
                     </div>
+                    <div class="col-md-3 mb-3">
+                        <a t-att-href="'/alquiler/repuestos/' + str(datos_registro['id'])" class="btn btn-info btn-lg btn-block" role="button">
+                            Repuestos Cambiados
+                        </a>
+                    </div>
                     <!-- Añadir más opciones según sean necesarias -->
                 </div>
             </div>

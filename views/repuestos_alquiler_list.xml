@@ -1,0 +1,33 @@
+<odoo>
+    <template id="repuestos_alquiler_list" name="Lista de Repuestos">
+        <t t-call="website.layout">
+            <div class="container mt-5 mb-5">
+                <h2>Repuestos para el Alquiler: <t t-esc="alquiler.name"/></h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Descripción</th>
+                            <th>Serie</th>
+                            <th>Contometro actual</th>
+                            <th>Contometro último cambio</th>
+                            <th>Cantidad</th>
+                            <!-- Agrega más columnas según sea necesario -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="repuestos" t-as="repuesto">
+                            <tr>
+                                <td><t t-esc="repuesto.name"/></td>
+                                <td><t t-esc="repuesto.serie_id"/></td>
+                                <td><t t-esc="repuesto.contometro_actual"/></td>
+                                <td><t t-esc="repuesto.contometro_ultimo"/></td>
+                                <td><t t-esc="repuesto.cantidad"/></td>
+                                <!-- Agrega más campos según sea necesario -->
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </div>
+        </t>
+    </template>
+</odoo>

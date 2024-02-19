@@ -202,3 +202,20 @@ class TonerRequestController(http.Controller):
         except Exception as e:
             _logger.exception("Failed to send toner request: %s", e)
             return request.redirect('/pagina_error')  # Asegúrate de tener una vista de error definida.
+        
+class RepuestosAlquilerController(http.Controller):
+    @http.route('/alquiler/repuestos/<int:id_alquiler>', auth='public', website=True)
+    def listar_repuestos(self, id_alquiler, **kw):
+        # Buscar el registro de alquiler por ID
+        registro_alquiler = request.env['alquiler'].sudo().browse(id_alquiler)
+        if not registro_alquiler.exists():
+            return request.redirect('/pagina_error')
+
+        # Buscar todos los repuestos asociados a este registro de alquiler
+        repuestos = request.env['repuestos.alquiler'].sudo().search([('modelo_id', '=', id_alquiler)])
+        
+        # Pasar los repuestos a la vista
+        return request.render('sat.repuestos_alquiler_list', {
+            'repuestos': repuestos,
+            'alquiler': registro_alquiler,
+        })
