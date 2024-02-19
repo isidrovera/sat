@@ -3,12 +3,8 @@
         <t t-call="website.layout">
             <div class="container mt-5 mb-5">
                 <h2>Repuestos para el Alquiler: <t t-esc="alquiler.name"/></h2>
-                <input type="text" id="search" placeholder="Buscar por descripción..." class="form-control mb-3" value=""/>
-                <script>
-                    document.getElementById('search').addEventListener('input', function(e){
-                        window.location.href = '/alquiler/repuestos/' + <t t-esc="alquiler.id"/> + '?search=' + e.target.value;
-                    });
-                </script>
+                <!-- Campo de Búsqueda Dinámica -->
+                <input type="text" id="searchRepuestos" placeholder="Buscar por descripción..." class="form-control mb-3"/>
                 <table class="table">
                     <thead>
                         <tr>
@@ -16,31 +12,45 @@
                             <th>Pedido #</th>
                             <th>Descripción</th>
                             <th>Cantidad</th>
-                            <th>Contometro Anterior</th>                            
+                            <th>Contometro Anterior</th>
                             <th>Contometro último cambio</th>
                             <th>Rendimiento</th>
                             <th>Solicitante</th>
-                            
-                            <!-- Agrega más columnas según sea necesario -->
                         </tr>
                     </thead>
                     <tbody>
-                        <t t-foreach="repuestos" t-as="repuesto">
-                            <tr>
-                                <td><t t-esc="repuesto.create_date"/></td>
-                                <td><t t-esc="repuesto.referencia_reparacion_id"/></td>
-                                <td><t t-esc="repuesto.name"/></td>
-                                <td><t t-esc="repuesto.cantidad"/></td>
-                                <td><t t-esc="repuesto.contometro_ultimo"/></td>
-                                <td><t t-esc="repuesto.contometro_actual"/></td>
-                                <td><t t-esc="repuesto.duracion_repuesto"/></td>
-                                <td><t t-esc="repuesto.solicitante_id"/></td>
-                                <!-- Agrega más campos según sea necesario -->
-                            </tr>
-                        </t>
+                        <!-- Los datos se llenarán con AJAX -->
                     </tbody>
                 </table>
             </div>
+            <script>
+                document.getElementById('searchRepuestos').addEventListener('keyup', function() {
+                    const searchValue = this.value;
+                    fetch('/alquiler/repuestos/' + <t t-esc="alquiler.id"/> + '?search=' + encodeURIComponent(searchValue), {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const tbody = document.querySelector('table tbody');
+                        tbody.innerHTML = ''; // Limpiar las filas existentes
+                        data.forEach(repuesto => {
+                            const row = `<tr>
+                                <td>${repuesto.fecha}</td>
+                                <td>${repuesto.pedido}</td>
+                                <td>${repuesto.descripcion}</td>
+                                <td>${repuesto.cantidad}</td>
+                                <td>${repuesto.contometro_ultimo}</td>
+                                <td>${repuesto.contometro_actual}</td>
+                                <td>${repuesto.rendimiento}</td>
+                                <td>${repuesto.solicitante}</td>
+                            </tr>`;
+                            tbody.innerHTML += row; // Agregar fila a la tabla
+                        });
+                    });
+                });
+            </script>
         </t>
     </template>
 </odoo>

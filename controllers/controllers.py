@@ -204,20 +204,30 @@ class TonerRequestController(http.Controller):
             return request.redirect('/pagina_error')  # Asegúrate de tener una vista de error definida.
         
 class RepuestosAlquilerController(http.Controller):
-    @http.route('/alquiler/repuestos/<int:id_alquiler>', auth='public', website=True)
+    @http.route('/alquiler/repuestos/<int:id_alquiler>', type='http', auth='public', website=True)
     def listar_repuestos(self, id_alquiler, search='', **kw):
-        registro_alquiler = request.env['alquiler'].sudo().browse(id_alquiler)
-        if not registro_alquiler.exists():
-            return request.redirect('/pagina_error')
-
         domain = [('modelo_id', '=', id_alquiler)]
         if search:
             domain.append(('name', 'ilike', search))
+        repuestos = request.env['repuestos.alquiler'].sudo().search(domain, order='create_date ASC')
 
-        repuestos = request.env['repuestos.alquiler'].sudo().search(domain, order='create_date DESC')
-        
-        return request.render('sat.repuestos_alquiler_list', {
+        if request.httprequest.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            repuestos_data = [{
+                'fecha': repuesto.create_date.strftime('%Y-%m-%d %H:%M:%S') if repuesto.create_date else '',
+                'pedido': repuesto.referencia_reparacion_id,
+                'descripcion': repuesto.name,
+                'cantidad': repuesto.cantidad,
+                'contometro_ultimo': repuesto.contometro_ultimo,
+                'contometro_actual': repuesto.contometro_actual,
+                'rendimiento': repuesto.rendimiento,
+                'solicitante': repuesto.solicitante_id,
+                # Agrega más campos según necesites
+            } for repuesto in repuestos]
+
+            return request.make_response(json.dumps(repuestos_data), headers={'Content-Type': 'application/json'})
+
+        # Manejo normal sin AJAX
+        return request.render('tu_modulo.repuestos_alquiler_list', {
             'repuestos': repuestos,
-            'alquiler': registro_alquiler,
-            'search': search,
+            'alquiler': request.env['alquiler'].sudo().browse(id_alquiler),
         })
