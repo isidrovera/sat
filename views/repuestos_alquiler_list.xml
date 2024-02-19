@@ -6,22 +6,29 @@
                 <table class="table">
                     <thead>
                         <tr>
+                            <th>Fecha</th>
+                            <th>Pedido #</th>
                             <th>Descripción</th>
-                            <th>Serie</th>
-                            <th>Contometro actual</th>
-                            <th>Contometro último cambio</th>
                             <th>Cantidad</th>
+                            <th>Contometro Anterior</th>                            
+                            <th>Contometro último cambio</th>
+                            <th>Rendimiento</th>
+                            <th>Solicitante</th>
+                            
                             <!-- Agrega más columnas según sea necesario -->
                         </tr>
                     </thead>
                     <tbody>
                         <t t-foreach="repuestos" t-as="repuesto">
                             <tr>
+                                <td><t t-esc="repuesto.create_date"/></td>
+                                <td><t t-esc="repuesto.referencia_reparacion_id"/></td>
                                 <td><t t-esc="repuesto.name"/></td>
-                                <td><t t-esc="repuesto.serie_id"/></td>
-                                <td><t t-esc="repuesto.contometro_actual"/></td>
-                                <td><t t-esc="repuesto.contometro_ultimo"/></td>
                                 <td><t t-esc="repuesto.cantidad"/></td>
+                                <td><t t-esc="repuesto.contometro_ultimo"/></td>
+                                <td><t t-esc="repuesto.contometro_actual"/></td>
+                                <td><t t-esc="repuesto.duracion_repuesto"/></td>
+                                <td><t t-esc="repuesto.solicitante_id"/></td>
                                 <!-- Agrega más campos según sea necesario -->
                             </tr>
                         </t>
