@@ -137,6 +137,24 @@ class TonerRequestController(http.Controller):
                     toner_lines += f"<tr><td>{toner['name']}</td><td>{toner['qty']}</td></tr>"
 
             body_html = f"""
+            <html>
+            <head>
+            <style>
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }}
+            th {{
+                background-color: #f2f2f2;
+            }}
+            </style>
+            </head>
+            <body>
             <p>Hola,</p>
             <p>Se ha realizado una solicitud de tóner con los siguientes detalles:</p>
             <ul>
@@ -150,18 +168,20 @@ class TonerRequestController(http.Controller):
             </ul>
             <p>Los toners solicitados son:</p>
             <table>
-                <thead>
-                    <tr>
-                        <th>Tipo de Tóner</th>
-                        <th>Cantidad</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {toner_lines}
-                </tbody>
+            <thead>
+                <tr>
+                <th>Tipo de Tóner</th>
+                <th>Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {toner_lines}
+            </tbody>
             </table>
             <p>Por favor, proceda con la preparación y envío del tóner.</p>
             <p>Gracias,</p>
+            </body>
+            </html>
             """
 
             # Configurar los valores del correo electrónico
