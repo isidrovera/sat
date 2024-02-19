@@ -365,5 +365,29 @@
                 
             ]]>      </field>
     </record>
+    <record id="email_template_pedido_toner" model="mail.template">
+            <field name="name">Solicitud de Tóner</field>
+            <field name="email_from">${(user.email or '')|safe}</field>
+            <field name="subject">Solicitud de Tóner - ${object.modelo_maquina}</field>
+            <field name="model_id" ref="model_alquiler"/>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html"><![CDATA[
+                <p>Hola,</p>
+                <p>Se ha recibido una nueva solicitud de tóner con los siguientes detalles:</p>
+                <ul>
+                    <li>Nombre del Cliente: ${object.nombre}</li>
+                    <li>Celular: ${object.celular}</li>
+                    <li>Modelo de Máquina: ${object.modelo_maquina}</li>
+                    <li>Serie: ${object.serie}</li>
+                    <li>Tóner Black: ${object.toner_black}</li>
+                    <li>Tóner Cyan: ${object.toner_cyan}</li>
+                    <li>Tóner Yellow: ${object.toner_yellow}</li>
+                    <li>Tóner Magenta: ${object.toner_magenta}</li>
+                    <li>Cantidad: ${object.cantidad}</li>
+                </ul>
+                <p>Por favor, proceda con la preparación y envío del tóner.</p>
+                <p>Gracias,</p>
+            ]]></field>
+        </record>
   </data>
 </odoo>

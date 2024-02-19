@@ -35,7 +35,7 @@
                         </a>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <a t-att-href="'/solicitar_toner?id_registro=' + str(datos_registro['id'])" class="btn btn-secondary btn-lg btn-block" role="button">
+                        <a t-att-href="'/toner/solicitar_toner?id_registro=' + str(datos_registro['id'])" class="btn btn-secondary btn-lg btn-block" role="button">
                             Solicitar Toner
                         </a>
                     </div>

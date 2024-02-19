@@ -22,7 +22,7 @@ class SaleOrderController(http.Controller):
         }
         
         # Asegúrate de cambiar 'tu_modulo.sale_order_form' por la ruta correcta a tu formulario
-        return request.render('tu_modulo.sale_order_form', values)
+        return request.render('sat.sale_order_form', values)
 
     @http.route('/order/submit_order', type='http', auth="public", methods=['POST'], website=True)
     def submit_create_order(self, **post):

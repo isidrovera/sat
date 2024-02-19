@@ -57,6 +57,7 @@
         'views/reportar_incidencia_form.xml',
         'views/solicitar_toner_form.xml',
         'views/pagina_confirmacion.xml',
+        'views/solicitar_toner_form_template.xml',
     ],
     'demo': [
         'demo/demo_data.xml',

@@ -84,3 +84,64 @@ class PublicTicketController(http.Controller):
         except Exception as e:
             _logger.exception("Failed to create ticket: %s", e)
             return request.render('sat.error_page', {'error': str(e)})
+        
+        
+class TonerRequestController(http.Controller):
+    @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
+    def display_toner_request_form(self, **kw):
+        id_registro = kw.get('id_registro')
+        registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))])
+        if not registro:
+            return request.redirect('/pagina_error')
+
+        # Preparar los valores para prellenar el formulario
+        values = {
+            'id_registro': registro.id,
+            'cliente': registro.cliente_id.name,
+            'modelo_maquina': registro.name.name,
+            'serie': registro.serie,
+            # ... puedes agregar más valores si es necesario
+        }
+        # Renderizar el formulario con los valores
+        return request.render('tu_modulo.tu_template_formulario_toner', values)
+
+    @http.route('/toner/enviar_solicitud', type='http', auth="public", methods=['POST'], website=True)
+    def send_toner_request(self, **post):
+        try:
+            # Recopilar los datos del formulario
+            datos_formulario = {
+                'nombre': post.get('nombre'),
+                'celular': post.get('celular'),
+                'modelo_maquina': post.get('modelo_maquina'),
+                'serie': post.get('serie'),
+                'toner_black': post.get('toner_black'),
+                'toner_cyan': post.get('toner_cyan'),
+                'toner_yellow': post.get('toner_yellow'),
+                'toner_magenta': post.get('toner_magenta'),
+                'cantidad': post.get('cantidad'),
+                # ... otros campos que hayas incluido en tu formulario
+            }
+            
+            # Enviar correo electrónico
+            template = request.env.ref('sat.email_template_pedido_toner')
+            if template:
+                email_values = {
+                    'email_to': 'destinatario@ejemplo.com',
+                    'subject': 'Solicitud de Toner',
+                    # Puedes construir el cuerpo del correo aquí o en la plantilla directamente
+                    'body_html': "<p>Se ha realizado una solicitud de tóner con los siguientes detalles:</p>"
+                                 "<ul>"
+                                 f"<li>Cliente: {datos_formulario['nombre']}</li>"
+                                 # ... agregar más detalles
+                                 "</ul>",
+                }
+                template.sudo().send_mail(1, email_values=email_values, force_send=True)
+
+            # Redirigir a la página de confirmación
+            return request.redirect('/pagina_confirmacion')
+        except Exception as e:
+            _logger.exception("Failed to send toner request: %s", e)
+            return request.render('sat.tu_template_error', {'error': str(e)})
+
+# Asegúrate de reemplazar 'tu_modulo.tu_template_formulario_toner', 'tu_modulo.plantilla_correo_pedido_toner', y 'tu_modulo.tu_template_error'
+# con las rutas correctas de tus templates en Odoo
