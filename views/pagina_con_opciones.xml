@@ -1,54 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <template id="pagina_con_opciones" name="Opciones">
-    <t t-call="website.layout">
-        <div id="wrap" class="container mt-5 mb-5">
-            <div class="jumbotron text-center">
-                <h1 class="display-4">¡Bienvenido/a <t t-esc="datos_registro['cliente']"/>!</h1>
-                <div class="text-center mt-4">
-                    <p class="text-primary" style="font-size: 1.2rem;">Revise los datos del equipo y elija la opción que necesita para reportar.</p>
-                    <p class="text-muted" style="font-size: 1rem;">Aquí puede reportar fallas de la impresora, solicitar tóner y más. Algunas opciones requieren autenticación.</p>
-                </div>
-                <!-- Datos del equipo -->
-                <div class="row justify-content-center mt-4">
-                    <div class="col-md-8">
-                        <div class="card">
-                            <div class="card-header text-left">
+        <t t-call="website.layout">
+            <div id="wrap" class="container mt-5 mb-5">
+                <div class="jumbotron text-center">
+                    <h1 class="display-4">¡Bienvenido/a <t t-esc="datos_registro['cliente']"/>
+!</h1>
+                    <div class="text-center mt-4">
+                        <p class="text-primary" style="font-size: 1.2rem;">Revise los datos del equipo y elija la opción que necesita para reportar.</p>
+                        <p class="text-muted" style="font-size: 1rem;">Aquí puede reportar fallas de la impresora, solicitar tóner y más. Algunas opciones requieren autenticación.</p>
+                    </div>
+                    <!-- Datos del equipo -->
+                    <div class="row justify-content-center mt-4">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header text-left">
                                 Datos del Equipo
-                            </div>
-                            <div class="card-body text-left">
-                                <p class="card-text">Estas son las máquinas fotocopiadoras asignadas:</p>
-                                <ul class="list-group list-group-flush">
-                                    <li class="list-group-item">Modelo: <t t-esc="datos_registro['modelo_maquina']"/></li>
-                                    <li class="list-group-item">Serie: <t t-esc="datos_registro['serie']"/></li>
-                                    <!-- Agrega otros campos del equipo aquí -->
-                                </ul>
+                                </div>
+                                <div class="card-body text-left">
+                                    <p class="card-text">Estas son las máquinas fotocopiadoras asignadas:</p>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">Modelo: <t t-esc="datos_registro['modelo_maquina']"/>
+                                        </li>
+                                        <li class="list-group-item">Serie: <t t-esc="datos_registro['serie']"/>
+                                        </li>
+                                        <!-- Agrega otros campos del equipo aquí -->
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <!-- Botones de acción -->
-                <div class="row justify-content-center mt-4">
-                    <div class="col-md-3 mb-3">
-                        <a t-att-href="'/ticket/reportar_incidencia?id_registro=' + str(datos_registro['id'])" class="btn btn-primary btn-lg btn-block" role="button">
-                            Reportar Incidencia
-                        </a>
+                    <!-- Botones de acción -->
+                    <div class="row justify-content-center mt-4">
+                        <div class="col-md-3 mb-3">
+                            <a t-att-href="'/ticket/reportar_incidencia?id_registro=' + str(datos_registro['id'])" class="btn btn-primary btn-lg btn-block" role="button">
+                                <i class="fa fa-exclamation-circle"></i> Reportar Incidencia
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a t-att-href="'/toner/solicitar_toner?id_registro=' + str(datos_registro['id'])" class="btn btn-secondary btn-lg btn-block" role="button">
+                                <i class="fa fa-tint"></i> Solicitar Toner
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a t-att-href="'/alquiler/repuestos/' + str(datos_registro['id'])" class="btn btn-info btn-lg btn-block" role="button">
+                                <i class="fa fa-cogs"></i> Repuestos Cambiados
+                            </a>
+                        </div>
+                        <!-- Añadir más opciones según sean necesarias -->
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <a t-att-href="'/toner/solicitar_toner?id_registro=' + str(datos_registro['id'])" class="btn btn-secondary btn-lg btn-block" role="button">
-                            Solicitar Toner
-                        </a>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <a t-att-href="'/alquiler/repuestos/' + str(datos_registro['id'])" class="btn btn-info btn-lg btn-block" role="button">
-                            Repuestos Cambiados
-                        </a>
-                    </div>
-                    <!-- Añadir más opciones según sean necesarias -->
+
                 </div>
             </div>
-        </div>
-    </t>
-</template>
+        </t>
+    </template>
 
 </odoo>
