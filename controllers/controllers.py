@@ -103,7 +103,7 @@ class TonerRequestController(http.Controller):
             # ... puedes agregar más valores si es necesario
         }
         # Renderizar el formulario con los valores
-        return request.render('tu_modulo.tu_template_formulario_toner', values)
+        return request.render('sat.solicitar_toner_form_template', values)
 
     @http.route('/toner/enviar_solicitud', type='http', auth="public", methods=['POST'], website=True)
     def send_toner_request(self, **post):
