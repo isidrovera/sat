@@ -6,8 +6,8 @@
                 <h1 class="text-center">Solicitar Toner</h1>
                 <form action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>                
-                    <t t-if="values and 'modelo_maquina' in values">
-                        <input type="hidden" name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
+                    <t t-if="values and 'serie' in values">
+                        <input type="hidden" name="serie" t-att-value="values['serie']"/>
                     </t>
                     <input type="hidden" name="id_registro" t-att-value="id_registro"/>
 
