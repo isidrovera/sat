@@ -7,7 +7,7 @@
                 <form action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                     <input type="hidden" name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
-                    <input  name="cliente" t-att-value="values['cliente']"/>
+                    <input type="hidden" name="cliente" t-att-value="values['cliente']"/>
                     <input type="hidden" name="serie" t-att-value="values['serie']"/>
                     <input type="hidden" name="id_registro" t-att-value="id_registro"/>
 
