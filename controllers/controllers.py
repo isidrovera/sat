@@ -190,8 +190,10 @@ class TonerRequestController(http.Controller):
             mail_values = {
                 'subject': "Solicitud de Toner - {0}".format(datos_formulario['modelo_maquina']),
                 'body_html': body_html,
-                'email_to': 'verapolo@icloud.com',  # Reemplaza por el correo del destinatario real
+                'email_to': 'jamilet.roggero@andescopiers.com.pe',  # Reemplaza por el correo del destinatario real
+                'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',  # Agrega aquí la dirección de correo que recibirá la copia
             }
+
 
             # Crear y enviar el correo electrónico
             mail_id = request.env['mail.mail'].sudo().create(mail_values)
