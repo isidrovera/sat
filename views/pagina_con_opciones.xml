@@ -34,21 +34,22 @@
                     <div class="row justify-content-center mt-4">
                         <div class="col-md-3 mb-3">
                             <a t-att-href="'/ticket/reportar_incidencia?id_registro=' + str(datos_registro['id'])" class="btn btn-primary btn-lg btn-block" role="button">
-                                <i class="fa fa-exclamation-circle"></i> Reportar Incidencia
+                                <i class="fa fa-exclamation-circle" style="color: red;"></i> Reportar Incidencia
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
                             <a t-att-href="'/toner/solicitar_toner?id_registro=' + str(datos_registro['id'])" class="btn btn-secondary btn-lg btn-block" role="button">
-                                <i class="fa fa-tint"></i> Solicitar Toner
+                                <i class="fa fa-tint" style="color: blue;"></i> Solicitar Toner
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
                             <a t-att-href="'/alquiler/repuestos/' + str(datos_registro['id'])" class="btn btn-info btn-lg btn-block" role="button">
-                                <i class="fa fa-cogs"></i> Repuestos Cambiados
+                                <i class="fa fa-cogs" style="color: orange;"></i> Repuestos
                             </a>
                         </div>
                         <!-- Añadir más opciones según sean necesarias -->
                     </div>
+
 
                 </div>
             </div>
