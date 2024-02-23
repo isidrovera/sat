@@ -128,8 +128,7 @@
       <field name="name">SAT list</field>
       <field name="model">sat.sat</field>
       <field name="arch" type="xml">            
-        <tree default_order="id desc">
-          
+        <tree default_order="id desc">          
           <field name="create_date" string="Ingreso" widget="remaining_days" width="80%"/>
           <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" attrs="{'invisible':[('disponibilidad_id','!=', 'separada')]}" />
           <field name="importacion" optional="hide"/>
@@ -326,21 +325,7 @@
         }
       </field>
     </record>
-    <record model="ir.actions.server" id="sat.action_server_revision">
-      <field name="name">Ver Maquinas Para Revisión</field>
-      <field name="model_id" ref="model_sat_sat"/>
-      <field name="state">code</field>
-      <field name="code">
-          action = {
-              "type": "ir.actions.act_window",
-              "view_mode": "tree",
-              "res_model": "sat.sat",
-              "domain": [('estado_ventas_id', '=', 'para_revision')],
-              "context": {'order': 'fecha_para_revision asc'},
-          }
-      </field>
-  </record>
-
+    
         <!-- Top menu item -->
     <menuitem name="Sistema de taller" id="sat.menu_root" web_icon="sat,static/description/icon.png"/>
     <!-- menu categories -->
