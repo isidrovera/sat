@@ -127,8 +127,14 @@
     <record model="ir.ui.view" id="sat.list">
       <field name="name">SAT list</field>
       <field name="model">sat.sat</field>
-      <field name="arch" type="xml">
+      <field name="arch" type="xml">            
         <tree default_order="id desc">
+          <header>
+                      <!-- Asegúrate de que esta línea está justo después de abrir la etiqueta <header> -->
+            <button string="Ver Para Revisión" type="object"
+                        name="%(sat.action_server_revision)d"
+                        class="oe_highlight"/>
+          </header>
           <field name="create_date" string="Ingreso" widget="remaining_days" width="80%"/>
           <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" attrs="{'invisible':[('disponibilidad_id','!=', 'separada')]}" />
           <field name="importacion" optional="hide"/>
@@ -260,12 +266,7 @@
         </kanban>
       </field>
     </record>
-
-
-
-    <!-- actions opening views on models -->
-
-
+        <!-- actions opening views on models -->
     <record model="ir.actions.act_window" id="sat.action_reparaciones_window">
       <field name="name">Reparaciones</field>
       <field name="res_model">reparaciones.reparaciones</field>
@@ -317,12 +318,7 @@
       <field name="res_model">repuestos.alquiler</field>
       <field name="view_mode">tree,form,kanban</field>
     </record>
-    
-
-
-
     <!-- server action to the one above -->
-
     <record model="ir.actions.server" id="sat.action_server">
       <field name="name">SAT server</field>
       <field name="model_id" ref="model_sat_sat"/>
@@ -335,12 +331,23 @@
         }
       </field>
     </record>
+    <record model="ir.actions.server" id="sat.action_server_revision">
+      <field name="name">Ver Maquinas Para Revisión</field>
+      <field name="model_id" ref="model_sat_sat"/>
+      <field name="state">code</field>
+      <field name="code">
+          action = {
+              "type": "ir.actions.act_window",
+              "view_mode": "tree",
+              "res_model": "sat.sat",
+              "domain": [('estado_ventas_id', '=', 'para_revision')],
+              "context": {'order': 'fecha_para_revision asc'},
+          }
+      </field>
+  </record>
 
-
-    <!-- Top menu item -->
-
+        <!-- Top menu item -->
     <menuitem name="Sistema de taller" id="sat.menu_root" web_icon="sat,static/description/icon.png"/>
-
     <!-- menu categories -->
     <menuitem name="Maquinas" id="sat.stock_maquinas" parent="sat.menu_root" action="sat.action_window" sequence="10"/>
     <menuitem name="Reparaciones" id="sat.reparaciones" parent="sat.menu_root" action="sat.action_reparaciones_window" sequence="20"/>
@@ -348,19 +355,11 @@
     <menuitem name="Repuestos" id="sat.repuestos" parent="sat.menu_root" action="sat.action_repuestos_window" sequence="40"/>
     
     <menuitem name="Configuración" id="sat.ajustes" parent="sat.menu_root" sequence="70"/>
-
-
-
     <!-- actions -->
-
     <menuitem name="Marcas" id="sat.menu_marca" parent="sat.ajustes" action="sat.action_marca_window"/>
     <menuitem name="Modelo" id="sat.menu_modelo" parent="sat.ajustes" action="sat.action_modelo_window"/>
     <menuitem name="Tipo de maquina" id="sat.menu_tipo" parent="sat.ajustes" action="sat.action_tipo_window"/>
     <menuitem name="Registro de fallas" id="sat.menu_fallas" parent="sat.ajustes" action="sat.action_falla_window"/>
     <menuitem name="Informes proveedor" id="sat.menu_informes" parent="sat.ajustes" action="sat.action_informe_window"/>
   </data>
- 
-
-
-
 </odoo>

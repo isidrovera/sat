@@ -120,7 +120,7 @@ class reparaciones(models.Model):
         return prioridad_legible
 
 
-    estado_id = fields.Selection([('sin_revisar', 'Sin revisar'), ('en_revision', 'En revisión'), ('finalizado', 'Finalizado'), ('con_problemas', 'Con problemas'), ('de_partes', 'De partes'), ('entregada', 'Entregada')],
+    estado_id = fields.Selection([('sin_revisar', 'Sin revisar'),('para_revision', 'Para revision'),('asignado','Asignado'),('en_revision', 'En revisión'), ('finalizado', 'Finalizado'), ('con_problemas', 'Con problemas'), ('de_partes', 'De partes'), ('entregada', 'Entregada')],
                                  string='Estado de revisión',
                                  related='maquina_id.estado_ventas_id',
                                  readonly=False,

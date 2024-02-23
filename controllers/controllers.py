@@ -193,7 +193,7 @@ class TonerRequestController(http.Controller):
                 'email_from': 'soporte@andescopiers.com.pe',  # Remitente del correo
                 'email_to': 'jamilet.roggero@andescopiers.com.pe',  # Reemplaza por el correo del destinatario real
                 'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',
-                'mail_server_id': 1,
+                |'mail_server_id': 1,
             }
 
 
