@@ -129,11 +129,7 @@
       <field name="model">sat.sat</field>
       <field name="arch" type="xml">
         <tree default_order="id desc">
-          <header>
-                <!-- Asegúrate de que esta línea está justo después de abrir la etiqueta <header> -->
-                <button string="Ver Para Revisión" type="object" name="%(sat.action_server_revision)d" class="oe_highlight"/>
-
-          </header>
+          
           <field name="create_date" string="Ingreso" widget="remaining_days" width="80%"/>
           <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" attrs="{'invisible':[('disponibilidad_id','!=', 'separada')]}" />
           <field name="importacion" optional="hide"/>
