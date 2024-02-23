@@ -393,3 +393,16 @@ class SatSat(models.Model):
                 
             },
         }
+
+    fecha_para_revision = fields.Datetime(string="Fecha para Revisión", readonly=True)
+
+    @api.model
+    def create(self, vals):
+        # Puedes también inicializar la fecha en la creación si es necesario
+        return super(SatSat, self).create(vals)
+
+    def write(self, vals):
+        # Comprobar si los campos 'tipo_revision' o 'prioridad' están siendo modificados
+        if 'tipo_revision' in vals or 'prioridad' in vals:
+            vals['fecha_para_revision'] = fields.Datetime.now()
+        return super(SatSat, self).write(vals)
