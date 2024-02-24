@@ -64,6 +64,14 @@
     'demo': [
         'demo/demo_data.xml',
     ],
+    'assets': {
+    'web.assets_backend': [
+        'sat/static/src/js/tree_button.js',        
+    ],
+    'web.assets_qweb': [
+        'sat/static/src/xml/tree_button.xml',        
+    ],
+    },
     'installable': True,
     'application': True,
     'auto_install': False,
