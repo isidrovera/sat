@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<odoo>    
+<odoo>
+
     <templates>
-        <t t-extend="ListView.buttons" t-name="button_near_create.buttons">
+        <t t-extend="ListView.buttons" t-name="sat.tree_button">
             <t t-jquery="button.o_list_button_add" t-operation="after">
-                <button type="button" class="btn btn-primary open_wizard_action">
-               Open Wizard
+                <button type="button" class="btn btn-primary mi_boton_personalizado">
+                Mi Botón
                 </button>
             </t>
         </t>
     </templates>
+
 </odoo>
