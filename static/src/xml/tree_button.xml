@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<odoo>   
-        <template id="list_view_button" inherit_id="web.ListView.buttons">
-            <xpath expr="//button[@class='btn btn-primary o_list_button_add']" position="after">
-                <button type="button" class="btn btn-secondary" context="{'default_model': 'sat.sat'}">
-                    Texto del Botón
+<odoo>    
+    <templates>
+        <t t-extend="ListView.buttons" t-name="button_near_create.buttons">
+            <t t-jquery="button.o_list_button_add" t-operation="after">
+                <button type="button" class="btn btn-primary open_wizard_action">
+               Open Wizard
                 </button>
-            </xpath>
-        </template>    
+            </t>
+        </t>
+    </templates>
 </odoo>

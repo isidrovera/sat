@@ -127,8 +127,8 @@
     <record model="ir.ui.view" id="sat.list">
       <field name="name">SAT list</field>
       <field name="model">sat.sat</field>
-      <field name="arch" type="xml">
-        <tree default_order="id desc" js_class="sat.sat_list_controller">          
+      <field name="arch" type="xml">        
+        <tree default_order="id desc" >          
           <field name="create_date" string="Ingreso" widget="remaining_days" width="80%"/>
           <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" attrs="{'invisible':[('disponibilidad_id','!=', 'separada')]}" />
           <field name="importacion" optional="hide"/>
@@ -281,6 +281,11 @@
       <field name="name">Maquina</field>
       <field name="res_model">sat.sat</field>
       <field name="view_mode">tree,kanban,form,pivot</field>
+      <field name="help" type="html">
+        <p class="button_in_tree">
+                    Create a new QR Scanner
+        </p>
+      </field>
     </record>
     <record model="ir.actions.act_window" id="sat.action_marca_window">
       <field name="name">Marcas</field>

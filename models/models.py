@@ -406,3 +406,8 @@ class SatSat(models.Model):
         if 'tipo_revision' in vals or 'prioridad' in vals:
             vals['fecha_para_revision'] = fields.Datetime.now()
         return super(SatSat, self).write(vals)
+    
+    
+    def nombre_de_tu_metodo(self):
+        # Aquí la lógica que se ejecutará cuando se presione el botón
+        pass
