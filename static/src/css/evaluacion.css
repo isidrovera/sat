@@ -1,0 +1,9 @@
+.bg-danger {
+    background-color: #dc3545; /* rojo */
+}
+.bg-warning {
+    background-color: #ffc107; /* amarillo */
+}
+.bg-success {
+    background-color: #28a745; /* verde */
+}

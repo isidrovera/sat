@@ -72,6 +72,10 @@
         'sat/static/src/xml/tree_button.xml',        
     ],
     },
+    'qweb': [],
+        'css': ['static/src/css/evaluacion.css'],
+        'js': ['static/src/js/evaluacion.js'],
+
     'installable': True,
     'application': True,
     'auto_install': False,
