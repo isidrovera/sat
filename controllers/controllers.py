@@ -4,6 +4,7 @@ import json
 import logging
 from datetime import date
 import base64
+import urllib.parse
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -50,8 +51,28 @@ class PublicTicketController(http.Controller):
 
     @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
     def pagina_confirmacion(self, **kw):
-        return request.render('sat.pagina_confirmacion')
+        # Renderizar la página de confirmación
+        response = http.Response(template='sat.pagina_confirmacion')
 
+        # Preparar el mensaje de WhatsApp
+        numero_destino = '+51924894829'
+        mensaje = "Se ha creado una nueva solicitud de servicio (o ticket) en nuestro sistema. Pronto estaremos en contacto para seguir con el proceso. Gracias por elegirnos."
+        mensaje_codificado = urllib.parse.quote(mensaje)  # Codificar el mensaje para URL
+        
+        whatsapp_url = f'https://api.whatsapp.com/send?phone={numero_destino}&text={mensaje_codificado}'
+        
+        # Crear el script JS para abrir la URL de WhatsApp en una nueva pestaña después de un breve retraso
+        script = f"""
+        <script>
+        setTimeout(function() {{
+            window.open("{whatsapp_url}", '_blank');
+        }}, 3000);  // Espera 3 segundos después de cargar la página de confirmación
+        </script>
+        """
+        
+        # Añadir el script JS a la respuesta y devolver la respuesta completa
+        response.qcontext.update({'whatsapp_script': script})
+        return response.render()
     # Ruta POST para procesar el formulario
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['POST'], website=True)
     def submit_reportar_incidencia(self, **post):
