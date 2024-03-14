@@ -170,13 +170,11 @@ class EvaluacionPersonal(models.Model):
     is_red = fields.Boolean(compute='_compute_color_flags')
     is_yellow = fields.Boolean(compute='_compute_color_flags')
     is_green = fields.Boolean(compute='_compute_color_flags')
+
     @api.depends('total_score')
-    def _compute_total_score_color(self):
+    def _compute_color_flags(self):
         for record in self:
-            if record.total_score < 50:
-                record.total_score_color = 'red'
-            elif record.total_score < 80:
-                record.total_score_color = 'yellow'
-            else:
-                record.total_score_color = 'green'
+            record.is_red = record.total_score < 50
+            record.is_yellow = 50 <= record.total_score < 80
+            record.is_green = record.total_score >= 80
 
