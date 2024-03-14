@@ -60,6 +60,7 @@
         'views/solicitar_toner_form_template.xml',
         'views/pagina_confirmacion_toner.xml',
         'views/repuestos_alquiler_list.xml',
+        'static/src/js/evaluacion.js',
     ],
     'demo': [
         'demo/demo_data.xml',
