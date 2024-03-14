@@ -38,6 +38,9 @@ class PublicTicketController(http.Controller):
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['GET'], website=True)
     def display_reportar_incidencia(self, **kw):
         id_registro = kw.get('id_registro')
+        reporter_name = kw.get('reporter_name')
+        reporter_phone = kw.get('reporter_phone')
+
         registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))])
         values = {
             'partner_id': registro.cliente_id.id if registro.cliente_id else '',
@@ -46,6 +49,8 @@ class PublicTicketController(http.Controller):
             'celular': registro.celular if registro.celular else '',
             'correo': registro.correo_ if registro.correo_ else '',
             'product_id': registro.id,
+            'reporter_name': reporter_name,
+            'reporter_phone': reporter_phone,
         }
         return request.render('sat.reportar_incidencia_form', values)
 
