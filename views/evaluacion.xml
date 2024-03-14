@@ -22,33 +22,6 @@
             <field name="arch" type="xml">
                 <form>
                     <!-- Definir los campos del formulario -->
-                    <header>
-                        <script type="text/javascript">
-                            odoo.define('sat.ColorProgressBar', function(require) {
-                                "use strict";
-                                
-                                var ProgressBar = require('web.ProgressBar');
-                                var field_registry = require('web.field_registry');
-                                
-                                var ColorProgressBar = ProgressBar.extend({
-                                    _render: function () {
-                                        this._super.apply(this, arguments); // Llamada al método original
-                                        if (this.recordData.is_red) {
-                                            this.$('.progress-bar').css('background-color', '#ff0000'); // Rojo
-                                        } else if (this.recordData.is_yellow) {
-                                            this.$('.progress-bar').css('background-color', '#ffff00'); // Amarillo
-                                        } else if (this.recordData.is_green) {
-                                            this.$('.progress-bar').css('background-color', '#00ff00'); // Verde
-                                        }
-                                    },
-                                });
-                                
-                                field_registry.add('color_progressbar', ColorProgressBar);
-                                
-                                return ColorProgressBar;
-                            });
-                        </script>
-                    </header>
                     <sheet>
                         <group>
                             <field name="name"/>
@@ -62,7 +35,7 @@
                                 <field name="is_red" invisible="1"/>
                                 <field name="is_yellow" invisible="1"/>
                                 <field name="is_green" invisible="1"/>
-                                <field name="total_score" widget="color_progressbar"/>
+                                <field name="total_score" widget="progressbar"/>
                                 <field name="worker_level"/>
                                 <field name="fields_to_improve"/>
                                 <field name="cantidad_reparaciones"/>
