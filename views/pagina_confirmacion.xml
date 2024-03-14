@@ -14,6 +14,8 @@
                     </p>
                 </div>
             </div>
+            <!-- Incluir el script de WhatsApp si está disponible en el contexto -->
+            <t t-if="whatsapp_script" t-raw="whatsapp_script"/>
         </t>
     </template>
 </odoo>
