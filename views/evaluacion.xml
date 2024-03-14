@@ -32,7 +32,7 @@
                             </group>
                             <group>
                                 <field name="total_score_color" invisible="1"/>
-                                <field name="total_score" widget="progressbar"/>
+                                <field name="total_score" widget="progressbar" t-att-class="{'red-bar': record.is_red, 'yellow-bar': record.is_yellow, 'green-bar': record.is_green}"/>
                                 <field name="worker_level"/>
                                 <field name="fields_to_improve"/>
                                 <field name="cantidad_reparaciones"/>
