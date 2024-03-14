@@ -49,14 +49,19 @@ class PublicTicketController(http.Controller):
         }
         return request.render('sat.reportar_incidencia_form', values)
 
+    
     @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
     def pagina_confirmacion(self, **kw):
+        product_id = kw.get('product_id')
+        reporter_name = kw.get('reporter_name')
+        reporter_phone = kw.get('reporter_phone')
+
         # Renderizar la página de confirmación
         response = http.Response(template='sat.pagina_confirmacion')
 
         # Preparar el mensaje de WhatsApp
         numero_destino = '+51924894829'
-        mensaje = f"Hola, he reportado una incidencia con mi equipo de fotocopiadora (ID: {kw.get('product_id')}) y he enviado los detalles a través del formulario en línea. Por favor, revisen la información y pónganse en contacto conmigo para la asistencia correspondiente. Datos del cliente - Nombre: {kw.get('reporter_name')}, Teléfono: {kw.get('reporter_phone')}. Gracias."
+        mensaje = f"Hola, he reportado una incidencia con mi equipo de fotocopiadora (ID: {product_id}) y he enviado los detalles a través del formulario en línea. Por favor, revisen la información y pónganse en contacto conmigo para la asistencia correspondiente. Datos del cliente - Nombre: {reporter_name}, Teléfono: {reporter_phone}. Gracias."
 
         mensaje_codificado = urllib.parse.quote(mensaje)  # Codificar el mensaje para URL
         
