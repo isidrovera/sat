@@ -166,7 +166,7 @@ class EvaluacionPersonal(models.Model):
 
             if fields_to_improve:
                 evaluation.fields_to_improve = ', '.join(fields_to_improve)
-    total_score_color = fields.Char(string='Total Score Color', compute='_compute_total_score_color', store=True)
+    total_score_color = fields.Char(string='Total Score Color', compute='_compute_color_flags', store=True)
     is_red = fields.Boolean(compute='_compute_color_flags')
     is_yellow = fields.Boolean(compute='_compute_color_flags')
     is_green = fields.Boolean(compute='_compute_color_flags')
