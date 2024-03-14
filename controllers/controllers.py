@@ -56,7 +56,8 @@ class PublicTicketController(http.Controller):
 
         # Preparar el mensaje de WhatsApp
         numero_destino = '+51924894829'
-        mensaje = "Se ha creado una nueva solicitud de servicio (o ticket) en nuestro sistema. Pronto estaremos en contacto para seguir con el proceso. Gracias por elegirnos."
+        mensaje = f"Hola, he reportado una incidencia con mi equipo de fotocopiadora (ID: {kw.get('product_id')}) y he enviado los detalles a través del formulario en línea. Por favor, revisen la información y pónganse en contacto conmigo para la asistencia correspondiente. Datos del cliente - Nombre: {kw.get('reporter_name')}, Teléfono: {kw.get('reporter_phone')}. Gracias."
+
         mensaje_codificado = urllib.parse.quote(mensaje)  # Codificar el mensaje para URL
         
         whatsapp_url = f'https://api.whatsapp.com/send?phone={numero_destino}&text={mensaje_codificado}'
