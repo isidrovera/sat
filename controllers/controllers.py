@@ -88,6 +88,7 @@ class PublicTicketController(http.Controller):
         # Añadir el script JS a la respuesta y devolver la respuesta completa
         response.qcontext.update({'whatsapp_script': script})
         return response.render()
+
     # Ruta POST para procesar el formulario
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['POST'], website=True)
     def submit_reportar_incidencia(self, **post):
