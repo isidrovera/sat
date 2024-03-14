@@ -35,7 +35,7 @@
                                 <field name="is_red" invisible="1"/>
                                 <field name="is_yellow" invisible="1"/>
                                 <field name="is_green" invisible="1"/>
-                                <field name="total_score" widget="NombreProgressBarWidget"/>
+                                <field name="total_score" />
                                 <field name="worker_level"/>
                                 <field name="fields_to_improve"/>
                                 <field name="cantidad_reparaciones"/>
