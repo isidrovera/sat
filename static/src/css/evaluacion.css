@@ -1,9 +1,13 @@
-.bg-danger {
-    background-color: #dc3545; /* rojo */
+/* static/src/css/custom_styles.css */
+
+.bg-red {
+    background-color: #ffcccc !important;
 }
-.bg-warning {
-    background-color: #ffc107; /* amarillo */
+
+.bg-yellow {
+    background-color: #ffff99 !important;
 }
-.bg-success {
-    background-color: #28a745; /* verde */
+
+.bg-green {
+    background-color: #ccffcc !important;
 }

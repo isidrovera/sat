@@ -1,24 +1,26 @@
-odoo.define('sat.NombreProgressBarWidget', function (require) {
-    'use strict';
-
-    var fieldRegistry = require('web.field_registry');
+odoo.define('sat.ColorProgressBar', function(require) {
+    "use strict";
+    
     var ProgressBar = require('web.ProgressBar');
-
-    var NombreProgressBarWidget = ProgressBar.extend({
+    var field_registry = require('web.field_registry');
+    
+    var ColorProgressBar = ProgressBar.extend({
+    
+        // Función para actualizar el color de la barra de progreso
         _render: function () {
             this._super.apply(this, arguments); // Llamada al método original
-            // Aplica una lógica para añadir clases basadas en el valor
-            if (this.value < 0.5) {
-                this.$('.progress-bar').addClass('bg-danger');
-            } else if (this.value < 0.8) {
-                this.$('.progress-bar').addClass('bg-warning');
-            } else {
-                this.$('.progress-bar').addClass('bg-success');
+            if (this.recordData.is_red) {
+                this.$('.progress-bar').css('background-color', '#ff0000'); // Rojo
+            } else if (this.recordData.is_yellow) {
+                this.$('.progress-bar').css('background-color', '#ffff00'); // Amarillo
+            } else if (this.recordData.is_green) {
+                this.$('.progress-bar').css('background-color', '#00ff00'); // Verde
             }
         },
     });
-
-    fieldRegistry.add('nombre_progressbar', NombreProgressBarWidget);
-
-    return NombreProgressBarWidget;
-});
+    
+    field_registry.add('color_progressbar', ColorProgressBar);
+    
+    return ColorProgressBar;
+    });
+    
