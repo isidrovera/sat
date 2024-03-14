@@ -66,15 +66,15 @@
     ],
     'assets': {
     'web.assets_backend': [
-        'sat/static/src/js/tree_button.js',        
+        'sat/static/src/js/tree_button.js',
+        'sat/static/src/js/evaluacion.js', 
+        'sat/static/src/css/evaluacion.css',        
     ],
     'web.assets_qweb': [
         'sat/static/src/xml/tree_button.xml',        
     ],
     },
-    'qweb': [],
-        'css': ['static/src/css/evaluacion.css'],
-        'js': ['static/src/js/evaluacion.js'],
+   
 
     'installable': True,
     'application': True,
