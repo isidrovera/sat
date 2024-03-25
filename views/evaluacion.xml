@@ -83,12 +83,30 @@
                 </form>
             </field>
         </record>
+       
+        <!-- Vista de gráficos -->
+        <record id="view_evaluacion_personal_graph" model="ir.ui.view">
+            <field name="name">evaluacion.personal.graph</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <graph>
+                    <!-- Definir los gráficos -->
+                    <field name="productividad"/>
+                    <field name="eficiencia"/>
+                    <field name="habilidades"/>
+                    <field name="aprendizaje"/>
+                    <field name="comunicacion"/>
+                    <field name="relaciones"/>
+                    <field name="asistencia"/>
+                </graph>
+            </field>
+        </record>
 
         <!-- Acciones -->
         <record id="action_evaluacion_personal" model="ir.actions.act_window">
             <field name="name">Evaluación Personal</field>
             <field name="res_model">evaluacion.personal</field>
-            <field name="view_mode">tree,form</field>
+            <field name="view_mode">tree,form,graph</field>
         </record>
 
         <!-- Menú -->
