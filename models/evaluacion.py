@@ -206,7 +206,7 @@ class EvaluacionPersonal(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Servicios',
-            'view_mode': 'tree,form',
+            'view_mode': 'pivot',
             'res_model': 'ticket.alquiler',  # Asegúrate de que este sea el nombre correcto del modelo
             'domain': [('responsable', '=', self.usuario_id.id)],
             'context': "{'create': False}"

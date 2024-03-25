@@ -252,8 +252,7 @@
                 <pivot string="">
                     <field name="agenda" type="row"/>
                     <field name="partner_id" type="row"/>
-                    <field name="tipo_servicio_id" type="col"/>
-                    <field name="estado" type="measure"/>
+                    <field name="tipo_servicio_id" type="col"/>                    
                 </pivot>
             </field>
         </record>
