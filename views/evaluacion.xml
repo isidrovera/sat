@@ -90,12 +90,13 @@
             <field name="arch" type="xml">
                 <pivot string="Estadísticas de Evaluación">
                     <field name="usuario_id" type="row"/>
-                    <field name="cantidad_reparaciones" type="measure" sum="Count of Reparaciones" detail="evaluacion.personal.reparaciones_ids"/>
-                    <field name="cantidad_servicios" type="measure" sum="Count of Servicios" detail="evaluacion.personal.servicios_ids"/>
+                    <field name="cantidad_reparaciones" type="measure" sum="Count of Reparaciones"/>
+                    <field name="cantidad_servicios" type="measure" sum="Count of Servicios"/>
                     <field name="total_score" type="measure" sum="Avg Score"/>
                 </pivot>
             </field>
         </record>
+
 
        
         <!-- Vista de gráficos -->
