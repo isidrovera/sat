@@ -83,6 +83,7 @@
                 </form>
             </field>
         </record>
+
         <record id="view_evaluacion_personal_pivot" model="ir.ui.view">
             <field name="name">evaluacion.personal.pivot</field>
             <field name="model">evaluacion.personal</field>
@@ -95,19 +96,23 @@
                 </pivot>
             </field>
         </record>
-
        
         <!-- Vista de gráficos -->
-        <record id="view_evaluacion_personal_graph_productividad" model="ir.ui.view">
-            <field name="name">evaluacion.personal.graph.productividad</field>
+        <record id="view_evaluacion_personal_graph" model="ir.ui.view">
+            <field name="name">evaluacion.personal.graph</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <graph string="Distribución de Puntuaciones de Productividad" type="pie">
-                    <field name="productividad" group="True"/>
-                    <field name="id" type="count"/>
+                <graph string="Evaluaciones por Técnico" type="bar">
+                    <field name="usuario_id" type="row"/>
+                    <field name="total_score" type="measure" operator="avg"/>
+                    <field name="cantidad_reparaciones" type="measure"/>
+                    <field name="cantidad_alquileres" type="measure"/>
+                    <field name="worker_level" type="row"/>
                 </graph>
             </field>
-        </record>   
+        </record>
+
+
 
 
         <!-- Acciones -->
@@ -116,10 +121,8 @@
             <field name="res_model">evaluacion.personal</field>
             <field name="view_mode">tree,form,graph,pivot</field>
         </record>
-        
+
         <!-- Menú -->
         <menuitem id="menu_evaluacion_personal" name="Evaluación Personal" parent="sat.menu_root" action="action_evaluacion_personal" sequence="60"/>
-        
-
     </data>
 </odoo>
