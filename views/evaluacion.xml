@@ -95,8 +95,7 @@
                     <field name="cantidad_alquileres" type="measure"/>
                     <!-- Configuraciones adicionales para mejorar la visualización -->
                     <field name="total_score" type="measure"/>
-                    <attribute name="stacked">True</attribute> <!-- Opcional: Para apilar los datos si es necesario -->
-                    <attribute name="show_measure">True</attribute> <!-- Asegura que las medidas/etiquetas se muestren -->
+                    
                 </graph>
             </field>
         </record>
