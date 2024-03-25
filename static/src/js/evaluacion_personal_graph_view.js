@@ -28,12 +28,14 @@ odoo.define('sat.evaluacion_personal_graph_view', function (require) {
         // Define the initialization function
         init: function () {
             this._super.apply(this, arguments);
+            console.log('EvaluacionPersonalGraphView init');  // Agrega esta línea
             // Initialize your view
         },
 
         // Define the function to render the view
         render: function () {
             this._super.apply(this, arguments);
+            console.log('EvaluacionPersonalGraphView render');  // Agrega esta línea
             // Render your view
         },
     });
