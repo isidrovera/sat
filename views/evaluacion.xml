@@ -85,16 +85,18 @@
         </record>
        
         <!-- Vista de gráficos -->
-        <!-- Vista de gráficos -->
         <record id="view_evaluacion_personal_graph" model="ir.ui.view">
             <field name="name">evaluacion.personal.graph</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <evaluacion_personal_graph string="Evaluación Personal">
-                    <!-- Aquí puedes definir los campos que quieres mostrar en el gráfico -->
-                </evaluacion_personal_graph>
+                <graph string="Evaluaciones por Técnico" type="bar">
+                    <field name="usuario_id" type="row"/>
+                    <field name="total_score" type="measure" operator="avg"/>
+                    <field name="worker_level" type="col"/>
+                </graph>
             </field>
         </record>
+
 
 
         <!-- Acciones -->
