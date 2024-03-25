@@ -84,19 +84,22 @@
             </field>
         </record>
 
-       <record id="view_evaluacion_personal_pivot" model="ir.ui.view">
+        
+        <record id="evaluacion_personal_pivot_view" model="ir.ui.view">
             <field name="name">evaluacion.personal.pivot</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <pivot string="Estadísticas de Evaluación">
+                <pivot string="Evaluaciones del Personal">
+                    <field name="anio" type="row"/>
+                    <field name="mes" type="row"/>
                     <field name="usuario_id" type="row"/>
-                    <field name="cantidad_reparaciones" type="measure" sum="Count of Reparaciones"/>
-                    <field name="cantidad_servicios" type="measure" sum="Count of Servicios"/>
-                    <field name="total_score" type="measure" sum="Avg Score"/>
+                    <field name="cantidad_reparaciones" type="col"/>
+                    <field name="cantidad_alquileres" type="col"/>
+                    <!-- Puedes agregar más campos según necesites -->
                 </pivot>
             </field>
         </record>
-
+    
 
        
         <!-- Vista de gráficos -->

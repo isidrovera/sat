@@ -2,6 +2,7 @@
 from odoo import models, fields, api
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
+    import babel
 
 
 class EvaluacionPersonal(models.Model):
@@ -178,35 +179,15 @@ class EvaluacionPersonal(models.Model):
             record.is_yellow = 50 <= record.total_score < 80
             record.is_green = record.total_score >= 80
     
-    cantidad_evaluaciones = fields.Integer(string="Cantidad de Evaluaciones", compute='_compute_cantidad_evaluaciones')
-    cantidad_reparaciones = fields.Integer(string="Reparaciones", compute='_compute_cantidad_reparaciones')
-    cantidad_servicios = fields.Integer(string="Servicios", compute='_compute_cantidad_servicios')
-    reparaciones_ids = fields.One2many('reparaciones.reparaciones', compute='_compute_reparaciones')
-    servicios_ids = fields.One2many('ticket.alquiler', compute='_compute_servicios')
+    mes = fields.Char(string='Mes', compute='_compute_mes_anio', store=True)
+    anio = fields.Char(string='Año', compute='_compute_mes_anio', store=True)
 
-    # Resto de campos y métodos del modelo EvaluacionPersonal
-
-    @api.depends('usuario_id')
-    def _compute_cantidad_evaluaciones(self):
+    @api.depends('fecha')
+    def _compute_mes_anio(self):
         for record in self:
-            record.cantidad_evaluaciones = len(record)
-
-    @api.depends('usuario_id')
-    def _compute_cantidad_reparaciones(self):
-        for record in self:
-            record.cantidad_reparaciones = len(record.reparaciones_ids)
-
-    @api.depends('usuario_id')
-    def _compute_cantidad_servicios(self):
-        for record in self:
-            record.cantidad_servicios = len(record.servicios_ids)
-
-    @api.depends('usuario_id')
-    def _compute_reparaciones(self):
-        for record in self:
-            record.reparaciones_ids = self.env['reparaciones.reparaciones'].search([('responsable_id', '=', record.usuario_id.id)])
-
-    @api.depends('usuario_id')
-    def _compute_servicios(self):
-        for record in self:
-            record.servicios_ids = self.env['ticket.alquiler'].search([('responsable', '=', record.usuario_id.id)])
+            if record.fecha:
+                locale = self.env.context.get('lang') or 'es_ES'
+                record.mes = babel.dates.format_date(record.fecha, format='MMMM', locale=locale).capitalize()
+                record.anio = record.fecha.strftime('%Y')
+            else:
+                record.mes, record.anio = False, False
