@@ -128,9 +128,7 @@
       <field name="name">SAT list</field>
       <field name="model">sat.sat</field>
       <field name="arch" type="xml">
-        <header>
-          <button string="Nombre del botón" type="object" class="btn-primary" name="nombre_de_tu_metodo"/>
-        </header>
+        
         <tree default_order="id desc">          
           <field name="create_date" string="Ingreso" widget="remaining_days" width="80%"/>
           <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" attrs="{'invisible':[('disponibilidad_id','!=', 'separada')]}" />
