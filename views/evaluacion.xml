@@ -90,7 +90,7 @@
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
                 <graph string="Evaluaciones por Técnico" type="bar">
-                    <field name="usuario_id" type="row" type="measure" widget="progressbar"/>
+                    <field name="usuario_id"  type="measure" widget="progressbar"/>
                     <field name="total_score" type="measure" operator="avg"/>                
                     <field name="cantidad_reparaciones" type="measure"/>
                     <field name="cantidad_alquileres" type="measure"/>
