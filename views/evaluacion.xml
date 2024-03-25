@@ -83,33 +83,72 @@
                 </form>
             </field>
         </record>
-       
-        <!-- Vista de gráficos -->
-        <record id="view_evaluacion_personal_graph" model="ir.ui.view">
-            <field name="name">evaluacion.personal.graph</field>
+        <record id="view_evaluacion_personal_pivot" model="ir.ui.view">
+            <field name="name">evaluacion.personal.pivot</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <graph string="Evaluaciones por Técnico" type="bar">
+                <pivot string="Estadísticas de Evaluación">
                     <field name="usuario_id" type="row"/>
-                    <field name="total_score" type="measure" operator="avg"/>
-                    <field name="cantidad_reparaciones" type="measure"/>
-                    <field name="cantidad_alquileres" type="measure"/>
-                    <field name="worker_level" type="row"/>
+                    <field name="cantidad_reparaciones" type="col"/>
+                    <field name="cantidad_alquileres" type="col"/>
+                    <field name="total_score" type="measure" sum="Avg Score"/>
+                </pivot>
+            </field>
+        </record>
+
+       
+        <!-- Vista de gráficos -->
+        <record id="view_evaluacion_personal_graph_productividad" model="ir.ui.view">
+            <field name="name">evaluacion.personal.graph.productividad</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <graph string="Distribución de Puntuaciones de Productividad" type="pie">
+                    <field name="productividad" group="True"/>
+                    <field name="id" type="count"/>
                 </graph>
             </field>
         </record>
 
 
+        <record id="view_evaluacion_personal_dashboard" model="ir.ui.view">
+            <field name="name">evaluacion.personal.dashboard</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <dashboard>
+                    <row>
+                        <col>
+                            <action string="Pivot" name="%(view_evaluacion_personal_pivot)d" type="action"/>
+                        </col>
+                        <col>
+                            <action string="Gráfico de Productividad" name="%(view_evaluacion_personal_graph_productividad)d" type="action"/>
+                        </col>
+                    </row>
+                    <!-- Añade más filas y columnas según sea necesario -->
+                </dashboard>
+            </field>
+        </record>
 
 
         <!-- Acciones -->
         <record id="action_evaluacion_personal" model="ir.actions.act_window">
             <field name="name">Evaluación Personal</field>
             <field name="res_model">evaluacion.personal</field>
-            <field name="view_mode">tree,form,graph</field>
+            <field name="view_mode">tree,form,graph,pivot</field>
+        </record>
+        <record id="action_evaluacion_personal_dashboard" model="ir.actions.act_window">
+            <field name="name">Dashboard de Evaluaciones del Personal</field>
+            <field name="res_model">evaluacion.personal</field>
+            <field name="view_mode">dashboard</field>
+            <field name="view_id" ref="view_evaluacion_personal_dashboard"/>
+            <field name="target">new</field>
         </record>
 
         <!-- Menú -->
         <menuitem id="menu_evaluacion_personal" name="Evaluación Personal" parent="sat.menu_root" action="action_evaluacion_personal" sequence="60"/>
+        <menuitem id="menu_evaluacion_personal_dashboard"
+          name="Dashboard de Evaluaciones"
+          parent="sat.menu_root"
+          action="action_evaluacion_personal_dashboard"/>
+
     </data>
 </odoo>
