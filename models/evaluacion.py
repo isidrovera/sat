@@ -178,4 +178,32 @@ class EvaluacionPersonal(models.Model):
             record.is_yellow = 50 <= record.total_score < 80
             record.is_green = record.total_score >= 80
 
-  
+    reparaciones_ids = fields.One2many('reparaciones.reparaciones', compute='_compute_reparaciones')
+    servicios_ids = fields.One2many('ticket.alquiler', compute='_compute_servicios')
+
+    # Resto de campos y métodos del modelo EvaluacionPersonal
+
+    @api.depends('usuario_id')
+    def _compute_cantidad_evaluaciones(self):
+        for record in self:
+            record.cantidad_evaluaciones = len(record)
+
+    @api.depends('usuario_id')
+    def _compute_cantidad_reparaciones(self):
+        for record in self:
+            record.cantidad_reparaciones = len(record.reparaciones_ids)
+
+    @api.depends('usuario_id')
+    def _compute_cantidad_servicios(self):
+        for record in self:
+            record.cantidad_servicios = len(record.servicios_ids)
+
+    @api.depends('usuario_id')
+    def _compute_reparaciones(self):
+        for record in self:
+            record.reparaciones_ids = self.env['reparaciones.reparaciones'].search([('responsable_id', '=', record.usuario_id.id)])
+
+    @api.depends('usuario_id')
+    def _compute_servicios(self):
+        for record in self:
+            record.servicios_ids = self.env['ticket.alquiler'].search([('responsable', '=', record.usuario_id.id)])
