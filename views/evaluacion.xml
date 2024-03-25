@@ -21,7 +21,10 @@
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
                 <form>
-                     <header>
+                     
+                    <!-- Definir los campos del formulario -->
+                    <sheet>
+                        <header>
                         <button string="Reparaciones" type="object"
                                 name="ver_reparaciones"
                                 class="oe_stat_button" icon="fa-wrench">
@@ -33,8 +36,6 @@
                             <field string="Servicios" name="cantidad_alquileres" widget="statinfo"/>
                         </button>
                     </header>
-                    <!-- Definir los campos del formulario -->
-                    <sheet>
                         <group>
                             <field name="name"/>
                             <group>
