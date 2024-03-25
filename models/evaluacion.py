@@ -178,3 +178,4 @@ class EvaluacionPersonal(models.Model):
             record.is_yellow = 50 <= record.total_score < 80
             record.is_green = record.total_score >= 80
 
+  

@@ -75,6 +75,12 @@
         'sat/static/src/xml/tree_button.xml',        
     ],
     },
+    'qweb': [
+        'static/src/xml/*.xml',
+    ],
+    'js': [
+        'static/src/js/*.js',
+    ],
    
 
     'installable': True,
