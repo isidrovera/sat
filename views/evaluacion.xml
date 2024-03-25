@@ -129,6 +129,7 @@
         </record>
 
 
+
         <!-- Acciones -->
         <record id="action_evaluacion_personal" model="ir.actions.act_window">
             <field name="name">Evaluación Personal</field>
