@@ -22,12 +22,14 @@
             <field name="arch" type="xml">
                 <form>
                      <header>
-                        <!-- Botón inteligente para reparaciones -->
-                        <button class="oe_stat_button" type="object" name="action_ver_reparaciones" icon="fa-wrench">
+                        <button string="Reparaciones" type="object"
+                                name="action_ver_reparaciones"
+                                class="oe_stat_button" icon="fa-wrench">
                             <field string="Reparaciones" name="cantidad_reparaciones" widget="statinfo"/>
                         </button>
-                        <!-- Botón inteligente para servicios -->
-                        <button class="oe_stat_button" type="object" name="action_ver_servicios" icon="fa-cogs">
+                        <button string="Servicios" type="object"
+                                name="action_ver_servicios"
+                                class="oe_stat_button" icon="fa-cogs">
                             <field string="Servicios" name="cantidad_alquileres" widget="statinfo"/>
                         </button>
                     </header>
