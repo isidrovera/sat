@@ -89,13 +89,15 @@
             <field name="name">evaluacion.personal.graph</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <graph string="Evaluaciones por Técnico" type="bar">
-                    <field name="usuario_id" type="row"/>
-                    <field name="total_score" type="measure" operator="avg"/>
-                    <field name="worker_level" type="col"/>
+                <graph string="Evaluaciones" type="bar" stacked="True">
+                    <field name="total_score" type="measure" widget="progressbar"/>
+                    <field name="cantidad_reparaciones" type="measure"/>
+                    <field name="cantidad_alquileres" type="measure"/>
+                    <field name="worker_level" type="row"/>
                 </graph>
             </field>
         </record>
+
 
 
 
