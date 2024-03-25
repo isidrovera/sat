@@ -21,6 +21,16 @@
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
                 <form>
+                     <header>
+                        <!-- Botón inteligente para reparaciones -->
+                        <button class="oe_stat_button" type="object" name="action_ver_reparaciones" icon="fa-wrench">
+                            <field string="Reparaciones" name="cantidad_reparaciones" widget="statinfo"/>
+                        </button>
+                        <!-- Botón inteligente para servicios -->
+                        <button class="oe_stat_button" type="object" name="action_ver_servicios" icon="fa-cogs">
+                            <field string="Servicios" name="cantidad_alquileres" widget="statinfo"/>
+                        </button>
+                    </header>
                     <!-- Definir los campos del formulario -->
                     <sheet>
                         <group>

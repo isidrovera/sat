@@ -191,3 +191,23 @@ class EvaluacionPersonal(models.Model):
                 record.anio = record.fecha.strftime('%Y')
             else:
                 record.mes, record.anio = False, False
+                
+    def action_ver_reparaciones(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Reparaciones',
+            'view_mode': 'tree,form',
+            'res_model': 'reparaciones.reparaciones',
+            'domain': [('responsable_id', '=', self.usuario_id.id)],
+            'context': "{'create': False}"
+        }
+
+    def action_ver_servicios(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Servicios',
+            'view_mode': 'tree,form',
+            'res_model': 'ticket.alquiler',  # Asegúrate de que este sea el nombre correcto del modelo
+            'domain': [('responsable', '=', self.usuario_id.id)],
+            'context': "{'create': False}"
+        }
