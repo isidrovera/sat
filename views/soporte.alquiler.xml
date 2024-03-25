@@ -64,8 +64,8 @@
                                         <field name="reporter_name" />
                                         <field name="reporter_phone" widget="phone"/>
                                         <field name="problem_photo" widget="image" />
-                                    </group>                                        
-                                </group>                                
+                                    </group>
+                                </group>
                             </page>
                             <page string="Informe Técnico">
                                 <group >
@@ -245,10 +245,22 @@
                 </calendar>
             </field>
         </record>
+        <record id="ticket_pivot" model="ir.ui.view">
+            <field name="name">ticket.pivot</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="arch" type="xml">
+                <pivot string="">
+                    <field name="agenda" type="row"/>
+                    <field name="partner_id" type="row"/>
+                    <field name="tipo_servicio_id" type="col"/>
+                    <field name="estado" type="measure"/>
+                </pivot>
+            </field>
+        </record>
         <record model="ir.actions.act_window" id="sat.action_soporte_window">
             <field name="name">Tickets</field>
             <field name="res_model">ticket.alquiler</field>
-            <field name="view_mode">tree,form,kanban,search,graph,calendar</field>
+            <field name="view_mode">tree,form,kanban,search,graph,calendar,pivot</field>
             <field name="view_id" ref="sat.model_name_view_kanban"/>
         </record>
         <menuitem name="Tickets" id="sat.tickets" parent="sat.menu_root" action="sat.action_soporte_window" sequence="50"/>
