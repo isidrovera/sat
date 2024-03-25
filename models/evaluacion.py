@@ -2,7 +2,7 @@
 from odoo import models, fields, api
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
-    import babel
+import babel
 
 
 class EvaluacionPersonal(models.Model):
@@ -179,4 +179,15 @@ class EvaluacionPersonal(models.Model):
             record.is_yellow = 50 <= record.total_score < 80
             record.is_green = record.total_score >= 80
     
-    
+    mes = fields.Char(string='Mes', compute='_compute_mes_anio', store=True)
+    anio = fields.Char(string='Año', compute='_compute_mes_anio', store=True)
+
+    @api.depends('fecha')
+    def _compute_mes_anio(self):
+        for record in self:
+            if record.fecha:
+                locale = self.env.context.get('lang') or 'es_ES'
+                record.mes = babel.dates.format_date(record.fecha, format='MMMM', locale=locale).capitalize()
+                record.anio = record.fecha.strftime('%Y')
+            else:
+                record.mes, record.anio = False, False
