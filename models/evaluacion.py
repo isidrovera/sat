@@ -177,7 +177,10 @@ class EvaluacionPersonal(models.Model):
             record.is_red = record.total_score < 50
             record.is_yellow = 50 <= record.total_score < 80
             record.is_green = record.total_score >= 80
-
+    
+    cantidad_evaluaciones = fields.Integer(string="Cantidad de Evaluaciones", compute='_compute_cantidad_evaluaciones')
+    cantidad_reparaciones = fields.Integer(string="Reparaciones", compute='_compute_cantidad_reparaciones')
+    cantidad_servicios = fields.Integer(string="Servicios", compute='_compute_cantidad_servicios')
     reparaciones_ids = fields.One2many('reparaciones.reparaciones', compute='_compute_reparaciones')
     servicios_ids = fields.One2many('ticket.alquiler', compute='_compute_servicios')
 
