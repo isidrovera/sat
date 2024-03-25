@@ -84,21 +84,24 @@
             </field>
         </record>
        
-        <!-- Vista de gráficos -->
-        <record id="view_evaluacion_personal_graph" model="ir.ui.view">
+       <record id="action_evaluacion_personal_graph" model="ir.actions.act_window">
+            <field name="name">Evaluaciones por Técnico</field>
+            <field name="res_model">evaluacion.personal</field>
+            <field name="view_mode">graph</field>
+            <field name="view_id" ref="evaluacion_personal_graph_view"/>
+        </record>
+
+        <record id="evaluacion_personal_graph_view" model="ir.ui.view">
             <field name="name">evaluacion.personal.graph</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <graph string="Evaluaciones por Técnico" type="bar">
-                    <field name="usuario_id" type="row"/>
-                    <field name="total_score" type="measure" operator="avg"/>
+                <graph string="Evaluaciones por Técnico" type="bar" stacked="True">
+                    <field name="usuario_id"/>
                     <field name="cantidad_reparaciones" type="measure"/>
                     <field name="cantidad_alquileres" type="measure"/>
-                    <field name="worker_level" type="row"/>
                 </graph>
             </field>
         </record>
-
 
 
 
