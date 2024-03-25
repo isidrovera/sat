@@ -192,7 +192,7 @@ class EvaluacionPersonal(models.Model):
             else:
                 record.mes, record.anio = False, False
                 
-    def action_ver_reparaciones(self):
+    def ver_reparaciones(self):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Reparaciones',
@@ -202,7 +202,7 @@ class EvaluacionPersonal(models.Model):
             'context': "{'create': False}"
         }
 
-    def action_ver_servicios(self):
+    def ver_servicios(self):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Servicios',

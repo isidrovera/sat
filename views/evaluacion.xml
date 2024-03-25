@@ -23,12 +23,12 @@
                 <form>
                      <header>
                         <button string="Reparaciones" type="object"
-                                name="action_ver_reparaciones"
+                                name="ver_reparaciones"
                                 class="oe_stat_button" icon="fa-wrench">
                             <field string="Reparaciones" name="cantidad_reparaciones" widget="statinfo"/>
                         </button>
                         <button string="Servicios" type="object"
-                                name="action_ver_servicios"
+                                name="ver_servicios"
                                 class="oe_stat_button" icon="fa-cogs">
                             <field string="Servicios" name="cantidad_alquileres" widget="statinfo"/>
                         </button>
