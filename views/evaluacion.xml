@@ -109,6 +109,7 @@
                     <field name="anio" type="row"/>
                     <field name="mes" type="row"/>
                     <field name="usuario_id" type="row"/>
+                    <field name="total_score" type="col"/>
                     <field name="cantidad_reparaciones" type="col"/>
                     <field name="cantidad_alquileres" type="col"/>
                     <!-- Puedes agregar más campos según necesites -->
