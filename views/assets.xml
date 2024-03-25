@@ -1,11 +1,9 @@
-<!-- mi_modulo/views/assets.xml -->
+<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <data>
-        <template id="sat_assets" inherit_id="web.assets_backend">
+        <template id="assets_backend" name="mi_modulo assets" inherit_id="web.assets_backend">
             <xpath expr="." position="inside">
-                <script type="text/javascript" src="/mi_modulo/static/src/js/mi_vista_personalizada.js"></script>
-                <!-- Incluir Chart.js si es necesario -->
-                <script type="text/javascript" src="/sat/static/src/js/"></script>
+                <script type="text/javascript" src="/sat/static/src/js/custom_graph.js"></script>
             </xpath>
         </template>
     </data>
