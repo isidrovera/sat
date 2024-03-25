@@ -89,15 +89,10 @@
             <field name="name">evaluacion.personal.graph</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <graph>
-                    <!-- Definir los gráficos -->
-                    <field name="productividad"/>
-                    <field name="eficiencia"/>
-                    <field name="habilidades"/>
-                    <field name="aprendizaje"/>
-                    <field name="comunicacion"/>
-                    <field name="relaciones"/>
-                    <field name="asistencia"/>
+                <graph string="Evaluación Personal">
+                    <field name="usuario_id" type="row"/>
+                    <field name="cantidad_reparaciones" type="measure"/>
+                    <field name="cantidad_alquileres" type="measure"/>
                 </graph>
             </field>
         </record>
