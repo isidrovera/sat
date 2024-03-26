@@ -33,15 +33,7 @@ class ticket_alquiler(models.Model):
     problem_photo = fields.Binary(string="Foto del problema")
 
     responsable = fields.Many2one("res.users", string="Técnico", tracking=True, index=True)
-    nombre_responsable = fields.Char(string="Nombre del Técnico", compute="_compute_nombre_responsable", store=True)
-
-    @api.depends('responsable')
-    def _compute_nombre_responsable(self):
-        for record in self:
-            if record.responsable:
-                record.nombre_responsable = record.responsable.name
-            else:
-                record.nombre_responsable = ""
+    nombre_responsable = fields.Char(string="Nombre del Técnico", related="responsable.name", store=True)
     
     priority = fields.Selection([("0", ("Low")),("1", ("Medium")),("2", ("High")),("3", ("Very High"))],string="Prioridad",default="1")
     partner_id = fields.Many2one("res.partner", string="Empresa", tracking=True 
