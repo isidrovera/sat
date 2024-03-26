@@ -124,8 +124,11 @@
             <field name="name">evaluacion.personal.graph</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <graph string="Evaluaciones por Técnico" type="bar">
+                <graph string="Evaluaciones por Técnico" type="bar" >
                     <field name="usuario_id" type="row"/>
+                    <field name="anio" type="row" groupby="year"/>
+                    <field name="mes" type="row" groupby="month"/>
+                    <field name="usuario_id" type="row" groupby="usuario_id"/>
                     <field name="total_score" type="measure" operator="avg"/>
                     <field name="cantidad_reparaciones" type="measure"/>
                     <field name="cantidad_alquileres" type="measure"/>
