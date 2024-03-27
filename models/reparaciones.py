@@ -45,7 +45,7 @@ class reparaciones(models.Model):
                               related='maquina_id.importacion')
     nombre_proveedor = fields.Char(
         related='maquina_id.proveedor_id.name', string="Proveedor")
-    nombre_maquina = fields.Char(related='maquina_id.name.name')
+    nombre_maquina = fields.Char(related='maquina_id.name.name', store=True)
 
     tapas_id = fields.Selection([('blancas', 'Blancas'), ('amarillas', 'Amarillas'), ('rotas', 'Rotas'), ('le_faltan', 'Le faltan'),
                                  ('no_aplica', 'No aplica')],
@@ -272,6 +272,9 @@ class reparaciones(models.Model):
     responsable_id = fields.Many2one(
         'res.users',
         string='Responsable', tracking=True
+    )
+    nombre_responsable  = fields.Char(related='responsable_id.name', 
+    string='Nombre responsable',store=True
     )
     cliente_id = fields.Many2one(
         'res.partner',

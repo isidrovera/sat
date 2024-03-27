@@ -26,6 +26,9 @@ class EvaluacionPersonal(models.Model):
     
     # Campos existentes en el modelo evaluacion.personal
     usuario_id = fields.Many2one('res.users', string='Técnico')
+    nombre_usuario  = fields.Char(related='usuario_id.name', 
+    string='Nombre de usuario', store=True
+    )
 
     # Nuevo campo para contar las reparaciones en el modelo reparaciones.reparaciones
     cantidad_reparaciones = fields.Integer(string="Reparaciones",compute='_compute_reparaciones', store=True, compute_sudo=True)
