@@ -39,7 +39,7 @@ class ticket_alquiler(models.Model):
     partner_id = fields.Many2one("res.partner", string="Empresa", tracking=True 
     )
     nombre_cliente  = fields.Char(related='partner_id.name', 
-    string='Nombre de cliente'
+    string='Nombre de cliente', store=True
     )
     
     
@@ -57,9 +57,9 @@ class ticket_alquiler(models.Model):
     
     tipo_id = fields.Selection([('color', 'Color'),('monocromatica','Monocromatica')], 
      string='Tipo de maquina', related='product_alquiler.tipo_maquina_id')
-    serie_id_r = fields.Char(related='product_alquiler.serie', string="Serie")    
-    marca_id_r = fields.Char(related='product_alquiler.marca', string="Marca")
-    modelo_id_r  = fields.Char(related='product_alquiler.name.name',string='Modelo')
+    serie_id_r = fields.Char(related='product_alquiler.serie', string="Serie", store=True)    
+    marca_id_r = fields.Char(related='product_alquiler.marca', string="Marca", store=True)
+    modelo_id_r  = fields.Char(related='product_alquiler.name.name',string='Modelo', store=True)
     direccion_id_r = fields.Char(string="Dirección")
     contacto_id_r = fields.Char(string="Contacto")
     celular_id_r = fields.Char(string="Celular")
