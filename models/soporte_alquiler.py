@@ -38,6 +38,9 @@ class ticket_alquiler(models.Model):
     priority = fields.Selection([("0", ("Low")),("1", ("Medium")),("2", ("High")),("3", ("Very High"))],string="Prioridad",default="1")
     partner_id = fields.Many2one("res.partner", string="Empresa", tracking=True 
     )
+    nombre_cliente  = fields.Char(related='partner_id.name', 
+    string='Nombre de cliente'
+    )
     
     
     description = fields.Text(tracking=True
@@ -51,6 +54,7 @@ class ticket_alquiler(models.Model):
     codigo_id = fields.Many2one('sale.order', string="Código")
 
     product_alquiler = fields.Many2one('alquiler', string='Maquina a reparar', tracking=True)
+    
     tipo_id = fields.Selection([('color', 'Color'),('monocromatica','Monocromatica')], 
      string='Tipo de maquina', related='product_alquiler.tipo_maquina_id')
     serie_id_r = fields.Char(related='product_alquiler.serie', string="Serie")    
