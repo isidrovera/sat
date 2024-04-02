@@ -12,10 +12,10 @@
                     <field name="usuario_id"/>
                     <field name="observacion"/>
                     <field name="cantidad_reparaciones"/>
-                    <field name="cantidad_alquileres"/>
-                    <field name="cantidad_reparaciones"/>
+                    <field name="cantidad_alquileres"/>                    
                     <field name="total_score" widget="progressbar"/>
-                    
+                    <field name="worker_level"/>
+                    <field name="fields_to_improve"/>                    
                 </tree>
             </field>
         </record>
