@@ -9,6 +9,7 @@
                 <tree default_order="id desc">
                     <!-- Definir las columnas de la vista -->
                     <field name="name"/>
+                    <field name="fecha"/>
                     <field name="usuario_id"/>
                     <field name="observacion" optional="hide"/>
                     <field name="cantidad_reparaciones"/>
