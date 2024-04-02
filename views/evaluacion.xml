@@ -6,16 +6,16 @@
             <field name="name">evaluacion.personal.tree</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <tree>
+                <tree default_order="id desc">
                     <!-- Definir las columnas de la vista -->
                     <field name="name"/>
                     <field name="usuario_id"/>
-                    <field name="observacion"/>
+                    <field name="observacion" optional="hide"/>
                     <field name="cantidad_reparaciones"/>
                     <field name="cantidad_alquileres"/>                    
                     <field name="total_score" widget="progressbar"/>
-                    <field name="worker_level"/>
-                    <field name="fields_to_improve"/>                    
+                    <field name="worker_level" optional="hide"/>
+                    <field name="fields_to_improve" optional="hide"/>                    
                 </tree>
             </field>
         </record>

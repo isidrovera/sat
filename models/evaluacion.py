@@ -21,7 +21,7 @@ class EvaluacionPersonal(models.Model):
         return super(EvaluacionPersonal,self).create(vals) 
 
     
-    observacion  = fields.Text(string='Observacioes')
+    observacion  = fields.Text(string='Observaciones')
     fecha = fields.Date(string='Fecha de evaluación',default=fields.Date.today())
     
     # Campos existentes en el modelo evaluacion.personal
