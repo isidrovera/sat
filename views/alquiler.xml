@@ -169,6 +169,8 @@
                     </group>
                     <field name="serie"/>
                     <field name="cliente_id"/>
+                    <field name="marca"/>
+                    <field name="name"/>
                     <searchpanel >
                         <field name="estado_alquiler_id" string="Estado" icon="fa-spinner" enable_counters="1"/>
                         <field name="cliente_id" string="Cliente" icon="fa-users" enable_counters="1"/>

@@ -229,6 +229,11 @@
                     <field name="product_alquiler"/>
                     <field name="partner_id" type="measure"/>
                     <field name="id" type="measure"/>
+                    <field name="agenda" type="measure"/>
+                    <field name="tipo_servicio_id" type="measure"/>
+                    <field name="estado" type="measure"/>
+                    <field name="responsable" type="measure"/>
+                    
                 </search>
             </field>
         </record>
