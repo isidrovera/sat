@@ -187,14 +187,13 @@
           <field name="cliente_id" string="Cliente"/>
           <field name="ubicacion_id"/>
           <field name="asesora_id"/>
-        </search>
-
-        <!--  <searchpanel>
-                          <field name="cliente_id" string="Cliente"/>                          
-                          <field name="ubicacion_id"/>
-                          <field name="disponibilidad_id"/>
-
-                </searchpanel>-->
+          <searchpanel>
+            <field name="cliente_id" string="Cliente" enable_counters="1"/>
+            <field name="estado_ventas_id" string="Estado" enable_counters="1"/>                         
+            <field name="ubicacion_id"/>
+            <field name="disponibilidad_id"/>
+          </searchpanel>
+        </search>        
       </field>
     </record>
     <record id="Sat_pivot_view" model="ir.ui.view">
