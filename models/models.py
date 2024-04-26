@@ -420,3 +420,18 @@ class SatSat(models.Model):
                     vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
 
         return super(SatSat, self).write(vals)
+    
+    #icono_estado = fields.Char(compute='_compute_icono_estado', string='Icono', store=True, html=True)
+
+    #@api.depends('estado_ventas_id')
+    #def _compute_icono_estado(self):
+        #for record in self:
+            #if record.estado_ventas_id == 'sin_revisar':
+              #  record.icono_estado = '<i class="fa fa-times-circle icono-rojo"></i>'
+            #elif record.estado_ventas_id == 'para_revision':
+               # record.icono_estado = '<i class="fa fa-exclamation-circle icono-amarillo"></i>'
+            #elif record.estado_ventas_id == 'asignado':
+       #         record.icono_estado = '<i class="fa fa-user-circle icono-azul"></i>'
+            # Agrega más condiciones según sea necesario
+      #      else:
+       #         record.icono_estado = '<i class="fa fa-check-circle icono-verde"></i>'

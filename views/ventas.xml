@@ -188,7 +188,7 @@
           <field name="ubicacion_id"/>
           <field name="asesora_id"/>
           <searchpanel>            
-            <field name="estado_ventas_id" string="Estado" enable_counters="1"/>                      
+            <field name="estado_ventas_id" string="Estado" icon="fa-hourglass-start" enable_counters="1"/>                      
           </searchpanel>
         </search>        
       </field>
