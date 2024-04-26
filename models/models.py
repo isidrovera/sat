@@ -314,11 +314,12 @@ class SatSat(models.Model):
     def _compute_disponibilidad_id(self):
         for record in self:
             _logger.debug('Computing Disponibilidad for Record ID: %s', record.id)
-            if record.estado_ventas_id in ['sin_revisar', 'en_revision', 'finalizado'] and record.cliente_id:
+            # Incluyendo 'para_revision' en la lógica de disponibilidad
+            if record.estado_ventas_id in ['sin_revisar', 'en_revision', 'finalizado', 'para_revision'] and record.cliente_id:
                 _logger.debug('Setting disponibilidad_id to separada for Record ID: %s', record.id)
                 record.disponibilidad_id = 'separada'
                 record.fecha_separacion = fields.Date.today()
-            elif record.estado_ventas_id in ['sin_revisar', 'en_revision', 'finalizado'] and not record.cliente_id:
+            elif record.estado_ventas_id in ['sin_revisar', 'en_revision', 'finalizado', 'para_revision'] and not record.cliente_id:
                 _logger.debug('Setting disponibilidad_id to disponible for Record ID: %s', record.id)
                 record.disponibilidad_id = 'disponible'
                 record.fecha_separacion = False
@@ -327,6 +328,7 @@ class SatSat(models.Model):
                 record.disponibilidad_id = 'no_disponible'
                 record.fecha_separacion = False
             _logger.debug('Disponibilidad ID updated to %s for Record ID: %s', record.disponibilidad_id, record.id)
+
 
 
     @api.onchange('factura_venta')
@@ -421,17 +423,4 @@ class SatSat(models.Model):
 
         return super(SatSat, self).write(vals)
     
-    #icono_estado = fields.Char(compute='_compute_icono_estado', string='Icono', store=True, html=True)
-
-    #@api.depends('estado_ventas_id')
-    #def _compute_icono_estado(self):
-        #for record in self:
-            #if record.estado_ventas_id == 'sin_revisar':
-              #  record.icono_estado = '<i class="fa fa-times-circle icono-rojo"></i>'
-            #elif record.estado_ventas_id == 'para_revision':
-               # record.icono_estado = '<i class="fa fa-exclamation-circle icono-amarillo"></i>'
-            #elif record.estado_ventas_id == 'asignado':
-       #         record.icono_estado = '<i class="fa fa-user-circle icono-azul"></i>'
-            # Agrega más condiciones según sea necesario
-      #      else:
-       #         record.icono_estado = '<i class="fa fa-check-circle icono-verde"></i>'
+   
