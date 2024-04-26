@@ -398,8 +398,25 @@ class SatSat(models.Model):
 
 
     def write(self, vals):
+        # Estados permitidos para cambio
+        estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
+        
         # Verificar si los campos 'tipo_revision' o 'prioridad' están siendo modificados
-        if 'tipo_revision' in vals or 'prioridad' in vals:
-            vals['estado_ventas_id'] = 'para_revision'
-            vals['fecha_para_revision'] = fields.Datetime.now()  # Registrar la fecha y hora de la modificación
+        tipo_revision_modificado = 'tipo_revision' in vals
+        prioridad_modificada = 'prioridad' in vals
+        
+        # Solo proceder si uno de estos campos ha sido modificado
+        if tipo_revision_modificado or prioridad_modificada:
+            estado_actual = self.estado_ventas_id
+            
+            if estado_actual in estados_permitidos_para_cambio:
+                if vals.get('tipo_revision') or vals.get('prioridad'):
+                    # Si alguno de los campos tiene un valor, cambiar a 'para_revision'
+                    vals['estado_ventas_id'] = 'para_revision'
+                    vals['fecha_para_revision'] = fields.Datetime.now()  # Registrar la fecha y hora de la modificación
+                else:
+                    # Si ambos campos están vacíos o borrados, cambiar a 'sin_revisar'
+                    vals['estado_ventas_id'] = 'sin_revisar'
+                    vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
+
         return super(SatSat, self).write(vals)
