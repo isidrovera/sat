@@ -132,6 +132,7 @@
         <tree default_order="id desc">          
           <field name="create_date" string="Ingreso" widget="remaining_days" width="80%" optional="hide"/>
           <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" attrs="{'invisible':[('disponibilidad_id','!=', 'separada')]}" optional="hide" />
+          <field name="fecha_para_revision" string="Fecha para revison" optional="hide"/>
           <field name="importacion" optional="hide"/>
           <field name="proveedor_id" optional="hide"/>
           <field name="cliente_nombre" string="Cliente"/>
