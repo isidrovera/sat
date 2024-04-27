@@ -188,14 +188,10 @@
           <field name="cliente_id" string="Cliente"/>
           <field name="ubicacion_id"/>
           <field name="asesora_id"/>
-            <searchpanel>            
-            <field name="estado_ventas_id" string="Estado" icon="fa-hourglass-start" enable_counters="1"/>
-            <field name="disponibilidad_id" string="Disponibilidad" icon="fa-check-circle" enable_counters="1"/>                                 
-            </searchpanel>
-            <colors>
-            <field name="estado_ventas_id" colors='{"sin_revisar": "red", "en_revision": "blue", "finalizado": "green", "entregada": "purple"}'/>
-            <field name="disponibilidad_id" colors='{"disponible": "green", "separada": "orange", "no_disponible": "red"}'/>
-            </colors>
+          <searchpanel>            
+              <field name="estado_ventas_id" string="Estado" icon="fa-hourglass-start" enable_counters="1" colors='{"sin_revisar": "red", "en_revision": "blue", "finalizado": "green", "entregada": "purple"}'/>
+              <field name="disponibilidad_id" string="Disponibilidad" icon="fa-check-circle" enable_counters="1" colors='{"disponible": "green", "separada": "orange", "no_disponible": "red"}'/>                                 
+          </searchpanel>            
         </search>        
       </field>
     </record>
