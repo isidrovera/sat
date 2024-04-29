@@ -227,14 +227,15 @@
             <field name="arch" type="xml">
             <search string="">                
                 <!-- Filtros de fecha predefinidos -->
-                <filter string="Hoy" name="today" date="agenda" date_range="today"/>
-                <filter string="Últimos 7 días" name="last_7_days" date="agenda" date_range="last_7_days"/>
-                <filter string="Este Mes" name="this_month" date="agenda" date_range="this_month"/>
-                <filter string="Este Año" name="this_year" date="agenda" date_range="this_year"/>
+                
                 
 
                 <!-- Agrupaciones por fecha -->
                 <group expand="0" string="Agrupar por">
+                <filter string="Hoy" name="today" date="agenda" date_range="today"/>
+                <filter string="Últimos 7 días" name="last_7_days" date="agenda" date_range="last_7_days"/>
+                <filter string="Este Mes" name="this_month" date="agenda" date_range="this_month"/>
+                <filter string="Este Año" name="this_year" date="agenda" date_range="this_year"/>
                 <filter string="Día" name="group_by_day" context="{'group_by':'agenda:day'}"/>
                 <filter string="Semana" name="group_by_week" context="{'group_by':'agenda:week'}"/>
                 <filter string="Mes" name="group_by_month" context="{'group_by':'agenda:month'}"/>
