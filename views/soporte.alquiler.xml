@@ -215,40 +215,25 @@
             <field name="name">ticket.graph</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
-                <graph string="Distribución de Tickets por Servicio" type="bar" stacked="True">
-                    <field name="responsable"/>
-                    <field name="tipo_servicio_id" type="row"/>
-                </graph>
+            <graph string="Distribución de Tickets por Servicio" type="bar" stacked="True">
+                <field name="responsable"/>                
+                <field name="tipo_servicio_id" type="row"/>
+            </graph>
             </field>
         </record>
         <record id="ticket_search" model="ir.ui.view">
             <field name="name">ticket.search</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
-            <search string="">                
-                <!-- Filtros de fecha predefinidos -->
-                
-                
-
-                <!-- Agrupaciones por fecha -->
-                <group expand="0" string="Agrupar por">
-                <filter string="Hoy" name="today" date="agenda" date_range="today"/>
-                <filter string="Últimos 7 días" name="last_7_days" date="agenda" date_range="last_7_days"/>
-                <filter string="Este Mes" name="this_month" date="agenda" date_range="this_month"/>
-                <filter string="Este Año" name="this_year" date="agenda" date_range="this_year"/>
-                <filter string="Día" name="group_by_day" context="{'group_by':'agenda:day'}"/>
-                <filter string="Semana" name="group_by_week" context="{'group_by':'agenda:week'}"/>
-                <filter string="Mes" name="group_by_month" context="{'group_by':'agenda:month'}"/>
-                <filter string="Año" name="group_by_year" context="{'group_by':'agenda:year'}"/>
-                </group>
-                <!-- Otros campos y filtros -->
-                <field name="product_alquiler"/>
-                <field name="partner_id"/>
-                <!-- Asegúrate de que los campos no sean de tipo 'measure' a menos que sean campos numéricos destinados a medidas en gráficos -->
-                <field name="estado"/>
-                <field name="responsable"/>
-
-            </search>
+                <search string="">
+                    <field name="product_alquiler"/>
+                    <field name="partner_id"/>                    
+                    <field name="agenda"/>
+                    <field name="tipo_servicio_id"/>
+                    <field name="estado"/>
+                    <field name="responsable"/>
+                    
+                </search>
             </field>
         </record>
         <record id="ticket_calendar" model="ir.ui.view">
@@ -270,7 +255,7 @@
                     <field name="agenda" type="row"/>
                     <field name="partner_id" type="row"/>
                     <field name="product_alquiler" type="row"/>
-                    <field name="tipo_servicio_id" type="col"/>
+                    <field name="tipo_servicio_id" type="col"/>                    
                 </pivot>
             </field>
         </record>
