@@ -225,14 +225,13 @@
             <field name="name">ticket.search</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
-            <search string="">
-                <group>
+            <search string="">                
                 <!-- Filtros de fecha predefinidos -->
                 <filter string="Hoy" name="today" date="agenda" date_range="today"/>
                 <filter string="Últimos 7 días" name="last_7_days" date="agenda" date_range="last_7_days"/>
                 <filter string="Este Mes" name="this_month" date="agenda" date_range="this_month"/>
                 <filter string="Este Año" name="this_year" date="agenda" date_range="this_year"/>
-                </group>
+                
 
                 <!-- Agrupaciones por fecha -->
                 <group expand="0" string="Agrupar por">
