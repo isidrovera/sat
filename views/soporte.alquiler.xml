@@ -215,10 +215,10 @@
             <field name="name">ticket.graph</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
-                <graph string="">
-                    <field name="name"/>
-                    <field name="partner_id" type="measure"/>
-                </graph>
+            <graph string="Distribución de Tickets por Servicio" type="bar" stacked="True">
+                <field name="responsable"/>                
+                <field name="tipo_servicio_id" type="row"/>
+            </graph>
             </field>
         </record>
         <record id="ticket_search" model="ir.ui.view">
@@ -226,6 +226,9 @@
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
                 <search string="">
+                    <separator/>
+                        <filter name="agenda" string="fecha"/>
+                    <separator/>
                     <field name="product_alquiler"/>
                     <field name="partner_id" type="measure"/>
                     <field name="id" type="measure"/>
