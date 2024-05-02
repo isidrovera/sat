@@ -3,7 +3,7 @@
         <t t-call="web.html_container">
             <div class="dashboard-container">
                 <h1>Dashboard de Servicios Técnicos</h1>
-                <input type="text" id="dateRangeSelector" placeholder="YYYY-MM-DD to YYYY-MM-DD">
+                <input type="text" id="dateRangeSelector" placeholder="YYYY-MM-DD to YYYY-MM-DD"/>
                 <canvas id="myChart"></canvas>
                 <script type="text/javascript" src="/sat/static/src/js/dashboard_script.js"></script>
                 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
