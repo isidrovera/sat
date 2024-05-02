@@ -2,7 +2,7 @@ from odoo import http
 from datetime import datetime
 
 class DashboardController(http.Controller):
-    @http.route('/dashboard/data', auth='user', type='json')
+    @http.route('/dashboard/data', auth='public', type='json')
     def get_dashboard_data(self, start_date=None, end_date=None):
         domain = []
         if start_date and end_date:
