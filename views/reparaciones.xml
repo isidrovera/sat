@@ -11,7 +11,7 @@
                         <button string="Problemas" name="action_con_problemas_reparacion" type="object" class="btn btn-danger" icon="fa-exclamation-triangle"/>
                         <button string="Asignar" name="enviar_mensaje_whatsapp_reparaciones" type="object" class="oe_highlight"/>
                        
-                        <field name="estado_id" widget="statusbar" readonly="True"/>
+                        <field name="estado_id" widget="statusbar" readonly="True" statusbar_visible="true"/>
                     </header>
                     <sheet>
                         <div class="oe_title">
