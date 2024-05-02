@@ -60,6 +60,7 @@
         'views/solicitar_toner_form_template.xml',
         'views/pagina_confirmacion_toner.xml',
         'views/repuestos_alquiler_list.xml',
+        'views/soporte_dashboard.xml',
         
     ],
     'demo': [
@@ -68,7 +69,7 @@
     'assets': {
     'web.assets_backend': [
         'sat/static/src/js/tree_button.js',
-        'sat/static/src/js/evaluacion.js', 
+        'sat/static/src/js/evaluacion.js',        
         'sat/static/src/css/evaluacion.css',        
     ],
     'web.assets_qweb': [
