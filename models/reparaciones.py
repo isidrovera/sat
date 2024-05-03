@@ -337,10 +337,24 @@ class reparaciones(models.Model):
 		    'target': 'new',
 		    'url':whatsapp_iu_url
         }
-    
+    fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
+
     
     def write(self, vals):
+        # Verificar si 'estado_id' está en vals y si el nuevo estado es 'finalizado'
+        finalizado = vals.get('estado_id') == 'finalizado'
+        
+        # Antes de ejecutar el write original, revisar si se debe actualizar la fecha de finalización
+        if finalizado:
+            for rec in self:
+                # Solo actualizar si el estado actual es 'en_revision'
+                if rec.estado_id == 'en_revision':
+                    vals['fecha_finalizacion'] = fields.Datetime.now()
+
+        # Ejecutar el método write original y guardar el resultado
         res = super(reparaciones, self).write(vals)
+        
+        # Aquí continúa la lógica existente de manejo de 'falla_proveedor'
         if 'falla_proveedor' in vals:
             for rec in self:
                 existing_record = rec.env['fallas'].search([
@@ -367,7 +381,9 @@ class reparaciones(models.Model):
                         'serie': rec.maquina_id.serie_id,
                         'usuario_id': rec.responsable_id.name,
                     })
+
         return res
+
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
     
 
