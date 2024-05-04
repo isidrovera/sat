@@ -282,7 +282,7 @@
       <field name="view_mode">tree,kanban,form,pivot</field>
       <field name="help" type="html">
         <p class="button_in_tree">
-                    Create a new QR Scanner
+                    Registra un equipo
         </p>
       </field>
     </record>
