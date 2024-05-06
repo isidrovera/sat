@@ -426,7 +426,7 @@ class reparaciones(models.Model):
                 record.month_year = ''
 
     @api.model
-    def update_month_year(self):
+    def update_month_year(self, *args, **kwargs):  # Aceptar argumentos adicionales
         records = self.search([])
         for record in records:
             record._compute_month_year()
