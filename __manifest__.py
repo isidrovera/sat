@@ -5,15 +5,10 @@
     'summary': "Administra las operaciones de un taller de fotocopiadoras",
     'sequence': -100,
     'description': """Gestiona reparaciones, mantenimientos y más.""",
-    'author': "Tu Nombre o Empresa",
-    'website': "http://www.tuempresa.com",
+    'author': "Isidro vera polo",
+    'website': "https://copiercompanysac.com",
     'category': 'Services',
-    'depends': ['base',
-        'mail',
-        'contacts',
-        'sale_management',
-        'portal',
-        'web'],
+    'depends': ['base','mail','contacts','sale_management','portal','web'],
     'data': [
         #'security/ir.model.access.csv',  # Descomenta si tienes este archivo
         'views/ventas.xml',
