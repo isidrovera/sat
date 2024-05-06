@@ -10,7 +10,10 @@
                         <button string="Finalizar" name="action_finalizar_reparacion" type="object" class="btn btn-success" icon="fa-wrench"/>
                         <button string="Problemas" name="action_con_problemas_reparacion" type="object" class="btn btn-danger" icon="fa-exclamation-triangle"/>
                         <button string="Asignar" name="enviar_mensaje_whatsapp_reparaciones" type="object" class="oe_highlight"/>
-                       
+                       <button string="Actualizar Mes y Año"
+                                type="object"
+                                name="update_month_year"
+                                class="oe_highlight"/>
                         <field name="estado_id" widget="statusbar" readonly="True" statusbar_visible="true"/>
                     </header>
                     <sheet>
