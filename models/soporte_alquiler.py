@@ -329,7 +329,7 @@ class ticket_alquiler(models.Model):
         for record in self:
             if record.agenda:
                 # Formatear la fecha para que el año aparezca primero, lo cual facilita el ordenamiento
-                record.month_year = record.create_date.strftime('%Y-%m')
+                record.month_year = record.agenda.strftime('%Y-%m')
             else:
                 record.month_year = ''
 
