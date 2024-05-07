@@ -100,6 +100,7 @@ class UnidadAlquiler(models.Model):
     correo_1 = fields.Char(string='Correo', tracking=True)
     correo_2 = fields.Char(string='Correo', tracking=True)
     cargo = fields.Char(string='Cargo', tracking=True)
+    observaciones  = fields.Html(string="Observaciones", tracking=True)
     direccion = fields.Text(string='Dirección y Distrito', tracking=True)
     ubicacion_id = fields.Selection([('primer_piso', 'Primer piso'), ('tercer_piso', 'Tercer piso'), ('segundo_local', 'Segundo local'), ('covida', 'Covida')],
                                     default='primer_piso', tracking=True,
