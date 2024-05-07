@@ -25,7 +25,7 @@ access_informes_sat,informes_sat,model_informes,base.group_system,1,1,1,1
 access_alquiler_sat,informes_sat,model_alquiler,base.group_system,1,1,1,1
 access_ticket_alquiler_sat,ticket_alquiler_sat,model_ticket_alquiler,base.group_system,1,1,1,1
 access_evaluacion_personal_sat,evaluacion_personal_sat,model_evaluacion_personal,base.group_system,1,1,1,1
-
+access_evaluacion_personal_jefes_sat,evaluacion_personal_sat,model_evaluacion_personal,sat_jefes_group_user,1,1,0,0
 
 
 
