@@ -323,4 +323,17 @@ class ticket_alquiler(models.Model):
         }  
 
       
-    
+    month_year = fields.Char(string='Mes y Año', compute='_compute_month_year', store=True)
+
+    def _compute_month_year(self):
+        for record in self:
+            if record.agenda:
+                record.month_year = record.create_date.strftime('%m-%Y')
+            else:
+                record.month_year = ''
+
+    @api.model
+    def update_month_year(self, *args, **kwargs):  # Aceptar argumentos adicionales
+        records = self.search([])
+        for record in records:
+            record._compute_month_year()

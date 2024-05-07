@@ -342,3 +342,4 @@ class UnidadAlquiler(models.Model):
         self.write({'qr_image': qr_img})
 
 
+    
