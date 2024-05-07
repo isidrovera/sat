@@ -328,12 +328,14 @@ class ticket_alquiler(models.Model):
     def _compute_month_year(self):
         for record in self:
             if record.agenda:
-                record.month_year = record.create_date.strftime('%m-%Y')
+                # Formatear la fecha para que el año aparezca primero, lo cual facilita el ordenamiento
+                record.month_year = record.create_date.strftime('%Y-%m')
             else:
                 record.month_year = ''
 
     @api.model
-    def update_month_year(self, *args, **kwargs):  # Aceptar argumentos adicionales
+    def update_month_year(self):
+        """Método para forzar la actualización del campo en todos los registros existentes."""
         records = self.search([])
         for record in records:
             record._compute_month_year()
