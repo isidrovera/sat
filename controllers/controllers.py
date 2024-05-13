@@ -256,3 +256,4 @@ class RepuestosAlquilerController(http.Controller):
             'repuestos': repuestos,
             'alquiler': request.env['alquiler'].sudo().browse(id_alquiler),
         })
+        

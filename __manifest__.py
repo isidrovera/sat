@@ -57,6 +57,7 @@
         'views/repuestos_alquiler_list.xml',
         'views/soporte_dashboard.xml',
         
+        
     ],
     'demo': [
         'demo/demo_data.xml',
