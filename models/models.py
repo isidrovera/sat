@@ -414,31 +414,30 @@ class SatSat(models.Model):
         
         isidro_partner_id = self.get_isidro_partner_id()
         
-        # Solo proceder si uno de estos campos ha sido modificado
-        if tipo_revision_modificado or prioridad_modificada:
-            estado_actual = self.estado_ventas_id
+        for record in self:
+            estado_actual = record.estado_ventas_id
             
             if estado_actual in estados_permitidos_para_cambio:
-                if vals.get('tipo_revision') or vals.get('prioridad'):
+                if tipo_revision_modificado or prioridad_modificada:
                     # Si alguno de los campos tiene un valor, cambiar a 'para_revision'
-                    vals['estado_ventas_id'] = 'para_revision'
-                    vals['fecha_para_revision'] = fields.Datetime.now()  # Registrar la fecha y hora de la modificación
+                    if vals.get('tipo_revision') or vals.get('prioridad'):
+                        vals['estado_ventas_id'] = 'para_revision'
+                        vals['fecha_para_revision'] = fields.Datetime.now()  # Registrar la fecha y hora de la modificación
 
-                    # Enviar notificación a Isidro Vera Polo
-                    if isidro_partner_id:
-                        user_name = self.env.user.name
-                        record_name = self.name.name
-                        serie = self.serie_id
-                        message = f"Se ha colocado una nueva máquina para revisión.\n\nDetalles del equipo:\n- Nombre: {record_name}\n- Serie: {serie}\n\nModificado por: {user_name}"
-                        self.message_post(
-                            body=message,
-                            partner_ids=[isidro_partner_id],
-                            subtype='mail.mt_comment',
-                        )
-                else:
-                    # Si ambos campos están vacíos o borrados, cambiar a 'sin_revisar'
-                    vals['estado_ventas_id'] = 'sin_revisar'
-                    vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
+                        # Enviar notificación a Isidro Vera Polo
+                        if isidro_partner_id:
+                            user_name = self.env.user.name
+                            record_name = record.name.name
+                            serie = record.serie_id
+                            message = f"Se ha colocado una nueva máquina para revisión.\n\nDetalles del equipo:\n- Nombre: {record_name}\n- Serie: {serie}\n\nModificado por: {user_name}"
+                            record.message_post(
+                                body=message,
+                                partner_ids=[isidro_partner_id],
+                                subtype='mail.mt_comment',
+                            )
+                    else:
+                        # Si ambos campos están vacíos o borrados, cambiar a 'sin_revisar'
+                        vals['estado_ventas_id'] = 'sin_revisar'
+                        vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
 
         return super(SatSat, self).write(vals)
-   
