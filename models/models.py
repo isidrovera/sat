@@ -399,13 +399,20 @@ class SatSat(models.Model):
     fecha_para_revision = fields.Datetime(string="Fecha para Revisión", readonly=True)
 
 
+    def get_isidro_partner_id(self):
+        isidro_user = self.env['res.users'].search([('name', '=', 'Isidro Vera Polo')], limit=1)
+        if isidro_user:
+            return isidro_user.partner_id.id
+        return False
+
     def write(self, vals):
-        # Estados permitidos para cambio
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         
         # Verificar si los campos 'tipo_revision' o 'prioridad' están siendo modificados
         tipo_revision_modificado = 'tipo_revision' in vals
         prioridad_modificada = 'prioridad' in vals
+        
+        isidro_partner_id = self.get_isidro_partner_id()
         
         # Solo proceder si uno de estos campos ha sido modificado
         if tipo_revision_modificado or prioridad_modificada:
@@ -416,11 +423,22 @@ class SatSat(models.Model):
                     # Si alguno de los campos tiene un valor, cambiar a 'para_revision'
                     vals['estado_ventas_id'] = 'para_revision'
                     vals['fecha_para_revision'] = fields.Datetime.now()  # Registrar la fecha y hora de la modificación
+
+                    # Enviar notificación a Isidro Vera Polo
+                    if isidro_partner_id:
+                        user_name = self.env.user.name
+                        record_name = self.name.name
+                        serie = self.serie_id
+                        message = f"Se ha colocado una nueva máquina para revisión.\n\nDetalles del equipo:\n- Nombre: {record_name}\n- Serie: {serie}\n\nModificado por: {user_name}"
+                        self.message_post(
+                            body=message,
+                            partner_ids=[isidro_partner_id],
+                            subtype='mail.mt_comment',
+                        )
                 else:
                     # Si ambos campos están vacíos o borrados, cambiar a 'sin_revisar'
                     vals['estado_ventas_id'] = 'sin_revisar'
                     vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
 
         return super(SatSat, self).write(vals)
-    
    
