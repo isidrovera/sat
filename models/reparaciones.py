@@ -306,53 +306,47 @@ class reparaciones(models.Model):
         return estado_legible
 
     def enviar_mensaje_whatsapp_reparaciones(self):
-        try:
-            # Enviar correos
-            template = self.env.ref('sat.email_template_reparaciones')
-            template.send_mail(self.id, force_send=True)
+        # Enviar correos
+        template = self.env.ref('sat.email_template_reparaciones')
+        template.send_mail(self.id, force_send=True)
 
-            additional_template = self.env.ref('sat.email_template_reparacion_creada')
-            additional_template.send_mail(self.id, force_send=True)
+        additional_template = self.env.ref('sat.email_template_reparacion_creada')
+        additional_template.send_mail(self.id, force_send=True)
 
-            # Crear el mensaje para WhatsApp
-            msg = ("*Cliente:* {cliente}\n"
-                "*Tipo de equipo:* {tipo_equipo}\n"
-                "*Marca:* {marca}\n"
-                "*Modelo:* {modelo}\n"
-                "*Serie:* {serie}\n"
-                "*Estado:* {estado}\n"
-                "*Tipo de revisión:* {tipo_revision}\n"
-                "*Prioridad:* {prioridad}\n"
-                "*Ubicación:* {ubicacion}\n"
-                "*Asesora:* {asesora}\n"
-                "*REPARACION N°:* {numero_reparacion}\n"
-                "Hola {responsable},\n"
-                "Se te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. "
-                "Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.").format(
-                    cliente=self.cliente_id.name,
-                    tipo_equipo=self.tipo_machine,
-                    marca=self.marca,
-                    modelo=self.maquina_id.name.name,
-                    serie=self.serie_id,
-                    estado=self.obtener_estado_legible(),
-                    tipo_revision=self.obtener_tipo_revision_legible(),
-                    prioridad=self.obtener_prioridad_legible(),
-                    ubicacion=self.obtener_ubicacion_legible(),
-                    asesora=self.maquina_id.asesora_id if self.maquina_id.asesora_id else 'N/A',
-                    numero_reparacion=self.name,
-                    responsable=self.responsable_id.name)
+        # Crear el mensaje para WhatsApp
+        msg = ("*Cliente:* {}\n"
+            "*Tipo de equipo:* {}\n"
+            "*Marca:* {}\n"
+            "*Modelo:* {}\n"
+            "*Serie:* {}\n"
+            "*Estado:* {}\n"
+            "*Tipo de revisión:* {}\n"
+            "*Prioridad:* {}\n"
+            "*Ubicación:* {}\n"
+            "*Asesora:* {}\n"
+            "*REPARACION N°:* {}\n"
+            "Hola;\n"
+            "{}\n"
+            "Se te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.").format(
+                self.cliente_id.name,
+                self.tipo_machine,
+                self.marca,
+                self.maquina_id.name.name,
+                self.serie_id,
+                self.obtener_estado_legible(),
+                self.obtener_tipo_revision_legible(),
+                self.obtener_prioridad_legible(),
+                self.obtener_ubicacion_legible(),
+                self.maquina_id.asesora_id,
+                self.name,
+                self.responsable_id.name)
 
-            # Enviar mensaje de WhatsApp
-            pywhatkit.sendwhatmsg_instantly(self.responsable_id.mobile_phone, msg, 15, True)
-
-            # Actualizar estado
-            self.estado_id = 'en_revision'
-
-        except Exception as e:
-            logging.error("Error al enviar mensaje de WhatsApp: {}".format(e))
-            # Manejar el error adecuadamente
-            return {'error': str(e)}
-
+        # Enviar mensaje de WhatsApp
+        pywhatkit.sendwhatmsg_instantly(self.responsable_id.mobile_phone, msg, 15, True)
+        
+        # Actualizar estado
+        self.estado_id = 'en_revision'
+        
         return {
             'type': 'ir.actions.act_url',
             'target': 'new',
