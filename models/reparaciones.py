@@ -10,7 +10,7 @@ import base64
 import re
 import qrcode
 from odoo.exceptions import ValidationError
-import pywhatkit
+
 
 class reparaciones(models.Model):
 
