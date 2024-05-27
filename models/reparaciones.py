@@ -10,7 +10,7 @@ import base64
 import re
 import qrcode
 from odoo.exceptions import ValidationError
-
+import requests
 
 class reparaciones(models.Model):
 
@@ -306,37 +306,40 @@ class reparaciones(models.Model):
         return estado_legible
 
     def enviar_mensaje_whatsapp_reparaciones(self):
+        # Enviar correos
         template = self.env.ref('sat.email_template_reparaciones')
         template.send_mail(self.id, force_send=True)
 
         additional_template = self.env.ref('sat.email_template_reparacion_creada')
-        additional_template.send_mail(self.id, force_send=True)
+        additional0_template.send_mail(self.id, force_send=True)
 
+        # Crear el mensaje para WhatsApp
+        msg = f"""*Cliente:* {self.cliente_id.name}
+    *Tipo de equipo:* {self.tipo_machine}
+    *Marca:* {self.marca}
+    *Modelo:* {self.maquina_id.name.name}
+    *Serie:* {self.serie_id}
+    *Estado:* {self.obtener_estado_legible()}
+    *Tipo de revisión:* {self.obtener_tipo_revision_legible()}
+    *Prioridad:* {self.obtener_prioridad_legible()}
+    *Ubicación:* {self.obtener_ubicacion_legible()}
+    *Asesora:* {self.maquina_id.asesora_id if self.maquina_id.asesora_id else 'N/A'}
+    *REPARACION N°:* {self.name}
+    Hola {self.responsable_id.name};
+    Se te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección."""
 
-        msg =  "*Cliente:* %s" % (self.cliente_id.name)
-        msg1 = "*Tipo de equipo:* %s" % (self.tipo_machine)
-        msg2 = "*Marca:* %s" % (self.marca)
-        msg3 = "*Modelo:* %s" % (self.maquina_id.name.name)
-        msg4 = "*Serie:* %s" % (self.serie_id)
-        msg5 = "*Estado:* %s" % (self.obtener_estado_legible())
-        msg6 = "*Tipo de revisión:* %s" % (self.obtener_tipo_revision_legible())
-        msg7 = "*Prioridad:* %s" % (self.obtener_prioridad_legible())
-        msg8 = "*Ubicación:* %s" % (self.obtener_ubicacion_legible())       
-        msg9 = "*Asesora:* %s" % (self.maquina_id.asesora_id)
-        msg10 = "*REPARACION N°:* %s" % (self.name)
-        msg11 = "%s" % ('Hola;')
-        msg12 = "%s" % (self.responsable_id.name)
-        msg13 = "%s" % ('Se te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.')
-        
-        #msg2 = (f'{msg}{msg1}')       
-
-        whatsapp_iu_url = 'https://api.whatsapp.com/send?phone=%s&text=%s' %  (self.responsable_id.mobile_phone, (f'{msg11}%0A{msg12}%0A{msg13}%0A{msg10}%0A{msg}%0A{msg1}%0A{msg2}%0A{msg3}%0A{msg4}%0A{msg5}%0A{msg6}%0A{msg7}%0A{msg8}%0A{msg9}'))
-        self.estado_id='en_revision'       
-        return{
-            'type': 'ir.actions.act_url',
-		    'target': 'new',
-		    'url':whatsapp_iu_url
+        # Enviar mensaje mediante la API
+        data = {
+            'phone': self.responsable_id.mobile_phone,
+            'message': msg
         }
+        response = requests.post('http://161.132.39.159:5000/send_whatsapp', json=data)
+        if response.status_code == 200:
+            self.estado_id = 'en_revision'
+        else:
+            error = response.json().get('message', 'Failed to send message')
+            _logger.error(f'Error sending WhatsApp message: {error}')
+
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
 
     
