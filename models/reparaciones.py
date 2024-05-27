@@ -311,7 +311,7 @@ class reparaciones(models.Model):
         template.send_mail(self.id, force_send=True)
 
         additional_template = self.env.ref('sat.email_template_reparacion_creada')
-        additional0_template.send_mail(self.id, force_send=True)
+        additional_template.send_mail(self.id, force_send=True)
 
         # Crear el mensaje para WhatsApp
         msg = f"""*Cliente:* {self.cliente_id.name}
