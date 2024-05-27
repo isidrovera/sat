@@ -306,51 +306,36 @@ class reparaciones(models.Model):
         return estado_legible
 
     def enviar_mensaje_whatsapp_reparaciones(self):
-        # Enviar correos
         template = self.env.ref('sat.email_template_reparaciones')
         template.send_mail(self.id, force_send=True)
 
         additional_template = self.env.ref('sat.email_template_reparacion_creada')
         additional_template.send_mail(self.id, force_send=True)
 
-        # Crear el mensaje para WhatsApp
-        msg = ("*Cliente:* {}\n"
-            "*Tipo de equipo:* {}\n"
-            "*Marca:* {}\n"
-            "*Modelo:* {}\n"
-            "*Serie:* {}\n"
-            "*Estado:* {}\n"
-            "*Tipo de revisión:* {}\n"
-            "*Prioridad:* {}\n"
-            "*Ubicación:* {}\n"
-            "*Asesora:* {}\n"
-            "*REPARACION N°:* {}\n"
-            "Hola;\n"
-            "{}\n"
-            "Se te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.").format(
-                self.cliente_id.name,
-                self.tipo_machine,
-                self.marca,
-                self.maquina_id.name.name,
-                self.serie_id,
-                self.obtener_estado_legible(),
-                self.obtener_tipo_revision_legible(),
-                self.obtener_prioridad_legible(),
-                self.obtener_ubicacion_legible(),
-                self.maquina_id.asesora_id,
-                self.name,
-                self.responsable_id.name)
 
-        # Enviar mensaje de WhatsApp
-        pywhatkit.sendwhatmsg_instantly(self.responsable_id.mobile_phone, msg, 15, True)
+        msg =  "*Cliente:* %s" % (self.cliente_id.name)
+        msg1 = "*Tipo de equipo:* %s" % (self.tipo_machine)
+        msg2 = "*Marca:* %s" % (self.marca)
+        msg3 = "*Modelo:* %s" % (self.maquina_id.name.name)
+        msg4 = "*Serie:* %s" % (self.serie_id)
+        msg5 = "*Estado:* %s" % (self.obtener_estado_legible())
+        msg6 = "*Tipo de revisión:* %s" % (self.obtener_tipo_revision_legible())
+        msg7 = "*Prioridad:* %s" % (self.obtener_prioridad_legible())
+        msg8 = "*Ubicación:* %s" % (self.obtener_ubicacion_legible())       
+        msg9 = "*Asesora:* %s" % (self.maquina_id.asesora_id)
+        msg10 = "*REPARACION N°:* %s" % (self.name)
+        msg11 = "%s" % ('Hola;')
+        msg12 = "%s" % (self.responsable_id.name)
+        msg13 = "%s" % ('Se te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.')
         
-        # Actualizar estado
-        self.estado_id = 'en_revision'
-        
-        return {
+        #msg2 = (f'{msg}{msg1}')       
+
+        whatsapp_iu_url = 'https://api.whatsapp.com/send?phone=%s&text=%s' %  (self.responsable_id.mobile_phone, (f'{msg11}%0A{msg12}%0A{msg13}%0A{msg10}%0A{msg}%0A{msg1}%0A{msg2}%0A{msg3}%0A{msg4}%0A{msg5}%0A{msg6}%0A{msg7}%0A{msg8}%0A{msg9}'))
+        self.estado_id='en_revision'       
+        return{
             'type': 'ir.actions.act_url',
-            'target': 'new',
-            'url': 'about:blank'  # Esto se puede cambiar si es necesario abrir una URL específica
+		    'target': 'new',
+		    'url':whatsapp_iu_url
         }
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
 
