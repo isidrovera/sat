@@ -153,9 +153,9 @@
           <field name='disponibilidad_id' widget='badge' decoration-success="disponibilidad_id == 'disponible'" decoration-warning="disponibilidad_id == 'separada'" decoration-danger="disponibilidad_id == 'no_disponible'"/>
           <field name='estado_ventas_id' widget='badge' decoration-muted="estado_ventas_id == 'sin_revisar'" decoration-info="estado_ventas_id == 'en_revision'" decoration-success="estado_ventas_id == 'finalizado' " decoration-danger="estado_ventas_id not in ('sin_revisar','en_revision','finalizado','entregada')" decoration-warning="estado_ventas_id == 'entregada' "/>
           <field name="asesora_id" optional="hide"/>
-          <button name="action_primer" type="object" class="oe_stat_button" icon="fa-building-o" string="Primer piso" optional="hide"/>
-          <button name="action_tercero" type="object" class="oe_stat_button" icon="fa-building" string="Tercer piso" optional="hide"/>
-          <button name="action_segundo" type="object" class="oe_stat_button" icon="fa-store" string="Segundo local" optional="hide"/>
+          <button name="action_primer" type="object" class="oe_stat_button" icon="fa-building-o" string="Primer piso" />
+          <button name="action_tercero" type="object" class="oe_stat_button" icon="fa-building" string="Tercer piso"/>
+          <button name="action_segundo" type="object" class="oe_stat_button" icon="fa-store" string="Segundo local"/>
           <field name="activity_ids" widget="list_activity" optional="hide"/>
           <button name="view_reparaciones_ids" type="object" icon="fa-wrench" attrs="{'invisible':[('estado_ventas_id','!=', 'finalizado')]}"/>
         </tree>
