@@ -61,15 +61,18 @@
                 <field name="importacion"/>
                 <field name="invoice"/>
                 <!--<field name="qr_image" widget='image' class="oe_avatar" options="{'size': [90, 90]}" readonly="0" />-->
-                <group string="Cambiar Ubicaciones" groups="sat.sat_tecnica_group_user">
-                  <div class="oe_button_box" name="button_box">
+                <group string="Cambiar Ubicaciones" groups="sat.sat_tecnica_group_user">                 
+                    
+                  <group >                  
                     <button name="action_primer" type="object" class="oe_stat_button" icon="fa-building-o" string="Primer piso"/>
+                  </group>
+                  <group >                 
                     <button name="action_tercero" type="object" class="oe_stat_button" icon="fa-building" string="Tercer piso"/>
+                  </group>
+                  <group >                 
                     <button name="action_segundo" type="object" class="oe_stat_button" icon="fa-store" string="Segundo local"/>
-                  </div>
+                  </group>
                 </group>
-
-
               </group>
               <group string='Datos para revisión' style='color:red;'>
                 <field name="tipo_revision" widget="kanban_label_selection" options="{'classes': {'draft': 'default', 'done': 'success'}}"/>
