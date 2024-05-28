@@ -306,39 +306,38 @@ class reparaciones(models.Model):
         return estado_legible
 
     def enviar_mensaje_whatsapp_reparaciones(self):
-        # Enviar correos
         template = self.env.ref('sat.email_template_reparaciones')
         template.send_mail(self.id, force_send=True)
 
         additional_template = self.env.ref('sat.email_template_reparacion_creada')
         additional_template.send_mail(self.id, force_send=True)
 
-        # Crear el mensaje para WhatsApp
         msg = f"""*Cliente:* {self.cliente_id.name}
-    *Tipo de equipo:* {self.tipo_machine}
-    *Marca:* {self.marca}
-    *Modelo:* {self.maquina_id.name.name}
-    *Serie:* {self.serie_id}
-    *Estado:* {self.obtener_estado_legible()}
-    *Tipo de revisión:* {self.obtener_tipo_revision_legible()}
-    *Prioridad:* {self.obtener_prioridad_legible()}
-    *Ubicación:* {self.obtener_ubicacion_legible()}
-    *Asesora:* {self.maquina_id.asesora_id if self.maquina_id.asesora_id else 'N/A'}
-    *REPARACION N°:* {self.name}
-    Hola {self.responsable_id.name};
-    Se te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección."""
+        *Tipo de equipo:* {self.tipo_machine}
+        *Marca:* {self.marca}
+        *Modelo:* {self.maquina_id.name.name}
+        *Serie:* {self.serie_id}
+        *Estado:* {self.obtener_estado_legible()}
+        *Tipo de revisión:* {self.obtener_tipo_revision_legible()}
+        *Prioridad:* {self.obtener_prioridad_legible()}
+        *Ubicación:* {self.obtener_ubicacion_legible()}
+        *Asesora:* {self.maquina_id.asesora_id if self.maquina_id.asesora_id else 'N/A'}
+        *REPARACION N°:* {self.name}
+        Hola {self.responsable_id.name};
+        Se te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección."""
 
-        # Enviar mensaje mediante la API
         data = {
             'phone': self.responsable_id.mobile_phone,
             'message': msg
         }
-        response = requests.post('http://161.132.39.159:5000/send_whatsapp', json=data)
-        if response.status_code == 200:
-            self.estado_id = 'en_revision'
-        else:
-            error = response.json().get('message', 'Failed to send message')
-            _logger.error(f'Error sending WhatsApp message: {error}')
+        try:
+            response = requests.post('http://161.132.39.159:5000/send_whatsapp', json=data)
+            if response.status_code == 200:
+                self.estado_id = 'en_revision'
+            else:
+                _logger.error(f'Error sending WhatsApp message: {response.text}')
+        except requests.exceptions.RequestException as e:
+            _logger.error(f'HTTP Request failed: {e}')
 
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
 
