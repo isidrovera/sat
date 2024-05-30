@@ -316,17 +316,20 @@ class reparaciones(models.Model):
         headers = {'Content-Type': 'application/json'}
         response = requests.post(url, headers=headers, json=data)
         
-        # Imprimir la respuesta para depuración
-        print("Respuesta de la API:", response.text)
+        # Imprimir la respuesta completa para depuración
+        print("Código de estado:", response.status_keyword)  # Muestra el código de estado HTTP
+        print("Respuesta de la API:", response.text)  # Muestra el texto de la respuesta
 
-        # Verificar que la respuesta contiene un JSON válido y no está vacía
-        if response.status_code == 200 and response.text.strip():
-            return response.json()  # Devuelve la respuesta JSON
-        else:
-            # Manejo de errores o respuestas vacías
-            error_msg = f"Error o respuesta vacía de la API. Código de estado: {response.status_code}"
+        # Verificar si la respuesta contiene un cuerpo JSON válido
+        try:
+            response_json = response.json()  # Intenta decodificar el JSON
+            return response_json
+        except json.JSONDecodeError:
+            # Si la respuesta no contiene un JSON válido, manejar adecuadamente
+            error_msg = "La respuesta no contiene un JSON válido."
             print(error_msg)
             return {"error": error_msg}
+
 
     def enviar_mensaje_whatsapp_reparaciones(self):
         # Logica para enviar correos
