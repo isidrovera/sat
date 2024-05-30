@@ -319,7 +319,7 @@ class reparaciones(models.Model):
 
     def send_whatsapp_message(self, phone, message):
         """Envía un mensaje de WhatsApp utilizando la API externa."""
-        phone = self.format_phone_character(self.format_phone_number(phone))  # Limpia y formatea el número de teléfono
+        phone = self.format_phone_number(phone)  # Limpia y formatea el número de teléfono
         url = 'https://copierconnectremote.com/lead'
         data = {
             'phone': phone,
@@ -362,10 +362,9 @@ class reparaciones(models.Model):
             self.obtener_ubicacion_legible(), 
             self.maquina_id.asesora_id, 
             self.name, 
-            self.responsable_id.name  # Asegúrate de que este campo se llama así en tu modelo
+            self.responsable_id.name
         )
 
-        # Asegurarse de que responsable_id y mobile_phone existan
         if self.responsable_id and self.responsable_id.mobile_phone:
             phone_number = self.responsable_id.mobile_phone
             self.send_whatsapp_message(phone_number, msg)
@@ -375,9 +374,8 @@ class reparaciones(models.Model):
         return {
             'type': 'ir.actions.act_url',
             'target': 'new',
-            'url': 'about:blank'  # No se necesita abrir una URL específica después del envío
+            'url': 'about:blank'
         }
-
 
 
 
