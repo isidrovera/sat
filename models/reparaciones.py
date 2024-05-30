@@ -307,14 +307,19 @@ class reparaciones(models.Model):
         return estado_legible
 
     def format_phone_number(self, phone):
-        """Asegúrate de que el número de teléfono tenga el formato adecuado."""
+        """Formatea el número de teléfono para que empiece con '51' sin el signo '+', ajustando según sea necesario."""
         if phone.startswith('+'):
             phone = phone[1:]  # Elimina el signo '+' al inicio si existe
+
+        # Asegurarse de que el número empiece con '51'
+        if not phone.startswith('51'):
+            phone = '51' + phone
+
         return phone
 
     def send_whatsapp_message(self, phone, message):
         """Envía un mensaje de WhatsApp utilizando la API externa."""
-        phone = self.format_phone_number(phone)  # Formatea el número de teléfono
+        phone = self.format_phone_number(phone)  # Formatea el número de teléfono antes de enviar
         url = 'https://copierconnectremote.com/lead'
         data = {
             'phone': phone,
@@ -360,6 +365,7 @@ class reparaciones(models.Model):
             'target': 'new',
             'url': 'about:blank'
         }
+
 
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
 
