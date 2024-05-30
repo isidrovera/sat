@@ -319,15 +319,13 @@ class reparaciones(models.Model):
 
     def send_whatsapp_message(self, phone, message):
         """Envía un mensaje de WhatsApp utilizando la API externa."""
-        phone = self.format_phone_number(phone)  # Formatea el número de teléfono antes de enviar
+        phone = self.format_phone_character(self.format_phone_number(phone))  # Limpia y formatea el número de teléfono
         url = 'https://copierconnectremote.com/lead'
         data = {
             'phone': phone,
             'message': message
         }
         headers = {'Content-Type': 'application/json'}
-        print("Enviando datos:", data)  # Depuración para ver los datos enviados
-
         response = requests.post(url, headers=headers, json=data)
 
         print("Código de estado:", response.status_code)
@@ -336,7 +334,7 @@ class reparaciones(models.Model):
         # Verificar si la respuesta contiene un cuerpo JSON válido
         try:
             response_json = response.json()
-            print("Respuesta JSON:", response_json)  # Depuración para ver la respuesta JSON
+            print("Respuesta JSON:", response_json)
             return response_json
         except json.JSONDecodeError:
             error_msg = "La respuesta no contiene un JSON válido."
@@ -344,7 +342,7 @@ class reparaciones(models.Model):
             return {"error": error_msg}
 
     def enviar_mensaje_whatsapp_reparaciones(self):
-        # Logica para enviar correos
+        # Lógica para enviar correos
         template = self.env.ref('sat.email_template_reparaciones')
         template.send_mail(self.id, force_send=True)
 
@@ -353,9 +351,9 @@ class reparaciones(models.Model):
 
         # Construir y enviar el mensaje de WhatsApp
         msg = "*Cliente:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}\n*REPARACION N°:* {}\nHola;\n{}\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.".format(
-            self.cliente_id.name, self.tipo_machine, self.marca, self.maquina_id.name.name, self.serie_id, self.obtener_estado_legible(), self.obtener_tipo_revision_legible(), self.obtener_prioridad_legible(), self.obtener_ubicacion_legible(), self.maquina_id.asesora_id, self.name, self.responsable_id.name
+            self.cliente_id.name, self.tipo_machine, self.marca, self.maquina_id.name.name, self.serie_id, self.obtener_estado_legible(), self.obtener_tipo_revision_legible(), self.obtener_prioridad_legible(), self.obtener_ubicacion_legible(), self.maquina_id.asesora_id, self.name, self.responsible_id.name
         )
-        phone_number = self.responsable_id.mobile_phone  # Obtener número de móvil del campo correspondiente
+        phone_number = self.responsable_id.mobile_phone
         self.send_whatsapp_message(phone_number, msg)
 
         # Actualizar estado de la reparación
@@ -365,6 +363,7 @@ class reparaciones(models.Model):
             'target': 'new',
             'url': 'about:blank'
         }
+
 
 
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
