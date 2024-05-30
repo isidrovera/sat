@@ -314,23 +314,22 @@ class reparaciones(models.Model):
             'message': message
         }
         headers = {'Content-Type': 'application/json'}
+        print("Enviando datos:", data)  # Depuración para ver los datos enviados
+
         response = requests.post(url, headers=headers, json=data)
-        
-        # Corrección: Cambio de 'status_keyword' a 'status_code'
-        print("Código de estado:", response.status_code)  # Muestra el código de estado HTTP correcto
-        print("Respuesta de la API:", response.text)  # Muestra el texto de la respuesta
+
+        print("Código de estado:", response.status_code)
+        print("Respuesta de la API:", response.text)
 
         # Verificar si la respuesta contiene un cuerpo JSON válido
         try:
-            response_json = response.json()  # Intenta decodificar el JSON
+            response_json = response.json()
+            print("Respuesta JSON:", response_json)  # Depuración para ver la respuesta JSON
             return response_json
         except json.JSONDecodeError:
-            # Si la respuesta no contiene un JSON válido, manejar adecuadamente
             error_msg = "La respuesta no contiene un JSON válido."
             print(error_msg)
-        return {"error": error_msg}
-
-
+            return {"error": error_msg}
 
     def enviar_mensaje_whatsapp_reparaciones(self):
         # Logica para enviar correos
@@ -340,48 +339,18 @@ class reparaciones(models.Model):
         additional_template = self.env.ref('sat.email_template_reparacion_creada')
         additional_template.send_mail(self.id, force_send=True)
 
-        # Construir el mensaje de WhatsApp
-        msg = (
-            "*Cliente:* {}\n"
-            "*Tipo de equipo:* {}\n"
-            "*Marca:* {}\n"
-            "*Modelo:* {}\n"
-            "*Serie:* {}\n"
-            "*Estado:* {}\n"
-            "*Tipo de revisión:* {}\n"
-            "*Prioridad:* {}\n"
-            "*Ubicación:* {}\n"
-            "*Asesora:* {}\n"
-            "*REPARACION N°:* {}\n"
-            "Hola;\n"
-            "{}\n"
-            "Se te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. "
-            "Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección."
-        ).format(
-            self.cliente_id.name,
-            self.tipo_machine,
-            self.marca,
-            self.maquina_id.name.name,
-            self.serie_id,
-            self.obtener_estado_legible(),
-            self.obtener_tipo_revision_legible(),
-            self.obtener_prioridad_legible(),
-            self.obtener_ubicacion_legible(),
-            self.maquina_id.asesora_id,
-            self.name,
-            self.responsable_id.name
+        # Construir y enviar el mensaje de WhatsApp
+        msg = "*Cliente:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}\n*REPARACION N°:* {}\nHola;\n{}\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.".format(
+            self.cliente_id.name, self.tipo_machine, self.marca, self.maquina_id.name.name, self.serie_id, self.obtener_estado_legible(), self.obtener_tipo_revision_legible(), self.obtener_prioridad_legible(), self.obtener_ubicacion_legible(), self.maquina_id.asesora_id, self.name, self.responsable_id.name
         )
-
-        # Enviar el mensaje de WhatsApp
         self.send_whatsapp_message(self.responsable_id.mobile_phone, msg)
 
         # Actualizar estado de la reparación
         self.estado_id = 'en_revision'
-
         return {
             'type': 'ir.actions.act_url',
             'target': 'new',
-            'url': 'about:blank'  # Dado que no necesitas abrir una URL específica después del envío
+            'url': 'about:blank'
         }
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
 
