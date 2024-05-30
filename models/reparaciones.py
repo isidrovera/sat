@@ -351,18 +351,33 @@ class reparaciones(models.Model):
 
         # Construir y enviar el mensaje de WhatsApp
         msg = "*Cliente:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}\n*REPARACION N°:* {}\nHola;\n{}\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.".format(
-            self.cliente_id.name, self.tipo_machine, self.marca, self.maquina_id.name.name, self.serie_id, self.obtener_estado_legible(), self.obtener_tipo_revision_legible(), self.obtener_prioridad_legible(), self.obtener_ubicacion_legible(), self.maquina_id.asesora_id, self.name, self.responsible_id.name
+            self.cliente_id.name, 
+            self.tipo_machine, 
+            self.marca, 
+            self.maquina_id.name.name, 
+            self.serie_id, 
+            self.obtener_estado_legible(), 
+            self.obtener_tipo_revision_legible(), 
+            self.obtener_prioridad_legible(), 
+            self.obtener_ubicacion_legible(), 
+            self.maquina_id.asesora_id, 
+            self.name, 
+            self.responsable_id.name  # Asegúrate de que este campo se llama así en tu modelo
         )
-        phone_number = self.responsable_id.mobile_phone
-        self.send_whatsapp_message(phone_number, msg)
+
+        # Asegurarse de que responsable_id y mobile_phone existan
+        if self.responsable_id and self.responsable_id.mobile_phone:
+            phone_number = self.responsable_id.mobile_phone
+            self.send_whatsapp_message(phone_number, msg)
 
         # Actualizar estado de la reparación
         self.estado_id = 'en_revision'
         return {
             'type': 'ir.actions.act_url',
             'target': 'new',
-            'url': 'about:blank'
+            'url': 'about:blank'  # No se necesita abrir una URL específica después del envío
         }
+
 
 
 
