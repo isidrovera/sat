@@ -306,8 +306,15 @@ class reparaciones(models.Model):
         estado_legible = dict(selection).get(self.estado_id)
         return estado_legible
 
+    def format_phone_number(self, phone):
+        """Asegúrate de que el número de teléfono tenga el formato adecuado."""
+        if phone.startswith('+'):
+            phone = phone[1:]  # Elimina el signo '+' al inicio si existe
+        return phone
+
     def send_whatsapp_message(self, phone, message):
         """Envía un mensaje de WhatsApp utilizando la API externa."""
+        phone = self.format_phone_number(phone)  # Formatea el número de teléfono
         url = 'https://copierconnectremote.com/lead'
         data = {
             'phone': phone,
@@ -343,7 +350,8 @@ class reparaciones(models.Model):
         msg = "*Cliente:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}\n*REPARACION N°:* {}\nHola;\n{}\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.".format(
             self.cliente_id.name, self.tipo_machine, self.marca, self.maquina_id.name.name, self.serie_id, self.obtener_estado_legible(), self.obtener_tipo_revision_legible(), self.obtener_prioridad_legible(), self.obtener_ubicacion_legible(), self.maquina_id.asesora_id, self.name, self.responsable_id.name
         )
-        self.send_whatsapp_message(51975399303, msg)
+        phone_number = self.responsable_id.mobile_phone  # Obtener número de móvil del campo correspondiente
+        self.send_whatsapp_message(phone_number, msg)
 
         # Actualizar estado de la reparación
         self.estado_id = 'en_revision'
@@ -352,6 +360,7 @@ class reparaciones(models.Model):
             'target': 'new',
             'url': 'about:blank'
         }
+
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
 
     
