@@ -316,8 +316,8 @@ class reparaciones(models.Model):
         headers = {'Content-Type': 'application/json'}
         response = requests.post(url, headers=headers, json=data)
         
-        # Imprimir la respuesta completa para depuración
-        print("Código de estado:", response.status_keyword)  # Muestra el código de estado HTTP
+        # Corrección: Cambio de 'status_keyword' a 'status_code'
+        print("Código de estado:", response.status_code)  # Muestra el código de estado HTTP correcto
         print("Respuesta de la API:", response.text)  # Muestra el texto de la respuesta
 
         # Verificar si la respuesta contiene un cuerpo JSON válido
@@ -328,7 +328,8 @@ class reparaciones(models.Model):
             # Si la respuesta no contiene un JSON válido, manejar adecuadamente
             error_msg = "La respuesta no contiene un JSON válido."
             print(error_msg)
-            return {"error": error_msg}
+        return {"error": error_msg}
+
 
 
     def enviar_mensaje_whatsapp_reparaciones(self):
