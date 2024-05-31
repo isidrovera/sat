@@ -341,10 +341,10 @@ class reparaciones(models.Model):
             response_json = response.json()
             print("Respuesta JSON:", response_json)
             return response_json
-        except json.JSONDecodeError:
-            error_msg = "La respuesta no contiene un JSON válido."
+        except json.JSONDecodeHisError as e:
+            error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
             print(error_msg)
-            return {"error": error_item}
+            return {"error": error_msg}  # Devuelve un diccionario con la clave 'error' y el mensaje de error como valor
 
     def enviar_mensaje_whatsapp_reparaciones(self):
         # Lógica para enviar correos
@@ -352,7 +352,7 @@ class reparaciones(models.Model):
         template.send_mail(self.id, force_send=True)
 
         additional_template = self.env.ref('sat.email_template_reparacion_creada')
-        additional_template.send_mail(self.id, force_send=True)  # Corregido aquí
+        additional_template.send_mail(self.id, force_send=True)
 
         # Construir y enviar el mensaje de WhatsApp
         msg = "*Cliente:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}\n*REPARACION N°:* {}\nHola;\n{}\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.".format(
@@ -371,14 +371,15 @@ class reparaciones(models.Model):
         )
 
         if self.responsable_id and self.responsable_mobile_clean:
-            phone_number = self.responsable_mobile_clean
+            phone_number = self.responsable_mobile_a_clean
             self.send_whatsapp_message(phone_number, msg)
 
         # Actualizar estado de la reparación
         self.estado_id = 'en_revision'
         return {
-            'type': 'ir.actions.act_window_close'  # Cambio aquí para cerrar la ventana después de la acción
+            'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
         }
+
 
 
 
