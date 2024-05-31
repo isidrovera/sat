@@ -315,12 +315,15 @@ class reparaciones(models.Model):
     def _compute_responsable_mobile_clean(self):
         for record in self:
             if record.responsable_id.mobile_phone:
-                phone = record.responsable_id.mobile_phone.replace('+', '')
+                # Elimina todos los espacios y el signo '+'
+                phone = record.responsable_id.mobile_phone.replace(' ', '').replace('+', '')
+                # Asegura que el número comience con '51'
                 if not phone.startswith('51'):
                     phone = '51' + phone
                 record.responsable_mobile_clean = phone
             else:
                 record.responsable_mobile_clean = ''
+
 
 
     def send_whatsapp_message(self, phone, message):
