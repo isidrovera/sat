@@ -323,20 +323,8 @@ class reparaciones(models.Model):
                 record.responsable_mobile_clean = ''
 
 
-    def format_phone_number(self, phone):
-        """Formatea el número de teléfono para que empiece con '51' sin el signo '+', ajustando según sea necesario."""
-        if phone.startswith('+'):
-            phone = phone[1:]  # Elimina el signo '+' al inicio si existe
-
-        # Asegurarse de que el número empiece con '51'
-        if not phone.startswith('51'):
-            phone = '51' + phone
-
-        return phone
-
     def send_whatsapp_message(self, phone, message):
         """Envía un mensaje de WhatsApp utilizando la API externa."""
-        phone = self.format_phone_number(phone)  # Limpia y formatea el número de teléfono
         url = 'https://copierconnectremote.com/lead'
         data = {
             'phone': phone,
@@ -356,7 +344,7 @@ class reparaciones(models.Model):
         except json.JSONDecodeError:
             error_msg = "La respuesta no contiene un JSON válido."
             print(error_msg)
-            return {"error": error_msg}
+            return {"error": error_item}
 
     def enviar_mensaje_whatsapp_reparaciones(self):
         # Lógica para enviar correos
@@ -364,7 +352,7 @@ class reparaciones(models.Model):
         template.send_mail(self.id, force_send=True)
 
         additional_template = self.env.ref('sat.email_template_reparacion_creada')
-        additional_template.send_mail(self.id, force_send=True)
+        additional_to.send_mail(self.id, force_send=True)
 
         # Construir y enviar el mensaje de WhatsApp
         msg = "*Cliente:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}\n*REPARACION N°:* {}\nHola;\n{}\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.".format(
@@ -382,17 +370,16 @@ class reparaciones(models.Model):
             self.responsable_id.name
         )
 
-        if self.responsable_id and self.responsable_id.mobile_phone:
-            phone_number = self.responsable_id.mobile_phone
+        if self.responsable_id and self.responsable_mobile_clean:
+            phone_number = self.responsable_mobile_clean
             self.send_whatsapp_message(phone_number, msg)
 
         # Actualizar estado de la reparación
         self.estado_id = 'en_revision'
         return {
-            'type': 'ir.actions.act_url',
-            'target': 'new',
-            'url': 'about:blank'
+            'type': 'ir.actions.act_window_close'  # Cambio aquí para cerrar la ventana después de la acción
         }
+
 
 
 
