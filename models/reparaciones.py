@@ -305,6 +305,23 @@ class reparaciones(models.Model):
             selection = selection(self)
         estado_legible = dict(selection).get(self.estado_id)
         return estado_legible
+    responsable_mobile_clean = fields.Char(
+        string='Número de celular (limpio)',
+        compute='_compute_responsable_mobile_clean',
+        store=True
+    )
+
+    @api.depends('responsable_id.mobile_phone')
+    def _compute_responsable_mobile_clean(self):
+        for record in self:
+            if record.responsable_id.mobile_phone:
+                phone = record.responsable_id.mobile_phone.replace('+', '')
+                if not phone.startswith('51'):
+                    phone = '51' + phone
+                record.responsable_mobile_clean = phone
+            else:
+                record.responsable_mobile_clean = ''
+
 
     def format_phone_number(self, phone):
         """Formatea el número de teléfono para que empiece con '51' sin el signo '+', ajustando según sea necesario."""
