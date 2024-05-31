@@ -352,7 +352,7 @@ class reparaciones(models.Model):
         template.send_mail(self.id, force_send=True)
 
         additional_template = self.env.ref('sat.email_template_reparacion_creada')
-        additional_to.send_mail(self.id, force_send=True)
+        additional_template.send_mail(self.id, force_send=True)  # Corregido aquí
 
         # Construir y enviar el mensaje de WhatsApp
         msg = "*Cliente:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}\n*REPARACION N°:* {}\nHola;\n{}\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.".format(
