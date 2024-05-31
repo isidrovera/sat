@@ -372,7 +372,7 @@ class reparaciones(models.Model):
 
         if self.responsable_id and self.responsable_mobile_clean:
             phone_number = self.responsable_mobile_clean  # Usa el nombre de campo correcto
-            self.send_whatsapp_message(phone_number, msg)
+            self.send_whatsapp_message(51975399303, msg)
 
         # Actualizar estado de la reparación
         self.estado_id = 'en_revision'
