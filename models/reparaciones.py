@@ -373,8 +373,8 @@ class reparaciones(models.Model):
             self.responsable_id.name
         )
 
-        if self.responsable_id and hasattr(self.responsable_id, 'x_celular'):
-            phone_number = self.responsable_id.x_celular
+        if self.responsable_id and self.responsable_mobile_clean:
+            phone_number = self.responsable_mobile_clean
             self.send_whatsapp_message(phone_number, msg)
 
         # Actualizar estado de la reparación
@@ -382,6 +382,7 @@ class reparaciones(models.Model):
         return {
             'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
         }
+
 
 
 
