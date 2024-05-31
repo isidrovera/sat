@@ -17,6 +17,7 @@ from . import registro_fallas
 from . import reparaciones
 from . import repuestos_alquiler
 from . import incidencias
+from . import mobiluser
 
 
 
