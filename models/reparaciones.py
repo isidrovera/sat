@@ -360,19 +360,20 @@ class reparaciones(models.Model):
 
         # Construir y enviar el mensaje de WhatsApp
         msg = "Hola;\n*{}*\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.\n*REPARACION N°:* {}\n*Cliente:* {}\n*Importación:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}".format(
-            self.responsable_id.name,
-            self.name,
-            self.cliente_id.name,
-            self.importacion,
-            self.tipo_machine, 
-            self.marca, 
-            self.maquina_id.name.name, 
-            self.serie_id, 
-            self.obtener_estado_legible(), 
-            self.obtener_tipo_revision_legible(), 
-            self.obtener_prioridad_legible(), 
-            self.obtener_ubicacion_legible(), 
-            self.maquina_id.asesora_id             
+            self.responsable_id.name if self.responsable_id.name else 'NA',
+            self.name if self.name else 'NA',
+            self.cliente_id.name if self.cliente_id.name else 'NA',
+            self.importacion if self.importacion else 'NA',
+            self.tipo_machine if self.tipo_machine else 'NA',
+            self.marca if self.marca else 'NA',
+            self.maquina_id.name.name if self.maquina_id.name.name else 'NA',
+            self.serie_id if self.serie_id else 'NA',
+            self.obtener_estado_legible() if self.obtener_estado_legible() else 'NA',
+            self.obtener_tipo_revision_legible() if self.obtener_tipo_revision_legible() else 'NA',
+            self.obtener_prioridad_legible() if self.obtener_prioridad_legible() else 'NA',
+            self.obtener_ubicacion_legible() if self.obtener_ubicacion_legible() else 'NA',
+            self.maquina_id.asesora_id.name if self.maquina_id.asesora_id.name else 'NA'
+           
             
         )
 
