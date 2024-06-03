@@ -345,7 +345,7 @@ class reparaciones(models.Model):
             response_json = response.json()
             print("Respuesta JSON:", response_json)
             return response_json
-        except json.JSONDecodeHisError as e:
+        except json.JSONDecodeError as e:
             error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
             print(error_msg)
             return {"error": error_msg}  # Devuelve un diccionario con la clave 'error' y el mensaje de error como valor
@@ -374,8 +374,8 @@ class reparaciones(models.Model):
             self.responsable_id.name
         )
 
-        if self.responsable_id and hasattr(self.responsable_id, 'x_celular'):
-            phone_number = self.responsable_id.x_celular
+        if self.responsable_id and self.responsable_mobile_clean:
+            phone_number = self.responsable_mobile_clean
             self.send_whatsapp_message(phone_number, msg)
 
         # Actualizar estado de la reparación
