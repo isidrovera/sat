@@ -325,7 +325,7 @@ class ticket_alquiler(models.Model):
             # Enviar el tercer correo si asistencia_id es 'si'
             template3 = self.env.ref('sat.mail_template_asistencia_directa')
             template3.send_mail(self.id, force_send=True)
-
+        self.estado='proceso'
         return {
             'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
         }
