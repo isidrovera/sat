@@ -366,16 +366,15 @@ class reparaciones(models.Model):
             self.importacion if self.importacion else 'NA',
             self.tipo_machine if self.tipo_machine else 'NA',
             self.marca if self.marca else 'NA',
-            self.maquina_id.name.name if self.maquina_id.name.name else 'NA',
+            self.maquina_id.name.name if self.maquina_id.name and self.maquina_id.name.name else 'NA',
             self.serie_id if self.serie_id else 'NA',
             self.obtener_estado_legible() if self.obtener_estado_legible() else 'NA',
             self.obtener_tipo_revision_legible() if self.obtener_tipo_revision_legible() else 'NA',
             self.obtener_prioridad_legible() if self.obtener_prioridad_legible() else 'NA',
             self.obtener_ubicacion_legible() if self.obtener_ubicacion_legible() else 'NA',
-            self.maquina_id.asesora_id.name if self.maquina_id.asesora_id.name else 'NA'
-           
-            
+            self.maquina_id.asesora_id.name if self.maquina_id.asesora_id and self.maquina_id.asesora_id.name else 'NA'
         )
+
 
         if self.responsable_id and self.responsable_mobile_clean:
             phone_number = self.responsable_mobile_clean
