@@ -8,7 +8,8 @@ import webbrowser
 from datetime import datetime
 from pytz import timezone
 #import telegram
-
+import requests
+import json
 
 class ticket_alquiler(models.Model):
 
@@ -251,24 +252,70 @@ class ticket_alquiler(models.Model):
         }
     
     
+    responsable_mobile_clean = fields.Char(
+        string='Número de celular (limpio)',
+        compute='_compute_responsable_mobile_clean',
+        store=True
+    )
+
+    @api.depends('responsable.mobile_phone')
+    def _compute_responsable_mobile_clean(self):
+        for record in self:
+            if record.responsable.mobile_phone:
+                # Remove '+' and all types of spaces
+                phone = record.responsable.mobile_phone.replace('+', '')
+                phone = ''.join(phone.split())
+                # Ensure phone starts with '51'
+                if not phone.startswith('51'):
+                    phone = '51' + phone
+                record.responsable_mobile_clean = phone
+            else:
+                record.responsable_mobile_clean = 'NA'
+
+    def send_whatsapp_message(self, phone, message):
+        """Envía un mensaje de WhatsApp utilizando la API externa."""
+        url = 'https://copierconnectremote.com/lead'
+        data = {
+            'phone': phone,
+            'message': message
+        }
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(url, headers=headers, json=data)
+
+        print("Código de estado:", response.status_code)
+        print("Respuesta de la API:", response.text)
+
+        # Verificar si la respuesta contiene un cuerpo JSON válido
+        try:
+            response_json = response.json()
+            print("Respuesta JSON:", response_json)
+            return response_json
+        except json.JSONDecodeError as e:
+            error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
+            print(error_msg)
+            return {"error": error_msg}  # Devuelve un diccionario con la clave 'error' y el mensaje de error como valor
+
     def enviar_mensaje_whatsapp(self):
-
-        msg = "*Cliente:* %s" % (self.partner_id.name)
-        msg1 = "*Direccion:* %s" % (self.direccion_id_r)
-        msg2 = "*Modelo:* %s" % (self.product_alquiler.name.name)
-        msg3 = "*Serie:* %s" % (self.serie_id_r)
-        msg4 = "*Problema:* %s" % (self.description)
-        msg5 = "*Fecha de visita:* %s" % (self.agenda.strftime('%d/%m/%Y'))
-        msg6 = "*Tipo de servicio:* %s" % (self.tipo_servicio_id)
-        msg7 = "*Asistencia directa:* %s" % (self.asistencia_id)
-        msg8 = "  %s" % (self.mensaje)
-        msg9 = "*Contacto:* %s" % (self.contacto_id_r)
-        msg10 = "  %s" % (self.responsable.name)
+        # Construir y enviar el mensaje de WhatsApp
+        msg = "*Cliente:* {}".format(self.partner_id.name if self.partner_id.name else 'NA')
+        msg1 = "*Direccion:* {}".format(self.direccion_id_r if self.direccion_id_r else 'NA')
+        msg2 = "*Modelo:* {}".format(self.product_alquiler.name.name if self.product_alquiler.name and self.product_alquiler.name.name else 'NA')
+        msg3 = "*Serie:* {}".format(self.serie_id_r if self.serie_id_r else 'NA')
+        msg4 = "*Problema:* {}".format(self.description if self.description else 'NA')
+        msg5 = "*Fecha de visita:* {}".format(self.agenda.strftime('%d/%m/%Y') if self.agenda else 'NA')
+        msg6 = "*Tipo de servicio:* {}".format(self.tipo_servicio_id if self.tipo_servicio_id else 'NA')
+        msg7 = "*Asistencia directa:* {}".format(self.asistencia_id if self.asistencia_id else 'NA')
+        msg8 = "  {}".format(self.mensaje if self.mensaje else 'NA')
+        msg9 = "*Contacto:* {}".format(self.contacto_id_r if self.contacto_id_r else 'NA')
+        msg10 = "  {}".format(self.responsable.name if self.responsable.name else 'NA')
         
-        #msg2 = (f'{msg}{msg1}')       
+        if self.responsable and self.responsable_mobile_clean:
+            phone_number = self.responsable_mobile_clean
+            message = "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}".format(
+                msg10, msg8, msg, msg1, msg9, msg2, msg3, msg4, msg5, msg6, msg7
+            )
+            self.send_whatsapp_message(phone_number, message)
 
-        whatsapp_iu_url = 'https://api.whatsapp.com/send?phone=%s&text=%s' %  (self.responsable.mobile_phone, (f'{msg10}%0A{msg8}%0A{msg}%0A{msg1}%0A{msg9}%0A{msg2}%0A{msg3}%0A{msg4}%0A{msg5}%0A{msg6}%0A{msg7}'))
-        self.estado='proceso'
         # Enviando el primer correo con la primera plantilla
         template1 = self.env.ref('sat.email_template_ticket_cliente')
         template1.send_mail(self.id, force_send=True)
@@ -279,11 +326,10 @@ class ticket_alquiler(models.Model):
         if self.asistencia_id == 'si':
             # Enviar el tercer correo si asistencia_id es 'si'
             template3 = self.env.ref('sat.mail_template_asistencia_directa')
-            template3.send_mail(self.id, force_send=True)       
-        return{
-            'type': 'ir.actions.act_url',
-		    'target': 'new',
-		    'url':whatsapp_iu_url
+            template3.send_mail(self.id, force_send=True)
+            
+        return {
+            'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
         }
          
     repuestos_count_ticket = fields.Integer(compute='compute_count_repuestos_ticket')
