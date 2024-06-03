@@ -10,6 +10,9 @@ from pytz import timezone
 #import telegram
 import requests
 import json
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class ticket_alquiler(models.Model):
 
