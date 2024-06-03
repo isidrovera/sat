@@ -297,24 +297,22 @@ class ticket_alquiler(models.Model):
 
     def enviar_mensaje_whatsapp(self):
         # Construir y enviar el mensaje de WhatsApp
-        msg = "*Cliente:* {}".format(self.partner_id.name if self.partner_id.name else 'NA')
-        msg1 = "*Direccion:* {}".format(self.direccion_id_r if self.direccion_id_r else 'NA')
-        msg2 = "*Modelo:* {}".format(self.product_alquiler.name.name if self.product_alquiler.name and self.product_alquiler.name.name else 'NA')
-        msg3 = "*Serie:* {}".format(self.serie_id_r if self.serie_id_r else 'NA')
-        msg4 = "*Problema:* {}".format(self.description if self.description else 'NA')
-        msg5 = "*Fecha de visita:* {}".format(self.agenda.strftime('%d/%m/%Y') if self.agenda else 'NA')
-        msg6 = "*Tipo de servicio:* {}".format(self.tipo_servicio_id if self.tipo_servicio_id else 'NA')
-        msg7 = "*Asistencia directa:* {}".format(self.asistencia_id if self.asistencia_id else 'NA')
-        msg8 = "  {}".format(self.mensaje if self.mensaje else 'NA')
-        msg9 = "*Contacto:* {}".format(self.contacto_id_r if self.contacto_id_r else 'NA')
-        msg10 = "  {}".format(self.responsable.name if self.responsable.name else 'NA')
-        
+        msg = "Hola *{}*,\n\nSe le ha asignado un Ticket de servicio. Lea atentamente los detalles del servicio:\n\n*Cliente:* {}\n*Direccion:* {}\n*Contacto:* {}\n*Modelo:* {}\n*Serie:* {}\n*Problema:* {}\n*Fecha de visita:* {}\n*Tipo de servicio:* {}\n*Asistencia directa:* {}\n".format(
+            self.responsable.name if self.responsable and self.responsable.name else 'NA',
+            self.partner_id.name if self.partner_id and self.partner_id.name else 'NA',
+            self.direccion_id_r if self.direccion_id_r else 'NA',
+            self.contacto_id_r if self.contacto_id_r else 'NA',
+            self.product_alquiler.name.name if self.product_alquiler.name and self.product_alquiler.name.name else 'NA',
+            self.serie_id_r if self.serie_id_r else 'NA',
+            self.description if self.description else 'NA',
+            self.agenda.strftime('%d/%m/%Y') if self.agenda else 'NA',
+            self.tipo_servicio_id.name if self.tipo_servicio_id and self.tipo_servicio_id.name else 'NA',
+            self.asistencia_id if self.asistencia_id else 'NA'
+        )
+
         if self.responsable and self.responsable_mobile_clean:
             phone_number = self.responsable_mobile_clean
-            message = "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}".format(
-                msg10, msg8, msg, msg1, msg9, msg2, msg3, msg4, msg5, msg6, msg7
-            )
-            self.send_whatsapp_message(phone_number, message)
+            self.send_whatsapp_message(phone_number, msg)
 
         # Enviando el primer correo con la primera plantilla
         template1 = self.env.ref('sat.email_template_ticket_cliente')
@@ -327,7 +325,7 @@ class ticket_alquiler(models.Model):
             # Enviar el tercer correo si asistencia_id es 'si'
             template3 = self.env.ref('sat.mail_template_asistencia_directa')
             template3.send_mail(self.id, force_send=True)
-            
+
         return {
             'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
         }
