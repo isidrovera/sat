@@ -236,7 +236,10 @@ class ticket_alquiler(models.Model):
         if self.retorno_id == 'no':
             # Enviar el tercer correo si asistencia_id es 'si'
             template5 = self.env.ref('sat.mail_template_retorno')
-            template5.send_mail(self.id, force_send=True) 
+            template5.send_mail(self.id, force_send=True)
+        
+        # Llamar a la función para enviar mensaje de finalización al cliente
+        self.enviar_mensaje_whatsapp_finalizacion()
 
     
 
@@ -271,6 +274,25 @@ class ticket_alquiler(models.Model):
                 record.responsable_mobile_clean = phone
             else:
                 record.responsable_mobile_clean = 'NA'
+    cliente_phones_clean = fields.Char(
+        string='Números de contacto limpios',
+        compute='_compute_cliente_phones_clean',
+        store=True
+    )           
+    @api.depends('product_alquiler.celular')
+    def _compute_cliente_phones_clean(self):
+        for record in self:
+            if record.product_alquiler.celular:
+                phones = record.product_alquiler.celular.split('/')
+                cleaned_phones = []
+                for phone in phones:
+                    phone = ''.join(phone.split())
+                    if not phone.startswith('51'):
+                        phone = '51' + phone
+                    cleaned_phones.append(phone)
+                record.cliente_phones_clean = ','.join(cleaned_phones)
+            else:
+                record.cliente_phones_clean = 'NA'
 
     def send_whatsapp_message(self, phone, message):
         """Envía un mensaje de WhatsApp utilizando la API externa."""
@@ -310,9 +332,30 @@ class ticket_alquiler(models.Model):
             self.asistencia_id if self.asistencia_id else 'NA'
         )
 
+        msg_cliente = "Estimado/a *{}*,\n\nLe informamos que hemos programado una visita técnica para atender su requerimiento. A continuación, le detallamos la información correspondiente:\n\n*Ticket #:* {}\n*Fecha de Visita:* {}\n*Tipo de servicio:* {}\n*Dirección:* {}\n*Técnico Asignado:* {}\n*DNI:* {}\n\n*ESPECIFICACIONES DEL EQUIPO*\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n\n*PROBLEMA REPORTADO*\n{}\n\nPor favor, notifíquenos sobre su stock de toner para garantizarles el total abastecimiento. Además, le solicitamos reportar cualquier inconveniente adicional que presente al técnico en su visita para solventar la totalidad de sus dudas. Para finalizar, solicitamos su apoyo en:\n\n1. Dar autorización para el ingreso de nuestro personal a sus oficinas o el espacio donde se encuentre nuestro equipo.\n2. Disponibilidad de espacio y tiempo para que nuestro personal pueda desarrollar su labor.\n\nGracias por su atención.".format(
+            self.partner_id.name if self.partner_id and self.partner_id.name else 'NA',
+            self.name if self.name else 'NA',
+            self.agenda.strftime('%d/%m/%Y') if self.agenda else 'NA',
+            self.tipo_servicio_id if self.tipo_servicio_id else 'NA',
+            self.direccion_id_r if self.direccion_id_r else 'NA',
+            self.responsable.name if self.responsable and self.responsable.name else 'NA',
+            self.responsable.vat if self.responsable and self.responsable.vat else 'NA',
+            self.marca_id_r if self.marca_id_r else 'NA',
+            self.product_alquiler.name.name if self.product_alquiler.name and self.product_alquiler.name.name else 'NA',
+            self.serie_id_r if self.serie_id_r else 'NA',
+            self.description if self.description else 'NA'
+        )
+
+        # Enviar mensaje al técnico
         if self.responsable and self.responsable_mobile_clean:
             phone_number = self.responsable_mobile_clean
-            self.send_whatsapp_message(phone_number, msg)
+            self.send_whatsapp_message(phone_number, msg_tecnico)
+
+        # Enviar mensaje al cliente
+        if self.cliente_phones_clean:
+            phone_numbers = self.cliente_phones_clean.split(',')
+            for phone_number in phone_numbers:
+                self.send_whatsapp_message(phone_number, msg_cliente)
 
         # Enviando el primer correo con la primera plantilla
         template1 = self.env.ref('sat.email_template_ticket_cliente')
@@ -325,10 +368,66 @@ class ticket_alquiler(models.Model):
             # Enviar el tercer correo si asistencia_id es 'si'
             template3 = self.env.ref('sat.mail_template_asistencia_directa')
             template3.send_mail(self.id, force_send=True)
-        self.estado='proceso'
+
+        self.estado = 'proceso'
         return {
             'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
         }
+
+    def enviar_mensaje_whatsapp_finalizacion(self):
+        msg_cliente_finalizacion = "Hola, estimado cliente.\n\nQueremos informarle que hemos completado satisfactoriamente nuestra visita técnica programada. A continuación, le detallamos el trabajo realizado durante la visita:\n\n*Ticket #:* {}\n*Fecha de Visita:* {}\n*Tipo de servicio:* {}\n*Dirección:* {}\n*Técnico Asignado:* {}\n*DNI:* {}\n\n*ESPECIFICACIONES DEL EQUIPO*\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Contómetro K:* {}\n*Contómetro color:* {}\n*Contómetro scanner:* {}\n\n*PROBLEMA REPORTADO*\n{}\n\n*INFORME TÉCNICO*\n{}\n\nAgradecemos su confianza en nuestros servicios y productos. Si necesita más asistencia o tiene cualquier requerimiento adicional, no dude en comunicarse con nosotros.".format(
+            self.name if self.name else 'NA',
+            self.agenda.strftime('%d/%m/%Y') if self.agenda else 'NA',
+            self.tipo_servicio_id if self.tipo_servicio_id else 'NA',
+            self.direccion_id_r if self.direccion_id_r else 'NA',
+            self.responsable.name if self.responsable and self.responsable.name else 'NA',
+            self.responsable.vat if self.responsable and self.responsable.vat else 'NA',
+            self.marca_id_r if self.marca_id_r else 'NA',
+            self.product_alquiler.name.name if self.product_alquiler.name and self.product_alquiler.name.name else 'NA',
+            self.serie_id_r if self.serie_id_r else 'NA',
+            self.contometrok_id if self.contometrok_id else 'NA',
+            self.contometroc_id if self.contometroc_id else 'NA',
+            self.contometros_id if self.contometros_id else 'NA',
+            self.description if self.description else 'NA',
+            self.informe_id if self.informe_id else 'NA'
+        )
+
+        # Generar URL del informe
+        file_url = self._generate_report_url()
+
+        # Enviar mensaje al cliente
+        if self.cliente_phones_clean:
+            phone_numbers = self.cliente_phones_clean.split(',')
+            for phone_number in phone_numbers:
+                self.send_whatsapp_message(phone_number, msg_cliente_finalizacion, file_url)
+
+        # Enviando el correo de finalización al cliente
+        template4 = self.env.ref('sat.email_template_ticket_cliente_finalizacion')
+        template4.send_mail(self.id, force_send=True)
+        # Verificar el valor de asistencia_id
+        if self.retorno_id == 'no':
+            # Enviar el correo de retorno si asistencia_id es 'no'
+            template5 = self.env.ref('sat.mail_template_retorno')
+            template5.send_mail(self.id, force_send=True)
+
+    def _generate_report_url(self):
+        """Genera la URL del informe técnico en formato PDF."""
+        report = self.env.ref('your_module.report_template_id')
+        pdf_content, _ = report.sudo().render_qweb_pdf([self.id])
+        report_name = 'Informe_Tecnico_{}.pdf'.format(self.name)
+        attachment = self.env['ir.attachment'].create({
+            'name': report_name,
+            'type': 'binary',
+            'datas': base64.b64encode(pdf_content),
+            'store_fname': report_name,
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'application/pdf'
+        })
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        return '{}/web/content/{}?download=true'.format(base_url, attachment.id)
+
+    
          
     repuestos_count_ticket = fields.Integer(compute='compute_count_repuestos_ticket')
 
