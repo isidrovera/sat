@@ -261,24 +261,24 @@ class ticket_alquiler(models.Model):
         store=True
     )
 
+    cliente_phones_clean = fields.Char(
+        string='Números de contacto limpios',
+        compute='_compute_cliente_phones_clean',
+        store=True
+    )
+
     @api.depends('responsable.mobile_phone')
     def _compute_responsable_mobile_clean(self):
         for record in self:
             if record.responsable.mobile_phone:
-                # Remove '+' and all types of spaces
                 phone = record.responsable.mobile_phone.replace('+', '')
                 phone = ''.join(phone.split())
-                # Ensure phone starts with '51'
                 if not phone.startswith('51'):
                     phone = '51' + phone
                 record.responsable_mobile_clean = phone
             else:
                 record.responsable_mobile_clean = 'NA'
-    cliente_phones_clean = fields.Char(
-        string='Números de contacto limpios',
-        compute='_compute_cliente_phones_clean',
-        store=True
-    )           
+
     @api.depends('product_alquiler.celular')
     def _compute_cliente_phones_clean(self):
         for record in self:
@@ -294,32 +294,34 @@ class ticket_alquiler(models.Model):
             else:
                 record.cliente_phones_clean = 'NA'
 
-    def send_whatsapp_message(self, phone, message):
-        """Envía un mensaje de WhatsApp utilizando la API externa."""
+    def send_whatsapp_message(self, phone, message, file_url=None):
+        """Envía un mensaje de WhatsApp con o sin archivo adjunto utilizando la API externa."""
+        _logger.debug(f"Enviando mensaje a {phone} con contenido: {message} y archivo: {file_url}")
+        
         url = 'https://copierconnectremote.com/lead'
         data = {
             'phone': phone,
             'message': message
         }
+        if file_url:
+            data['file_url'] = file_url
         headers = {'Content-Type': 'application/json'}
         response = requests.post(url, headers=headers, json=data)
 
-        print("Código de estado:", response.status_code)
-        print("Respuesta de la API:", response.text)
+        _logger.debug(f"Código de estado: {response.status_code}")
+        _logger.debug(f"Respuesta de la API: {response.text}")
 
-        # Verificar si la respuesta contiene un cuerpo JSON válido
         try:
             response_json = response.json()
-            print("Respuesta JSON:", response_json)
+            _logger.debug(f"Respuesta JSON: {response_json}")
             return response_json
         except json.JSONDecodeError as e:
             error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
-            print(error_msg)
-            return {"error": error_msg}  # Devuelve un diccionario con la clave 'error' y el mensaje de error como valor
+            _logger.error(error_msg)
+            return {"error": error_msg}
 
-    def enviar_mensaje_whatsapp(self):
-        # Construir y enviar el mensaje de WhatsApp
-        msg = "Hola *{}*,\n\nSe le ha asignado un Ticket de servicio. Lea atentamente los detalles del servicio:\n\n*Cliente:* {}\n*Direccion:* {}\n*Contacto:* {}\n*Modelo:* {}\n*Serie:* {}\n*Problema:* {}\n*Fecha de visita:* {}\n*Tipo de servicio:* {}\n*Asistencia directa:* {}\n".format(
+    def enviar_mensaje_whatsapp_asignacion(self):
+        msg_tecnico = "Hola *{}*,\n\nSe le ha asignado un Ticket de servicio. Lea atentamente los detalles del servicio:\n\n*Cliente:* {}\n*Direccion:* {}\n*Contacto:* {}\n*Modelo:* {}\n*Serie:* {}\n*Problema:* {}\n*Fecha de visita:* {}\n*Tipo de servicio:* {}\n*Asistencia directa:* {}\n".format(
             self.responsable.name if self.responsable and self.responsable.name else 'NA',
             self.partner_id.name if self.partner_id and self.partner_id.name else 'NA',
             self.direccion_id_r if self.direccion_id_r else 'NA',
@@ -407,12 +409,12 @@ class ticket_alquiler(models.Model):
         # Verificar el valor de asistencia_id
         if self.retorno_id == 'no':
             # Enviar el correo de retorno si asistencia_id es 'no'
-            template5 = self.env.ref('sat.mail_template_retorno')
+            template5 = self.env.ref('sat.ticket_alquiler')
             template5.send_mail(self.id, force_send=True)
 
     def _generate_report_url(self):
         """Genera la URL del informe técnico en formato PDF."""
-        report = self.env.ref('your_module.report_template_id')
+        report = self.env.ref('sat.report_template_id')
         pdf_content, _ = report.sudo().render_qweb_pdf([self.id])
         report_name = 'Informe_Tecnico_{}.pdf'.format(self.name)
         attachment = self.env['ir.attachment'].create({
