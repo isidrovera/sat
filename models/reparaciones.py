@@ -359,10 +359,11 @@ class reparaciones(models.Model):
         additional_template.send_mail(self.id, force_send=True)
 
         # Construir y enviar el mensaje de WhatsApp
-        msg = "Hola;\n{}\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.\n*REPARACION N°:* {}\n*Cliente:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}".format(
+        msg = "Hola;\n{}\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.\n*REPARACION N°:* {}\n*Cliente:* {}\n*Importación:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}".format(
             self.responsable_id.name,
             self.name,
-            self.cliente_id.name, 
+            self.cliente_id.name,
+            self.importacion,
             self.tipo_machine, 
             self.marca, 
             self.maquina_id.name.name, 
