@@ -372,9 +372,8 @@ class reparaciones(models.Model):
             self.obtener_tipo_revision_legible() if self.obtener_tipo_revision_legible() else 'NA',
             self.obtener_prioridad_legible() if self.obtener_prioridad_legible() else 'NA',
             self.obtener_ubicacion_legible() if self.obtener_ubicacion_legible() else 'NA',
-            self.maquina_id.asesora_id.name if self.maquina_id.asesora_id and self.maquina_id.asesora_id.name else 'NA'
+            self.maquina_id.asesora_id if self.maquina_id.asesora_id else 'NA'
         )
-
 
         if self.responsable_id and self.responsable_mobile_clean:
             phone_number = self.responsable_mobile_clean
@@ -385,7 +384,6 @@ class reparaciones(models.Model):
         return {
             'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
         }
-
 
 
 
