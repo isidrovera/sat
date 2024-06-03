@@ -315,13 +315,15 @@ class reparaciones(models.Model):
     def _compute_responsable_mobile_clean(self):
         for record in self:
             if record.responsable_id.mobile_phone:
-                # Remove '+' and spaces
-                phone = record.responsable_id.mobile_phone.replace('+', '').replace(' ', '')
+                # Remove '+' and all types of spaces
+                phone = record.responsable_id.mobile_phone.replace('+', '')
+                phone = ''.join(phone.split())
                 # Ensure phone starts with '51'
                 if not phone.startswith('51'):
                     phone = '51' + phone
                 record.responsable_mobile_clean = phone
             else:
+                record.responsable_mobile_clean = ''
                 record.responsable_mobile_clean = ''
 
 
