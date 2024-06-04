@@ -24,34 +24,18 @@ class reparaciones(models.Model):
                        required=True,
                        readonly=True)
 
-    #@api.model
-   # def create(self, vals):
-        # Genera una referencia estándar
-     #   vals['name'] = self.env['ir.sequence'].next_by_code(
-       #     'reparaciones.reparaciones') or '/'
         
-        # Crear el registro sin enviar correos electrónicos
-       # record = super().create(vals)
-        
-       # return record
-    
     @api.model
     def create(self, vals):
-        # Genera una referencia estándar
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
-        # Crear el registro sin enviar correos electrónicos
         record = super(reparaciones, self).create(vals)
+        record.enviar_mensaje_whatsapp_reparaciones()
         return record
 
-    
+      
+    maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True )
 
-  
-    maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True
-
-    )
-
-    marca = fields.Char(string='Marca', related='maquina_id.marca', readonly=True, store=True
-                        )
+    marca = fields.Char(string='Marca', related='maquina_id.marca', readonly=True, store=True)
     importacion = fields.Char(string='Importación',
                               related='maquina_id.importacion')
     nombre_proveedor = fields.Char(
@@ -83,25 +67,12 @@ class reparaciones(models.Model):
         return self.env.ref('sat.report_reparaciones_qr').report_action(self)
 
 
-
-
-
-
     def action_con_problemas_reparacion(self):
         self.estado_id = "con_problemas"
 
-    tipo_revision = fields.Selection(related='maquina_id.tipo_revision',
-                                     readonly=True,
-                                     store=True
-                                     )
-    ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id',
-                                    readonly=True,
-                                    store=True
-                                    )
-    prioridad = fields.Selection(related='maquina_id.prioridad',
-                                 readonly=True,
-                                 store=True
-                                 )
+    tipo_revision = fields.Selection(related='maquina_id.tipo_revision', readonly=True,store=True)
+    ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id', readonly=True, store=True)
+    prioridad = fields.Selection(related='maquina_id.prioridad',readonly=True,store=True)
 
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
@@ -403,19 +374,14 @@ class reparaciones(models.Model):
 
     
     def _create_next_reparacion(self):
-        next_maquina = self.env['sat.sat'].search([
-            ('estado_ventas_id', '=', 'para_revision')
-        ], order='fecha_para_revision asc', limit=1)
-        
+        next_maquina = self.env['sat.sat'].search([('estado_ventas_id', '=', 'para_revision')], order='fecha_para_revision asc', limit=1)
         if next_maquina:
-            next_maquina.write({
-                'estado_ventas_id': 'en_revision',
-                'trabajadores_id': self.responsable_id.id
-            })
-            self.env['reparaciones.reparaciones'].create({
+            next_maquina.write({'estado_ventas_id': 'en_revision', 'trabajadores_id': self.responsable_id.id})
+            reparacion = self.env['reparaciones.reparaciones'].create({
                 'maquina_id': next_maquina.id,
                 'responsable_id': self.responsable_id.id,
             })
+            reparacion.enviar_mensaje_whatsapp_reparaciones()
 
     def write(self, vals):
         finalizado = vals.get('estado_id') == 'finalizado'
@@ -439,9 +405,7 @@ class reparaciones(models.Model):
                     ('usuario_id', '=', rec.responsable_id.name),
                 ], limit=1)
                 if existing_record:
-                    existing_record.write({
-                        'descripcion': rec.falla_proveedor,
-                    })
+                    existing_record.write({'descripcion': rec.falla_proveedor})
                 else:
                     rec.env['fallas'].create({
                         'descripcion': rec.falla_proveedor,
