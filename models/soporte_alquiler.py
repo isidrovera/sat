@@ -230,7 +230,7 @@ class ticket_alquiler(models.Model):
 
     }
    
-    def action_finalizar(self):
+    def enviar_mensaje_whatsapp(self):
         self.estado='finalizado'
         # Enviando el segundo correo con la segunda plantilla
         template4 = self.env.ref('sat.email_template_ticket_cliente_finalizacion')
