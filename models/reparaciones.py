@@ -27,6 +27,8 @@ class reparaciones(models.Model):
         
     @api.model
     def create(self, vals):
+        if 'contometrok_id' not in vals or not vals['contometrok_id']:
+            raise ValidationError(_("El campo Contometro es obligatorio."))
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         record = super(reparaciones, self).create(vals)
         record.enviar_mensaje_whatsapp_reparaciones()
@@ -383,14 +385,14 @@ class reparaciones(models.Model):
             })
 
     def write(self, vals):
+        if 'contometrok_id' in vals and not vals['contometrok_id']:
+            raise ValidationError(_("El campo Contometro es obligatorio."))
         finalizado = vals.get('estado_id') == 'finalizado'
         if finalizado:
             for rec in self:
                 if rec.estado_id == 'en_revision':
                     vals['fecha_finalizacion'] = fields.Datetime.now()
-
         res = super(reparaciones, self).write(vals)
-
         if 'falla_proveedor' in vals:
             for rec in self:
                 existing_record = rec.env['fallas'].search([
@@ -415,10 +417,8 @@ class reparaciones(models.Model):
                         'serie': rec.maquina_id.serie_id,
                         'usuario_id': rec.responsable_id.name,
                     })
-
         if finalizado:
             self._create_next_reparacion()
-
         return res
     
 
