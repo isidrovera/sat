@@ -40,7 +40,7 @@ class reparaciones(models.Model):
         # Genera una referencia estándar
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         # Crear el registro sin enviar correos electrónicos
-        record = super(Reparaciones, self).create(vals)
+        record = super(reparaciones, self).create(vals)
         return record
 
     def _create_next_reparacion(self):
