@@ -43,20 +43,7 @@ class reparaciones(models.Model):
         record = super(reparaciones, self).create(vals)
         return record
 
-    def _create_next_reparacion(self):
-        next_maquina = self.env['sat.sat'].search([
-            ('estado_ventas_id', '=', 'para_revision')
-        ], order='fecha_para_revision asc', limit=1)
-        
-        if next_maquina:
-            next_maquina.write({
-                'estado_ventas_id': 'en_revision',
-                'trabajadores_id': self.responsable_id.id
-            })
-            self.env['reparaciones.reparaciones'].create({
-                'maquina_id': next_maquina.id,
-                'responsable_id': self.responsable_id.id,
-            })
+    
 
   
     maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True
@@ -415,21 +402,31 @@ class reparaciones(models.Model):
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
 
     
+    def _create_next_reparacion(self):
+        next_maquina = self.env['sat.sat'].search([
+            ('estado_ventas_id', '=', 'para_revision')
+        ], order='fecha_para_revision asc', limit=1)
+        
+        if next_maquina:
+            next_maquina.write({
+                'estado_ventas_id': 'en_revision',
+                'trabajadores_id': self.responsable_id.id
+            })
+            self.env['reparaciones.reparaciones'].create({
+                'maquina_id': next_maquina.id,
+                'responsable_id': self.responsable_id.id,
+            })
+
     def write(self, vals):
-        # Verificar si 'estado_id' está en vals y si el nuevo estado es 'finalizado'
         finalizado = vals.get('estado_id') == 'finalizado'
         
-        # Antes de ejecutar el write original, revisar si se debe actualizar la fecha de finalización
         if finalizado:
             for rec in self:
-                # Solo actualizar si el estado actual es 'en_revision'
                 if rec.estado_id == 'en_revision':
                     vals['fecha_finalizacion'] = fields.Datetime.now()
 
-        # Ejecutar el método write original y guardar el resultado
         res = super(reparaciones, self).write(vals)
         
-        # Aquí continúa la lógica existente de manejo de 'falla_proveedor'
         if 'falla_proveedor' in vals:
             for rec in self:
                 existing_record = rec.env['fallas'].search([
@@ -457,7 +454,6 @@ class reparaciones(models.Model):
                         'usuario_id': rec.responsable_id.name,
                     })
         
-        # Lógica para crear la siguiente reparación
         if finalizado:
             self._create_next_reparacion()
 
