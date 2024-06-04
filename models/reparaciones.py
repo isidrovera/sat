@@ -385,7 +385,6 @@ class reparaciones(models.Model):
 
     def _send_notifications(self):
         self.enviar_mensaje_whatsapp_reparaciones()
-        self.estado_id = 'en_revision'
 
     def write(self, vals):
         finalizado = vals.get('estado_id') == 'finalizado'
@@ -424,6 +423,10 @@ class reparaciones(models.Model):
         
         if finalizado:
             self._create_next_reparacion()
+        else:
+            # Only send notifications if the repair is newly assigned or updated with specific conditions
+            if 'responsable_id' in vals or 'maquina_id' in vals:
+                self._send_notifications()
 
         return res
 
