@@ -28,7 +28,7 @@ class reparaciones(models.Model):
     @api.model
     def create(self, vals):
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
-        record = super(Reparaciones, self).create(vals)
+        record = super(reparaciones, self).create(vals)
         record.enviar_mensaje_whatsapp_reparaciones()  # Solo envía notificaciones en la creación
         return record
 
