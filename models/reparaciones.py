@@ -24,18 +24,41 @@ class reparaciones(models.Model):
                        required=True,
                        readonly=True)
 
+    #@api.model
+   # def create(self, vals):
+        # Genera una referencia estándar
+     #   vals['name'] = self.env['ir.sequence'].next_by_code(
+       #     'reparaciones.reparaciones') or '/'
+        
+        # Crear el registro sin enviar correos electrónicos
+       # record = super().create(vals)
+        
+       # return record
+    
     @api.model
     def create(self, vals):
         # Genera una referencia estándar
-        vals['name'] = self.env['ir.sequence'].next_by_code(
-            'reparaciones.reparaciones') or '/'
-        
+        vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         # Crear el registro sin enviar correos electrónicos
-        record = super().create(vals)
-        
+        record = super(Reparaciones, self).create(vals)
         return record
 
+    def _create_next_reparacion(self):
+        next_maquina = self.env['sat.sat'].search([
+            ('estado_ventas_id', '=', 'para_revision')
+        ], order='fecha_para_revision asc', limit=1)
+        
+        if next_maquina:
+            next_maquina.write({
+                'estado_ventas_id': 'en_revision',
+                'trabajadores_id': self.responsable_id.id
+            })
+            self.env['reparaciones.reparaciones'].create({
+                'maquina_id': next_maquina.id,
+                'responsable_id': self.responsable_id.id,
+            })
 
+  
     maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True
 
     )
@@ -433,8 +456,15 @@ class reparaciones(models.Model):
                         'serie': rec.maquina_id.serie_id,
                         'usuario_id': rec.responsable_id.name,
                     })
+        
+        # Lógica para crear la siguiente reparación
+        if finalizado:
+            self._create_next_reparacion()
 
         return res
+
+    
+
 
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
     
