@@ -28,8 +28,8 @@ class reparaciones(models.Model):
     @api.model
     def create(self, vals):
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
-        record = super(reparaciones, self).create(vals)
-        record.enviar_mensaje_whatsapp_reparaciones()
+        record = super(Reparaciones, self).create(vals)
+        record.enviar_mensaje_whatsapp_reparaciones()  # Solo envía notificaciones en la creación
         return record
 
       
@@ -381,10 +381,6 @@ class reparaciones(models.Model):
                 'maquina_id': next_maquina.id,
                 'responsable_id': self.responsable_id.id,
             })
-            reparacion._send_notifications()
-
-    def _send_notifications(self):
-        self.enviar_mensaje_whatsapp_reparaciones()
 
     def write(self, vals):
         finalizado = vals.get('estado_id') == 'finalizado'
@@ -423,10 +419,6 @@ class reparaciones(models.Model):
         
         if finalizado:
             self._create_next_reparacion()
-        else:
-            # Only send notifications if the repair is newly assigned or updated with specific conditions
-            if 'responsable_id' in vals or 'maquina_id' in vals:
-                self._send_notifications()
 
         return res
 
