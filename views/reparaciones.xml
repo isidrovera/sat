@@ -47,7 +47,7 @@
                                 <field name="marca"/>
                                 <field name="maquina_id" domain="[('estado_ventas_id', '=', 'sin_revisar')]" />
                                 <field name="serie_id"/>
-                                <field name="contometrok_id" attrs="{'required':[('estado_id', '=', 'en_revision')]}"/>
+                                <field name="contometrok_id" />
                                 <field name="nombre_maquina" invisible='True'/>
                                 <field name="nombre_proveedor" invisible='True'/>
                             </group>

@@ -298,7 +298,7 @@ class SatSat(models.Model):
             else:
                 record.activador = 'no'
 
-    contometro = fields.Char(string='Contometro', required=True, tracking=True,)
+    contometro = fields.Char(string='Contometro', tracking=True,)
     marca = fields.Char(string='Marca', related='name.marca_id.name', readonly=True, store=True, tracking=True
                         )
     precio_venta = fields.Float(string='Precio de venta', related='name.precio_venta', readonly=True, tracking=True)
