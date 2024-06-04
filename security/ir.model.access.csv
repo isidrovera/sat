@@ -1,6 +1,6 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_sat_sat,sat.sat,model_sat_sat,base.group_user,1,1,0,0
-access_reparaciones_reparaciones,reparaciones.reparaciones,model_reparaciones_reparaciones,base.group_user,1,1,0,0
+access_sat_sat,sat.sat,model_sat_sat,base.group_user,1,1,1,1
+access_reparaciones_reparaciones,reparaciones.reparaciones,model_reparaciones_reparaciones,base.group_user,1,1,1,1
 access_tipo_maquina,tipo.maquina,model_tipo_maquina,base.group_user,1,1,0,0
 access_ajustes_ajustes,ajustes.ajustes,model_ajustes_ajustes,base.group_user,1,1,0,0
 access_modelo_maquina,modelo.maquina,model_modelo_maquina,base.group_user,1,1,0,0
