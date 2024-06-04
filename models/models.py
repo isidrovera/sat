@@ -404,25 +404,11 @@ class SatSat(models.Model):
         if isidro_user:
             return isidro_user.partner_id.id
         return False
-    def _create_reparacion_if_needed(self):
-        for record in self:
-            if record.estado_ventas_id == 'para_revision':
-                self.env['reparaciones.reparaciones'].create({
-                    'maquina_id': record.id,
-                    'responsable_id': record.trabajadores_id.id,
-                })
-                record.write({'estado_ventas_id': 'en_revision'})
-
-    @api.model
-    def create(self, vals):
-        record = super(SatSat, self).create(vals)
-        if vals.get('estado_ventas_id') == 'para_revision':
-            record._create_reparacion_if_needed()
-        return record
 
     def write(self, vals):
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         
+        # Verificar si los campos 'tipo_revision' o 'prioridad' están siendo modificados
         tipo_revision_modificado = 'tipo_revision' in vals
         prioridad_modificada = 'prioridad' in vals
         
@@ -433,24 +419,25 @@ class SatSat(models.Model):
             
             if estado_actual in estados_permitidos_para_cambio:
                 if tipo_revision_modificado or prioridad_modificada:
+                    # Si alguno de los campos tiene un valor, cambiar a 'para_revision'
                     if vals.get('tipo_revision') or vals.get('prioridad'):
                         vals['estado_ventas_id'] = 'para_revision'
-                        vals['fecha_para_revision'] = fields.Datetime.now()
+                        vals['fecha_para_revision'] = fields.Datetime.now()  # Registrar la fecha y hora de la modificación
 
+                        # Enviar notificación a Isidro Vera Polo
                         if isidro_partner_id:
                             user_name = self.env.user.name
                             record_name = record.name.name
                             serie = record.serie_id
                             message = f"Se ha colocado una nueva máquina para revisión.\n\nDetalles del equipo:\n- Nombre: {record_name}\n- Serie: {serie}\n\nModificado por: {user_name}"
-                            record.message_post(body=message, partner_ids=[isidro_partner_id], subtype='mail.mt_comment')
-                        
-                        self.env['reparaciones.reparaciones'].create({
-                            'maquina_id': record.id,
-                            'responsable_id': record.trabajadores_id.id,
-                        })
-                        vals['estado_ventas_id'] = 'en_revision'
+                            record.message_post(
+                                body=message,
+                                partner_ids=[isidro_partner_id],
+                                subtype='mail.mt_comment',
+                            )
                     else:
+                        # Si ambos campos están vacíos o borrados, cambiar a 'sin_revisar'
                         vals['estado_ventas_id'] = 'sin_revisar'
-                        vals['fecha_para_revision'] = None
+                        vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
 
         return super(SatSat, self).write(vals)
