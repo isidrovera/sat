@@ -395,7 +395,7 @@ class reparaciones(models.Model):
                 if rec.estado_id == 'en_revision':
                     vals['fecha_finalizacion'] = fields.Datetime.now()
 
-        res = super(Reparaciones, self).write(vals)
+        res = super(reparaciones, self).write(vals)
         
         if 'falla_proveedor' in vals:
             for rec in self:
