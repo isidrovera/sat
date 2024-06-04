@@ -143,7 +143,14 @@ class Reparaciones(models.Model):
     cliente_id = fields.Many2one('res.partner', string='Cliente', related='maquina_id.cliente_id', readonly=True, store=True, tracking=True)
     falla_proveedor = fields.Html(string="Descripción", tracking=True)
     falla_ventas = fields.Text(string='Descripción', related='maquina_id.descripcion', readonly=False, store=True, tracking=True)
+    # Método para finalizar reparación
+    def action_finalizar_reparacion(self):
+        self.estado_id = "finalizado"
 
+        # Enviar el correo
+        template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
+        template_id.send_mail(self.id, force_send=True)
+        return self.env.ref('sat.report_reparaciones_qr').report_action(self)
     @api.depends('estado_id')
     def obtener_estado_legible(self):
         estado_legible = ""
