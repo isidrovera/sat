@@ -381,7 +381,11 @@ class reparaciones(models.Model):
                 'maquina_id': next_maquina.id,
                 'responsable_id': self.responsable_id.id,
             })
-            reparacion.enviar_mensaje_whatsapp_reparaciones()
+            reparacion._send_notifications()
+
+    def _send_notifications(self):
+        self.enviar_mensaje_whatsapp_reparaciones()
+        self.estado_id = 'en_revision'
 
     def write(self, vals):
         finalizado = vals.get('estado_id') == 'finalizado'
@@ -391,7 +395,7 @@ class reparaciones(models.Model):
                 if rec.estado_id == 'en_revision':
                     vals['fecha_finalizacion'] = fields.Datetime.now()
 
-        res = super(reparaciones, self).write(vals)
+        res = super(Reparaciones, self).write(vals)
         
         if 'falla_proveedor' in vals:
             for rec in self:
