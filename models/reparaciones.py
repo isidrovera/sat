@@ -24,18 +24,24 @@ class reparaciones(models.Model):
                        required=True,
                        readonly=True)
 
-        
     @api.model
     def create(self, vals):
-        vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
-        record = super(reparaciones, self).create(vals)
-        record.enviar_mensaje_whatsapp_reparaciones()
+        # Genera una referencia estándar
+        vals['name'] = self.env['ir.sequence'].next_by_code(
+            'reparaciones.reparaciones') or '/'
+        
+        # Crear el registro sin enviar correos electrónicos
+        record = super().create(vals)
+        
         return record
 
-      
-    maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True )
 
-    marca = fields.Char(string='Marca', related='maquina_id.marca', readonly=True, store=True)
+    maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True
+
+    )
+
+    marca = fields.Char(string='Marca', related='maquina_id.marca', readonly=True, store=True
+                        )
     importacion = fields.Char(string='Importación',
                               related='maquina_id.importacion')
     nombre_proveedor = fields.Char(
@@ -67,12 +73,25 @@ class reparaciones(models.Model):
         return self.env.ref('sat.report_reparaciones_qr').report_action(self)
 
 
+
+
+
+
     def action_con_problemas_reparacion(self):
         self.estado_id = "con_problemas"
 
-    tipo_revision = fields.Selection(related='maquina_id.tipo_revision', readonly=True,store=True)
-    ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id', readonly=True, store=True)
-    prioridad = fields.Selection(related='maquina_id.prioridad',readonly=True,store=True)
+    tipo_revision = fields.Selection(related='maquina_id.tipo_revision',
+                                     readonly=True,
+                                     store=True
+                                     )
+    ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id',
+                                    readonly=True,
+                                    store=True
+                                    )
+    prioridad = fields.Selection(related='maquina_id.prioridad',
+                                 readonly=True,
+                                 store=True
+                                 )
 
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
@@ -244,8 +263,8 @@ class reparaciones(models.Model):
     contometrok_id = fields.Char(string="Contometro",
                                  related='maquina_id.contometro',
                                  readonly=False,
-                                 store=True,  tracking=True
-                                 
+                                 store=True,  tracking=True,
+                                 required=True
 
                                  )
 
@@ -373,24 +392,21 @@ class reparaciones(models.Model):
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
 
     
-    def _create_next_reparacion(self):
-        next_maquina = self.env['sat.sat'].search([('estado_ventas_id', '=', 'para_revision')], order='fecha_para_revision asc', limit=1)
-        if next_maquina:
-            next_maquina.write({'estado_ventas_id': 'en_revision', 'trabajadores_id': self.responsable_id.id})
-            reparacion = self.env['reparaciones.reparaciones'].create({
-                'maquina_id': next_maquina.id,
-                'responsable_id': self.responsable_id.id,
-            })
-
     def write(self, vals):
+        # Verificar si 'estado_id' está en vals y si el nuevo estado es 'finalizado'
         finalizado = vals.get('estado_id') == 'finalizado'
+        
+        # Antes de ejecutar el write original, revisar si se debe actualizar la fecha de finalización
         if finalizado:
             for rec in self:
+                # Solo actualizar si el estado actual es 'en_revision'
                 if rec.estado_id == 'en_revision':
                     vals['fecha_finalizacion'] = fields.Datetime.now()
 
+        # Ejecutar el método write original y guardar el resultado
         res = super(reparaciones, self).write(vals)
-
+        
+        # Aquí continúa la lógica existente de manejo de 'falla_proveedor'
         if 'falla_proveedor' in vals:
             for rec in self:
                 existing_record = rec.env['fallas'].search([
@@ -403,7 +419,9 @@ class reparaciones(models.Model):
                     ('usuario_id', '=', rec.responsable_id.name),
                 ], limit=1)
                 if existing_record:
-                    existing_record.write({'descripcion': rec.falla_proveedor})
+                    existing_record.write({
+                        'descripcion': rec.falla_proveedor,
+                    })
                 else:
                     rec.env['fallas'].create({
                         'descripcion': rec.falla_proveedor,
@@ -416,12 +434,7 @@ class reparaciones(models.Model):
                         'usuario_id': rec.responsable_id.name,
                     })
 
-        if finalizado:
-            self._create_next_reparacion()
-
         return res
-    
-
 
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
     
