@@ -29,7 +29,7 @@ class reparaciones(models.Model):
     def create(self, vals):
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         record = super(reparaciones, self).create(vals)
-        record.enviar_mensaje_whatsapp_reparaciones()  # Solo envía notificaciones en la creación
+        record.enviar_mensaje_whatsapp_reparaciones()
         return record
 
       
@@ -384,14 +384,13 @@ class reparaciones(models.Model):
 
     def write(self, vals):
         finalizado = vals.get('estado_id') == 'finalizado'
-        
         if finalizado:
             for rec in self:
                 if rec.estado_id == 'en_revision':
                     vals['fecha_finalizacion'] = fields.Datetime.now()
 
         res = super(reparaciones, self).write(vals)
-        
+
         if 'falla_proveedor' in vals:
             for rec in self:
                 existing_record = rec.env['fallas'].search([
@@ -416,12 +415,11 @@ class reparaciones(models.Model):
                         'serie': rec.maquina_id.serie_id,
                         'usuario_id': rec.responsable_id.name,
                     })
-        
+
         if finalizado:
             self._create_next_reparacion()
 
         return res
-
     
 
 
