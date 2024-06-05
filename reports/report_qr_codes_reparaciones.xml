@@ -13,20 +13,14 @@
 
         <!-- Template del Reporte -->
         <template id="report_qr_codes_reparaciones_template">
-            <style>
-                .header-data p {
-                    font-size: 60px !important;  /* Incrementa el tamaño de la fuente aquí */
-                }
-            </style>
-
             <t t-foreach="docs" t-as="doc">
                 <t t-call="web.html_container">
                     <t t-call="web.external_layout">
                         <div class="header-data">
-                            <p><strong>MARCA:</strong> <t t-esc="doc.maquina_id.marca"/></p>
-                            <p><strong>MODELO:</strong> <t t-esc="doc.maquina_id.name.name"/></p>
-                            <p><strong>SERIE:</strong> <t t-esc="doc.serie_id"/></p>
-                            <p><strong>CONTOMETRO:</strong> <t t-esc="doc.contometrok_id"/></p>
+                            <p style="font-size: 60px;"><strong>MARCA:</strong> <t t-esc="doc.maquina_id.marca"/></p>
+                            <p style="font-size: 60px;"><strong>MODELO:</strong> <t t-esc="doc.maquina_id.name.name"/></p>
+                            <p style="font-size: 60px;"><strong>SERIE:</strong> <t t-esc="doc.serie_id"/></p>
+                            <p style="font-size: 60px;"><strong>CONTOMETRO:</strong> <t t-esc="doc.contometrok_id"/></p>
                         </div>
 
                         <div class="page">
