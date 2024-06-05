@@ -155,7 +155,7 @@
                                         <th>Caseteras</th>
                                         <td><t t-esc="reparaciones.tray_id"/></td>
                                         <th>Duplex</th>
-                                        <td><t t-esc="reparaciones.duplex_id"/></td>
+                                        <td><t t-esc="reparaciones.bypass_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Bypass</th>
