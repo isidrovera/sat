@@ -465,10 +465,12 @@ class reparaciones(models.Model):
                     'estado_ventas_id': 'en_revision',
                     'trabajadores_id': empleado.id
                 })
-                self.env['reparaciones.reparaciones'].create({
+                nueva_reparacion = self.env['reparaciones.reparaciones'].create({
                     'maquina_id': next_maquina.id,
                     'responsable_id': self.responsable_id.id,
                 })
+                # Enviar el mensaje de WhatsApp para la nueva reparación
+                nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
 
@@ -481,8 +483,5 @@ class reparaciones(models.Model):
 
         # Crear la siguiente reparación en la lista
         self._create_next_reparacion()
-
-        # Enviar el mensaje de WhatsApp
-        self.enviar_mensaje_whatsapp_reparaciones()
 
         return self.env.ref('sat.report_reparaciones_qr').report_action(self)
