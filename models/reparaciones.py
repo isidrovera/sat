@@ -350,17 +350,20 @@ class reparaciones(models.Model):
             'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
         }
 
-
-
-
-
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
-
-    
-    
-
-    
-    
+   
+    asesora_mobile_clean = fields.Char(string='Número de celular de asesora (limpio)', compute='_compute_asesora_mobile_clean', store=True)
+   
+    @api.depends('maquina_id.asesora_id.mobile_phone')
+    def _compute_asesora_mobile_clean(self):
+        for record in self:
+            if record.maquina_id.asesora_id and record.maquina_id.asesora_id.mobile_phone:
+                phone = record.maquina_id.asesora_id.mobile_phone.replace('+', '').replace(' ', '')
+                if not phone.startswith('51'):
+                    phone = '51' + phone
+                record.asesora_mobile_clean = phone
+            else:
+                record.asesora_mobile_clean = ''
 
 
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
@@ -477,10 +480,28 @@ class reparaciones(models.Model):
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
+    def enviar_mensaje_finalizacion_asesora(self):
+        url = self.generate_record_url(self)
+        msg = "Finalización de máquina:\n*Cliente:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Contómetro:* {}\n*Estado:* {}\n*Técnico:* {}\n\nPor favor, ingrese al siguiente enlace para revisar todos los detalles: {}".format(
+            self.cliente_id.name if self.cliente_id.name else 'NA',
+            self.marca if self.marca else 'NA',
+            self.nombre_maquina if self.nombre_maquina else 'NA',
+            self.serie_id if self.serie_id else 'NA',
+            self.contometrok_id if self.contometrok_id else 'NA',
+            self.obtener_estado_legible() if self.obtener_estado_legible() else 'NA',
+            self.responsable_id.name if self.responsable_id.name else 'NA',
+            url
+        )
 
+        if self.asesora_mobile_clean:
+            phone_number = self.asesora_mobile_clean
+            self.send_whatsapp_message(phone_number, msg)
+
+            
     def action_finalizar_reparacion(self):
         self.estado_id = "finalizado"
         template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
         template_id.send_mail(self.id, force_send=True)
+        self.enviar_mensaje_finalizacion_asesora()
         self._create_next_reparacion()
         return self.env.ref('sat.report_reparaciones_qr').report_action(self)
