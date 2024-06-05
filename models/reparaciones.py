@@ -29,7 +29,6 @@ class reparaciones(models.Model):
     def create(self, vals):
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         record = super(reparaciones, self).create(vals)
-        record.enviar_mensaje_whatsapp_reparaciones()
         return record
 
       
@@ -456,9 +455,8 @@ class reparaciones(models.Model):
         next_maquina = self.env['sat.sat'].search([
             ('estado_ventas_id', '=', 'para_revision')
         ], order='fecha_para_revision asc', limit=1)
-        
+
         if next_maquina:
-            # Verificar que el trabajador exista en la tabla hr.employee
             empleado = self.env['hr.employee'].search([('user_id', '=', self.responsable_id.id)], limit=1)
             if empleado:
                 next_maquina.write({
@@ -469,19 +467,13 @@ class reparaciones(models.Model):
                     'maquina_id': next_maquina.id,
                     'responsable_id': self.responsable_id.id,
                 })
-                # Enviar el mensaje de WhatsApp para la nueva reparación
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
 
     def action_finalizar_reparacion(self):
         self.estado_id = "finalizado"
-
-        # Enviar el correo
         template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
         template_id.send_mail(self.id, force_send=True)
-
-        # Crear la siguiente reparación en la lista
         self._create_next_reparacion()
-
         return self.env.ref('sat.report_reparaciones_qr').report_action(self)
