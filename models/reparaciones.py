@@ -58,23 +58,7 @@ class reparaciones(models.Model):
 
                                )
 
-    def action_finalizar_reparacion(self):
-        self.ensure_one()
-        self.estado_id = 'finalizado'
-        self.fecha_finalizacion = fields.Datetime.now()
-
-        # Crear la siguiente reparación
-        self._create_next_reparacion()
-
-        # Enviar el correo
-        template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
-        template_id.send_mail(self.id, force_send=True)
-
-        # Enviar mensaje de WhatsApp
-        self.enviar_mensaje_whatsapp_reparaciones()
-
-        # Generar reporte QR
-        return self.env.ref('sat.report_reparaciones_qr').report_action(self)
+    
 
 
     def action_con_problemas_reparacion(self):
@@ -469,10 +453,31 @@ class reparaciones(models.Model):
             
             
     def _create_next_reparacion(self):
-        next_maquina = self.env['sat.sat'].search([('estado_ventas_id', '=', 'para_revision')], order='fecha_para_revision asc', limit=1)
+        next_maquina = self.env['sat.sat'].search([
+            ('estado_ventas_id', '=', 'para_revision')
+        ], order='fecha_para_revision asc', limit=1)
+        
         if next_maquina:
-            next_maquina.write({'estado_ventas_id': 'en_revision', 'trabajadores_id': self.responsable_id.id})
+            next_maquina.write({
+                'estado_ventas_id': 'en_revision',
+                'trabajadores_id': self.responsable_id.id
+            })
             self.env['reparaciones.reparaciones'].create({
                 'maquina_id': next_maquina.id,
                 'responsable_id': self.responsable_id.id,
             })
+
+    def action_finalizar_reparacion(self):
+        self.estado_id = "finalizado"
+
+        # Enviar el correo
+        template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
+        template_id.send_mail(self.id, force_send=True)
+
+        # Crear la siguiente reparación en la lista
+        self._create_next_reparacion()
+
+        # Enviar el mensaje de WhatsApp
+        self.enviar_mensaje_whatsapp_reparaciones()
+
+        return self.env.ref('sat.report_reparaciones_qr').report_action(self)
