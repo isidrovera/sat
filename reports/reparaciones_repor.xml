@@ -74,30 +74,30 @@
                                 <table class="info-table">
                                     <tr>
                                         <th>Tipo de equipo</th>
-                                        <td t-field="reparaciones.tipo_machine" class="m-0"/>
+                                        <td><t t-esc="reparaciones.tipo_machine"/></td>
                                         <th>Marca</th>
-                                        <td t-field="reparaciones.marca" class="m-0"/>
+                                        <td><t t-esc="reparaciones.marca"/></td>
                                         <th>Maquina</th>
-                                        <td t-field="reparaciones.maquina_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.maquina_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Contometro</th>
-                                        <td t-field="reparaciones.contometrok_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.contometrok_id"/></td>
                                         <th>Calidad</th>
-                                        <td t-field="reparaciones.calidad_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.calidad_id"/></td>
                                         <th>Tapas</th>
-                                        <td t-field="reparaciones.tapas_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.tapas_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Panel</th>
-                                        <td t-field="reparaciones.panel_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.panel_id"/></td>
                                     </tr>
                                 </table>
                             </div>
 
                             <div>
                                 <h2 class="section-title">Informe Técnico</h2>
-                                <p><span t-field="reparaciones.informe"/></p>
+                                <p><t t-esc="reparaciones.informe"/></p>
                             </div>
 
                             <div class="oe_structure"/>
@@ -107,39 +107,39 @@
                                 <table class="info-table">
                                     <tr>
                                         <th>Caseteras</th>
-                                        <td t-field="reparaciones.tray_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.tray_id"/></td>
                                         <th>ADF simple</th>
-                                        <td t-field="reparaciones.adf_simple_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.adf_simple_id"/></td>
                                         <th>ADF dual sacn</th>
-                                        <td t-field="reparaciones.adf_dual_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.adf_dual_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Finalizador interno</th>
-                                        <td t-field="reparaciones.finalizador_interno_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.finalizador_interno_id"/></td>
                                         <th>Finalizador externo</th>
-                                        <td t-field="reparaciones.finalizador_externo_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.finalizador_externo_id"/></td>
                                         <th>Mueble</th>
-                                        <td t-field="reparaciones.mueble_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.mueble_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>LCT</th>
-                                        <td t-field="reparaciones.lct_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.lct_id"/></td>
                                         <th>Wi-Fi</th>
-                                        <td t-field="reparaciones.wi_fi_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.wi_fi_id"/></td>
                                         <th>Cable de poder</th>
-                                        <td t-field="reparaciones.cable_poder_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.cable_poder_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Panel normal</th>
-                                        <td t-field="reparaciones.panel_normal_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.panel_normal_id"/></td>
                                         <th>Panel smart</th>
-                                        <td t-field="reparaciones.panel_smart_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.panel_smart_id"/></td>
                                         <th>Bandeja OT</th>
-                                        <td t-field="reparaciones.ot_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.ot_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Disco duro</th>
-                                        <td t-field="reparaciones.hdd_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.hdd_id"/></td>
                                     </tr>
                                 </table>
                             </div>
@@ -151,55 +151,55 @@
                                 <table class="info-table">
                                     <tr>
                                         <th>ADF</th>
-                                        <td t-field="reparaciones.adf_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.adf_id"/></td>
                                         <th>Caseteras</th>
-                                        <td t-field="reparaciones.caseteras_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.caseteras_id"/></td>
                                         <th>Duplex</th>
-                                        <td t-field="reparaciones.duplex_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.duplex_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Bypass</th>
-                                        <td t-field="reparaciones.bypass_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.bypass_id"/></td>
                                         <th>Copia</th>
-                                        <td t-field="reparaciones.copia_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.copia_id"/></td>
                                         <th>Impresión</th>
-                                        <td t-field="reparaciones.impresion_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.impresion_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Impresión USB</th>
-                                        <td t-field="reparaciones.impresion_usb_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.impresion_usb_id"/></td>
                                         <th>Scaner SMB</th>
-                                        <td t-field="reparaciones.scaner_smb_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.scaner_smb_id"/></td>
                                         <th>Scaner USB</th>
-                                        <td t-field="reparaciones.scaner_usb_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.scaner_usb_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Scaner FTP</th>
-                                        <td t-field="reparaciones.scaner_ftp_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.scaner_ftp_id"/></td>
                                         <th>Scaner Mail</th>
-                                        <td t-field="reparaciones.scaner_mail_id" class="m-0"/>
+                                        <td><t t-esc="reparaciones.scaner_mail_id"/></td>
                                         <th>Developer black</th>
-                                        <td t-field="reparaciones.developerk_id" class="color-black m-0"/>
+                                        <td class="color-black"><t t-esc="reparaciones.developerk_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Developer magenta</th>
-                                        <td t-field="reparaciones.developerm_id" class="color-magenta m-0"/>
+                                        <td class="color-magenta"><t t-esc="reparaciones.developerm_id"/></td>
                                         <th>Developer cyan</th>
-                                        <td t-field="reparaciones.developerc_id" class="color-cyan m-0"/>
+                                        <td class="color-cyan"><t t-esc="reparaciones.developerc_id"/></td>
                                         <th>Developer yellow</th>
-                                        <td t-field="reparaciones.developery_id" class="color-yellow m-0"/>
+                                        <td class="color-yellow"><t t-esc="reparaciones.developery_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Chip Developer Cyan</th>
-                                        <td t-field="reparaciones.chip_developerc_id" class="color-cyan m-0"/>
+                                        <td class="color-cyan"><t t-esc="reparaciones.chip_developerc_id"/></td>
                                         <th>Chip Developer Magenta</th>
-                                        <td t-field="reparaciones.chip_developerm_id" class="color-magenta m-0"/>
+                                        <td class="color-magenta"><t t-esc="reparaciones.chip_developerm_id"/></td>
                                         <th>Chip Developer Yellow</th>
-                                        <td t-field="reparaciones.chip_developery_id" class="color-yellow m-0"/>
+                                        <td class="color-yellow"><t t-esc="reparaciones.chip_developery_id"/></td>
                                     </tr>
                                     <tr>
                                         <th>Chip Developer Black</th>
-                                        <td t-field="reparaciones.chip_developerk_id" class="color-black m-0"/>
+                                        <td class="color-black"><t t-esc="reparaciones.chip_developerk_id"/></td>
                                     </tr>
                                 </table>
                             </div>
