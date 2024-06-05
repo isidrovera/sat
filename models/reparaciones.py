@@ -449,9 +449,19 @@ class reparaciones(models.Model):
 
         return res        
     def _create_next_reparacion(self):
+        # Verificar si el técnico tiene algún registro en estado 'en_revision'
+        if self.env['reparaciones.reparaciones'].search_count([('responsable_id', '=', self.responsable_id.id), ('estado_id', '=', 'en_revision')]) > 0:
+            return
+
         next_maquina = self.env['sat.sat'].search([
             ('estado_ventas_id', '=', 'para_revision')
         ], order='fecha_para_revision asc', limit=1)
+
+        if not next_maquina:
+            next_maquina = self.env['sat.sat'].search([
+                ('estado_ventas_id', '=', 'sin_revisar'),
+                ('disponibilidad_id', '=', 'disponible')
+            ], limit=1)
 
         if next_maquina:
             empleado = self.env['hr.employee'].search([('user_id', '=', self.responsable_id.id)], limit=1)
