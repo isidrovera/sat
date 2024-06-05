@@ -351,14 +351,19 @@ class reparaciones(models.Model):
         }
 
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
-   
-    asesora_mobile_clean = fields.Char(string='Número de celular de asesora (limpio)', compute='_compute_asesora_mobile_clean', store=True)
+    cliente_id = fields.Many2one(related='maquina_id.cliente_id', store=True)
+    asesora_mobile_clean = fields.Char(
+        string='Número de celular asesora (limpio)',
+        compute='_compute_asesora_mobile_clean',
+        store=True
+    )
+
    
     @api.depends('maquina_id.cliente_id.asesora_id.mobile_phone')
     def _compute_asesora_mobile_clean(self):
         for record in self:
-            if record.maquina_id.cliente_id.asesora_id.mobile_phone:
-                phone = record.maquina_id.cliente_id.asesora_id.mobile_phone.replace('+', '')
+            if record.cliente_id.asesora_id.mobile_phone:
+                phone = record.cliente_id.asesora_id.mobile_phone.replace('+', '')
                 phone = ''.join(phone.split())
                 if not phone.startswith('51'):
                     phone = '51' + phone
