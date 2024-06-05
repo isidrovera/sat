@@ -359,44 +359,7 @@ class reparaciones(models.Model):
     
     
 
-    def write(self, vals):
-        finalizado = vals.get('estado_id') == 'finalizado'
-        if finalizado:
-            for rec in self:
-                if rec.estado_id == 'en_revision':
-                    vals['fecha_finalizacion'] = fields.Datetime.now()
-
-        res = super(reparaciones, self).write(vals)
-
-        if 'falla_proveedor' in vals:
-            for rec in self:
-                existing_record = rec.env['fallas'].search([
-                    ('name', '=', rec.maquina_id.invoice),
-                    ('modelo_id', '=', rec.maquina_id.name.name),
-                    ('importacion', '=', rec.maquina_id.importacion),
-                    ('proveedor_id', '=', rec.maquina_id.proveedor_id.name),
-                    ('marca', '=', rec.maquina_id.marca),
-                    ('serie', '=', rec.maquina_id.serie_id),
-                    ('usuario_id', '=', rec.responsable_id.name),
-                ], limit=1)
-                if existing_record:
-                    existing_record.write({'descripcion': rec.falla_proveedor})
-                else:
-                    rec.env['fallas'].create({
-                        'descripcion': rec.falla_proveedor,
-                        'name': rec.maquina_id.invoice,
-                        'modelo_id': rec.maquina_id.name.name,
-                        'importacion': rec.maquina_id.importacion,
-                        'proveedor_id': rec.maquina_id.proveedor_id.name,
-                        'marca': rec.maquina_id.marca,
-                        'serie': rec.maquina_id.serie_id,
-                        'usuario_id': rec.responsable_id.name,
-                    })
-
-        if finalizado:
-            self._create_next_reparacion()
-
-        return res
+    
     
 
 
@@ -450,7 +413,41 @@ class reparaciones(models.Model):
         for record in records:
             record._compute_month_year()
             
-            
+    def write(self, vals):
+        finalizado = vals.get('estado_id') == 'finalizado'
+        if finalizado:
+            for rec in self:
+                if rec.estado_id == 'en_revision':
+                    vals['fecha_finalizacion'] = fields.Datetime.now()
+
+        res = super(reparaciones, self).write(vals)
+
+        if 'falla_proveedor' in vals:
+            for rec in self:
+                existing_record = rec.env['fallas'].search([
+                    ('name', '=', rec.maquina_id.invoice),
+                    ('modelo_id', '=', rec.maquina_id.name.name),
+                    ('importacion', '=', rec.maquina_id.importacion),
+                    ('proveedor_id', '=', rec.maquina_id.proveedor_id.name),
+                    ('marca', '=', rec.maquina_id.marca),
+                    ('serie', '=', rec.maquina_id.serie_id),
+                    ('usuario_id', '=', rec.responsable_id.name),
+                ], limit=1)
+                if existing_record:
+                    existing_record.write({'descripcion': rec.falla_proveedor})
+                else:
+                    rec.env['fallas'].create({
+                        'descripcion': rec.falla_proveedor,
+                        'name': rec.maquina_id.invoice,
+                        'modelo_id': rec.maquina_id.name.name,
+                        'importacion': rec.maquina_id.importacion,
+                        'proveedor_id': rec.maquina_id.proveedor_id.name,
+                        'marca': rec.maquina_id.marca,
+                        'serie': rec.maquina_id.serie_id,
+                        'usuario_id': rec.responsable_id.name,
+                    })
+
+        return res        
     def _create_next_reparacion(self):
         next_maquina = self.env['sat.sat'].search([
             ('estado_ventas_id', '=', 'para_revision')
