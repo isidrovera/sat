@@ -59,11 +59,21 @@ class reparaciones(models.Model):
                                )
 
     def action_finalizar_reparacion(self):
-        self.estado_id = "finalizado"
+        self.ensure_one()
+        self.estado_id = 'finalizado'
+        self.fecha_finalizacion = fields.Datetime.now()
+
+        # Crear la siguiente reparación
+        self._create_next_reparacion()
 
         # Enviar el correo
         template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
         template_id.send_mail(self.id, force_send=True)
+
+        # Enviar mensaje de WhatsApp
+        self.enviar_mensaje_whatsapp_reparaciones()
+
+        # Generar reporte QR
         return self.env.ref('sat.report_reparaciones_qr').report_action(self)
 
 
@@ -258,22 +268,13 @@ class reparaciones(models.Model):
     nombre_responsable  = fields.Char(related='responsable_id.name', 
     string='Nombre responsable',store=True
     )
-    cliente_id = fields.Many2one(
-        'res.partner',
-        string='Cliente',
-        related='maquina_id.cliente_id',
-        readonly=True,
+    cliente_id = fields.Many2one('res.partner', string='Cliente', related='maquina_id.cliente_id', readonly=True,
         store=True, tracking=True
-
     )
 
     falla_proveedor = fields.Html(string="Descripción", tracking=True)
     
-    falla_ventas = fields.Text(
-        string='Descripción',
-        related='maquina_id.descripcion',
-        readonly=False,
-        store=True, tracking=True
+    falla_ventas = fields.Text(string='Descripción',related='maquina_id.descripcion',readonly=False, store=True, tracking=True
 
     )
     
@@ -373,14 +374,7 @@ class reparaciones(models.Model):
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
 
     
-    def _create_next_reparacion(self):
-        next_maquina = self.env['sat.sat'].search([('estado_ventas_id', '=', 'para_revision')], order='fecha_para_revision asc', limit=1)
-        if next_maquina:
-            next_maquina.write({'estado_ventas_id': 'en_revision', 'trabajadores_id': self.responsable_id.id})
-            reparacion = self.env['reparaciones.reparaciones'].create({
-                'maquina_id': next_maquina.id,
-                'responsable_id': self.responsable_id.id,
-            })
+    
 
     def write(self, vals):
         finalizado = vals.get('estado_id') == 'finalizado'
@@ -472,3 +466,13 @@ class reparaciones(models.Model):
         records = self.search([])
         for record in records:
             record._compute_month_year()
+            
+            
+    def _create_next_reparacion(self):
+        next_maquina = self.env['sat.sat'].search([('estado_ventas_id', '=', 'para_revision')], order='fecha_para_revision asc', limit=1)
+        if next_maquina:
+            next_maquina.write({'estado_ventas_id': 'en_revision', 'trabajadores_id': self.responsable_id.id})
+            self.env['reparaciones.reparaciones'].create({
+                'maquina_id': next_maquina.id,
+                'responsable_id': self.responsable_id.id,
+            })
