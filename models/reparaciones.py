@@ -458,14 +458,19 @@ class reparaciones(models.Model):
         ], order='fecha_para_revision asc', limit=1)
         
         if next_maquina:
-            next_maquina.write({
-                'estado_ventas_id': 'en_revision',
-                'trabajadores_id': self.responsable_id.id
-            })
-            self.env['reparaciones.reparaciones'].create({
-                'maquina_id': next_maquina.id,
-                'responsable_id': self.responsable_id.id,
-            })
+            # Verificar que el trabajador exista en la tabla hr.employee
+            empleado = self.env['hr.employee'].search([('user_id', '=', self.responsable_id.id)], limit=1)
+            if empleado:
+                next_maquina.write({
+                    'estado_ventas_id': 'en_revision',
+                    'trabajadores_id': empleado.id
+                })
+                self.env['reparaciones.reparaciones'].create({
+                    'maquina_id': next_maquina.id,
+                    'responsable_id': self.responsable_id.id,
+                })
+            else:
+                raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
 
     def action_finalizar_reparacion(self):
         self.estado_id = "finalizado"
