@@ -15,7 +15,7 @@
         <template id="report_qr_codes_reparaciones_template">
             <style>
                 .header-data p {
-                font-size: 240px !important; 
+                    font-size: 60px !important;  /* Incrementa el tamaño de la fuente aquí */
                 }
             </style>
 
