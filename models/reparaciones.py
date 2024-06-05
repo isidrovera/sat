@@ -354,11 +354,12 @@ class reparaciones(models.Model):
    
     asesora_mobile_clean = fields.Char(string='Número de celular de asesora (limpio)', compute='_compute_asesora_mobile_clean', store=True)
    
-    @api.depends('maquina_id.asesora_id.mobile_phone')
+    @api.depends('asesora_id.mobile_phone')
     def _compute_asesora_mobile_clean(self):
         for record in self:
-            if record.maquina_id.asesora_id and record.maquina_id.asesora_id.mobile_phone:
-                phone = record.maquina_id.asesora_id.mobile_phone.replace('+', '').replace(' ', '')
+            if record.asesora_id.mobile_phone:
+                phone = record.asesora_id.mobile_phone.replace('+', '')
+                phone = ''.join(phone.split())
                 if not phone.startswith('51'):
                     phone = '51' + phone
                 record.asesora_mobile_clean = phone
