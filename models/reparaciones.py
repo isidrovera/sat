@@ -488,7 +488,7 @@ class reparaciones(models.Model):
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
     def enviar_mensaje_finalizacion_asesora(self):
         url = self.generate_record_url(self)
-        msg = "Finalización de máquina:\n*Cliente:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Contómetro:* {}\n*Estado:* {}\n*Técnico:* {}\n\nPor favor, ingrese al siguiente enlace para revisar todos los detalles: {}".format(
+        msg = "*Reparación Finalizada*\n*Cliente:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Contómetro:* {}\n*Estado:* {}\n*Técnico:* {}\n\nPor favor, ingrese al siguiente enlace para revisar todos los detalles: {}".format(
             self.cliente_id.name if self.cliente_id.name else 'NA',
             self.marca if self.marca else 'NA',
             self.nombre_maquina if self.nombre_maquina else 'NA',
