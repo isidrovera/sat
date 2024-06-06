@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <data>
         <report id="report_reparaciones_ventas" 
@@ -12,6 +11,7 @@
         <template id="reparacion_view">
             <t t-call="web.html_container">
                 <t t-foreach="docs" t-as="reparaciones">
+                    <t t-set="selection_labels" t-value="selection_labels.get(reparaciones.id, {})"/>
                     <t t-call="web.external_layout">
                         <div class="page">
                             <div class="oe_structure"/>
@@ -84,13 +84,13 @@
                                         <th>Contometro</th>
                                         <td><t t-esc="reparaciones.contometrok_id"/></td>
                                         <th>Calidad</th>
-                                        <td><t t-esc="reparaciones.calidad_id"/></td>
+                                        <td><t t-esc="selection_labels['calidad_id']"/></td>
                                         <th>Tapas</th>
-                                        <td><t t-esc="reparaciones.tapas_id"/></td>
+                                        <td><t t-esc="selection_labels['tapas_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Panel</th>
-                                        <td><t t-esc="reparaciones.panel_id"/></td>
+                                        <td><t t-esc="selection_labels['panel_id']"/></td>
                                     </tr>
                                 </table>
                             </div>
@@ -109,37 +109,37 @@
                                         <th>Caseteras</th>
                                         <td><t t-esc="reparaciones.tray_id"/></td>
                                         <th>ADF simple</th>
-                                        <td><t t-esc="reparaciones.adf_simple_id"/></td>
+                                        <td><t t-esc="selection_labels['adf_simple_id']"/></td>
                                         <th>ADF dual sacn</th>
-                                        <td><t t-esc="reparaciones.adf_dual_id"/></td>
+                                        <td><t t-esc="selection_labels['adf_dual_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Finalizador interno</th>
-                                        <td><t t-esc="reparaciones.finalizador_interno_id"/></td>
+                                        <td><t t-esc="selection_labels['finalizador_interno_id']"/></td>
                                         <th>Finalizador externo</th>
-                                        <td><t t-esc="reparaciones.finalizador_externo_id"/></td>
+                                        <td><t t-esc="selection_labels['finalizador_externo_id']"/></td>
                                         <th>Mueble</th>
-                                        <td><t t-esc="reparaciones.mueble_id"/></td>
+                                        <td><t t-esc="selection_labels['mueble_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>LCT</th>
-                                        <td><t t-esc="reparaciones.lct_id"/></td>
+                                        <td><t t-esc="selection_labels['lct_id']"/></td>
                                         <th>Wi-Fi</th>
-                                        <td><t t-esc="reparaciones.wi_fi_id"/></td>
+                                        <td><t t-esc="selection_labels['wi_fi_id']"/></td>
                                         <th>Cable de poder</th>
-                                        <td><t t-esc="reparaciones.cable_poder_id"/></td>
+                                        <td><t t-esc="selection_labels['cable_poder_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Panel normal</th>
-                                        <td><t t-esc="reparaciones.panel_normal_id"/></td>
+                                        <td><t t-esc="selection_labels['panel_normal_id']"/></td>
                                         <th>Panel smart</th>
-                                        <td><t t-esc="reparaciones.panel_smart_id"/></td>
+                                        <td><t t-esc="selection_labels['panel_smart_id']"/></td>
                                         <th>Bandeja OT</th>
-                                        <td><t t-esc="reparaciones.ot_id"/></td>
+                                        <td><t t-esc="selection_labels['ot_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Disco duro</th>
-                                        <td><t t-esc="reparaciones.hdd_id"/></td>
+                                        <td><t t-esc="selection_labels['hdd_id']"/></td>
                                     </tr>
                                 </table>
                             </div>
@@ -151,87 +151,87 @@
                                 <table class="info-table">
                                     <tr>
                                         <th>Copia</th>
-                                        <td><t t-esc="reparaciones.copia_id"/></td>
+                                        <td><t t-esc="selection_labels['copia_id']"/></td>
                                         <th>Impresión</th>
-                                        <td><t t-esc="reparaciones.impresion_id"/></td>
+                                        <td><t t-esc="selection_labels['impresion_id']"/></td>
                                         <th>Impresión USB</th>
-                                        <td><t t-esc="reparaciones.impresion_usb_id"/></td>
+                                        <td><t t-esc="selection_labels['impresion_usb_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Scaner SMB</th>
-                                        <td><t t-esc="reparaciones.scaner_smb_id"/></td>
+                                        <td><t t-esc="selection_labels['scaner_smb_id']"/></td>
                                         <th>Scaner USB</th>
-                                        <td><t t-esc="reparaciones.scaner_usb_id"/></td>
+                                        <td><t t-esc="selection_labels['scaner_usb_id']"/></td>
                                         <th>Scaner FTP</th>
-                                        <td><t t-esc="reparaciones.scaner_ftp_id"/></td>
+                                        <td><t t-esc="selection_labels['scaner_ftp_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Scaner Mail</th>
-                                        <td><t t-esc="reparaciones.scaner_mail_id"/></td>
+                                        <td><t t-esc="selection_labels['scaner_mail_id']"/></td>
                                         <th>Bypass</th>
-                                        <td><t t-esc="reparaciones.bypass_id"/></td>
+                                        <td><t t-esc="selection_labels['bypass_id']"/></td>
                                         <th>Tray 1</th>
-                                        <td><t t-esc="reparaciones.tray1_id"/></td>
+                                        <td><t t-esc="selection_labels['tray1_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Tray 2</th>
-                                        <td><t t-esc="reparaciones.tray2_id"/></td>
+                                        <td><t t-esc="selection_labels['tray2_id']"/></td>
                                         <th>Tray 3</th>
-                                        <td><t t-esc="reparaciones.tray3_id"/></td>
+                                        <td><t t-esc="selection_labels['tray3_id']"/></td>
                                         <th>Tray 4</th>
-                                        <td><t t-esc="reparaciones.tray4_id"/></td>
+                                        <td><t t-esc="selection_labels['tray4_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>ADF</th>
-                                        <td><t t-esc="reparaciones.adf_id"/></td>
+                                        <td><t t-esc="selection_labels['adf_id']"/></td>
                                         <th>Finalizador</th>
-                                        <td><t t-esc="reparaciones.finalizador_id"/></td>
+                                        <td><t t-esc="selection_labels['finalizador_id']"/></td>
                                         <th>Tacho residual</th>
-                                        <td><t t-esc="reparaciones.tacho_id"/></td>
+                                        <td><t t-esc="selection_labels['tacho_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Faja fusora</th>
-                                        <td><t t-esc="reparaciones.fusora_id"/></td>
+                                        <td><t t-esc="selection_labels['fusora_id']"/></td>
                                         <th>Rodillo de presión</th>
-                                        <td><t t-esc="reparaciones.rodillo_id"/></td>
+                                        <td><t t-esc="selection_labels['rodillo_id']"/></td>
                                         <th>Rodillo de calor</th>
-                                        <td><t t-esc="reparaciones.calor_id"/></td>
+                                        <td><t t-esc="selection_labels['calor_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Faja de transferencia</th>
-                                        <td><t t-esc="reparaciones.transfer_id"/></td>
+                                        <td><t t-esc="selection_labels['transfer_id']"/></td>
                                         <th>Optico</th>
-                                        <td><t t-esc="reparaciones.optico_id"/></td>
+                                        <td><t t-esc="selection_labels['optico_id']"/></td>
                                         <th>Toner black</th>
-                                        <td class="color-black"><t t-esc="reparaciones.toner_black_id"/></td>
+                                        <td class="color-black"><t t-esc="selection_labels['toner_black_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Toner magenta</th>
-                                        <td class="color-magenta"><t t-esc="reparaciones.toner_magenta_id"/></td>
+                                        <td class="color-magenta"><t t-esc="selection_labels['toner_magenta_id']"/></td>
                                         <th>Unidad Imagen cyan</th>
-                                        <td class="color-cyan"><t t-esc="reparaciones.cyan_id"/></td>
+                                        <td class="color-cyan"><t t-esc="selection_labels['cyan_id']"/></td>
                                         <th>Toner yellow</th>
-                                        <td class="color-yellow"><t t-esc="reparaciones.toner_yellow_id"/></td>
+                                        <td class="color-yellow"><t t-esc="selection_labels['toner_yellow_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Unidad Imagen black</th>
-                                        <td><t t-esc="reparaciones.black_id"/></td>
+                                        <td><t t-esc="selection_labels['black_id']"/></td>
                                         <th>Unidad Imagen magenta</th>
-                                        <td><t t-esc="reparaciones.magenta_id"/></td>
+                                        <td><t t-esc="selection_labels['magenta_id']"/></td>
                                         <th>Toner cyan</th>
-                                        <td class="color-cyan"><t t-esc="reparaciones.toner_cyan_id"/></td>
+                                        <td class="color-cyan"><t t-esc="selection_labels['toner_cyan_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Developer black</th>
-                                        <td class="color-black"><t t-esc="reparaciones.developerk_id"/></td>
+                                        <td class="color-black"><t t-esc="selection_labels['developerk_id']"/></td>
                                         <th>Developer magenta</th>
-                                        <td class="color-magenta"><t t-esc="reparaciones.developerm_id"/></td>
+                                        <td class="color-magenta"><t t-esc="selection_labels['developerm_id']"/></td>
                                         <th>Developer cyan</th>
-                                        <td class="color-cyan"><t t-esc="reparaciones.developerc_id"/></td>
+                                        <td class="color-cyan"><t t-esc="selection_labels['developerc_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Developer yellow</th>
-                                        <td class="color-yellow"><t t-esc="reparaciones.developery_id"/></td>
+                                        <td class="color-yellow"><t t-esc="selection_labels['developery_id']"/></td>
                                     </tr>
                                 </table>
                             </div>
