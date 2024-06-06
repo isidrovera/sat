@@ -498,11 +498,15 @@ class reparaciones(models.Model):
         return self.env.ref('sat.report_reparaciones_qr').report_action(self)
     
     
-    def get_report_values(self, docids, data=None):
+class ReportReparacionView(models.AbstractModel):
+    _name = 'report.sat.reparacion_view'
+
+    @api.model
+    def _get_report_values(self, docids, data=None):
         docs = self.env['reparaciones.reparaciones'].browse(docids)
         selection_labels = {}
         for doc in docs:
-            selection_labels[doc.id] = doc.get_selection_labels()
+            selection_labels[doc.id] = doc.get_selection_labels() if doc else {}
         return {
             'doc_ids': docids,
             'doc_model': 'reparaciones.reparaciones',

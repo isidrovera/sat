@@ -83,13 +83,13 @@
                                         <th>Contometro</th>
                                         <td><t t-esc="reparaciones.contometrok_id"/></td>
                                         <th>Calidad</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['calidad_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA')"/></td>
                                         <th>Tapas</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['tapas_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tapas_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Panel</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['panel_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_id', 'NA')"/></td>
                                     </tr>
                                 </table>
                             </div>
@@ -108,37 +108,37 @@
                                         <th>Caseteras</th>
                                         <td><t t-esc="reparaciones.tray_id"/></td>
                                         <th>ADF simple</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['adf_simple_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('adf_simple_id', 'NA')"/></td>
                                         <th>ADF dual scan</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['adf_dual_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('adf_dual_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Finalizador interno</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['finalizador_interno_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('finalizador_interno_id', 'NA')"/></td>
                                         <th>Finalizador externo</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['finalizador_externo_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('finalizador_externo_id', 'NA')"/></td>
                                         <th>Mueble</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['mueble_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('mueble_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>LCT</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['lct_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('lct_id', 'NA')"/></td>
                                         <th>Wi-Fi</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['wi_fi_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('wi_fi_id', 'NA')"/></td>
                                         <th>Cable de poder</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['cable_poder_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('cable_poder_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Panel normal</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['panel_normal_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_normal_id', 'NA')"/></td>
                                         <th>Panel smart</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['panel_smart_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_smart_id', 'NA')"/></td>
                                         <th>Bandeja OT</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['ot_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('ot_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Disco duro</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['hdd_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('hdd_id', 'NA')"/></td>
                                     </tr>
                                 </table>
                             </div>
@@ -150,87 +150,87 @@
                                 <table class="info-table">
                                     <tr>
                                         <th>Copia</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['copia_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('copia_id', 'NA')"/></td>
                                         <th>Impresión</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['impresion_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('impresion_id', 'NA')"/></td>
                                         <th>Impresión USB</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['impresion_usb_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('impresion_usb_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Scaner SMB</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['scaner_smb_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('scaner_smb_id', 'NA')"/></td>
                                         <th>Scaner USB</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['scaner_usb_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('scaner_usb_id', 'NA')"/></td>
                                         <th>Scaner FTP</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['scaner_ftp_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('scaner_ftp_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Scaner Mail</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['scaner_mail_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('scaner_mail_id', 'NA')"/></td>
                                         <th>Bypass</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['bypass_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('bypass_id', 'NA')"/></td>
                                         <th>Tray 1</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['tray1_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tray1_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Tray 2</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['tray2_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tray2_id', 'NA')"/></td>
                                         <th>Tray 3</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['tray3_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tray3_id', 'NA')"/></td>
                                         <th>Tray 4</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['tray4_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tray4_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>ADF</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['adf_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('adf_id', 'NA')"/></td>
                                         <th>Finalizador</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['finalizador_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('finalizador_id', 'NA')"/></td>
                                         <th>Tacho residual</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['tacho_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tacho_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Faja fusora</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['fusora_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('fusora_id', 'NA')"/></td>
                                         <th>Rodillo de presión</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['rodillo_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('rodillo_id', 'NA')"/></td>
                                         <th>Rodillo de calor</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['calor_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('calor_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Faja de transferencia</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['transfer_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('transfer_id', 'NA')"/></td>
                                         <th>Optico</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['optico_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('optico_id', 'NA')"/></td>
                                         <th>Toner black</th>
-                                        <td class="color-black"><t t-esc="selection_labels[reparaciones.id]['toner_black_id']"/></td>
+                                        <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_black_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Toner magenta</th>
-                                        <td class="color-magenta"><t t-esc="selection_labels[reparaciones.id]['toner_magenta_id']"/></td>
+                                        <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_magenta_id', 'NA')"/></td>
                                         <th>Unidad Imagen cyan</th>
-                                        <td class="color-cyan"><t t-esc="selection_labels[reparaciones.id]['cyan_id']"/></td>
+                                        <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('cyan_id', 'NA')"/></td>
                                         <th>Toner yellow</th>
-                                        <td class="color-yellow"><t t-esc="selection_labels[reparaciones.id]['toner_yellow_id']"/></td>
+                                        <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_yellow_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Unidad Imagen black</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['black_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('black_id', 'NA')"/></td>
                                         <th>Unidad Imagen magenta</th>
-                                        <td><t t-esc="selection_labels[reparaciones.id]['magenta_id']"/></td>
+                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('magenta_id', 'NA')"/></td>
                                         <th>Toner cyan</th>
-                                        <td class="color-cyan"><t t-esc="selection_labels[reparaciones.id]['toner_cyan_id']"/></td>
+                                        <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_cyan_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Developer black</th>
-                                        <td class="color-black"><t t-esc="selection_labels[reparaciones.id]['developerk_id']"/></td>
+                                        <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerk_id', 'NA')"/></td>
                                         <th>Developer magenta</th>
-                                        <td class="color-magenta"><t t-esc="selection_labels[reparaciones.id]['developerm_id']"/></td>
+                                        <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerm_id', 'NA')"/></td>
                                         <th>Developer cyan</th>
-                                        <td class="color-cyan"><t t-esc="selection_labels[reparaciones.id]['developerc_id']"/></td>
+                                        <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerc_id', 'NA')"/></td>
                                     </tr>
                                     <tr>
                                         <th>Developer yellow</th>
-                                        <td class="color-yellow"><t t-esc="selection_labels[reparaciones.id]['developery_id']"/></td>
+                                        <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developery_id', 'NA')"/></td>
                                     </tr>
                                 </table>
                             </div>
@@ -241,3 +241,4 @@
         </template>
     </data>
 </odoo>
+
