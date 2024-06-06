@@ -13,7 +13,7 @@
           <p>Reciba un cordial saludo. Le informamos que hemos programado una visita técnica para atender su requerimiento. A continuación, le detallamos la información correspondiente:</p>
           <ul>
             <li>Ticket #: <b><t t-out="object.name"></b></li>
-            <li>Fecha de Visita: <t t-out="format_datetime(object.agenda)"></li>
+            <li>Fecha de Visita: <t t-out="format_datetime(object.agenda_local)"></li>
             <li>Prioridad: </li>
             <li>Tipo de servicio: <t t-out="object.tipo_servicio_id"></li>
             <li>Dirección: <t t-out="object.direccion_id_r"></li>
@@ -64,7 +64,7 @@
             
             <ul>
             <li>Ticket #: <b><t t-out="object.name"></b></li>
-            <li>Fecha de Visita: <t t-out="format_datetime(object.agenda)"></li>
+            <li>Fecha de Visita: <t t-out="format_datetime(object.agenda_local)"></li>
             <li>Prioridad: </li>
             <li>Tipo de servicio: <t t-out="object.tipo_servicio_id"></li>
             <li>Dirección: <t t-out="object.direccion_id_r"></li>
@@ -110,7 +110,7 @@
                 <p>Se le ha asignado un Ticket de Servicio con la siguiente información:</p>
                 <ul>
                     <li><strong>Ticket #:</strong><b> <t t-out="object.name"></b></li>
-                    <li><strong>Fecha de Visita:</strong> <t t-out="format_datetime(object.agenda)"></li>                    
+                    <li><strong>Fecha de Visita:</strong> <t t-out="format_datetime(object.agenda_local)"></li>                    
                     <li><strong>Tipo de Servicio:</strong> <t t-out="object.tipo_servicio_id"></li>
                     <li><strong>Asistencia Directa:</strong> <t t-out="object.asistencia_id"></li>
                     <li><strong>Cliente:</strong> <t t-out="object.partner_id.name"></li>
@@ -144,7 +144,7 @@
             <p>Le escribo para informarle que el trabajador designado acudió directamente al cliente sin ninguna tardanza o necesidad de aplicar descuentos. Adjunto encontrará el ticket correspondiente a la visita:</p>
             <ul>
               <li><strong>Ticket:</strong><t t-out="object.name"></li>
-              <li><strong>Fecha:</strong><t t-out="format_datetime(object.agenda)"></li>
+              <li><strong>Fecha:</strong><t t-out="format_datetime(object.agenda_local)"></li>
               <li><strong>Cliente:</strong><t t-out="object.partner_id.name"></li>
               <li><strong>Trabajador:</strong><t t-out="object.responsable.name"></li>
             </ul>
@@ -173,7 +173,7 @@
             <p>Le escribo para informarle que el trabajador designado no pudo regresar a marcar su salida,no aplicar descuentos. Adjunto encontrará el ticket correspondiente a la visita:</p>
             <ul>
               <li><strong>Ticket:</strong><t t-out="object.name"></li>
-              <li><strong>Fecha:</strong><t t-out="format_datetime(object.agenda)"></li>
+              <li><strong>Fecha:</strong><t t-out="format_datetime(object.agenda_local)"></li>
               <li><strong>Cliente:</strong><t t-out="object.partner_id.name"></li>
               <li><strong>Trabajador:</strong><t t-out="object.responsable.name"></li>
             </ul>
