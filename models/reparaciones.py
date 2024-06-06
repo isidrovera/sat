@@ -67,34 +67,6 @@ class reparaciones(models.Model):
     ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id', readonly=True, store=True)
     prioridad = fields.Selection(related='maquina_id.prioridad',readonly=True,store=True)
 
-    @api.depends('tipo_revision')
-    def obtener_tipo_revision_legible(self):
-        tipo_revision_legible = ""
-        selection = self._fields['tipo_revision'].selection
-        if callable(selection):
-            selection = selection(self)
-        tipo_revision_legible = dict(selection).get(self.tipo_revision)
-        return tipo_revision_legible
-
-    @api.depends('ubicacion_id')
-    def obtener_ubicacion_legible(self):
-        ubicacion_legible = ""
-        selection = self._fields['ubicacion_id'].selection
-        if callable(selection):
-            selection = selection(self)
-        ubicacion_legible = dict(selection).get(self.ubicacion_id)
-        return ubicacion_legible
-
-    @api.depends('prioridad')
-    def obtener_prioridad_legible(self):
-        prioridad_legible = ""
-        selection = self._fields['prioridad'].selection
-        if callable(selection):
-            selection = selection(self)
-        prioridad_legible = dict(selection).get(self.prioridad)
-        return prioridad_legible
-
-
     estado_id = fields.Selection([('sin_revisar', 'Sin revisar'),('para_revision', 'Para revision'),('asignado','Asignado'),('en_revision', 'En revisión'), ('finalizado', 'Finalizado'), ('con_problemas', 'Con problemas'), ('de_partes', 'De partes'), ('entregada', 'Entregada')],
                                  string='Estado de revisión',
                                  related='maquina_id.estado_ventas_id',
@@ -260,19 +232,9 @@ class reparaciones(models.Model):
     falla_ventas = fields.Text(string='Descripción',related='maquina_id.descripcion',readonly=False, store=True, tracking=True
 
     )
+  
     
-    
-    @api.depends('estado_id')
-    def obtener_estado_legible(self):
-        estado_legible = ""
-        selection = self._fields['estado_id'].selection
-        if callable(selection):
-            selection = selection(self)
-        estado_legible = dict(selection).get(self.estado_id)
-        return estado_legible
-    responsable_mobile_clean = fields.Char(
-        string='Número de celular (limpio)',
-        compute='_compute_responsable_mobile_clean',
+    responsable_mobile_clean = fields.Char(string='Número de celular (limpio)', compute='_compute_responsable_mobile_clean',
         store=True
     )
 
@@ -314,8 +276,24 @@ class reparaciones(models.Model):
             error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
             print(error_msg)
             return {"error": error_msg}  # Devuelve un diccionario con la clave 'error' y el mensaje de error como valor
-
+    def get_selection_labels(self):
+        selection_labels = {}
+        for field_name, field in self._fields.items():
+            if field.type == 'selection' and hasattr(self, field_name):
+                value = getattr(self, field_name)
+                if value:
+                    selection = field.selection
+                    if callable(selection):
+                        selection = selection(self)
+                    for option_value, option_label in selection:
+                        if option_value == value:
+                            selection_labels[field_name] = option_label
+                            break
+                else:
+                    selection_labels[field_name] = 'NA'
+        return selection_labels
     def enviar_mensaje_whatsapp_reparaciones(self):
+        selection_labels = self.get_selection_labels()
         # Lógica para enviar correos
         template = self.env.ref('sat.email_template_reparaciones')
         template.send_mail(self.id, force_send=True)
@@ -333,10 +311,10 @@ class reparaciones(models.Model):
             self.marca if self.marca else 'NA',
             self.maquina_id.name.name if self.maquina_id.name and self.maquina_id.name.name else 'NA',
             self.serie_id if self.serie_id else 'NA',
-            self.obtener_estado_legible() if self.obtener_estado_legible() else 'NA',
-            self.obtener_tipo_revision_legible() if self.obtener_tipo_revision_legible() else 'NA',
-            self.obtener_prioridad_legible() if self.obtener_prioridad_legible() else 'NA',
-            self.obtener_ubicacion_legible() if self.obtener_ubicacion_legible() else 'NA',
+            selection_labels.get('estado_id', 'NA'),
+            selection_labels.get('tipo_revision', 'NA'),
+            selection_labels.get('prioridad', 'NA'),
+            selection_labels.get('ubicacion_id', 'NA'),        
             self.maquina_id.asesora_id if self.maquina_id.asesora_id else 'NA'
         )
 

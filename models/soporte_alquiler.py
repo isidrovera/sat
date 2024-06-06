@@ -525,13 +525,7 @@ class ticket_alquiler(models.Model):
     
         }
         
-    selection_labels = fields.Char(string='Etiquetas de Selección', compute='_compute_selection_labels')
-
-    @api.depends('adf_simple_id', 'adf_dual_id', 'finalizador_interno_id', 'finalizador_externo_id', 'mueble_id', 'panel_smart_id', 'panel_normal_id', 'wi_fi_id', 'bluetooth_id', 'cable_usb_id', 'cable_red_id', 'toner_black_id', 'toner_magenta_id', 'toner_cyan_id', 'toner_yellow_id', 'copia_id', 'impresion_id', 'impresion_usb_id', 'scaner_smb_id', 'scaner_usb_id', 'scaner_ftp_id', 'scaner_mail_id', 'adf_id', 'tray1_id', 'tray2_id', 'tray3_id', 'tray4_id', 'bypass_id', 'finalizador_id', 'tacho_id', 'fusora_id', 'transfer_id', 'optico_id', 'black_id', 'magenta_id', 'cyan_id', 'yellow_id', 'tipo_servicio_id', 'retorno_id', 'asistencia_id', 'calidad_id')
-    def _compute_selection_labels(self):
-        for record in self:
-            labels = record.get_selection_labels()
-            record.selection_labels = json.dumps(labels)
+    
             
 class ReportTicketAlquiler(models.AbstractModel):
     _name = 'report.sat.ticket_view'
