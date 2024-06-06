@@ -498,8 +498,7 @@ class reparaciones(models.Model):
         return self.env.ref('sat.report_reparaciones_qr').report_action(self)
     
     
-    @api.model
-    def _get_report_values(self, docids, data=None):
+    def get_report_values(self, docids, data=None):
         docs = self.env['reparaciones.reparaciones'].browse(docids)
         selection_labels = {}
         for doc in docs:
