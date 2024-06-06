@@ -523,6 +523,14 @@ class reparaciones(models.Model):
             selection = selection(self)
         prioridad_legible = dict(selection).get(self.prioridad)
         return prioridad_legible
+    @api.depends('estado_id')
+    def obtener_estado_legible(self):
+        estado_legible = ""
+        selection = self._fields['estado_id'].selection
+        if callable(selection):
+            selection = selection(self)
+        estado_legible = dict(selection).get(self.estado_id)
+        return estado_legible
 class ReportReparacionView(models.AbstractModel):
     _name = 'report.sat.reparacion_view'
 
