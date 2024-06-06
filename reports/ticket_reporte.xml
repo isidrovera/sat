@@ -82,6 +82,8 @@
                                         <td><t t-esc="ticket.marca_id_r"/></td>
                                         <th>Maquina</th>
                                         <td><t t-esc="ticket.product_alquiler.name.name"/></td>
+                                        <th>Serie</th>
+                                        <td><t t-esc="ticket.product_alquiler.serie"/></td>
                                     </tr>
                                     <tr>
                                         <th>Contometro Black</th>
@@ -229,7 +231,7 @@
                                 <div class="col-3 bm-2">
                                     <strong>Técnico</strong>
                                     <t>
-                                        <span t-esc="ticket.responsable"/>
+                                        <span t-esc="ticket.responsable.name"/>
                                     </t>
                                 </div>
                                 <div class="col-3 bm-2">
