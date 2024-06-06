@@ -513,7 +513,7 @@ class ticket_alquiler(models.Model):
             self.product_alquiler.name.name if self.product_alquiler.name and self.product_alquiler.name.name else 'NA',
             self.serie_id_r if self.serie_id_r else 'NA',
             self.description if self.description else 'NA',
-            self.agenda.strftime('%d/%m/%Y') if self.agenda else 'NA',
+            self.agenda_local if self.agenda_local else 'NA',
             self.tipo_servicio_id if self.tipo_servicio_id else 'NA',
             self.asistencia_id if self.asistencia_id else 'NA'
         )
@@ -521,7 +521,7 @@ class ticket_alquiler(models.Model):
         msg_cliente = "Estimado/a *{}*,\n\nLe informamos que hemos programado una visita técnica para atender su requerimiento. A continuación, le detallamos la información correspondiente:\n\n*Ticket #:* {}\n*Fecha de Visita:* {}\n*Tipo de servicio:* {}\n*Dirección:* {}\n*Técnico Asignado:* {}\n*DNI:* {}\n\n*ESPECIFICACIONES DEL EQUIPO*\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n\n*PROBLEMA REPORTADO*\n{}\n\nPor favor, notifíquenos sobre su stock de toner para garantizarles el total abastecimiento. Además, le solicitamos reportar cualquier inconveniente adicional que presente al técnico en su visita para solventar la totalidad de sus dudas. Para finalizar, solicitamos su apoyo en:\n\n1. Dar autorización para el ingreso de nuestro personal a sus oficinas o el espacio donde se encuentre nuestro equipo.\n2. Disponibilidad de espacio y tiempo para que nuestro personal pueda desarrollar su labor.\n\nGracias por su atención.".format(
             self.partner_id.name if self.partner_id and self.partner_id.name else 'NA',
             self.name if self.name else 'NA',
-            self.agenda.strftime('%d/%m/%Y') if self.agenda else 'NA',
+            self.agenda_local if self.agenda_local else 'NA',
             self.tipo_servicio_id if self.tipo_servicio_id else 'NA',
             self.direccion_id_r if self.direccion_id_r else 'NA',
             self.responsable.name if self.responsable and self.responsable.name else 'NA',
