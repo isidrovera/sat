@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 from odoo.exceptions import UserError
 import webbrowser
 from datetime import datetime
-from pytz import timezone
+from pytz import timezone, UTC
+from datetime import datetime
 #import telegram
 import requests
 import json
@@ -189,6 +190,19 @@ class ticket_alquiler(models.Model):
     asistencia_id = fields.Selection([("no", "No"), ("si", "Si")], string="Asistencia Directa", default="no", tracking=True)
     calidad_id = fields.Selection([("buena", "Buena"), ("regular", "Regular"), ("mala", "Mala")], string="Calidad", tracking=True)
     agenda = fields.Datetime(string='Fecha de visita', tracking=True)
+    agenda_local = fields.Char(string='Fecha y Hora Local', compute='_compute_agenda_local')
+
+    @api.depends('agenda')
+    def _compute_agenda_local(self):
+        user_tz = self.env.user.tz or 'UTC'
+        local_tz = timezone(user_tz)
+        for record in self:
+            if record.agenda:
+                utc_dt = UTC.localize(record.agenda)
+                local_dt = utc_dt.astimezone(local_tz)
+                record.agenda_local = local_dt.strftime('%d/%m/%Y %I:%M:%S %p')
+            else:
+                record.agenda_local = ''
     mensaje  = fields.Text(
     default='Se le asigno un Ticket de  servicio, lea atentamente se le indica todos los detalles del servicio.'
     )

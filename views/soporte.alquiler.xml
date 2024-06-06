@@ -54,6 +54,7 @@
                                 <field name="retorno_id" />
                                 <field name="asistencia_id" />
                                 <field name="agenda" attrs="{'required':[('estado', '=', 'nuevo')]}"/>
+                                <field name="agenda_local" readonly="1"/>
                                 <field name="responsable" widget="many2one_avatar" attrs="{'required':[('estado', '=', 'nuevo')]}"/>
                             </group>
                         </group>
