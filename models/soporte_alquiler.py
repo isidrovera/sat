@@ -509,15 +509,15 @@ class ticket_alquiler(models.Model):
 
         # Enviando el primer correo con la primera plantilla
         template1 = self.env.ref('sat.email_template_ticket_cliente')
-        template1.send_mail(self.id, force_send=True)
+        template1.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
         # Enviando el segundo correo con la segunda plantilla
         template2 = self.env.ref('sat.email_template_ticket_tecnico')
-        template2.send_mail(self.id, force_send=True)
+        template2.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
         # Verificar el valor de asistencia_id
         if self.asistencia_id == 'si':
             # Enviar el tercer correo si asistencia_id es 'si'
             template3 = self.env.ref('sat.mail_template_asistencia_directa')
-            template3.send_mail(self.id, force_send=True)
+            template3.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
 
         self.estado = 'proceso'
         return {
