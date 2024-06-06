@@ -296,9 +296,11 @@ class reparaciones(models.Model):
        
         selection_labels = self.get_selection_labels()
         # Contexto para las plantillas de correo
-        context = {
+        # Contexto para las plantillas de correo
+        context = dict(self.env.context or {})
+        context.update({
             'selection_labels': selection_labels
-        }
+        })
         # Lógica para enviar correos
         template = self.env.ref('sat.email_template_reparaciones')
         template.with_context(**context).send_mail(self.id, force_send=True)

@@ -192,14 +192,14 @@
 
 
     <record id="email_template_reparaciones" model="mail.template">
-      <field name="name">Correo de asignación de orden de reparación</field>
-      <field name="subject">Asignación de orden de reparación</field>
-      <field name="model_id" ref="model_reparaciones_reparaciones"/>
-      <field name="lang">${object.technician_id.lang}</field>
-      <field name="auto_delete" eval="True"/>
-      <field name="email_from">soporte@andescopiers.com.pe</field>
-      <field name="email_to">{{object.responsable_id.email}}</field>
-      <field name="body_html">
+    <field name="name">Correo de asignación de orden de reparación</field>
+    <field name="subject">Asignación de orden de reparación</field>
+    <field name="model_id" ref="model_reparaciones_reparaciones"/>
+    <field name="lang">${object.technician_id.lang}</field>
+    <field name="auto_delete" eval="True"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">{{object.responsable_id.email}}</field>
+    <field name="body_html">
         <![CDATA[
             Estimado/a <strong><t t-out="object.responsable_id.name"/></strong>,<br/>
             Es un placer informarte que te ha sido asignada una orden de reparación con los siguientes detalles:<br/><br/>
@@ -210,10 +210,10 @@
                 <li>Marca: <strong><t t-out="object.marca"/></strong><br/></li>
                 <li>Modelo: <strong><t t-out="object.maquina_id.name.name"/></strong><br/></li>
                 <li>Serie: <strong><t t-out="object.serie_id"/></strong><br/></li>
-                <li>Estado: <strong><t t-out="ctx.selection_labels['estado_id']"/></strong><br/></li>
-                <li>Tipo de revisión: <strong><t t-out="ctx.selection_labels['tipo_revision']"/></strong><br/></li>
-                <li>Prioridad: <strong><t t-out="ctx.selection_labels['prioridad']"/></strong><br/></li>
-                <li>Ubicación: <strong><t t-out="ctx.selection_labels['ubicacion_id']"/></strong><br/></li>
+                <li>Estado: <strong><t t-esc="selection_labels['estado_id']"/></strong><br/></li>
+                <li>Tipo de revisión: <strong><t t-esc="selection_labels['tipo_revision']"/></strong><br/></li>
+                <li>Prioridad: <strong><t t-esc="selection_labels['prioridad']"/></strong><br/></li>
+                <li>Ubicación: <strong><t t-esc="selection_labels['ubicacion_id']"/></strong><br/></li>
                 <li>Asesora de ventas: <strong><t t-out="object.maquina_id.asesora_id.name"/></strong><br/><br/></li>
             </ul>
             Confiamos en tu experiencia y habilidades técnicas para llevar a cabo esta reparación de manera eficiente y profesional. Te solicitamos que revises detenidamente la información proporcionada y tomes todas las medidas necesarias para realizar la reparación de manera satisfactoria.<br/><br/>
@@ -222,8 +222,9 @@
             Quedo a tu disposición para cualquier consulta o requerimiento adicional.
             Saludos cordiales,<br/><br/>
         ]]>
-      </field>
-    </record>
+    </field>
+</record>
+
 
 
     <record id="email_template_finalizacion_reparacion" model="mail.template">
@@ -255,11 +256,11 @@
     </record>
 
     <record id="email_template_reparacion_creada" model="mail.template">
-      <field name="name">Notificación de Máquina Asignada para Revisión</field>
-      <field name="model_id" ref="model_reparaciones_reparaciones"/>
-      <field name="subject">Su máquina ha sido asignada para revisión</field>
-      <field name="email_to">{{object.cliente_id.asesora_id.email}}</field>
-      <field name="body_html">
+    <field name="name">Notificación de Máquina Asignada para Revisión</field>
+    <field name="model_id" ref="model_reparaciones_reparaciones"/>
+    <field name="subject">Su máquina ha sido asignada para revisión</field>
+    <field name="email_to">{{object.cliente_id.asesora_id.email}}</field>
+    <field name="body_html">
         <![CDATA[
             <p>Estimada, <strong><t t-out="object.maquina_id.asesora_id.name"/></strong>,</p>
             <p>Nos complace informarle que la máquina asignada ha sido registrada para revisión en nuestro sistema.</p>
@@ -271,17 +272,18 @@
                 <li>Marca: <strong><t t-out="object.marca"/></strong><br/></li>
                 <li>Modelo: <strong><t t-out="object.maquina_id.name.name"/></strong><br/></li>
                 <li>Serie: <strong><t t-out="object.serie_id"/></strong><br/></li>
-                <li>Estado: <strong><t t-out="ctx.selection_labels['estado_id']"/></strong><br/></li>
-                <li>Tipo de revisión: <strong><t t-out="ctx.selection_labels['tipo_revision']"/></strong><br/></li>
-                <li>Prioridad: <strong><t t-out="ctx.selection_labels['prioridad']"/></strong><br/></li>
-                <li>Ubicación: <strong><t t-out="ctx.selection_labels['ubicacion_id']"/></strong><br/></li>
+                <li>Estado: <strong><t t-esc="selection_labels['estado_id']"/></strong><br/></li>
+                <li>Tipo de revisión: <strong><t t-esc="selection_labels['tipo_revision']"/></strong><br/></li>
+                <li>Prioridad: <strong><t t-esc="selection_labels['prioridad']"/></strong><br/></li>
+                <li>Ubicación: <strong><t t-esc="selection_labels['ubicacion_id']"/></strong><br/></li>
             </ul>
             <p>Gracias por su paciencia y comprensión.</p>
             <p>Saludos cordiales,</p>
             <p>Isidro vera polo</p>
         ]]>
-      </field>
-    </record>
+    </field>
+</record>
+
 
     <record id="email_template_informes" model="mail.template">
       <field name="name">Enviar informe al proveedor</field>
