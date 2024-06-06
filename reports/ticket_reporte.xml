@@ -158,7 +158,7 @@
                                 <table class="info-table">
                                     <tr>
                                         <th>Copia</th>
-                                        <td><t t-esc="ticket.selection_labels.get['copia_id']"/></td>
+                                        <td><t t-esc="ticket.selection_labels['copia_id']"/></td>
                                         <th>Impresión</th>
                                         <td><t t-esc="ticket.impresion_id"/></td>
                                         <th>Impresión USB</th>
