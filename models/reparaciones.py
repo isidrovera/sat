@@ -497,7 +497,32 @@ class reparaciones(models.Model):
         self._create_next_reparacion()
         return self.env.ref('sat.report_reparaciones_qr').report_action(self)
     
-    
+    @api.depends('tipo_revision')
+    def obtener_tipo_revision_legible(self):
+        tipo_revision_legible = ""
+        selection = self._fields['tipo_revision'].selection
+        if callable(selection):
+            selection = selection(self)
+        tipo_revision_legible = dict(selection).get(self.tipo_revision)
+        return tipo_revision_legible
+
+    @api.depends('ubicacion_id')
+    def obtener_ubicacion_legible(self):
+        ubicacion_legible = ""
+        selection = self._fields['ubicacion_id'].selection
+        if callable(selection):
+            selection = selection(self)
+        ubicacion_legible = dict(selection).get(self.ubicacion_id)
+        return ubicacion_legible
+
+    @api.depends('prioridad')
+    def obtener_prioridad_legible(self):
+        prioridad_legible = ""
+        selection = self._fields['prioridad'].selection
+        if callable(selection):
+            selection = selection(self)
+        prioridad_legible = dict(selection).get(self.prioridad)
+        return prioridad_legible
 class ReportReparacionView(models.AbstractModel):
     _name = 'report.sat.reparacion_view'
 

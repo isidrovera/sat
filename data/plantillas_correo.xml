@@ -192,98 +192,112 @@
 
 
    <record id="email_template_reparaciones" model="mail.template">
-    <field name="name">Correo de asignación de orden de reparación</field>
-    <field name="subject">Asignación de orden de reparación</field>
-    <field name="model_id" ref="model_reparaciones_reparaciones"/>
-    <field name="lang">${object.responsable_id.lang}</field>
-    <field name="auto_delete" eval="True"/>
-    <field name="email_from">soporte@andescopiers.com.pe</field>
-    <field name="email_to">${object.responsable_id.email}</field>
-    <field name="body_html">
+      <field name="name">Correo de asignación de orden de reparación</field>
+      <field name="subject">Asignación de orden de reparación</field>
+      <field name="model_id" ref="model_reparaciones_reparaciones"/>
+      <field name="lang">${object.technician_id.lang}</field>
+      <field name="auto_delete" eval="True"/>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">{{object.responsable_id.email}}</field>
+      <field name="body_html">
         <![CDATA[
-            Estimado/a <strong>${object.responsable_id.name}</strong>,<br/>
-            Es un placer informarte que te ha sido asignada una orden de reparación con los siguientes detalles:<br/><br/>
-            <ul>
-                <li>Reparación #: <strong>${object.name}</strong><br/></li>
-                <li>Cliente: <strong>${object.cliente_id.name}</strong><br/></li>
-                <li>Tipo de equipo: <strong>${object.tipo_machine}</strong><br/></li>
-                <li>Marca: <strong>${object.marca}</strong><br/></li>
-                <li>Modelo: <strong>${object.maquina_id.name.name}</strong><br/></li>
-                <li>Serie: <strong>${object.serie_id}</strong><br/></li>
-                <li>Estado: <strong>${ctx.selection_labels.get('estado_id', 'NA')}</strong><br/></li>
-                <li>Tipo de revisión: <strong>${ctx.selection_labels.get('tipo_revision', 'NA')}</strong><br/></li>
-                <li>Prioridad: <strong>${ctx.selection_labels.get('prioridad', 'NA')}</strong><br/></li>
-                <li>Ubicación: <strong>${ctx.selection_labels.get('ubicacion_id', 'NA')}</strong><br/></li>
-                <li>Asesora de ventas: <strong>${object.maquina_id.asesora_id.name}</strong><br/><br/></li>
-            </ul>
-            Confiamos en tu experiencia y habilidades técnicas para llevar a cabo esta reparación de manera eficiente y profesional. Te solicitamos que revises detenidamente la información proporcionada y tomes todas las medidas necesarias para realizar la reparación de manera satisfactoria.<br/><br/>
-            Recuerda que la calidad del servicio que brindas es fundamental para mantener la satisfacción de nuestros clientes. Si tienes alguna pregunta o necesitas más detalles, no dudes en contactarme o comunicarte con el departamento de soporte técnico.<br/><br/>
-            Agradecemos tu dedicación y compromiso en el cumplimiento de tus responsabilidades. Estamos seguros de que llevarás a cabo esta orden de reparación con el más alto nivel de profesionalismo.<br/><br/>
-            Quedo a tu disposición para cualquier consulta o requerimiento adicional.
-            Saludos cordiales,<br/><br/>
-        ]]>
-    </field>
-</record>
+                    Estimado/a <strong><t t-out="object.name">,</strong><br/>
 
 
+                    Es un placer informarte que te ha sido asignada una orden de reparación con los siguientes detalles:<br/><br/>
+
+                  <ul>
+                      <li>Reparación #: <strong><t t-out="object.name"></strong><br/></li>
+                      <li>Cliente: <strong><t t-out="object.cliente_id.name"></strong><br/></li>
+                      <li>Tipo de equipo: <strong><t t-out="object.tipo_machine"></strong><br/></li>
+                      <li>Marca: <strong><t t-out="object.marca"></strong><br/></li>
+                      <li>Modelo: <strong><t t-out="object.maquina_id.name.name"></strong><br/></li>
+                      <li>Serie: <strong><t t-out="object.serie_id"></strong><br/></li>
+                      <li>Estado: <strong><t t-out="object.obtener_estado_legible()"></strong><br/></li>
+                      <li>Tipo de revisión: <strong><t t-out="object.obtener_tipo_revision_legible()"></strong><br/></li>
+                      <li>Prioridad: <strong><t t-out="object.obtener_prioridad_legible()"></strong><br/></li>
+                      <li>Ubicación: <strong><t t-out="object.obtener_ubicacion_legible()"></strong><br/></li>
+                      <li>Asesora de ventas: <strong><t t-out="object.maquina_id.asesora_id"></strong><br/><br/></li>
+                  </ul>
+
+                    Confiamos en tu experiencia y habilidades técnicas para llevar a cabo esta reparación de manera eficiente y profesional. Te solicitamos que revises detenidamente la información proporcionada y tomes todas las medidas necesarias para realizar la reparación de manera satisfactoria.<br/><br/>
+                    Recuerda que la calidad del servicio que brindas es fundamental para mantener la satisfacción de nuestros clientes. Si tienes alguna pregunta o necesitas más detalles, no dudes en contactarme o comunicarte con el departamento de soporte técnico.<br/><br/>
+                    Agradecemos tu dedicación y compromiso en el cumplimiento de tus responsabilidades. Estamos seguros de que llevarás a cabo esta orden de reparación con el más alto nivel de profesionalismo.<br/><br/>
+                    Quedo a tu disposición para cualquier consulta o requerimiento adicional.
+
+                    Saludos cordiales,<br/><br/>
+
+                    
+                ]]>
+      </field>
+    </record>
 
     <record id="email_template_finalizacion_reparacion" model="mail.template">
-    <field name="name">Correo de finalización de reparación</field>
-    <field name="subject">Finalización de reparación</field>
-    <field name="model_id" ref="model_reparaciones_reparaciones"/>
-    <field name="lang">${object.cliente_id.asesora_id.lang}</field>
-    <field name="auto_delete" eval="True"/>
-    <field name="email_from">soporte@andescopiers.com.pe</field>
-    <field name="email_to">${object.cliente_id.asesora_id.email}</field>
-    <field name="body_html">
+      <field name="name">Correo de finalización de reparación</field>
+      <field name="subject">Finalización de reparación</field>
+      <field name="model_id" ref="model_reparaciones_reparaciones"/>
+      <field name="lang">${object.sales_consultant.lang}</field>
+      <field name="auto_delete" eval="True"/>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">{{object.cliente_id.asesora_id.email}}</field>
+      <field name="body_html">
         <![CDATA[
-            Estimada <strong>${object.maquina_id.asesora_id.name}</strong>,<br/>
-            Nos complace informarte que la máquina asignada para revisión ha sido finalizada. Puedes revisar los detalles en el archivo adjunto.
-            Detalles de la reparación:<br/>
-            <ul>                      
-                <li>Reparación: <strong>${object.name}</strong><br/></li>
-                <li>Cliente: <strong>${object.cliente_id.name}</strong><br/></li>
-                <li>Modelo: <strong>${object.maquina_id.name.name}</strong><br/></li>
-                <li>Serie: <strong>${object.serie_id}</strong><br/></li>
-                <li>Técnico responsable: <strong>${object.responsable_id.name}</strong><br/><br/></li>
-            </ul>
-            Agradecemos tu paciencia durante el proceso de reparación y confiamos en que el trabajo realizado cumplirá con tus expectativas. Si tienes alguna pregunta o necesitas más información, no dudes en comunicarte con nosotros.
-            Esperamos que la máquina funcione correctamente y esté lista para ser entregada al cliente. Si necesitas asistencia adicional, estamos aquí para brindarte el apoyo necesario.
-            Apreciamos tu colaboración y confianza en nuestros servicios. Esperamos seguir brindándote el mejor soporte en el futuro.<br/>
-            Atentamente,                    
-        ]]>
-    </field>
-</record>
+                    Estimada <strong><t t-out="object.maquina_id.asesora_id"></strong>,<br/>
+
+                    Nos complace informarte que la máquina asignada para revisión ha sido finalizada. Puedes revisar los detalles en el archivo adjunto.
+
+                    Detalles de la reparación:<br/>
+                    <ul>                      
+                      <li>Reparación: <strong><t t-out="object.name"></strong>
+                      <br/></li>
+                      <li>Cliente: <strong><t t-out="object.cliente_id.name"></strong>
+                      <br/></li>
+                      <li>Modelo: <strong><t t-out="object.maquina_id.name.name"></strong>
+                      <br/></li>
+                      <li>Serie: <strong><t t-out="object.serie_id"></strong>
+                      <br/></li>
+                      <li>Técnico responsable: <strong><t t-out="object.responsable_id.name"></strong>
+                      <br/><br/></li>
+                    </ul>
+
+                    Agradecemos tu paciencia durante el proceso de reparación y confiamos en que el trabajo realizado cumplirá con tus expectativas. Si tienes alguna pregunta o necesitas más información, no dudes en comunicarte con nosotros.
+
+                    Esperamos que la máquina funcione correctamente y esté lista para ser entregada al cliente. Si necesitas asistencia adicional, estamos aquí para brindarte el apoyo necesario.
+
+                    Apreciamos tu colaboración y confianza en nuestros servicios. Esperamos seguir brindándote el mejor soporte en el futuro.<br/>
+
+                    Atentamente,                    
+                ]]>
+      </field>
 
 
     <record id="email_template_reparacion_creada" model="mail.template">
-    <field name="name">Notificación de Máquina Asignada para Revisión</field>
-    <field name="model_id" ref="model_reparaciones_reparaciones"/>
-    <field name="subject">Su máquina ha sido asignada para revisión</field>
-    <field name="email_to">${object.cliente_id.asesora_id.email}</field>
-    <field name="body_html">
-        <![CDATA[
-            <p>Estimada, <strong>${object.maquina_id.asesora_id.name}</strong>,</p>
-            <p>Nos complace informarle que la máquina asignada ha sido registrada para revisión en nuestro sistema.</p>
-            <p>Una vez finalizada la revisión, se le enviará un detalle completo de los resultados.</p>
-            <ul>
-                <li>Reparación #: <strong>${object.name}</strong><br/></li>
-                <li>Cliente: <strong>${object.cliente_id.name}</strong><br/></li>
-                <li>Tipo de equipo: <strong>${object.tipo_machine}</strong><br/></li>
-                <li>Marca: <strong>${object.marca}</strong><br/></li>
-                <li>Modelo: <strong>${object.maquina_id.name.name}</strong><br/></li>
-                <li>Serie: <strong>${object.serie_id}</strong><br/></li>
-                <li>Estado: <strong>${ctx.selection_labels.get('estado_id', 'NA')}</strong><br/></li>
-                <li>Tipo de revisión: <strong>${ctx.selection_labels.get('tipo_revision', 'NA')}</strong><br/></li>
-                <li>Prioridad: <strong>${ctx.selection_labels.get('prioridad', 'NA')}</strong><br/></li>
-                <li>Ubicación: <strong>${ctx.selection_labels.get('ubicacion_id', 'NA')}</strong><br/></li>
-            </ul>
-            <p>Gracias por su paciencia y comprensión.</p>
-            <p>Saludos cordiales,</p>
-            <p>Isidro Vera Polo</p>
-        ]]>
-    </field>
-</record>
+      <field name="name">Notificación de Máquina Asignada para Revisión</field>
+      <field name="model_id" ref="model_reparaciones_reparaciones"/>
+      <field name="subject">Su máquina ha sido asignada para revisión</field>
+      <field name="email_to">{{object.cliente_id.asesora_id.email}}</field>
+      <field name="body_html"><![CDATA[
+                <p>Estimada, <t t-out="object.maquina_id.asesora_id">,</p>
+                <p>Nos complace informarle que la máquina asignada ha sido registrada para revisión en nuestro sistema.</p>
+                <p>Una vez finalizada la revisión, se le enviará un detalle completo de los resultados.</p>
+                <ul>
+                  <li>Reparación #: <strong><t t-out="object.name"></strong><br/></li>
+                  <li>Cliente: <strong><t t-out="object.cliente_id.name"></strong><br/></li>
+                  <li>Tipo de equipo: <strong><t t-out="object.tipo_machine"></strong><br/></li>
+                  <li>Marca: <strong><t t-out="object.marca"></strong><br/></li>
+                  <li>Modelo: <strong><t t-out="object.maquina_id.name.name"></strong><br/></li>
+                  <li>Serie: <strong><t t-out="object.serie_id"></strong><br/></li>
+                  <li>Estado: <strong><t t-out="object.obtener_estado_legible()"></strong><br/></li>
+                  <li>Tipo de revisión: <strong><t t-out="object.obtener_tipo_revision_legible()"></strong><br/></li>
+                  <li>Prioridad: <strong><t t-out="object.obtener_prioridad_legible()"></strong><br/></li>
+                  <li>Ubicación: <strong><t t-out="object.obtener_ubicacion_legible()"></strong><br/></li>
+                </ul>
+                <p>Gracias por su paciencia y comprensión.</p>
+                <p>Saludos cordiales,</p>
+                <p>Isidro vera polo</p>
+            ]]>
+      </field>
+    </record>
 
 
 
