@@ -523,3 +523,16 @@ class ticket_alquiler(models.Model):
         return {
             'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
         }
+class ReportTicketAlquiler(models.AbstractModel):
+    _name = 'report.sat.ticket_view'
+
+    @api.model
+    def _get_report_values(self, docids, data=None):
+        docs = self.env['ticket.alquiler'].browse(docids)
+        for doc in docs:
+            doc.selection_labels = doc.get_selection_labels()
+        return {
+            'doc_ids': docids,
+            'doc_model': 'ticket.alquiler',
+            'docs': docs,
+        }
