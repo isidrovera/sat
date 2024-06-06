@@ -78,7 +78,7 @@
                                         <th>Marca</th>
                                         <td><t t-esc="reparaciones.marca"/></td>
                                         <th>Maquina</th>
-                                        <td><t t-esc="reparaciones.maquina_id.name"/></td>
+                                        <td><t t-esc="reparaciones.maquina_id.name.name"/></td>
                                     </tr>
                                     <tr>
                                         <th>Contometro</th>
