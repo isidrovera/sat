@@ -295,13 +295,17 @@ class reparaciones(models.Model):
     def enviar_mensaje_whatsapp_reparaciones(self):
        
         selection_labels = self.get_selection_labels()
+        # Contexto para las plantillas de correo
+        context = {
+            'selection_labels': selection_labels
+        }
         # Lógica para enviar correos
         template = self.env.ref('sat.email_template_reparaciones')
-        template.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
+        template.with_context(**context).send_mail(self.id, force_send=True)
 
 
         additional_template = self.env.ref('sat.email_template_reparacion_creada')
-        additional_template.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
+        additional_template.with_context(**context).send_mail(self.id, force_send=True)
 
         # Construir y enviar el mensaje de WhatsApp
         msg = "Hola;\n*{}*\nSe te ha asignado la inspección y elaboración del informe de la máquina que se encuentra en el taller. Por favor, verifica detalladamente la máquina, toma fotografías de su estado actual y documenta cualquier daño o problema que encuentres durante la inspección.\n*REPARACION N°:* {}\n*Cliente:* {}\n*Importación:* {}\n*Tipo de equipo:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Estado:* {}\n*Tipo de revisión:* {}\n*Prioridad:* {}\n*Ubicación:* {}\n*Asesora:* {}".format(
