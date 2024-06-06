@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <data>
         <report
@@ -55,15 +54,15 @@
                                 }
                                 .color-yellow {
                                     background-color: yellow;
-                                    color: black;
+                                    color: black.
                                 }
                                 .color-black {
-                                    background-color: black;
-                                    color: white;
+                                    background-color: black.
+                                    color: white.
                                 }
                                 .highlight {
-                                    font-weight: bold;
-                                    color: #007BFF;
+                                    font-weight: bold.
+                                    color: #007BFF.
                                 }
                             </style>
 
@@ -95,7 +94,7 @@
                                     </tr>
                                     <tr>
                                         <th>Calidad</th>
-                                        <td><t t-esc="ticket.calidad_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['calidad_id']"/></td>
                                     </tr>
                                 </table>
                             </div>
@@ -114,39 +113,39 @@
                                         <th>Caseteras N°</th>
                                         <td><t t-esc="ticket.tray_id"/></td>
                                         <th>ADF simple</th>
-                                        <td><t t-esc="ticket.adf_simple_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['adf_simple_id']"/></td>
                                         <th>ADF dual scan</th>
-                                        <td><t t-esc="ticket.adf_dual_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['adf_dual_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Finalizador interno</th>
-                                        <td><t t-esc="ticket.finalizador_interno_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['finalizador_interno_id']"/></td>
                                         <th>Finalizador externo</th>
-                                        <td><t t-esc="ticket.finalizador_externo_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['finalizador_externo_id']"/></td>
                                         <th>Mueble</th>
-                                        <td><t t-esc="ticket.mueble_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['mueble_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Transformador</th>
-                                        <td><t t-esc="ticket.transformador_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['transformador_id']"/></td>
                                         <th>Wi-Fi</th>
-                                        <td><t t-esc="ticket.wi_fi_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['wi_fi_id']"/></td>
                                         <th>Estabilizador</th>
-                                        <td><t t-esc="ticket.estabilizador"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['estabilizador']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Panel normal</th>
-                                        <td><t t-esc="ticket.panel_normal_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['panel_normal_id']"/></td>
                                         <th>Panel smart</th>
-                                        <td><t t-esc="ticket.panel_smart_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['panel_smart_id']"/></td>
                                         <th>Cable de impresión USB</th>
-                                        <td><t t-esc="ticket.cable_usb_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['cable_usb_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Cable de red</th>
-                                        <td><t t-esc="ticket.cable_red_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['cable_red_id']"/></td>
                                         <th>Bluetooth</th>
-                                        <td><t t-esc="ticket.bluetooth_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['bluetooth_id']"/></td>
                                     </tr>
                                 </table>
                             </div>
@@ -158,71 +157,71 @@
                                 <table class="info-table">
                                     <tr>
                                         <th>Copia</th>
-                                        <td><t t-esc="selection_labels['copia_id']"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['copia_id']"/></td>
                                         <th>Impresión</th>
-                                        <td><t t-esc="ticket.impresion_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['impresion_id']"/></td>
                                         <th>Impresión USB</th>
-                                        <td><t t-esc="ticket.impresion_usb_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['impresion_usb_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Scaner SMB</th>
-                                        <td><t t-esc="ticket.scaner_smb_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['scaner_smb_id']"/></td>
                                         <th>Scaner USB</th>
-                                        <td><t t-esc="ticket.scaner_usb_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['scaner_usb_id']"/></td>
                                         <th>Scaner FTP</th>
-                                        <td><t t-esc="ticket.scaner_ftp_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['scaner_ftp_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Scaner Mail</th>
-                                        <td><t t-esc="ticket.scaner_mail_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['scaner_mail_id']"/></td>
                                         <th>Bypass</th>
-                                        <td><t t-esc="ticket.bypass_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['bypass_id']"/></td>
                                         <th>Tray 1</th>
-                                        <td><t t-esc="ticket.tray1_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['tray1_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Tray 2</th>
-                                        <td><t t-esc="ticket.tray2_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['tray2_id']"/></td>
                                         <th>Tray 3</th>
-                                        <td><t t-esc="ticket.tray3_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['tray3_id']"/></td>
                                         <th>Tray 4</th>
-                                        <td><t t-esc="ticket.tray4_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['tray4_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>ADF</th>
-                                        <td><t t-esc="ticket.adf_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['adf_id']"/></td>
                                         <th>Finalizador</th>
-                                        <td><t t-esc="ticket.finalizador_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['finalizador_id']"/></td>
                                         <th>Tacho residual</th>
-                                        <td><t t-esc="ticket.tacho_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['tacho_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Faja fusora</th>
-                                        <td><t t-esc="ticket.fusora_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['fusora_id']"/></td>
                                         <th>Faja de transferencia</th>
-                                        <td><t t-esc="ticket.transfer_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['transfer_id']"/></td>
                                         <th>Optico</th>
-                                        <td><t t-esc="ticket.optico_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['optico_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Toner black</th>
-                                        <td class="color-black"><t t-esc="ticket.toner_black_id"/></td>
+                                        <td class="color-black"><t t-esc="selection_labels[ticket.id]['toner_black_id']"/></td>
                                         <th>Toner magenta</th>
-                                        <td class="color-magenta"><t t-esc="ticket.toner_magenta_id"/></td>
+                                        <td class="color-magenta"><t t-esc="selection_labels[ticket.id]['toner_magenta_id']"/></td>
                                         <th>Unidad Imagen cyan</th>
-                                        <td class="color-cyan"><t t-esc="ticket.cyan_id"/></td>
+                                        <td class="color-cyan"><t t-esc="selection_labels[ticket.id]['cyan_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Toner yellow</th>
-                                        <td class="color-yellow"><t t-esc="ticket.toner_yellow_id"/></td>
+                                        <td class="color-yellow"><t t-esc="selection_labels[ticket.id]['toner_yellow_id']"/></td>
                                         <th>Unidad Imagen black</th>
-                                        <td><t t-esc="ticket.black_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['black_id']"/></td>
                                         <th>Unidad Imagen magenta</th>
-                                        <td><t t-esc="ticket.magenta_id"/></td>
+                                        <td><t t-esc="selection_labels[ticket.id]['magenta_id']"/></td>
                                     </tr>
                                     <tr>
                                         <th>Toner cyan</th>
-                                        <td class="color-cyan"><t t-esc="ticket.toner_cyan_id"/></td>
+                                        <td class="color-cyan"><t t-esc="selection_labels[ticket.id]['toner_cyan_id']"/></td>
                                     </tr>
                                 </table>
                             </div>

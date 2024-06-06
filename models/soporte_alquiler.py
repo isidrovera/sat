@@ -539,10 +539,16 @@ class ReportTicketAlquiler(models.AbstractModel):
     @api.model
     def _get_report_values(self, docids, data=None):
         docs = self.env['ticket.alquiler'].browse(docids)
+        report_data = []
         for doc in docs:
-            doc.selection_labels = doc.get_selection_labels()
+            selection_labels = doc.get_selection_labels()
+            report_data.append({
+                'doc': doc,
+                'selection_labels': selection_labels,
+            })
         return {
             'doc_ids': docids,
             'doc_model': 'ticket.alquiler',
             'docs': docs,
+            'selection_labels': {doc.id: doc.get_selection_labels() for doc in docs},
         }
