@@ -338,6 +338,8 @@ class ticket_alquiler(models.Model):
             return {"error": error_msg}
 
     def enviar_mensaje_whatsapp_asignacion(self):
+        print("Valor de agenda_local:", self.agenda_local)  # Añade esta línea para depurar
+        
         msg_tecnico = "Hola *{}*,\n\nSe le ha asignado un Ticket de servicio. Lea atentamente los detalles del servicio:\n\n*Cliente:* {}\n*Direccion:* {}\n*Contacto:* {}\n*Modelo:* {}\n*Serie:* {}\n*Problema:* {}\n*Fecha de visita:* {}\n*Tipo de servicio:* {}\n*Asistencia directa:* {}\n".format(
             self.responsable.name if self.responsable and self.responsable.name else 'NA',
             self.partner_id.name if self.partner_id and self.partner_id.name else 'NA',
