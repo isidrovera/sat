@@ -81,7 +81,7 @@
                                         <th>Marca</th>
                                         <td><t t-esc="ticket.marca_id_r"/></td>
                                         <th>Maquina</th>
-                                        <td><t t-esc="ticket.product_alquiler"/></td>
+                                        <td><t t-esc="ticket.product_alquiler.name.name"/></td>
                                     </tr>
                                     <tr>
                                         <th>Contometro Black</th>
