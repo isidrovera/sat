@@ -242,7 +242,7 @@ class ticket_alquiler(models.Model):
             template5.send_mail(self.id, force_send=True)
         
         # Llamar a la función para enviar mensaje de finalización al cliente
-        self.enviar_mensaje_whatsapp_finalizacion()
+        #self.enviar_mensaje_whatsapp_finalizacion()
 
     
 

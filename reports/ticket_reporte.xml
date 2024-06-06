@@ -2,14 +2,13 @@
 <odoo>
     <data>
         <report
-                id="ticket_alquiler"
-                model="ticket.alquiler"
-                string="Ticket Alquiler"
-                name="sat.ticket_view"
-                file="ticket.alquiler"
-                report_type="qweb-pdf"
-                print_report_name="object.name"/>
-                
+            id="ticket_alquiler"
+            model="ticket.alquiler"
+            string="Ticket Alquiler"
+            name="sat.ticket_view"
+            file="ticket.alquiler"
+            report_type="qweb-pdf"
+            print_report_name="object.name"/>
 
         <template id="ticket_view">
             <t t-call="web.html_container">
@@ -18,426 +17,232 @@
                         <div class="page">
                             <div class="oe_structure"/>
 
-                                <h2>                        
-                                    <span t-field="ticket.name"/>
-                                </h2>
-                                <div id="informationss" class="row mt32 mb32">
-                                    <div class="col-3 bm-2" >
-                                        <strong>Fecha de visita:  </strong>
-                                        <t>
-                                            <span t-field="ticket.agenda" class="m-0" color="red"/>
-                                        </t>
-                                    </div>                      
-                                </div>
-                                
-                                <div id="informationss" class="row mt32 mb32">
-                                    <!--<div t-if="reparaciones.tipo_machine" class="col-3 bm-2">
-                                        <strong>Tipo de equipo:</strong>
-                                        <p t-field="reparaciones.tipo_machine" class="m-0"/>
-                                    </div>-->
-                                    <!--<div class="col-3 bm-2" >
-                                        <strong>Tipo de equipo:  </strong>
-                                        <t>
-                                            <span t-field="ticket.tipo_machine" class="m-0"/>
-                                        </t>
-                                    </div>-->
-                                    <div class="col-3 bm-2" >
-                                        <strong>Marca:  </strong>
-                                        <t>
-                                            <span t-field="ticket.marca_id_r" class="m-0"/>
-                                        </t>
-                                    </div>
-                                    <div class="col-3 bm-2" >
-                                        <strong>Maquina:  </strong>
-                                        <t>
-                                            <span t-field="ticket.product_alquiler" class="m-0"/>
-                                        </t>
-                                    </div>                      
-                                </div>
-                                <div id="informationss" class="row mt32 mb32" color="red">                        
-                                    <div class="col-3 bm-2" >
-                                        <strong>Contometro Black:  </strong>
-                                        <t>
-                                            <span t-field="ticket.contometrok_id" class="m-0"/>
-                                        </t>
-                                    </div>
-                                    <div class="col-3 bm-2" >
-                                        <strong>Contometro Color:  </strong>
-                                        <t>
-                                            <span t-field="ticket.contometroc_id" class="m-0"/>
-                                        </t>
-                                    </div>
-                                    <div class="col-3 bm-2" >
-                                        <strong>Contometro Scanner:  </strong>
-                                        <t>
-                                            <span t-field="ticket.contometros_id" class="m-0"/>
-                                        </t>
-                                    </div>                                          
-                                </div>
-                                <div id="informationss" class="row mt32 mb32">                        
-                                    <div class="col-3 bm-2" >
-                                        <strong>Calidad:  </strong>
-                                        <t>
-                                            <span t-field="ticket.calidad_id" class="m-0"/>
-                                        </t>
-                                    </div>                                   
-                                </div>
-                                <div>
-                                    <h2><span/></h2>
-                                        <p>Informe Técnico : <span t-field="ticket.informe_id"/></p>
-                                        
-                                </div>
-                                            <div class="oe_structure"/>
+                            <style>
+                                .header {
+                                    font-size: 24px;
+                                    font-weight: bold;
+                                    margin-top: 20px;
+                                    text-align: center;
+                                }
+                                .section-title {
+                                    font-size: 20px;
+                                    font-weight: bold;
+                                    background-color: black;
+                                    color: white;
+                                    padding: 5px;
+                                    margin-top: 20px;
+                                }
+                                .info-table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    margin-bottom: 20px;
+                                }
+                                .info-table th, .info-table td {
+                                    border: 1px solid #ddd;
+                                    padding: 8px;
+                                }
+                                .info-table th {
+                                    background-color: #f2f2f2;
+                                    text-align: left;
+                                }
+                                .color-cyan {
+                                    background-color: cyan;
+                                    color: black;
+                                }
+                                .color-magenta {
+                                    background-color: magenta;
+                                    color: white;
+                                }
+                                .color-yellow {
+                                    background-color: yellow;
+                                    color: black;
+                                }
+                                .color-black {
+                                    background-color: black;
+                                    color: white;
+                                }
+                                .highlight {
+                                    font-weight: bold;
+                                    color: #007BFF;
+                                }
+                            </style>
 
-                                        <h2>                        
-                                            <span/>
-                                                <strong>ACCESORIOS</strong>
-                                        </h2>
+                            <h2 class="header">
+                                <span t-field="ticket.name"/>
+                            </h2>
 
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Caseteras N°:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.tray_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>ADF simple:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.adf_simple_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>ADF dual scan:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.adf_dual_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                      
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Finalizador interno:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.finalizador_interno_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Finalizador externo:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.finalizador_externo_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Mueble:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.mueble_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                      
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Transformador:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.transformador_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Wi-Fi:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.wi_fi_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Estabilizador:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.estabilizador" class="m-0"/>
-                                                </t>
-                                            </div>                                                                     
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Panel normal:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.panel_normal_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Panel smart:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.panel_smart_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Cable de impresión USB:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.cable_usb_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                 
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Cable de red:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.cable_red_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Bluetooth:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.bluetooth_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                                               
-                                        </div>
-                                        
-                                            <div class="oe_structure"/>
+                            <div id="informationss">
+                                <table class="info-table">
+                                    <tr>
+                                        <th>Fecha de visita</th>
+                                        <td><t t-esc="ticket.agenda"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Marca</th>
+                                        <td><t t-esc="ticket.marca_id_r"/></td>
+                                        <th>Maquina</th>
+                                        <td><t t-esc="ticket.product_alquiler"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Contometro Black</th>
+                                        <td><t t-esc="ticket.contometrok_id"/></td>
+                                        <th>Contometro Color</th>
+                                        <td><t t-esc="ticket.contometroc_id"/></td>
+                                        <th>Contometro Scanner</th>
+                                        <td><t t-esc="ticket.contometros_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Calidad</th>
+                                        <td><t t-esc="ticket.calidad_id"/></td>
+                                    </tr>
+                                </table>
+                            </div>
 
-                                        <h2>                        
-                                            <span/>
-                                                <strong>CHECK LIST</strong>
-                                        </h2>
+                            <div>
+                                <h2 class="section-title">Informe Técnico</h2>
+                                <p><t t-esc="ticket.informe_id"/></p>
+                            </div>
 
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Copia :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.copia_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Impresión :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.impresion_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Impresión USB :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.impresion_usb_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                      
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Scaner SMB:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.scaner_smb_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Scaner USB :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.scaner_usb_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Scaner FTP :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.scaner_ftp_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                      
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Scaner Mail :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.scaner_mail_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Bypass :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.bypass_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Tray 1 :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.tray1_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                      
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Tray 2 :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.tray2_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Tray 3 :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.tray3_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Tray 4 :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.tray4_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                      
-                                        </div>                            
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>ADF:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.adf_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Finalizador :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.finalizador_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Tacho residual :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.tacho_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                                                
-                                        </div> 
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Faja fusora :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.fusora_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <!--<div class="col-3 bm-2" >
-                                                <strong>Rodillo de presión:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.rodillo_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Rodillo de calor :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.calor_id" class="m-0"/>
-                                                </t>
-                                            </div>-->                                                                                                
-                                        </div> 
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Faja de transferencia :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.transfer_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Optico:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.optico_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Toner black :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.toner_black_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                                                
-                                        </div> 
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Toner magenta :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.toner_magenta_id" class="m-0"/>
-                                                </t>
-                                            </div>                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Unidad Imagen cyan :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.cyan_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Toner yellow :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.toner_yellow_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                                                
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Unidad Imagen black:  </strong>
-                                                <t>
-                                                    <span t-field="ticket.black_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Unidad Imagen magenta :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.magenta_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Toner cyan :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.toner_cyan_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                                                                                
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                               
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                
-                                            </div>                                                                                                                                
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">
-                                            <div class="col-3 bm-2" >
-                                                <strong>Técnico </strong>
-                                                <t>
-                                                    <p t-field="ticket.responsable" class="m-0"/>
-                                                </t>                                            
-                                            </div>
-                                        <div id="informations" class="row mt32 mb32">
-                                                <div class="col-3 bm-2" >
-                                                    <strong>DNI  </strong>
-                                                    <t>
-                                                        <p t-field="ticket.responsable.vat" class="m-0"/>
-                                                    </t>
-                                                </div>
-                                        </div> 
-                                                                             
-                                            <!--<div class="col-3 bm-2" >
-                                                <strong>Developer black :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.developerk_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Developer magenta :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.developerm_id" class="m-0"/>
-                                                </t>
-                                            </div>
-                                            <div class="col-3 bm-2" >
-                                                <strong>Developer cyan :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.developerc_id" class="m-0"/>
-                                                </t>
-                                            </div>                                                                                                
-                                        </div>
-                                        <div id="informations" class="row mt32 mb32">                                
-                                            <div class="col-3 bm-2" >
-                                                <strong>Developer yellow :  </strong>
-                                                <t>
-                                                    <span t-field="ticket.developery_id" class="m-0"/>
-                                                </t>
-                                            </div> -->                                                                                                                             
-                                        </div>                                                   
-                         <!--   <h2><span t-field="reparaciones.name"/></h2>
-                            <p>Cliente: <span t-field="reparaciones.cliente_id"/></p>
-                            <p>Tipo de equipo: <span t-field="reparaciones.tipo_machine"/></p>-->                                                       
-                        </div>                        
-                    </t>                    
+                            <div class="oe_structure"/>
+                            <h2 class="section-title">ACCESORIOS</h2>
+
+                            <div id="informations">
+                                <table class="info-table">
+                                    <tr>
+                                        <th>Caseteras N°</th>
+                                        <td><t t-esc="ticket.tray_id"/></td>
+                                        <th>ADF simple</th>
+                                        <td><t t-esc="ticket.adf_simple_id"/></td>
+                                        <th>ADF dual scan</th>
+                                        <td><t t-esc="ticket.adf_dual_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Finalizador interno</th>
+                                        <td><t t-esc="ticket.finalizador_interno_id"/></td>
+                                        <th>Finalizador externo</th>
+                                        <td><t t-esc="ticket.finalizador_externo_id"/></td>
+                                        <th>Mueble</th>
+                                        <td><t t-esc="ticket.mueble_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Transformador</th>
+                                        <td><t t-esc="ticket.transformador_id"/></td>
+                                        <th>Wi-Fi</th>
+                                        <td><t t-esc="ticket.wi_fi_id"/></td>
+                                        <th>Estabilizador</th>
+                                        <td><t t-esc="ticket.estabilizador"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Panel normal</th>
+                                        <td><t t-esc="ticket.panel_normal_id"/></td>
+                                        <th>Panel smart</th>
+                                        <td><t t-esc="ticket.panel_smart_id"/></td>
+                                        <th>Cable de impresión USB</th>
+                                        <td><t t-esc="ticket.cable_usb_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Cable de red</th>
+                                        <td><t t-esc="ticket.cable_red_id"/></td>
+                                        <th>Bluetooth</th>
+                                        <td><t t-esc="ticket.bluetooth_id"/></td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <div class="oe_structure"/>
+                            <h2 class="section-title">CHECK LIST</h2>
+
+                            <div id="informations">
+                                <table class="info-table">
+                                    <tr>
+                                        <th>Copia</th>
+                                        <td><t t-esc="ticket.copia_id"/></td>
+                                        <th>Impresión</th>
+                                        <td><t t-esc="ticket.impresion_id"/></td>
+                                        <th>Impresión USB</th>
+                                        <td><t t-esc="ticket.impresion_usb_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Scaner SMB</th>
+                                        <td><t t-esc="ticket.scaner_smb_id"/></td>
+                                        <th>Scaner USB</th>
+                                        <td><t t-esc="ticket.scaner_usb_id"/></td>
+                                        <th>Scaner FTP</th>
+                                        <td><t t-esc="ticket.scaner_ftp_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Scaner Mail</th>
+                                        <td><t t-esc="ticket.scaner_mail_id"/></td>
+                                        <th>Bypass</th>
+                                        <td><t t-esc="ticket.bypass_id"/></td>
+                                        <th>Tray 1</th>
+                                        <td><t t-esc="ticket.tray1_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Tray 2</th>
+                                        <td><t t-esc="ticket.tray2_id"/></td>
+                                        <th>Tray 3</th>
+                                        <td><t t-esc="ticket.tray3_id"/></td>
+                                        <th>Tray 4</th>
+                                        <td><t t-esc="ticket.tray4_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>ADF</th>
+                                        <td><t t-esc="ticket.adf_id"/></td>
+                                        <th>Finalizador</th>
+                                        <td><t t-esc="ticket.finalizador_id"/></td>
+                                        <th>Tacho residual</th>
+                                        <td><t t-esc="ticket.tacho_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Faja fusora</th>
+                                        <td><t t-esc="ticket.fusora_id"/></td>
+                                        <th>Faja de transferencia</th>
+                                        <td><t t-esc="ticket.transfer_id"/></td>
+                                        <th>Optico</th>
+                                        <td><t t-esc="ticket.optico_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Toner black</th>
+                                        <td class="color-black"><t t-esc="ticket.toner_black_id"/></td>
+                                        <th>Toner magenta</th>
+                                        <td class="color-magenta"><t t-esc="ticket.toner_magenta_id"/></td>
+                                        <th>Unidad Imagen cyan</th>
+                                        <td class="color-cyan"><t t-esc="ticket.cyan_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Toner yellow</th>
+                                        <td class="color-yellow"><t t-esc="ticket.toner_yellow_id"/></td>
+                                        <th>Unidad Imagen black</th>
+                                        <td><t t-esc="ticket.black_id"/></td>
+                                        <th>Unidad Imagen magenta</th>
+                                        <td><t t-esc="ticket.magenta_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Toner cyan</th>
+                                        <td class="color-cyan"><t t-esc="ticket.toner_cyan_id"/></td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong>Técnico</strong>
+                                    <t>
+                                        <span t-esc="ticket.responsable"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong>DNI</strong>
+                                    <t>
+                                        <span t-esc="ticket.responsable.vat"/>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
                 </t>
             </t>
-        </template>        
-
+        </template>
     </data>
 </odoo>
