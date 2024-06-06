@@ -346,7 +346,7 @@ class ticket_alquiler(models.Model):
             self.product_alquiler.name.name if self.product_alquiler.name and self.product_alquiler.name.name else 'NA',
             self.serie_id_r if self.serie_id_r else 'NA',
             self.description if self.description else 'NA',
-            self.agenda_local.strftime('%d/%m/%Y') if self.agenda_local else 'NA',
+            self.agenda_local if self.agenda_local else 'NA',
             self.tipo_servicio_id if self.tipo_servicio_id else 'NA',
             self.asistencia_id if self.asistencia_id else 'NA'
         )
