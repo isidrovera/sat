@@ -75,7 +75,7 @@
                                 <table class="info-table">
                                     <tr>
                                         <th>Fecha de visita</th>
-                                        <td><t t-esc="ticket.agenda"/></td>
+                                        <td><t t-esc="ticket.agenda_local"/></td>
                                     </tr>
                                     <tr>
                                         <th>Marca</th>
