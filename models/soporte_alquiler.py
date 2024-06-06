@@ -454,13 +454,17 @@ class ticket_alquiler(models.Model):
             if field.type == 'selection' and hasattr(self, field_name):
                 value = getattr(self, field_name)
                 if value:
-                    for option_value, option_label in field.selection:
+                    selection = field.selection
+                    if callable(selection):
+                        selection = selection(self.env)
+                    for option_value, option_label in selection:
                         if option_value == value:
                             selection_labels[field_name] = option_label
                             break
                 else:
                     selection_labels[field_name] = 'NA'
-        return selection_labels        
+        return selection_labels
+       
     def enviar_mensaje_whatsapp(self):
         selection_labels = self.get_selection_labels()
         msg_tecnico = "Hola *{}*,\n\nSe le ha asignado un Ticket de servicio. Lea atentamente los detalles del servicio:\n\n*Cliente:* {}\n*Direccion:* {}\n*Contacto:* {}\n*Modelo:* {}\n*Serie:* {}\n*Problema:* {}\n*Fecha de visita:* {}\n*Tipo de servicio:* {}\n*Asistencia directa:* {}\n".format(
