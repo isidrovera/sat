@@ -14,7 +14,7 @@
             font-size: 24px;
             font-weight: bold;
             margin-top: 20px;
-            text-align: center;
+            text-align: left;
         }
         .section-title {
             font-size: 20px;
@@ -278,38 +278,43 @@
                                             <t t-esc="selection_labels[ticket.id]['optico_id']"/>
                                         </td>
                                     </tr>
-                                    <tr>
-                                        <th>Toner black</th>
-                                        <td class="color-black">
-                                            <t t-esc="selection_labels[ticket.id]['toner_black_id']"/>
-                                        </td>
-                                        <th>Toner magenta</th>
-                                        <td class="color-magenta">
-                                            <t t-esc="selection_labels[ticket.id]['toner_magenta_id']"/>
-                                        </td>
+                                    <tr>                                        
                                         <th>Unidad Imagen cyan</th>
                                         <td class="color-cyan">
                                             <t t-esc="selection_labels[ticket.id]['cyan_id']"/>
                                         </td>
+                                        <th>Unidad Imagen black</th>
+                                        <td class="color-black">
+                                            <t t-esc="selection_labels[ticket.id]['black_id']"/>
+                                        </td>
+                                        <th>Unidad Imagen magenta</th>
+                                        <td class="color-magenta">
+                                            <t t-esc="selection_labels[ticket.id]['magenta_id']"/>
+                                        </td>
                                     </tr>
                                     <tr>
+                                        <th>Unidad Imagen yellow</th>
+                                        <td class="color-yellow" ><t t-esc="selection_labels[ticket.id]['yellow_id']"/>
+                                        </td>
                                         <th>Toner yellow</th>
                                         <td class="color-yellow">
                                             <t t-esc="selection_labels[ticket.id]['toner_yellow_id']"/>
                                         </td>
-                                        <th>Unidad Imagen black</th>
-                                        <td>
-                                            <t t-esc="selection_labels[ticket.id]['black_id']"/>
+                                        <th>Toner black</th>
+                                        <td class="color-black">
+                                            <t t-esc="selection_labels[ticket.id]['toner_black_id']"/>
                                         </td>
-                                        <th>Unidad Imagen magenta</th>
-                                        <td>
-                                            <t t-esc="selection_labels[ticket.id]['magenta_id']"/>
-                                        </td>
+                                        
+                                        
                                     </tr>
                                     <tr>
                                         <th>Toner cyan</th>
                                         <td class="color-cyan">
                                             <t t-esc="selection_labels[ticket.id]['toner_cyan_id']"/>
+                                        </td>
+                                        <th>Toner magenta</th>
+                                        <td class="color-magenta">
+                                            <t t-esc="selection_labels[ticket.id]['toner_magenta_id']"/>
                                         </td>
                                     </tr>
                                 </table>
