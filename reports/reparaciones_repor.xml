@@ -201,24 +201,20 @@
                                         <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('transfer_id', 'NA')"/></td>
                                         <th>Optico</th>
                                         <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('optico_id', 'NA')"/></td>
-                                        <th>Toner black</th>
-                                        <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_black_id', 'NA')"/></td>
+                                         <th>Unidad Imagen black</th>
+                                        <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('black_id', 'NA')"/></td>
                                     </tr>
-                                    <tr>
-                                        <th>Toner magenta</th>
-                                        <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_magenta_id', 'NA')"/></td>
+                                    <tr>                                       
+                                        <th>Unidad Imagen magenta</th>
+                                        <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('magenta_id', 'NA')"/></td>
                                         <th>Unidad Imagen cyan</th>
                                         <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('cyan_id', 'NA')"/></td>
-                                        <th>Toner yellow</th>
-                                        <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_yellow_id', 'NA')"/></td>
+                                        <th>Unidad Imagen yellow</th>
+                                        <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('yellow_id', 'NA')"/></td>
+                                        
                                     </tr>
                                     <tr>
-                                        <th>Unidad Imagen black</th>
-                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('black_id', 'NA')"/></td>
-                                        <th>Unidad Imagen magenta</th>
-                                        <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('magenta_id', 'NA')"/></td>
-                                        <th>Toner cyan</th>
-                                        <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_cyan_id', 'NA')"/></td>
+                                        
                                     </tr>
                                     <tr>
                                         <th>Developer black</th>
@@ -228,9 +224,19 @@
                                         <th>Developer cyan</th>
                                         <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerc_id', 'NA')"/></td>
                                     </tr>
-                                    <tr>
+                                    <tr> 
                                         <th>Developer yellow</th>
-                                        <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developery_id', 'NA')"/></td>
+                                        <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developery_id', 'NA')"/></td>                                       
+                                        <th>Toner black</th>
+                                        <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_black_id', 'NA')"/></td>
+                                        <th>Toner magenta</th>
+                                        <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_magenta_id', 'NA')"/></td>
+                                    </tr>
+                                    <tr>                                    
+                                        <th>Toner cyan</th>
+                                        <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_cyan_id', 'NA')"/></td>
+                                        <th>Toner yellow</th>
+                                        <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_yellow_id', 'NA')"/></td>
                                     </tr>
                                 </table>
                             </div>
