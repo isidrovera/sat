@@ -476,16 +476,19 @@ class reparaciones(models.Model):
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
     def generate_pdf_report_url(self):
         report = self.env.ref('sat.report_reparaciones_ventas').sudo()
-        pdf_content, _ = report.render([self.id])  # Generate PDF content
-        pdf_file_name = f"/tmp/reparacion_{self.id}.pdf"
+        pdf_content, content_type = report._render_qweb_pdf([self.id])  # Generar contenido PDF
 
+        # Guardar el contenido PDF en un archivo temporal
+        pdf_file_name = f"/tmp/reparacion_{self.id}.pdf"
         with open(pdf_file_name, 'wb') as pdf_file:
             pdf_file.write(pdf_content)
 
+        # Generar la URL para el PDF
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        pdf_url = f"{base_url}/web/content/{self._name}/{self.id}/reparacion_{self.id}.pdf"
+        pdf_url = f"{base_url}/web/content/{pdf_file_name}?download=true"
 
         return pdf_url
+
 
     def enviar_mensaje_finalizacion_asesora(self):
         pdf_url = self.generate_pdf_report_url()
