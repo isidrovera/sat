@@ -12,7 +12,7 @@ import qrcode
 from odoo.exceptions import ValidationError
 import requests
 import json
-
+from odoo.tools import config
 class reparaciones(models.Model):
 
     _name = 'reparaciones.reparaciones'
@@ -472,8 +472,21 @@ class reparaciones(models.Model):
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
+    def generate_pdf_report_url(self):
+        report = self.env.ref('sat.report_reparaciones_ventas')
+        pdf_content, _ = report.render_qweb_pdf([self.id])
+        pdf_file_name = f"/tmp/reparacion_{self.id}.pdf"
+
+        with open(pdf_file_name, 'wb') as pdf_file:
+            pdf_file.write(pdf_content)
+
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        pdf_url = f"{base_url}/web/content/{self._name}/{self.id}/reparacion_{self.id}.pdf"
+
+        return pdf_url
+
     def enviar_mensaje_finalizacion_asesora(self):
-        url = self.generate_record_url(self)
+        pdf_url = self.generate_pdf_report_url()
         msg = "*Reparación Finalizada*\n*Cliente:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Contómetro:* {}\n*Estado:* {}\n*Técnico:* {}\n\nPor favor, ingrese al siguiente enlace para revisar todos los detalles: {}".format(
             self.cliente_id.name if self.cliente_id.name else 'NA',
             self.marca if self.marca else 'NA',
@@ -482,7 +495,7 @@ class reparaciones(models.Model):
             self.contometrok_id if self.contometrok_id else 'NA',
             self.obtener_estado_legible() if self.obtener_estado_legible() else 'NA',
             self.responsable_id.name if self.responsable_id.name else 'NA',
-            url
+            pdf_url
         )
 
         if self.asesora_mobile_clean:
