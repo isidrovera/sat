@@ -364,32 +364,25 @@ class reparaciones(models.Model):
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
     
 
-    def generate_record_url(self, record):
-        try:
-            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-            action_id = self.env.ref('sat.action_reparaciones_window').id
-            menu_id = self.env.ref('sat.menu_reparaciones').id
-            url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
-            _logger.info("URL generada para el registro %s: %s", record.id, url)
-            return url
-        except Exception as e:
-            _logger.error("Error al generar URL para el registro %s: %s", record.id, str(e))
-            return ""
+    def generate_custom_record_url(self, record):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        action_id = self.env.ref('sat.action_reparaciones_window').id
+        menu_id = self.env.ref('sat.menu_reparaciones').id
+        url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
+        return url
+
 
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
 
 
-    @api.depends('serie_id')  # Puedes cambiar esta dependencia según lo que necesites
+    @api.depends('serie_id')
     def _generate_qr_code(self):
         import qrcode
         from io import BytesIO
         import base64
         for record in self:
-            _logger.info("Generando QR para el registro: %s", record.id)
             try:
-                url = self.generate_record_url(record)  # Uso correcto del método
-                _logger.info("URL generada: %s", url)
-
+                url = self.generate_custom_record_url(record)
                 qr = qrcode.QRCode(
                     version=1,
                     error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -403,10 +396,10 @@ class reparaciones(models.Model):
                 temp = BytesIO()
                 img.save(temp, format="PNG")
                 temp.seek(0)
-                record.qr_image = base64.b64encode(temp.read()).decode('utf-8')  # Asegúrate de codificar correctamente en base64
-
+                record.qr_image = base64.b64encode(temp.read()).decode('utf-8')
             except Exception as e:
-                _logger.error("Error al generar el código QR: %s", str(e))
+                _logger.error("Error generating QR code: %s", str(e))
+
 
             
             
