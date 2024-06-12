@@ -14,9 +14,8 @@ import requests
 import json
 from odoo.tools import config
 from odoo.http import request
-class reparaciones(models.Model):
-    
 
+class reparaciones(models.Model):
     _name = 'reparaciones.reparaciones'
     _description = 'Reparaciones Ventas'
     _inherit = ['mail.thread', 'mail.activity.mixin']
@@ -26,219 +25,96 @@ class reparaciones(models.Model):
                        required=True,
                        readonly=True)
 
-        
     @api.model
     def create(self, vals):
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         record = super(reparaciones, self).create(vals)
         return record
 
-      
-    maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True )
-
+    maquina_id = fields.Many2one('sat.sat', string='Maquina', tracking=True)
     marca = fields.Char(string='Marca', related='maquina_id.marca', readonly=True, store=True)
-    importacion = fields.Char(string='Importación',
-                              related='maquina_id.importacion')
-    nombre_proveedor = fields.Char(
-        related='maquina_id.proveedor_id.name', string="Proveedor")
+    importacion = fields.Char(string='Importación', related='maquina_id.importacion')
+    nombre_proveedor = fields.Char(related='maquina_id.proveedor_id.name', string="Proveedor")
     nombre_maquina = fields.Char(related='maquina_id.name.name', store=True)
-
     tapas_id = fields.Selection([('blancas', 'Blancas'), ('amarillas', 'Amarillas'), ('rotas', 'Rotas'), ('le_faltan', 'Le faltan'),
                                  ('no_aplica', 'No aplica')],
-                                string='Tapas', tracking=True
-                                )
+                                string='Tapas', tracking=True)
     panel_id = fields.Selection(
         [('blanco', 'Blanco'), ('amarillo', 'Amarillo'), ('no_aplica', 'No aplica')],
         string='Panel', tracking=True
     )
     lct_id = fields.Selection([('si', 'Si'), ('no', 'No')],
-                              string='LCT', tracking=True
-                              )
-    tipo_machine = fields.Char(string='Tipo de maquina', related='maquina_id.tipo_maquina',
-                               readonly=True
-
-                               )
-
-    
-
+                              string='LCT', tracking=True)
+    tipo_machine = fields.Char(string='Tipo de maquina', related='maquina_id.tipo_maquina', readonly=True)
 
     def action_con_problemas_reparacion(self):
         self.estado_id = "con_problemas"
 
-    tipo_revision = fields.Selection(related='maquina_id.tipo_revision', readonly=True,store=True)
+    tipo_revision = fields.Selection(related='maquina_id.tipo_revision', readonly=True, store=True)
     ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id', readonly=True, store=True)
-    prioridad = fields.Selection(related='maquina_id.prioridad',readonly=True,store=True)
-
-    estado_id = fields.Selection([('sin_revisar', 'Sin revisar'),('para_revision', 'Para revision'),('asignado','Asignado'),('en_revision', 'En revisión'), ('finalizado', 'Finalizado'), ('con_problemas', 'Con problemas'), ('de_partes', 'De partes'), ('entregada', 'Entregada')],
+    prioridad = fields.Selection(related='maquina_id.prioridad', readonly=True, store=True)
+    estado_id = fields.Selection([('sin_revisar', 'Sin revisar'), ('para_revision', 'Para revision'), ('asignado', 'Asignado'), ('en_revision', 'En revisión'), ('finalizado', 'Finalizado'), ('con_problemas', 'Con problemas'), ('de_partes', 'De partes'), ('entregada', 'Entregada')],
                                  string='Estado de revisión',
                                  related='maquina_id.estado_ventas_id',
                                  readonly=False,
-                                         store=True,                                         
-                                 )
-    serie_id = fields.Char(string='Serie',
-                           related='maquina_id.serie_id',
-                           readonly=True,
-                           store=True
-                           )
-    ot_id = fields.Selection([('si', 'Si'), ('no', 'No')],
-                             string='Bandeja de salida OT', tracking=True
-                             )
-    hdd_id = fields.Selection([('si', 'Si'), ('no', 'No')],
-                              string='Disco duro', tracking=True
-                              )
-    tipo_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')
-                                ],
-                               string='Tipo de MFP',  related='maquina_id.tipo_id', readonly=True)
+                                 store=True)
+    serie_id = fields.Char(string='Serie', related='maquina_id.serie_id', readonly=True, store=True)
+    ot_id = fields.Selection([('si', 'Si'), ('no', 'No')], string='Bandeja de salida OT', tracking=True)
+    hdd_id = fields.Selection([('si', 'Si'), ('no', 'No')], string='Disco duro', tracking=True)
+    tipo_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')], string='Tipo de MFP', related='maquina_id.tipo_id', readonly=True)
     informe = fields.Html(string='Descripción', tracking=True)
-    tray_id = fields.Char("Caseteras N°", tracking=True
-                          )
-    adf_simple_id = fields.Selection(
-        [("si", "Si"), ("no", "No")], string="ADF Simple", tracking=True)
-    adf_dual_id = fields.Selection(
-        [("si", "Si"), ("no", "No")], string="ADF Dual scan", tracking=True)
-    finalizador_interno_id = fields.Selection(
-        [("si", "Si"), ("no", "No")], string="Finalizador Interno", tracking=True)
-    finalizador_externo_id = fields.Selection(
-        [("si", "Si"), ("no", "No")], string="Finalizador Externo", tracking=True)
-    mueble_id = fields.Selection(
-        [("si", "Si"), ("no", "No")], string="Mueble", tracking=True)
-    panel_smart_id = fields.Selection(
-        [("si", "Si"), ("no", "No")], string="Panel Smart", tracking=True)
-    panel_normal_id = fields.Selection(
-        [("si", "Si"), ("no", "No")], string="Panel Normal", tracking=True)
-    wi_fi_id = fields.Selection(
-        [("si", "Si"), ("no", "No")], string="Wi-Fi", tracking=True)
+    tray_id = fields.Char("Caseteras N°", tracking=True)
+    adf_simple_id = fields.Selection([("si", "Si"), ("no", "No")], string="ADF Simple", tracking=True)
+    adf_dual_id = fields.Selection([("si", "Si"), ("no", "No")], string="ADF Dual scan", tracking=True)
+    finalizador_interno_id = fields.Selection([("si", "Si"), ("no", "No")], string="Finalizador Interno", tracking=True)
+    finalizador_externo_id = fields.Selection([("si", "Si"), ("no", "No")], string="Finalizador Externo", tracking=True)
+    mueble_id = fields.Selection([("si", "Si"), ("no", "No")], string="Mueble", tracking=True)
+    panel_smart_id = fields.Selection([("si", "Si"), ("no", "No")], string="Panel Smart", tracking=True)
+    panel_normal_id = fields.Selection([("si", "Si"), ("no", "No")], string="Panel Normal", tracking=True)
+    wi_fi_id = fields.Selection([("si", "Si"), ("no", "No")], string="Wi-Fi", tracking=True)
+    cable_poder_id = fields.Selection([("si", "Si"), ("no", "No")], string="Cable de poder", tracking=True)
+    toner_black_id = fields.Selection([("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"), ("sin_botella", "Sin botella")], string="Toner Black", tracking=True)
+    toner_magenta_id = fields.Selection([("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"), ("sin_botella", "Sin botella"), ("no_aplica", "No aplica")], string="Toner Magenta", tracking=True)
+    toner_cyan_id = fields.Selection([("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"), ("sin_botella", "Sin botella"), ("no_aplica", "No aplica")], string="Toner Cyan", tracking=True)
+    toner_yellow_id = fields.Selection([("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"), ("sin_botella", "Sin botella"), ("no_aplica", "No aplica")], string="Toner Yellow", tracking=True)
+    copia_id = fields.Selection([("correcto", "Correcto"), ("sin_probar", "Sin probar"), ("falla", "Falla")], string="Copia", tracking=True)
+    impresion_id = fields.Selection([("correcto", "Correcto"), ("sin_probar", "Sin probar"), ("falla", "Falla"), ("no_aplica", "No aplica")], string="Impresión", tracking=True)
+    impresion_usb_id = fields.Selection([("correcto", "Correcto"), ("sin_probar", "Sin probar"), ("falla", "Falla"), ("no_aplica", "No aplica")], string="Impresión USB", tracking=True)
+    scaner_smb_id = fields.Selection([("correcto", "Correcto"), ("sin_probar", "Sin probar"), ("falla", "Falla"), ("no_aplica", "No aplica")], string="Scanner SMB", tracking=True)
+    scaner_usb_id = fields.Selection([("correcto", "Correcto"), ("sin_probar", "Sin probar"), ("falla", "Falla"), ("no_aplica", "No aplica")], string="Scanner USB", tracking=True)
+    scaner_ftp_id = fields.Selection([("correcto", "Correcto"), ("sin_probar", "Sin probar"), ("falla", "Falla"), ("no_aplica", "No aplica")], string="Scanner FTP", tracking=True)
+    scaner_mail_id = fields.Selection([("correcto", "Correcto"), ("sin_probar", "Sin probar"), ("falla", "Falla"), ("no_aplica", "No aplica")], string="Scanner Mail", tracking=True)
+    adf_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"), ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"), ("no_aplica", "No aplica")], string="ADF", tracking=True)
+    tray1_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado")], string="Tray 1", tracking=True)
+    tray2_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado"), ("no_aplica", "No aplica")], string="Tray 2", tracking=True)
+    tray3_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado"), ("no_aplica", "No aplica")], string="Tray 3", tracking=True)
+    tray4_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado"), ("no_aplica", "No aplica")], string="Tray 4", tracking=True)
+    bypass_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado"), ("no_aplica", "No aplica")], string="Bypass", tracking=True)
+    finalizador_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado"), ("no_aplica", "No aplica")], string="Finalizador", tracking=True)
+    tacho_id = fields.Selection([("si", "Si"), ("no", "No"), ("no_aplica", "No aplica")], string="Tacho residual", tracking=True)
+    fusora_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar'), ("no_aplica", "No aplica")], string="Faja fusora", tracking=True)
+    rodillo_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar'), ("no_aplica", "No aplica")], string="Rodillo de presión", tracking=True)
+    calor_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')], string="Rodillo de calor", tracking=True)
+    transfer_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')], string="Faja de Transferencia", tracking=True)
+    optico_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"), ("revisado", "Revisado")], string="Unidad Optica", tracking=True)
+    black_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')], string="Unidad Imagen Black", tracking=True)
+    developerk_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')], string="Developer Black", tracking=True)
+    magenta_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')], string="Unidad Imagen Magenta", tracking=True)
+    developerm_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')], string="Developer Magenta", tracking=True)
+    cyan_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')], string="Unidad Imagen Cyan", tracking=True)
+    developerc_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')], string="Developer Cyan", tracking=True)
+    yellow_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')], string="Unidad Imagen Yellow", tracking=True)
+    developery_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')], string="Developer Yellow", tracking=True)
+    contometrok_id = fields.Char(string="Contometro", related='maquina_id.contometro', readonly=False, store=True, tracking=True)
 
-    cable_poder_id = fields.Selection(
-        [("si", "Si"), ("no", "No")], string="Cable de poder", tracking=True)
-
-    toner_black_id = fields.Selection(
-        [("nuevo", "Nuevo"), ("regular", "Regular"),
-         ("vacio", "Vacío"), ("sin_botella", "Sin botella")],
-        string="Toner Black", tracking=True)
-    toner_magenta_id = fields.Selection(
-        [("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"),
-         ("sin_botella", "Sin botella"), ("no_aplica", "No aplica")],
-        string="Toner Magenta", tracking=True)
-    toner_cyan_id = fields.Selection(
-        [("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"),
-         ("sin_botella", "Sin botella"), ("no_aplica", "No aplica")],
-        string="Toner Cyan", tracking=True)
-    toner_yellow_id = fields.Selection(
-        [("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"),
-         ("sin_botella", "Sin botella"), ("no_aplica", "No aplica")],
-        string="Toner Yellow", tracking=True)
-    copia_id = fields.Selection([("correcto", "Correcto"), ("sin_probar", "Sin probar"), ("falla", "Falla")],
-                                string="Copia", tracking=True)
-    impresion_id = fields.Selection(
-        [("correcto", "Correcto"), ("sin_probar", "Sin probar"),
-         ("falla", "Falla"), ("no_aplica", "No aplica")],
-        string="Impresión", tracking=True)
-    impresion_usb_id = fields.Selection(
-        [("correcto", "Correcto"), ("sin_probar", "Sin probar"),
-         ("falla", "Falla"), ("no_aplica", "No aplica")],
-        string="Impresión USB", tracking=True)
-    scaner_smb_id = fields.Selection(
-        [("correcto", "Correcto"), ("sin_probar", "Sin probar"),
-         ("falla", "Falla"), ("no_aplica", "No aplica")],
-        string="Scanner SMB", tracking=True)
-    scaner_usb_id = fields.Selection(
-        [("correcto", "Correcto"), ("sin_probar", "Sin probar"),
-         ("falla", "Falla"), ("no_aplica", "No aplica")],
-        string="Scanner USB", tracking=True)
-    scaner_ftp_id = fields.Selection(
-        [("correcto", "Correcto"), ("sin_probar", "Sin probar"),
-         ("falla", "Falla"), ("no_aplica", "No aplica")],
-        string="Scanner FTP", tracking=True)
-    scaner_mail_id = fields.Selection(
-        [("correcto", "Correcto"), ("sin_probar", "Sin probar"),
-         ("falla", "Falla"), ("no_aplica", "No aplica")],
-        string="Scanner Mail", tracking=True)
-    adf_id = fields.Selection(
-        [("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-         ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"), ("no_aplica", "No aplica")],
-        string="ADF", tracking=True)
-    tray1_id = fields.Selection([("sin_revisar", "Sin revisar"),
-                                 ("revisado", "Revisado")],
-                                string="Tray 1", tracking=True)
-    tray2_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado"), ("no_aplica", "No aplica")],
-                                string="Tray 2", tracking=True)
-    tray3_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado"), ("no_aplica", "No aplica")],
-                                string="Tray 3", tracking=True)
-    tray4_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado"), ("no_aplica", "No aplica")],
-                                string="Tray 4", tracking=True)
-    bypass_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado"), ("no_aplica", "No aplica")],
-                                 string="Bypass", tracking=True)
-    finalizador_id = fields.Selection([("sin_revisar", "Sin revisar"), ("revisado", "Revisado"), ("no_aplica", "No aplica")],
-                                      string="Finalizador", tracking=True)
-
-    tacho_id = fields.Selection(
-        [("si", "Si"), ("no", "No"), ("no_aplica", "No aplica")],
-        string="Tacho residual", tracking=True)
-    fusora_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar'), ("no_aplica", "No aplica")],
-                                 string="Faja fusora", tracking=True)
-    rodillo_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ('nuevo', 'Nuevo'), ('regular', 'Regular'), (
-        'gastada_pero_puede_trabajar', 'Gastada pero puede trabajar'), ("no_aplica", "No aplica")], string="Rodillo de presión", tracking=True)
-    calor_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')],
-                                string="Rodillo de calor",
-                                tracking=True)
-
-    transfer_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')
-                                    ],
-                                   string="Faja de Transferencia", tracking=True)
-    optico_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                  ("revisado", "Revisado")],
-                                 string="Unidad Optica", tracking=True)
-    black_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')
-                                 ],
-                                string="Unidad Imagen Black", tracking=True)
-    developerk_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')
-                                      ],
-                                     string="Developer Black", tracking=True)
-    magenta_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')],
-                                  string="Unidad Imagen Magenta", tracking=True)
-    developerm_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')],
-                                     string="Developer Magenta", tracking=True)
-    cyan_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')],
-                               string="Unidad Imagen Cyan", tracking=True)
-    developerc_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"),
-                                      ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')],
-                                     string="Developer Cyan", tracking=True)
-    yellow_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')],
-                                 string="Unidad Imagen Yellow", tracking=True)
-    developery_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ("no_aplica", "No aplica"), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar')],
-                                     string="Developer Yellow", tracking=True)
-    contometrok_id = fields.Char(string="Contometro",
-                                 related='maquina_id.contometro',
-                                 readonly=False,
-                                 store=True,  tracking=True
-                                 
-
-                                 )
-
-    calidad_id = fields.Selection(
-        [("buena", "Buena"), ("regular", "Regular"), ("mala", "Mala")], string="Calidad", tracking=True)
-    responsable_id = fields.Many2one(
-        'res.users',
-        string='Responsable', tracking=True
-    )
-    nombre_responsable  = fields.Char(related='responsable_id.name', 
-    string='Nombre responsable',store=True
-    )
-    cliente_id = fields.Many2one('res.partner', string='Cliente', related='maquina_id.cliente_id', readonly=True,
-        store=True, tracking=True
-    )
-
+    calidad_id = fields.Selection([("buena", "Buena"), ("regular", "Regular"), ("mala", "Mala")], string="Calidad", tracking=True)
+    responsable_id = fields.Many2one('res.users', string='Responsable', tracking=True)
+    nombre_responsable = fields.Char(related='responsable_id.name', string='Nombre responsable', store=True)
+    cliente_id = fields.Many2one('res.partner', string='Cliente', related='maquina_id.cliente_id', readonly=True, store=True, tracking=True)
     falla_proveedor = fields.Html(string="Descripción", tracking=True)
-    
-    falla_ventas = fields.Text(string='Descripción',related='maquina_id.descripcion',readonly=False, store=True, tracking=True
+    falla_ventas = fields.Text(string='Descripción', related='maquina_id.descripcion', readonly=False, store=True, tracking=True)
 
-    )
-  
-    
-    responsable_mobile_clean = fields.Char(string='Número de celular (limpio)', compute='_compute_responsable_mobile_clean',
-        store=True
-    )
+    responsable_mobile_clean = fields.Char(string='Número de celular (limpio)', compute='_compute_responsable_mobile_clean', store=True)
 
     @api.depends('responsable_id.mobile_phone')
     def _compute_responsable_mobile_clean(self):
@@ -253,8 +129,6 @@ class reparaciones(models.Model):
                 record.responsable_mobile_clean = phone
             else:
                 record.responsable_mobile_clean = ''
-                record.responsable_mobile_clean = ''
-
 
     def send_whatsapp_message(self, phone, message):
         """Envía un mensaje de WhatsApp utilizando la API externa."""
@@ -278,6 +152,7 @@ class reparaciones(models.Model):
             error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
             print(error_msg)
             return {"error": error_msg}  # Devuelve un diccionario con la clave 'error' y el mensaje de error como valor
+
     def get_selection_labels(self):
         selection_labels = {}
         for field_name, field in self._fields.items():
@@ -294,11 +169,9 @@ class reparaciones(models.Model):
                 else:
                     selection_labels[field_name] = 'NA'
         return selection_labels
+
     def enviar_mensaje_whatsapp_reparaciones(self):
-       
         selection_labels = self.get_selection_labels()
-        # Contexto para las plantillas de correo
-        # Contexto para las plantillas de correo
         context = dict(self.env.context or {})
         context.update({
             'selection_labels': selection_labels
@@ -306,8 +179,6 @@ class reparaciones(models.Model):
         # Lógica para enviar correos
         template = self.env.ref('sat.email_template_reparaciones')
         template.with_context(**context).send_mail(self.id, force_send=True)
-
-
         additional_template = self.env.ref('sat.email_template_reparacion_creada')
         additional_template.with_context(**context).send_mail(self.id, force_send=True)
 
@@ -339,14 +210,9 @@ class reparaciones(models.Model):
         }
 
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
-   
-    asesora_mobile_clean = fields.Char(
-        string='Número de celular asesora (limpio)',
-        compute='_compute_asesora_mobile_clean',
-        store=True
-    )
 
-   
+    asesora_mobile_clean = fields.Char(string='Número de celular asesora (limpio)', compute='_compute_asesora_mobile_clean', store=True)
+
     @api.depends('maquina_id.cliente_id.asesora_id.mobile')
     def _compute_asesora_mobile_clean(self):
         for record in self:
@@ -359,57 +225,48 @@ class reparaciones(models.Model):
             else:
                 record.asesora_mobile_clean = ''
 
-
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
-    
 
+    @api.model
     def generate_record_url(self, record):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         action_id = self.env.ref('sat.action_reparaciones_window').id  # Debes cambiar 'sat.action_id' al ID de acción correcto para tu modelo sat.sat
         menu_id = self.env.ref('sat.reparaciones').id  # Cambia 'sat.menu_id' al ID de menú correcto
         url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
         return url
+
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
 
-
-    @api.depends('serie_id')  # Suponiendo que quieras codificar un campo específico, reemplaza 'nombre_del_campo_a_codificar' con el campo relevante.
+    @api.depends('serie_id')
     def _generate_qr_code(self):
-        import qrcode
-        from io import BytesIO
-        import base64
         for record in self:
             url = self.generate_record_url(record)
-            
             qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
             qr.add_data(url)
             qr.make(fit=True)
-            
+
             img = qr.make_image(fill_color="black", back_color="white")
-            
+
             temp = BytesIO()
             img.save(temp, format="PNG")
             temp.seek(0)
             record.qr_image = base64.b64encode(temp.read())
-            
-            
-                
+
     month_year = fields.Char(string='Mes y Año', compute='_compute_month_year', store=True)
 
     def _compute_month_year(self):
         for record in self:
             if record.create_date:
-                # Formatear la fecha para que el año aparezca primero, lo cual facilita el ordenamiento
                 record.month_year = record.create_date.strftime('%Y-%m')
             else:
                 record.month_year = ''
 
     @api.model
     def update_month_year(self, *args, **kwargs):
-        """Método para forzar la actualización del campo en todos los registros existentes."""
         records = self.search([])
         for record in records:
             record._compute_month_year()
-            
+
     def write(self, vals):
         finalizado = vals.get('estado_id') == 'finalizado'
         if finalizado:
@@ -444,9 +301,9 @@ class reparaciones(models.Model):
                         'usuario_id': rec.responsable_id.name,
                     })
 
-        return res        
+        return res
+
     def _create_next_reparacion(self):
-        # Verificar si el técnico tiene algún registro en estado 'en_revision'
         if self.env['reparaciones.reparaciones'].search_count([('responsable_id', '=', self.responsable_id.id), ('estado_id', '=', 'en_revision')]) > 0:
             return
 
@@ -474,15 +331,11 @@ class reparaciones(models.Model):
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
+
     def generate_pdf_report_url(self):
-        report = self.env.ref('sat.report_reparaciones_ventas').sudo()
-        
-        # Generar la URL para el PDF
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         pdf_url = f"{base_url}/report/pdf/sat.reparacion_view/{self.id}?cid=1"
-
         return pdf_url
-
 
     def enviar_mensaje_finalizacion_asesora(self):
         pdf_url = self.generate_pdf_report_url()
@@ -501,14 +354,12 @@ class reparaciones(models.Model):
             phone_number = self.asesora_mobile_clean
             self.send_whatsapp_message(phone_number, msg)
 
-            
     def action_finalizar_reparacion(self):
         self.estado_id = "finalizado"
-        template_id = self.env.ref('sat.email_template_finalizacion_reparacion')        
         self.enviar_mensaje_finalizacion_asesora()
         self._create_next_reparacion()
         return self.env.ref('sat.report_reparaciones_qr').report_action(self)
-    
+
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
         tipo_revision_legible = ""
@@ -535,6 +386,7 @@ class reparaciones(models.Model):
             selection = selection(self)
         prioridad_legible = dict(selection).get(self.prioridad)
         return prioridad_legible
+
     @api.depends('estado_id')
     def obtener_estado_legible(self):
         estado_legible = ""
@@ -543,6 +395,7 @@ class reparaciones(models.Model):
             selection = selection(self)
         estado_legible = dict(selection).get(self.estado_id)
         return estado_legible
+
 class ReportReparacionView(models.AbstractModel):
     _name = 'report.sat.reparacion_view'
 
