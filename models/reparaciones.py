@@ -156,7 +156,7 @@ class reparaciones(models.Model):
     def get_selection_labels(self):
         selection_labels = {}
         for field_name, field in self._fields.items():
-            if field.type == 'selection' and hasattr(self, field_name):
+            if (field.type == 'selection') and (hasattr(self, field_name)):
                 value = getattr(self, field_name)
                 if value:
                     selection = field.selection
@@ -230,8 +230,8 @@ class reparaciones(models.Model):
     @api.model
     def generate_record_url(self, record):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        action_id = self.env.ref('sat.action_reparaciones_window').id  # Debes cambiar 'sat.action_id' al ID de acción correcto para tu modelo sat.sat
-        menu_id = self.env.ref('sat.reparaciones').id  # Cambia 'sat.menu_id' al ID de menú correcto
+        action_id = self.env.ref('sat.action_reparaciones_window').id  # Ajusta 'sat.action_reparaciones_window' si es necesario
+        menu_id = self.env.ref('sat.reparaciones').id  # Ajusta 'sat.reparaciones' si es necesario
         url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
         return url
 
