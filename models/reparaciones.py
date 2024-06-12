@@ -13,6 +13,9 @@ from odoo.exceptions import ValidationError
 import requests
 import json
 from odoo.tools import config
+
+
+
 class reparaciones(models.Model):
 
     _name = 'reparaciones.reparaciones'
@@ -362,32 +365,49 @@ class reparaciones(models.Model):
     
 
     def generate_record_url(self, record):
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        action_id = self.env.ref('sat.action_reparaciones_window').id  # Debes cambiar 'sat.action_id' al ID de acción correcto para tu modelo sat.sat
-        menu_id = self.env.ref('sat.reparaciones').id  # Cambia 'sat.menu_id' al ID de menú correcto
-        url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
-        return url
+        try:
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            action_id = self.env.ref('sat.action_reparaciones_window').id
+            menu_id = self.env.ref('sat.menu_reparaciones').id
+            url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
+            _logger.info("URL generada para el registro %s: %s", record.id, url)
+            return url
+        except Exception as e:
+            _logger.error("Error al generar URL para el registro %s: %s", record.id, str(e))
+            return ""
+
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
 
 
-    @api.depends('serie_id')  # Suponiendo que quieras codificar un campo específico, reemplaza 'nombre_del_campo_a_codificar' con el campo relevante.
+    @api.depends('serie_id')  # Puedes cambiar esta dependencia según lo que necesites
     def _generate_qr_code(self):
         import qrcode
         from io import BytesIO
         import base64
         for record in self:
-            url = self.generate_record_url(record)
-            
-            qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
-            qr.add_data(url)
-            qr.make(fit=True)
-            
-            img = qr.make_image(fill_color="black", back_color="white")
-            
-            temp = BytesIO()
-            img.save(temp, format="PNG")
-            temp.seek(0)
-            record.qr_image = base64.b64encode(temp.read())
+            _logger.info("Generando QR para el registro: %s", record.id)
+            try:
+                url = self.generate_record_url(record)  # Uso correcto del método
+                _logger.info("URL generada: %s", url)
+
+                qr = qrcode.QRCode(
+                    version=1,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L,
+                    box_size=10,
+                    border=4
+                )
+                qr.add_data(url)
+                qr.make(fit=True)
+
+                img = qr.make_image(fill_color="black", back_color="white")
+                temp = BytesIO()
+                img.save(temp, format="PNG")
+                temp.seek(0)
+                record.qr_image = base64.b64encode(temp.read()).decode('utf-8')  # Asegúrate de codificar correctamente en base64
+
+            except Exception as e:
+                _logger.error("Error al generar el código QR: %s", str(e))
+
             
             
                 
