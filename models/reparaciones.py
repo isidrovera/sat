@@ -468,6 +468,11 @@ class reparaciones(models.Model):
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
+    @api.model
+    def generate_record_url(self, record):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        record_url = f"{base_url}/web#id={record.id}&model={record._name}&view_type=form"
+        return record_url
     def generate_pdf_report_url(self):
         report = self.env.ref('sat.report_reparaciones_ventas').sudo()
         
