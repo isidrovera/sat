@@ -12,7 +12,7 @@ import qrcode
 from odoo.exceptions import ValidationError
 import requests
 import json
-
+from odoo.tools import config
 class reparaciones(models.Model):
 
     _name = 'reparaciones.reparaciones'
@@ -359,23 +359,31 @@ class reparaciones(models.Model):
 
 
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
+    
+
+    def generate_record_url(self, record):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        action_id = self.env.ref('sat.action_reparaciones_window').id  # Debes cambiar 'sat.action_id' al ID de acción correcto para tu modelo sat.sat
+        menu_id = self.env.ref('sat.reparaciones').id  # Cambia 'sat.menu_id' al ID de menú correcto
+        url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
+        return url
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
 
-    def generate_record_url(self):
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        action_id = self.env.ref('sat.action_reparaciones_window').id  # Ajusta 'sat.action_reparaciones_window' si es necesario
-        menu_id = self.env.ref('sat.reparaciones').id  # Ajusta 'sat.reparaciones' si es necesario
-        url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, self.id, action_id, menu_id)
-        return url
 
-    @api.depends('serie_id')
+    @api.depends('serie_id')  # Suponiendo que quieras codificar un campo específico, reemplaza 'nombre_del_campo_a_codificar' con el campo relevante.
     def _generate_qr_code(self):
+        import qrcode
+        from io import BytesIO
+        import base64
         for record in self:
-            url = record.generate_record_url()
+            url = self.generate_record_url(record)
+            
             qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
             qr.add_data(url)
             qr.make(fit=True)
+            
             img = qr.make_image(fill_color="black", back_color="white")
+            
             temp = BytesIO()
             img.save(temp, format="PNG")
             temp.seek(0)
@@ -464,8 +472,21 @@ class reparaciones(models.Model):
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
+    def generate_pdf_report_url(self):
+        report = self.env.ref('sat.report_reparaciones_ventas')
+        pdf_content, _ = report.render_qweb_pdf([self.id])
+        pdf_file_name = f"/tmp/reparacion_{self.id}.pdf"
+
+        with open(pdf_file_name, 'wb') as pdf_file:
+            pdf_file.write(pdf_content)
+
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        pdf_url = f"{base_url}/web/content/{self._name}/{self.id}/reparacion_{self.id}.pdf"
+
+        return pdf_url
+
     def enviar_mensaje_finalizacion_asesora(self):
-        url = self.generate_record_url(self)
+        pdf_url = self.generate_pdf_report_url()
         msg = "*Reparación Finalizada*\n*Cliente:* {}\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Contómetro:* {}\n*Estado:* {}\n*Técnico:* {}\n\nPor favor, ingrese al siguiente enlace para revisar todos los detalles: {}".format(
             self.cliente_id.name if self.cliente_id.name else 'NA',
             self.marca if self.marca else 'NA',
@@ -474,7 +495,7 @@ class reparaciones(models.Model):
             self.contometrok_id if self.contometrok_id else 'NA',
             self.obtener_estado_legible() if self.obtener_estado_legible() else 'NA',
             self.responsable_id.name if self.responsable_id.name else 'NA',
-            url
+            pdf_url
         )
 
         if self.asesora_mobile_clean:
