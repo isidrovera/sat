@@ -359,9 +359,7 @@ class reparaciones(models.Model):
 
 
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
-    
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
-
 
     def generate_record_url(self):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
