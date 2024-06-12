@@ -363,17 +363,17 @@ class reparaciones(models.Model):
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
 
 
-    def generate_record_url(self, record):
+    def generate_record_url(self):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         action_id = self.env.ref('sat.action_reparaciones_window').id  # Ajusta 'sat.action_reparaciones_window' si es necesario
         menu_id = self.env.ref('sat.reparaciones').id  # Ajusta 'sat.reparaciones' si es necesario
-        url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
+        url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, self.id, action_id, menu_id)
         return url
 
     @api.depends('serie_id')
     def _generate_qr_code(self):
         for record in self:
-            url = self.generate_record_url(record)
+            url = record.generate_record_url()
             qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
             qr.add_data(url)
             qr.make(fit=True)
