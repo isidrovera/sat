@@ -363,6 +363,12 @@ class reparaciones(models.Model):
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
     
 
+    def generate_record_url(self, record):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        action_id = self.env.ref('sat.action_reparaciones_window').id  # Debes cambiar 'sat.action_id' al ID de acción correcto para tu modelo sat.sat
+        menu_id = self.env.ref('sat.reparaciones').id  # Cambia 'sat.menu_id' al ID de menú correcto
+        url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
+        return url
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
 
 
@@ -468,11 +474,6 @@ class reparaciones(models.Model):
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
-    @api.model
-    def generate_record_url(self, record):
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        record_url = f"{base_url}/web#id={record.id}&model={record._name}&view_type=form"
-        return record_url
     def generate_pdf_report_url(self):
         report = self.env.ref('sat.report_reparaciones_ventas').sudo()
         
