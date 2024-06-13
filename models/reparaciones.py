@@ -497,12 +497,16 @@ class reparaciones(models.Model):
             raise UserError("No se encontró el reporte especificado.")
         
         pdf_content, content_type = report.render([self.id])
+        if not pdf_content:
+            raise UserError("No se pudo generar el contenido del PDF.")
+        
         pdf_file_name = f"/tmp/reparacion_{self.id}.pdf"
 
         with open(pdf_file_name, 'wb') as pdf_file:
             pdf_file.write(pdf_content)
         
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        
         attachment = self.env['ir.attachment'].create({
             'name': f"reparacion_{self.id}.pdf",
             'type': 'binary',
