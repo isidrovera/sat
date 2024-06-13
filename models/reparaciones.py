@@ -13,7 +13,7 @@ from odoo.exceptions import ValidationError
 import requests
 import json
 from odoo.tools import config
-
+from odoo.exceptions import UserError
 
 
 class reparaciones(models.Model):
@@ -492,14 +492,27 @@ class reparaciones(models.Model):
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
     def generate_pdf_report_url(self):
         report = self.env.ref('sat.report_reparaciones_ventas')
-        pdf_content, _ = report.render_qweb_pdf([self.id])
+        
+        if not report:
+            raise UserError("No se encontró el reporte especificado.")
+        
+        pdf_content, content_type = report.render([self.id])
         pdf_file_name = f"/tmp/reparacion_{self.id}.pdf"
 
         with open(pdf_file_name, 'wb') as pdf_file:
             pdf_file.write(pdf_content)
-
+        
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        pdf_url = f"{base_url}/web/content/{self._name}/{self.id}/reparacion_{self.id}.pdf"
+        attachment = self.env['ir.attachment'].create({
+            'name': f"reparacion_{self.id}.pdf",
+            'type': 'binary',
+            'datas': base64.b64encode(pdf_content),
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'application/pdf',
+        })
+
+        pdf_url = f"{base_url}/web/content/{attachment.id}?download=true"
 
         return pdf_url
 
