@@ -259,7 +259,7 @@ class reparaciones(models.Model):
 
     def send_whatsapp_message(self, phone, message):
         """Envía un mensaje de WhatsApp utilizando la API externa."""
-        url = 'https://copierconnectremote.com/lead'
+        url = 'https://whatsapp.copiercompanysac.com/lead'
         data = {
             'phone': phone,
             'message': message
