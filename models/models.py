@@ -451,14 +451,9 @@ class SatSat(models.Model):
             self.enviar_mensaje_whatsapp(numero, mensaje)
 
     def enviar_mensaje_whatsapp(self, phone, message):
-        formatted_phone = phone.replace('+', '').replace(' ', '')
-        if not formatted_phone.startswith('51'):
-            formatted_phone = '51' + formatted_phone
-        formatted_phone = formatted_phone + '@c.us'
-        
         url = 'https://whatsapp.copiercompanysac.com/lead'
         data = {
-            'phone': formatted_phone,
+            'phone': phone,  # Utilizar el número directamente
             'message': message
         }
         headers = {'Content-Type': 'application/json'}
@@ -466,7 +461,7 @@ class SatSat(models.Model):
         if response.status_code != 200:
             _logger.error(f"Error al enviar mensaje de WhatsApp: {response.text}")
         else:
-            _logger.info(f"Mensaje enviado exitosamente a {formatted_phone}")
+            _logger.info(f"Mensaje enviado exitosamente a {phone}")
 
     def crear_url_cambio_ubicacion(self, record):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
