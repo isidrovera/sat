@@ -17,6 +17,7 @@ import tempfile
 import os
 import io
 import qrcode
+import requests
 class SatSat(models.Model):
     _name = 'sat.sat'
     _description = 'Registro de maquina'
