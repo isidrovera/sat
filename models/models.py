@@ -446,9 +446,7 @@ class SatSat(models.Model):
     def _onchange_disponibilidad_ubicacion(self):
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
             self.enviar_mensaje_transportistas()
-            self.env.user.notify_info(message='Estimada vendedora, ya se está notificando a transporte que traigan el equipo.',
-                                      title='Notificación',
-                                      sticky=False)
+            return self._notify_vendedora()
 
     def enviar_mensaje_transportistas(self):
         transportista_numeros = ['51975399303']
@@ -481,7 +479,14 @@ class SatSat(models.Model):
         clean_id = re.sub(r'\D', '', str(record.id))  # Remover cualquier carácter no numérico
         url = f"{base_url}/sat/change_location/{clean_id}"
         return url
-
+    def _notify_vendedora(self):
+        return {
+            'warning': {
+                'title': "Notificación",
+                'message': "Estimada vendedora, ya se está notificando a transporte que traigan el equipo.",
+                'type': 'notification'
+            }
+        }
     @api.model
     def cron_evaluador_diario(self):
         _logger.debug("Iniciando cron_evaluador_diario")
