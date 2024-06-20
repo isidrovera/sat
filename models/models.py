@@ -435,6 +435,12 @@ class SatSat(models.Model):
                         _logger.debug("Condiciones cumplidas, enviando mensaje a transportistas...")
                         self.enviar_mensaje_transportistas(record)
                         _logger.debug(f"Mensaje enviado a los transportistas para la máquina con serie: {record.serie_id}")
+                    else:
+                        _logger.debug(f"La ubicación actual ({record.ubicacion_id}) no es 'segundo_local' ni 'covida'.")
+                else:
+                    _logger.debug(f"La disponibilidad no es 'separada', es {vals['disponibilidad_id']}")
+            else:
+                _logger.debug("No se cambió la disponibilidad")
 
         return res
 
