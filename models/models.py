@@ -446,9 +446,12 @@ class SatSat(models.Model):
     def _onchange_disponibilidad_ubicacion(self):
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
             self.enviar_mensaje_transportistas()
+            self.env.user.notify_info(message='Estimada vendedora, ya se está notificando a transporte que traigan el equipo.',
+                                      title='Notificación',
+                                      sticky=False)
 
     def enviar_mensaje_transportistas(self):
-        transportista_numeros = ['51924894872']
+        transportista_numeros = ['51975399303']
         mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {self.name.name}\nSerie: {self.serie_id}\nUbicación actual: {self.ubicacion_id}."
         url = self.crear_url_cambio_ubicacion(self)
 
