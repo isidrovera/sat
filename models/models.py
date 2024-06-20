@@ -386,7 +386,6 @@ class SatSat(models.Model):
             return isidro_user.partner_id.id
         return False
 
-    @api.model
     def write(self, vals):
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         
@@ -401,13 +400,13 @@ class SatSat(models.Model):
             disponibilidad_anterior = record.disponibilidad_id
             ubicacion_anterior = record.ubicacion_id
 
-            res = super(SatSat, self).write(vals)
+            res = super(SatSat, record).write(vals)
 
             if estado_actual in estados_permitidos_para_cambio:
                 if tipo_revision_modificado or prioridad_modificada:
                     if vals.get('tipo_revision') or vals.get('prioridad'):
-                        vals['estado_ventas_id'] = 'para_revision'
-                        vals['fecha_para_revision'] = fields.Datetime.now()
+                        record.estado_ventas_id = 'para_revision'
+                        record.fecha_para_revision = fields.Datetime.now()
 
                         if isidro_partner_id:
                             user_name = self.env.user.name
@@ -420,13 +419,13 @@ class SatSat(models.Model):
                                 subtype='mail.mt_comment',
                             )
                     else:
-                        vals['estado_ventas_id'] = 'sin_revisar'
-                        vals['fecha_para_revision'] = None
+                        record.estado_ventas_id = 'sin_revisar'
+                        record.fecha_para_revision = None
 
             if 'disponibilidad_id' in vals and vals['disponibilidad_id'] == 'separada' and record.ubicacion_id in ['segundo_local', 'covida']:
                 self.enviar_mensaje_transportistas(record)
 
-            return res
+        return res
 
     def enviar_mensaje_transportistas(self, record):
         transportista_numeros = ['51975339903']
