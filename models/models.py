@@ -501,6 +501,3 @@ class SatSat(models.Model):
 
                     for numero in transportista_numeros:
                         self.enviar_mensaje_whatsapp(numero, mensaje)
-                    
-                    # Actualizar la ubicación a primer_piso después de enviar el mensaje
-                    registro.ubicacion_id = 'primer_piso'
