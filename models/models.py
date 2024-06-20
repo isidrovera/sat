@@ -448,7 +448,7 @@ class SatSat(models.Model):
             self.enviar_mensaje_transportistas()
 
     def enviar_mensaje_transportistas(self):
-        transportista_numeros = ['51975399303', '5199345668']
+        transportista_numeros = ['51924894872']
         mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {self.name.name}\nSerie: {self.serie_id}\nUbicación actual: {self.ubicacion_id}."
         url = self.crear_url_cambio_ubicacion(self)
 
@@ -497,7 +497,7 @@ class SatSat(models.Model):
             _logger.debug(f"Máquinas a traer: {registros_a_traer}")
             
             if registros_a_traer:
-                transportista_numeros = ['51975399303', '5199345668']
+                transportista_numeros = ['51924894872']
                 for registro in registros_a_traer:
                     mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {registro.name.name}\nSerie: {registro.serie_id}\nUbicación actual: {registro.ubicacion_id}."
                     url = self.crear_url_cambio_ubicacion(registro)
