@@ -466,11 +466,12 @@ class SatSat(models.Model):
             'message': message
         }
         headers = {'Content-Type': 'application/json'}
-        response = requests.post(url, headers=headers, json=data)
-        if response.status_code != 200:
-            _logger.error(f"Error al enviar mensaje de WhatsApp: {response.text}")
-        else:
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=10)
+            response.raise_for_status()
             _logger.info(f"Mensaje enviado exitosamente a {phone}")
+        except requests.exceptions.RequestException as e:
+            _logger.error(f"Error al enviar mensaje de WhatsApp a {phone}: {e}")
 
     def crear_url_cambio_ubicacion(self, record):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
@@ -480,6 +481,7 @@ class SatSat(models.Model):
 
     @api.model
     def cron_evaluador_diario(self):
+        _logger.debug("Iniciando cron_evaluador_diario")
         self.evaluar_registros_diarios()
 
     def evaluar_registros_diarios(self):
@@ -506,3 +508,5 @@ class SatSat(models.Model):
 
                     for numero in transportista_numeros:
                         self.enviar_mensaje_whatsapp(numero, mensaje)
+                    
+                    _logger.info(f"Mensaje enviado para la máquina {registro.name.name} con serie {registro.serie_id}")
