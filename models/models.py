@@ -442,7 +442,7 @@ class SatSat(models.Model):
                         vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
 
         return super(SatSat, self).write(vals)
-     @api.onchange('disponibilidad_id', 'ubicacion_id')
+    @api.onchange('disponibilidad_id', 'ubicacion_id')
     def _onchange_disponibilidad_ubicacion(self):
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
             self.enviar_mensaje_transportistas()
