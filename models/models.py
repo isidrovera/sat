@@ -428,7 +428,7 @@ class SatSat(models.Model):
         return res
 
     def enviar_mensaje_transportistas(self, record):
-        transportista_numeros = ['51975339903']
+        transportista_numeros = ['51975399303']
         mensaje = f"La máquina {record.name.name} con serie {record.serie_id} ha sido separada. Ubicación actual: {record.ubicacion_id}."
         url = self.crear_url_cambio_ubicacion(record)
 
