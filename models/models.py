@@ -380,16 +380,9 @@ class SatSat(models.Model):
     fecha_para_revision = fields.Datetime(string="Fecha para Revisión", readonly=True)
 
 
-    def get_isidro_partner_id(self):
-        isidro_user = self.env['res.users'].search([('name', '=', 'Isidro Vera Polo')], limit=1)
-        if isidro_user:
-            return isidro_user.partner_id.id
-        return False
-
     def write(self, vals):
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         
-        # Verificar si los campos 'tipo_revision' o 'prioridad' están siendo modificados
         tipo_revision_modificado = 'tipo_revision' in vals
         prioridad_modificada = 'prioridad' in vals
         
@@ -426,7 +419,6 @@ class SatSat(models.Model):
                         record.estado_ventas_id = 'sin_revisar'
                         record.fecha_para_revision = None
 
-            # Verificar si la disponibilidad ha cambiado a 'separada' y si la ubicación es 'segundo_local' o 'covida'
             if 'disponibilidad_id' in vals:
                 _logger.debug(f"Disponibilidad cambiada a: {vals['disponibilidad_id']}")
                 if vals['disponibilidad_id'] == 'separada':
@@ -459,7 +451,7 @@ class SatSat(models.Model):
     def enviar_mensaje_whatsapp(self, phone, message):
         url = 'https://whatsapp.copiercompanysac.com/lead'
         data = {
-            'phone': phone,  # Utilizar el número directamente
+            'phone': phone,
             'message': message
         }
         headers = {'Content-Type': 'application/json'}
@@ -501,3 +493,10 @@ class SatSat(models.Model):
                 transportista_numeros = ['51975399303', '51975399303']
                 for numero in transportista_numeros:
                     self.enviar_mensaje_whatsapp(numero, mensaje)
+
+    @api.model
+    def get_isidro_partner_id(self):
+        isidro_user = self.env['res.users'].search([('name', '=', 'Isidro Vera Polo')], limit=1)
+        if isidro_user:
+            return isidro_user.partner_id.id
+        return False
