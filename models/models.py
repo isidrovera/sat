@@ -404,6 +404,8 @@ class SatSat(models.Model):
 
             res = super(SatSat, record).write(vals)
 
+            _logger.debug(f"Valores escritos: {vals}")
+
             if estado_actual in estados_permitidos_para_cambio:
                 if tipo_revision_modificado or prioridad_modificada:
                     if vals.get('tipo_revision') or vals.get('prioridad'):
@@ -430,6 +432,7 @@ class SatSat(models.Model):
                 if vals['disponibilidad_id'] == 'separada':
                     _logger.debug(f"Ubicación actual: {record.ubicacion_id}")
                     if record.ubicacion_id in ['segundo_local', 'covida']:
+                        _logger.debug("Condiciones cumplidas, enviando mensaje a transportistas...")
                         self.enviar_mensaje_transportistas(record)
                         _logger.debug(f"Mensaje enviado a los transportistas para la máquina con serie: {record.serie_id}")
 
@@ -441,6 +444,8 @@ class SatSat(models.Model):
         url = self.crear_url_cambio_ubicacion(record)
 
         mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace:\n{url}"
+
+        _logger.debug(f"Enviando mensaje a transportistas: {mensaje}")
 
         for numero in transportista_numeros:
             self.enviar_mensaje_whatsapp(numero, mensaje)
@@ -467,6 +472,15 @@ class SatSat(models.Model):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         url = f"{base_url}/sat/change_location/{record.id}"
         return url
+
+    def button_send_test_message(self):
+        _logger.info("Botón de prueba presionado")
+        mensaje = "Este es un mensaje de prueba desde Odoo."
+        transportista_numeros = ['51975399303', '51975399303']
+
+        for numero in transportista_numeros:
+            self.enviar_mensaje_whatsapp(numero, mensaje)
+            _logger.info(f"Mensaje de prueba enviado a {numero}")
 
     @api.model
     def cron_evaluador_diario(self):

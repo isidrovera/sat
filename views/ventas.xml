@@ -9,7 +9,7 @@
           <header>
             <button string=" " name="action_partes" type="object" class="btn btn-danger" icon="fa-puzzle-piece" help="Cambia el estado a maquinas de partes" attrs="{'invisible':[('estado_ventas_id', '=', 'de_partes')]}" groups="base.group_system"/>
             <button string=" " name="action_problemas" type="object" class="btn btn-warning" icon="fa-exclamation-triangle" help="Cambia el estao a maquina con problemas" attrs="{'invisible':[('estado_ventas_id', '=', 'con_problemas')]}" groups="base.group_system"/>
-
+            <button name="button_send_test_message" type="object" string="Enviar Mensaje de Prueba" class="btn-primary"/>
             <button string=" " name="action_sin_revisar" type="object" class="btn btn-primary" help="Cambia el estado a sin revisar" icon="fa-times-circle" attrs="{'invisible':[('estado_ventas_id', '=', 'sin_revisar')]}" groups="base.group_system"/>
             <button string=" " name="send_records_by_email" type="object" class="oe_highlight" icon="fa-paper-plane" help="Envia por correo lista de maquinas con problemas y de partes"/>
             <button string=" " name="action_en_revision" type="object" class="btn btn-info" icon="fa-cogs" attrs="{'invisible':[('estado_ventas_id', '=', 'en_revision')]}" help="Cambia el estado  en revisión" groups="base.group_system"/>
