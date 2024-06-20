@@ -448,7 +448,7 @@ class SatSat(models.Model):
             self.enviar_mensaje_transportistas()
 
     def enviar_mensaje_transportistas(self):
-        transportista_numeros = ['51975399303']
+        transportista_numeros = ['51975399303', '5199345668']
         mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {self.name.name}\nSerie: {self.serie_id}\nUbicación actual: {self.ubicacion_id}."
         url = self.crear_url_cambio_ubicacion(self)
 
@@ -487,12 +487,20 @@ class SatSat(models.Model):
         registros_tercer_piso = self.search([('ubicacion_id', '=', 'tercer_piso'), ('estado_ventas_id', '=', 'sin_revisar')])
 
         if not registros_primer_piso and not registros_tercer_piso:
-            registros_a_traer = self.search([('ubicacion_id', 'in', ['segundo_local', 'covida']), ('estado_ventas_id', '!=', 'sin_revisar')], limit=8)
+            registros_a_traer = self.search([
+                ('ubicacion_id', 'in', ['segundo_local', 'covida']),
+                ('estado_ventas_id', '=', 'sin_revisar')
+            ], limit=8)
             if registros_a_traer:
+                transportista_numeros = ['51975399303', '5199345668']
                 for registro in registros_a_traer:
-                    registro.ubicacion_id = 'primer_piso'
+                    mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {registro.name.name}\nSerie: {registro.serie_id}\nUbicación actual: {registro.ubicacion_id}."
+                    url = self.crear_url_cambio_ubicacion(registro)
 
-                mensaje = "No hay registros en 'primer_piso' o 'tercer_piso' con el estado 'sin revisar'. Se han traído 8 máquinas a 'primer_piso'."
-                transportista_numeros = ['51975399303']
-                for numero in transportista_numeros:
-                    self.enviar_mensaje_whatsapp(numero, mensaje)
+                    mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace: 📍 {url}"
+
+                    for numero in transportista_numeros:
+                        self.enviar_mensaje_whatsapp(numero, mensaje)
+                    
+                    # Actualizar la ubicación a primer_piso después de enviar el mensaje
+                    registro.ubicacion_id = 'primer_piso'
