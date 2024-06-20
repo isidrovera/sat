@@ -257,7 +257,7 @@
                     <t>
                       <field name="disponibilidad_id" widget="badge"/>
                     </t>
-                    <button string=" " name="action_whatsap" type="object" icon="fa-whatsapp"/>
+                    
                   </strong>
                 </div>
               </div>
