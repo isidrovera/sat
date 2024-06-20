@@ -448,11 +448,11 @@ class SatSat(models.Model):
             self.enviar_mensaje_transportistas()
 
     def enviar_mensaje_transportistas(self):
-        transportista_numeros = ['51975399303', '51975399303']
-        mensaje = f"La máquina {self.name.name} con serie {self.serie_id} ha sido separada. Ubicación actual: {self.ubicacion_id}."
+        transportista_numeros = ['51975399303']
+        mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {self.name.name}\nSerie: {self.serie_id}\nUbicación actual: {self.ubicacion_id}."
         url = self.crear_url_cambio_ubicacion(self)
 
-        mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace:\n{url}"
+        mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace: 📍 {url}"
 
         _logger.debug(f"Enviando mensaje a transportistas: {mensaje}")
 
@@ -493,6 +493,6 @@ class SatSat(models.Model):
                     registro.ubicacion_id = 'primer_piso'
 
                 mensaje = "No hay registros en 'primer_piso' o 'tercer_piso' con el estado 'sin revisar'. Se han traído 8 máquinas a 'primer_piso'."
-                transportista_numeros = ['51975399303', '51975399303']
+                transportista_numeros = ['51975399303']
                 for numero in transportista_numeros:
                     self.enviar_mensaje_whatsapp(numero, mensaje)
