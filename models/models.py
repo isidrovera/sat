@@ -400,6 +400,8 @@ class SatSat(models.Model):
             disponibilidad_anterior = record.disponibilidad_id
             ubicacion_anterior = record.ubicacion_id
 
+            _logger.debug(f"Estado actual: {estado_actual}, Disponibilidad anterior: {disponibilidad_anterior}, Ubicación anterior: {ubicacion_anterior}")
+
             res = super(SatSat, record).write(vals)
 
             if estado_actual in estados_permitidos_para_cambio:
@@ -423,13 +425,18 @@ class SatSat(models.Model):
                         record.fecha_para_revision = None
 
             # Verificar si la disponibilidad ha cambiado a 'separada' y si la ubicación es 'segundo_local' o 'covida'
-            if 'disponibilidad_id' in vals and vals['disponibilidad_id'] == 'separada' and record.ubicacion_id in ['segundo_local', 'covida']:
-                self.enviar_mensaje_transportistas(record)
+            if 'disponibilidad_id' in vals:
+                _logger.debug(f"Disponibilidad cambiada a: {vals['disponibilidad_id']}")
+                if vals['disponibilidad_id'] == 'separada':
+                    _logger.debug(f"Ubicación actual: {record.ubicacion_id}")
+                    if record.ubicacion_id in ['segundo_local', 'covida']:
+                        self.enviar_mensaje_transportistas(record)
+                        _logger.debug(f"Mensaje enviado a los transportistas para la máquina con serie: {record.serie_id}")
 
         return res
 
     def enviar_mensaje_transportistas(self, record):
-        transportista_numeros = ['51975399303','51975399303']
+        transportista_numeros = ['51975399303', '51975399303']
         mensaje = f"La máquina {record.name.name} con serie {record.serie_id} ha sido separada. Ubicación actual: {record.ubicacion_id}."
         url = self.crear_url_cambio_ubicacion(record)
 
@@ -453,6 +460,8 @@ class SatSat(models.Model):
         response = requests.post(url, headers=headers, json=data)
         if response.status_code != 200:
             _logger.error(f"Error al enviar mensaje de WhatsApp: {response.text}")
+        else:
+            _logger.info(f"Mensaje enviado exitosamente a {formatted_phone}")
 
     def crear_url_cambio_ubicacion(self, record):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
