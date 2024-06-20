@@ -491,6 +491,9 @@ class SatSat(models.Model):
                 ('ubicacion_id', 'in', ['segundo_local', 'covida']),
                 ('estado_ventas_id', '=', 'sin_revisar')
             ], limit=8)
+            
+            _logger.debug(f"Máquinas a traer: {registros_a_traer}")
+            
             if registros_a_traer:
                 transportista_numeros = ['51975399303', '5199345668']
                 for registro in registros_a_traer:
@@ -498,6 +501,8 @@ class SatSat(models.Model):
                     url = self.crear_url_cambio_ubicacion(registro)
 
                     mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace: 📍 {url}"
+
+                    _logger.debug(f"Enviando mensaje para la máquina {registro.name.name} con serie {registro.serie_id}")
 
                     for numero in transportista_numeros:
                         self.enviar_mensaje_whatsapp(numero, mensaje)
