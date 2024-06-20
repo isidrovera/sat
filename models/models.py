@@ -341,8 +341,8 @@ class SatSat(models.Model):
     
     def generate_record_url(self, record):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        action_id = self.env.ref('sat.action_window').id  # Debes cambiar 'sat.action_id' al ID de acción correcto para tu modelo sat.sat
-        menu_id = self.env.ref('sat.stock_maquinas').id  # Cambia 'sat.menu_id' al ID de menú correcto
+        action_id = self.env.ref('sat.action_window').id
+        menu_id = self.env.ref('sat.stock_maquinas').id
         url = "{}/web#id={}&view_type=form&model=sat.sat&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
         return url
     qr_image = fields.Binary("QR Image", compute="generate_qr_code", attachment=True, store=True)
@@ -442,12 +442,11 @@ class SatSat(models.Model):
                         vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
 
         return super(SatSat, self).write(vals)
-    
-    @api.onchange('disponibilidad_id', 'ubicacion_id')
+     @api.onchange('disponibilidad_id', 'ubicacion_id')
     def _onchange_disponibilidad_ubicacion(self):
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
             self.enviar_mensaje_transportistas()
-            
+
     def enviar_mensaje_transportistas(self):
         transportista_numeros = ['51975399303', '51975399303']
         mensaje = f"La máquina {self.name.name} con serie {self.serie_id} ha sido separada. Ubicación actual: {self.ubicacion_id}."
@@ -475,10 +474,8 @@ class SatSat(models.Model):
 
     def crear_url_cambio_ubicacion(self, record):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        urls = f"{base_url}/sat/change_location/{record.id}"
-        return urls
-
-   
+        url = f"{base_url}/sat/change_location/{record.id}"
+        return url
 
     @api.model
     def cron_evaluador_diario(self):
