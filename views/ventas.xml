@@ -16,7 +16,7 @@
             <button string="Entregar" name="action_entregada" type="object" class="btn btn-primary" icon="fa-truck" attrs="{'invisible':[('estado_ventas_id', '=', 'entregada')]}" help="Cambia el estado a entregada" groups="base.group_system"/>
             <button string=" " name="action_finalizado" type="object" class="btn btn-success" icon="fa-check" attrs="{'invisible':[('estado_ventas_id', '=', 'finalizado')]}" help="Cambia el estado a finalizado" groups="base.group_system"/>
             <button string=" " name="action_disponible" type="object" class="oe_highlight" icon="fa-check-circle" help="Cambia el estado a disponible" groups="base.group_system"/>
-            <button string=" " name="action_whatsap" type="object" icon="fa-whatsapp" class="btn btn-success"/>
+            
             <button string=" " name="create_reparacion" type="object" class="btn btn-success" icon="fa-wrench" help="Permite crear ordenes de reparaciones" groups="base.group_system"/>
             <field name="disponibilidad_id" widget="statusbar" statusbar_colors='{disponible:"red",separada:"blue"}' statusbar_visible="true"/>
             <field name="estado_ventas_id" widget="statusbar" class="oe_right" statusbar_visible="true" />
