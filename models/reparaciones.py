@@ -473,7 +473,8 @@ class reparaciones(models.Model):
         if not next_maquina:
             next_maquina = self.env['sat.sat'].search([
                 ('estado_ventas_id', '=', 'sin_revisar'),
-                ('disponibilidad_id', '=', 'disponible')
+                ('disponibilidad_id', '=', 'disponible'),
+                ('ubicacion_id', 'in', ['primer_piso', 'tercer_piso'])
             ], limit=1)
 
         if next_maquina:

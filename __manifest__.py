@@ -30,6 +30,7 @@
         'reports/report_qr_codes_reparaciones.xml',
         'reports/qr_alquiler.xml',
         'data/cron_data.xml',
+        'data/cron_evaluador_diario.xml',
         'views/reporte_cotizacion.xml',
         'views/reparaciones.xml',        
         'views/opciones_cliente.xml',
@@ -56,6 +57,7 @@
         'views/pagina_confirmacion_toner.xml',
         'views/repuestos_alquiler_list.xml',
         'views/soporte_dashboard.xml',
+        'views/transportistas.xml',
         
         
     ],

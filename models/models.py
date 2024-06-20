@@ -10,6 +10,7 @@ _logger = logging.getLogger(__name__)
 import xlwt
 from io import BytesIO
 import base64
+import requests
 import re
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
@@ -216,27 +217,7 @@ class SatSat(models.Model):
         return next_date.strftime('%Y-%m-%d') + ' 13:00:00'
 
 
-
-    def action_whatsap(self):
-        msg = "Cliente: %s" % (self.cliente_id.name)
-        msg1 = " Modelo: %s" % (self.name.name)
-        msg2 = " Serie: %s" % (self.serie_id)
-        msg3 = " Importación: %s" % (self.importacion)
-        msg4 = " Proveedor: %s" % (self.proveedor_id.name)
-        msg5 = " Marca: %s" % (self.marca)
-        msg6 = " Ubicación: %s" % (self.ubicacion_id)
-        msg7 = " Estado: %s" % (self.obtener_estado_ventas_display(self.estado_ventas_id))
-
-        # msg2 = (f'{msg}{msg1}')
-
-        whatsapp_iu_url = 'https://api.whatsapp.com/send?phone=%s&text=%s' % (
-            self.trabajadores_id.mobile_phone, (f'{msg3}%0A{msg4}%0A{msg}%0A{msg5}%0A{msg1}%0A{msg2}%0A{msg6}%0A{msg7}'))
-        return {
-            'type': 'ir.actions.act_url',
-                    'target': 'new',
-                    'url': whatsapp_iu_url
-        }
-
+    
 
     reparacion_id = fields.Many2one('reparaciones.reparaciones',string='Reparacion', )  
 
@@ -405,6 +386,7 @@ class SatSat(models.Model):
             return isidro_user.partner_id.id
         return False
 
+    @api.model
     def write(self, vals):
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         
@@ -416,15 +398,17 @@ class SatSat(models.Model):
         
         for record in self:
             estado_actual = record.estado_ventas_id
-            
+            disponibilidad_anterior = record.disponibilidad_id
+            ubicacion_anterior = record.ubicacion_id
+
+            res = super(SatSat, self).write(vals)
+
             if estado_actual in estados_permitidos_para_cambio:
                 if tipo_revision_modificado or prioridad_modificada:
-                    # Si alguno de los campos tiene un valor, cambiar a 'para_revision'
                     if vals.get('tipo_revision') or vals.get('prioridad'):
                         vals['estado_ventas_id'] = 'para_revision'
-                        vals['fecha_para_revision'] = fields.Datetime.now()  # Registrar la fecha y hora de la modificación
+                        vals['fecha_para_revision'] = fields.Datetime.now()
 
-                        # Enviar notificación a Isidro Vera Polo
                         if isidro_partner_id:
                             user_name = self.env.user.name
                             record_name = record.name.name
@@ -436,8 +420,55 @@ class SatSat(models.Model):
                                 subtype='mail.mt_comment',
                             )
                     else:
-                        # Si ambos campos están vacíos o borrados, cambiar a 'sin_revisar'
                         vals['estado_ventas_id'] = 'sin_revisar'
-                        vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
+                        vals['fecha_para_revision'] = None
 
-        return super(SatSat, self).write(vals)
+            if 'disponibilidad_id' in vals and vals['disponibilidad_id'] == 'separada' and record.ubicacion_id in ['segundo_local', 'covida']:
+                self.enviar_mensaje_transportistas(record)
+
+            return res
+
+    def enviar_mensaje_transportistas(self, record):
+        transportista_numeros = ['51975339903']
+        mensaje = f"La máquina {record.name.name} con serie {record.serie_id} ha sido separada. Ubicación actual: {record.ubicacion_id}."
+        url = self.crear_url_cambio_ubicacion(record)
+
+        mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace:\n{url}"
+
+        for numero in transportista_numeros:
+            self.enviar_mensaje_whatsapp(numero, mensaje)
+
+    def enviar_mensaje_whatsapp(self, phone, message):
+        url = 'https://whatsapp.copiercompanysac.com/lead'
+        data = {
+            'phone': phone,
+            'message': message
+        }
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code != 200:
+            _logger.error(f"Error al enviar mensaje de WhatsApp: {response.text}")
+
+    def crear_url_cambio_ubicacion(self, record):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        url = f"{base_url}/sat/change_location/{record.id}"
+        return url
+
+    @api.model
+    def cron_evaluador_diario(self):
+        self.evaluar_registros_diarios()
+
+    def evaluar_registros_diarios(self):
+        registros_primer_piso = self.search([('ubicacion_id', '=', 'primer_piso'), ('estado_ventas_id', '=', 'sin_revisar')])
+        registros_tercer_piso = self.search([('ubicacion_id', '=', 'tercer_piso'), ('estado_ventas_id', '=', 'sin_revisar')])
+
+        if not registros_primer_piso and not registros_tercer_piso:
+            registros_a_traer = self.search([('ubicacion_id', 'in', ['segundo_local', 'covida']), ('estado_ventas_id', '!=', 'sin_revisar')], limit=8)
+            if registros_a_traer:
+                for registro in registros_a_traer:
+                    registro.ubicacion_id = 'primer_piso'
+
+                mensaje = "No hay registros en 'primer_piso' o 'tercer_piso' con el estado 'sin revisar'. Se han traído 8 máquinas a 'primer_piso'."
+                transportista_numeros = ['51975339903', '5199345668']
+                for numero in transportista_numeros:
+                    self.enviar_mensaje_whatsapp(numero, mensaje)
