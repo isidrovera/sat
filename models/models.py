@@ -474,7 +474,8 @@ class SatSat(models.Model):
 
     def crear_url_cambio_ubicacion(self, record):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        url = f"{base_url}/sat/change_location/{record.id}"
+        clean_id = re.sub(r'\D', '', str(record.id))  # Remover cualquier carácter no numérico
+        url = f"{base_url}/sat/change_location/{clean_id}"
         return url
 
     @api.model
