@@ -10,7 +10,6 @@ _logger = logging.getLogger(__name__)
 import xlwt
 from io import BytesIO
 import base64
-import requests
 import re
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
@@ -217,7 +216,27 @@ class SatSat(models.Model):
         return next_date.strftime('%Y-%m-%d') + ' 13:00:00'
 
 
-    
+
+    def action_whatsap(self):
+        msg = "Cliente: %s" % (self.cliente_id.name)
+        msg1 = " Modelo: %s" % (self.name.name)
+        msg2 = " Serie: %s" % (self.serie_id)
+        msg3 = " Importación: %s" % (self.importacion)
+        msg4 = " Proveedor: %s" % (self.proveedor_id.name)
+        msg5 = " Marca: %s" % (self.marca)
+        msg6 = " Ubicación: %s" % (self.ubicacion_id)
+        msg7 = " Estado: %s" % (self.obtener_estado_ventas_display(self.estado_ventas_id))
+
+        # msg2 = (f'{msg}{msg1}')
+
+        whatsapp_iu_url = 'https://api.whatsapp.com/send?phone=%s&text=%s' % (
+            self.trabajadores_id.mobile_phone, (f'{msg3}%0A{msg4}%0A{msg}%0A{msg5}%0A{msg1}%0A{msg2}%0A{msg6}%0A{msg7}'))
+        return {
+            'type': 'ir.actions.act_url',
+                    'target': 'new',
+                    'url': whatsapp_iu_url
+        }
+
 
     reparacion_id = fields.Many2one('reparaciones.reparaciones',string='Reparacion', )  
 
@@ -380,9 +399,16 @@ class SatSat(models.Model):
     fecha_para_revision = fields.Datetime(string="Fecha para Revisión", readonly=True)
 
 
+    def get_isidro_partner_id(self):
+        isidro_user = self.env['res.users'].search([('name', '=', 'Isidro Vera Polo')], limit=1)
+        if isidro_user:
+            return isidro_user.partner_id.id
+        return False
+
     def write(self, vals):
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         
+        # Verificar si los campos 'tipo_revision' o 'prioridad' están siendo modificados
         tipo_revision_modificado = 'tipo_revision' in vals
         prioridad_modificada = 'prioridad' in vals
         
@@ -390,21 +416,15 @@ class SatSat(models.Model):
         
         for record in self:
             estado_actual = record.estado_ventas_id
-            disponibilidad_anterior = record.disponibilidad_id
-            ubicacion_anterior = record.ubicacion_id
-
-            _logger.debug(f"Estado actual: {estado_actual}, Disponibilidad anterior: {disponibilidad_anterior}, Ubicación anterior: {ubicacion_anterior}")
-
-            res = super(SatSat, record).write(vals)
-
-            _logger.debug(f"Valores escritos: {vals}")
-
+            
             if estado_actual in estados_permitidos_para_cambio:
                 if tipo_revision_modificado or prioridad_modificada:
+                    # Si alguno de los campos tiene un valor, cambiar a 'para_revision'
                     if vals.get('tipo_revision') or vals.get('prioridad'):
-                        record.estado_ventas_id = 'para_revision'
-                        record.fecha_para_revision = fields.Datetime.now()
+                        vals['estado_ventas_id'] = 'para_revision'
+                        vals['fecha_para_revision'] = fields.Datetime.now()  # Registrar la fecha y hora de la modificación
 
+                        # Enviar notificación a Isidro Vera Polo
                         if isidro_partner_id:
                             user_name = self.env.user.name
                             record_name = record.name.name
@@ -416,30 +436,21 @@ class SatSat(models.Model):
                                 subtype='mail.mt_comment',
                             )
                     else:
-                        record.estado_ventas_id = 'sin_revisar'
-                        record.fecha_para_revision = None
+                        # Si ambos campos están vacíos o borrados, cambiar a 'sin_revisar'
+                        vals['estado_ventas_id'] = 'sin_revisar'
+                        vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
 
-            if 'disponibilidad_id' in vals:
-                _logger.debug(f"Disponibilidad cambiada a: {vals['disponibilidad_id']}")
-                if vals['disponibilidad_id'] == 'separada':
-                    _logger.debug(f"Ubicación actual: {record.ubicacion_id}")
-                    if record.ubicacion_id in ['segundo_local', 'covida']:
-                        _logger.debug("Condiciones cumplidas, enviando mensaje a transportistas...")
-                        self.enviar_mensaje_transportistas(record)
-                        _logger.debug(f"Mensaje enviado a los transportistas para la máquina con serie: {record.serie_id}")
-                    else:
-                        _logger.debug(f"La ubicación actual ({record.ubicacion_id}) no es 'segundo_local' ni 'covida'.")
-                else:
-                    _logger.debug(f"La disponibilidad no es 'separada', es {vals['disponibilidad_id']}")
-            else:
-                _logger.debug("No se cambió la disponibilidad")
-
-        return res
-
-    def enviar_mensaje_transportistas(self, record):
+        return super(SatSat, self).write(vals)
+    
+    @api.onchange('disponibilidad_id', 'ubicacion_id')
+    def _onchange_disponibilidad_ubicacion(self):
+        if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
+            self.enviar_mensaje_transportistas()
+            
+    def enviar_mensaje_transportistas(self):
         transportista_numeros = ['51975399303', '51975399303']
-        mensaje = f"La máquina {record.name.name} con serie {record.serie_id} ha sido separada. Ubicación actual: {record.ubicacion_id}."
-        url = self.crear_url_cambio_ubicacion(record)
+        mensaje = f"La máquina {self.name.name} con serie {self.serie_id} ha sido separada. Ubicación actual: {self.ubicacion_id}."
+        url = self.crear_url_cambio_ubicacion(self)
 
         mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace:\n{url}"
 
@@ -466,14 +477,7 @@ class SatSat(models.Model):
         url = f"{base_url}/sat/change_location/{record.id}"
         return url
 
-    def button_send_test_message(self):
-        _logger.info("Botón de prueba presionado")
-        mensaje = "Este es un mensaje de prueba desde Odoo."
-        transportista_numeros = ['51975399303', '51975399303']
-
-        for numero in transportista_numeros:
-            self.enviar_mensaje_whatsapp(numero, mensaje)
-            _logger.info(f"Mensaje de prueba enviado a {numero}")
+   
 
     @api.model
     def cron_evaluador_diario(self):
@@ -493,10 +497,3 @@ class SatSat(models.Model):
                 transportista_numeros = ['51975399303', '51975399303']
                 for numero in transportista_numeros:
                     self.enviar_mensaje_whatsapp(numero, mensaje)
-
-    @api.model
-    def get_isidro_partner_id(self):
-        isidro_user = self.env['res.users'].search([('name', '=', 'Isidro Vera Polo')], limit=1)
-        if isidro_user:
-            return isidro_user.partner_id.id
-        return False
