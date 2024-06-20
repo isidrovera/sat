@@ -422,13 +422,14 @@ class SatSat(models.Model):
                         record.estado_ventas_id = 'sin_revisar'
                         record.fecha_para_revision = None
 
+            # Verificar si la disponibilidad ha cambiado a 'separada' y si la ubicación es 'segundo_local' o 'covida'
             if 'disponibilidad_id' in vals and vals['disponibilidad_id'] == 'separada' and record.ubicacion_id in ['segundo_local', 'covida']:
                 self.enviar_mensaje_transportistas(record)
 
         return res
 
     def enviar_mensaje_transportistas(self, record):
-        transportista_numeros = ['51975399303']
+        transportista_numeros = ['51975399303','51975399303']
         mensaje = f"La máquina {record.name.name} con serie {record.serie_id} ha sido separada. Ubicación actual: {record.ubicacion_id}."
         url = self.crear_url_cambio_ubicacion(record)
 
@@ -438,9 +439,14 @@ class SatSat(models.Model):
             self.enviar_mensaje_whatsapp(numero, mensaje)
 
     def enviar_mensaje_whatsapp(self, phone, message):
+        formatted_phone = phone.replace('+', '').replace(' ', '')
+        if not formatted_phone.startswith('51'):
+            formatted_phone = '51' + formatted_phone
+        formatted_phone = formatted_phone + '@c.us'
+        
         url = 'https://whatsapp.copiercompanysac.com/lead'
         data = {
-            'phone': phone,
+            'phone': formatted_phone,
             'message': message
         }
         headers = {'Content-Type': 'application/json'}
@@ -468,6 +474,6 @@ class SatSat(models.Model):
                     registro.ubicacion_id = 'primer_piso'
 
                 mensaje = "No hay registros en 'primer_piso' o 'tercer_piso' con el estado 'sin revisar'. Se han traído 8 máquinas a 'primer_piso'."
-                transportista_numeros = ['51975339903', '5199345668']
+                transportista_numeros = ['51975399303', '51975399303']
                 for numero in transportista_numeros:
                     self.enviar_mensaje_whatsapp(numero, mensaje)
