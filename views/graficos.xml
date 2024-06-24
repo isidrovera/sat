@@ -24,6 +24,7 @@
                 }
                 #myChart {
                     margin-top: 20px;
+                    max-width: 1000px;
                 }
             </style>
             <form id="form_grafico">
@@ -95,12 +96,18 @@
                             campos: [formData.get('campos')]
                         };
 
+                        console.log('Enviando datos:', data);
+
                         const response = await fetch('/api/grafico/datos', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify(data)
                         });
+
                         const result = await response.json();
+
+                        console.log('Datos recibidos:', result);
+
                         const ctx = document.getElementById('myChart').getContext('2d');
                         new Chart(ctx, {
                             type: 'bar',
