@@ -1,6 +1,26 @@
 <odoo>
     <template id="template_graficos_dinamicos" name="Gráficos Dinámicos">
         <div>
+            <style>
+                form#form_grafico {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                form#form_grafico label {
+                    margin-right: 5px;
+                }
+                form#form_grafico select, 
+                form#form_grafico input {
+                    padding: 5px;
+                    font-size: 14px;
+                }
+                button {
+                    padding: 5px 10px;
+                    font-size: 14px;
+                    cursor: pointer;
+                }
+            </style>
             <form id="form_grafico">
                 <label for="modelo">Modelo:</label>
                 <select id="modelo" name="modelo" onchange="cargarCamposModelo();">
@@ -28,7 +48,7 @@
                         const response = await fetch('/api/modelos', {method: 'GET'});
                         const modelos = await response.json();
                         const selectModelo = document.getElementById('modelo');
-                        modelos.forEach(modelo => {
+                        modelos.forEach(modelo =&gt; {
                             let option = new Option(modelo.name, modelo.model);
                             selectModelo.options.add(option);
                         });
@@ -44,7 +64,7 @@
                         const campos = await response.json();
                         const selectCampos = document.getElementById('campos');
                         selectCampos.innerHTML = '';  // Limpiar opciones existentes
-                        campos.forEach(campo => {
+                        campos.forEach(campo =&gt; {
                             let option = new Option(campo.name, campo.field);
                             selectCampos.options.add(option);
                         });
