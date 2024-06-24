@@ -87,7 +87,7 @@
 
                 window.cargarCamposModelo = cargarCamposModelo;  // Hacer global para acceso desde onchange
 
-                async function configurarYObtenerDatos() {
+                window.configurarYObtenerDatos = async function() {
                     try {
                         const form = document.getElementById('form_grafico');
                         const formData = new FormData(form);
@@ -128,7 +128,7 @@
                     } catch (error) {
                         console.error('Error configurando y obteniendo datos:', error);
                     }
-                }
+                };
             });
         </script>
     </template>
