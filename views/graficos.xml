@@ -1,54 +1,52 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- En tu módulo, por ejemplo en my_module/views/grafico_template.xml -->
 <odoo>
-<template id="template_graficos_dinamicos" name="Gráficos Dinámicos">
-    <t t-call="web.html_container">
-        <div class="o_control_panel">
-            <label>Modelo:</label>
-            <input id="modelo" type="text" placeholder="Ej. res.partner"/>
-            <label>Fecha Inicio:</label>
-            <input id="fecha_inicio" type="date"/>
-            <label>Fecha Fin:</label>
-            <input id="fecha_fin" type="date"/>
-            <label>Campos:</label>
-            <input id="campos" type="text" placeholder="Ej. name"/>
-            <button type="button" onclick="configurarYObtenerDatos()">Configurar y Ver Gráfico</button>
+    <template id="template_graficos_dinamicos" name="Gráficos Dinámicos">
+        <div>
+            <form id="form_grafico">
+                <label for="modelo">Modelo:</label>
+                <input id="modelo" name="modelo" type="text" placeholder="Ej. res.partner"/>
+                <label for="fecha_inicio">Fecha Inicio:</label>
+                <input id="fecha_inicio" name="fecha_inicio" type="date"/>
+                <label for="fecha_fin">Fecha Fin:</label>
+                <input id="fecha_fin" name="fecha_fin" type="date"/>
+                <label for="campos">Campo:</label>
+                <input id="campos" name="campos" type="text" placeholder="Ej. name"/>
+                <button type="button" onclick="configurarYObtenerDatos()">Configurar y Ver Gráfico</button>
+            </form>
+            <canvas id="myChart"></canvas>
         </div>
-        <canvas id="myChart"></canvas>
-    </t>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        async function configurarYObtenerDatos() {
-            const modelo = document.getElementById('modelo').value;
-            const fecha_inicio = document.getElementById('fecha_inicio').value;
-            const fecha_fin = document.getElementById('fecha_fin').value;
-            const campos = document.getElementById('campos').value.split(',');
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script type="text/javascript">
+            async function configurarYObtenerDatos() {
+                const form = document.getElementById('form_grafico');
+                const formData = new FormData(form);
+                const data = {
+                    modelo: formData.get('modelo'),
+                    fecha_inicio: formData.get('fecha_inicio'),
+                    fecha_fin: formData.get('fecha_fin'),
+                    campos: formData.get('campos').split(',')
+                };
 
-            const configResponse = await fetch('/configurar_grafico', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({modelo, fecha_inicio, fecha_fin, campos})
-            });
-            const configData = await configResponse.json();
-
-            const dataResponse = await fetch('/obtener_datos_grafico', {method: 'POST'});
-            const data = await dataResponse.json();
-            if (data.error) {
-                console.error(data.error);
-            } else {
-                const ctx = document.getElementById('myChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.labels,
-                        datasets: data.datasets
-                    },
-                    options: {}
+                const response = await fetch('/api/grafico/datos', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
                 });
+                const result = await response.json();
+                if (result.error) {
+                    console.error(result.error);
+                } else {
+                    const ctx = document.getElementById('myChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar', // Cambiar según necesidad
+                        data: {
+                            labels: result.labels,
+                            datasets: result.datasets
+                        },
+                        options: {}
+                    });
+                }
             }
-        }
-    </script>
-</template>
-
-
-
+        </script>
+    </template>
 </odoo>

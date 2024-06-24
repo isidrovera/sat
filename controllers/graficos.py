@@ -1,40 +1,23 @@
+# En tu módulo, por ejemplo en my_module/controllers/main.py
 from odoo import http
 from odoo.http import request
-import json
 
-class ControladorGraficos(http.Controller):
-    @http.route('/configurar_grafico', type='json', auth='user', methods=['POST'])
-    def configurar_grafico(self, modelo, fecha_inicio=None, fecha_fin=None, campos=None):
-        # Guardar configuración en la sesión para simplificar
-        request.session['config_grafico'] = {
-            'modelo': modelo,
-            'fecha_inicio': fecha_inicio,
-            'fecha_fin': fecha_fin,
-            'campos': campos
-        }
-        return {"estado": "Configuración guardada"}
+class GraficoController(http.Controller):
+    @http.route('/generar/grafico', type='http', auth='user', website=True)
+    def mostrar_pagina_grafico(self, **kwargs):
+        return request.render('sat.template_graficos_dinamicos')
 
-    @http.route('/obtener_datos_grafico', type='json', auth='user')
-    def obtener_datos_grafico(self):
-        config = request.session.get('config_grafico')
-        if not config:
-            return {"error": "No se encontró configuración"}
+    @http.route('/api/grafico/datos', type='json', auth='user', methods=['POST'])
+    def obtener_datos_grafico(self, **post):
+        modelo = post.get('modelo')
+        fecha_inicio = post.get('fecha_inicio')
+        fecha_fin = post.get('fecha_fin')
+        campos = post.get('campos')
 
-        modelo = request.env[config['modelo']]
-        dominio = []
-        if config['fecha_inicio']:
-            dominio.append(('create_date', '>=', config['fecha_inicio']))
-        if config['fecha_fin']:
-            dominio.append(('create_date', '<=', config['fecha_fin']))
-        
-        registros = modelo.search(dominio)
-        etiquetas = [reg.display_name for reg in registros]
-        datos = [getattr(reg, config['campos'][0], 0) for reg in registros]  # Asumiendo un solo campo
+        Model = request.env[modelo]
+        dominio = [('create_date', '>=', fecha_inicio), ('create_date', '<=', fecha_fin)]
+        registros = Model.search(dominio)
+        etiquetas = [getattr(r, 'name', 'Sin Nombre') for r in registros]  # Ajustar según el campo relevante
+        datos = [getattr(r, campos[0], 0) for r in registros]  # Asumiendo un solo campo
 
-        return {
-            'labels': etiquetas,
-            'datasets': [{
-                'label': config['modelo'],
-                'data': datos
-            }]
-        }
+        return {'labels': etiquetas, 'datasets': [{'label': modelo, 'data': datos}]}
