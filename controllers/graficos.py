@@ -6,7 +6,7 @@ class GraficoController(http.Controller):
     def mostrar_pagina_grafico(self, **kwargs):
         return request.render('sat.template_graficos_dinamicos')
 
-    @http.route('/api/grafico/datos', type='json', auth='user', methods=['POST'])
+    @http.route('/api/grafico/datos', type='json', auth='public', methods=['POST'])
     def obtener_datos_grafico(self, **post):
         modelo = post.get('modelo')
         fecha_inicio = post.get('fecha_inicio')
@@ -21,12 +21,12 @@ class GraficoController(http.Controller):
 
         return {'labels': etiquetas, 'datasets': [{'label': modelo, 'data': datos}]}
 
-    @http.route('/api/modelos', type='json', auth='user', methods=['GET'])
+    @http.route('/api/modelos', type='json', auth='public', methods=['GET'])
     def get_modelos(self):
         modelos = request.env['ir.model'].search([])
         return [{'model': m.model, 'name': m.name} for m in modelos]
 
-    @http.route('/api/campos', type='json', auth='user', methods=['GET'])
+    @http.route('/api/campos', type='json', auth='public', methods=['GET'])
     def get_campos(self, modelo):
         campos = request.env['ir.model.fields'].search([('model', '=', modelo)])
         return [{'field': c.name, 'name': c.field_description} for c in campos]

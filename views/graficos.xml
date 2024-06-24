@@ -6,6 +6,7 @@
                     display: flex;
                     align-items: center;
                     gap: 10px;
+                    flex-wrap: wrap;
                 }
                 form#form_grafico label {
                     margin-right: 5px;
@@ -14,11 +15,15 @@
                 form#form_grafico input {
                     padding: 5px;
                     font-size: 14px;
+                    width: 200px; /* Ajusta este valor según sea necesario */
                 }
                 button {
                     padding: 5px 10px;
                     font-size: 14px;
                     cursor: pointer;
+                }
+                #myChart {
+                    margin-top: 20px;
                 }
             </style>
             <form id="form_grafico">
@@ -60,7 +65,7 @@
                 async function cargarCamposModelo() {
                     try {
                         const modelo = document.getElementById('modelo').value;
-                        const response = await fetch(`/api/campos?modelo=${modelo}`, {method: 'GET'});
+                        const response = await fetch('/api/campos?modelo=' + modelo, {method: 'GET'});
                         const campos = await response.json();
                         const selectCampos = document.getElementById('campos');
                         selectCampos.innerHTML = '';  // Limpiar opciones existentes
