@@ -25,6 +25,12 @@
                 #myChart {
                     margin-top: 20px;
                 }
+                pre {
+                    background: #f4f4f4;
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    overflow-x: auto;
+                }
             </style>
             <form id="form_grafico">
                 <label for="modelo">Modelo:</label>
@@ -42,82 +48,83 @@
                 <button type="button" onclick="configurarYObtenerDatos()">Configurar y Ver Gráfico</button>
             </form>
             <canvas id="myChart"></canvas>
+            <pre id="jsonOutput"></pre> <!-- Añadir esta línea para mostrar el JSON formateado -->
         </div>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script type="text/javascript">
             document.addEventListener('DOMContentLoaded', function() {
-    cargarModelos();
+                cargarModelos();
 
-    async function cargarModelos() {
-        try {
-            const response = await fetch('/api/modelos', {
-                method: 'GET',
-                headers: {'Content-Type': 'application/json'}
-            });
-            const modelos = await response.json();
-            const selectModelo = document.getElementById('modelo');
-            modelos.forEach(modelo =&gt; {
-                let option = new Option(modelo.name, modelo.model);
-                selectModelo.options.add(option);
-            });
-        } catch (error) {
-            console.error('Error cargando modelos:', error);
-        }
-    }
+                async function cargarModelos() {
+                    try {
+                        const response = await fetch('/api/modelos', {
+                            method: 'GET'
+                        });
+                        const modelos = await response.json();
+                        const selectModelo = document.getElementById('modelo');
+                        modelos.forEach(modelo =&gt; {
+                            let option = new Option(modelo.name, modelo.model);
+                            selectModelo.options.add(option);
+                        });
+                        
+                        // Mostrar el JSON formateado en el pre
+                        document.getElementById('jsonOutput').textContent = JSON.stringify(modelos, null, 2);
+                    } catch (error) {
+                        console.error('Error cargando modelos:', error);
+                    }
+                }
 
-    async function cargarCamposModelo() {
-        try {
-            const modelo = document.getElementById('modelo').value;
-            const response = await fetch(`/api/campos?modelo=` + modelo, {
-                method: 'GET',
-                headers: {'Content-Type': 'application/json'}
-            });
-            const campos = await response.json();
-            const selectCampos = document.getElementById('campos');
-            selectCampos.innerHTML = '';  // Limpiar opciones existentes
-            campos.forEach(campo =&gt; {
-                let option = new Option(campo.name, campo.field);
-                selectCampos.options.add(option);
-            });
-        } catch (error) {
-            console.error('Error cargando campos:', error);
-        }
-    }
+                async function cargarCamposModelo() {
+                    try {
+                        const modelo = document.getElementById('modelo').value;
+                        const response = await fetch(`/api/campos?modelo=` + modelo, {
+                            method: 'GET'
+                        });
+                        const campos = await response.json();
+                        const selectCampos = document.getElementById('campos');
+                        selectCampos.innerHTML = '';  // Limpiar opciones existentes
+                        campos.forEach(campo =&gt; {
+                            let option = new Option(campo.name, campo.field);
+                            selectCampos.options.add(option);
+                        });
+                    } catch (error) {
+                        console.error('Error cargando campos:', error);
+                    }
+                }
 
-    window.cargarCamposModelo = cargarCamposModelo;  // Hacer global para acceso desde onchange
+                window.cargarCamposModelo = cargarCamposModelo;  // Hacer global para acceso desde onchange
 
-    async function configurarYObtenerDatos() {
-        try {
-            const form = document.getElementById('form_grafico');
-            const formData = new FormData(form);
-            const data = {
-                modelo: formData.get('modelo'),
-                fecha_inicio: formData.get('fecha_inicio'),
-                fecha_fin: formData.get('fecha_fin'),
-                campos: [formData.get('campos')]
-            };
+                async function configurarYObtenerDatos() {
+                    try {
+                        const form = document.getElementById('form_grafico');
+                        const formData = new FormData(form);
+                        const data = {
+                            modelo: formData.get('modelo'),
+                            fecha_inicio: formData.get('fecha_inicio'),
+                            fecha_fin: formData.get('fecha_fin'),
+                            campos: [formData.get('campos')]
+                        };
 
-            const response = await fetch('/api/grafico/datos', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
+                        const response = await fetch('/api/grafico/datos', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(data)
+                        });
+                        const result = await response.json();
+                        const ctx = document.getElementById('myChart').getContext('2d');
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: result.labels,
+                                datasets: result.datasets
+                            },
+                            options: {}
+                        });
+                    } catch (error) {
+                        console.error('Error configurando y obteniendo datos:', error);
+                    }
+                }
             });
-            const result = await response.json();
-            const ctx = document.getElementById('myChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: result.labels,
-                    datasets: result.datasets
-                },
-                options: {}
-            });
-        } catch (error) {
-            console.error('Error configurando y obteniendo datos:', error);
-        }
-    }
-});
-
         </script>
     </template>
 </odoo>
