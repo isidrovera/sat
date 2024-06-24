@@ -23,7 +23,8 @@ class GraficoController(http.Controller):
             Model = request.env[modelo]
             dominio = [('create_date', '>=', fecha_inicio), ('create_date', '<=', fecha_fin)]
             registros = Model.search(dominio)
-            etiquetas = [getattr(r, 'name', 'Sin Nombre') for r in registros]  # Ajustar según el campo relevante
+
+            etiquetas = [str(r.create_date) for r in registros]  # Suponiendo que `create_date` es relevante
             datos = [getattr(r, campos[0], 0) for r in registros]  # Asumiendo un solo campo
 
             _logger.info("Data prepared for grafico: labels=%s, datasets=%s", etiquetas, datos)

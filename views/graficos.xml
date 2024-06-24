@@ -110,6 +110,11 @@
 
                         console.log('Datos recibidos:', result);
 
+                        if (result.labels.length === 0 || result.datasets[0].data.length === 0) {
+                            console.error('No se recibieron datos válidos para el gráfico.');
+                            return;
+                        }
+
                         const ctx = document.getElementById('myChart').getContext('2d');
                         new Chart(ctx, {
                             type: 'bar',
