@@ -32,19 +32,19 @@ class GraficoController(http.Controller):
             _logger.error("Error in obtener_datos_grafico: %s", str(e))
             return {'error': str(e)}
 
-    @http.route('/api/modelos', type='json', auth='public', methods=['GET'])
+    @http.route('/api/modelos', type='http', auth='public', methods=['GET'])
     def get_modelos(self):
         try:
             _logger.info("Fetching modelos")
             modelos = request.env['ir.model'].search([])
             result = [{'model': m.model, 'name': m.name} for m in modelos]
             _logger.info("Modelos fetched: %s", json.dumps(result))
-            return result
+            return request.make_response(json.dumps(result), headers={'Content-Type': 'application/json'})
         except Exception as e:
             _logger.error("Error in get_modelos: %s", str(e))
-            return {'error': str(e)}
+            return request.make_response(json.dumps({'error': str(e)}), headers={'Content-Type': 'application/json'})
 
-    @http.route('/api/campos', type='json', auth='public', methods=['GET'])
+    @http.route('/api/campos', type='http', auth='public', methods=['GET'])
     def get_campos(self, **kwargs):
         try:
             modelo = kwargs.get('modelo')
@@ -52,7 +52,7 @@ class GraficoController(http.Controller):
             campos = request.env['ir.model.fields'].search([('model', '=', modelo)])
             result = [{'field': c.name, 'name': c.field_description} for c in campos]
             _logger.info("Campos fetched: %s", json.dumps(result))
-            return result
+            return request.make_response(json.dumps(result), headers={'Content-Type': 'application/json'})
         except Exception as e:
             _logger.error("Error in get_campos: %s", str(e))
-            return {'error': str(e)}
+            return request.make_response(json.dumps({'error': str(e)}), headers={'Content-Type': 'application/json'})
