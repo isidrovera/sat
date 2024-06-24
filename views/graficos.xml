@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<template id="template_graficos_dinamicos" name="Gráficos Dinámicos">
+    <t t-call="web.html_container">
+        <div class="o_control_panel">
+            <label>Modelo:</label>
+            <input id="modelo" type="text" placeholder="Ej. res.partner"/>
+            <label>Fecha Inicio:</label>
+            <input id="fecha_inicio" type="date"/>
+            <label>Fecha Fin:</label>
+            <input id="fecha_fin" type="date"/>
+            <label>Campos:</label>
+            <input id="campos" type="text" placeholder="Ej. name"/>
+            <button type="button" onclick="configurarYObtenerDatos()">Configurar y Ver Gráfico</button>
+        </div>
+        <canvas id="myChart"></canvas>
+    </t>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        async function configurarYObtenerDatos() {
+            const modelo = document.getElementById('modelo').value;
+            const fecha_inicio = document.getElementById('fecha_inicio').value;
+            const fecha_fin = document.getElementById('fecha_fin').value;
+            const campos = document.getElementById('campos').value.split(',');
+
+            const configResponse = await fetch('/configurar_grafico', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({modelo, fecha_inicio, fecha_fin, campos})
+            });
+            const configData = await configResponse.json();
+
+            const dataResponse = await fetch('/obtener_datos_grafico', {method: 'POST'});
+            const data = await dataResponse.json();
+            if (data.error) {
+                console.error(data.error);
+            } else {
+                const ctx = document.getElementById('myChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: data.datasets
+                    },
+                    options: {}
+                });
+            }
+        }
+    </script>
+</template>
+
+
+
+</odoo>
