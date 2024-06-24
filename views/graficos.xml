@@ -42,7 +42,9 @@
                 </select>
                 <button type="button" onclick="configurarYObtenerDatos()">Configurar y Ver Gráfico</button>
             </form>
-            <canvas id="myChart"></canvas>
+            <div>
+                <canvas id="myChart"></canvas>
+            </div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script type="text/javascript">
@@ -115,7 +117,13 @@
                                 labels: result.labels,
                                 datasets: result.datasets
                             },
-                            options: {}
+                            options: {
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
                         });
                     } catch (error) {
                         console.error('Error configurando y obteniendo datos:', error);
