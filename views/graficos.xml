@@ -25,12 +25,6 @@
                 #myChart {
                     margin-top: 20px;
                 }
-                pre {
-                    background: #f4f4f4;
-                    padding: 10px;
-                    border: 1px solid #ddd;
-                    overflow-x: auto;
-                }
             </style>
             <form id="form_grafico">
                 <label for="modelo">Modelo:</label>
@@ -48,7 +42,6 @@
                 <button type="button" onclick="configurarYObtenerDatos()">Configurar y Ver Gráfico</button>
             </form>
             <canvas id="myChart"></canvas>
-            <pre id="jsonOutput"></pre> <!-- Añadir esta línea para mostrar el JSON formateado -->
         </div>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script type="text/javascript">
@@ -66,9 +59,6 @@
                             let option = new Option(modelo.name, modelo.model);
                             selectModelo.options.add(option);
                         });
-                        
-                        // Mostrar el JSON formateado en el pre
-                        document.getElementById('jsonOutput').textContent = JSON.stringify(modelos, null, 2);
                     } catch (error) {
                         console.error('Error cargando modelos:', error);
                     }
