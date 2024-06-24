@@ -45,8 +45,9 @@ class GraficoController(http.Controller):
             return {'error': str(e)}
 
     @http.route('/api/campos', type='json', auth='public', methods=['GET'])
-    def get_campos(self, modelo):
+    def get_campos(self, **kwargs):
         try:
+            modelo = kwargs.get('modelo')
             _logger.info("Fetching campos for modelo: %s", modelo)
             campos = request.env['ir.model.fields'].search([('model', '=', modelo)])
             result = [{'field': c.name, 'name': c.field_description} for c in campos]
