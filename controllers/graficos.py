@@ -21,3 +21,12 @@ class GraficoController(http.Controller):
         datos = [getattr(r, campos[0], 0) for r in registros]  # Asumiendo un solo campo
 
         return {'labels': etiquetas, 'datasets': [{'label': modelo, 'data': datos}]}
+    @http.route('/api/modelos', type='json', auth='user', methods=['GET'])
+    def get_modelos(self):
+        modelos = request.env['ir.model'].search([])
+        return [{'model': m.model, 'name': m.name} for m in modelos]
+
+    @http.route('/api/campos', type='json', auth='user', methods=['GET'])
+    def get_campos(self, modelo):
+        campos = request.env['ir.model.fields'].search([('model', '=', modelo)])
+        return [{'field': c.name, 'name': c.field_description} for c in campos]

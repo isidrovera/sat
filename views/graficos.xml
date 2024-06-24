@@ -1,22 +1,53 @@
 <!-- En tu módulo, por ejemplo en my_module/views/grafico_template.xml -->
 <odoo>
     <template id="template_graficos_dinamicos" name="Gráficos Dinámicos">
-        <div>
-            <form id="form_grafico">
-                <label for="modelo">Modelo:</label>
-                <input id="modelo" name="modelo" type="text" placeholder="Ej. res.partner"/>
-                <label for="fecha_inicio">Fecha Inicio:</label>
-                <input id="fecha_inicio" name="fecha_inicio" type="date"/>
-                <label for="fecha_fin">Fecha Fin:</label>
-                <input id="fecha_fin" name="fecha_fin" type="date"/>
-                <label for="campos">Campo:</label>
-                <input id="campos" name="campos" type="text" placeholder="Ej. name"/>
-                <button type="button" onclick="configurarYObtenerDatos()">Configurar y Ver Gráfico</button>
-            </form>
-            <canvas id="myChart"></canvas>
-        </div>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script type="text/javascript">
+    <div>
+        <form id="form_grafico">
+            <label for="modelo">Modelo:</label>
+            <select id="modelo" name="modelo" onchange="cargarCamposModelo();">
+                <!-- Las opciones se cargarán dinámicamente -->
+            </select>
+            <label for="fecha_inicio">Fecha Inicio:</label>
+            <input id="fecha_inicio" name="fecha_inicio" type="date"/>
+            <label for="fecha_fin">Fecha Fin:</label>
+            <input id="fecha_fin" name="fecha_fin" type="date"/>
+            <label for="campos">Campo:</label>
+            <select id="campos" name="campos">
+                <!-- Las opciones de campos se cargarán basadas en el modelo seleccionado -->
+            </select>
+            <button type="button" onclick="configurarYObtenerDatos()">Configurar y Ver Gráfico</button>
+        </form>
+        <canvas id="myChart"></canvas>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarModelos();
+
+            async function cargarModelos() {
+                const response = await fetch('/api/modelos', {method: 'GET'});
+                const modelos = await response.json();
+                const selectModelo = document.getElementById('modelo');
+                modelos.forEach(modelo => {
+                    let option = new Option(modelo.name, modelo.model);
+                    selectModelo.options.add(option);
+                });
+            }
+
+            async function cargarCamposModelo() {
+                const modelo = document.getElementById('modelo').value;
+                const response = await fetch(`/api/campos?modelo=${modelo}`, {method: 'GET'});
+                const campos = await response.json();
+                const selectCampos = document.getElementById('campos');
+                selectCampos.innerHTML = '';  // Limpiar opciones existentes
+                campos.forEach(campo => {
+                    let option = new Option(campo.name, campo.field);
+                    selectCampos.options.add(option);
+                });
+            }
+
+            window.cargarCamposModelo = cargarCamposModelo;  // Hacer global para acceso desde onchange
+
             async function configurarYObtenerDatos() {
                 const form = document.getElementById('form_grafico');
                 const formData = new FormData(form);
@@ -24,7 +55,7 @@
                     modelo: formData.get('modelo'),
                     fecha_inicio: formData.get('fecha_inicio'),
                     fecha_fin: formData.get('fecha_fin'),
-                    campos: formData.get('campos').split(',')
+                    campos: formData.get('campos')
                 };
 
                 const response = await fetch('/api/grafico/datos', {
@@ -33,20 +64,18 @@
                     body: JSON.stringify(data)
                 });
                 const result = await response.json();
-                if (result.error) {
-                    console.error(result.error);
-                } else {
-                    const ctx = document.getElementById('myChart').getContext('2d');
-                    new Chart(ctx, {
-                        type: 'bar', // Cambiar según necesidad
-                        data: {
-                            labels: result.labels,
-                            datasets: result.datasets
-                        },
-                        options: {}
-                    });
-                }
+                const ctx = document.getElementById('myChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: result.labels,
+                        datasets: result.datasets
+                    },
+                    options: {}
+                });
             }
-        </script>
-    </template>
+        });
+    </script>
+</template>
+
 </odoo>
