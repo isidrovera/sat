@@ -24,6 +24,8 @@ class GraficoController(http.Controller):
             dominio = [('create_date', '>=', fecha_inicio), ('create_date', '<=', fecha_fin)]
             registros = Model.search(dominio)
 
+            _logger.info("Registros encontrados: %s", registros)
+
             etiquetas = [str(r.create_date) for r in registros]  # Suponiendo que `create_date` es relevante
             datos = [getattr(r, campos[0], 0) for r in registros]  # Asumiendo un solo campo
 
