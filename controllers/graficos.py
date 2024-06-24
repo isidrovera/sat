@@ -1,4 +1,3 @@
-# En tu módulo, por ejemplo en my_module/controllers/main.py
 from odoo import http
 from odoo.http import request
 
@@ -21,6 +20,7 @@ class GraficoController(http.Controller):
         datos = [getattr(r, campos[0], 0) for r in registros]  # Asumiendo un solo campo
 
         return {'labels': etiquetas, 'datasets': [{'label': modelo, 'data': datos}]}
+
     @http.route('/api/modelos', type='json', auth='user', methods=['GET'])
     def get_modelos(self):
         modelos = request.env['ir.model'].search([])
