@@ -19,7 +19,7 @@ class GraficoController(http.Controller):
         response = request.render('sat.template_graficos_dinamicos')
         return self._add_cors_headers(response)
 
-    @http.route('/api/grafico/datos', type='json', auth='public', methods=['POST'])
+    @http.route('/api/grafico/datos', type='json', auth='public', methods=['POST'], csrf=False)
     def obtener_datos_grafico(self, **post):
         try:
             _logger.info("Request data for grafico: %s", json.dumps(post))
@@ -27,6 +27,9 @@ class GraficoController(http.Controller):
             fecha_inicio = post.get('fecha_inicio')
             fecha_fin = post.get('fecha_fin')
             campos = post.get('campos')
+
+            if not modelo or not fecha_inicio or not fecha_fin or not campos:
+                raise ValueError("Missing required parameters")
 
             Model = request.env[modelo]
             dominio = [('create_date', '>=', fecha_inicio), ('create_date', '<=', fecha_fin)]
