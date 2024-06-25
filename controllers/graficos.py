@@ -86,7 +86,7 @@ class TicketAlquilerController(http.Controller):
         tickets = request.env['ticket.alquiler'].search([])
         data = {
             'months': [],
-            'counts: [],
+            'counts': [],
         }
 
         # Suponiendo que quieres mostrar la cantidad de tickets por mes
