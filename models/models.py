@@ -449,7 +449,7 @@ class SatSat(models.Model):
             return self._notify_vendedora()
 
     def enviar_mensaje_transportistas(self):
-        transportista_numeros = ['51975399303']
+        transportista_numeros = ['51924894872']
         mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {self.name.name}\nSerie: {self.serie_id}\nUbicación actual: {self.ubicacion_id}."
         url = self.crear_url_cambio_ubicacion(self)
 
