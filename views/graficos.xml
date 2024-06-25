@@ -22,7 +22,7 @@
                     font-size: 14px;
                     cursor: pointer;
                 }
-                #myChart {
+                #chart-container {
                     margin-top: 20px;
                     max-width: 1000px;
                 }
@@ -42,100 +42,104 @@
                 </select>
                 <button type="button" onclick="configurarYObtenerDatos()">Configurar y Ver Gráfico</button>
             </form>
-            <div>
-                <canvas id="myChart"></canvas>
+            <div id="chart-container">
+                <div id="myChart" style="height: 400px;"></div>
             </div>
         </div>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
         <script type="text/javascript">
             document.addEventListener('DOMContentLoaded', function() {
-    cargarModelos();
+                cargarModelos();
 
-    async function cargarModelos() {
-        try {
-            const response = await fetch('/api/modelos', {
-                method: 'GET'
-            });
-            const modelos = await response.json();
-            const selectModelo = document.getElementById('modelo');
-            modelos.forEach(modelo => {
-                let option = new Option(modelo.name, modelo.model);
-                selectModelo.options.add(option);
-            });
-        } catch (error) {
-            console.error('Error cargando modelos:', error);
-        }
-    }
-
-    async function cargarCamposModelo() {
-        try {
-            const modelo = document.getElementById('modelo').value;
-            const response = await fetch(`/api/campos?modelo=` + modelo, {
-                method: 'GET'
-            });
-            const campos = await response.json();
-            const selectCampos = document.getElementById('campos');
-            selectCampos.innerHTML = '';  // Limpiar opciones existentes
-            campos.forEach(campo => {
-                let option = new Option(campo.name, campo.field);
-                selectCampos.options.add(option);
-            });
-        } catch (error) {
-            console.error('Error cargando campos:', error);
-        }
-    }
-
-    window.cargarCamposModelo = cargarCamposModelo;  // Hacer global para acceso desde onchange
-
-    window.configurarYObtenerDatos = async function() {
-        try {
-            const form = document.getElementById('form_grafico');
-            const formData = new FormData(form);
-            const data = {
-                modelo: formData.get('modelo'),
-                fecha_inicio: formData.get('fecha_inicio'),
-                fecha_fin: formData.get('fecha_fin'),
-                campos: [formData.get('campos')]
-            };
-
-            console.log('Enviando datos:', data);
-
-            const response = await fetch('/api/grafico/datos', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-
-            const result = await response.json();
-
-            console.log('Datos recibidos:', result);
-
-            if (!result.labels || !result.datasets || result.labels.length === 0 || result.datasets[0].data.length === 0) {
-                console.error('No se recibieron datos válidos para el gráfico.');
-                return;
-            }
-
-            const ctx = document.getElementById('myChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: result.labels,
-                    datasets: result.datasets
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
+                async function cargarModelos() {
+                    try {
+                        const response = await fetch('/api/modelos', {
+                            method: 'GET'
+                        });
+                        const modelos = await response.json();
+                        const selectModelo = document.getElementById('modelo');
+                        modelos.forEach(modelo =&gt; {
+                            let option = new Option(modelo.name, modelo.model);
+                            selectModelo.options.add(option);
+                        });
+                    } catch (error) {
+                        console.error('Error cargando modelos:', error);
                     }
                 }
-            });
-        } catch (error) {
-            console.error('Error configurando y obteniendo datos:', error);
-        }
-    };
-});
 
+                async function cargarCamposModelo() {
+                    try {
+                        const modelo = document.getElementById('modelo').value;
+                        const response = await fetch(`/api/campos?modelo=` + modelo, {
+                            method: 'GET'
+                        });
+                        const campos = await response.json();
+                        const selectCampos = document.getElementById('campos');
+                        selectCampos.innerHTML = '';  // Limpiar opciones existentes
+                        campos.forEach(campo =&gt; {
+                            let option = new Option(campo.name, campo.field);
+                            selectCampos.options.add(option);
+                        });
+                    } catch (error) {
+                        console.error('Error cargando campos:', error);
+                    }
+                }
+
+                window.cargarCamposModelo = cargarCamposModelo;  // Hacer global para acceso desde onchange
+
+                window.configurarYObtenerDatos = async function() {
+                    try {
+                        const form = document.getElementById('form_grafico');
+                        const formData = new FormData(form);
+                        const data = {
+                            modelo: formData.get('modelo'),
+                            fecha_inicio: formData.get('fecha_inicio'),
+                            fecha_fin: formData.get('fecha_fin'),
+                            campos: [formData.get('campos')]
+                        };
+
+                        console.log('Enviando datos:', data);
+
+                        const response = await fetch('/api/grafico/datos', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(data)
+                        });
+
+                        const result = await response.json();
+
+                        console.log('Datos recibidos:', result);
+
+                        if (!result.labels || !result.datasets || result.labels.length === 0 || result.datasets[0].data.length === 0) {
+                            console.error('No se recibieron datos válidos para el gráfico.');
+                            return;
+                        }
+
+                        var chartDom = document.getElementById('myChart');
+                        var myChart = echarts.init(chartDom);
+                        var option;
+
+                        option = {
+                            xAxis: {
+                                type: 'category',
+                                data: result.labels
+                            },
+                            yAxis: {
+                                type: 'value'
+                            },
+                            series: [{
+                                data: result.datasets[0].data,
+                                type: 'bar'
+                            }]
+                        };
+
+                        myChart.setOption(option);
+
+                    } catch (error) {
+                        console.error('Error configurando y obteniendo datos:', error);
+                    }
+                };
+            });
         </script>
     </template>
 </odoo>
