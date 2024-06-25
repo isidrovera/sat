@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<!-- sat/views/assets.xml -->
 <odoo>
-    <data>
-        <template id="assets_backend" name="mi_modulo assets" inherit_id="web.assets_backend">
-            <xpath expr="." position="inside">
-                <script type="text/javascript" src="/sat/static/src/js/custom_graph.js"></script>
-            </xpath>
-        </template>
-    </data>
+    <template id="assets_backend" name="sat assets" inherit_id="web.assets_backend">
+        <xpath expr="." position="inside">
+            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+            <script type="text/javascript" src="/sat/static/src/js/ticket_chart.js"></script>
+        </xpath>
+    </template>
 </odoo>

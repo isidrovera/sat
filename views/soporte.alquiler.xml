@@ -45,6 +45,9 @@
                                 <field name="total_copias_id" invisible="1"/>
                                 <field name="serie_id_r" invisible="1"/>
                                 <field name="tipo_id" invisible="1"/>
+                                <div>
+                                    <t t-call="sat.TicketChart"/>
+                                </div>
                             </group>
                             <group >
                                 <field name="partner_id" widget="many2one_avatar"/>
@@ -144,6 +147,7 @@
                 </form>
             </field>
         </record>
+        
         <record id="ticket_tree_view" model="ir.ui.view">
             <field name="name">ticket_alquiler.tree</field>
             <field name="model">ticket.alquiler</field>

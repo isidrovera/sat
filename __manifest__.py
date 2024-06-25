@@ -59,7 +59,7 @@
         'views/soporte_dashboard.xml',
         'views/transportistas.xml',
         'views/graficos.xml',
-        
+        'views/assets.xml',
         
     ],
     'demo': [
@@ -72,7 +72,9 @@
         'sat/static/src/css/evaluacion.css',        
     ],
     'web.assets_qweb': [
-        'sat/static/src/xml/tree_button.xml',        
+        'sat/static/src/xml/tree_button.xml',
+        'sat/static/src/js/ticket_chart.js',
+        'sat/static/src/xml/ticket_chart_template.xml',        
     ],
     },
     'qweb': [

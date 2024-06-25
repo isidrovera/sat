@@ -2,7 +2,7 @@ import json
 import logging
 from odoo import http
 from odoo.http import request
-
+from odoo.http import request
 _logger = logging.getLogger(__name__)
 
 class GraficoController(http.Controller):
@@ -79,3 +79,26 @@ class GraficoController(http.Controller):
             _logger.error("Error in get_campos: %s", str(e))
             response = request.make_response(json.dumps({'error': str(e)}), headers={'Content-Type': 'application/json'})
             return self._add_cors_headers(response)
+class TicketAlquilerController(http.Controller):
+
+    @http.route('/ticket/alquiler/chart_data', type='json', auth='user')
+    def get_chart_data(self):
+        tickets = request.env['ticket.alquiler'].search([])
+        data = {
+            'months': [],
+            'counts: [],
+        }
+
+        # Suponiendo que quieres mostrar la cantidad de tickets por mes
+        ticket_counts = {}
+        for ticket in tickets:
+            month = ticket.agenda.strftime('%Y-%m') if ticket.agenda else 'NA'
+            if month not in ticket_counts:
+                ticket_counts[month] = 0
+            ticket_counts[month] += 1
+
+        for month in sorted(ticket_counts.keys()):
+            data['months'].append(month)
+            data['counts'].append(ticket_counts[month])
+
+        return data

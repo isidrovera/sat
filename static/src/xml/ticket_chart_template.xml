@@ -1,0 +1,6 @@
+<!-- sat/static/src/xml/ticket_chart_template.xml -->
+<templates id="template" xml:space="preserve">
+    <t t-name="sat.TicketChart">
+        <div id="ticket_chart_container" style="width: 100%; height: 400px;"></div>
+    </t>
+</templates>
