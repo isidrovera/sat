@@ -28,6 +28,8 @@ class GraficoController(http.Controller):
             fecha_fin = post.get('fecha_fin')
             campos = post.get('campos')
 
+            _logger.info("Received params: modelo=%s, fecha_inicio=%s, fecha_fin=%s, campos=%s", modelo, fecha_inicio, fecha_fin, campos)
+
             if not modelo or not fecha_inicio or not fecha_fin or not campos:
                 raise ValueError("Missing required parameters")
 

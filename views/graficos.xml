@@ -98,7 +98,7 @@
                             campos: [formData.get('campos')]
                         };
 
-                        console.log('Enviando datos:', data);
+                        console.log('Enviando datos:', data);  // Agregar registro de depuración
 
                         const response = await fetch('/api/grafico/datos', {
                             method: 'POST',
@@ -108,7 +108,7 @@
 
                         const result = await response.json();
 
-                        console.log('Datos recibidos:', result);
+                        console.log('Datos recibidos:', result);  // Agregar registro de depuración
 
                         if (!result.labels || !result.datasets || result.labels.length === 0 || result.datasets[0].data.length === 0) {
                             console.error('No se recibieron datos válidos para el gráfico.');
