@@ -466,10 +466,10 @@ class reparaciones(models.Model):
         if self.env['reparaciones.reparaciones'].search_count([('responsable_id', '=', self.responsable_id.id), ('estado_id', '=', 'en_revision')]) > 0:
             return
 
-        # Buscar la siguiente máquina en estado 'para_revision'
+        # Buscar la siguiente máquina en estado 'para_revision', ordenada por fecha_para_revision
         next_maquina = self.env['sat.sat'].search([
             ('estado_ventas_id', '=', 'para_revision')
-        ], limit=1)
+        ], order='fecha_para_revision asc', limit=1)
 
         # Si no hay ninguna máquina en estado 'para_revision', buscar en estado 'sin_revisar' y 'disponible', ordenada por fecha de creación
         if not next_maquina:
@@ -493,6 +493,7 @@ class reparaciones(models.Model):
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
+
 
     def generate_pdf_report_url(self):
         # Obtener el reporte
