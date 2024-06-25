@@ -10,7 +10,7 @@
     'category': 'Services',
     'depends': ['base','mail','contacts','sale_management','portal','web'],
     'data': [
-        #'security/ir.model.access.csv',  # Descomenta si tienes este archivo
+        
         'views/ventas.xml',
         'views/templates.xml',
         'data/ir_secuense.xml',
@@ -44,8 +44,7 @@
         'views/evaluacion.xml',
         'views/crear_ticket_portal.xml',
         'views/incidencias.xml',
-        'views/soporte.alquiler.xml',
-        #'wizard/wizard.xml',        
+        'views/soporte.alquiler.xml',               
         'data/ir.secuence_incidencia.xml',
         'views/template_formulario_ticket.xml',               
         'data/plantillas_correo.xml',
@@ -59,7 +58,7 @@
         'views/soporte_dashboard.xml',
         'views/transportistas.xml',
         'views/graficos.xml',
-        #'views/assets.xml',
+        
         
     ],
     'demo': [
@@ -70,8 +69,7 @@
         'sat/static/src/js/tree_button.js',
         'sat/static/src/js/evaluacion.js',        
         'sat/static/src/css/evaluacion.css',
-        'sat/static/src/js/ticket_chart.js',
-        'sat/static/src/xml/ticket_chart_template.xml',        
+             
     ],
     'web.assets_qweb': [
         'sat/static/src/xml/tree_button.xml',

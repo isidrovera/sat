@@ -1,9 +1,0 @@
-<!-- sat/views/assets.xml -->
-<odoo>
-    <template id="assets_backend" name="sat assets" inherit_id="web.assets_backend">
-        <xpath expr="." position="inside">
-            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
-            <script type="text/javascript" src="/sat/static/src/js/ticket_chart.js"></script>
-        </xpath>
-    </template>
-</odoo>
