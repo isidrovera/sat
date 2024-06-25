@@ -112,17 +112,26 @@
                                         <field name="transfer_id" attrs="{'required':[('estado_id', '=', 'en_revision')]}"/>
                                         <field name="optico_id" attrs="{'required':[('estado_id', '=', 'en_revision')]}"/>
                                         <field name="toner_black_id" attrs="{'required':[('estado_id', '=', 'en_revision')]}"/>
-                                        <field name="toner_magenta_id" attrs="{'required':[('estado_id', '=', 'en_revision'),('tipo_id','=','color')]}"/>
-                                        <field name="toner_cyan_id" attrs="{'required':[('estado_id', '=', 'en_revision'),('tipo_id','=','color')]}"/>
-                                        <field name="toner_yellow_id" attrs="{'required':[('estado_id', '=', 'en_revision'),('tipo_id','=','color')]}"/>
+                                        <field name="toner_magenta_id" attrs="{'required': [('estado_id', '=', 'en_revision'), ('tipo_id', '=', 'color')], 
+               'invisible': [('tipo_id', '!=', 'color')]}"/>
+                                        <field name="toner_cyan_id" attrs="{'required': [('estado_id', '=', 'en_revision'), ('tipo_id', '=', 'color')], 
+               'invisible': [('tipo_id', '!=', 'color')]}"/>
+                                        <field name="toner_yellow_id" attrs="{'required': [('estado_id', '=', 'en_revision'), ('tipo_id', '=', 'color')], 
+               'invisible': [('tipo_id', '!=', 'color')]}"/>
                                         <field name="black_id" attrs="{'required':[('estado_id', '=', 'en_revision')]}"/>
-                                        <field name="magenta_id" attrs="{'required':[('estado_id', '=', 'en_revision'),('tipo_id','=','color')]}"/>
-                                        <field name="cyan_id" attrs="{'required':[('estado_id', '=', 'en_revision'),('tipo_id','=','color')]}"/>
-                                        <field name="yellow_id" attrs="{'required':[('estado_id', '=', 'en_revision'),('tipo_id','=','color')]}"/>
+                                        <field name="magenta_id" attrs="{'required': [('estado_id', '=', 'en_revision'), ('tipo_id', '=', 'color')], 
+               'invisible': [('tipo_id', '!=', 'color')]}"/>
+                                        <field name="cyan_id" attrs="{'required': [('estado_id', '=', 'en_revision'), ('tipo_id', '=', 'color')], 
+               'invisible': [('tipo_id', '!=', 'color')]}"/>
+                                        <field name="yellow_id" attrs="{'required': [('estado_id', '=', 'en_revision'), ('tipo_id', '=', 'color')], 
+               'invisible': [('tipo_id', '!=', 'color')]}"/>
                                         <field name="developerk_id" attrs="{'required':[('estado_id', '=', 'en_revision')]}"/>
-                                        <field name="developerm_id" attrs="{'required':[('estado_id', '=', 'en_revision'),('tipo_id','=','color')]}"/>
-                                        <field name="developerc_id" attrs="{'required':[('estado_id', '=', 'en_revision'),('tipo_id','=','color')]}"/>
-                                        <field name="developery_id" attrs="{'required':[('estado_id', '=', 'en_revision'),('tipo_id','=','color')]}"/>
+                                        <field name="developerm_id" attrs="{'required': [('estado_id', '=', 'en_revision'), ('tipo_id', '=', 'color')], 
+               'invisible': [('tipo_id', '!=', 'color')]}"/>
+                                        <field name="developerc_id" attrs="{'required': [('estado_id', '=', 'en_revision'), ('tipo_id', '=', 'color')], 
+               'invisible': [('tipo_id', '!=', 'color')]}"/>
+                                        <field name="developery_id" attrs="{'required': [('estado_id', '=', 'en_revision'), ('tipo_id', '=', 'color')], 
+               'invisible': [('tipo_id', '!=', 'color')]}"/>
                                     </group>
                                 </group>
                             </page>
