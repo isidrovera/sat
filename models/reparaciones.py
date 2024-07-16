@@ -408,7 +408,7 @@ class reparaciones(models.Model):
         try:
             base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
             action_id = self.env.ref('sat.action_reparaciones_window').id
-            menu_id = self.env.ref('sat.menu_reparaciones').id
+            menu_id = self.env.ref('sat.reparaciones').id
             url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
             _logger.info("Generated URL: %s", url)
             return url
