@@ -32,6 +32,7 @@ class reparaciones(models.Model):
     def create(self, vals):
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         record = super(reparaciones, self).create(vals)
+        _logger.info("Record created with ID: %s", record.id)
         record.generate_qr_code()
         return record
 
@@ -365,22 +366,22 @@ class reparaciones(models.Model):
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
     
 
-    qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
+    qr_image = fields.Binary("QR Image", compute="generate_qr_code", attachment=True, store=True)
     qr_url = fields.Char("QR URL", compute="generate_qr_code", store=True)
 
     @api.depends('name')
     def generate_qr_code(self):
         for record in self:
             try:
+                _logger.info("Generating QR code for record ID: %s", record.id)
                 url = self.generate_record_url(record)
-                record.qr_url = url  # Almacena la URL generada
+                _logger.info("Generated URL for record ID %s: %s", record.id, url)
+                record.qr_url = url
 
                 if not url:
                     _logger.error("No URL generated for record %s", record.id)
                     continue
 
-                _logger.info("Generated URL for QR Code: %s", url)
-                
                 qr = qrcode.QRCode(
                     version=1,
                     error_correction=qrcode.constants.ERROR_CORRECT_L,
