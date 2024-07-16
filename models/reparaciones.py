@@ -365,23 +365,7 @@ class reparaciones(models.Model):
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
     
 
-    @api.model
-    def generate_custom_record_url(self, record):
-        try:
-            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-            action_id = self.env.ref('sat.action_reparaciones_window').id
-            menu_id = self.env.ref('sat.menu_reparaciones').id
-            url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
-            _logger.info("URL generada: %s", url)
-            return url
-        except Exception as e:
-            _logger.error("Error al generar URL: %s", str(e))
-            return ""
-
-
-
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
-
 
     def _generate_qr_code(self):
         for record in self:
@@ -409,6 +393,19 @@ class reparaciones(models.Model):
                 record.qr_image = base64.b64encode(temp.read()).decode('utf-8')
             except Exception as e:
                 _logger.error("Error generating QR code for record %s: %s", record.id, str(e))
+
+    @api.model
+    def generate_custom_record_url(self, record):
+        try:
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            action_id = self.env.ref('sat.action_reparaciones_window').id
+            menu_id = self.env.ref('sat.menu_reparaciones').id
+            url = "{}/web#id={}&view_type=form&model=reparaciones.reparaciones&action={}&menu_id={}".format(base_url, record.id, action_id, menu_id)
+            _logger.info("Generated URL: %s", url)
+            return url
+        except Exception as e:
+            _logger.error("Error generating URL: %s", str(e))
+            return ""
 
     def action_generate_qr_for_all(self):
         all_records = self.search([])
