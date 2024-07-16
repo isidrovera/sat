@@ -366,39 +366,41 @@ class reparaciones(models.Model):
     
 
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
-
+    qr_url = fields.Char("QR URL", compute="generate_qr_code", store=True)
+    
     @api.depends('name')
     def generate_qr_code(self):
         for record in self:
-            # Generar la URL del registro
-            url = self.generate_record_url(record)
+            try:
+                url = self.generate_record_url(record)
+                record.qr_url = url  # Almacena la URL generada
 
-            if not url:
-                continue
+                if not url:
+                    _logger.error("No URL generated for record %s", record.id)
+                    continue
 
-            # Crear un objeto de código QR
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=10,
-                border=4,
-            )
-            qr.add_data(url)
-            qr.make(fit=True)
+                _logger.info("Generated URL for QR Code: %s", url)
+                
+                qr = qrcode.QRCode(
+                    version=1,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L,
+                    box_size=10,
+                    border=4
+                )
+                qr.add_data(url)
+                qr.make(fit=True)
 
-            # Generar la imagen del código QR
-            img = qr.make_image(fill_color="black", back_color="white")
+                img = qr.make_image(fill_color="black", back_color="white")
+                temp = BytesIO()
+                img.save(temp, format="PNG")
+                temp.seek(0)
+                qr_base64 = base64.b64encode(temp.read()).decode('utf-8')
+                record.qr_image = qr_base64
 
-            # Guardar la imagen en un buffer en memoria
-            buffer = BytesIO()
-            img.save(buffer, format="PNG")
-            buffer.seek(0)
+                _logger.info("QR code generated and stored for record %s", record.id)
 
-            # Codificar la imagen en base64
-            img_base64 = base64.b64encode(buffer.read())
-
-            # Guardar la imagen codificada en el campo qr_image
-            record.qr_image = img_base64
+            except Exception as e:
+                _logger.error("Error generating QR code for record %s: %s", record.id, str(e))
 
     @api.model
     def generate_record_url(self, record):
@@ -420,8 +422,7 @@ class reparaciones(models.Model):
         return {
             'type': 'ir.actions.client',
             'tag': 'reload',
-        }
-        
+        }     
             
                 
     month_year = fields.Char(string='Mes y Año', compute='_compute_month_year', store=True)

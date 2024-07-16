@@ -37,6 +37,8 @@
                                 <field name="ubicacion_id" widget="badge"/>
                                 <field name="responsable_id" widget="many2one_avatar"/>
                                 <field name="responsable_mobile_clean"/>
+                                <field name="qr_image"/>
+                                <field name="qr_url"/>
                             </group>
                             <group string="Datos del equipo">
                                 <!--<field name="qr_image" widget='image' class="oe_avatar" options="{'size': [90, 90]}"/>
