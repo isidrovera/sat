@@ -351,18 +351,35 @@ class SatSat(models.Model):
     @api.depends('estado_ventas_id')  # Suponiendo que quieras codificar un campo específico, reemplaza 'nombre_del_campo_a_codificar' con el campo relevante.
     def generate_qr_code(self):
         for record in self:
+            # Generar la URL del registro
             url = self.generate_record_url(record)
             
-            qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+            if not url:
+                continue
+            
+            # Crear un objeto de código QR
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
             qr.add_data(url)
             qr.make(fit=True)
             
+            # Generar la imagen del código QR
             img = qr.make_image(fill_color="black", back_color="white")
             
-            temp = BytesIO()
-            img.save(temp, format="PNG")
-            temp.seek(0)
-            record.qr_image = base64.b64encode(temp.read())
+            # Guardar la imagen en un buffer en memoria
+            buffer = BytesIO()
+            img.save(buffer, format="PNG")
+            buffer.seek(0)
+            
+            # Codificar la imagen en base64
+            img_base64 = base64.b64encode(buffer.read())
+            
+            # Guardar la imagen codificada en el campo qr_image
+            record.qr_image = img_base64
     icono_rojo = fields.Char(compute='_compute_icono_rojo', string=' ')
 
     @api.depends('activador')  # Reemplaza con el campo real que afecta la condición
