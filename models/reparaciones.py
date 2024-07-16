@@ -410,7 +410,14 @@ class reparaciones(models.Model):
             except Exception as e:
                 _logger.error("Error generating QR code for record %s: %s", record.id, str(e))
 
-
+    def action_generate_qr_for_all(self):
+        all_records = self.search([])
+        for record in all_records:
+            record._generate_qr_code()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'reload',
+        }
 
             
             
