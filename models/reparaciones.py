@@ -32,6 +32,7 @@ class reparaciones(models.Model):
     def create(self, vals):
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         record = super(reparaciones, self).create(vals)
+        record._generate_qr_code()
         return record
 
       
@@ -382,11 +383,16 @@ class reparaciones(models.Model):
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
 
 
-    @api.depends('serie_id')
     def _generate_qr_code(self):
         for record in self:
             try:
                 url = self.generate_custom_record_url(record)
+                if not url:
+                    _logger.error("No URL generated for record %s", record.id)
+                    continue
+
+                _logger.info("Generated URL for QR Code: %s", url)
+                
                 qr = qrcode.QRCode(
                     version=1,
                     error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -402,7 +408,7 @@ class reparaciones(models.Model):
                 temp.seek(0)
                 record.qr_image = base64.b64encode(temp.read()).decode('utf-8')
             except Exception as e:
-                _logger.error("Error al generar el código QR para el registro %s: %s", record.id, str(e))
+                _logger.error("Error generating QR code for record %s: %s", record.id, str(e))
 
 
 
