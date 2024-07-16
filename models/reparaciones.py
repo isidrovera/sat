@@ -32,7 +32,7 @@ class reparaciones(models.Model):
     def create(self, vals):
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         record = super(reparaciones, self).create(vals)
-        record._generate_qr_code()
+        record.generate_qr_code()
         return record
 
       
@@ -367,7 +367,7 @@ class reparaciones(models.Model):
 
     qr_image = fields.Binary("QR Image", compute="_generate_qr_code", attachment=True, store=True)
     qr_url = fields.Char("QR URL", compute="generate_qr_code", store=True)
-    
+
     @api.depends('name')
     def generate_qr_code(self):
         for record in self:
@@ -422,7 +422,8 @@ class reparaciones(models.Model):
         return {
             'type': 'ir.actions.client',
             'tag': 'reload',
-        }     
+        }
+    
             
                 
     month_year = fields.Char(string='Mes y Año', compute='_compute_month_year', store=True)
