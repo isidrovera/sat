@@ -10,7 +10,7 @@
                         <button string="Finalizar" name="action_finalizar_reparacion" type="object" class="btn btn-success" icon="fa-wrench"/>
                         <button string="Problemas" name="action_con_problemas_reparacion" type="object" class="btn btn-danger" icon="fa-exclamation-triangle"/>
                         <button string="Asignar" name="enviar_mensaje_whatsapp_reparaciones" type="object" class="oe_highlight"/>
-                        <button string="QR" name="action_generate_qr_for_all" type="object" class="oe_highlight"/>
+                        <!--<button string="QR" name="action_generate_qr_for_all" type="object" class="oe_highlight"/>-->
                        <button string="Actualizar Mes y Año"
                                 type="object"
                                 name="update_month_year"
@@ -36,9 +36,7 @@
                                 <field name="tipo_revision" widget="badge"/>
                                 <field name="ubicacion_id" widget="badge"/>
                                 <field name="responsable_id" widget="many2one_avatar"/>
-                                <field name="responsable_mobile_clean"/>
-                                <field name="qr_image"/>
-                                <field name="qr_url"/>
+                                <field name="responsable_mobile_clean"/>                                
                             </group>
                             <group string="Datos del equipo">
                                 <!--<field name="qr_image" widget='image' class="oe_avatar" options="{'size': [90, 90]}"/>
