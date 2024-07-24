@@ -524,6 +524,10 @@ class ticket_alquiler(models.Model):
             'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
     
         }
+
+    def action_proceso(self):
+        self.estado='proceso'
+    
         
     
             

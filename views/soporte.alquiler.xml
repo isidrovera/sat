@@ -17,6 +17,7 @@
                                 type="object"
                                 name="update_month_year"
                                 class="oe_highlight"/>
+                        <button string="Proceso" name="action_proceso" type="object" class="oe_highlight"/>
                     </header>
                     <sheet>
                         <div name="button_box">
