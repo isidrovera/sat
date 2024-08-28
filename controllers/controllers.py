@@ -44,8 +44,8 @@ class PublicTicketController(http.Controller):
         values = {
             'partner_id': registro.cliente_id.id if registro.cliente_id else '',
             'direccion': registro.direccion if registro.direccion else '',
-            'contacto_id': user_name or registro.contacto_id or '',
-            'celular': phone_number.replace('@c.us', '') if phone_number else registro.celular or '',
+            'contacto_id': user_name or '',  # Usamos el nombre del chat
+            'celular': phone_number.replace('@c.us', '') if phone_number else '',  # Usamos el número del chat
             'correo': registro.correo_ if registro.correo_ else '',
             'product_id': registro.id,
         }
@@ -64,13 +64,11 @@ class PublicTicketController(http.Controller):
             ticket_vals = {
                 'partner_id': int(post.get('partner_id')),
                 'direccion_id_r': post.get('direccion'),
-                'contacto_id_r': post.get('contacto_id'),
-                'celular_id_r': post.get('celular'),
+                'contacto_id_r': post.get('reporter_name'),  # Usamos el nombre ingresado en el formulario
+                'celular_id_r': post.get('reporter_phone'),  # Usamos el teléfono ingresado en el formulario
                 'corre_id_r': post.get('correo'),
                 'product_alquiler': int(post.get('product_id')),
                 'description': post.get('description'),
-                'reporter_name': post.get('reporter_name'),
-                'reporter_phone': post.get('reporter_phone'),
                 'problem_photo': file_base64,
             }
             request.env['ticket.alquiler'].sudo().create(ticket_vals)

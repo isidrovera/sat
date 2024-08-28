@@ -11,8 +11,6 @@
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                     <input type="hidden" id="partner_id" name="partner_id" t-att-value="partner_id"/>
                     <input type="hidden" id="direccion" name="direccion" t-att-value="direccion"/>
-                    <input type="hidden" id="contacto_id" name="contacto_id" t-att-value="contacto_id"/>
-                    <input type="hidden" id="celular" name="celular" t-att-value="celular"/>
                     <input type="hidden" id="correo" name="correo" t-att-value="correo"/>
                     <input type="hidden" id="product_id" name="product_id" t-att-value="product_id"/>
                     
