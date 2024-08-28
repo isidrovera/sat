@@ -15,14 +15,56 @@
                     </p>
                 </div>
             </div>
-            <script>
+            <script type="text/javascript">
                 function volverARegistros() {
-                    var lastPage = localStorage.getItem('lastRecordsPage');
-                    if (lastPage) {
-                        window.location.href = lastPage;
-                    } else {
-                        window.location.href = '/customer/records';
-                    }
+                    var lastPage = localStorage.getItem('lastRecordsPage') || '/customer/records';
+                    
+                    fetch(lastPage, { method: 'HEAD' })
+                        .then(function(response) {
+                            if (response.ok) {
+                                window.location.href = lastPage;
+                            } else {
+                                handleError();
+                            }
+                        })
+                        .catch(function(error) {
+                            handleError();
+                        });
+                }
+
+                function handleError() {
+                    var errorMessage = "Lo sentimos, ha ocurrido un error al intentar volver a la página de registros. ";
+                    errorMessage += "Por favor, intente una de las siguientes opciones:";
+                    
+                    var options = [
+                        { text: "Ir al inicio", action: function() { window.location.href = '/'; } },
+                        { text: "Intentar de nuevo", action: function() { volverARegistros(); } },
+                        { text: "Contactar soporte", action: function() { window.location.href = '/contact'; } }
+                    ];
+                    
+                    showErrorModal(errorMessage, options);
+                }
+
+                function showErrorModal(message, options) {
+                    var modal = document.createElement('div');
+                    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+                    
+                    var content = document.createElement('div');
+                    content.style.cssText = 'background:white;padding:20px;border-radius:5px;max-width:80%;';
+                    content.innerHTML = '<p>' + message + '</p>';
+                    
+                    options.forEach(function(option) {
+                        var button = document.createElement('button');
+                        button.textContent = option.text;
+                        button.onclick = function() {
+                            document.body.removeChild(modal);
+                            option.action();
+                        };
+                        content.appendChild(button);
+                    });
+                    
+                    modal.appendChild(content);
+                    document.body.appendChild(modal);
                 }
             </script>
         </t>
