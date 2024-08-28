@@ -103,6 +103,8 @@ class TonerRequestController(http.Controller):
     @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
     def display_toner_request_form(self, **kw):
         id_registro = kw.get('id_registro')
+        user_name = kw.get('user_name')
+        phone_number = kw.get('phone_number')
         
         registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))], limit=1)
         if registro:
@@ -111,6 +113,8 @@ class TonerRequestController(http.Controller):
                 'cliente': registro.cliente_id.name if registro.cliente_id else "",
                 'modelo_maquina': registro.name.name if registro.name else "",
                 'serie': registro.serie if registro else "",
+                'nombre': user_name or "",
+                'celular': phone_number.replace('@c.us', '') if phone_number else "",
             }
             return request.render('sat.solicitar_toner_form_template', {'values': values})
         else:
