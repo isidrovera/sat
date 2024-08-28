@@ -257,3 +257,41 @@ class RepuestosAlquilerController(http.Controller):
             'alquiler': request.env['alquiler'].sudo().browse(id_alquiler),
         })
         
+
+
+class CustomerSearchController(http.Controller):
+
+    @http.route('/api/customer_search', auth='public', type='json', methods=['POST'])
+    def customer_search(self, **kwargs):
+        name_part = kwargs.get('name')
+        if not name_part:
+            return {'error': 'Name parameter is required'}
+
+        # Buscar clientes que coincidan parcialmente con el nombre proporcionado
+        clientes = request.env['res.partner'].sudo().search([('name', 'ilike', name_part)])
+
+        if not clientes:
+            return {'message': 'No customers found'}
+
+        # Supongamos que el primer cliente coincidente será el relevante
+        cliente = clientes[0]
+        base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        customer_url = f"{base_url}/customer/records?customer_id={cliente.id}"
+        
+        return {'url': customer_url}
+    
+class CustomerRecordsController(http.Controller):
+
+    @http.route('/customer/records', auth='public', type='http', website=True)
+    def show_customer_records(self, customer_id=None):
+        if not customer_id:
+            return request.render('sat.pagina_error', {})
+
+        # Buscar los registros de alquiler asociados al cliente
+        registros = request.env['alquiler'].sudo().search([('cliente_id', '=', int(customer_id))])
+
+        # Renderizar la página con los registros
+        return request.render('sat.customer_records_page', {
+            'registros': registros,
+            'cliente': request.env['res.partner'].sudo().browse(int(customer_id)).name
+        })

@@ -58,6 +58,7 @@
         'views/soporte_dashboard.xml',
         'views/transportistas.xml',
         'views/graficos.xml',
+        'views/customer_records_page.xml',
         
         
     ],
