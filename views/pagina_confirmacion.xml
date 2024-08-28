@@ -10,20 +10,18 @@
                     <p>Nuestro equipo está revisando tu caso y se pondrá en contacto contigo dentro de las próximas 24 horas para asistirte. Agradecemos tu paciencia y comprensión.</p>
                     <p>Si tu incidencia es urgente o necesitas asistencia inmediata, no dudes en llamar a nuestro servicio al cliente al <strong>+51 924894829</strong></p>
                     <p class="lead">
-                        <button class="btn btn-secondary mr-2" onclick="goBack()">Volver a mis equipos</button>
+                        <button onclick="volverARegistros()" class="btn btn-secondary mr-2">Volver a mis equipos</button>
                         <a class="btn btn-primary" href="/" role="button">Ir al inicio</a>
                     </p>
                 </div>
             </div>
             <script>
-                function goBack() {
-                    var customRecordsUrl = '/customer/records';
-                    if (document.referrer.indexOf(customRecordsUrl) !== -1) {
-                        window.location.href = customRecordsUrl;
-                    } else if (document.referrer) {
-                        window.location.href = document.referrer;
+                function volverARegistros() {
+                    var lastPage = localStorage.getItem('lastRecordsPage');
+                    if (lastPage) {
+                        window.location.href = lastPage;
                     } else {
-                        window.location.href = customRecordsUrl;
+                        window.location.href = '/customer/records';
                     }
                 }
             </script>

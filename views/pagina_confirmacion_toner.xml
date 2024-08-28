@@ -11,20 +11,18 @@
                     <p>Te recordamos revisar periódicamente tu stock de tóner para evitar quedarte sin suministros. Una buena gestión de inventario asegura la continuidad en tus operaciones y reduce las interrupciones en tu trabajo.</p>
                     <p>Si tienes alguna pregunta o necesitas asistencia adicional, no dudes en contactarnos al <strong>981 597 727  -  924 894 863</strong> o mediante nuestro formulario de contacto en la web.</p>
                     <p class="lead">
-                        <button class="btn btn-secondary mr-2" onclick="goBack()">Volver a mis equipos</button>
+                        <button onclick="volverARegistros()" class="btn btn-secondary mr-2">Volver a mis equipos</button>
                         <a class="btn btn-primary" href="/" role="button">Ir al inicio</a>
                     </p>
                 </div>
             </div>
             <script>
-                function goBack() {
-                    var customRecordsUrl = '/customer/records';
-                    if (document.referrer.indexOf(customRecordsUrl) !== -1) {
-                        window.location.href = customRecordsUrl;
-                    } else if (document.referrer) {
-                        window.location.href = document.referrer;
+                function volverARegistros() {
+                    var lastPage = localStorage.getItem('lastRecordsPage');
+                    if (lastPage) {
+                        window.location.href = lastPage;
                     } else {
-                        window.location.href = customRecordsUrl;
+                        window.location.href = '/customer/records';
                     }
                 }
             </script>

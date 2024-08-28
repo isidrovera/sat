@@ -26,6 +26,9 @@
                     </tbody>
                 </table>
             </div>
+            <script>
+                localStorage.setItem('lastRecordsPage', window.location.href);
+            </script>
         </t>
     </template>
 </odoo>
