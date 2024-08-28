@@ -103,6 +103,7 @@ class TonerRequestController(http.Controller):
     @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
     def display_toner_request_form(self, **kw):
         id_registro = kw.get('id_registro')
+        
         registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))], limit=1)
         if registro:
             values = {
@@ -110,11 +111,11 @@ class TonerRequestController(http.Controller):
                 'cliente': registro.cliente_id.name if registro.cliente_id else "",
                 'modelo_maquina': registro.name.name if registro.name else "",
                 'serie': registro.serie if registro else "",
-                # ... otros campos según sea necesario
             }
             return request.render('sat.solicitar_toner_form_template', {'values': values})
         else:
             return request.redirect('/pagina_error')
+
     @http.route('/pagina_confirmacion_toner', type='http', auth="public", website=True)
     def pagina_confirmacion(self, **kw):
         return request.render('sat.pagina_confirmacion_toner')
@@ -135,7 +136,6 @@ class TonerRequestController(http.Controller):
                 'toner_magenta': post.get('toner_magenta'),
                 'contometro_black': post.get('contometro_black'),
                 'contometro_color': post.get('contometro_color'),
-                # ... otros campos que hayas incluido en tu formulario
             }
             
             # Construir el cuerpo del correo electrónico
@@ -148,7 +148,7 @@ class TonerRequestController(http.Controller):
 
             toner_lines = ""
             for toner in toners:
-                if toner['qty'] and int(toner['qty']) > 0:  # Asegúrate de que la cantidad es un número y es mayor que cero
+                if toner['qty'] and int(toner['qty']) > 0:
                     toner_lines += f"<tr><td>{toner['name']}</td><td>{toner['qty']}</td></tr>"
 
             body_html = f"""
@@ -201,14 +201,13 @@ class TonerRequestController(http.Controller):
            
             # Configurar los valores del correo electrónico
             mail_values = {
-                'subject': "Solicitud de Toner - {0}".format(datos_formulario['modelo_maquina']),
+                'subject': f"Solicitud de Toner - {datos_formulario['modelo_maquina']}",
                 'body_html': body_html,
-                'email_from': 'soporte@andescopiers.com.pe',  # Remitente del correo
-                'email_to': 'jamilet.roggero@andescopiers.com.pe',  # Reemplaza por el correo del destinatario real
+                'email_from': 'soporte@andescopiers.com.pe',
+                'email_to': 'jamilet.roggero@andescopiers.com.pe',
                 'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',
                 'mail_server_id': 1,
             }
-
 
             # Crear y enviar el correo electrónico
             mail_id = request.env['mail.mail'].sudo().create(mail_values)
@@ -218,7 +217,7 @@ class TonerRequestController(http.Controller):
             return request.redirect('/pagina_confirmacion_toner')
         except Exception as e:
             _logger.exception("Failed to send toner request: %s", e)
-            return request.redirect('/pagina_error')  # Asegúrate de tener una vista de error definida.
+            return request.redirect('/pagina_error')
         
 class RepuestosAlquilerController(http.Controller):
     @http.route('/alquiler/repuestos/<int:id_alquiler>', type='http', auth='user', website=True)

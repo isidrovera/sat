@@ -9,7 +9,7 @@
                     <input type="hidden" name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
                     <input type="hidden" name="cliente" t-att-value="values['cliente']"/>
                     <input type="hidden" name="serie" t-att-value="values['serie']"/>
-                    <input type="hidden" name="id_registro" t-att-value="id_registro"/>
+                    <input type="hidden" name="id_registro" t-att-value="values['id_registro']"/>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -44,7 +44,7 @@
                             <tr>
                                 <td>
                                     <div style="display:inline-block; width:20px; height:20px; background-color:black; border-radius:10px;"></div>
-            Toner Black
+                                    Toner Black
                                 </td>
                                 <td>
                                     <input type="number" name="toner_black" class="form-control" required="required"/>
@@ -53,7 +53,7 @@
                             <tr>
                                 <td>
                                     <div style="display:inline-block; width:20px; height:20px; background-color:cyan; border-radius:10px;"></div>
-            Toner Cyan
+                                    Toner Cyan
                                 </td>
                                 <td>
                                     <input type="number" name="toner_cyan" class="form-control" />
@@ -62,7 +62,7 @@
                             <tr>
                                 <td>
                                     <div style="display:inline-block; width:20px; height:20px; background-color:yellow; border-radius:10px;"></div>
-            Toner Yellow
+                                    Toner Yellow
                                 </td>
                                 <td>
                                     <input type="number" name="toner_yellow" class="form-control"/>
@@ -71,14 +71,13 @@
                             <tr>
                                 <td>
                                     <div style="display:inline-block; width:20px; height:20px; background-color:magenta; border-radius:10px;"></div>
-            Toner Magenta
+                                    Toner Magenta
                                 </td>
                                 <td>
                                     <input type="number" name="toner_magenta" class="form-control" />
                                 </td>
                             </tr>
                         </tbody>
-
                     </table>
 
                     <!-- Botón de envío -->
@@ -88,4 +87,3 @@
         </t>
     </template>
 </odoo>
-
