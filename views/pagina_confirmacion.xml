@@ -29,14 +29,20 @@
                         var customerId = urlParams.get('customer_id');
                         var userName = urlParams.get('user_name');
                         var phoneNumber = urlParams.get('phone_number');
+                        var idRegistro = urlParams.get('id_registro');
                         
                         if (customerId) {
+                            // Caso WhatsApp
                             var constructedUrl = defaultPage + '?customer_id=' + customerId;
                             if (userName) constructedUrl += '&amp;user_name=' + encodeURIComponent(userName);
                             if (phoneNumber) constructedUrl += '&amp;phone_number=' + encodeURIComponent(phoneNumber);
                             navigateToPage(constructedUrl);
+                        } else if (idRegistro) {
+                            // Caso QR
+                            var qrUrl = '/api/escanear_qr?id_registro=' + idRegistro;
+                            navigateToPage(qrUrl);
                         } else {
-                            // Si no hay customer_id, ir a la página por defecto
+                            // Si no hay identificadores, ir a la página por defecto
                             navigateToPage(defaultPage);
                         }
                     }
