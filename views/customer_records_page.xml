@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    
     <template id="customer_records_page" name="Customer Records Page">
         <t t-call="website.layout">
             <div class="container">
@@ -19,7 +18,7 @@
                                 <td><t t-esc="registro.name.name"/></td>
                                 <td><t t-esc="registro.serie"/></td>
                                 <td>
-                                    <a t-att-href="'/ticket/reportar_incidencia?id_registro=' + str(registro.id)" class="btn btn-primary">Reportar Incidencia</a>
+                                    <a t-att-href="'/ticket/reportar_incidencia?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-primary">Reportar Incidencia</a>
                                 </td>
                             </tr>
                         </t>
@@ -28,6 +27,4 @@
             </div>
         </t>
     </template>
-    
-    
 </odoo>
