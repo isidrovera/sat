@@ -14,12 +14,12 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="nombre">Nombre</label>
-                            <input type="text" class="form-control" id="nombre" name="nombre" required="1"/>
+                            <input type="text" class="form-control" id="nombre" name="nombre" t-att-value="values.get('nombre', '')" required="1"/>
                         </div>
 
                         <div class="col-md-6 mb-3">
                             <label for="celular">Celular</label>
-                            <input type="tel" class="form-control" id="celular" name="celular" required="1"/>
+                            <input type="tel" class="form-control" id="celular" name="celular" t-att-value="values.get('celular', '')" required="1"/>
                         </div>
                     </div>
                     <div class="row">
@@ -81,11 +81,20 @@
                     </table>
 
                     <div class="text-center mt-4">
-                        <a href="/customer/records" class="btn btn-secondary mr-2">Volver</a>
+                        <button type="button" class="btn btn-secondary mr-2" onclick="goBack()">Volver</button>
                         <button class="btn btn-primary" type="submit">Enviar Solicitud</button>
                     </div>
                 </form>
             </div>
+            <script>
+                function goBack() {
+                    if (document.referrer) {
+                        window.location.href = document.referrer;
+                    } else {
+                        window.history.back();
+                    }
+                }
+            </script>
         </t>
     </template>
 </odoo>
