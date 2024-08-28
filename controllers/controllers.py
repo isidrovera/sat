@@ -41,14 +41,31 @@ class PublicTicketController(http.Controller):
         phone_number = kw.get('phone_number')
         
         registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))])
+        
+        # Determinar si es un escaneo QR o desde WhatsApp
+        is_qr_scan = not (user_name or phone_number)
+        
         values = {
             'partner_id': registro.cliente_id.id if registro.cliente_id else '',
             'direccion': registro.direccion if registro.direccion else '',
-            'contacto_id': user_name or registro.contacto_id or '',
-            'celular': phone_number.replace('@c.us', '') if phone_number else registro.celular or '',
             'correo': registro.correo_ if registro.correo_ else '',
             'product_id': registro.id,
+            'is_qr_scan': is_qr_scan,
         }
+        
+        if not is_qr_scan:
+            # Si viene de WhatsApp, prellenamos los campos
+            values.update({
+                'contacto_id': user_name or '',
+                'celular': phone_number.replace('@c.us', '') if phone_number else '',
+            })
+        else:
+            # Si es escaneo QR, dejamos los campos en blanco
+            values.update({
+                'contacto_id': '',
+                'celular': '',
+            })
+        
         return request.render('sat.reportar_incidencia_form', values)
 
     @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
@@ -69,8 +86,8 @@ class PublicTicketController(http.Controller):
             ticket_vals = {
                 'partner_id': int(post.get('partner_id')),
                 'direccion_id_r': post.get('direccion'),
-                'contacto_id_r': post.get('reporter_name'),  # Usamos el nombre ingresado en el formulario
-                'celular_id_r': post.get('reporter_phone'),  # Usamos el teléfono ingresado en el formulario
+                'contacto_id_r': post.get('reporter_name'),
+                'celular_id_r': post.get('reporter_phone'),
                 'corre_id_r': post.get('correo'),
                 'product_alquiler': int(post.get('product_id')),
                 'description': post.get('description'),
