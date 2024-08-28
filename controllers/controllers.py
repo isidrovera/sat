@@ -44,12 +44,17 @@ class PublicTicketController(http.Controller):
         values = {
             'partner_id': registro.cliente_id.id if registro.cliente_id else '',
             'direccion': registro.direccion if registro.direccion else '',
-            'contacto_id': user_name or '',  # Usamos el nombre del chat
-            'celular': phone_number.replace('@c.us', '') if phone_number else '',  # Usamos el número del chat
+            'contacto_id': user_name or registro.contacto_id or '',
+            'celular': phone_number.replace('@c.us', '') if phone_number else registro.celular or '',
             'correo': registro.correo_ if registro.correo_ else '',
             'product_id': registro.id,
         }
         return request.render('sat.reportar_incidencia_form', values)
+
+    @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
+    def pagina_confirmacion(self, **kw):
+        response = http.Response(template='sat.pagina_confirmacion')
+        return response.render()
 
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['POST'], website=True)
     def submit_reportar_incidencia(self, **post):
@@ -76,7 +81,6 @@ class PublicTicketController(http.Controller):
         except Exception as e:
             _logger.exception("Failed to create ticket: %s", e)
             return request.render('sat.error_page', {'error': str(e)})
-        
         
 class TonerRequestController(http.Controller):
     @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
