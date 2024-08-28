@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="customer_records_page" name="Customer Records Page">
+    <template id="customer_records_page" name="Lista de maquinas">
         <t t-call="website.layout">
             <div class="container">
                 <h2>Registros del Cliente: <t t-esc="cliente"/></h2>

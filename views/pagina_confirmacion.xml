@@ -10,12 +10,11 @@
                     <p>Nuestro equipo está revisando tu caso y se pondrá en contacto contigo dentro de las próximas 24 horas para asistirte. Agradecemos tu paciencia y comprensión.</p>
                     <p>Si tu incidencia es urgente o necesitas asistencia inmediata, no dudes en llamar a nuestro servicio al cliente al <strong>+51 924894829</strong></p>
                     <p class="lead">
-                        <a class="btn btn-primary btn-lg" href="/" role="button">Volver al inicio</a>
+                        <a class="btn btn-secondary mr-2" href="/customer/records" role="button">Volver a mis equipos</a>
+                        <a class="btn btn-primary" href="/" role="button">Ir al inicio</a>
                     </p>
                 </div>
             </div>
-            <!-- Incluir el script de WhatsApp si está disponible en el contexto -->
-            <t t-if="whatsapp_script" t-raw="whatsapp_script"/>
         </t>
     </template>
 </odoo>
