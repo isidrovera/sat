@@ -45,25 +45,27 @@ class CustomerSearchController(http.Controller):
 class CustomerRecordsController(http.Controller):
 
     @http.route('/customer/records', auth='public', type='http', website=True)
-    def show_customer_records(self, customer_id=None):
+    def show_customer_records(self, customer_id=None, user_name=None, phone_number=None):
         if not customer_id:
-            _logger.error("Customer ID not provided.")
             return request.render('sat.pagina_error', {})
 
         try:
-            _logger.info(f"Fetching rental records for customer ID: {customer_id}")
             registros = request.env['alquiler'].sudo().search([('cliente_id', '=', int(customer_id))])
 
             if not registros:
-                _logger.warning(f"No rental records found for customer ID: {customer_id}")
-                return request.render('sat.pagina_sin_registros', {'cliente': request.env['res.partner'].sudo().browse(int(customer_id)).name})
+                return request.render('sat.pagina_sin_registros', {
+                    'cliente': request.env['res.partner'].sudo().browse(int(customer_id)).name,
+                    'user_name': user_name,
+                    'phone_number': phone_number
+                })
 
-            _logger.info(f"Found {len(registros)} rental records for customer ID: {customer_id}")
             return request.render('sat.customer_records_page', {
                 'registros': registros,
-                'cliente': request.env['res.partner'].sudo().browse(int(customer_id)).name
+                'cliente': request.env['res.partner'].sudo().browse(int(customer_id)).name,
+                'user_name': user_name,
+                'phone_number': phone_number
             })
 
         except Exception as e:
-            _logger.error(f"An error occurred while displaying customer records for ID {customer_id}: {str(e)}", exc_info=True)
+            _logger.error(f"An error occurred while displaying customer records: {str(e)}", exc_info=True)
             return request.render('sat.pagina_error', {})

@@ -34,10 +34,12 @@ class AlquilerQRController(http.Controller):
 
 
 class PublicTicketController(http.Controller):
-    # Ruta GET para mostrar el formulario
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['GET'], website=True)
     def display_reportar_incidencia(self, **kw):
         id_registro = kw.get('id_registro')
+        user_name = kw.get('user_name')
+        phone_number = kw.get('phone_number')
+        
         registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))])
         values = {
             'partner_id': registro.cliente_id.id if registro.cliente_id else '',
@@ -46,45 +48,18 @@ class PublicTicketController(http.Controller):
             'celular': registro.celular if registro.celular else '',
             'correo': registro.correo_ if registro.correo_ else '',
             'product_id': registro.id,
+            'user_name': user_name,
+            'phone_number': phone_number,
         }
         return request.render('sat.reportar_incidencia_form', values)
 
-    @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
-    def pagina_confirmacion(self, **kw):
-        # Renderizar la página de confirmación
-        response = http.Response(template='sat.pagina_confirmacion')
-
-        # Preparar el mensaje de WhatsApp
-        numero_destino = '+51924894829'
-        mensaje = "Hola, he reportado una incidencia con mi equipo de fotocopiadora y he enviado los detalles a través del formulario en línea. Por favor, revisen la información y pónganse en contacto conmigo para la asistencia correspondiente. Gracias."
-        mensaje_codificado = urllib.parse.quote(mensaje)  # Codificar el mensaje para URL
-        
-        whatsapp_url = f'https://api.whatsapp.com/send?phone={numero_destino}&text={mensaje_codificado}'
-        
-        # Crear el script JS para abrir la URL de WhatsApp en una nueva pestaña después de un breve retraso
-        script = f"""
-        <script>
-        setTimeout(function() {{
-            window.open("{whatsapp_url}", '_blank');
-        }}, 3000);  // Espera 3 segundos después de cargar la página de confirmación
-        </script>
-        """
-        
-        # Añadir el script JS a la respuesta y devolver la respuesta completa
-        response.qcontext.update({'whatsapp_script': script})
-        return response.render()
-    # Ruta POST para procesar el formulario
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['POST'], website=True)
     def submit_reportar_incidencia(self, **post):
         try:
-            # Manejo de la carga de archivo
-            if 'problem_photo' in post:
-                file_storage = post['problem_photo']
-                if file_storage:
-                    file_content = file_storage.read()
-                    file_base64 = base64.b64encode(file_content)
-                else:
-                    file_base64 = None
+            if 'problem_photo' in request.httprequest.files:
+                file = request.httprequest.files['problem_photo']
+                file_content = file.read()
+                file_base64 = base64.b64encode(file_content).decode('utf-8')
             else:
                 file_base64 = None
 
@@ -98,7 +73,7 @@ class PublicTicketController(http.Controller):
                 'description': post.get('description'),
                 'reporter_name': post.get('reporter_name'),
                 'reporter_phone': post.get('reporter_phone'),
-                'problem_photo': file_base64.decode('utf-8') if file_base64 else None,
+                'problem_photo': file_base64,
             }
             request.env['ticket.alquiler'].sudo().create(ticket_vals)
             return request.redirect('/pagina_confirmacion')
