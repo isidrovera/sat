@@ -10,38 +10,38 @@ class CustomerSearchController(http.Controller):
     def customer_search(self, **kwargs):
         name_part = kwargs.get('name')
         if not name_part:
-            _logger.error("Name parameter is required but not provided.")
-            return {'error': 'Name parameter is required'}
+            _logger.error("El parámetro 'name' es requerido pero no fue proporcionado.")
+            return {'error': 'El parámetro "name" es requerido'}
 
         try:
             # Buscar los clientes cuyo nombre coincida parcialmente
-            _logger.info(f"Searching for customers with name part: {name_part}")
+            _logger.info(f"Buscando clientes con nombre que contiene: {name_part}")
             clientes = request.env['res.partner'].sudo().search([('name', 'ilike', name_part)])
-            _logger.info(f"Found {len(clientes)} customers.")
+            _logger.info(f"Se encontraron {len(clientes)} clientes.")
 
             if not clientes:
-                _logger.warning(f"No customers found with the name part: {name_part}")
-                return {'message': 'No customers found'}
+                _logger.warning(f"No se encontraron clientes con el nombre que contiene: {name_part}")
+                return {'message': 'No se encontraron clientes'}
 
             # Buscar registros de alquiler asociados con estos clientes
             registros = request.env['alquiler'].sudo().search([('cliente_id', 'in', clientes.ids)])
-            _logger.info(f"Found {len(registros)} rental records for the customers.")
+            _logger.info(f"Se encontraron {len(registros)} registros de alquiler para los clientes.")
 
             if not registros:
-                _logger.warning(f"No rental records found for the customer(s) with name part: {name_part}")
-                return {'message': 'No rental records found for this customer'}
+                _logger.warning(f"No se encontraron registros de alquiler para el/los cliente(s) con nombre que contiene: {name_part}")
+                return {'message': 'No se encontraron registros de alquiler para este cliente'}
 
-            # Suponiendo que rediriges al primer cliente encontrado
+            # Se redirige al primer cliente encontrado
             cliente_id = clientes[0].id
             base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
             customer_url = f"{base_url}/customer/records?customer_id={cliente_id}"
             
-            _logger.info(f"Returning URL: {customer_url}")
+            _logger.info(f"Devolviendo URL: {customer_url}")
             return {'url': customer_url}
 
         except Exception as e:
-            _logger.error(f"An error occurred while searching for customer: {str(e)}", exc_info=True)
-            return {'error': 'An unexpected error occurred'}
+            _logger.error(f"Ocurrió un error al buscar el cliente: {str(e)}", exc_info=True)
+            return {'error': 'Ocurrió un error inesperado'}
 class CustomerRecordsController(http.Controller):
 
     @http.route('/customer/records', auth='public', type='http', website=True)
