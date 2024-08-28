@@ -44,12 +44,10 @@ class PublicTicketController(http.Controller):
         values = {
             'partner_id': registro.cliente_id.id if registro.cliente_id else '',
             'direccion': registro.direccion if registro.direccion else '',
-            'contacto_id': registro.contacto_id if registro.contacto_id else '',
-            'celular': registro.celular if registro.celular else '',
+            'contacto_id': user_name or registro.contacto_id or '',
+            'celular': phone_number.replace('@c.us', '') if phone_number else registro.celular or '',
             'correo': registro.correo_ if registro.correo_ else '',
             'product_id': registro.id,
-            'user_name': user_name,
-            'phone_number': phone_number,
         }
         return request.render('sat.reportar_incidencia_form', values)
 
