@@ -4,7 +4,7 @@
         <t t-call="website.layout">
             <div class="container mt-5 mb-5">
                 <h1 class="text-center">Solicitar Toner</h1>
-                <form action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
+                <form id="toner_form" action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                     <input type="hidden" name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
                     <input type="hidden" name="cliente" t-att-value="values['cliente']"/>
@@ -81,19 +81,52 @@
                     </table>
 
                     <div class="text-center mt-4">
-                        <button type="button" class="btn btn-secondary mr-2" onclick="goBack()">Volver</button>
                         <button class="btn btn-primary" type="submit">Enviar Solicitud</button>
                     </div>
                 </form>
             </div>
-            <script>
-                function goBack() {
-                    if (document.referrer) {
-                        window.location.href = document.referrer;
-                    } else {
-                        window.history.back();
-                    }
-                }
+
+            <!-- Ventana de confirmación flotante -->
+            <div id="confirmationModal" class="modal fade" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirmación</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&amp;times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p id="confirmationMessage"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script type="text/javascript">
+                $(document).ready(function() {
+                    $('#toner_form').submit(function(e) {
+                        e.preventDefault();
+                        var form = $(this);
+                        $.ajax({
+                            url: form.attr('action'),
+                            type: 'POST',
+                            data: form.serialize(),
+                            success: function(response) {
+                                var result = JSON.parse(response);
+                                $('#confirmationMessage').text(result.message);
+                                $('#confirmationModal').modal('show');
+                                setTimeout(function() {
+                                    $('#confirmationModal').modal('hide');
+                                    window.history.back();
+                                }, 3000);
+                            },
+                            error: function() {
+                                alert('Ocurrió un error al enviar la solicitud de tóner.');
+                            }
+                        });
+                    });
+                });
             </script>
         </t>
     </template>
