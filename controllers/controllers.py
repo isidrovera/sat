@@ -5,7 +5,10 @@ import logging
 from datetime import date
 import base64
 import urllib.parse
+import logging
 _logger = logging.getLogger(__name__)
+
+
 
 class AlquilerQRController(http.Controller):
     @http.route('/api/escanear_qr', auth='public', type='http', methods=['GET'], website=True)
@@ -17,6 +20,7 @@ class AlquilerQRController(http.Controller):
         if not registro:
             return request.redirect('/pagina_error')
 
+        # Aquí se podrían agregar más datos según sea necesario
         datos_registro = {
             'id': registro.id,
             'modelo_maquina': registro.name.name,
@@ -24,7 +28,10 @@ class AlquilerQRController(http.Controller):
             'cliente': registro.cliente_id.name,
         }
         
+        # Redirigir a la página con opciones, pasando los datos_registro como contexto
         return request.render('sat.pagina_con_opciones', {'datos_registro': datos_registro})
+    
+
 
 class PublicTicketController(http.Controller):
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['GET'], website=True)
@@ -35,6 +42,7 @@ class PublicTicketController(http.Controller):
         
         registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))])
         
+        # Determinar si es un escaneo QR o desde WhatsApp
         is_qr_scan = not (user_name or phone_number)
         
         values = {
@@ -46,17 +54,24 @@ class PublicTicketController(http.Controller):
         }
         
         if not is_qr_scan:
+            # Si viene de WhatsApp, prellenamos los campos
             values.update({
                 'contacto_id': user_name or '',
                 'celular': phone_number.replace('@c.us', '') if phone_number else '',
             })
         else:
+            # Si es escaneo QR, dejamos los campos en blanco
             values.update({
                 'contacto_id': '',
                 'celular': '',
             })
         
         return request.render('sat.reportar_incidencia_form', values)
+
+    @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
+    def pagina_confirmacion(self, **kw):
+        response = http.Response(template='sat.pagina_confirmacion')
+        return response.render()
 
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['POST'], website=True)
     def submit_reportar_incidencia(self, **post):
@@ -79,16 +94,11 @@ class PublicTicketController(http.Controller):
                 'problem_photo': file_base64,
             }
             request.env['ticket.alquiler'].sudo().create(ticket_vals)
-            return {
-            'success': True,
-            'message': '¡Reporte de incidencia enviado con éxito!'
-            }
+            return request.redirect('/pagina_confirmacion')
         except Exception as e:
             _logger.exception("Failed to create ticket: %s", e)
-            return {
-                'success': False,
-                'message': f'Error al crear el ticket: {str(e)}'
-            }
+            return request.render('sat.error_page', {'error': str(e)})
+        
 class TonerRequestController(http.Controller):
     @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
     def display_toner_request_form(self, **kw):
@@ -110,9 +120,14 @@ class TonerRequestController(http.Controller):
         else:
             return request.redirect('/pagina_error')
 
+    @http.route('/pagina_confirmacion_toner', type='http', auth="public", website=True)
+    def pagina_confirmacion(self, **kw):
+        return request.render('sat.pagina_confirmacion_toner')
+
     @http.route('/toner/enviar_solicitud', type='http', auth="public", methods=['POST'], website=True)
     def send_toner_request(self, **post):
         try:
+            # Recopilar los datos del formulario
             datos_formulario = {
                 'cliente': post.get('cliente'),
                 'nombre': post.get('nombre'),
@@ -127,6 +142,7 @@ class TonerRequestController(http.Controller):
                 'contometro_color': post.get('contometro_color'),
             }
             
+            # Construir el cuerpo del correo electrónico
             toners = [
                 {'name': 'Tóner Black', 'qty': datos_formulario.get('toner_black')},
                 {'name': 'Tóner Cyan', 'qty': datos_formulario.get('toner_cyan')},
@@ -187,6 +203,7 @@ class TonerRequestController(http.Controller):
             </html>
             """
            
+            # Configurar los valores del correo electrónico
             mail_values = {
                 'subject': f"Solicitud de Toner - {datos_formulario['modelo_maquina']}",
                 'body_html': body_html,
@@ -196,20 +213,16 @@ class TonerRequestController(http.Controller):
                 'mail_server_id': 1,
             }
 
+            # Crear y enviar el correo electrónico
             mail_id = request.env['mail.mail'].sudo().create(mail_values)
             request.env['mail.mail'].sudo().send([mail_id])
 
-            return {
-            'success': True,
-            'message': '¡Solicitud de tóner enviada con éxito!'
-            }
+            # Redirigir a la página de confirmación
+            return request.redirect('/pagina_confirmacion_toner')
         except Exception as e:
             _logger.exception("Failed to send toner request: %s", e)
-            return {
-                'success': False,
-                'message': f'Error al enviar la solicitud de tóner: {str(e)}'
-            }
-
+            return request.redirect('/pagina_error')
+        
 class RepuestosAlquilerController(http.Controller):
     @http.route('/alquiler/repuestos/<int:id_alquiler>', type='http', auth='user', website=True)
     def listar_repuestos(self, id_alquiler, search='', **kw):
@@ -233,8 +246,10 @@ class RepuestosAlquilerController(http.Controller):
 
             return request.make_response(json.dumps(repuestos_data), headers={'Content-Type': 'application/json'})
 
+        # Manejo normal sin AJAX
         return request.render('sat.repuestos_alquiler_list', {
             'repuestos': repuestos,
             'alquiler': request.env['alquiler'].sudo().browse(id_alquiler),
         })
+        
 

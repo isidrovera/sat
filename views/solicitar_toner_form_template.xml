@@ -2,38 +2,9 @@
 <odoo>
     <template id="solicitar_toner_form_template" name="Solicitar Toner Form">
         <t t-call="website.layout">
-            <style>
-                .form-group { margin-bottom: 30px; }
-                #confirmationModal .modal-content {
-                    border-radius: 15px;
-                    border: none;
-                    box-shadow: 0 0 20px rgba(0,0,0,0.1);
-                }
-                #confirmationModal .modal-header {
-                    background-color: #2196F3;
-                    color: white;
-                    border-top-left-radius: 15px;
-                    border-top-right-radius: 15px;
-                    border-bottom: none;
-                }
-                #confirmationModal .modal-body {
-                    padding: 30px;
-                    text-align: center;
-                }
-                #confirmationModal .modal-body i {
-                    font-size: 60px;
-                    color: #2196F3;
-                    margin-bottom: 20px;
-                }
-                #confirmationModal .modal-body p {
-                    font-size: 18px;
-                    color: #333;
-                    margin-bottom: 0;
-                }
-            </style>
             <div class="container mt-5 mb-5">
-                <h1 class="text-center mb-4">Solicitar Toner</h1>
-                <form id="toner_form" action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
+                <h1 class="text-center">Solicitar Toner</h1>
+                <form action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                     <input type="hidden" name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
                     <input type="hidden" name="cliente" t-att-value="values['cliente']"/>
@@ -45,6 +16,7 @@
                             <label for="nombre">Nombre</label>
                             <input type="text" class="form-control" id="nombre" name="nombre" t-att-value="values.get('nombre', '')" required="1"/>
                         </div>
+
                         <div class="col-md-6 mb-3">
                             <label for="celular">Celular</label>
                             <input type="tel" class="form-control" id="celular" name="celular" t-att-value="values.get('celular', '')" required="1"/>
@@ -55,9 +27,10 @@
                             <label for="contometro_black">Contometro Black</label>
                             <input type="text" class="form-control" id="contometro_black" name="contometro_black" required="1"/>
                         </div>
+
                         <div class="col-md-6 mb-3">
                             <label for="contometro_color">Contometro Color</label>
-                            <input type="text" class="form-control" id="contometro_color" name="contometro_color" required="1"/>
+                            <input type="tel" class="form-control" id="contometro_color" name="contometro_color" required="1"/>
                         </div>
                     </div>
                     <table class="table">
@@ -108,57 +81,19 @@
                     </table>
 
                     <div class="text-center mt-4">
-                        <button class="btn btn-primary btn-lg" type="submit">Enviar Solicitud</button>
+                        <button type="button" class="btn btn-secondary mr-2" onclick="goBack()">Volver</button>
+                        <button class="btn btn-primary" type="submit">Enviar Solicitud</button>
                     </div>
                 </form>
             </div>
-
-            <!-- Modal de confirmación -->
-            <div id="confirmationModal" class="modal fade" tabindex="-1" role="dialog">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Confirmación</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&amp;times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <i class="fa fa-check-circle"></i>
-                            <p id="confirmationMessage"></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <script type="text/javascript">
-                $(document).ready(function() {
-                    $('#toner_form').submit(function(e) {
-                        e.preventDefault();
-                        var form = $(this);
-                        $.ajax({
-                            url: form.attr('action'),
-                            type: 'POST',
-                            data: form.serialize(),
-                            dataType: 'json',
-                            success: function(response) {
-                                if (response.success) {
-                                    $('#confirmationMessage').text(response.message);
-                                    $('#confirmationModal').modal('show');
-                                    setTimeout(function() {
-                                        $('#confirmationModal').modal('hide');
-                                        window.history.back();
-                                    }, 3000);
-                                } else {
-                                    alert(response.message);
-                                }
-                            },
-                            error: function() {
-                                alert('Ocurrió un error al enviar la solicitud de tóner.');
-                            }
-                        });
-                    });
-                });
+            <script>
+                function goBack() {
+                    if (document.referrer) {
+                        window.location.href = document.referrer;
+                    } else {
+                        window.history.back();
+                    }
+                }
             </script>
         </t>
     </template>
