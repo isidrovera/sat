@@ -79,11 +79,16 @@ class PublicTicketController(http.Controller):
                 'problem_photo': file_base64,
             }
             request.env['ticket.alquiler'].sudo().create(ticket_vals)
-            return json.dumps({'success': True, 'message': '¡Reporte de incidencia enviado con éxito!'})
+            return {
+            'success': True,
+            'message': '¡Reporte de incidencia enviado con éxito!'
+            }
         except Exception as e:
             _logger.exception("Failed to create ticket: %s", e)
-            return json.dumps({'success': False, 'message': f'Error al crear el ticket: {str(e)}'})
-
+            return {
+                'success': False,
+                'message': f'Error al crear el ticket: {str(e)}'
+            }
 class TonerRequestController(http.Controller):
     @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
     def display_toner_request_form(self, **kw):
@@ -194,10 +199,16 @@ class TonerRequestController(http.Controller):
             mail_id = request.env['mail.mail'].sudo().create(mail_values)
             request.env['mail.mail'].sudo().send([mail_id])
 
-            return json.dumps({'success': True, 'message': '¡Solicitud de tóner enviada con éxito!'})
+            return {
+            'success': True,
+            'message': '¡Solicitud de tóner enviada con éxito!'
+            }
         except Exception as e:
             _logger.exception("Failed to send toner request: %s", e)
-            return json.dumps({'success': False, 'message': f'Error al enviar la solicitud de tóner: {str(e)}'})
+            return {
+                'success': False,
+                'message': f'Error al enviar la solicitud de tóner: {str(e)}'
+            }
 
 class RepuestosAlquilerController(http.Controller):
     @http.route('/alquiler/repuestos/<int:id_alquiler>', type='http', auth='user', website=True)

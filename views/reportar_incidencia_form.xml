@@ -4,9 +4,35 @@
         <t t-call="website.layout">
             <style>
                 .form-group { margin-bottom: 30px; }
+                #confirmationModal .modal-content {
+                    border-radius: 15px;
+                    border: none;
+                    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+                }
+                #confirmationModal .modal-header {
+                    background-color: #4CAF50;
+                    color: white;
+                    border-top-left-radius: 15px;
+                    border-top-right-radius: 15px;
+                    border-bottom: none;
+                }
+                #confirmationModal .modal-body {
+                    padding: 30px;
+                    text-align: center;
+                }
+                #confirmationModal .modal-body i {
+                    font-size: 60px;
+                    color: #4CAF50;
+                    margin-bottom: 20px;
+                }
+                #confirmationModal .modal-body p {
+                    font-size: 18px;
+                    color: #333;
+                    margin-bottom: 0;
+                }
             </style>
-            <div id="wrap" class="container mt-5 mb-5">
-                <h1 class="text-center">Reportar un Problema</h1>
+            <div class="container mt-5 mb-5">
+                <h1 class="text-center mb-4">Reportar un Problema</h1>
                 <form id="ticket_form" action="/ticket/reportar_incidencia" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                     <input type="hidden" id="partner_id" name="partner_id" t-att-value="partner_id"/>
@@ -15,28 +41,32 @@
                     <input type="hidden" id="product_id" name="product_id" t-att-value="product_id"/>
                     
                     <div class="form-group">
+                        <label for="reporter_name">Nombre</label>
                         <input type="text" id="reporter_name" name="reporter_name" class="form-control" 
                                t-att-value="contacto_id" placeholder="Ingresa tu nombre" required="required"/>
                     </div>
                     <div class="form-group">
+                        <label for="reporter_phone">Número de Celular</label>
                         <input type="tel" id="reporter_phone" name="reporter_phone" class="form-control" 
                                t-att-value="celular" placeholder="Ingresa tu número de celular" required="required"/>
                     </div>
                     <div class="form-group">
-                        <textarea id="description" name="description" class="form-control" required="required" 
-                                  placeholder="Describa el problema con detalle"></textarea>
+                        <label for="description">Descripción del Problema</label>
+                        <textarea id="description" name="description" class="form-control" rows="5" required="required" 
+                                  placeholder="Describe el problema con detalle"></textarea>
                     </div>
                     <div class="form-group">
+                        <label for="problem_photo">Foto del Problema (opcional)</label>
                         <input type="file" id="problem_photo" name="problem_photo" class="form-control-file" 
-                               accept="image/*" capture="environment" required="required"/>
+                               accept="image/*" capture="environment"/>
                     </div>
                     <div class="text-center">
-                        <button type="submit" class="btn btn-primary">Enviar Reporte</button>
+                        <button type="submit" class="btn btn-primary btn-lg">Enviar Reporte</button>
                     </div>
                 </form>
             </div>
 
-            <!-- Ventana de confirmación flotante -->
+            <!-- Modal de confirmación -->
             <div id="confirmationModal" class="modal fade" tabindex="-1" role="dialog">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -47,6 +77,7 @@
                             </button>
                         </div>
                         <div class="modal-body">
+                            <i class="fa fa-check-circle"></i>
                             <p id="confirmationMessage"></p>
                         </div>
                     </div>
@@ -58,20 +89,26 @@
                     $('#ticket_form').submit(function(e) {
                         e.preventDefault();
                         var form = $(this);
+                        var formData = new FormData(this);
+                        
                         $.ajax({
                             url: form.attr('action'),
                             type: 'POST',
-                            data: new FormData(this),
+                            data: formData,
                             processData: false,
                             contentType: false,
+                            dataType: 'json',
                             success: function(response) {
-                                var result = JSON.parse(response);
-                                $('#confirmationMessage').text(result.message);
-                                $('#confirmationModal').modal('show');
-                                setTimeout(function() {
-                                    $('#confirmationModal').modal('hide');
-                                    window.history.back();
-                                }, 3000);
+                                if (response.success) {
+                                    $('#confirmationMessage').text(response.message);
+                                    $('#confirmationModal').modal('show');
+                                    setTimeout(function() {
+                                        $('#confirmationModal').modal('hide');
+                                        window.history.back();
+                                    }, 3000);
+                                } else {
+                                    alert(response.message);
+                                }
                             },
                             error: function() {
                                 alert('Ocurrió un error al enviar el reporte.');
