@@ -100,14 +100,21 @@ class PublicTicketController(http.Controller):
             return request.render('sat.error_page', {'error': str(e)})
         
 class TonerRequestController(http.Controller):
+
     @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
     def display_toner_request_form(self, **kw):
-        id_registro = kw.get('id_registro')
-        user_name = kw.get('user_name')
-        phone_number = kw.get('phone_number')
-        
-        registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))], limit=1)
-        if registro:
+        try:
+            id_registro = kw.get('id_registro')
+            user_name = kw.get('user_name')
+            phone_number = kw.get('phone_number')
+
+            _logger.info(f"Solicitud de formulario de tóner recibida. id_registro={id_registro}, user_name={user_name}, phone_number={phone_number}")
+            
+            registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))], limit=1)
+            if not registro:
+                _logger.error(f"No se encontró registro con id {id_registro}")
+                return request.redirect('/pagina_error')
+
             values = {
                 'id_registro': registro.id,
                 'cliente': registro.cliente_id.name if registro.cliente_id else "",
@@ -116,13 +123,22 @@ class TonerRequestController(http.Controller):
                 'nombre': user_name or "",
                 'celular': phone_number.replace('@c.us', '') if phone_number else "",
             }
+
+            _logger.info(f"Formulario de tóner preparado con los siguientes valores: {values}")
             return request.render('sat.solicitar_toner_form_template', {'values': values})
-        else:
+        
+        except Exception as e:
+            _logger.exception(f"Error al mostrar el formulario de solicitud de tóner: {str(e)}")
             return request.redirect('/pagina_error')
 
     @http.route('/pagina_confirmacion_toner', type='http', auth="public", website=True)
     def pagina_confirmacion(self, **kw):
-        return request.render('sat.pagina_confirmacion_toner')
+        try:
+            _logger.info("Mostrando la página de confirmación de tóner.")
+            return request.render('sat.pagina_confirmacion_toner')
+        except Exception as e:
+            _logger.exception(f"Error al mostrar la página de confirmación de tóner: {str(e)}")
+            return request.redirect('/pagina_error')
 
     @http.route('/toner/enviar_solicitud', type='http', auth="public", methods=['POST'], website=True)
     def send_toner_request(self, **post):
@@ -141,7 +157,14 @@ class TonerRequestController(http.Controller):
                 'contometro_black': post.get('contometro_black'),
                 'contometro_color': post.get('contometro_color'),
             }
-            
+
+            _logger.info(f"Datos recibidos del formulario de solicitud de tóner: {datos_formulario}")
+
+            # Validar campos obligatorios
+            if not all([datos_formulario['cliente'], datos_formulario['nombre'], datos_formulario['celular'], datos_formulario['modelo_maquina'], datos_formulario['serie']]):
+                _logger.error("Faltan campos obligatorios en el formulario.")
+                return request.redirect('/pagina_error')
+
             # Construir el cuerpo del correo electrónico
             toners = [
                 {'name': 'Tóner Black', 'qty': datos_formulario.get('toner_black')},
@@ -202,10 +225,10 @@ class TonerRequestController(http.Controller):
             </body>
             </html>
             """
-           
+
             # Configurar los valores del correo electrónico
             mail_values = {
-                'subject': f"Solicitud de Toner - {datos_formulario['modelo_maquina']}",
+                'subject': f"Solicitud de Tóner - {datos_formulario['modelo_maquina']}",
                 'body_html': body_html,
                 'email_from': 'soporte@andescopiers.com.pe',
                 'email_to': 'jamilet.roggero@andescopiers.com.pe',
@@ -213,14 +236,18 @@ class TonerRequestController(http.Controller):
                 'mail_server_id': 1,
             }
 
+            _logger.info(f"Enviando correo con los valores: {mail_values}")
+
             # Crear y enviar el correo electrónico
             mail_id = request.env['mail.mail'].sudo().create(mail_values)
             request.env['mail.mail'].sudo().send([mail_id])
 
+            _logger.info("Correo enviado exitosamente.")
+
             # Redirigir a la página de confirmación
             return request.redirect('/pagina_confirmacion_toner')
         except Exception as e:
-            _logger.exception("Failed to send toner request: %s", e)
+            _logger.exception(f"Error al enviar la solicitud de tóner: {str(e)}")
             return request.redirect('/pagina_error')
         
 class RepuestosAlquilerController(http.Controller):
