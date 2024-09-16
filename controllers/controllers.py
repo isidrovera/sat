@@ -6,6 +6,7 @@ from datetime import date
 import base64
 import urllib.parse
 import logging
+import requests
 _logger = logging.getLogger(__name__)
 
 
@@ -111,6 +112,14 @@ class PublicTicketController(http.Controller):
 
 class TonerRequestController(http.Controller):
 
+    def clean_phone_number(self, phone_number):
+        """Elimina espacios en blanco y agrega el prefijo '51' si no lo tiene."""
+        if phone_number:
+            phone_number = ''.join(phone_number.split())  # Elimina espacios
+            if not phone_number.startswith('51'):
+                phone_number = '51' + phone_number  # Agrega prefijo '51'
+        return phone_number
+
     @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
     def display_toner_request_form(self, **kw):
         try:
@@ -119,20 +128,27 @@ class TonerRequestController(http.Controller):
             phone_number = kw.get('phone_number')
 
             _logger.info(f"Solicitud de formulario de tóner recibida. id_registro={id_registro}, user_name={user_name}, phone_number={phone_number}")
-            
+
             registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))], limit=1)
             if not registro:
                 _logger.error(f"No se encontró registro con id {id_registro}")
                 return request.redirect('/pagina_error')
+
+            # Limpiar y agregar el prefijo '51' si no está
+            if phone_number:
+                phone_number = self.clean_phone_number(phone_number)
+            else:
+                # Si el acceso es por QR, phone_number será vacío y el usuario debe ingresar manualmente
+                phone_number = ''
 
             values = {
                 'id_registro': registro.id,
                 'cliente': registro.cliente_id.name if registro.cliente_id else "",
                 'modelo_maquina': registro.name.name if registro.name else "",
                 'serie': registro.serie if registro else "",
-                'nombre': user_name or "",
-                'celular': phone_number.replace('@c.us', '') if phone_number else "",
-                'tipo_maquina_id': registro.tipo_maquina_id,
+                'nombre': user_name or "",  # Puede venir precargado desde WhatsApp
+                'celular': phone_number,    # Si viene desde WhatsApp, lo normalizamos
+                'tipo_maquina_id': registro.tipo_maquina_id
             }
 
             _logger.info(f"Formulario de tóner preparado con los siguientes valores: {values}")
@@ -158,56 +174,68 @@ class TonerRequestController(http.Controller):
             datos_formulario = {
                 'cliente': post.get('cliente'),
                 'nombre': post.get('nombre'),
-                'celular': post.get('celular'),  # Verificar el celular enviado por el formulario
+                'celular': self.clean_phone_number(post.get('celular')),  # Limpiar número antes de usar
                 'modelo_maquina': post.get('modelo_maquina'),
                 'serie': post.get('serie'),
                 'toner_black': post.get('toner_black'),
-                'toner_cyan': post.get('toner_cyan') if post.get('tipo_maquina_id') == 'color' else None,
-                'toner_yellow': post.get('toner_yellow') if post.get('tipo_maquina_id') == 'color' else None,
-                'toner_magenta': post.get('toner_magenta') if post.get('tipo_maquina_id') == 'color' else None,
+                'toner_cyan': post.get('toner_cyan'),
+                'toner_yellow': post.get('toner_yellow'),
+                'toner_magenta': post.get('toner_magenta'),
                 'contometro_black': post.get('contometro_black'),
-                'contometro_color': post.get('contometro_color') if post.get('tipo_maquina_id') == 'color' else None,
+                'contometro_color': post.get('contometro_color'),
             }
 
             _logger.info(f"Datos recibidos del formulario de solicitud de tóner: {datos_formulario}")
 
-            # Validar campos obligatorios, incluido el campo de celular
+            # Validar campos obligatorios
             if not all([datos_formulario['cliente'], datos_formulario['nombre'], datos_formulario['celular'], datos_formulario['modelo_maquina'], datos_formulario['serie']]):
                 _logger.error("Faltan campos obligatorios en el formulario.")
                 return request.redirect('/pagina_error')
 
-            # Enviar mensaje de WhatsApp (opcional)
-            mensaje_toner = f"Estimado {datos_formulario['nombre']},\n\nHemos recibido su solicitud de tóner. Los detalles de su solicitud son los siguientes:\n\n" \
-                            f"Cliente: {datos_formulario['cliente']}\nModelo de Máquina: {datos_formulario['modelo_maquina']}\nSerie: {datos_formulario['serie']}\n" \
-                            f"Contometro Black: {datos_formulario['contometro_black']}\n" \
-                            f"Contometro Color: {datos_formulario.get('contometro_color', 'N/A')}\n\n" \
-                            "Por favor, esté atento a próximas notificaciones sobre el estado de su pedido."
+            # Generar el mensaje
+            mensaje_toner = f"Estimado/a {datos_formulario['nombre']},\n\nSu solicitud de tóner ha sido recibida:\n"
+            mensaje_toner += f"Cliente: {datos_formulario['cliente']}\n"
+            mensaje_toner += f"Modelo: {datos_formulario['modelo_maquina']}\n"
+            mensaje_toner += f"Serie: {datos_formulario['serie']}\n"
+            mensaje_toner += f"Contometro Black: {datos_formulario['contometro_black']}\n"
 
-            # Enviar el mensaje de WhatsApp solo si el celular está presente
-            if datos_formulario['celular']:
-                self.send_whatsapp_message(datos_formulario['celular'], mensaje_toner)
+            if datos_formulario['contometro_color']:
+                mensaje_toner += f"Contometro Color: {datos_formulario['contometro_color']}\n"
+
+            # Enviar el mensaje de WhatsApp
+            self.send_whatsapp_message_toner(datos_formulario['celular'], mensaje_toner)
 
             # Construir el cuerpo del correo electrónico
-            toner_lines = f"<tr><td>Tóner Black</td><td>{datos_formulario.get('toner_black', '0')}</td></tr>"
+            toners = [
+                {'name': 'Tóner Black', 'qty': datos_formulario.get('toner_black')},
+                {'name': 'Tóner Cyan', 'qty': datos_formulario.get('toner_cyan')},
+                {'name': 'Tóner Yellow', 'qty': datos_formulario.get('toner_yellow')},
+                {'name': 'Tóner Magenta', 'qty': datos_formulario.get('toner_magenta')},
+            ]
 
-            if post.get('tipo_maquina_id') == 'color':
-                toner_lines += f"""
-                    <tr>
-                        <td>Tóner Cyan</td>
-                        <td>{datos_formulario.get('toner_cyan', '0')}</td>
-                    </tr>
-                    <tr>
-                        <td>Tóner Yellow</td>
-                        <td>{datos_formulario.get('toner_yellow', '0')}</td>
-                    </tr>
-                    <tr>
-                        <td>Tóner Magenta</td>
-                        <td>{datos_formulario.get('toner_magenta', '0')}</td>
-                    </tr>
-                """
+            toner_lines = ""
+            for toner in toners:
+                if toner['qty'] and int(toner['qty']) > 0:
+                    toner_lines += f"<tr><td>{toner['name']}</td><td>{toner['qty']}</td></tr>"
 
             body_html = f"""
             <html>
+            <head>
+            <style>
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }}
+            th {{
+                background-color: #f2f2f2;
+            }}
+            </style>
+            </head>
             <body>
             <p>Hola,</p>
             <p>Se ha realizado una solicitud de tóner con los siguientes detalles:</p>
@@ -218,20 +246,21 @@ class TonerRequestController(http.Controller):
                 <li>Modelo de Máquina: {datos_formulario['modelo_maquina']}</li>
                 <li>Serie: {datos_formulario['serie']}</li>
                 <li>Contometro Black: {datos_formulario['contometro_black']}</li>
-                <li>Contometro Color: {datos_formulario.get('contometro_color', 'N/A')}</li>
+                <li>Contometro Color: {datos_formulario['contometro_color']}</li>
             </ul>
-            <p>Los tóners solicitados son:</p>
+            <p>Los toners solicitados son:</p>
             <table>
-                <thead>
-                    <tr>
-                        <th>Tipo de Tóner</th>
-                        <th>Cantidad</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {toner_lines}
-                </tbody>
+            <thead>
+                <tr>
+                <th>Tipo de Tóner</th>
+                <th>Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {toner_lines}
+            </tbody>
             </table>
+            <p>Por favor, proceda con la preparación y envío del tóner.</p>
             <p>Gracias,</p>
             </body>
             </html>
@@ -261,7 +290,24 @@ class TonerRequestController(http.Controller):
             _logger.exception(f"Error al enviar la solicitud de tóner: {str(e)}")
             return request.redirect('/pagina_error')
 
-        
+    def send_whatsapp_message_toner(self, phone, message):
+        """Envia un mensaje de WhatsApp relacionado con la solicitud de tóner."""
+        try:
+            _logger.debug(f"Enviando mensaje de WhatsApp para tóner a {phone} con contenido: {message}")
+            
+            url = 'https://whatsapp.copiercompanysac.com/lead'
+            data = {
+                'phone': phone,
+                'message': message
+            }
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(url, headers=headers, json=data)
+
+            _logger.debug(f"Código de estado: {response.status_code}")
+            _logger.debug(f"Respuesta de la API: {response.text}")
+        except Exception as e:
+            _logger.error(f"Error enviando mensaje de WhatsApp para tóner: {str(e)}")
+
 class RepuestosAlquilerController(http.Controller):
     @http.route('/alquiler/repuestos/<int:id_alquiler>', type='http', auth='user', website=True)
     def listar_repuestos(self, id_alquiler, search='', **kw):
