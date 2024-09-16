@@ -49,8 +49,7 @@
         'views/template_formulario_ticket.xml',               
         'data/plantillas_correo.xml',
         'views/pagina_con_opciones.xml',
-        'views/reportar_incidencia_form.xml',
-        'views/solicitar_toner_form.xml',
+        'views/reportar_incidencia_form.xml',        
         'views/pagina_confirmacion.xml',
         'views/solicitar_toner_form_template.xml',
         'views/pagina_confirmacion_toner.xml',
@@ -67,15 +66,11 @@
     ],
     'assets': {
     'web.assets_backend': [
-        'sat/static/src/js/tree_button.js',
-        'sat/static/src/js/evaluacion.js',        
-        'sat/static/src/css/evaluacion.css',
+        
              
     ],
     'web.assets_qweb': [
-        'sat/static/src/xml/tree_button.xml',
-        'sat/static/src/js/ticket_chart.js',
-        'sat/static/src/xml/ticket_chart_template.xml',        
+               
     ],
     },
     'qweb': [

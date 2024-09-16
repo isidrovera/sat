@@ -1,8 +1,0 @@
-<!-- static/src/xml/evaluacion_personal_graph_view.xml -->
-<templates>
-    <t t-name="EvaluacionPersonalGraphView">
-        <div class="o_evaluacion_personal_graph_view">
-            <canvas id="evaluacionPersonalChart"></canvas>
-        </div>
-    </t>
-</templates>
