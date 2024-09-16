@@ -86,8 +86,8 @@ class PublicTicketController(http.Controller):
             ticket_vals = {
                 'partner_id': int(post.get('partner_id')),
                 'direccion_id_r': post.get('direccion'),
-                'contacto_id_r': post.get('reporter_name'),
-                'celular_id_r': post.get('reporter_phone'),
+                'reporter_name': post.get('reporter_name'),
+                'reporter_phone': post.get('reporter_phone'),
                 'corre_id_r': post.get('correo'),
                 'product_alquiler': int(post.get('product_id')),
                 'description': post.get('description'),
