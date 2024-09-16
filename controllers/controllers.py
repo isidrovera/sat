@@ -76,6 +76,7 @@ class PublicTicketController(http.Controller):
     @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['POST'], website=True)
     def submit_reportar_incidencia(self, **post):
         try:
+            # Procesar la foto del problema, si existe
             if 'problem_photo' in request.httprequest.files:
                 file = request.httprequest.files['problem_photo']
                 file_content = file.read()
@@ -83,6 +84,7 @@ class PublicTicketController(http.Controller):
             else:
                 file_base64 = None
 
+            # Valores del ticket enviados por el cliente
             ticket_vals = {
                 'partner_id': int(post.get('partner_id')),
                 'direccion_id_r': post.get('direccion'),
@@ -93,12 +95,20 @@ class PublicTicketController(http.Controller):
                 'description': post.get('description'),
                 'problem_photo': file_base64,
             }
-            request.env['ticket.alquiler'].sudo().create(ticket_vals)
+
+            # Crear el ticket en la base de datos
+            ticket = request.env['ticket.alquiler'].sudo().create(ticket_vals)
+            
+            # Llamar a la función para enviar el mensaje de WhatsApp al reportero
+            ticket.enviar_mensaje_whatsapp_reporter()
+
+            # Redirigir a la página de confirmación
             return request.redirect('/pagina_confirmacion')
+        
         except Exception as e:
             _logger.exception("Failed to create ticket: %s", e)
             return request.render('sat.error_page', {'error': str(e)})
-        
+
 class TonerRequestController(http.Controller):
 
     @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
@@ -147,55 +157,56 @@ class TonerRequestController(http.Controller):
             datos_formulario = {
                 'cliente': post.get('cliente'),
                 'nombre': post.get('nombre'),
-                'celular': post.get('celular'),
+                'celular': post.get('celular'),  # Verificar el celular enviado por el formulario
                 'modelo_maquina': post.get('modelo_maquina'),
                 'serie': post.get('serie'),
                 'toner_black': post.get('toner_black'),
-                'toner_cyan': post.get('toner_cyan'),
-                'toner_yellow': post.get('toner_yellow'),
-                'toner_magenta': post.get('toner_magenta'),
+                'toner_cyan': post.get('toner_cyan') if post.get('tipo_maquina_id') == 'color' else None,
+                'toner_yellow': post.get('toner_yellow') if post.get('tipo_maquina_id') == 'color' else None,
+                'toner_magenta': post.get('toner_magenta') if post.get('tipo_maquina_id') == 'color' else None,
                 'contometro_black': post.get('contometro_black'),
-                'contometro_color': post.get('contometro_color'),
+                'contometro_color': post.get('contometro_color') if post.get('tipo_maquina_id') == 'color' else None,
             }
 
             _logger.info(f"Datos recibidos del formulario de solicitud de tóner: {datos_formulario}")
 
-            # Validar campos obligatorios
+            # Validar campos obligatorios, incluido el campo de celular
             if not all([datos_formulario['cliente'], datos_formulario['nombre'], datos_formulario['celular'], datos_formulario['modelo_maquina'], datos_formulario['serie']]):
                 _logger.error("Faltan campos obligatorios en el formulario.")
                 return request.redirect('/pagina_error')
 
-            # Construir el cuerpo del correo electrónico
-            toners = [
-                {'name': 'Tóner Black', 'qty': datos_formulario.get('toner_black')},
-                {'name': 'Tóner Cyan', 'qty': datos_formulario.get('toner_cyan')},
-                {'name': 'Tóner Yellow', 'qty': datos_formulario.get('toner_yellow')},
-                {'name': 'Tóner Magenta', 'qty': datos_formulario.get('toner_magenta')},
-            ]
+            # Enviar mensaje de WhatsApp (opcional)
+            mensaje_toner = f"Estimado {datos_formulario['nombre']},\n\nHemos recibido su solicitud de tóner. Los detalles de su solicitud son los siguientes:\n\n" \
+                            f"Cliente: {datos_formulario['cliente']}\nModelo de Máquina: {datos_formulario['modelo_maquina']}\nSerie: {datos_formulario['serie']}\n" \
+                            f"Contometro Black: {datos_formulario['contometro_black']}\n" \
+                            f"Contometro Color: {datos_formulario.get('contometro_color', 'N/A')}\n\n" \
+                            "Por favor, esté atento a próximas notificaciones sobre el estado de su pedido."
 
-            toner_lines = ""
-            for toner in toners:
-                if toner['qty'] and int(toner['qty']) > 0:
-                    toner_lines += f"<tr><td>{toner['name']}</td><td>{toner['qty']}</td></tr>"
+            # Enviar el mensaje de WhatsApp solo si el celular está presente
+            if datos_formulario['celular']:
+                self.send_whatsapp_message(datos_formulario['celular'], mensaje_toner)
+
+            # Construir el cuerpo del correo electrónico
+            toner_lines = f"<tr><td>Tóner Black</td><td>{datos_formulario.get('toner_black', '0')}</td></tr>"
+
+            if post.get('tipo_maquina_id') == 'color':
+                toner_lines += f"""
+                    <tr>
+                        <td>Tóner Cyan</td>
+                        <td>{datos_formulario.get('toner_cyan', '0')}</td>
+                    </tr>
+                    <tr>
+                        <td>Tóner Yellow</td>
+                        <td>{datos_formulario.get('toner_yellow', '0')}</td>
+                    </tr>
+                    <tr>
+                        <td>Tóner Magenta</td>
+                        <td>{datos_formulario.get('toner_magenta', '0')}</td>
+                    </tr>
+                """
 
             body_html = f"""
             <html>
-            <head>
-            <style>
-            table {{
-                width: 100%;
-                border-collapse: collapse;
-            }}
-            th, td {{
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }}
-            th {{
-                background-color: #f2f2f2;
-            }}
-            </style>
-            </head>
             <body>
             <p>Hola,</p>
             <p>Se ha realizado una solicitud de tóner con los siguientes detalles:</p>
@@ -206,21 +217,20 @@ class TonerRequestController(http.Controller):
                 <li>Modelo de Máquina: {datos_formulario['modelo_maquina']}</li>
                 <li>Serie: {datos_formulario['serie']}</li>
                 <li>Contometro Black: {datos_formulario['contometro_black']}</li>
-                <li>Contometro Color: {datos_formulario['contometro_color']}</li>
+                <li>Contometro Color: {datos_formulario.get('contometro_color', 'N/A')}</li>
             </ul>
-            <p>Los toners solicitados son:</p>
+            <p>Los tóners solicitados son:</p>
             <table>
-            <thead>
-                <tr>
-                <th>Tipo de Tóner</th>
-                <th>Cantidad</th>
-                </tr>
-            </thead>
-            <tbody>
-                {toner_lines}
-            </tbody>
+                <thead>
+                    <tr>
+                        <th>Tipo de Tóner</th>
+                        <th>Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {toner_lines}
+                </tbody>
             </table>
-            <p>Por favor, proceda con la preparación y envío del tóner.</p>
             <p>Gracias,</p>
             </body>
             </html>
@@ -249,6 +259,7 @@ class TonerRequestController(http.Controller):
         except Exception as e:
             _logger.exception(f"Error al enviar la solicitud de tóner: {str(e)}")
             return request.redirect('/pagina_error')
+
         
 class RepuestosAlquilerController(http.Controller):
     @http.route('/alquiler/repuestos/<int:id_alquiler>', type='http', auth='user', website=True)

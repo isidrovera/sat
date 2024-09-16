@@ -529,7 +529,21 @@ class ticket_alquiler(models.Model):
         self.estado='proceso'
     
         
-    
+    def enviar_mensaje_whatsapp_reporter(self):
+        """Enviar mensaje de WhatsApp con los datos proporcionados por el cliente."""
+        if self.reporter_phone:
+            # Datos del reporte del cliente
+            message = f"Gracias {self.reporter_name}, por su reporte.\n\nA continuación los detalles proporcionados:\n"
+            message += f"Cliente: {self.partner_id.name if self.partner_id else 'No especificado'}\n"
+            message += f"Dirección: {self.direccion_id_r if self.direccion_id_r else 'No especificada'}\n"
+            message += f"Descripción del problema: {self.description if self.description else 'No proporcionada'}\n"
+
+            if self.problem_photo:
+                message += "Foto del problema: Se adjuntará en un correo."
+
+            # Enviar mensaje de WhatsApp con los detalles del cliente
+            self.send_whatsapp_message(self.reporter_phone, message)
+
             
 class ReportTicketAlquiler(models.AbstractModel):
     _name = 'report.sat.ticket_view'
