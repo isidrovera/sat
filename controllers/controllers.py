@@ -200,8 +200,8 @@ class TonerRequestController(http.Controller):
             mensaje_toner += f"Serie: {datos_formulario['serie']}\n"
            
 
-            if datos_formulario['contometro_color']:
-                mensaje_toner += f"Contometro Color: {datos_formulario['contometro_color']}\n"
+            #if datos_formulario['contometro_color']:
+                #mensaje_toner += f"Contometro Color: {datos_formulario['contometro_color']}\n"
 
             # Enviar el mensaje de WhatsApp
             self.send_whatsapp_message_toner(datos_formulario['celular'], mensaje_toner)
