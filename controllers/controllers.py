@@ -112,13 +112,14 @@ class PublicTicketController(http.Controller):
 
 class TonerRequestController(http.Controller):
 
-    def clean_phone_number(self, phone_number):
-        """Elimina espacios en blanco y agrega el prefijo '51' si no lo tiene."""
-        if phone_number:
-            phone_number = ''.join(phone_number.split())  # Elimina espacios
-            if not phone_number.startswith('51'):
-                phone_number = '51' + phone_number  # Agrega prefijo '51'
-        return phone_number
+    def clean_phone_number(self, phone):
+        """Limpia el número de teléfono eliminando el sufijo '@c.us' y agregando el prefijo '51' si es necesario."""
+        if phone:
+            phone = phone.replace('@c.us', '')  # Eliminar el sufijo '@c.us'
+            phone = ''.join(phone.split())  # Eliminar cualquier espacio en blanco
+            if not phone.startswith('51'):
+                phone = '51' + phone  # Agregar el prefijo '51' si no está presente
+        return phone
 
     @http.route('/toner/solicitar_toner', type='http', auth="public", methods=['GET'], website=True)
     def display_toner_request_form(self, **kw):
