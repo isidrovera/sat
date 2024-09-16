@@ -198,7 +198,7 @@ class TonerRequestController(http.Controller):
             mensaje_toner += f"Cliente: {datos_formulario['cliente']}\n"
             mensaje_toner += f"Modelo: {datos_formulario['modelo_maquina']}\n"
             mensaje_toner += f"Serie: {datos_formulario['serie']}\n"
-            mensaje_toner += f"Contometro Black: {datos_formulario['contometro_black']}\n"
+           
 
             if datos_formulario['contometro_color']:
                 mensaje_toner += f"Contometro Color: {datos_formulario['contometro_color']}\n"
@@ -272,8 +272,8 @@ class TonerRequestController(http.Controller):
                 'subject': f"Solicitud de Tóner - {datos_formulario['modelo_maquina']}",
                 'body_html': body_html,
                 'email_from': 'soporte@andescopiers.com.pe',
-                'email_to': 'verapolo@icloud.com',
-                #'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',
+                'email_to': 'jamilet.roggero@andescopiers.com.p',
+                'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',
                 'mail_server_id': 1,
             }
 

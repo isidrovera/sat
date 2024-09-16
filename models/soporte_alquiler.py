@@ -533,13 +533,24 @@ class ticket_alquiler(models.Model):
         """Enviar mensaje de WhatsApp con los datos proporcionados por el cliente."""
         if self.reporter_phone:
             # Datos del reporte del cliente
-            message = f"Gracias {self.reporter_name}, por su reporte.\n\nA continuación los detalles proporcionados:\n"
-            message += f"Cliente: {self.partner_id.name if self.partner_id else 'No especificado'}\n"
-            message += f"Dirección: {self.direccion_id_r if self.direccion_id_r else 'No especificada'}\n"
-            message += f"Descripción del problema: {self.description if self.description else 'No proporcionada'}\n"
+            message = (
+                f"Estimado/a {self.reporter_name},\n\n"
+                "Hemos recibido su reporte de incidente y agradecemos la información proporcionada. "
+                "A continuación, detallamos los datos registrados:\n\n"
+                f"Cliente: {self.partner_id.name if self.partner_id else 'No especificado'}\n"
+                f"Dirección: {self.direccion_id_r if self.direccion_id_r else 'No especificada'}\n"
+                f"Modelo: {self.modelo_id_r if self.modelo_id_r else 'No especificada'}\n"
+                f"Serie: {self.serie_id_r if self.serie_id_r else 'No especificada'}\n"
+                f"Descripción del problema: {self.description if self.description else 'No proporcionada'}\n"
+            )
 
             if self.problem_photo:
                 message += "Foto del problema: Se adjuntará en un correo."
+
+            message += (
+                "\nNuestro equipo de soporte programará la asistencia técnica en función de la disponibilidad. "
+                "Nos pondremos en contacto con usted para confirmar la fecha y hora."
+            )
 
             # Enviar mensaje de WhatsApp con los detalles del cliente
             self.send_whatsapp_message(self.reporter_phone, message)
