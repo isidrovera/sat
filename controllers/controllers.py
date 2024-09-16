@@ -132,6 +132,7 @@ class TonerRequestController(http.Controller):
                 'serie': registro.serie if registro else "",
                 'nombre': user_name or "",
                 'celular': phone_number.replace('@c.us', '') if phone_number else "",
+                'tipo_maquina_id': registro.tipo_maquina_id,
             }
 
             _logger.info(f"Formulario de tóner preparado con los siguientes valores: {values}")
@@ -241,8 +242,8 @@ class TonerRequestController(http.Controller):
                 'subject': f"Solicitud de Tóner - {datos_formulario['modelo_maquina']}",
                 'body_html': body_html,
                 'email_from': 'soporte@andescopiers.com.pe',
-                'email_to': 'jamilet.roggero@andescopiers.com.pe',
-                'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',
+                'email_to': 'verapolo@icloud.com',
+                #'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',
                 'mail_server_id': 1,
             }
 

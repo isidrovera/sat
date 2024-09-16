@@ -27,14 +27,13 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="contometro_black">Contometro Black</label>
-                            <input type="text" class="form-control" id="contometro_black" name="contometro_black" required="1"/>
+                            <input type="number" class="form-control" id="contometro_black" name="contometro_black" min="1" required="1" oninvalid="this.setCustomValidity('El contometro no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
                         </div>
 
-                        <!-- Mostrar el campo de contometro de color solo si la máquina es de tipo color -->
                         <t t-if="values['tipo_maquina_id'] == 'color'">
                             <div class="col-md-6 mb-3">
                                 <label for="contometro_color">Contometro Color</label>
-                                <input type="tel" class="form-control" id="contometro_color" name="contometro_color" required="1"/>
+                                <input type="number" class="form-control" id="contometro_color" name="contometro_color" min="1" required="1" oninvalid="this.setCustomValidity('El contometro no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
                             </div>
                         </t>
                     </div>
@@ -53,11 +52,10 @@
                                     Toner Black
                                 </td>
                                 <td>
-                                    <input type="number" name="toner_black" class="form-control" required="required"/>
+                                    <input type="number" name="toner_black" class="form-control" min="1" required="1" oninvalid="this.setCustomValidity('La cantidad de toner no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
                                 </td>
                             </tr>
 
-                            <!-- Mostrar los tóneres de color solo si la máquina es de tipo color -->
                             <t t-if="values['tipo_maquina_id'] == 'color'">
                                 <tr>
                                     <td>
@@ -65,7 +63,7 @@
                                         Toner Cyan
                                     </td>
                                     <td>
-                                        <input type="number" name="toner_cyan" class="form-control" />
+                                        <input type="number" name="toner_cyan" class="form-control" min="1" oninvalid="this.setCustomValidity('La cantidad de toner no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
                                     </td>
                                 </tr>
                                 <tr>
@@ -74,7 +72,7 @@
                                         Toner Yellow
                                     </td>
                                     <td>
-                                        <input type="number" name="toner_yellow" class="form-control"/>
+                                        <input type="number" name="toner_yellow" class="form-control" min="1" oninvalid="this.setCustomValidity('La cantidad de toner no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
                                     </td>
                                 </tr>
                                 <tr>
@@ -83,7 +81,7 @@
                                         Toner Magenta
                                     </td>
                                     <td>
-                                        <input type="number" name="toner_magenta" class="form-control" />
+                                        <input type="number" name="toner_magenta" class="form-control" min="1" oninvalid="this.setCustomValidity('La cantidad de toner no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
                                     </td>
                                 </tr>
                             </t>
@@ -96,7 +94,6 @@
                     </div>
                 </form>
             </div>
-
             <script>
                 function goBack() {
                     if (document.referrer) {
