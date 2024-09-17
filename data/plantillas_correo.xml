@@ -351,7 +351,7 @@
       <field name="model_id" ref="model_sat_sat"/>
       <field name="email_from">soporte@andescopiers.com.pe</field>
       <field name="email_to">lincoln@corapsac.com</field>
-      <field name="email_cc">campuero@corapsac.com.pe, ventas2@corapsac.com.pe, norma@corapsac.com, ventas3@andescopiers.com, ventas@corapsac.com</field>
+      <field name="email_cc">campuero@corapsac.com.pe, ventas2@corapsac.com.pe, norma@corapsac.com, ventas@corapsac.com</field>
       <field name="subject">Maquinas con problemas</field>
       <field name="auto_delete" eval="True"/>
       <field name="body_html"><![CDATA[

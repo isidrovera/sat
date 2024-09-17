@@ -161,7 +161,9 @@
                     <field name="agenda" widget="remaining_days"/>
                     <field name="asistencia_id" widget="badge" optional="hide"/>
                     <field name="responsable" widget="many2one_avatar" optional="hide"/>
+                    <button string=" " name="action_nuevo" type="object" class="oe_highlight" icon="fa-exchange"/>
                     <field name="estado" widget="badge" decoration-success="estado == 'finalizado' " decoration-warning="estado == 'proceso' "/>
+
                 </tree>
             </field>
         </record>
