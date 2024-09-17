@@ -272,7 +272,7 @@ class TonerRequestController(http.Controller):
                 'subject': f"Solicitud de Tóner - {datos_formulario['modelo_maquina']}",
                 'body_html': body_html,
                 'email_from': 'soporte@andescopiers.com.pe',
-                'email_to': 'jamilet.roggero@andescopiers.com.p',
+                'email_to': 'jamilet.roggero@andescopiers.com.pe',
                 'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',
                 'mail_server_id': 1,
             }
