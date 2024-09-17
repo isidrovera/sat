@@ -527,6 +527,9 @@ class ticket_alquiler(models.Model):
 
     def action_proceso(self):
         self.estado='proceso'
+        
+    def action_nuevo(self):
+        self.estado='nuevo'
     
         
     def enviar_mensaje_whatsapp_reporter(self):
