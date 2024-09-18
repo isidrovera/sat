@@ -67,7 +67,7 @@
             </div>
 
             <!-- Importar el archivo JS -->
-            <script type="text/javascript" src="/web/static/src/js/searchFilter.js"></script>
+            <script type="text/javascript" src="/sat/static/src/js/searchFilter.js"></script>
         </t>
     </template>
 </odoo>
