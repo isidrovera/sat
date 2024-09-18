@@ -26,6 +26,7 @@ class AlquilerQRController(http.Controller):
             'id': registro.id,
             'modelo_maquina': registro.name.name,
             'serie': registro.serie,
+            'ubicacion_instlacion': registro.ubicacion_instalacion,
             'cliente': registro.cliente_id.name,
         }
         
@@ -148,7 +149,9 @@ class TonerRequestController(http.Controller):
                 'modelo_maquina': registro.name.name if registro.name else "",
                 'serie': registro.serie if registro else "",
                 'nombre': user_name or "",  # Puede venir precargado desde WhatsApp
-                'celular': phone_number,    # Si viene desde WhatsApp, lo normalizamos
+                'celular': phone_number,
+                'ubicacion_instalacion': registro.ubicacion_instalacion,
+                # Si viene desde WhatsApp, lo normalizamos
                 'tipo_maquina_id': registro.tipo_maquina_id
             }
 

@@ -9,6 +9,7 @@
                         <tr>
                             <th>Modelo</th>
                             <th>Serie</th>
+                            <th>Área</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -17,6 +18,7 @@
                             <tr>
                                 <td><t t-esc="registro.name.name"/></td>
                                 <td><t t-esc="registro.serie"/></td>
+                                <td><t t-esc="registro.ubicacion_instalacion"/></td>
                                 <td>
                                     <a t-att-href="'/ticket/reportar_incidencia?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-primary">Reportar Incidencia</a>
                                     <a t-att-href="'/toner/solicitar_toner?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-secondary">Solicitar Tóner</a>

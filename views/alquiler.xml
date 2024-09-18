@@ -69,6 +69,7 @@
                                 <field name="serie"/>
                                 <field name="ubicacion_id" attrs="{'invisible':[('estado_alquiler_id', '=', 'alquilada')]}"/>
                                 <field name="observaciones"/>
+                                <field name="ubicacion_instalacion"/>
                             </group>
                         </group>
                         <notebook>
