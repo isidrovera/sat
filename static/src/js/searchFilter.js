@@ -14,11 +14,15 @@ function filterTable() {
         tdSerie = tr[i].getElementsByTagName("td")[1]; // Serie
         tdArea = tr[i].getElementsByTagName("td")[2];  // Área
 
+        console.log("Fila " + i + " - Modelo: ", tdModel, "Serie: ", tdSerie, "Área: ", tdArea);
+
         // Verificar que las celdas existan
         if (tdModel || tdSerie || tdArea) {
             txtValueModel = tdModel ? (tdModel.textContent || tdModel.innerText).toLowerCase() : '';
             txtValueSerie = tdSerie ? (tdSerie.textContent || tdSerie.innerText).toLowerCase() : '';
             txtValueArea = tdArea ? (tdArea.textContent || tdArea.innerText).toLowerCase() : '';
+
+            console.log("Valores - Modelo: ", txtValueModel, "Serie: ", txtValueSerie, "Área: ", txtValueArea);
 
             // Verifica si el texto ingresado coincide con cualquiera de los tres valores
             if (txtValueModel.indexOf(filter) > -1 || txtValueSerie.indexOf(filter) > -1 || txtValueArea.indexOf(filter) > -1) {
