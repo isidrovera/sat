@@ -69,6 +69,10 @@
         
              
     ],
+    'web.assets_frontend': [
+            'sat/static/src/js/searchFilter.js',
+            
+        ],
     'web.assets_qweb': [
                
     ],
