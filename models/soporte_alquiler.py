@@ -316,7 +316,7 @@ class ticket_alquiler(models.Model):
         """Envía un mensaje de WhatsApp con o sin archivo adjunto utilizando la API externa."""
         _logger.debug(f"Enviando mensaje a {phone} con contenido: {message} y archivo: {file_url}")
         
-        url = 'https://whatsapp.copiercompanysac.com/lead'
+        url = 'https://whatsapp.andessolutioncopiers.com/lead'
         data = {
             'phone': phone,
             'message': message

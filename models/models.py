@@ -478,7 +478,7 @@ class SatSat(models.Model):
             self.enviar_mensaje_whatsapp(numero, mensaje)
 
     def enviar_mensaje_whatsapp(self, phone, message):
-        url = 'https://whatsapp.copiercompanysac.com/lead'
+        url = 'https://whatsapp.andessolutioncopiers.com/lead'
         data = {
             'phone': phone,
             'message': message

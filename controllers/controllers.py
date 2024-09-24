@@ -299,7 +299,7 @@ class TonerRequestController(http.Controller):
         try:
             _logger.debug(f"Enviando mensaje de WhatsApp para tóner a {phone} con contenido: {message}")
             
-            url = 'https://whatsapp.copiercompanysac.com/lead'
+            url = 'https://whatsapp.andessolutioncopiers.com/lead'
             data = {
                 'phone': phone,
                 'message': message
