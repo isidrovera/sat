@@ -158,7 +158,7 @@
             <field name="name">reparaciones.reparaciones.tree</field>
             <field name="model">reparaciones.reparaciones</field>
             <field name="arch" type="xml">
-                <tree string="Reparaciones" default_order="id desc">
+                <list string="Reparaciones" default_order="id desc">
                     <field name="create_date" string="Agendado" widget="remaining_days" width="80%"/>
                     <field name="name"/>
                     <field name="cliente_id" widget="many2one_avatar"/>
@@ -171,7 +171,7 @@
                     <field name="responsable_id" widget="many2one_avatar"/>
                     <field name="estado_id" widget='badge' decoration-muted="estado_id == 'en_revision'" decoration-info="estado_id == 'en_revision'" decoration-success="estado_id == 'finalizado'" decoration-danger="estado_id not in ('sin_revisar','en_revision','finalizado','entregada')" decoration-warning="estado_id == 'entregada'"/>
                     <field name="activity_ids" widget="list_activity"/>
-                </tree>
+                </list>
             </field>
         </record>
         <record id="reparaciones_search_view" model="ir.ui.view">

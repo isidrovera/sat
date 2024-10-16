@@ -21,7 +21,7 @@
                             <field name="proveedor_id" />
                             <field name="informe" />                            
                             <field name="detalle_ids" >
-                                <tree string="Your Field Name">
+                                <list string="Your Field Name">
                                     <field name="name"/>
                                     <field name="importacion"/>
                                     <field name="proveedor_short"/>
@@ -31,7 +31,7 @@
                                     <field name="foto" 
                                     widget="image"
                                     />
-                                </tree>
+                                </list>
                             </field>
                         </group>
                     </sheet>
@@ -43,12 +43,12 @@
             <field name="name">Informes.tree</field>
             <field name="model">informes</field>
             <field name="arch" type="xml">
-                <tree string="ModelTitle">
+                <list string="ModelTitle">
                     <field name="name"/>
                     <field name="importacion" />
                     <field name="invoice" />
                     <field name="proveedor_id" />
-                </tree>
+                </list>
             </field>
         </record>
 

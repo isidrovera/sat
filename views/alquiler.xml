@@ -117,7 +117,7 @@
             <field name="name">Alquiler.tree</field>
             <field name="model">alquiler</field>
             <field name="arch" type="xml">
-                <tree string="ModelTitle">
+                <list string="ModelTitle">
                     <field name="cliente_id" class="oe_avatar"/>
                     <field name="tipo_maquina_id" optional="hide"/>
                     <field name="tipo_maquina" optional="hide"/>
@@ -137,7 +137,7 @@
                     </button>
                     <button class="oe_stat_button" type="object" name="get_repuestos" icon="fa-cogs">
                     </button>
-                </tree>
+                </list>
             </field>
         </record>
         <record id="alquiler_andes_search_view" model="ir.ui.view">

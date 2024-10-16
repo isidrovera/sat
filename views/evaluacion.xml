@@ -6,7 +6,7 @@
             <field name="name">evaluacion.personal.tree</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <tree default_order="id desc">
+                <list default_order="id desc">
                     <!-- Definir las columnas de la vista -->
                     <field name="name"/>
                     <field name="fecha"/>
@@ -17,7 +17,7 @@
                     <field name="total_score" widget="progressbar"/>
                     <field name="worker_level" optional="hide"/>
                     <field name="fields_to_improve" optional="hide"/>                    
-                </tree>
+                </list>
             </field>
         </record>
 

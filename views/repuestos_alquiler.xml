@@ -66,7 +66,7 @@
             <field name="name">repuestos.tree</field>
             <field name="model">repuestos.alquiler</field>
             <field name="arch" type="xml">
-                <tree string="Repuestos" default_order="id desc">
+                <list string="Repuestos" default_order="id desc">
                     <field name="create_date" string="Creado" widget="remaining_days" width="80%" optional="hide"/>
                     <field name="cliente_id"/>
                     <field name="modelo_id"/>
@@ -83,7 +83,7 @@
                     invisible="1"
                     />
                     <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide"/>
-                </tree>
+                </list>
             </field>
         </record>
 

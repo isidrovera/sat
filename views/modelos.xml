@@ -33,7 +33,7 @@
             <field name="name">Modelos_maquina.tree</field>
             <field name="model">modelo.maquina</field>
             <field name="arch" type="xml">
-                <tree string="ModelTitle" 
+                <list string="ModelTitle" 
                 editable="bottom"
                 >
                     <field name="tipo_id"/>
@@ -42,7 +42,7 @@
                     <field name="name"/>
                     <field name="currency_id" string="Tipo de moneda"/>
                     <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}"/>
-                </tree>
+                </list>
             </field>
         </record>
         <record id="modelos_maquina_search_view" model="ir.ui.view">

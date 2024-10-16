@@ -151,7 +151,7 @@
             <field name="name">ticket_alquiler.tree</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
-                <tree default_order="id desc">
+                <list default_order="id desc">
                     <field name="name" optional="hide"/>
                     <field name="partner_id"/>
                     <field name="direccion_id_r" optional="hide"/>
@@ -164,7 +164,7 @@
                     <button string=" " name="action_nuevo" type="object" class="oe_highlight" icon="fa-exchange"/>
                     <field name="estado" widget="badge" decoration-success="estado == 'finalizado' " decoration-warning="estado == 'proceso' "/>
 
-                </tree>
+                </list>
             </field>
         </record>
         <record id="model_name_view_kanban" model="ir.ui.view">

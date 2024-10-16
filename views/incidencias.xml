@@ -36,7 +36,7 @@
             <field name="name">taller.incidencia.tree</field>
             <field name="model">taller.incidencia</field>
             <field name="arch" type="xml">
-                <tree string="Incidencia">
+                <list string="Incidencia">
                     <field name="name" />
                     <field name="fecha_hora" />
                     <field name="tipo" />
@@ -50,7 +50,7 @@
                     <field name="fecha_resolucion" />
                     <field name="comentarios_cliente" />
                     <field name="costos" />
-                </tree>
+                </list>
             </field>
         </record>
 

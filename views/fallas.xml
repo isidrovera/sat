@@ -40,7 +40,7 @@
             <field name="name">Fallas_de_maquina.tree</field>
             <field name="model">fallas</field>
             <field name="arch" type="xml">
-                <tree string="ModelTitle">
+                <list string="ModelTitle">
                     <field name="name"/>
                     <field name="importacion" />
                     <field name="proveedor_id" />
@@ -50,7 +50,7 @@
                     <field name="descripcion_procesada" />
                     <field name="foto" widget="image" class="oe_avatar"/>                                
                     <field name="usuario_id" />                  
-                </tree>
+                </list>
             </field>
         </record>
 

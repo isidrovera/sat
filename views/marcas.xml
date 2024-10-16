@@ -25,9 +25,9 @@
             <field name="name">Marcas.tree</field>
             <field name="model">marca.marca</field>
             <field name="arch" type="xml">
-                <tree string="ModelTitle">
+                <list string="ModelTitle">
                     <field name="name"/>                   
-                </tree>
+                </list>
             </field>
         </record>
     </data>
