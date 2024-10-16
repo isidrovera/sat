@@ -7,7 +7,7 @@
             <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">1</field>
             <field name="interval_type">weeks</field>
-            <field name="numbercall">-1</field>
+            
             <field name="doall" eval="False"/>
             <field name="model_id" ref="model_sat_sat"/>
             <field name="state">code</field>
@@ -23,7 +23,7 @@
             <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">1</field>
             <field name="interval_type">days</field>
-            <field name="numbercall">-1</field>
+            
         </record>
         <record id="cron_send_maintenance_reminders" model="ir.cron">
             <field name="name">Enviar recordatorios de mantenimiento</field>
@@ -34,7 +34,7 @@
             <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">1</field>
             <field name="interval_type">days</field>
-            <field name="numbercall">-1</field>
+            
         </record>
     </data>
 </odoo>
