@@ -21,7 +21,8 @@ import requests
 class SatSat(models.Model):
     _name = 'sat.sat'
     _description = 'Registro de maquina'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'product.catalog.mixin']
 
     name = fields.Many2one('modelo.maquina', string='Modelo', required=True, tracking=True, 
      )
