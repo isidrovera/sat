@@ -131,8 +131,8 @@
     </record>
 
     <!-- Vista en formato lista -->
-    <record model="ir.ui.view" id="sat.list">
-      <field name="name">SAT list</field>
+    <record model="ir.ui.view" id="maquinas_tree_sat">
+      <field name="name">sat tree</field>
       <field name="model">sat.sat</field>
       <field name="type">tree</field>
       <field name="arch" type="xml">
