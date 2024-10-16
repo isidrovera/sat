@@ -134,9 +134,9 @@
     <record  id="maquinas_tree_sat" model="ir.ui.view">
       <field name="name">sat.tree</field>
       <field name="model">sat.sat</field>
-      <field name="type">tree</field>
+      <field name="type">list</field>
       <field name="arch" type="xml">
-        <tree default_order="id desc">
+        <list default_order="id desc">
           <field name="create_date" string="Ingreso" widget="remaining_days" width="80%" optional="hide"/>
           <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" invisible="disponibilidad_id != 'separada'" optional="hide"/>
           <field name="fecha_para_revision" string="Fecha para revisión" optional="hide"/>
@@ -162,7 +162,7 @@
           <button name="action_segundo" type="object" class="oe_stat_button" icon="fa-truck" groups="base.group_system" help="Segundo local"/>
           <field name="activity_ids" widget="list_activity" optional="hide"/>
           <button name="view_reparaciones_ids" type="object" icon="fa-wrench" invisible="estado_ventas_id != 'finalizado'"/>
-        </tree>
+        </list>
       </field>
     </record>
 
