@@ -8,14 +8,14 @@
             <field name="arch" type="xml">
                 <form>
                     <header>
-                        <button string="Alquilar" name="action_alquilar" type="object" class="btn btn-primary" attrs="{'invisible':[('estado_alquiler_id', '=', 'alquilada')]}"/>
-                        <button string="Stock" name="action_stock" type="object" class="btn btn-primary" attrs="{'invisible':[('estado_alquiler_id', '=', 'stock')]}"/>
-                        <button string="Lista" name="action_lista" type="object" icon="fa-check" class="btn btn-success" attrs="{'invisible':[('estado_alquiler_id', '=', 'lista')]}" groups="base.group_system"/>
-                        <button string="Para venta" name="action_venta" type="object" icon="fa-cart-plus" class="btn btn-info" attrs="{'invisible':[('estado_alquiler_id', '=', 'para_venta')]}" groups="base.group_system"/>
-                        <button string="Problemas" name="action_problemas" type="object" icon="fa-exclamation-triangle" class="btn btn-warning" attrs="{'invisible':[('estado_alquiler_id', '=', 'con_problemas')]}" groups="base.group_system"/>
-                        <button string="Externo" name="action_externo" type="object" icon="fa-user" class="oe_highlight" attrs="{'invisible':[('estado_alquiler_id', '=', 'externo')]}"/>
-                        <button string="Vender" name="action_vendida" type="object" class="btn btn-info" attrs="{'invisible':[('estado_alquiler_id', '=', 'vendida')]}"/>
-                        <button string="Partes" name="action_partes" type="object" icon="fa-exclamation-triangle" class="btn btn-danger" attrs="{'invisible':[('estado_alquiler_id', '=', 'partes')]}" groups="base.group_system"/>
+                        <button string="Alquilar" name="action_alquilar" type="object" class="btn btn-primary" invisible="estado_alquiler_id == 'alquilada'"/>
+                        <button string="Stock" name="action_stock" type="object" class="btn btn-primary" invisible="estado_alquiler_id == 'stock'"/>
+                        <button string="Lista" name="action_lista" type="object" icon="fa-check" class="btn btn-success" invisible="estado_alquiler_id == 'lista'" groups="base.group_system"/>
+                        <button string="Para venta" name="action_venta" type="object" icon="fa-cart-plus" class="btn btn-info" invisible="estado_alquiler_id == 'para_venta'" groups="base.group_system"/>
+                        <button string="Problemas" name="action_problemas" type="object" icon="fa-exclamation-triangle" class="btn btn-warning" invisible="estado_alquiler_id == 'con_problemas'" groups="base.group_system"/>
+                        <button string="Externo" name="action_externo" type="object" icon="fa-user" class="oe_highlight" invisible="estado_alquiler_id == 'externo'"/>
+                        <button string="Vender" name="action_vendida" type="object" class="btn btn-info" invisible="estado_alquiler_id == 'vendida'"/>
+                        <button string="Partes" name="action_partes" type="object" icon="fa-exclamation-triangle" class="btn btn-danger" invisible="estado_alquiler_id == 'partes'" groups="base.group_system"/>
                         <button string="Crear Pedido" name="create_sale_order" type="object" icon="fa-cart-plus" class="btn btn-success"/>
                         <button string="Crear Ticket" name="create_ticket" type="object" icon="fa-wrench" class="btn btn-primary"/>
                         
@@ -52,10 +52,10 @@
                         </div>
                         <group>
                             <group>
-                                <field name="direccion" attrs="{'required':[('estado_alquiler_id', '=', 'lista')]}"/>
-                                <field name="contacto_id" attrs="{'required':[('estado_alquiler_id', '=', 'lista')]}"/>
-                                <field name="celular" widget="phone" attrs="{'required':[('estado_alquiler_id', '=', 'lista')]}"/>
-                                <field name="correo_" widget="email" attrs="{'required':[('estado_alquiler_id', '=', 'lista')]}"/>
+                                <field name="direccion" required="estado_alquiler_id == 'lista'"/>
+                                <field name="contacto_id" required="estado_alquiler_id == 'lista'"/>
+                                <field name="celular" widget="phone" required="estado_alquiler_id == 'lista'"/>
+                                <field name="correo_" widget="email" required="estado_alquiler_id == 'lista'"/>
                                 <field name="correo_1" widget="email"/>
                                 <field name="correo_2" widget="email"/> 
                                 <!--<field name="image_qr" widget="image" options="{'size': [128, 128]}"/>-->
@@ -67,7 +67,7 @@
                                 <field name="marca"/>
                                 <field name="name"/>
                                 <field name="serie"/>
-                                <field name="ubicacion_id" attrs="{'invisible':[('estado_alquiler_id', '=', 'alquilada')]}"/>
+                                <field name="ubicacion_id" invisible="estado_alquiler_id == 'alquilada'"/>
                                 <field name="observaciones"/>
                                 <field name="ubicacion_instalacion"/>
                             </group>
@@ -84,7 +84,7 @@
                             <page string="Datos para mantenimiento">
                                 <group >
                                     <field name="control_mantenimiento"  widget="boolean_button"/>
-                                    <field name="fecha_inicio" attrs="{'required': [('control_mantenimiento', '=', True), ('estado_alquiler_id', '=','lista')]}"/>
+                                    <field name="fecha_inicio" required="control_mantenimiento == True and estado_alquiler_id == 'lista'"/>
                                     <field name="fecha_recurrente"/>
                                 </group>
                             </page>

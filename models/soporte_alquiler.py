@@ -468,9 +468,7 @@ class ticket_alquiler(models.Model):
        
     def enviar_mensaje_whatsapp(self):
         selection_labels = self.get_selection_labels()
-
-        # Mensaje para el técnico
-        msg_tecnico = "Hola *{}*,\n\nSe le ha asignado un Ticket de servicio. Lea atentamente los detalles del servicio:\n\n*Cliente:* {}\n*Dirección:* {}\n*Contacto:* {}\n*Modelo:* {}\n*Serie:* {}\n*Problema:* {}\n*Fecha de visita:* {}\n*Tipo de servicio:* {}\n*Asistencia directa:* {}\n".format(
+        msg_tecnico = "Hola *{}*,\n\nSe le ha asignado un Ticket de servicio. Lea atentamente los detalles del servicio:\n\n*Cliente:* {}\n*Direccion:* {}\n*Contacto:* {}\n*Modelo:* {}\n*Serie:* {}\n*Problema:* {}\n*Fecha de visita:* {}\n*Tipo de servicio:* {}\n*Asistencia directa:* {}\n".format(
             self.responsable.name if self.responsable and self.responsable.name else 'NA',
             self.partner_id.name if self.partner_id and self.partner_id.name else 'NA',
             self.direccion_id_r if self.direccion_id_r else 'NA',
@@ -480,11 +478,11 @@ class ticket_alquiler(models.Model):
             self.description if self.description else 'NA',
             self.agenda_local if self.agenda_local else 'NA',
             selection_labels.get('tipo_servicio_id', 'NA'),
-            selection_labels.get('asistencia_id', 'NA')
+            selection_labels.get('asistencia_id', 'NA')             
+            
         )
 
-        # Mensaje para el cliente
-        msg_cliente = "Estimado/a *{}*,\n\nLe informamos que hemos programado una visita técnica para atender su requerimiento. A continuación, le detallamos la información correspondiente:\n\n*Ticket #:* {}\n*Fecha de Visita:* {}\n*Tipo de servicio:* {}\n*Dirección:* {}\n*Técnico Asignado:* {}\n*DNI:* {}\n\n*ESPECIFICACIONES DEL EQUIPO*\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n\n*PROBLEMA REPORTADO*\n{}\n\nPor favor, notifíquenos sobre su stock de tóner para garantizarles el total abastecimiento. Además, le solicitamos reportar cualquier inconveniente adicional que presente al técnico en su visita para solventar la totalidad de sus dudas. Para finalizar, solicitamos su apoyo en:\n\n1. Dar autorización para el ingreso de nuestro personal a sus oficinas o el espacio donde se encuentre nuestro equipo.\n2. Disponibilidad de espacio y tiempo para que nuestro personal pueda desarrollar su labor.\n\nGracias por su atención.".format(
+        msg_cliente = "Estimado/a *{}*,\n\nLe informamos que hemos programado una visita técnica para atender su requerimiento. A continuación, le detallamos la información correspondiente:\n\n*Ticket #:* {}\n*Fecha de Visita:* {}\n*Tipo de servicio:* {}\n*Dirección:* {}\n*Técnico Asignado:* {}\n*DNI:* {}\n\n*ESPECIFICACIONES DEL EQUIPO*\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n\n*PROBLEMA REPORTADO*\n{}\n\nPor favor, notifíquenos sobre su stock de toner para garantizarles el total abastecimiento. Además, le solicitamos reportar cualquier inconveniente adicional que presente al técnico en su visita para solventar la totalidad de sus dudas. Para finalizar, solicitamos su apoyo en:\n\n1. Dar autorización para el ingreso de nuestro personal a sus oficinas o el espacio donde se encuentre nuestro equipo.\n2. Disponibilidad de espacio y tiempo para que nuestro personal pueda desarrollar su labor.\n\nGracias por su atención.".format(
             self.partner_id.name if self.partner_id and self.partner_id.name else 'NA',
             self.name if self.name else 'NA',
             self.agenda_local if self.agenda_local else 'NA',
@@ -509,41 +507,23 @@ class ticket_alquiler(models.Model):
             for phone_number in phone_numbers:
                 self.send_whatsapp_message(phone_number, msg_cliente)
 
-        # Enviar correos electrónicos
-        try:
-            # Enviando el primer correo con la primera plantilla
-            template1 = self.env.ref('sat.email_template_ticket_cliente')
-            template1.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
-        except Exception as e:
-            _logger.error(f"Error al enviar el correo al cliente: {e}")
-
-        try:
-            # Enviando el segundo correo con la segunda plantilla
-            template2 = self.env.ref('sat.email_template_ticket_tecnico')
-            template2.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
-        except Exception as e:
-            _logger.error(f"Error al enviar el correo al técnico: {e}")
-
+        # Enviando el primer correo con la primera plantilla
+        template1 = self.env.ref('sat.email_template_ticket_cliente')
+        template1.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
+        # Enviando el segundo correo con la segunda plantilla
+        template2 = self.env.ref('sat.email_template_ticket_tecnico')
+        template2.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
         # Verificar el valor de asistencia_id
         if self.asistencia_id == 'si':
-            try:
-                # Asegurarse de que existe la plantilla para asistencia directa
-                template3 = self.env.ref('sat.mail_template_asistencia_directa')
-                if template3:
-                    # Enviar el tercer correo si asistencia_id es 'si'
-                    template3.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
-                else:
-                    _logger.error("Plantilla de asistencia directa no encontrada")
-            except Exception as e:
-                _logger.error(f"Error al enviar el correo de asistencia directa: {e}")
+            # Enviar el tercer correo si asistencia_id es 'si'
+            template3 = self.env.ref('sat.mail_template_asistencia_directa')
+            template3.with_context(selection_labels=selection_labels).send_mail(self.id, force_send=True)
 
-        # Cambiar el estado a 'proceso'
         self.estado = 'proceso'
-
         return {
             'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
+    
         }
-
 
     def action_proceso(self):
         self.estado='proceso'

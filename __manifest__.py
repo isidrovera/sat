@@ -58,6 +58,7 @@
         'views/transportistas.xml',
         'views/graficos.xml',
         'views/customer_records_page.xml',
+        'views/importacionexcel.xml',
         
         
     ],

@@ -535,3 +535,31 @@ class SatSat(models.Model):
                         self.enviar_mensaje_whatsapp(numero, mensaje)
                     
                     _logger.info(f"Mensaje enviado para la máquina {registro.name.name} con serie {registro.serie_id}")
+
+    def action_crear_reparaciones(self):
+        """ Crea una reparación para cada registro en el modelo 'sat.sat'. """
+        # Buscar todos los registros en el modelo 'sat.sat'
+        sat_records = self.search([])  # Esto obtiene todos los registros de la tabla 'sat.sat'
+        
+        reparacion_model = self.env['reparaciones.reparaciones']
+        for record in sat_records:
+            # Crear la reparación para cada registro
+            reparacion_model.create({
+                'maquina_id': record.id,  # Relaciona la reparación con el registro actual de 'sat.sat'
+                  # Verifica si este campo existe en el modelo
+                # Puedes agregar otros campos aquí según los necesarios en el modelo 'reparaciones.reparaciones'
+            })
+            _logger.info(f"Reparación creada para la máquina {record.name.name} con serie {record.serie_id}")
+
+        # Mostrar una notificación de éxito
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Reparaciones creadas'),
+                'message': _('Se han creado las reparaciones para todas las máquinas.'),
+                'type': 'success',
+                'sticky': False,
+            }
+        }
+

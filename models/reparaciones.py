@@ -16,7 +16,7 @@ from odoo.tools import config
 from odoo.exceptions import UserError
 
 
-class reparaciones(models.Model):
+class Reparaciones(models.Model):
 
     _name = 'reparaciones.reparaciones'
     _description = 'Reparaciones Ventas'
@@ -30,14 +30,26 @@ class reparaciones(models.Model):
         
     @api.model
     def create(self, vals):
+        # Genera un número secuencial único para el campo 'name'
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
-        record = super(reparaciones, self).create(vals)
+        
+        # Aquí usa la clase `Reparaciones` correctamente, en mayúscula
+        record = super(Reparaciones, self).create(vals)
+        
+        # Registro de la creación en el log
         _logger.info("Record created with ID: %s", record.id)
+        
+        # Llama a la función para generar el código QR
         record.generate_qr_code()
+        
         return record
 
       
     maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True )
+     # Restricción SQL para evitar duplicados de serie_id
+    _sql_constraints = [
+        ('unique_serie_id', 'unique(serie_id)', 'El número de serie ya existe.')
+    ]
 
     marca = fields.Char(string='Marca', related='maquina_id.marca', readonly=True, store=True)
     importacion = fields.Char(string='Importación',
@@ -80,7 +92,7 @@ class reparaciones(models.Model):
                                  )
     serie_id = fields.Char(string='Serie',
                            related='maquina_id.serie_id',
-                           readonly=True,
+                           readonly=False,
                            store=True
                            )
     ot_id = fields.Selection([('si', 'Si'), ('no', 'No')],
@@ -92,7 +104,7 @@ class reparaciones(models.Model):
     tipo_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')
                                 ],
                                string='Tipo de MFP',  related='maquina_id.tipo_id', readonly=True)
-    informe = fields.Html(string='Descripción', tracking=True)
+    informe = fields.Html(string='Descripción')
     tray_id = fields.Char("Caseteras N°", tracking=True
                           )
     adf_simple_id = fields.Selection(
@@ -232,9 +244,9 @@ class reparaciones(models.Model):
         store=True, tracking=True
     )
 
-    falla_proveedor = fields.Html(string="Descripción", tracking=True)
+    falla_proveedor = fields.Html(string="Descripción")
     
-    falla_ventas = fields.Text(string='Descripción',related='maquina_id.descripcion',readonly=False, store=True, tracking=True
+    falla_ventas = fields.Text(string='Descripción',related='maquina_id.descripcion',readonly=False, store=True
 
     )
   
@@ -451,7 +463,7 @@ class reparaciones(models.Model):
                 if rec.estado_id == 'en_revision':
                     vals['fecha_finalizacion'] = fields.Datetime.now()
 
-        res = super(reparaciones, self).write(vals)
+        res = super(Reparaciones, self).write(vals)
 
         if 'falla_proveedor' in vals:
             for rec in self:

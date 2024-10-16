@@ -13,6 +13,7 @@ access_ticket,ticket_alquiler,model_ticket_alquiler,base.group_user,1,1,0,0
 
 
 access_sat_sat_sat,sat.sat_sat,model_sat_sat,base.group_system,1,1,1,1
+access_excel_import_model_manager,excel.import.model,model_excel_import_model,base.group_system,1,1,1,1
 access_taller_incidencia,taller_incidencia,model_taller_incidencia,base.group_system,1,1,1,1
 access_reparaciones_reparaciones_sat,reparaciones.reparaciones_sat,model_reparaciones_reparaciones,base.group_system,1,1,1,1
 access_tipo_maquina_sat,tipo.maquina_sat,model_tipo_maquina,base.group_system,1,1,1,1

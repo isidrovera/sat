@@ -7,83 +7,83 @@
       <field name="arch" type="xml">
         <form string="ModelTitle">
           <header>
-            <button string=" " name="action_partes" type="object" class="btn btn-danger" icon="fa-puzzle-piece" help="Cambia el estado a maquinas de partes" attrs="{'invisible':[('estado_ventas_id', '=', 'de_partes')]}" groups="base.group_system"/>
-            <button string=" " name="action_problemas" type="object" class="btn btn-warning" icon="fa-exclamation-triangle" help="Cambia el estao a maquina con problemas" attrs="{'invisible':[('estado_ventas_id', '=', 'con_problemas')]}" groups="base.group_system"/>
-
-            <button string=" " name="action_sin_revisar" type="object" class="btn btn-primary" help="Cambia el estado a sin revisar" icon="fa-times-circle" attrs="{'invisible':[('estado_ventas_id', '=', 'sin_revisar')]}" groups="base.group_system"/>
+            <button string=" " name="action_partes" type="object" class="btn btn-danger" icon="fa-puzzle-piece" help="Cambia el estado a maquinas de partes" invisible="estado_ventas_id == 'de_partes'" groups="base.group_system"/>
+            <button string=" " name="action_problemas" type="object" class="btn btn-warning" icon="fa-exclamation-triangle" help="Cambia el estado a maquina con problemas" invisible="estado_ventas_id == 'con_problemas'" groups="base.group_system"/>
+            <button string=" " name="action_sin_revisar" type="object" class="btn btn-primary" help="Cambia el estado a sin revisar" icon="fa-times-circle" invisible="estado_ventas_id == 'sin_revisar'" groups="base.group_system"/>
             <button string=" " name="send_records_by_email" type="object" class="oe_highlight" icon="fa-paper-plane" help="Envia por correo lista de maquinas con problemas y de partes"/>
-            <button string=" " name="action_en_revision" type="object" class="btn btn-info" icon="fa-cogs" attrs="{'invisible':[('estado_ventas_id', '=', 'en_revision')]}" help="Cambia el estado  en revisión" groups="base.group_system"/>
-            <button string="Entregar" name="action_entregada" type="object" class="btn btn-primary" icon="fa-truck" attrs="{'invisible':[('estado_ventas_id', '=', 'entregada')]}" help="Cambia el estado a entregada" groups="base.group_system"/>
-            <button string=" " name="action_finalizado" type="object" class="btn btn-success" icon="fa-check" attrs="{'invisible':[('estado_ventas_id', '=', 'finalizado')]}" help="Cambia el estado a finalizado" groups="base.group_system"/>
+            <button string=" " name="action_en_revision" type="object" class="btn btn-info" icon="fa-cogs" help="Cambia el estado a en revisión" invisible="estado_ventas_id == 'en_revision'" groups="base.group_system"/>
+            <button string="Entregar" name="action_entregada" type="object" class="btn btn-primary" icon="fa-truck" help="Cambia el estado a entregada" invisible="estado_ventas_id == 'entregada'" groups="base.group_system"/>
+            <button string=" " name="action_finalizado" type="object" class="btn btn-success" icon="fa-check" help="Cambia el estado a finalizado" invisible="estado_ventas_id == 'finalizado'" groups="base.group_system"/>
             <button string=" " name="action_disponible" type="object" class="oe_highlight" icon="fa-check-circle" help="Cambia el estado a disponible" groups="base.group_system"/>
-            
             <button string=" " name="create_reparacion" type="object" class="btn btn-success" icon="fa-wrench" help="Permite crear ordenes de reparaciones" groups="base.group_system"/>
-            <field name="disponibilidad_id" widget="statusbar" statusbar_colors='{disponible:"red",separada:"blue"}' statusbar_visible="true"/>
-            <field name="estado_ventas_id" widget="statusbar" class="oe_right" statusbar_visible="true" />
+            <button name="action_crear_reparaciones" string="Crear Reparaciones" type="object" class="btn-primary" />
+            <field name="disponibilidad_id" widget="statusbar" statusbar_colors="{'disponible':'red','separada':'blue'}" statusbar_visible="true"/>
+            <field name="estado_ventas_id" widget="statusbar" class="oe_right" statusbar_visible="true"/>
           </header>
 
-          <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" attrs="{'invisible':[('activador', '=', 'no')]}">
-                                      ¡ Esta maquina tiene observaciones, <field name="descripcion" style="color: red; "/>
-, si esta separando
-                                      o vendiendo revise antes, consulte con el área correspondiente !
+          <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" invisible="activador == 'no'">
+            ¡Esta maquina tiene observaciones, <field name='descripcion' style="color: red;"/>, si está separando o vendiendo revise antes, consulte con el área correspondiente!
           </div>
-          <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" attrs="{'invisible':['|',('ubicacion_id', '=', 'primer_piso'),('ubicacion_id','=','tercer_piso')]}">                    
-                    ¡ Esta maquina esta en el almacen,  <field name="ubicacion_id" style="background: yellow; "/>
-,  si esta separando o vendiendo 
-                    avisar con anticipación para que pueda ser traido !
-          </div>
-          <sheet>
 
+          <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" invisible="ubicacion_id == 'primer_piso' or ubicacion_id == 'tercer_piso'">                    
+            ¡Esta maquina está en el almacén, <field name="ubicacion_id" style="background: yellow;"/>! Si está separando o vendiendo, avisar con anticipación para que pueda ser traída.
+          </div>
+
+          <sheet>
             <div class="oe_button_box" name="button_box">
               <button name="view_reparaciones_ids" type="object" class="oe_stat_button" icon="fa-wrench">
-                <field name="reparaciones_count" string="Reparaciones" widget="statinfo" />
+                <field name="reparaciones_count" string="Reparaciones" widget="statinfo"/>
               </button>
             </div>
-            <!--<widget name="web_ribbon" title="IVP" field_selection="estado_ventas_id" />-->
+
             <div class="oe_title">
               <label for="cliente_id"/>
               <h1>
                 <field name="cliente_id" domain="[('tipo_cliente', '=', 'distribuidor')]" placeholder="Datos del Cliente" widget="many2one_avatar" style="width:100%"/>
               </h1>
             </div>
+
             <group>
-              <group string='Datos del Equipo'>
+              <group string="Datos del Equipo">
                 <field name="tipo_maquina"/>
                 <field name="marca"/>
-                <field name="name" search='True'/>
+                <field name="name" search="True"/>
                 <field name="serie_id"/>
                 <field name="contometro"/>
                 <field name="ubicacion_id"/>
-                <field name="fecha_separacion" attrs="{'invisible':[('disponibilidad_id', '=', 'disponible')]}" readonly="1" />
+                <field name="fecha_separacion" invisible="disponibilidad_id == 'disponible'" readonly="1"/>
               </group>
-              <group string='Datos de Importación'>
-                <field name="proveedor_id" domain="[('tipo_cliente', '=', 'proveedor')]" />
+
+              <group string="Datos de Importación">
+                <field name="proveedor_id" domain="[('tipo_cliente', '=', 'proveedor')]"/>
                 <field name="importacion"/>
                 <field name="invoice"/>
-                <!--<field name="qr_image" widget='image' class="oe_avatar" options="{'size': [90, 90]}" readonly="0" />-->
+
                 <group string="Cambiar Ubicaciones" groups="sat.sat_tecnica_group_user">                 
-                    
-                  <group >                  
+                  <group>                  
                     <button name="action_primer" type="object" class="oe_stat_button" icon="fa-building-o" string="Primer piso"/>
                   </group>
-                  <group >                 
+                  <group>                 
                     <button name="action_tercero" type="object" class="oe_stat_button" icon="fa-building" string="Tercer piso"/>
                   </group>
-                  <group >                 
+                  <group>                 
                     <button name="action_segundo" type="object" class="oe_stat_button" icon="fa-store" string="Segundo local"/>
                   </group>
                 </group>
               </group>
-              <group string='Datos para revisión' style='color:red;'>
+
+              <group string="Datos para revisión" style="color:red;">
                 <field name="tipo_revision" widget="kanban_label_selection" options="{'classes': {'draft': 'default', 'done': 'success'}}"/>
-                <field name="prioridad" widget="selection" />
+                <field name="prioridad" widget="selection"/>
               </group>
-              <group string='Notificar' style='color:green;'>
+
+              <group string="Notificar" style="color:green;">
                 <field name="trabajadores_id" widget="many2one_avatar"/>
                 <field name="asesora_id"/>
                 <field name="fecha_para_revision"/>
               </group>
             </group>
+
             <notebook>
               <page string="Observaciones del equipo">
                 <group>
@@ -91,21 +91,23 @@
                     <field name="descripcion"/>
                   </group>
                   <group>
-                    <field name="activador" class="oe_form_field_bottom_separator" invisible="1" />
+                    <field name="activador" class="oe_form_field_bottom_separator" invisible="1"/>
                   </group>
                 </group>
               </page>
+
               <page string="Precios">
                 <group>
                   <group>
-                    <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}" groups="base.group_system, sat.Sat_ventas_group_user" />
-                    <field name="currency_id" string="Tipo de moneda" />
+                    <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}" groups="base.group_system, sat.Sat_ventas_group_user"/>
+                    <field name="currency_id" string="Tipo de moneda"/>
                   </group>
                   <group>
                     <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" groups="base.group_system"/>
                   </group>
                 </group>
               </page>
+
               <page string="Logistica">
                 <group>
                   <group>
@@ -118,6 +120,7 @@
               </page>
             </notebook>
           </sheet>
+
           <div class="oe_chatter">
             <field name="message_follower_ids" widget="mail_followers"/>
             <field name="activity_ids" widget="mail_activity"/>
@@ -127,67 +130,59 @@
       </field>
     </record>
 
+    <!-- Vista en formato lista -->
     <record model="ir.ui.view" id="sat.list">
       <field name="name">SAT list</field>
       <field name="model">sat.sat</field>
       <field name="arch" type="xml">
-        
-        <tree default_order="id desc">          
+        <tree default_order="id desc">
           <field name="create_date" string="Ingreso" widget="remaining_days" width="80%" optional="hide"/>
-          <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" attrs="{'invisible':[('disponibilidad_id','!=', 'separada')]}" optional="hide" />
-          <field name="fecha_para_revision" string="Fecha para revison" optional="hide"/>
+          <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" invisible="disponibilidad_id != 'separada'" optional="hide"/>
+          <field name="fecha_para_revision" string="Fecha para revisión" optional="hide"/>
           <field name="importacion" optional="hide"/>
           <field name="proveedor_id" optional="hide"/>
           <field name="cliente_nombre" string="Cliente"/>
-          <field name="tipo_maquina" />
+          <field name="tipo_maquina"/>
           <field name="marca"/>
-          <field name="activador" class="oe_form_field_bottom_separator" invisible="1" />
-          <field name="icono_rojo" widget="html" string=" " attrs="{'invisible':[('activador', '=', 'no')]}"/>
+          <field name="activador" invisible="1"/>
+          <field name="icono_rojo" widget="html" string=" " invisible="activador == 'no'"/>
           <field name="name"/>
           <field name="serie_id"/>
           <field name="descripcion" optional="hide"/>
-          <field name="contometro" />
+          <field name="contometro"/>
           <field name="currency_id" string="Tipo de moneda" invisible="True"/>
           <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide" groups="base.group_system"/>
           <field name="ubicacion_id"/>
-          <field name='disponibilidad_id' widget='badge' decoration-success="disponibilidad_id == 'disponible'" decoration-warning="disponibilidad_id == 'separada'" decoration-danger="disponibilidad_id == 'no_disponible'"/>
-          <field name='estado_ventas_id' widget='badge' decoration-muted="estado_ventas_id == 'sin_revisar'" decoration-info="estado_ventas_id == 'en_revision'" decoration-success="estado_ventas_id == 'finalizado' " decoration-danger="estado_ventas_id not in ('sin_revisar','en_revision','finalizado','entregada')" decoration-warning="estado_ventas_id == 'entregada' "/>
+          <field name="disponibilidad_id" widget="badge" decoration-success="disponibilidad_id == 'disponible'" decoration-warning="disponibilidad_id == 'separada'" decoration-danger="disponibilidad_id == 'no_disponible'"/>
+          <field name="estado_ventas_id" widget="badge" decoration-muted="estado_ventas_id == 'sin_revisar'" decoration-info="estado_ventas_id == 'en_revision'" decoration-success="estado_ventas_id == 'finalizado'" decoration-danger="estado_ventas_id not in ('sin_revisar', 'en_revision', 'finalizado', 'entregada')" decoration-warning="estado_ventas_id == 'entregada'"/>
           <field name="asesora_id" optional="hide"/>
           <button name="action_primer" type="object" class="oe_stat_button" icon="fa-building-o" groups="base.group_system" help="Primer piso"/>
           <button name="action_tercero" type="object" class="oe_stat_button" icon="fa-building" groups="base.group_system" help="Tercer piso"/>
           <button name="action_segundo" type="object" class="oe_stat_button" icon="fa-truck" groups="base.group_system" help="Segundo local"/>
-
           <field name="activity_ids" widget="list_activity" optional="hide"/>
-          <button name="view_reparaciones_ids" type="object" icon="fa-wrench" attrs="{'invisible':[('estado_ventas_id','!=', 'finalizado')]}"/>
+          <button name="view_reparaciones_ids" type="object" icon="fa-wrench" invisible="estado_ventas_id != 'finalizado'"/>
         </tree>
       </field>
     </record>
+
+    <!-- Búsqueda -->
     <record id="Sat_search_view" model="ir.ui.view">
       <field name="name">sat.sat.search</field>
       <field name="model">sat.sat</field>
       <field name="arch" type="xml">
         <search string="ModelTitle">
           <group>
-            <!--Este son filtros rapidos-->
-            <filter name="disponibilidad_id" string="Disponibles" domain="[('disponibilidad_id', '=', 'disponible')]" />
-            <filter name="separadas_id" string="Separadas" domain="[('disponibilidad_id', '=', 'separada')]" />
-            <filter name="no_disponibles_id" string="No disponibles" domain="[('disponibilidad_id', '=', 'no_disponible')]" />
-            <filter name="sin_revisar_id" string="Sin revisar" domain="[('estado_ventas_id', '=', 'sin_revisar')]" />
-            <filter name="revision_id" string="En revisión" domain="[('estado_ventas_id', '=', 'en_revision')]" />
-            <filter name="finalizado_id" string="Finalizado" domain="[('estado_ventas_id', '=', 'finalizado')]" />
-            <filter name="problemas_id" string="Con problemas" domain="[('estado_ventas_id', '=', 'con_problemas')]" />
-            <filter name="partes_id" string="De partes" domain="[('estado_ventas_id', '=', 'de_partes')]" />
-            <filter name="entregada_id" string="Entregada" domain="[('estado_ventas_id', '=', 'entregada')]" />
-
-            <!--Este es agrupar rapido-->
-            <filter name="disponibilidad_id" string="Disponibilidad" context="{'group_by': 'disponibilidad_id'}" />
-            <filter name="estado_ventas_id" string="Estado" context="{'group_by': 'estado_ventas_id'}" />
-            <filter name="cliente_id" string="Cliente" context="{'group_by': 'cliente_id'}" />
-            <filter name="marca" string="Marca" context="{'group_by': 'marca'}" />
-            <filter name="importacion" string="Importación" context="{'group_by': 'importacion'}" />
-            <filter name="ubicacion_id" string="Ubicación" context="{'group_by': 'ubicacion_id'}" />
-            <filter name="asesora_id" string="Asesora" context="{'group_by': 'asesora_id'}" />
+            <filter name="disponibilidad_id" string="Disponibles" domain="[('disponibilidad_id', '=', 'disponible')]"/>
+            <filter name="separadas_id" string="Separadas" domain="[('disponibilidad_id', '=', 'separada')]"/>
+            <filter name="no_disponibles_id" string="No disponibles" domain="[('disponibilidad_id', '=', 'no_disponible')]"/>
+            <filter name="sin_revisar_id" string="Sin revisar" domain="[('estado_ventas_id', '=', 'sin_revisar')]"/>
+            <filter name="revision_id" string="En revisión" domain="[('estado_ventas_id', '=', 'en_revision')]"/>
+            <filter name="finalizado_id" string="Finalizado" domain="[('estado_ventas_id', '=', 'finalizado')]"/>
+            <filter name="problemas_id" string="Con problemas" domain="[('estado_ventas_id', '=', 'con_problemas')]"/>
+            <filter name="partes_id" string="De partes" domain="[('estado_ventas_id', '=', 'de_partes')]"/>
+            <filter name="entregada_id" string="Entregada" domain="[('estado_ventas_id', '=', 'entregada')]"/>
           </group>
+
           <field name="tipo_maquina"/>
           <field name="marca"/>
           <field name="name"/>
@@ -202,16 +197,8 @@
         </search>        
       </field>
     </record>
-    <record id="Sat_pivot_view" model="ir.ui.view">
-      <field name="name">sat.Sat.pivot</field>
-      <field name="model">sat.sat</field>
-      <field name="arch" type="xml">
-        <pivot string="estado_ventas_id">
-          <field name="name" type="row"/>
-          <field name="name" type="measure"/>
-        </pivot>
-      </field>
-    </record>
+
+    <!-- Kanban -->
     <record id="maquinas_kanban_view" model="ir.ui.view">
       <field name="name">maquinas.kanban</field>
       <field name="model">sat.sat</field>
@@ -225,7 +212,7 @@
               <div class="oe_kanban_global_click o_res_partner_kanban">
                 <div class="oe_kanban_details">
                   <strong class="o_kanban_record_title oe_partner_heading">
-                    <field name="cliente_id" />
+                    <field name="cliente_id"/>
                   </strong>
                 </div>
                 <div class="oe_kanban_details">
@@ -241,8 +228,8 @@
                 <div class="oe_kanban_details">
                   <strong class="o_kanban_record_title oe_partner_heading">
                     <t>
-                      <field name="name"/>
-, Serie: </t>
+                      <field name="name"/>, Serie: 
+                    </t>
                     <field name="serie_id"/>
                   </strong>
                 </div>
@@ -257,7 +244,6 @@
                     <t>
                       <field name="disponibilidad_id" widget="badge"/>
                     </t>
-                    
                   </strong>
                 </div>
               </div>
