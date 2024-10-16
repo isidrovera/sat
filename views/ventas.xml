@@ -257,18 +257,18 @@
     <record model="ir.actions.act_window" id="sat.action_reparaciones_window">
       <field name="name">Reparaciones</field>
       <field name="res_model">reparaciones.reparaciones</field>
-      <field name="view_mode">tree,form,graph,kanban</field>
+      <field name="view_mode">list,form,graph,kanban</field>
     </record>
 
     <record model="ir.actions.act_window" id="sat.action_alquiler_window">
       <field name="name">Alquiler</field>
       <field name="res_model">alquiler</field>
-      <field name="view_mode">tree,form,calendar,graph</field>
+      <field name="view_mode">list,form,calendar,graph</field>
     </record>
     <record model="ir.actions.act_window" id="sat.action_ajustes_window">
       <field name="name">Configuración</field>
       <field name="res_model">ajustes.ajustes</field>
-      <field name="view_mode">tree,form</field>
+      <field name="view_mode">list,form</field>
     </record>
     <record model="ir.actions.act_window" id="sat.action_window">
       <field name="name">Maquina</field>
@@ -283,32 +283,32 @@
     <record model="ir.actions.act_window" id="sat.action_marca_window">
       <field name="name">Marcas</field>
       <field name="res_model">marca.marca</field>
-      <field name="view_mode">tree,form</field>
+      <field name="view_mode">list,form</field>
     </record>
     <record model="ir.actions.act_window" id="sat.action_modelo_window">
       <field name="name">Modelo</field>
       <field name="res_model">modelo.maquina</field>
-      <field name="view_mode">tree,form</field>
+      <field name="view_mode">list,form</field>
     </record>
     <record model="ir.actions.act_window" id="sat.action_tipo_window">
       <field name="name">Tipo de maquina</field>
       <field name="res_model">tipo.maquina</field>
-      <field name="view_mode">tree,form</field>
+      <field name="view_mode">list,form</field>
     </record>
     <record model="ir.actions.act_window" id="sat.action_falla_window">
       <field name="name">Fallas</field>
       <field name="res_model">fallas</field>
-      <field name="view_mode">tree,form</field>
+      <field name="view_mode">list,form</field>
     </record>
     <record model="ir.actions.act_window" id="sat.action_informe_window">
       <field name="name">Informes</field>
       <field name="res_model">informes</field>
-      <field name="view_mode">tree,form</field>
+      <field name="view_mode">list,form</field>
     </record>
     <record model="ir.actions.act_window" id="sat.action_repuestos_window">
       <field name="name">Repuestos alquiler</field>
       <field name="res_model">repuestos.alquiler</field>
-      <field name="view_mode">tree,form,kanban</field>
+      <field name="view_mode">list,form,kanban</field>
     </record>
     <!-- server action to the one above -->
     <record model="ir.actions.server" id="sat.action_server">
@@ -318,7 +318,7 @@
       <field name="code">
         action = {
           "type": "ir.actions.act_window",
-          "view_mode": "tree,form",
+          "view_mode": "list,form",
           "res_model": model._name,
         }
       </field>
@@ -330,7 +330,7 @@
       <field name="code">
           action = {
               "type": "ir.actions.act_window",
-              "view_mode": "tree",
+              "view_mode": "list",
               "res_model": "sat.sat",
               "domain": [('estado_ventas_id', '=', 'para_revision')],
               "context": {'order': 'fecha_para_revision asc'},
