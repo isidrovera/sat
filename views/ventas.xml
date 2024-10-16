@@ -134,6 +134,7 @@
     <record model="ir.ui.view" id="sat.list">
       <field name="name">SAT list</field>
       <field name="model">sat.sat</field>
+      <field name="type">tree</field>
       <field name="arch" type="xml">
         <tree default_order="id desc">
           <field name="create_date" string="Ingreso" widget="remaining_days" width="80%" optional="hide"/>
