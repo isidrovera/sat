@@ -280,7 +280,7 @@ class SatSat(models.Model):
     factura_venta = fields.Char('Factura N°', tracking=True)
     fecha_entrega = fields.Date('Fecha de entrega', tracking=True)
     activador = fields.Selection([('si', 'Si'), ('no', 'No')],
-                                 string='Activador de observaciones',
+                                 string=' ',
                                  default='no', tracking=True
                                  )
     descripcion = fields.Text(string='Descripción', tracking=True)
