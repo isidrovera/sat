@@ -146,7 +146,7 @@
           <field name="serie_id"/>
           <field name="descripcion" optional="hide"/>
           <field name="contometro"/>
-          <field name="currency_id" string="Tipo de moneda" invisible="True"/>
+          <field name="currency_id" string="Tipo de moneda" invisible="1"/>
           <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide" groups="base.group_system"/>
           <field name="ubicacion_id"/>
           <field name="disponibilidad_id" widget="badge" decoration-success="disponibilidad_id == 'disponible'" decoration-warning="disponibilidad_id == 'separada'" decoration-danger="disponibilidad_id == 'no_disponible'"/>
