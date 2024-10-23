@@ -286,19 +286,15 @@ class SatSat(models.Model):
     descripcion = fields.Text(string='Descripción', tracking=True)
     @api.onchange('descripcion')
     def _onchange_descripcion(self):
-        if self.descripcion:
-            self.activador = 'si'
-        else:
-            self.activador = 'no'
-
-    @api.onchange('descripcion')
-    def _onchange_descripcion(self):
         _logger.debug('Onchange Description for Record IDs: %s', self.ids)
+        # Verifica cada registro en el conjunto
         for record in self:
             if record.descripcion:
                 record.activador = 'si'
             else:
                 record.activador = 'no'
+        # Registra el estado final después de evaluar la descripción
+        _logger.debug('Activador set to: %s', ', '.join([rec.activador for rec in self]))
 
     contometro = fields.Char(string='Contometro', required=True, tracking=True,)
     marca = fields.Char(string='Marca', related='name.marca_id.name', readonly=True, store=True, tracking=True
