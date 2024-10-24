@@ -223,9 +223,10 @@ class ticket_alquiler(models.Model):
 
 
     sale_order_line_ids = fields.One2many(
-        'sale.order.line',  # Relacionamos con el modelo de líneas de pedido de venta
-        'ticket_id',  # Este será el campo Many2one en 'sale.order.line' que haga referencia al ticket
-        string='Productos solicitados'
+        'sale.order.line',  # Modelo de las líneas de pedido de venta
+        'ticket_id',  # Campo Many2one en 'sale.order.line' que hace referencia al ticket
+        string='Productos Solicitados',
+        tracking=True
     )
     def create_sale_order(self):
         sale_order = self.env['sale.order'].create({
