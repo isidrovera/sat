@@ -10,6 +10,7 @@ class linea_pedido(models.Model):
 
     ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia',related='order_id.ticket_id'
     )
+    product_id = fields.Many2one('product.product', string='Producto', required=True)
     serie  = fields.Char(related='ticket_id.serie_id_r',string='Serie')
     contometro =  fields.Integer(related='ticket_id.total_copias_id',string='Contometro actual', readonly=False 
     )
