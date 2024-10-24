@@ -26,7 +26,11 @@ class linea_pedido(models.Model):
     @api.depends('contometro', 'contometroa')
     def restar_field(self):
         for record in self:
-            record.total_copias_id = record.contometro - record.contometroa
+            if record.contometro and record.contometroa:
+                record.total_copias_id = record.contometro - record.contometroa
+            else:
+                record.total_copias_id = 0
+
     total_copias_id = fields.Integer(string="Total de copias", compute=restar_field)
 
     @api.model
@@ -36,37 +40,32 @@ class linea_pedido(models.Model):
             _logger.debug("Se detectó un cambio al estado 'entregado'.")
             RepuestosAlquiler = self.env['repuestos.alquiler']
             for record in self:
-                repuesto = RepuestosAlquiler.search([('codigo_id', '=', record.id)])
+                # Busca el registro existente
+                repuesto = RepuestosAlquiler.search([('codigo_id', '=', record.id)], limit=1)
+                repuesto_vals = {
+                    'referencia_reparacion_id': record.order_id.name,
+                    'serie_id': record.order_id.equipo_id.serie,
+                    'modelo_id': record.order_id.equipo_id.id,
+                    'cliente_id': record.order_id.partner_id.name,
+                    'cantidad': record.product_uom_qty,
+                    'contometro_actual': record.contometro,
+                    'contometro_ultimo': record.contometroa,
+                    'solicitante_id': record.order_id.solicitante_id.name,
+                    'name': record.product_template_id.name,
+                    'codigo_id': record.id,
+                }
+                
                 if not repuesto:
+                    # Si no existe, crea uno nuevo
                     _logger.debug("Creando nuevo registro en repuestos.alquiler.")
-                    RepuestosAlquiler.create({
-                        'referencia_reparacion_id': record.order_id.name,
-                        'serie_id': record.order_id.equipo_id.serie,
-                        'modelo_id': record.order_id.equipo_id.id,
-                        'cliente_id': record.order_id.partner_id.name,
-                        'cantidad': record.product_uom_qty,
-                        'contometro_actual': record.contometro,
-                        'contometro_ultimo': record.contometroa,
-                        'solicitante_id': record.order_id.solicitante_id.name,
-                        'name': record.product_template_id.name,
-                        'codigo_id': record.id,
-                        # Agrega aquí los demás campos que quieras crear en el registro
-                    })
+                    RepuestosAlquiler.create(repuesto_vals)
                 else:
+                    # Si existe, actualiza
                     _logger.debug("Actualizando registro existente en repuestos.alquiler.")
-                    repuesto.write({
-                        'referencia_reparacion_id': record.order_id.name,
-                        'serie_id': record.order_id.equipo_id.serie,
-                        'modelo_id': record.order_id.equipo_id.id,
-                        'cliente_id': record.order_id.partner_id.name,
-                        'cantidad': record.product_uom_qty,
-                        'contometro_actual': record.contometro,
-                        'contometro_ultimo': record.contometroa,
-                        'solicitante_id': record.order_id.solicitante_id.name,
-                        'name': record.product_template_id.name,
-                        'codigo_id': record.id,
-                    })
+                    repuesto.write(repuesto_vals)
+
         return super(linea_pedido, self).write(vals)
+
         
                         
                             
