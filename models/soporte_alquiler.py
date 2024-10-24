@@ -269,16 +269,9 @@ class ticket_alquiler(models.Model):
         }
     
     
-    responsable_mobile_clean = fields.Char(
-        string='Número de celular (limpio)',
-        compute='_compute_responsable_mobile_clean',
-        store=True
-    )
+    responsable_mobile_clean = fields.Char(string='Número de celular (limpio)',  compute='_compute_responsable_mobile_clean', store=True )
 
-    cliente_phones_clean = fields.Char(
-        string='Números de contacto limpios',
-        compute='_compute_cliente_phones_clean',
-        store=True
+    cliente_phones_clean = fields.Char(string='Números de contacto limpios', compute='_compute_cliente_phones_clean',  store=True
     )
 
     @api.depends('responsable.mobile_phone')
