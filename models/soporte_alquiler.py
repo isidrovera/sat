@@ -221,26 +221,39 @@ class ticket_alquiler(models.Model):
             'context': "{'create': True}"
         }
 
-    def create_sale_order(self):
-        sale_order = self.env['sale.order']
-        order_id = sale_order.create({
-            'partner_id':self.partner_id.id,
-            'equipo_id' :self.product_alquiler.id,
-            'ticket_id' :self.id,
-            'solicitante_id':self.responsable.id,
-            
-        })
-        return {
-        'name': 'Nuevo Registro',
-        'view_type': 'form',
-        'view_mode': 'form',
-        'res_model': 'sale.order',
-        'res_id': order_id.id,
-        'type': 'ir.actions.act_window',
-        'target': 'current',
 
-    }
-   
+    sale_order_line_ids = fields.One2many(
+        'sale.order.line',  # Relacionamos con el modelo de líneas de pedido de venta
+        'ticket_id',  # Este será el campo Many2one en 'sale.order.line' que haga referencia al ticket
+        string='Productos solicitados'
+    )
+    def create_sale_order(self):
+        sale_order = self.env['sale.order'].create({
+            'partner_id': self.partner_id.id,
+            'equipo_id': self.product_alquiler.id,
+            'ticket_id': self.id,
+            'solicitante_id': self.responsable.id,
+        })
+
+        # Agregar automáticamente las líneas de productos seleccionadas por el técnico
+        for line in self.sale_order_line_ids:
+            self.env['sale.order.line'].create({
+                'order_id': sale_order.id,
+                'product_id': line.product_id.id,
+                'product_uom_qty': line.product_uom_qty,
+                'price_unit': line.price_unit,
+            })
+
+        return {
+            'name': 'Nuevo Pedido de Venta',
+            'view_type': 'form',
+            'view_mode': 'form',
+            'res_model': 'sale.order',
+            'res_id': sale_order.id,
+            'type': 'ir.actions.act_window',
+            'target': 'current',
+        }
+
     def action_finalizar(self):
         self.estado='finalizado'
         # Enviando el segundo correo con la segunda plantilla
