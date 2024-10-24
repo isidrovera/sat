@@ -1,25 +1,21 @@
 from odoo import _, models, fields, api, exceptions
-
 from dateutil.relativedelta import relativedelta
 from odoo.http import request
 from datetime import datetime, timedelta
 from odoo.exceptions import UserError
-import webbrowser
-from datetime import datetime
 from pytz import timezone, UTC
-from datetime import datetime
-#import telegram
 import requests
 import json
 import logging
 
 _logger = logging.getLogger(__name__)
 
+
 class ticket_alquiler(models.Model):
 
     _name = 'ticket.alquiler'
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _inherit_id='web.assets_backend'
+    
 
     name = fields.Char( 'TICKET N°', default='New',
         copy=False,
@@ -28,10 +24,15 @@ class ticket_alquiler(models.Model):
     
     @api.model
     def create(self, vals):
-        # We generate a standard reference
-        vals['name'] = self.env['ir.sequence'].next_by_code('ticket.alquiler')or '/'
-        return super(ticket_alquiler,self).create(vals) 
-      
+        # Generar el número del ticket utilizando la secuencia definida
+        vals['name'] = self.env['ir.sequence'].next_by_code('ticket.alquiler') or 'New'
+        
+        # Asegurar que el nombre no es nulo
+        if vals.get('name', 'New') == 'New':
+            raise UserError(_("Error: No se pudo generar un número de ticket."))
+        
+        return super(ticket_alquiler, self).create(vals)
+
     
 
     reporter_name = fields.Char(string="Nombre de quien reporta")
@@ -75,110 +76,106 @@ class ticket_alquiler(models.Model):
     area_id_r = fields.Char(string="Área")
     estern_id_r = fields.Boolean( string="Cliente externo", tracking=True)
     tray_id = fields.Char("Caseteras N°", tracking=True)
-    adf_simple_id = fields.Selection([("si", "Si"), ("no", "No")], string="ADF Simple", tracking=True)
-    transformador_id = fields.Selection([("si", "Si"), ("no", "No")], string="Transformador", tracking=True)
-    estabilizador = fields.Selection([("si", "Si"), ("no", "No")], string="Estabilizador", tracking=True)
-    adf_dual_id = fields.Selection([("si", "Si"), ("no", "No")], string="ADF Dual scan", tracking=True)
-    finalizador_interno_id = fields.Selection([("si", "Si"), ("no", "No")], string="Finalizador Interno", tracking=True)
-    finalizador_externo_id = fields.Selection([("si", "Si"), ("no", "No")], string="Finalizador Externo", tracking=True)
-    mueble_id = fields.Selection([("si", "Si"), ("no", "No")], string="Mueble", tracking=True)
-    panel_smart_id = fields.Selection([("si", "Si"), ("no", "No")], string="Panel Smart", tracking=True)
-    panel_normal_id = fields.Selection([("si", "Si"), ("no", "No")], string="Panel Normal", tracking=True)
-    wi_fi_id = fields.Selection([("si", "Si"), ("no", "No")], string="Wi-Fi", tracking=True)
-    bluetooth_id = fields.Selection([("si", "Si"), ("no", "No")], string="Bluetooth", tracking=True)
-    cable_usb_id = fields.Selection([("si", "Si"), ("no", "No")], string="Cable USB de impresión", tracking=True)
-    cable_red_id = fields.Selection([("si", "Si"), ("no", "No")], string="Cable de red", tracking=True)
-    toner_black_id = fields.Selection(
-        [("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"), ("sin_stock", "Sin stock"),("no_aplica","No aplica")],
-        string="Toner Black", tracking=True)
-    toner_black_id = fields.Selection(
-        [("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"), ("sin_stock", "Sin stock")],
+    adf_simple_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="ADF Simple", tracking=True)
+    transformador_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Transformador", tracking=True)
+    estabilizador = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Estabilizador", tracking=True)
+    adf_dual_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="ADF Dual scan", tracking=True)
+    finalizador_interno_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Finalizador Interno", tracking=True)
+    finalizador_externo_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Finalizador Externo", tracking=True)
+    mueble_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Mueble", tracking=True)
+    panel_smart_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Panel Smart", tracking=True)
+    panel_normal_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Panel Normal", tracking=True)
+    wi_fi_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Wi-Fi", tracking=True)
+    bluetooth_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Bluetooth", tracking=True)
+    cable_usb_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Cable USB de impresión", tracking=True)
+    cable_red_id = fields.Selection([("si", "Sí lo tiene"), ("no", "No lo tiene"), ("no_aplica", "No aplica")], string="Cable de red", tracking=True)
+    
+    toner_black_id = fields.Selection([("lleno", "Lleno"), ("medio", "Medio"), ("vacio", "Vacío"), ("sin_botella", "Sin botella")],
         string="Toner Black", tracking=True)
     toner_magenta_id = fields.Selection(
-        [("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"), ("sin_stock", "Sin stock"),("no_aplica","No aplica")],
+        [("lleno", "Lleno"),
+    ("medio", "Medio"),
+    ("vacio", "Vacío"),
+    ("sin_botella", "Sin botella"),
+    ("no_aplica", "No aplica")],
         string="Toner Magenta", tracking=True)
     toner_cyan_id = fields.Selection(
-        [("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"), ("sin_stock", "Sin stock"),("no_aplica","No aplica")],
+        [("lleno", "Lleno"),
+    ("medio", "Medio"),
+    ("vacio", "Vacío"),
+    ("sin_botella", "Sin botella"),
+    ("no_aplica", "No aplica")],
         string="Toner Cyan", tracking=True)
     toner_yellow_id = fields.Selection(
-        [("nuevo", "Nuevo"), ("regular", "Regular"), ("vacio", "Vacío"), ("sin_stock", "Sin stock"),("no_aplica","No aplica")],
+        [("lleno", "Lleno"),
+    ("medio", "Medio"),
+    ("vacio", "Vacío"),
+    ("sin_botella", "Sin botella"),
+    ("no_aplica", "No aplica")],
         string="Toner Yellow", tracking=True)
-    copia_id = fields.Selection([("correcto", "Correcto"), ("observacion", "Con Problemas"), ("regular", "Regulación")],
-                                string="Copia", tracking=True)
+    copia_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("no_aplica", "No Aplica para esta Máquina")], string="Copia", tracking=True)
     impresion_id = fields.Selection(
-        [("correcto", "Correcto"), ("observacion", "Con Problemas"), ("sin_probar", "Sin probar")],
+        [("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("no_aplica", "No Aplica para esta Máquina")],
         string="Impresión", tracking=True)
     impresion_usb_id = fields.Selection(
-        [("correcto", "Correcto"), ("observacion", "Con Problemas"), ("sin_probar", "Sin probar")],
+        [("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("no_aplica", "No Aplica para esta Máquina")],
         string="Impresión USB", tracking=True)
     scaner_smb_id = fields.Selection(
-        [("correcto", "Correcto"), ("observacion", "Con Problemas"), ("sin_probar", "Sin probar")],
+        [("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("no_aplica", "No Aplica para esta Máquina")],
         string="Scanner SMB", tracking=True)
     scaner_usb_id = fields.Selection(
-        [("correcto", "Correcto"), ("observacion", "Con Problemas"), ("sin_probar", "Sin probar")],
+        [("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("no_aplica", "No Aplica para esta Máquina")],
         string="Scanner USB", tracking=True)
     scaner_ftp_id = fields.Selection(
-        [("correcto", "Correcto"), ("observacion", "Con Problemas"), ("sin_probar", "Sin probar"),("no_aplica","No aplica")],
+        [("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("no_aplica", "No Aplica para esta Máquina")],
         string="Scanner FTP", tracking=True)
     scaner_mail_id = fields.Selection(
-        [("correcto", "Correcto"), ("observacion", "Con Problemas"), ("sin_probar", "Sin probar"),("no_aplica","No aplica")],
+        [("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("no_aplica", "No Aplica para esta Máquina")],
         string="Scanner Mail", tracking=True)
     adf_id = fields.Selection(
-        [("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-         ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),('con_problema','Con Problemas')],
+        [("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Requiere cambio de repuestos"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
         string="ADF", tracking=True)
-    tray1_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                 ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),('con_problema','Con Problemas')],
+    tray1_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Requiere cambio de repuestos"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                 string="Tray 1", tracking=True)
-    tray2_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                 ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),("no_aplica","No aplica"),('con_problema','Con Problemas')],
+    tray2_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Requiere cambio de repuestos"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                 string="Tray 2", tracking=True)
-    tray3_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                 ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),("no_aplica","No aplica"),('con_problema','Con Problemas')],
+    tray3_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Requiere cambio de repuestos"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                 string="Tray 3", tracking=True)
-    tray4_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                 ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),("no_aplica","No aplica"),('con_problema','Con Problemas')],
+    tray4_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Requiere cambio de repuestos"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                 string="Tray 4", tracking=True)
-    bypass_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                  ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),('con_problema','Con Problemas')],
+    bypass_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Requiere cambio de repuestos"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                  string="Bypass", tracking=True)
-    finalizador_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                       ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),("no_aplica","No aplica"),('con_problema','Con Problemas')],
+    finalizador_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Requiere cambio de repuestos"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                       string="Finalizador", tracking=True)
 
     tacho_id = fields.Selection(
-        [("sin_revisar", "Sin revisar"), ("se_cambio", "Se cambio"), ("se_boto_contenido", "Se boto contenido"),("no_aplica","No aplica"),
-        ("revisado", "Revisado"),('cambiar','Requiere cambio')],
+        [("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
         string="Tacho residual", tracking=True)
-    fusora_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                  ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),('cambiar','Requiere cambio')],
+    fusora_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                  string="Unidad Fusora", tracking=True)
-    transfer_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                    ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),("no_aplica","No aplica"),('cambiar','Requiere cambio')],
+    transfer_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                    string="Faja de Transferencia", tracking=True)
-    optico_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                  ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado")],
+    optico_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                  string="Unidad Optica", tracking=True)
-    black_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                 ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),('cambiar','Requiere cambio')],
+    black_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                 string="Unidad Imagen Black", tracking=True)
-    magenta_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                   ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),("no_aplica","No aplica"),('cambiar','Requiere cambio')],
+    magenta_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                   string="Unidad Imagen Magenta", tracking=True)
-    cyan_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),("no_aplica","No aplica"),('cambiar','Requiere cambio')],
+    cyan_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                string="Unidad Imagen Cyan", tracking=True)
-    yellow_id = fields.Selection([("sin_revisar", "Sin revisar"), ("mantenimiento", "Mantenimiento"),
-                                  ("cambio_de_repuestos", "Cambio de repuestos"), ("revisado", "Revisado"),("no_aplica","No aplica"),('cambiar','Requiere cambio')],
+    yellow_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                  string="Unidad Imagen Yellow", tracking=True) 
     contometrok_id = fields.Integer(string="Contometro K", tracking=True) 
     codigo_id  = fields.Char(string='Referencia id') 
 
     contometroc_id = fields.Integer(string="Contometro Color", tracking=True)
     contometros_id = fields.Integer(string="Contometro Scanner", tracking=True)
-    @api.model
+    @api.depends('contometrok_id', 'contometroc_id')
     def sumar_field(self):
-        self.total_copias_id = self.contometrok_id + self.contometroc_id
+        for record in self:
+            record.total_copias_id = record.contometrok_id + record.contometroc_id
+
+
     total_copias_id = fields.Integer(string="Contometro Total P+C", compute=sumar_field)
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
                                          ("mantenimiento_preventivo", "Mantenimeinto preventivo"), (
@@ -211,8 +208,7 @@ class ticket_alquiler(models.Model):
     pedidos_count = fields.Integer(compute='compute_count_pedidos')
     def compute_count_pedidos(self):
         for record in self:
-            record.pedidos_count = self.env['sale.order'].search_count(
-                [('equipo_id', '=', self.product_alquiler.id)])
+            record.pedidos_count = self.env['sale.order'].search_count([('equipo_id', '=', record.product_alquiler.id)])
 
     def get_pedidos(self):
         self.ensure_one()
