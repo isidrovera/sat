@@ -266,6 +266,9 @@ class ticket_alquiler(models.Model):
         # Crear el pedido de venta
         sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
+            'equipo_id' :self.product_alquiler.id,
+            'ticket_id' :self.id,
+            'solicitante_id':self.responsable.id,
             'origin': self.name,  # Usar el nombre del ticket como referencia
         })
 
