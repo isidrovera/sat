@@ -232,17 +232,21 @@ class ticket_alquiler(models.Model):
     def create_sale_order(self):
         SaleOrder = self.env['sale.order']
         SaleOrderLine = self.env['sale.order.line']
-        
+
+        # Verificamos y aseguramos que hay registros en 'self'
+        if not self:
+            raise UserError("No hay registros de tickets seleccionados.")
+
         for record in self:
-            # Crear el pedido de venta
+            # Creamos el pedido de venta para el registro actual en el bucle
             order = SaleOrder.create({
                 'partner_id': record.partner_id.id,
                 'equipo_id': record.product_alquiler.id,
                 'ticket_id': record.id,
                 'solicitante_id': record.responsable.id,
             })
-            
-            # Crear las líneas de pedido en base a las líneas de `sale_order_line_ids` en `ticket.alquiler`
+
+            # Validamos y creamos las líneas de pedido
             if record.sale_order_line_ids:
                 for line in record.sale_order_line_ids:
                     SaleOrderLine.create({
@@ -253,7 +257,7 @@ class ticket_alquiler(models.Model):
                         'name': line.product_id.get_product_multiline_description_sale(),
                     })
 
-            # Acción para abrir el pedido de venta recién creado
+            # Abrimos la vista del pedido de venta recién creado
             return {
                 'name': 'Nuevo Registro',
                 'view_type': 'form',
@@ -263,6 +267,7 @@ class ticket_alquiler(models.Model):
                 'type': 'ir.actions.act_window',
                 'target': 'current',
             }
+
 
 
 
