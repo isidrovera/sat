@@ -229,31 +229,66 @@ class ticket_alquiler(models.Model):
         string='Productos Solicitados',
         tracking=True
     )
-    def create_sale_order(self):
-        self.ensure_one()  # Asegurarte de que estamos procesando un único ticket
+    # Campo para el movimiento de inventario
+    move_id = fields.Many2one(
+        'stock.move', 'Inventario Movimiento',
+        copy=False, readonly=True, tracking=True, check_company=True
+    )
+    
+    # Campo para el producto relacionado
+    product_id = fields.Many2one(
+        'product.product', string='Producto a Alquilar',
+        domain="[('type', '=', 'consu'), '|', ('company_id', '=', company_id), ('company_id', '=', False)]",
+        check_company=True
+    )
 
-        # Crear el pedido de venta
+    # Campo para la cantidad de producto
+    product_qty = fields.Float(
+        'Cantidad del Producto', compute='_compute_product_qty', readonly=False, store=True,
+        default=1.0, digits='Product Unit of Measure'
+    )
+
+    # Campo para la unidad de medida
+    product_uom = fields.Many2one(
+        'uom.uom', 'Unidad de Medida del Producto',
+        compute='_compute_product_uom', store=True,
+        domain="[('category_id', '=', product_uom_category_id)]"
+    )
+
+    product_uom_category_id = fields.Many2one(related='product_id.uom_id.category_id')
+
+    # Método para calcular la cantidad del producto
+    @api.depends('product_qty')
+    def _compute_product_qty(self):
+        for record in self:
+            # Aquí puedes definir la lógica para calcular la cantidad
+            record.product_qty = 1.0  # Ajusta según sea necesario
+
+    # Método para calcular la unidad de medida
+    @api.depends('product_id')
+    def _compute_product_uom(self):
+        for record in self:
+            if record.product_id:
+                record.product_uom = record.product_id.uom_id.id
+            else:
+                record.product_uom = False
+
+    # Crear línea de pedido
+    def create_sale_order(self):
+        self.ensure_one()
         sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
-            'equipo_id': self.product_alquiler.id,
-            'ticket_id': self.id,
-            'solicitante_id': self.responsable.id,
-            'tipo_pedido': 'normal',
-            'estado_entrega': 'sin_entregar',  # Estado inicial del pedido
+            # Otros campos relevantes...
         })
 
-        # Agregar líneas de productos solicitados del ticket al pedido
-        for line in self.sale_order_line_ids:  # Recorremos las líneas de pedido
-            if line.product_id:  # Asegúrate de que la línea tenga un producto
-                self.env['sale.order.line'].create({
-                    'order_id': sale_order.id,  # Referencia al pedido de venta
-                    'product_id': line.product_id.id,  # ID del producto
-                    'product_uom_qty': line.product_uom_qty,  # Cantidad solicitada
-                    'price_unit': line.price_unit,  # Precio unitario del producto
-                    'name': line.product_id.name,  # Nombre del producto
-                })
+        # Crear la línea de pedido para el producto relacionado
+        self.env['sale.order.line'].create({
+            'order_id': sale_order.id,
+            'product_id': self.product_id.id,
+            'product_uom_qty': self.product_qty,
+            'price_unit': self.product_id.lst_price,  # O el precio que quieras usar
+        })
 
-        # Devolver una acción para abrir el pedido recién creado
         return {
             'name': 'Pedido de Venta',
             'view_type': 'form',
@@ -263,7 +298,6 @@ class ticket_alquiler(models.Model):
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
-
 
 
     def action_finalizar(self):
