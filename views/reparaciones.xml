@@ -228,16 +228,16 @@
                         decoration-danger="estado_id not in ('sin_revisar','en_revision','finalizado','entregada')"
                         decoration-warning="estado_id == 'entregada'" />
                 </list>
+                <!-- Aplicar el dominio solo para el grupo técnico -->
+                <field name="domain"
+                    eval="[
+            ('responsable_id', '=', user.id), 
+            ('estado_id', '!=', 'entregada'), 
+            ('estado_id', '!=', 'finalizado')
+        ]"
+                    if="user.has_group('sat_tecnica_group_user')" />
             </field>
 
-            <!-- Aplicar el dominio solo para el grupo técnico -->
-            <field name="domain"
-                eval="[
-                ('responsable_id', '=', user.id), 
-                ('estado_id', '!=', 'entregada'), 
-                ('estado_id', '!=', 'finalizado')
-            ]"
-                if="user.has_group('sat_tecnica_group_user')" />
 
         </record>
         <record id="reparaciones_search_view" model="ir.ui.view">
