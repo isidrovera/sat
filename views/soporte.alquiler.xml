@@ -155,8 +155,8 @@
                                     <list editable="bottom">
                                         <field name="product_id"/>
                                         <field name="product_uom_qty"/>
-                                        <field name="price_unit" invisible="True"/>
-                                        <field name="price_subtotal" readonly="True"/>
+                                        <field name="price_unit" invisible="1"/>
+                                        <field name="price_subtotal"  invisible="1" readonly="True"/>
                                         
                                     </list>
                                 </field>
