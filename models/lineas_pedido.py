@@ -8,8 +8,8 @@ _logger = logging.getLogger(__name__)
 class linea_pedido(models.Model):
     _inherit = 'sale.order.line'
 
-    ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia',related='order_id.ticket_class LineaPedido(models.Model):
-    _inherit = 'sale.order.line'
+    ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia',related='order_id.ticket_id')
+    
 
     ticket_ref_id = fields.Many2one('ticket.alquiler', string='Referencia de Ticket')
 
