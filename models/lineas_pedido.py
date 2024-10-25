@@ -7,7 +7,7 @@ _logger = logging.getLogger(__name__)
 class LineaPedido(models.Model):
     _inherit = 'sale.order.line'
 
-    ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia', related='order_id.ticket_id')
+    ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia')
     ticket_ref_id = fields.Many2one('ticket.alquiler', string='Referencia de Ticket')
     serie = fields.Char(related='ticket_id.serie_id_r', string='Serie')
     contometro = fields.Integer( string='Contometro actual', readonly=False)
@@ -28,31 +28,4 @@ class LineaPedido(models.Model):
 
     total_copias_id = fields.Integer(string="Total de copias")
 
-    def write(self, vals):
-        if 'estado_entrega' in vals and vals['estado_entrega'] == 'entregado':
-            _logger.debug("Se detectó un cambio al estado 'entregado' para el registro con ID: %s.", self.id)
-            RepuestosAlquiler = self.env['repuestos.alquiler']
-            
-            for record in self:
-                repuesto = RepuestosAlquiler.search([('codigo_id', '=', record.id)], limit=1)
-                repuesto_vals = {
-                    'referencia_reparacion_id': record.order_id.name,
-                    'serie_id': record.order_id.equipo_id.serie,
-                    'modelo_id': record.order_id.equipo_id.id,
-                    'cliente_id': record.order_id.partner_id.name,
-                    'cantidad': record.product_uom_qty,
-                    'contometro_actual': record.contometro,
-                    'contometro_ultimo': record.contometroa,
-                    'solicitante_id': record.order_id.solicitante_id.name,
-                    'name': record.product_template_id.name,
-                    'codigo_id': record.id,
-                }
-                
-                if not repuesto:
-                    _logger.debug("Creando nuevo registro en repuestos.alquiler para ID de producto: %s", record.product_template_id.id)
-                    RepuestosAlquiler.create(repuesto_vals)
-                else:
-                    _logger.debug("Actualizando registro existente en repuestos.alquiler para ID de producto: %s", record.product_template_id.id)
-                    repuesto.write(repuesto_vals)
-
-        return super(LineaPedido, self).write(vals)
+    
