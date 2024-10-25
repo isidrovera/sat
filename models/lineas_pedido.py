@@ -10,8 +10,8 @@ class LineaPedido(models.Model):
     ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia', related='order_id.ticket_id')
     ticket_ref_id = fields.Many2one('ticket.alquiler', string='Referencia de Ticket')
     serie = fields.Char(related='ticket_id.serie_id_r', string='Serie')
-    contometro = fields.Integer(related='ticket_id.total_copias_id', string='Contometro actual', readonly=False)
-    contometroa = fields.Integer(string='Contometro anterior')
+    contometro = fields.Char(related='ticket_id.total_copias_id', string='Contometro actual', readonly=False)
+    contometroa = fields.Char(string='Contometro anterior')
     pedido_id = fields.Many2one('sale.order', string='Pedido')
     codigo_id = fields.Char(string='Referencia id')
     estado_entrega = fields.Selection(
