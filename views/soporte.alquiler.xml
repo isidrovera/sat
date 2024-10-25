@@ -155,20 +155,17 @@
                                     </group>
                                 </group>
                             </page>
-                            <page string="Productos Solicitados" name="products">
-                                <field name="line_ids">
-                                    <list editable="bottom" >
-                                        <control>
-                                            <button string="Agregar Producto" type="object" name="action_add_product_line" class="oe_highlight"/>
-                                        </control>
-                                        <field name="product_id" required="1"/>
-                                        <field name="product_uom_qty" string="Cantidad" required="1"/>
-                                        <field name="price_unit" string="Precio Unitario" required="1"/>
-                                        <field name="price_subtotal" string="Subtotal" readonly="1"/>
+                            <page string="Productos">
+                                <field name="line_ids" context="{'default_ticket_id': id}">
+                                    <list editable="bottom">
+                                        <field name="product_id"/>
+                                        <field name="product_uom_qty"/>
+                                        <field name="price_unit"/>
+                                        <field name="price_subtotal" readonly="1"/>
+                                        <button name="action_add_product_line" string="Agregar Producto" type="object" class="oe_highlight"/>
                                     </list>
                                 </field>
                             </page>
-
                         </notebook>
                     </sheet>
                     <chatter />
