@@ -246,7 +246,7 @@ class ticket_alquiler(models.Model):
             'res_model': 'ticket.alquiler.line',
             'view_mode': 'form',
             'target': 'new',
-            'context': {'default_ticket_id': self.id}  # Pasar el ID del ticket actual
+            'context': {'default_ticket_id': self.id}
         }
 
     def action_view_lines(self):
