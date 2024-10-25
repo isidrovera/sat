@@ -26,7 +26,7 @@ class LineaPedido(models.Model):
         for record in self:
             record.total_copias_id = record.contometro - record.contometroa if record.contometro and record.contometroa else 0
 
-    total_copias_id = fields.Integer(string="Total de copias", compute="restar_field")
+    total_copias_id = fields.Char(string="Total de copias", compute="restar_field")
 
     def write(self, vals):
         if 'estado_entrega' in vals and vals['estado_entrega'] == 'entregado':

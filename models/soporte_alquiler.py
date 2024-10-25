@@ -166,11 +166,11 @@ class ticket_alquiler(models.Model):
                                string="Unidad Imagen Cyan", tracking=True)
     yellow_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                  string="Unidad Imagen Yellow", tracking=True) 
-    contometrok_id = fields.Integer(string="Contometro K", tracking=True) 
+    contometrok_id = fields.Char(string="Contometro K", tracking=True) 
     codigo_id  = fields.Char(string='Referencia id') 
 
-    contometroc_id = fields.Integer(string="Contometro Color", tracking=True)
-    contometros_id = fields.Integer(string="Contometro Scanner", tracking=True)
+    contometroc_id = fields.Char(string="Contometro Color", tracking=True)
+    contometros_id = fields.Char(string="Contometro Scanner", tracking=True)
     @api.depends('contometrok_id', 'contometroc_id')
     def sumar_field(self):
         for record in self:
@@ -217,7 +217,7 @@ class ticket_alquiler(models.Model):
                 )
 
 
-    total_copias_id = fields.Integer(string="Contometro Total P+C", compute=sumar_field)
+    total_copias_id = fields.Char(string="Contometro Total P+C", compute=sumar_field)
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
                                          ("mantenimiento_preventivo", "Mantenimeinto preventivo"), (
                                              "mantenimiento_correctivo", "Mantenimiento correctivo"),
