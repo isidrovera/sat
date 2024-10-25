@@ -230,44 +230,45 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
-        sale_order = self.env['sale.order']
-        
-        # Crear el pedido de venta con los valores básicos
-        order_id = sale_order.create({
+        # Verificar si el registro tiene un valor válido de `partner_id` y otros datos necesarios
+        if not self.partner_id or not self.product_alquiler or not self.responsable:
+            raise UserError("Debe completar todos los campos requeridos.")
+
+        # Crear el pedido de venta
+        sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
             'equipo_id': self.product_alquiler.id,
             'ticket_id': self.id,
             'solicitante_id': self.responsable.id,
         })
-        
-        # Verificar si hay productos agregados en el ticket para crear las líneas de pedido
+
+        # Crear las líneas de pedido si existen productos en el ticket
         if self.sale_order_line_ids:
             order_lines = []
-            
             for line in self.sale_order_line_ids:
                 if line.product_id:
                     order_lines.append({
-                        'order_id': order_id.id,  # Relacionar cada línea con el pedido recién creado
+                        'order_id': sale_order.id,  # Usamos el `id` del pedido recién creado
                         'product_id': line.product_id.id,
                         'product_uom_qty': line.product_uom_qty,
                         'price_unit': line.price_unit,
                         'name': line.product_id.get_product_multiline_description_sale(),
                     })
             
-            # Crear las líneas de pedido de venta en lote
+            # Crear todas las líneas de una vez
             if order_lines:
                 self.env['sale.order.line'].create(order_lines)
-        
-        # Retornar la acción para abrir el pedido de venta recién creado
+
+        # Retornar la acción para abrir el pedido recién creado
         return {
             'name': 'Nuevo Pedido de Venta',
-            'view_type': 'form',
             'view_mode': 'form',
             'res_model': 'sale.order',
-            'res_id': order_id.id,
+            'res_id': sale_order.id,
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
+
 
 
 
