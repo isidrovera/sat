@@ -223,7 +223,6 @@ class ticket_alquiler(models.Model):
 
     
 
-    product_id = fields.Many2one('product.product', string='Producto')
     sale_order_line_ids = fields.One2many(
         'sale.order.line',  # Modelo de las líneas de pedido de venta
         'ticket_ref_id',  # Campo Many2one en 'sale.order.line' que hace referencia al ticket
@@ -231,12 +230,16 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
+        # Crear el pedido de venta
         sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
             'equipo_id': self.product_alquiler.id,
             'ticket_id': self.id,
             'solicitante_id': self.responsable.id,
         })
+
+        # Asegurarse de que solo se haya creado un registro
+        sale_order.ensure_one()
 
         # Agregar automáticamente las líneas de productos seleccionadas por el técnico
         for line in self.sale_order_line_ids:
@@ -247,6 +250,7 @@ class ticket_alquiler(models.Model):
                 'price_unit': line.price_unit,
             })
 
+        # Retornar la acción para abrir el pedido de venta creado
         return {
             'name': 'Nuevo Pedido de Venta',
             'view_type': 'form',
@@ -256,6 +260,7 @@ class ticket_alquiler(models.Model):
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
+
 
     def action_finalizar(self):
         self.estado='finalizado'
