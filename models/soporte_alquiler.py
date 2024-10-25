@@ -261,24 +261,35 @@ class ticket_alquiler(models.Model):
         }
 
     def create_sale_order(self):
-        sale_order = self.env['sale.order']
-        order_id = sale_order.create({
-            'partner_id':self.partner_id.id,
-            'equipo_id' :self.product_alquiler.id,
-            'ticket_id' :self.id,
-            'solicitante_id':self.responsable.id,
-            
-        })
-        return {
-        'name': 'Nuevo Registro',
-        'view_type': 'form',
-        'view_mode': 'form',
-        'res_model': 'sale.order',
-        'res_id': order_id.id,
-        'type': 'ir.actions.act_window',
-        'target': 'current',
+        self.ensure_one()  # Asegúrate de estar trabajando con un único ticket
+        sale_order_vals = {
+            'partner_id': self.partner_id.id,
+            'ticket_id': self.id,  # Referencia al ticket
+            'origin': self.name,  # Usar el nombre del ticket como referencia
+            'line_ids': [],
+        }
 
-    }
+        # Recopilar líneas de productos
+        for line in self.line_ids:
+            sale_order_vals['line_ids'].append((0, 0, {
+                'product_id': line.product_id.id,
+                'product_uom_qty': line.product_uom_qty,
+                'price_unit': line.price_unit,
+                'price_subtotal': line.price_subtotal,  # Opcional, se calculará automáticamente
+            }))
+
+        # Crear el pedido de venta
+        sale_order = self.env['sale.order'].create(sale_order_vals)
+
+        return {
+            'name': 'Pedido de Venta',
+            'view_type': 'form',
+            'view_mode': 'form',
+            'res_model': 'sale.order',
+            'res_id': sale_order.id,
+            'type': 'ir.actions.act_window',
+            'target': 'current',
+        }
     def action_finalizar(self):
         self.estado='finalizado'
         # Enviando el segundo correo con la segunda plantilla
