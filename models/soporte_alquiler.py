@@ -229,72 +229,93 @@ class ticket_alquiler(models.Model):
         string='Productos Solicitados',
         tracking=True
     )
-    # Renombrar la función create_sale_order a generate_sale_order
-    def generate_sale_order(self):
-        _logger.info("Iniciando generación de pedido de venta para ticket ID: %s", self.id)
+    def create_sale_order(self):
+        _logger.info("Iniciando creación de pedido de venta para ticket ID: %s", self.id)
 
         # Validación de campos requeridos
-        if not self.partner_id:
-            _logger.error("El campo partner_id está vacío para el ticket ID: %s", self.id)
-            raise UserError("El campo del socio es obligatorio.")
-        if not self.product_alquiler:
-            _logger.error("El campo product_alquiler está vacío para el ticket ID: %s", self.id)
-            raise UserError("El campo del equipo es obligatorio.")
-        if not self.responsable:
-            _logger.error("El campo responsable está vacío para el ticket ID: %s", self.id)
-            raise UserError("El campo del solicitante es obligatorio.")
+        required_fields = {
+            'partner_id': "El campo del socio es obligatorio.",
+            'product_alquiler': "El campo del equipo es obligatorio.",
+            'responsable': "El campo del solicitante es obligatorio."
+        }
         
-        # Creación del pedido de venta
-        sale_order = self.env['sale.order'].create({
+        for field, message in required_fields.items():
+            if not self[field]:
+                _logger.error(f"El campo {field} está vacío para el ticket ID: {self.id}")
+                raise UserError(message)
+
+        try:
+            # Obtener valores por defecto para el pedido
+            default_values = self._prepare_sale_order_values()
+            
+            # Creación del pedido de venta con with_context para asegurar el comportamiento correcto
+            sale_order = self.env['sale.order'].with_context(
+                default_company_id=self.env.company.id
+            ).create(default_values)
+
+            _logger.info("Pedido de venta creado con ID: %s para ticket ID: %s", 
+                        sale_order.id, self.id)
+
+            # Validar que sale_order_line_ids contiene líneas
+            if not self.sale_order_line_ids:
+                raise UserError("No hay líneas de productos seleccionadas para agregar al pedido de venta.")
+
+            # Crear las líneas del pedido en lote para mejor rendimiento
+            order_lines_vals = []
+            for line in self.sale_order_line_ids:
+                if not line.product_id:
+                    continue
+                    
+                line_vals = self._prepare_sale_order_line_values(line, sale_order)
+                order_lines_vals.append(line_vals)
+
+            if order_lines_vals:
+                # Crear todas las líneas de una vez
+                self.env['sale.order.line'].with_context(
+                    default_order_id=sale_order.id
+                ).create(order_lines_vals)
+
+            # Forzar el recálculo de los campos computados
+            sale_order.invalidate_recordset()
+            
+            return self._get_sale_order_action(sale_order)
+
+        except Exception as e:
+            _logger.error("Error al crear el pedido de venta: %s", str(e), exc_info=True)
+            raise UserError(f"Error al crear el pedido de venta: {str(e)}")
+
+    def _prepare_sale_order_values(self):
+        """Prepara los valores para crear el pedido de venta."""
+        return {
             'partner_id': self.partner_id.id,
             'equipo_id': self.product_alquiler.id,
             'ticket_id': self.id,
             'solicitante_id': self.responsable.id,
-        })
-        _logger.info("Pedido de venta creado con ID: %s para ticket ID: %s", sale_order.id if sale_order else None, self.id)
+            'date_order': fields.Datetime.now(),
+            'company_id': self.env.company.id,
+            'user_id': self.env.user.id,
+        }
 
-        # Confirmar que sale_order fue creado y contiene un solo registro
-        if not sale_order:
-            _logger.error("Error crítico: El pedido de venta no fue creado para el ticket ID: %s", self.id)
-            raise UserError("Error al crear el pedido de venta.")
-        
-        try:
-            sale_order.ensure_one()
-            _logger.info("El registro sale_order es único con ID: %s", sale_order.id)
-        except ValueError as e:
-            _logger.error("Error en ensure_one para sale_order: %s", e)
-            raise UserError("Error de singleton en sale_order: %s" % e)
+    def _prepare_sale_order_line_values(self, line, sale_order):
+        """Prepara los valores para crear una línea de pedido."""
+        return {
+            'order_id': sale_order.id,
+            'product_id': line.product_id.id,
+            'product_uom_qty': line.product_uom_qty,
+            'price_unit': line.price_unit,
+            'name': line.product_id.get_product_multiline_description_sale(),
+        }
 
-        # Validar que sale_order_line_ids contiene líneas
-        if not self.sale_order_line_ids:
-            _logger.warning("No hay líneas de productos seleccionadas en el ticket ID: %s para agregar al pedido de venta", self.id)
-            raise UserError("No hay líneas de productos seleccionadas para agregar al pedido de venta.")
-
-        # Procesamiento de las líneas de producto
-        for line in self.sale_order_line_ids:
-            _logger.info("Procesando línea de producto con ID: %s y cantidad: %s", line.product_id.id, line.product_uom_qty)
-            if line.product_id:
-                sale_order_line = self.env['sale.order.line'].create({
-                    'order_id': sale_order.id,
-                    'product_id': line.product_id.id,
-                    'product_uom_qty': line.product_uom_qty,
-                    'price_unit': line.price_unit,
-                    'ticket_ref_id': self.id  # Asegurarse de establecer referencia
-                })
-                _logger.info("Línea de pedido creada con ID: %s para producto ID: %s en la orden ID: %s", sale_order_line.id, line.product_id.id, sale_order.id)
-
-        # Retornar la acción para abrir el pedido de venta creado
-        _logger.info("Pedido de venta con ID: %s creado exitosamente para el ticket ID: %s", sale_order.id, self.id)
+    def _get_sale_order_action(self, sale_order):
+        """Retorna la acción para abrir el pedido de venta."""
         return {
             'name': 'Nuevo Pedido de Venta',
-            'view_type': 'form',
             'view_mode': 'form',
             'res_model': 'sale.order',
             'res_id': sale_order.id,
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
-
 
 
     def action_finalizar(self):
