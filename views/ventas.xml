@@ -19,6 +19,7 @@
             <button name="action_crear_reparaciones" string="Crear Reparaciones" type="object" class="btn-primary" />
             <field name="disponibilidad_id" widget="statusbar" statusbar_colors="{'disponible':'red','separada':'blue'}" statusbar_visible="true"/>
             <field name="estado_ventas_id" widget="statusbar" class="oe_right" statusbar_visible="true"/>
+            <button name="abrir_cambio_estado" type="object" string="Cambiar Estado" class="btn-primary"/>
           </header>
 
           <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" invisible="activador == 'no'">

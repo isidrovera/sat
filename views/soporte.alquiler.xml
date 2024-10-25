@@ -9,10 +9,6 @@
                 <form string="">
                     <header>
                         <field name="estado" widget="statusbar" />
-                        <button string="Crear pedido" name="create_sale_order" type="object"
-                            class="btn btn-success" icon="fa-cart-plus"
-                             />
-
                         <button string="Cerrar" name="action_finalizar" type="object"
                             class="btn btn-info" icon="fa-wrench" invisible="estado !='proceso'" />
                         <button class="oe_highlight" name="enviar_mensaje_whatsapp" type="object"

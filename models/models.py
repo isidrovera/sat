@@ -560,3 +560,12 @@ class SatSat(models.Model):
             }
         }
 
+    def abrir_cambio_estado(self):
+            # Aquí puedes abrir un wizard para cambiar el estado
+            return {
+                'type': 'ir.actions.act_window',
+                'name': 'Cambiar Estado',
+                'res_model': 'sat.cambio.estado.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+            }
