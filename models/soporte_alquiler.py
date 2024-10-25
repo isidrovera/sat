@@ -260,7 +260,25 @@ class ticket_alquiler(models.Model):
             'context': {'create': False}
         }
 
+    def create_sale_order(self):
+        sale_order = self.env['sale.order']
+        order_id = sale_order.create({
+            'partner_id':self.partner_id.id,
+            'equipo_id' :self.product_alquiler.id,
+            'ticket_id' :self.id,
+            'solicitante_id':self.responsable.id,
+            
+        })
+        return {
+        'name': 'Nuevo Registro',
+        'view_type': 'form',
+        'view_mode': 'form',
+        'res_model': 'sale.order',
+        'res_id': order_id.id,
+        'type': 'ir.actions.act_window',
+        'target': 'current',
 
+    }
     def action_finalizar(self):
         self.estado='finalizado'
         # Enviando el segundo correo con la segunda plantilla
