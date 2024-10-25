@@ -229,102 +229,36 @@ class ticket_alquiler(models.Model):
         string='Productos Solicitados',
         tracking=True
     )
-    # Campo para el movimiento de inventario
-    move_id = fields.Many2one(
-        'stock.move', 'Inventario Movimiento',
-        copy=False, readonly=True, tracking=True, check_company=True
-    )
-    
-    # Campo para el producto relacionado
-    product_id = fields.Many2one(
-        'product.product', string='Producto a Alquilar',
-        domain="[('type', '=', 'consu'), '|', ('company_id', '=', company_id), ('company_id', '=', False)]",
-        check_company=True
+    line_ids = fields.One2many(
+        'ticket.alquiler.line',  # Modelo para las líneas de pedido
+        'ticket_id',             # Campo Many2one en el modelo de líneas que hace referencia a este ticket
+        string='Líneas de Productos',
+        copy=True,               # Permitir que se copien las líneas al duplicar el ticket
+        required=True            # Hacerlo requerido si es necesario
     )
 
-    # Campo para la cantidad de producto
-    product_qty = fields.Float(
-        'Cantidad del Producto', compute='_compute_product_qty', readonly=False, store=True,
-        default=1.0, digits='Product Unit of Measure'
-    )
-
-    # Campo para la unidad de medida
-    product_uom = fields.Many2one(
-        'uom.uom', 'Unidad de Medida del Producto',
-        compute='_compute_product_uom', store=True,
-        domain="[('category_id', '=', product_uom_category_id)]"
-    )
-
-    product_uom_category_id = fields.Many2one(related='product_id.uom_id.category_id')
-
-    # Método para calcular la cantidad del producto
-    @api.depends('product_qty')
-    def _compute_product_qty(self):
-        for record in self:
-            # Aquí puedes definir la lógica para calcular la cantidad
-            record.product_qty = 1.0  # Ajusta según sea necesario
-
-    # Método para calcular la unidad de medida
-    @api.depends('product_id')
-    def _compute_product_uom(self):
-        for record in self:
-            if record.product_id:
-                record.product_uom = record.product_id.uom_id.id
-            else:
-                record.product_uom = False
-
-    # Crear línea de pedido
-    def create_sale_order(self):
+    def action_add_product_line(self):
+        """ Método para agregar una línea de producto al ticket. """
         self.ensure_one()
-        sale_order = self.env['sale.order'].create({
-            'partner_id': self.partner_id.id,
-            # Otros campos relevantes...
-        })
-
-        # Crear la línea de pedido para el producto relacionado
-        self.env['sale.order.line'].create({
-            'order_id': sale_order.id,
-            'product_id': self.product_id.id,
-            'product_uom_qty': self.product_qty,
-            'price_unit': self.product_id.lst_price,  # O el precio que quieras usar
-        })
-
         return {
-            'name': 'Pedido de Venta',
-            'view_type': 'form',
-            'view_mode': 'form',
-            'res_model': 'sale.order',
-            'res_id': sale_order.id,
             'type': 'ir.actions.act_window',
-            'target': 'current',
+            'name': 'Agregar Producto',
+            'res_model': 'ticket.alquiler.line',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_ticket_id': self.id}  # Pasar el ID del ticket actual
         }
 
-    def create_sale_order_line(self, product_id, quantity):
-        """ Método para crear una línea de pedido a partir de un producto y cantidad dados. """
-        self.ensure_one()  # Asegúrate de estar trabajando con un único ticket
-        if not product_id:
-            raise UserError(_("No se puede crear una línea de pedido sin un producto."))
-
-        sale_order = self.env['sale.order'].create({
-            'partner_id': self.partner_id.id,
-            # Otros campos relevantes...
-        })
-
-        self.env['sale.order.line'].create({
-            'order_id': sale_order.id,  # Referencia al pedido
-            'product_id': product_id,
-            'product_uom_qty': quantity,
-            'price_unit': self.env['product.product'].browse(product_id).lst_price,  # O el precio que quieras usar
-        })
-
-    def add_product_from_catalog(self, product_id, quantity):
-        """ Método que se llama para agregar un producto específico desde el catálogo. """
-        self.ensure_one()  # Asegúrate de estar trabajando con un único ticket
-        self.create_sale_order_line(product_id, quantity)
+    def action_view_lines(self):
+        """ Método para ver las líneas de productos del ticket. """
         return {
-            'type': 'ir.actions.act_window_close',  # Cierra la ventana después de agregar
+            'type': 'ir.actions.act_window',
+            'name': 'Líneas de Productos',
+            'res_model': 'ticket.alquiler.line',
+            'view_mode': 'tree,form',
+            'domain': [('ticket_id', '=', self.id)],
+            'context': {'create': False}
         }
-
 
 
     def action_finalizar(self):
@@ -653,3 +587,37 @@ class ReportTicketAlquiler(models.AbstractModel):
             'docs': docs,
             'selection_labels': {doc.id: doc.get_selection_labels() for doc in docs},
         }
+
+class TicketAlquilerLine(models.Model):
+    _name = 'ticket.alquiler.line'
+    _description = 'Línea de Ticket de Alquiler'
+
+    ticket_id = fields.Many2one(
+        'ticket.alquiler',
+        string='Ticket',
+        required=True
+    )
+    product_id = fields.Many2one(
+        'product.product',
+        string='Producto',
+        required=True
+    )
+    product_uom_qty = fields.Float(
+        string='Cantidad',
+        required=True,
+        default=1.0
+    )
+    price_unit = fields.Float(
+        string='Precio Unitario',
+        required=True
+    )
+    price_subtotal = fields.Float(
+        string='Subtotal',
+        compute='_compute_price_subtotal',
+        store=True
+    )
+
+    @api.depends('product_uom_qty', 'price_unit')
+    def _compute_price_subtotal(self):
+        for line in self:
+            line.price_subtotal = line.product_uom_qty * line.price_unit
