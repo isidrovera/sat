@@ -298,6 +298,19 @@ class ticket_alquiler(models.Model):
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
+    def action_add_from_catalog(self):
+        """ Método para agregar un producto desde el catálogo. """
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Agregar Producto desde Catálogo',
+            'view_mode': 'form',
+            'res_model': 'tu.modelo.producto.catalogo',  # Cambia esto al modelo adecuado
+            'target': 'new',
+            'context': {
+                'default_ticket_id': self.id,  # Referencia al ticket actual
+            },
+        }
 
 
     def action_finalizar(self):
