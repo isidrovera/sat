@@ -274,30 +274,24 @@ class ticket_alquiler(models.Model):
                 record.product_uom = False
 
     # Crear línea de pedido
-    def create_sale_order(self):
-        self.ensure_one()
+    def create_sale_order_line(self, product_id, quantity):
+        """ Método para crear una línea de pedido a partir de un producto y cantidad dados. """
+        self.ensure_one()  # Asegúrate de estar trabajando con un único ticket
+        if not product_id:
+            raise UserError(_("No se puede crear una línea de pedido sin un producto."))
+
         sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
             # Otros campos relevantes...
         })
 
-        # Crear la línea de pedido para el producto relacionado
         self.env['sale.order.line'].create({
-            'order_id': sale_order.id,
-            'product_id': self.product_id.id,
-            'product_uom_qty': self.product_qty,
-            'price_unit': self.product_id.lst_price,  # O el precio que quieras usar
+            'order_id': sale_order.id,  # Referencia al pedido
+            'product_id': product_id,
+            'product_uom_qty': quantity,
+            'price_unit': self.env['product.product'].browse(product_id).lst_price,  # O el precio que quieras usar
         })
 
-        return {
-            'name': 'Pedido de Venta',
-            'view_type': 'form',
-            'view_mode': 'form',
-            'res_model': 'sale.order',
-            'res_id': sale_order.id,
-            'type': 'ir.actions.act_window',
-            'target': 'current',
-        }
     def add_product_from_catalog(self, product_id, quantity):
         """ Método que se llama para agregar un producto específico desde el catálogo. """
         self.ensure_one()  # Asegúrate de estar trabajando con un único ticket
