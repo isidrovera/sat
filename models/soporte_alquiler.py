@@ -176,6 +176,18 @@ class ticket_alquiler(models.Model):
         for record in self:
             record.total_copias_id = record.contometrok_id + record.contometroc_id
 
+    from odoo import _, models, fields, api
+from odoo.exceptions import ValidationError
+
+class TicketAlquiler(models.Model):
+    _name = 'ticket.alquiler'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    
+    contometrok_id = fields.Integer(string="Contometro K", tracking=True)
+    contometroc_id = fields.Integer(string="Contometro Color", tracking=True)
+    contometros_id = fields.Integer(string="Contometro Scanner", tracking=True)
+    product_alquiler = fields.Many2one('alquiler', string='Maquina a reparar', tracking=True)
+
     @api.constrains('contometrok_id', 'contometroc_id', 'contometros_id')
     def _check_contometro_values(self):
         for record in self:
@@ -186,20 +198,36 @@ class ticket_alquiler(models.Model):
                 order='id desc'
             )
             
+            # Validar si existe un registro previo para comparaciones
             if previous_record:
-                # Validación para cada contador
                 if record.contometrok_id <= previous_record.contometrok_id:
-                    raise ValidationError(_("El valor del Contometro K no puede ser igual o menor que el valor anterior para esta máquina."))
-                
+                    raise ValidationError(
+                        _("❗ ERROR: EL VALOR DEL CONTÓMETRO K ES INCORRECTO\n\n"
+                          "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
+                          .format(previous_record.contometrok_id))
+                    )
+
                 if record.contometroc_id <= previous_record.contometroc_id:
-                    raise ValidationError(_("El valor del Contometro Color no puede ser igual o menor que el valor anterior para esta máquina."))
-                
+                    raise ValidationError(
+                        _("❗ ERROR: EL VALOR DEL CONTÓMETRO COLOR ES INCORRECTO\n\n"
+                          "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
+                          .format(previous_record.contometroc_id))
+                    )
+
                 if record.contometros_id <= previous_record.contometros_id:
-                    raise ValidationError(_("El valor del Contometro Scanner no puede ser igual o menor que el valor anterior para esta máquina."))
+                    raise ValidationError(
+                        _("❗ ERROR: EL VALOR DEL CONTÓMETRO SCANNER ES INCORRECTO\n\n"
+                          "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
+                          .format(previous_record.contometros_id))
+                    )
 
             # Validación para valores de contadores en 0
             if record.contometrok_id == 0 or record.contometroc_id == 0 or record.contometros_id == 0:
-                raise ValidationError(_("El valor del contómetro no puede ser 0."))
+                raise ValidationError(
+                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
+                      "Debe ingresar el valor ACTUAL del contómetro.")
+                )
+
 
 
     total_copias_id = fields.Integer(string="Contometro Total P+C", compute=sumar_field)
