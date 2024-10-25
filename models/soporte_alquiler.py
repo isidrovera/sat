@@ -171,7 +171,6 @@ class ticket_alquiler(models.Model):
 
     contometroc_id = fields.Integer(string="Contometro Color", tracking=True)
     contometros_id = fields.Integer(string="Contometro Scanner", tracking=True)
-    total_copias_id = fields.Integer(string="Contometro Total P+C", compute=sumar_field)
     @api.depends('contometrok_id', 'contometroc_id')
     def sumar_field(self):
         for record in self:
@@ -218,7 +217,7 @@ class ticket_alquiler(models.Model):
                 )
 
 
-    
+    total_copias_id = fields.Integer(string="Contometro Total P+C", compute=sumar_field)
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
                                          ("mantenimiento_preventivo", "Mantenimeinto preventivo"), (
                                              "mantenimiento_correctivo", "Mantenimiento correctivo"),
