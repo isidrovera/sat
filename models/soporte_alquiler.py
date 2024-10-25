@@ -230,8 +230,13 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
-        # Asegurar que los campos obligatorios están presentes
+        # Log inicial indicando el inicio de la creación del pedido de venta
+        _logger.info("Iniciando creación de pedido de venta para ticket %s", self.id)
+
+        # Validar que los campos requeridos existen
         if not self.partner_id or not self.product_alquiler or not self.responsable:
+            _logger.error("Campos obligatorios faltantes: partner_id: %s, product_alquiler: %s, responsable: %s", 
+                        self.partner_id, self.product_alquiler, self.responsable)
             raise UserError("Asegúrese de que el socio, equipo y solicitante están configurados correctamente.")
 
         # Crear el pedido de venta
@@ -241,22 +246,41 @@ class ticket_alquiler(models.Model):
             'ticket_id': self.id,
             'solicitante_id': self.responsable.id,
         })
+        _logger.info("Pedido de venta creado con ID %s para el ticket %s", sale_order.id, self.id)
 
-        # Asegurarse de que solo hay un registro de sale_order
+        # Confirmar que sale_order fue creado correctamente y es único
         if not sale_order or len(sale_order) != 1:
-            raise UserError("Se esperaba un solo registro de sale.order al crear el pedido de venta.")
+            _logger.error("Error al crear el pedido de venta: se esperaba un único registro de sale.order, encontrado: %s", len(sale_order))
+            raise UserError("Error al crear el pedido de venta: se esperaba un único registro de sale.order.")
 
-        # Agregar automáticamente las líneas de productos seleccionadas por el técnico
+        # Asegurarse de que sale_order contiene un solo registro
+        try:
+            sale_order.ensure_one()
+            _logger.info("Confirmado que sale_order es un único registro con ID %s", sale_order.id)
+        except ValueError as e:
+            _logger.error("Error en ensure_one para sale_order: %s", e)
+            raise UserError("Error de singleton en sale_order: %s" % e)
+
+        # Validar que sale_order_line_ids contiene líneas
+        if not self.sale_order_line_ids:
+            _logger.warning("No hay líneas de productos seleccionadas en el ticket %s para agregar al pedido de venta", self.id)
+            raise UserError("No hay líneas de productos seleccionadas para agregar al pedido de venta.")
+
+        # Agregar las líneas de productos seleccionadas por el técnico
         for line in self.sale_order_line_ids:
+            _logger.info("Procesando línea de producto con ID %s y cantidad %s", line.product_id.id, line.product_uom_qty)
             if line.product_id:
-                self.env['sale.order.line'].create({
+                # Crear la línea de pedido de venta
+                sale_order_line = self.env['sale.order.line'].create({
                     'order_id': sale_order.id,
                     'product_id': line.product_id.id,
                     'product_uom_qty': line.product_uom_qty,
                     'price_unit': line.price_unit,
                 })
+                _logger.info("Línea de pedido creada con ID %s para el producto %s en la orden %s", sale_order_line.id, line.product_id.id, sale_order.id)
 
         # Retornar la acción para abrir el pedido de venta creado
+        _logger.info("Pedido de venta con ID %s creado exitosamente para el ticket %s", sale_order.id, self.id)
         return {
             'name': 'Nuevo Pedido de Venta',
             'view_type': 'form',
