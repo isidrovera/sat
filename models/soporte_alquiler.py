@@ -171,22 +171,11 @@ class ticket_alquiler(models.Model):
 
     contometroc_id = fields.Integer(string="Contometro Color", tracking=True)
     contometros_id = fields.Integer(string="Contometro Scanner", tracking=True)
+    total_copias_id = fields.Integer(string="Contometro Total P+C", compute=sumar_field)
     @api.depends('contometrok_id', 'contometroc_id')
     def sumar_field(self):
         for record in self:
             record.total_copias_id = record.contometrok_id + record.contometroc_id
-
-    from odoo import _, models, fields, api
-from odoo.exceptions import ValidationError
-
-class TicketAlquiler(models.Model):
-    _name = 'ticket.alquiler'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
-    
-    contometrok_id = fields.Integer(string="Contometro K", tracking=True)
-    contometroc_id = fields.Integer(string="Contometro Color", tracking=True)
-    contometros_id = fields.Integer(string="Contometro Scanner", tracking=True)
-    product_alquiler = fields.Many2one('alquiler', string='Maquina a reparar', tracking=True)
 
     @api.constrains('contometrok_id', 'contometroc_id', 'contometros_id')
     def _check_contometro_values(self):
@@ -229,8 +218,7 @@ class TicketAlquiler(models.Model):
                 )
 
 
-
-    total_copias_id = fields.Integer(string="Contometro Total P+C", compute=sumar_field)
+    
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
                                          ("mantenimiento_preventivo", "Mantenimeinto preventivo"), (
                                              "mantenimiento_correctivo", "Mantenimiento correctivo"),
