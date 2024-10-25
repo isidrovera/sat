@@ -145,8 +145,7 @@
                                             <button name="action_add_from_catalog" string="Desde Catálogo" type="object" class="btn-link" context="{'order_id': parent.id}"/>
                                         </control>
                                         <field name="product_id" required="1"/>
-                                        <field name="product_qty" string="Cantidad" required="1"/>
-                                        <field name="price_unit" string="Precio Unitario"/>
+                                        <field name="product_qty" string="Cantidad" required="1"/>                                       
                                         
                                     </tree>
                                 </field>
