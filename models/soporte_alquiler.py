@@ -1,5 +1,6 @@
 from odoo import _, models, fields, api, exceptions
 from dateutil.relativedelta import relativedelta
+from odoo.exceptions import ValidationError
 from odoo.http import request
 from datetime import datetime, timedelta
 from odoo.exceptions import UserError
@@ -174,6 +175,31 @@ class ticket_alquiler(models.Model):
     def sumar_field(self):
         for record in self:
             record.total_copias_id = record.contometrok_id + record.contometroc_id
+
+    @api.constrains('contometrok_id', 'contometroc_id', 'contometros_id')
+    def _check_contometro_values(self):
+        for record in self:
+            # Buscar el último registro de la misma máquina
+            previous_record = self.search(
+                [('product_alquiler', '=', record.product_alquiler.id), ('id', '<', record.id)],
+                limit=1,
+                order='id desc'
+            )
+            
+            if previous_record:
+                # Validación para cada contador
+                if record.contometrok_id <= previous_record.contometrok_id:
+                    raise ValidationError(_("El valor del Contometro K no puede ser igual o menor que el valor anterior para esta máquina."))
+                
+                if record.contometroc_id <= previous_record.contometroc_id:
+                    raise ValidationError(_("El valor del Contometro Color no puede ser igual o menor que el valor anterior para esta máquina."))
+                
+                if record.contometros_id <= previous_record.contometros_id:
+                    raise ValidationError(_("El valor del Contometro Scanner no puede ser igual o menor que el valor anterior para esta máquina."))
+
+            # Validación para valores de contadores en 0
+            if record.contometrok_id == 0 or record.contometroc_id == 0 or record.contometros_id == 0:
+                raise ValidationError(_("El valor del contómetro no puede ser 0."))
 
 
     total_copias_id = fields.Integer(string="Contometro Total P+C", compute=sumar_field)

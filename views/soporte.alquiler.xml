@@ -49,13 +49,12 @@
                                 <field name="marca_id_r" />
                                 <field name="product_alquiler" />
                                 <field name="serie_id_r" />
-                                <field name="modelo_id_r" />
+                                <!--<field name="modelo_id_r" />-->
                                 <field name="contometrok_id" required="estado =='proceso'" />
                                 <field name="contometroc_id"
                                     required="estado == 'proceso' and tipo_id =='color'" />
                                 <field name="contometros_id" required="estado =='proceso'" />
-                                <field name="total_copias_id" invisible="1" />
-                                <field name="serie_id_r" invisible="1" />
+                                <field name="total_copias_id" invisible="1" />                                
                                 <field name="tipo_id" invisible="1" />
                             </group>
                             <group>
