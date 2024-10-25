@@ -230,15 +230,14 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     line_ids = fields.One2many(
-        'ticket.alquiler.line',  # Modelo para las líneas de pedido
-        'ticket_id',             # Campo Many2one en el modelo de líneas que hace referencia a este ticket
+        'ticket.alquiler.line',
+        'ticket_id',
         string='Líneas de Productos',
-        copy=True,               # Permitir que se copien las líneas al duplicar el ticket
-        required=True            # Hacerlo requerido si es necesario
+        copy=True,
+        required=True
     )
 
     def action_add_product_line(self):
-        """ Método para agregar una línea de producto al ticket. """
         self.ensure_one()
         return {
             'type': 'ir.actions.act_window',
@@ -248,6 +247,7 @@ class ticket_alquiler(models.Model):
             'target': 'new',
             'context': {'default_ticket_id': self.id}
         }
+
 
     def action_view_lines(self):
         """ Método para ver las líneas de productos del ticket. """
