@@ -229,8 +229,9 @@ class ticket_alquiler(models.Model):
         string='Productos Solicitados',
         tracking=True
     )
-    def create_sale_order(self):
-        _logger.info("Iniciando creación de pedido de venta para ticket ID: %s", self.id)
+    # Renombrar la función create_sale_order a generate_sale_order
+    def generate_sale_order(self):
+        _logger.info("Iniciando generación de pedido de venta para ticket ID: %s", self.id)
 
         # Validación de campos requeridos
         if not self.partner_id:
@@ -278,6 +279,7 @@ class ticket_alquiler(models.Model):
                     'product_id': line.product_id.id,
                     'product_uom_qty': line.product_uom_qty,
                     'price_unit': line.price_unit,
+                    'ticket_ref_id': self.id  # Asegurarse de establecer referencia
                 })
                 _logger.info("Línea de pedido creada con ID: %s para producto ID: %s en la orden ID: %s", sale_order_line.id, line.product_id.id, sale_order.id)
 
@@ -292,6 +294,7 @@ class ticket_alquiler(models.Model):
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
+
 
 
     def action_finalizar(self):

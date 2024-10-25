@@ -3,29 +3,25 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 import logging
+
 _logger = logging.getLogger(__name__)
 
 class linea_pedido(models.Model):
     _inherit = 'sale.order.line'
 
     ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia', related='order_id.ticket_id')
-    
-
     ticket_ref_id = fields.Many2one('ticket.alquiler', string='Referencia de Ticket')
-
-    # Otros campos y lógica siguen iguales...
-    serie  = fields.Char(related='ticket_id.serie_id_r',string='Serie')
-    contometro =  fields.Integer(related='ticket_id.total_copias_id',string='Contometro actual', readonly=False 
+    serie = fields.Char(related='ticket_id.serie_id_r', string='Serie')
+    contometro = fields.Integer(related='ticket_id.total_copias_id', string='Contometro actual', readonly=False)
+    contometroa = fields.Integer(string='Contometro anterior')   
+    pedido_id = fields.Many2one('sale.order', string='Pedido')  
+    codigo_id = fields.Char(string='Referencia id')  
+    estado_entrega = fields.Selection(
+        string='Estado de entrega', 
+        selection=[('sin_entregar', 'No entregado'), ('entregado', 'Entregado')], 
+        related='order_id.estado_entrega',
+        readonly=False
     )
-    contometroa  = fields.Integer(string='Contometro anterior')   
-    
-    pedido_id = fields.Many2one('sale.order',string='Pedido')  
-    codigo_id  = fields.Char(string='Referencia id')  
-    estado_entrega = fields.Selection(string='Estado de entrega', selection=[('sin_entregar', 'No entregado'), ('entregado', 'Entregado')], 
-    related='order_id.estado_entrega',
-    readonly=False,   
-                                    
-                                      )
 
     @api.depends('contometro', 'contometroa')
     def restar_field(self):
@@ -37,14 +33,13 @@ class linea_pedido(models.Model):
 
     total_copias_id = fields.Integer(string="Total de copias", compute=restar_field)
 
-    @api.model
     def write(self, vals):
         if 'estado_entrega' in vals and vals['estado_entrega'] == 'entregado':
-            _logger = logging.getLogger(__name__)
-            _logger.debug("Se detectó un cambio al estado 'entregado'.")
+            _logger.debug("Se detectó un cambio al estado 'entregado' para el registro con ID: %s.", self.id)
             RepuestosAlquiler = self.env['repuestos.alquiler']
+            
             for record in self:
-                # Busca el registro existente
+                # Buscar o crear el registro en repuestos.alquiler
                 repuesto = RepuestosAlquiler.search([('codigo_id', '=', record.id)], limit=1)
                 repuesto_vals = {
                     'referencia_reparacion_id': record.order_id.name,
@@ -60,12 +55,12 @@ class linea_pedido(models.Model):
                 }
                 
                 if not repuesto:
-                    # Si no existe, crea uno nuevo
-                    _logger.debug("Creando nuevo registro en repuestos.alquiler.")
+                    # Crear el registro en repuestos.alquiler si no existe
+                    _logger.debug("Creando nuevo registro en repuestos.alquiler para ID de producto: %s", record.product_template_id.id)
                     RepuestosAlquiler.create(repuesto_vals)
                 else:
-                    # Si existe, actualiza
-                    _logger.debug("Actualizando registro existente en repuestos.alquiler.")
+                    # Actualizar el registro en repuestos.alquiler si existe
+                    _logger.debug("Actualizando registro existente en repuestos.alquiler para ID de producto: %s", record.product_template_id.id)
                     repuesto.write(repuesto_vals)
 
         return super(linea_pedido, self).write(vals)
