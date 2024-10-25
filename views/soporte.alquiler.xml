@@ -157,7 +157,10 @@
                             </page>
                             <page string="Productos Solicitados" name="products">
                                 <field name="line_ids">
-                                    <list editable="bottom">
+                                    <list editable="bottom" >
+                                        <control>
+                                            <button string="Agregar Producto" type="object" name="action_add_product_line" class="oe_highlight"/>
+                                        </control>
                                         <field name="product_id" required="1"/>
                                         <field name="product_uom_qty" string="Cantidad" required="1"/>
                                         <field name="price_unit" string="Precio Unitario" required="1"/>
