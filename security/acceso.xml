@@ -29,11 +29,15 @@
 
         <!-- Regla para los técnicos, restringiendo el acceso solo a sus órdenes -->
         <record id="repair_order_technician_rule" model="ir.rule">
-            <field name="name">Técnicos: ver solo sus órdenes</field>
+            <field name="name">Técnicos: ver solo sus reparaciones</field>
             <field name="model_id" ref="sat.model_reparaciones_reparaciones"/>
-            <field name="groups" eval="[(4, ref('sat_tecnica_group_user'))]"/>
-            <field name="domain_force">[('responsable_id', '=', user.id), ('estado_id', '!=', 'entregada'), ('estado_id', '!=', 'finalizado')]</field>
+            <field name="groups" eval="[(4, ref('sat.sat_tecnica_group_user'))]"/>
+            <field name="domain_force">[
+                ('responsable_id', '=', user.id), 
+                ('estado_id', '!=', 'entregada'), 
+                ('estado_id', '!=', 'finalizado')
+            ]</field>
         </record>
-
+        
     </data>
 </odoo>
