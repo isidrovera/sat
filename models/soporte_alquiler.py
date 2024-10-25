@@ -52,7 +52,7 @@ class ticket_alquiler(models.Model):
     
     description = fields.Text(tracking=True
     )
-    informe_id = fields.Html(string='Notas de reparación', tracking=True)   
+    informe_id = fields.Html(string='Notas de reparación')   
 
     estado = fields.Selection(string='Estado', selection=[('nuevo', 'Nuevo'),
     ('proceso','En Proceso'),('finalizado','Finalizado')],  tracking=True,
