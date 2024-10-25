@@ -230,43 +230,49 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
-        SaleOrder = self.env['sale.order']
-        SaleOrderLine = self.env['sale.order.line']
+        self.ensure_one()  # Asegurarse de que estamos procesando un único ticket
 
-        # Verificamos y aseguramos que hay registros en 'self'
-        if not self:
-            raise UserError("No hay registros de tickets seleccionados.")
+        # Crear el pedido de venta
+        sale_order = self.env['sale.order'].create({
+            'partner_id': self.partner_id.id,
+            'equipo_id': self.product_alquiler.id,
+            'ticket_id': self.id,
+            'solicitante_id': self.responsable.id,
+            'tipo_pedido': 'normal',  # Puedes ajustar este valor según el caso
+            'estado_entrega': 'sin_entregar',  # Estado inicial del pedido
+        })
 
-        for record in self:
-            # Creamos el pedido de venta para el registro actual en el bucle
-            order = SaleOrder.create({
-                'partner_id': record.partner_id.id,
-                'equipo_id': record.product_alquiler.id,
-                'ticket_id': record.id,
-                'solicitante_id': record.responsable.id,
+        # Agregar líneas de productos solicitados del ticket al pedido
+        for line in self.product_solicitado_ids:
+            self.env['sale.order.line'].create({
+                'order_id': sale_order.id,  # Referencia al pedido de venta
+                'product_id': line.product_id.id,  # ID del producto
+                'product_uom_qty': line.cantidad,  # Cantidad solicitada
+                'price_unit': line.product_id.lst_price,  # Precio unitario del producto
+                'name': line.product_id.name,  # Nombre del producto
             })
 
-            # Validamos y creamos las líneas de pedido
-            if record.sale_order_line_ids:
-                for line in record.sale_order_line_ids:
-                    SaleOrderLine.create({
-                        'order_id': order.id,
-                        'product_id': line.product_id.id,
-                        'product_uom_qty': line.product_uom_qty,
-                        'price_unit': line.price_unit,
-                        'name': line.product_id.get_product_multiline_description_sale(),
-                    })
-
-            # Abrimos la vista del pedido de venta recién creado
-            return {
-                'name': 'Nuevo Registro',
-                'view_type': 'form',
-                'view_mode': 'form',
-                'res_model': 'sale.order',
-                'res_id': order.id,
-                'type': 'ir.actions.act_window',
-                'target': 'current',
+        # Agregar líneas de pedido existentes en el ticket (si corresponde)
+        for line in self.sale_order_line_ids:
+            sale_order_line_vals = {
+                'product_id': line.product_id.id,
+                'product_uom_qty': line.product_uom_qty,
+                'price_unit': line.price_unit,
+                'order_id': sale_order.id,  # Aquí asegúrate de pasar la referencia al pedido correcto
             }
+            self.env['sale.order.line'].create(sale_order_line_vals)
+
+        # Devolver una acción para abrir el pedido recién creado
+        return {
+            'name': 'Pedido de Venta',
+            'view_type': 'form',
+            'view_mode': 'form',
+            'res_model': 'sale.order',
+            'res_id': sale_order.id,
+            'type': 'ir.actions.act_window',
+            'target': 'current',
+        }
+
 
 
 
