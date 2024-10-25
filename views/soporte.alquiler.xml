@@ -139,7 +139,7 @@
                             <page string="Productos Solicitados" name="products">
                                 <field name="sale_order_line_ids" 
                                        context="{'default_ticket_ref_id': id, 'default_product_uom_qty': 1}">
-                                    <tree editable="bottom">
+                                    <list editable="bottom">
                                         <control>
                                             <create string="Agregar Producto"/>
                                             <button name="action_add_from_catalog" string="Desde Catálogo" type="object" class="btn-link" context="{'order_id': parent.id}"/>
@@ -147,7 +147,7 @@
                                         <field name="product_id" required="1"/>
                                         <field name="product_qty" string="Cantidad" required="1"/>                                       
                                         
-                                    </tree>
+                                    </list>
                                 </field>
                             </page>
                                                         
