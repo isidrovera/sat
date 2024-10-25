@@ -22,15 +22,7 @@ class UnidadAlquiler(models.Model):
     name = fields.Many2one('modelo.maquina', string='Modelo de maquina',
                            required=True
                            )
-    _rec_name = 'serie'
-
-    def name_get(self):
-        result = []
-        for record in self:
-            name = '[  ' + record.name.name + '  ]   ' + \
-                'Serie: ' + record.serie
-            result.append((record.id, name))
-        return result
+    
     tipo_maquina = fields.Char(related='name.tipo_maquina_id.name', readonly=True, store=True,
                                string='Tipo de maquina')
     tipo_maquina_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')],
