@@ -1,12 +1,10 @@
-
-
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 import logging
 
 _logger = logging.getLogger(__name__)
 
-class linea_pedido(models.Model):
+class LineaPedido(models.Model):
     _inherit = 'sale.order.line'
 
     ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia', related='order_id.ticket_id')
@@ -26,12 +24,9 @@ class linea_pedido(models.Model):
     @api.depends('contometro', 'contometroa')
     def restar_field(self):
         for record in self:
-            if record.contometro and record.contometroa:
-                record.total_copias_id = record.contometro - record.contometroa
-            else:
-                record.total_copias_id = 0
+            record.total_copias_id = record.contometro - record.contometroa if record.contometro and record.contometroa else 0
 
-    total_copias_id = fields.Integer(string="Total de copias", compute=restar_field)
+    total_copias_id = fields.Integer(string="Total de copias", compute="restar_field")
 
     def write(self, vals):
         if 'estado_entrega' in vals and vals['estado_entrega'] == 'entregado':
@@ -39,7 +34,6 @@ class linea_pedido(models.Model):
             RepuestosAlquiler = self.env['repuestos.alquiler']
             
             for record in self:
-                # Buscar o crear el registro en repuestos.alquiler
                 repuesto = RepuestosAlquiler.search([('codigo_id', '=', record.id)], limit=1)
                 repuesto_vals = {
                     'referencia_reparacion_id': record.order_id.name,
@@ -55,17 +49,10 @@ class linea_pedido(models.Model):
                 }
                 
                 if not repuesto:
-                    # Crear el registro en repuestos.alquiler si no existe
                     _logger.debug("Creando nuevo registro en repuestos.alquiler para ID de producto: %s", record.product_template_id.id)
                     RepuestosAlquiler.create(repuesto_vals)
                 else:
-                    # Actualizar el registro en repuestos.alquiler si existe
                     _logger.debug("Actualizando registro existente en repuestos.alquiler para ID de producto: %s", record.product_template_id.id)
                     repuesto.write(repuesto_vals)
 
-        return super(linea_pedido, self).write(vals)
-
-        
-                        
-                            
-                            
+        return super(LineaPedido, self).write(vals)
