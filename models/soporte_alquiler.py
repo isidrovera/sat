@@ -215,7 +215,7 @@ class ticket_alquiler(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Pedidos',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'res_model': 'sale.order',
             'domain': [('equipo_id', '=', self.product_alquiler.id)],
             'context': "{'create': True}"
@@ -434,7 +434,7 @@ class ticket_alquiler(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Repuestos_ticket',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'res_model': 'repuestos.alquiler',
             'domain': [('modelo_id', '=', self.product_alquiler.id)],
             'context': "{'create': False}"
@@ -452,7 +452,7 @@ class ticket_alquiler(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Repuestos_ticket',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'res_model': 'repuestos.alquiler',
             'domain': [('modelo_id', '=', self.product_alquiler.id)],
             'context': "{'create': False}"

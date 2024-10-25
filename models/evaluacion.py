@@ -199,7 +199,7 @@ class EvaluacionPersonal(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Reparaciones',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'res_model': 'reparaciones.reparaciones',
             'domain': [('responsable_id', '=', self.usuario_id.id)],
             'context': "{'create': False}"

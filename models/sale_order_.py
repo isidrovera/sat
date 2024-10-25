@@ -62,7 +62,7 @@ class SaleOrderInherit(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Repuestos_pedidos',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'res_model': 'repuestos.alquiler',
             'domain': [('modelo_id', '=', self.equipo_id.id)],
             'context': "{'create': False}"
@@ -73,7 +73,7 @@ class SaleOrderInherit(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Tickets_pedidos',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'res_model': 'ticket.alquiler',
             'domain': [('product_alquiler', '=', self.equipo_id.id)],
             'context': "{'create': False}"
