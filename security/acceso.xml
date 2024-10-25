@@ -38,6 +38,16 @@
                 ('estado_id', '!=', 'finalizado')
             ]</field>
         </record>
+        <record id="ticket_order_technician_rule" model="ir.rule">
+            <field name="name">Técnicos: ver solo sus ticket</field>
+            <field name="model_id" ref="sat.model_ticket_alquiler"/>
+            <field name="groups" eval="[(4, ref('sat.sat_tecnica_group_user'))]"/>
+            <field name="domain_force">[
+                ('responsable', '=', user.id), 
+                ('estado', '!=', 'proceso') 
+                
+            ]</field>
+        </record>
         
     </data>
 </odoo>
