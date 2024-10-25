@@ -166,9 +166,8 @@ class ticket_alquiler(models.Model):
                                string="Unidad Imagen Cyan", tracking=True)
     yellow_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                  string="Unidad Imagen Yellow", tracking=True) 
-    codigo_id  = fields.Char(string='Referencia id') 
-    contometrok_id = fields.Char(string="Contometro K", tracking=True)   
-
+    codigo_id  = fields.Char(string='Referencia id')     
+    contometros_id = fields.Char(string="Contometro Scanner", tracking=True)
     contometrok_id = fields.Char(string="Contometro K", tracking=True)
     contometroc_id = fields.Char(string="Contometro Color", tracking=True)
     total_copias_id = fields.Char(string="Contometro Total P+C", compute="sumar_field")
@@ -181,6 +180,7 @@ class ticket_alquiler(models.Model):
             contometroc_value = int(record.contometroc_id) if record.contometroc_id else 0
             # Sumar los valores y convertir de nuevo a cadena para almacenarlos en total_copias_id
             record.total_copias_id = str(contometrok_value + contometroc_value)
+
 
     @api.constrains('contometrok_id', 'contometroc_id', 'contometros_id')
     def _check_contometro_values(self):
@@ -223,6 +223,7 @@ class ticket_alquiler(models.Model):
                 )
 
 
+    
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
                                          ("mantenimiento_preventivo", "Mantenimeinto preventivo"), (
                                              "mantenimiento_correctivo", "Mantenimiento correctivo"),
