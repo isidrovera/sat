@@ -262,24 +262,24 @@ class ticket_alquiler(models.Model):
 
     def create_sale_order(self):
         self.ensure_one()  # Asegúrate de estar trabajando con un único ticket
-        sale_order_vals = {
+
+        # Crear el pedido de venta
+        sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
-            'ticket_id': self.id,  # Referencia al ticket
             'origin': self.name,  # Usar el nombre del ticket como referencia
-            'line_ids': [],
-        }
+        })
 
         # Recopilar líneas de productos
+        sale_order_lines = []
         for line in self.line_ids:
-            sale_order_vals['line_ids'].append((0, 0, {
+            sale_order_lines.append((0, 0, {
                 'product_id': line.product_id.id,
                 'product_uom_qty': line.product_uom_qty,
                 'price_unit': line.price_unit,
-                'price_subtotal': line.price_subtotal,  # Opcional, se calculará automáticamente
             }))
 
-        # Crear el pedido de venta
-        sale_order = self.env['sale.order'].create(sale_order_vals)
+        # Agregar las líneas al pedido de venta
+        sale_order.write({'order_line': sale_order_lines})
 
         return {
             'name': 'Pedido de Venta',
@@ -290,6 +290,7 @@ class ticket_alquiler(models.Model):
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
+
     def action_finalizar(self):
         self.estado='finalizado'
         # Enviando el segundo correo con la segunda plantilla
