@@ -10,7 +10,7 @@ class LineaPedido(models.Model):
     ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia', related='order_id.ticket_id')
     ticket_ref_id = fields.Many2one('ticket.alquiler', string='Referencia de Ticket')
     serie = fields.Char(related='ticket_id.serie_id_r', string='Serie')
-    contometro = fields.Integer(related='ticket_id.total_copias_id', string='Contometro actual', readonly=False)
+    contometro = fields.Integer( string='Contometro actual', readonly=False)
     contometroa = fields.Integer(string='Contometro anterior')   
     pedido_id = fields.Many2one('sale.order', string='Pedido')  
     codigo_id = fields.Char(string='Referencia id')  
@@ -21,12 +21,12 @@ class LineaPedido(models.Model):
         readonly=False
     )
 
-    @api.depends('contometro', 'contometroa')
-    def restar_field(self):
-        for record in self:
-            record.total_copias_id = record.contometro - record.contometroa if record.contometro and record.contometroa else 0
+    #@api.depends('contometro', 'contometroa')
+    #def restar_field(self):
+        #for record in self:
+            #record.total_copias_id = record.contometro - record.contometroa if record.contometro and record.contometroa else 0
 
-    total_copias_id = fields.Integer(string="Total de copias", compute="restar_field")
+    total_copias_id = fields.Integer(string="Total de copias")
 
     def write(self, vals):
         if 'estado_entrega' in vals and vals['estado_entrega'] == 'entregado':
