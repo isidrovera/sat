@@ -166,15 +166,21 @@ class ticket_alquiler(models.Model):
                                string="Unidad Imagen Cyan", tracking=True)
     yellow_id = fields.Selection([("si", "Revisado - Funciona Correctamente"), ("no", "Revisado - No Funciona"), ("desgaste", "Revisado - Con Desgaste"), ("cambio", "Revisado - Requiere Cambio"), ("no_aplica", "No Aplica para esta Máquina")],
                                  string="Unidad Imagen Yellow", tracking=True) 
-    contometrok_id = fields.Char(string="Contometro K", tracking=True) 
     codigo_id  = fields.Char(string='Referencia id') 
+    contometrok_id = fields.Char(string="Contometro K", tracking=True)   
 
+    contometrok_id = fields.Char(string="Contometro K", tracking=True)
     contometroc_id = fields.Char(string="Contometro Color", tracking=True)
-    contometros_id = fields.Char(string="Contometro Scanner", tracking=True)
+    total_copias_id = fields.Char(string="Contometro Total P+C", compute="sumar_field")
+
     @api.depends('contometrok_id', 'contometroc_id')
     def sumar_field(self):
         for record in self:
-            record.total_copias_id = record.contometrok_id + record.contometroc_id
+            # Convertir los valores a enteros si existen, de lo contrario, usar 0
+            contometrok_value = int(record.contometrok_id) if record.contometrok_id else 0
+            contometroc_value = int(record.contometroc_id) if record.contometroc_id else 0
+            # Sumar los valores y convertir de nuevo a cadena para almacenarlos en total_copias_id
+            record.total_copias_id = str(contometrok_value + contometroc_value)
 
     @api.constrains('contometrok_id', 'contometroc_id', 'contometros_id')
     def _check_contometro_values(self):
@@ -217,7 +223,6 @@ class ticket_alquiler(models.Model):
                 )
 
 
-    total_copias_id = fields.Char(string="Contometro Total P+C", compute=sumar_field)
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
                                          ("mantenimiento_preventivo", "Mantenimeinto preventivo"), (
                                              "mantenimiento_correctivo", "Mantenimiento correctivo"),
