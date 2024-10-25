@@ -248,19 +248,15 @@ class ticket_alquiler(models.Model):
             # Obtener valores por defecto para el pedido
             default_values = self._prepare_sale_order_values()
             
-            # Creación del pedido de venta con with_context para asegurar el comportamiento correcto
-            sale_order = self.env['sale.order'].with_context(
-                default_company_id=self.env.company.id
-            ).create(default_values)
-
-            _logger.info("Pedido de venta creado con ID: %s para ticket ID: %s", 
-                        sale_order.id, self.id)
+            # Creación del pedido de venta sin contexto adicional
+            sale_order = self.env['sale.order'].create(default_values)
+            _logger.info("Pedido de venta creado con ID: %s para ticket ID: %s", sale_order.id, self.id)
 
             # Validar que sale_order_line_ids contiene líneas
             if not self.sale_order_line_ids:
                 raise UserError("No hay líneas de productos seleccionadas para agregar al pedido de venta.")
 
-            # Crear las líneas del pedido en lote para mejor rendimiento
+            # Crear las líneas del pedido y asociarlas directamente con el sale_order
             order_lines_vals = []
             for line in self.sale_order_line_ids:
                 if not line.product_id:
@@ -270,12 +266,10 @@ class ticket_alquiler(models.Model):
                 order_lines_vals.append(line_vals)
 
             if order_lines_vals:
-                # Crear todas las líneas de una vez
-                self.env['sale.order.line'].with_context(
-                    default_order_id=sale_order.id
-                ).create(order_lines_vals)
+                # Crear todas las líneas de una vez, especificando el 'order_id' directamente
+                self.env['sale.order.line'].create(order_lines_vals)
 
-            # Forzar el recálculo de los campos computados
+            # Forzar el recálculo de los campos computados en el sale_order
             sale_order.invalidate_recordset()
             
             return self._get_sale_order_action(sale_order)
@@ -305,6 +299,18 @@ class ticket_alquiler(models.Model):
             'price_unit': line.price_unit,
             'name': line.product_id.get_product_multiline_description_sale(),
         }
+
+    def _get_sale_order_action(self, sale_order):
+        """Retorna la acción para abrir el pedido de venta."""
+        return {
+            'name': 'Nuevo Pedido de Venta',
+            'view_mode': 'form',
+            'res_model': 'sale.order',
+            'res_id': sale_order.id,
+            'type': 'ir.actions.act_window',
+            'target': 'current',
+        }
+
 
     def _get_sale_order_action(self, sale_order):
         """Retorna la acción para abrir el pedido de venta."""
