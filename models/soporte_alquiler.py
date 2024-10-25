@@ -230,43 +230,40 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
-        # Asegurarse de que este método se ejecute solo para un registro
-        self.ensure_one()  
+        SaleOrder = self.env['sale.order']
+        SaleOrderLine = self.env['sale.order.line']
         
-        # Crear el pedido de venta
-        sale_order = self.env['sale.order'].create({
-            'partner_id': self.partner_id.id,
-            'equipo_id': self.product_alquiler.id,
-            'ticket_id': self.id,
-            'solicitante_id': self.responsable.id,
-        })
-        
-        # Validar y agregar líneas de pedido
-        if self.sale_order_line_ids:
-            order_lines = []
-            for line in self.sale_order_line_ids:
-                if line.product_id:
-                    order_lines.append({
-                        'order_id': sale_order.id,  # Asignar el pedido recién creado
+        for record in self:
+            # Crear el pedido de venta
+            order = SaleOrder.create({
+                'partner_id': record.partner_id.id,
+                'equipo_id': record.product_alquiler.id,
+                'ticket_id': record.id,
+                'solicitante_id': record.responsable.id,
+            })
+            
+            # Crear las líneas de pedido en base a las líneas de `sale_order_line_ids` en `ticket.alquiler`
+            if record.sale_order_line_ids:
+                for line in record.sale_order_line_ids:
+                    SaleOrderLine.create({
+                        'order_id': order.id,
                         'product_id': line.product_id.id,
                         'product_uom_qty': line.product_uom_qty,
                         'price_unit': line.price_unit,
                         'name': line.product_id.get_product_multiline_description_sale(),
                     })
-            
-            # Crear líneas de pedido si existen productos
-            if order_lines:
-                self.env['sale.order.line'].create(order_lines)
 
-        # Retornar la acción para ver el pedido de venta
-        return {
-            'name': 'Nuevo Pedido de Venta',
-            'view_mode': 'form',
-            'res_model': 'sale.order',
-            'res_id': sale_order.id,
-            'type': 'ir.actions.act_window',
-            'target': 'current',
-        }
+            # Acción para abrir el pedido de venta recién creado
+            return {
+                'name': 'Nuevo Registro',
+                'view_type': 'form',
+                'view_mode': 'form',
+                'res_model': 'sale.order',
+                'res_id': order.id,
+                'type': 'ir.actions.act_window',
+                'target': 'current',
+            }
+
 
 
 
