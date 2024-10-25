@@ -230,7 +230,7 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
-        self.ensure_one()  # Asegurarse de que estamos procesando un único ticket
+        self.ensure_one()  # Asegurarte de que estamos procesando un único ticket
 
         # Crear el pedido de venta
         sale_order = self.env['sale.order'].create({
@@ -243,17 +243,17 @@ class ticket_alquiler(models.Model):
         })
 
         # Agregar líneas de productos solicitados del ticket al pedido
-        for line in self.sale_order_line_ids:  # Cambiar a sale_order_line_ids
-            self.env['sale.order.line'].create({
-                'order_id': sale_order.id,
-                'product_id': line.product_id.id,
-                'product_uom_qty': line.product_uom_qty,
-                'price_unit': line.price_unit,
-                'name': line.product_id.name,
-            })
+        for line in self.sale_order_line_ids:  # Recorremos las líneas de pedido
+            if line.product_id:  # Asegúrate de que la línea tenga un producto
+                self.env['sale.order.line'].create({
+                    'order_id': sale_order.id,  # Referencia al pedido de venta
+                    'product_id': line.product_id.id,  # ID del producto
+                    'product_uom_qty': line.product_uom_qty,  # Cantidad solicitada
+                    'price_unit': line.price_unit,  # Precio unitario del producto
+                    'name': line.product_id.name,  # Nombre del producto
+                })
 
-        # Aquí puedes agregar más lógica según sea necesario para otros campos
-
+        # Devolver una acción para abrir el pedido recién creado
         return {
             'name': 'Pedido de Venta',
             'view_type': 'form',
@@ -263,6 +263,7 @@ class ticket_alquiler(models.Model):
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
+
 
 
     def action_finalizar(self):
