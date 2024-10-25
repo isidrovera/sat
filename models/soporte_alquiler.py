@@ -230,100 +230,45 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
-        _logger.info("Iniciando creación de pedido de venta para ticket ID: %s", self.id)
-
-        # Validación de campos requeridos
-        required_fields = {
-            'partner_id': "El campo del socio es obligatorio.",
-            'product_alquiler': "El campo del equipo es obligatorio.",
-            'responsable': "El campo del solicitante es obligatorio."
-        }
-
-        for field, message in required_fields.items():
-            if not self[field]:
-                _logger.error(f"El campo {field} está vacío para el ticket ID: {self.id}")
-                raise UserError(message)
-
-        try:
-            # Obtener valores por defecto para el pedido
-            default_values = self._prepare_sale_order_values()
-
-            # Crear el pedido de venta
-            sale_order = self.env['sale.order'].with_context(
-                default_company_id=self.env.company.id
-            ).create(default_values)
-
-            _logger.info("Pedido de venta creado con ID: %s para ticket ID: %s", sale_order.id, self.id)
-
-            if not self.sale_order_line_ids:
-                raise UserError("No hay líneas de productos seleccionadas para agregar al pedido de venta.")
-
-            # Crear las líneas del pedido
-            order_lines_vals = []
-            for line in self.sale_order_line_ids:
-                if not line.product_id:
-                    continue
-                line_vals = self._prepare_sale_order_line_values(line, sale_order)
-                order_lines_vals.append(line_vals)
-
-            if order_lines_vals:
-                # Crear todas las líneas de una vez
-                self.env['sale.order.line'].create(order_lines_vals)
-
-            # Forzar el recálculo de los campos computados
-            sale_order.invalidate_recordset()
-
-            return self._get_sale_order_action(sale_order)
-
-        except Exception as e:
-            _logger.error("Error al crear el pedido de venta: %s", str(e), exc_info=True)
-            raise UserError(f"Error al crear el pedido de venta: {str(e)}")
-
-    def _prepare_sale_order_values(self):
-        """Prepara los valores para crear el pedido de venta."""
-        return {
+        sale_order = self.env['sale.order']
+        
+        # Crear el pedido de venta con los valores básicos
+        order_id = sale_order.create({
             'partner_id': self.partner_id.id,
             'equipo_id': self.product_alquiler.id,
             'ticket_id': self.id,
             'solicitante_id': self.responsable.id,
-            'date_order': fields.Datetime.now(),
-            'company_id': self.env.company.id,
-            'user_id': self.env.user.id,
-        }
-
-    def _prepare_sale_order_line_values(self, line, sale_order):
-        """Prepara los valores para crear una línea de pedido."""
-        return {
-            'order_id': sale_order.id,  # Asegurarse que el order_id es único
-            'product_id': line.product_id.id,
-            'product_uom_qty': line.product_uom_qty,
-            'price_unit': line.price_unit,
-            'name': line.product_id.get_product_multiline_description_sale(),
-        }
-
-
-    def _get_sale_order_action(self, sale_order):
-        """Retorna la acción para abrir el pedido de venta."""
+        })
+        
+        # Verificar si hay productos agregados en el ticket para crear las líneas de pedido
+        if self.sale_order_line_ids:
+            order_lines = []
+            
+            for line in self.sale_order_line_ids:
+                if line.product_id:
+                    order_lines.append({
+                        'order_id': order_id.id,  # Relacionar cada línea con el pedido recién creado
+                        'product_id': line.product_id.id,
+                        'product_uom_qty': line.product_uom_qty,
+                        'price_unit': line.price_unit,
+                        'name': line.product_id.get_product_multiline_description_sale(),
+                    })
+            
+            # Crear las líneas de pedido de venta en lote
+            if order_lines:
+                self.env['sale.order.line'].create(order_lines)
+        
+        # Retornar la acción para abrir el pedido de venta recién creado
         return {
             'name': 'Nuevo Pedido de Venta',
+            'view_type': 'form',
             'view_mode': 'form',
             'res_model': 'sale.order',
-            'res_id': sale_order.id,
+            'res_id': order_id.id,
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
 
-
-    def _get_sale_order_action(self, sale_order):
-        """Retorna la acción para abrir el pedido de venta."""
-        return {
-            'name': 'Nuevo Pedido de Venta',
-            'view_mode': 'form',
-            'res_model': 'sale.order',
-            'res_id': sale_order.id,
-            'type': 'ir.actions.act_window',
-            'target': 'current',
-        }
 
 
     def action_finalizar(self):
