@@ -221,8 +221,7 @@ class ticket_alquiler(models.Model):
             'context': "{'create': True}"
         }
 
-    class TicketAlquiler(models.Model):
-    _name = 'ticket.alquiler'
+    
 
     product_id = fields.Many2one('product.product', string='Producto')
     sale_order_line_ids = fields.One2many(
