@@ -238,7 +238,7 @@ class ticket_alquiler(models.Model):
             'product_alquiler': "El campo del equipo es obligatorio.",
             'responsable': "El campo del solicitante es obligatorio."
         }
-        
+
         for field, message in required_fields.items():
             if not self[field]:
                 _logger.error(f"El campo {field} está vacío para el ticket ID: {self.id}")
@@ -247,31 +247,32 @@ class ticket_alquiler(models.Model):
         try:
             # Obtener valores por defecto para el pedido
             default_values = self._prepare_sale_order_values()
-            
-            # Creación del pedido de venta sin contexto adicional
-            sale_order = self.env['sale.order'].create(default_values)
+
+            # Crear el pedido de venta
+            sale_order = self.env['sale.order'].with_context(
+                default_company_id=self.env.company.id
+            ).create(default_values)
+
             _logger.info("Pedido de venta creado con ID: %s para ticket ID: %s", sale_order.id, self.id)
 
-            # Validar que sale_order_line_ids contiene líneas
             if not self.sale_order_line_ids:
                 raise UserError("No hay líneas de productos seleccionadas para agregar al pedido de venta.")
 
-            # Crear las líneas del pedido y asociarlas directamente con el sale_order
+            # Crear las líneas del pedido
             order_lines_vals = []
             for line in self.sale_order_line_ids:
                 if not line.product_id:
                     continue
-                    
                 line_vals = self._prepare_sale_order_line_values(line, sale_order)
                 order_lines_vals.append(line_vals)
 
             if order_lines_vals:
-                # Crear todas las líneas de una vez, especificando el 'order_id' directamente
+                # Crear todas las líneas de una vez
                 self.env['sale.order.line'].create(order_lines_vals)
 
-            # Forzar el recálculo de los campos computados en el sale_order
+            # Forzar el recálculo de los campos computados
             sale_order.invalidate_recordset()
-            
+
             return self._get_sale_order_action(sale_order)
 
         except Exception as e:
@@ -293,12 +294,13 @@ class ticket_alquiler(models.Model):
     def _prepare_sale_order_line_values(self, line, sale_order):
         """Prepara los valores para crear una línea de pedido."""
         return {
-            'order_id': sale_order.id,
+            'order_id': sale_order.id,  # Asegurarse que el order_id es único
             'product_id': line.product_id.id,
             'product_uom_qty': line.product_uom_qty,
             'price_unit': line.price_unit,
             'name': line.product_id.get_product_multiline_description_sale(),
         }
+
 
     def _get_sale_order_action(self, sale_order):
         """Retorna la acción para abrir el pedido de venta."""
