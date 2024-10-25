@@ -230,11 +230,9 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
-        # Validar los campos requeridos
-        if not self.partner_id or not self.product_alquiler or not self.responsable:
-            raise UserError("Debe completar todos los campos requeridos.")
+        self.ensure_one()  # Asegura que este método solo se ejecute en un único ticket
 
-        # Crear un pedido de venta
+        # Crear el pedido de venta
         sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
             'equipo_id': self.product_alquiler.id,
@@ -242,24 +240,24 @@ class ticket_alquiler(models.Model):
             'solicitante_id': self.responsable.id,
         })
 
-        # Validar si hay productos en `sale_order_line_ids` antes de intentar crearlos
+        # Validar si hay líneas de pedido que agregar
         if self.sale_order_line_ids:
             order_lines = []
             for line in self.sale_order_line_ids:
                 if line.product_id:
                     order_lines.append({
-                        'order_id': sale_order.id,  # Pasamos el ID del pedido recién creado
+                        'order_id': sale_order.id,  # Asigna el ID del pedido de venta creado
                         'product_id': line.product_id.id,
                         'product_uom_qty': line.product_uom_qty,
                         'price_unit': line.price_unit,
                         'name': line.product_id.get_product_multiline_description_sale(),
                     })
 
-            # Crear todas las líneas de una vez, usando un solo `sale.order`
+            # Crea las líneas de pedido en lote
             if order_lines:
                 self.env['sale.order.line'].create(order_lines)
 
-        # Retornar la acción para abrir el pedido recién creado
+        # Retorna la acción para abrir el pedido de venta recién creado
         return {
             'name': 'Nuevo Pedido de Venta',
             'view_mode': 'form',
