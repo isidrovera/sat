@@ -221,7 +221,10 @@ class ticket_alquiler(models.Model):
             'context': "{'create': True}"
         }
 
+    class TicketAlquiler(models.Model):
+    _name = 'ticket.alquiler'
 
+    product_id = fields.Many2one('product.product', string='Producto')
     sale_order_line_ids = fields.One2many(
         'sale.order.line',  # Modelo de las líneas de pedido de venta
         'ticket_ref_id',  # Campo Many2one en 'sale.order.line' que hace referencia al ticket
