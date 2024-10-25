@@ -8,7 +8,7 @@
     'author': "Isidro vera polo",
     'website': "https://copiercompanysac.com",
     'category': 'Services',
-    'depends': ['base','mail','contacts','sale_management','portal','web'],
+    'depends': ['base','mail','contacts','sale_management','portal','web', 'stock'],
     'data': [
         
         'views/ventas.xml',
