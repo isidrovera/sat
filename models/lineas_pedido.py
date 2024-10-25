@@ -8,9 +8,12 @@ _logger = logging.getLogger(__name__)
 class linea_pedido(models.Model):
     _inherit = 'sale.order.line'
 
-    ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia',related='order_id.ticket_id'
-    )
-    
+    ticket_id = fields.Many2one('ticket.alquiler', string='Ticket de referencia',related='order_id.ticket_class LineaPedido(models.Model):
+    _inherit = 'sale.order.line'
+
+    ticket_ref_id = fields.Many2one('ticket.alquiler', string='Referencia de Ticket')
+
+    # Otros campos y lógica siguen iguales...
     serie  = fields.Char(related='ticket_id.serie_id_r',string='Serie')
     contometro =  fields.Integer(related='ticket_id.total_copias_id',string='Contometro actual', readonly=False 
     )
