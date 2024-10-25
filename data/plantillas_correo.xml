@@ -40,7 +40,7 @@
 
         ]]>
       </field>
-      <field name="lang">${object.partner_id.lang}</field>
+      <field name="lang"></field>
       <field name="model_id" ref="model_ticket_alquiler"/>
       <field name="auto_delete" eval="True"/>
     </record>
@@ -52,7 +52,7 @@
       <field name="subject">Finalización de Ticket #{{object.name}}</field>
       <field name="model_id" ref="model_ticket_alquiler"/>
       <field name="auto_delete" eval="True"/>
-      <field name="lang">${object.partner_id.lang}</field>
+      <field name="lang"></field>
       <field name="body_html">
         <![CDATA[
             <p>Estimado/a,</p>
@@ -156,7 +156,7 @@
             <p>Cordialmente,</p>
             
             ]]>      </field>
-      <field name="lang">${object.partner_id.lang}</field>
+      <field name="lang"></field>
       <field name="model_id" ref="model_ticket_alquiler"/>
       <field name="auto_delete" eval="True"/>
     </record>
@@ -185,7 +185,7 @@
             <p>Cordialmente,</p>
             
             ]]>      </field>
-      <field name="lang">${object.partner_id.lang}</field>
+      <field name="lang"></field>
       <field name="model_id" ref="model_ticket_alquiler"/>
       <field name="auto_delete" eval="True"/>
     </record>
@@ -199,7 +199,7 @@
       <field name="name">Correo de asignación de orden de reparación</field>
       <field name="subject">Asignación de orden de reparación</field>
       <field name="model_id" ref="model_reparaciones_reparaciones"/>
-      <field name="lang">${object.technician_id.lang}</field>
+      <field name="lang"></field>
       <field name="auto_delete" eval="True"/>
       <field name="email_from">soporte@andescopiers.com.pe</field>
       <field name="email_to">{{object.responsable_id.email}}</field>
@@ -240,7 +240,7 @@
       <field name="name">Correo de finalización de reparación</field>
       <field name="subject">Finalización de reparación</field>
       <field name="model_id" ref="model_reparaciones_reparaciones"/>
-      <field name="lang">${object.sales_consultant.lang}</field>
+      <field name="lang"></field>
       <field name="auto_delete" eval="True"/>
       <field name="email_from">soporte@andescopiers.com.pe</field>
       <field name="email_to">{{object.cliente_id.asesora_id.email}}</field>
