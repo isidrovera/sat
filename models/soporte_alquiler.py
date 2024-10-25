@@ -230,11 +230,11 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
-        # Verificar si el registro tiene un valor válido de `partner_id` y otros datos necesarios
+        # Validar los campos requeridos
         if not self.partner_id or not self.product_alquiler or not self.responsable:
             raise UserError("Debe completar todos los campos requeridos.")
 
-        # Crear el pedido de venta
+        # Crear un pedido de venta
         sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
             'equipo_id': self.product_alquiler.id,
@@ -242,20 +242,20 @@ class ticket_alquiler(models.Model):
             'solicitante_id': self.responsable.id,
         })
 
-        # Crear las líneas de pedido si existen productos en el ticket
+        # Validar si hay productos en `sale_order_line_ids` antes de intentar crearlos
         if self.sale_order_line_ids:
             order_lines = []
             for line in self.sale_order_line_ids:
                 if line.product_id:
                     order_lines.append({
-                        'order_id': sale_order.id,  # Usamos el `id` del pedido recién creado
+                        'order_id': sale_order.id,  # Pasamos el ID del pedido recién creado
                         'product_id': line.product_id.id,
                         'product_uom_qty': line.product_uom_qty,
                         'price_unit': line.price_unit,
                         'name': line.product_id.get_product_multiline_description_sale(),
                     })
-            
-            # Crear todas las líneas de una vez
+
+            # Crear todas las líneas de una vez, usando un solo `sale.order`
             if order_lines:
                 self.env['sale.order.line'].create(order_lines)
 
