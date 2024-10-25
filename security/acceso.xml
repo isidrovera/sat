@@ -47,6 +47,10 @@
                 ('estado', '!=', 'proceso') 
                 
             ]</field>
+            <field name="perm_read" eval="True"/>   <!-- Permitir lectura -->
+            <field name="perm_write" eval="True"/>  <!-- Permitir edición -->
+            <field name="perm_create" eval="True"/> <!-- Permitir creación si es necesario -->
+            <field name="perm_unlink" eval="False"/>
         </record>
         
     </data>
