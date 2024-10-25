@@ -238,31 +238,22 @@ class ticket_alquiler(models.Model):
             'equipo_id': self.product_alquiler.id,
             'ticket_id': self.id,
             'solicitante_id': self.responsable.id,
-            'tipo_pedido': 'normal',  # Puedes ajustar este valor según el caso
+            'tipo_pedido': 'normal',
             'estado_entrega': 'sin_entregar',  # Estado inicial del pedido
         })
 
         # Agregar líneas de productos solicitados del ticket al pedido
-        for line in self.product_solicitado_ids:
+        for line in self.sale_order_line_ids:  # Cambiar a sale_order_line_ids
             self.env['sale.order.line'].create({
-                'order_id': sale_order.id,  # Referencia al pedido de venta
-                'product_id': line.product_id.id,  # ID del producto
-                'product_uom_qty': line.cantidad,  # Cantidad solicitada
-                'price_unit': line.product_id.lst_price,  # Precio unitario del producto
-                'name': line.product_id.name,  # Nombre del producto
-            })
-
-        # Agregar líneas de pedido existentes en el ticket (si corresponde)
-        for line in self.sale_order_line_ids:
-            sale_order_line_vals = {
+                'order_id': sale_order.id,
                 'product_id': line.product_id.id,
                 'product_uom_qty': line.product_uom_qty,
                 'price_unit': line.price_unit,
-                'order_id': sale_order.id,  # Aquí asegúrate de pasar la referencia al pedido correcto
-            }
-            self.env['sale.order.line'].create(sale_order_line_vals)
+                'name': line.product_id.name,
+            })
 
-        # Devolver una acción para abrir el pedido recién creado
+        # Aquí puedes agregar más lógica según sea necesario para otros campos
+
         return {
             'name': 'Pedido de Venta',
             'view_type': 'form',
@@ -272,11 +263,6 @@ class ticket_alquiler(models.Model):
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
-
-
-
-
-
 
 
     def action_finalizar(self):
