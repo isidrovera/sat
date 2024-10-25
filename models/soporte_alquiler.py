@@ -230,6 +230,10 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
+        # Asegurar que los campos obligatorios están presentes
+        if not self.partner_id or not self.product_alquiler or not self.responsable:
+            raise UserError("Asegúrese de que el socio, equipo y solicitante están configurados correctamente.")
+
         # Crear el pedido de venta
         sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
@@ -238,17 +242,19 @@ class ticket_alquiler(models.Model):
             'solicitante_id': self.responsable.id,
         })
 
-        # Asegurarse de que solo se haya creado un registro
-        sale_order.ensure_one()
+        # Asegurarse de que solo hay un registro de sale_order
+        if not sale_order or len(sale_order) != 1:
+            raise UserError("Se esperaba un solo registro de sale.order al crear el pedido de venta.")
 
         # Agregar automáticamente las líneas de productos seleccionadas por el técnico
         for line in self.sale_order_line_ids:
-            self.env['sale.order.line'].create({
-                'order_id': sale_order.id,
-                'product_id': line.product_id.id,
-                'product_uom_qty': line.product_uom_qty,
-                'price_unit': line.price_unit,
-            })
+            if line.product_id:
+                self.env['sale.order.line'].create({
+                    'order_id': sale_order.id,
+                    'product_id': line.product_id.id,
+                    'product_uom_qty': line.product_uom_qty,
+                    'price_unit': line.price_unit,
+                })
 
         # Retornar la acción para abrir el pedido de venta creado
         return {
