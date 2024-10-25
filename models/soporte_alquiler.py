@@ -224,7 +224,7 @@ class ticket_alquiler(models.Model):
 
     sale_order_line_ids = fields.One2many(
         'sale.order.line',  # Modelo de las líneas de pedido de venta
-        'ticket_id',  # Campo Many2one en 'sale.order.line' que hace referencia al ticket
+        'ticket_ref_id',  # Campo Many2one en 'sale.order.line' que hace referencia al ticket
         string='Productos Solicitados',
         tracking=True
     )
