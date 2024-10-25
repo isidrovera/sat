@@ -230,8 +230,9 @@ class ticket_alquiler(models.Model):
         tracking=True
     )
     def create_sale_order(self):
-        self.ensure_one()  # Asegura que este método solo se ejecute en un único ticket
-
+        # Asegurarse de que este método se ejecute solo para un registro
+        self.ensure_one()  
+        
         # Crear el pedido de venta
         sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
@@ -239,25 +240,25 @@ class ticket_alquiler(models.Model):
             'ticket_id': self.id,
             'solicitante_id': self.responsable.id,
         })
-
-        # Validar si hay líneas de pedido que agregar
+        
+        # Validar y agregar líneas de pedido
         if self.sale_order_line_ids:
             order_lines = []
             for line in self.sale_order_line_ids:
                 if line.product_id:
                     order_lines.append({
-                        'order_id': sale_order.id,  # Asigna el ID del pedido de venta creado
+                        'order_id': sale_order.id,  # Asignar el pedido recién creado
                         'product_id': line.product_id.id,
                         'product_uom_qty': line.product_uom_qty,
                         'price_unit': line.price_unit,
                         'name': line.product_id.get_product_multiline_description_sale(),
                     })
-
-            # Crea las líneas de pedido en lote
+            
+            # Crear líneas de pedido si existen productos
             if order_lines:
                 self.env['sale.order.line'].create(order_lines)
 
-        # Retorna la acción para abrir el pedido de venta recién creado
+        # Retornar la acción para ver el pedido de venta
         return {
             'name': 'Nuevo Pedido de Venta',
             'view_mode': 'form',
