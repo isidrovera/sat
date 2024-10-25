@@ -639,3 +639,6 @@ class TicketAlquilerLine(models.Model):
     def _compute_price_subtotal(self):
         for line in self:
             line.price_subtotal = line.product_uom_qty * line.price_unit
+    def action_add_product_line(self):
+        # Redirigir al método de ticket.alquiler
+        return self.env['ticket.alquiler'].browse(self.ticket_id.id).action_add_product_line()
