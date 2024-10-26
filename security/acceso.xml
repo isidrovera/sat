@@ -62,6 +62,7 @@
             <field name="perm_create" eval="True"/>
             <field name="perm_unlink" eval="True"/>
         </record>
+        
         <record id="ticket_order_no_restriction" model="ir.rule">
             <field name="name">Acceso completo a tickets de alquiler</field>
             <field name="model_id" ref="sat.model_ticket_alquiler"/>
