@@ -120,8 +120,7 @@
     <field name="type">list</field>
     <field name="arch" type="xml">
         <list default_order="id desc">
-            <!-- Botones de estadísticas arriba de la lista -->
-            <div class="oe_stat_buttons">
+            <header>
                 <button name="total_maquinas_button" type="button" class="oe_stat_button">
                     <span class="oe_stat_value">
                         <field name="total_maquinas"/>
@@ -146,7 +145,7 @@
                     </span>
                     <span class="oe_stat_text">No Disponibles</span>
                 </button>
-            </div>
+            </header>
 
             <!-- Lista de registros -->
             <field name="create_date" string="Ingreso" widget="remaining_days" width="80%" optional="hide" />
@@ -177,6 +176,7 @@
         </list>
     </field>
 </record>
+
 
 
     <!-- Búsqueda -->
