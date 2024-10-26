@@ -1,14 +1,7 @@
 <odoo>
-    <data>
-        <report id="report_reparaciones_ventas" 
-                model="reparaciones.reparaciones" 
-                string="Reparación" 
-                name="sat.reparacion_view" 
-                file="reparaciones.reparaciones" 
-                report_type="qweb-pdf" 
-                print_report_name="object.name"/>
-
-        <template id="reparacion_view">
+    
+        
+        <template id="report_reparaciones_ventas">
             <t t-call="web.html_container">
                 <t t-foreach="docs" t-as="reparaciones">
                     <t t-call="web.external_layout">
@@ -245,6 +238,6 @@
                 </t>
             </t>
         </template>
-    </data>
+    
 </odoo>
 

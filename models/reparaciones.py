@@ -527,7 +527,7 @@ class Reparaciones(models.Model):
 
     def generate_pdf_report_url(self):
         # Obtener el reporte
-        report = self.env.ref('sat.report_reparaciones_ventas')
+        report = self.env.ref('sat.action_report_reparaciones_ventas')
         
         if not report:
             raise UserError("No se encontró el reporte especificado.")
