@@ -44,7 +44,7 @@
             <field name="groups" eval="[(4, ref('sat.sat_tecnica_group_user'))]"/>
             <field name="domain_force">[
                 ('responsable', '=', user.id), 
-                ('estado', '!=', 'proceso') 
+                ('estado', '=', 'proceso') 
                 
             ]</field>
             <field name="perm_read" eval="True"/>   <!-- Permitir lectura -->
