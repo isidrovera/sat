@@ -114,69 +114,70 @@
       </field>
     </record>
 
-    <!-- Vista en formato lista -->
     <record id="maquinas_tree_sat" model="ir.ui.view">
-      <field name="name">sat.tree</field>
-      <field name="model">sat.sat</field>
-      <field name="type">list</field>
-      <field name="arch" type="xml">
+    <field name="name">sat.tree</field>
+    <field name="model">sat.sat</field>
+    <field name="type">list</field>
+    <field name="arch" type="xml">
         <list default_order="id desc">
-          <header>
+            <!-- Botones de estadísticas arriba de la lista -->
             <div class="oe_stat_buttons">
-              <button name="total_maquinas_button" type="button" class="oe_stat_button">
-                <span class="oe_stat_value">
-                  <field name="total_maquinas"/>
-                </span>
-                <span class="oe_stat_text">Total Máquinas</span>
-              </button>
-              <button name="disponibles_maquinas_button" type="button" class="oe_stat_button">
-                <span class="oe_stat_value">
-                  <field name="maquinas_disponibles"/>
-                </span>
-                <span class="oe_stat_text">Disponibles</span>
-              </button>
-              <button name="separadas_maquinas_button" type="button" class="oe_stat_button">
-                <span class="oe_stat_value">
-                  <field name="maquinas_separadas"/>
-                </span>
-                <span class="oe_stat_text">Separadas</span>
-              </button>
-              <button name="no_disponibles_maquinas_button" type="button" class="oe_stat_button">
-                <span class="oe_stat_value">
-                  <field name="maquinas_no_disponibles"/>
-                </span>
-                <span class="oe_stat_text">No Disponibles</span>
-              </button>
+                <button name="total_maquinas_button" type="button" class="oe_stat_button">
+                    <span class="oe_stat_value">
+                        <field name="total_maquinas"/>
+                    </span>
+                    <span class="oe_stat_text">Total Máquinas</span>
+                </button>
+                <button name="disponibles_maquinas_button" type="button" class="oe_stat_button">
+                    <span class="oe_stat_value">
+                        <field name="maquinas_disponibles"/>
+                    </span>
+                    <span class="oe_stat_text">Disponibles</span>
+                </button>
+                <button name="separadas_maquinas_button" type="button" class="oe_stat_button">
+                    <span class="oe_stat_value">
+                        <field name="maquinas_separadas"/>
+                    </span>
+                    <span class="oe_stat_text">Separadas</span>
+                </button>
+                <button name="no_disponibles_maquinas_button" type="button" class="oe_stat_button">
+                    <span class="oe_stat_value">
+                        <field name="maquinas_no_disponibles"/>
+                    </span>
+                    <span class="oe_stat_text">No Disponibles</span>
+                </button>
             </div>
-          </header>
-          <field name="create_date" string="Ingreso" widget="remaining_days" width="80%" optional="hide" />
-          <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" invisible="disponibilidad_id != 'separada'" optional="hide" />
-          <field name="fecha_para_revision" string="Fecha para revisión" optional="hide" />
-          <field name="importacion" optional="hide" />
-          <field name="proveedor_id" optional="hide" />
-          <field name="cliente_nombre" string="Cliente" />
-          <field name="tipo_maquina" />
-          <field name="marca" />
-          <field name="activador" invisible="True" />
-          <field name="icono_rojo" widget="html" string=" " invisible="activador == 'no'" />
-          <field name="name" />
-          <field name="serie_id" />
-          <field name="descripcion" optional="hide" />
-          <field name="contometro" />
-          <field name="currency_id" string="Tipo de moneda" invisible="True" />
-          <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide" groups="base.group_system" />
-          <field name="ubicacion_id" />
-          <field name="disponibilidad_id" widget="badge" decoration-success="disponibilidad_id == 'disponible'" decoration-warning="disponibilidad_id == 'separada'" decoration-danger="disponibilidad_id == 'no_disponible'" />
-          <field name="estado_ventas_id" widget="badge" decoration-muted="estado_ventas_id == 'sin_revisar'" decoration-info="estado_ventas_id == 'en_revision'" decoration-success="estado_ventas_id == 'finalizado'" decoration-danger="estado_ventas_id not in ('sin_revisar', 'en_revision', 'finalizado', 'entregada')" decoration-warning="estado_ventas_id == 'entregada'" />
-          <field name="asesora_id" optional="hide" />
-          <button name="action_primer" type="object" class="oe_stat_button" icon="fa-building-o" groups="base.group_system" help="Primer piso" />
-          <button name="action_tercero" type="object" class="oe_stat_button" icon="fa-building" groups="base.group_system" help="Tercer piso" />
-          <button name="action_segundo" type="object" class="oe_stat_button" icon="fa-truck" groups="base.group_system" help="Segundo local" />
-          <field name="activity_ids" widget="list_activity" optional="hide" />
-          <button name="view_reparaciones_ids" type="object" icon="fa-wrench" invisible="estado_ventas_id != 'finalizado'" />
+
+            <!-- Lista de registros -->
+            <field name="create_date" string="Ingreso" widget="remaining_days" width="80%" optional="hide" />
+            <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" invisible="disponibilidad_id != 'separada'" optional="hide" />
+            <field name="fecha_para_revision" string="Fecha para revisión" optional="hide" />
+            <field name="importacion" optional="hide" />
+            <field name="proveedor_id" optional="hide" />
+            <field name="cliente_nombre" string="Cliente" />
+            <field name="tipo_maquina" />
+            <field name="marca" />
+            <field name="activador" invisible="True" />
+            <field name="icono_rojo" widget="html" string=" " invisible="activador == 'no'" />
+            <field name="name" />
+            <field name="serie_id" />
+            <field name="descripcion" optional="hide" />
+            <field name="contometro" />
+            <field name="currency_id" string="Tipo de moneda" invisible="True" />
+            <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide" groups="base.group_system" />
+            <field name="ubicacion_id" />
+            <field name="disponibilidad_id" widget="badge" decoration-success="disponibilidad_id == 'disponible'" decoration-warning="disponibilidad_id == 'separada'" decoration-danger="disponibilidad_id == 'no_disponible'" />
+            <field name="estado_ventas_id" widget="badge" decoration-muted="estado_ventas_id == 'sin_revisar'" decoration-info="estado_ventas_id == 'en_revision'" decoration-success="estado_ventas_id == 'finalizado'" decoration-danger="estado_ventas_id not in ('sin_revisar', 'en_revision', 'finalizado', 'entregada')" decoration-warning="estado_ventas_id == 'entregada'" />
+            <field name="asesora_id" optional="hide" />
+            <button name="action_primer" type="object" class="oe_stat_button" icon="fa-building-o" groups="base.group_system" help="Primer piso" />
+            <button name="action_tercero" type="object" class="oe_stat_button" icon="fa-building" groups="base.group_system" help="Tercer piso" />
+            <button name="action_segundo" type="object" class="oe_stat_button" icon="fa-truck" groups="base.group_system" help="Segundo local" />
+            <field name="activity_ids" widget="list_activity" optional="hide" />
+            <button name="view_reparaciones_ids" type="object" icon="fa-wrench" invisible="estado_ventas_id != 'finalizado'" />
         </list>
-      </field>
-    </record>
+    </field>
+</record>
+
 
     <!-- Búsqueda -->
     <record id="Sat_search_view" model="ir.ui.view">
