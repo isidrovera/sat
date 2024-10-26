@@ -342,8 +342,10 @@ class ticket_alquiler(models.Model):
         }
 
     def action_finalizar(self):
+        # Deshabilitar las reglas de acceso temporalmente para evitar el error
+        self = self.sudo()  # Utilizamos sudo() para que el usuario tenga acceso sin restricciones durante este proceso
+
         # Realizar todas las acciones necesarias antes de cambiar el estado
-        # Crear el pedido de venta solo si hay líneas de productos
         if self.line_ids:
             self.create_sale_order()
 
@@ -353,7 +355,6 @@ class ticket_alquiler(models.Model):
 
         # Verificar el valor de retorno_id
         if self.retorno_id == 'no':
-            # Enviar el tercer correo si retorno_id es 'no'
             template5 = self.env.ref('sat.mail_template_retorno')
             template5.send_mail(self.id, force_send=True)
 
