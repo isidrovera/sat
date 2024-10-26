@@ -668,24 +668,22 @@ class ticket_alquiler(models.Model):
 
             
 class ReportTicketAlquiler(models.AbstractModel):
-    _name = 'report.sat.action_ticket_alquiler'
+    _name = 'report.sat.ticket_view'
 
     @api.model
     def _get_report_values(self, docids, data=None):
         docs = self.env['ticket.alquiler'].browse(docids)
-        report_data = []
+        selection_labels = {}
         for doc in docs:
-            selection_labels = doc.get_selection_labels()
-            report_data.append({
-                'doc': doc,
-                'selection_labels': selection_labels,
-            })
+            # Asegúrate de que get_selection_labels() siempre devuelva un diccionario
+            selection_labels[doc.id] = doc.get_selection_labels() if doc else {}
         return {
             'doc_ids': docids,
             'doc_model': 'ticket.alquiler',
             'docs': docs,
-            'selection_labels': {doc.id: doc.get_selection_labels() for doc in docs},
+            'selection_labels': selection_labels,
         }
+
 
 class TicketAlquilerLine(models.Model):
     _name = 'ticket.alquiler.line'
