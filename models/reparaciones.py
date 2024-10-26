@@ -564,7 +564,7 @@ class Reparaciones(models.Model):
         template_id = self.env.ref('sat.email_template_finalizacion_reparacion')        
         self.enviar_mensaje_finalizacion_asesora()
         self._create_next_reparacion()
-        return self.env.ref('sat.report_reparaciones_qr').report_action(self)
+        return self.env.ref('sat.report_qr_codes_reparaciones_template').report_action(self)
     
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
