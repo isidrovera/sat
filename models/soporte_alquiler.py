@@ -343,7 +343,7 @@ class ticket_alquiler(models.Model):
 
     def action_finalizar(self):
         # Deshabilitar las reglas de acceso temporalmente para evitar el error
-        self = self.sudo()  # Utilizamos sudo() para que el usuario tenga acceso sin restricciones durante este proceso
+        self = self.sudo()  # Utilizamos sudo() para evitar restricciones
 
         # Realizar todas las acciones necesarias antes de cambiar el estado
         if self.line_ids:
@@ -358,8 +358,14 @@ class ticket_alquiler(models.Model):
             template5 = self.env.ref('sat.mail_template_retorno')
             template5.send_mail(self.id, force_send=True)
 
-        # Finalmente, cambiar el estado del ticket a 'finalizado'
+        # Cambiar el estado del ticket a 'finalizado'
         self.write({'estado': 'finalizado'})
+
+        # Cerrar la vista de formulario después del cambio de estado
+        return {
+            'type': 'ir.actions.act_window_close'
+        }
+
 
 
         
