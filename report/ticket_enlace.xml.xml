@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_ticket_alquiler" model="ir.actions.report">
+        <field name="name">Ticket de Soporte</field>
+        <field name="model">ticket.alquiler</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sat.ticket_alquiler</field> <!-- Aquí cambias el nombre -->
+        <field name="report_file">sat.ticket_alquiler</field> <!-- Aquí también -->
+        <field name="print_report_name">'Ticket - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="sat.model_ticket_alquiler"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>
+

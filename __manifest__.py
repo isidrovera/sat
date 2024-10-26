@@ -25,6 +25,7 @@
         'data/print.xml',
         'report/reparacion_enlace.xml',
         'report/report_reparaciones_ventas.xml',
+        'report/ticket_enlace.xml',
         'report/ticket_reporte.xml',
         'report/informes.xml',
         'report/evaluacion.xml',
