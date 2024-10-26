@@ -37,21 +37,25 @@
                 ('estado_id', '!=', 'entregada'), 
                 ('estado_id', '!=', 'finalizado')
             ]</field>
-        </record>
-        <record id="ticket_order_technician_rule" model="ir.rule">
-            <field name="name">Técnicos: ver solo sus ticket</field>
-            <field name="model_id" ref="sat.model_ticket_alquiler"/>
-            <field name="groups" eval="[(4, ref('sat.sat_tecnica_group_user'))]"/>
-            <field name="domain_force">[
-                ('responsable', '=', user.id), 
-                ('estado', '=', 'proceso') 
-                
-            ]</field>
             <field name="perm_read" eval="True"/>   <!-- Permitir lectura -->
             <field name="perm_write" eval="True"/>  <!-- Permitir edición -->
             <field name="perm_create" eval="True"/> <!-- Permitir creación si es necesario -->
             <field name="perm_unlink" eval="True"/>
         </record>
+        <record id="ticket_order_technician_rule" model="ir.rule">
+            <field name="name">Técnicos: ver solo sus tickets en proceso</field>
+            <field name="model_id" ref="sat.model_ticket_alquiler"/>
+            <field name="groups" eval="[(4, ref('sat.sat_tecnica_group_user'))]"/>
+            <field name="domain_force">[
+                ('responsable', '=', user.id), 
+                ('estado', '=', 'proceso')  <!-- Permitir ver solo en estado "proceso" -->
+            ]</field>
+            <field name="perm_read" eval="True"/>   <!-- Permitir lectura -->
+            <field name="perm_write" eval="True"/>  <!-- Permitir edición, necesario para finalizar -->
+            <field name="perm_create" eval="False"/> <!-- No crear -->
+            <field name="perm_unlink" eval="False"/> <!-- No eliminar -->
+        </record>
+        
         
     </data>
 </odoo>

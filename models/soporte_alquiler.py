@@ -342,7 +342,8 @@ class ticket_alquiler(models.Model):
         }
 
     def action_finalizar(self):
-        self.estado = 'finalizado'
+        # Cambiar el estado del ticket a 'finalizado'
+        self.write({'estado': 'finalizado'})  # Asegura que el estado cambie primero
         
         # Crear el pedido de venta solo si hay líneas de productos
         if self.line_ids:
@@ -352,16 +353,13 @@ class ticket_alquiler(models.Model):
         template4 = self.env.ref('sat.email_template_ticket_cliente_finalizacion')
         template4.send_mail(self.id, force_send=True)
 
-        # Verificar el valor de asistencia_id
+        # Verificar el valor de retorno_id
         if self.retorno_id == 'no':
-            # Enviar el tercer correo si asistencia_id es 'si'
+            # Enviar el tercer correo si retorno_id es 'no'
             template5 = self.env.ref('sat.mail_template_retorno')
             template5.send_mail(self.id, force_send=True)
-        
-        # Llamar a la función para enviar mensaje de finalización al cliente
-        # self.enviar_mensaje_whatsapp_finalizacion()
 
-    
+        
 
     def create_ticket_wizard(self):
         return {
