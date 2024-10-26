@@ -24,7 +24,7 @@
         'data/ir_secuense_ev.xml',
         'data/print.xml',
         'reports/reparacion_enlace.xml',
-        'reports/reparaciones_repor.xml',
+        'reports/report_reparaciones_ventas.xml',
         'reports/ticket_reporte.xml',
         'reports/informes.xml',
         'reports/evaluacion.xml',
