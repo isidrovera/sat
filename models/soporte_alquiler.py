@@ -367,7 +367,7 @@ class ticket_alquiler(models.Model):
             'name': 'Tickets',
             'view_mode': 'list,form',
             'res_model': 'ticket.alquiler',
-            'view_id': 'list',  # Puedes especificar una vista de lista si es necesario
+            'view_id': False,  # Puedes especificar una vista de lista si es necesario
             'target': 'main',
         }
 
