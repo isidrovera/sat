@@ -570,8 +570,10 @@ class ticket_alquiler(models.Model):
                             selection_labels[field_name] = option_label
                             break
                 else:
-                    selection_labels[field_name] = 'NA'  # Retorna 'NA' si no hay valor
+                    selection_labels[field_name] = 'NA'  # Retorna 'NA' si no hay valor seleccionado
+        _logger.info('Selection labels for %s: %s', self.name, selection_labels)
         return selection_labels
+
 
        
     def enviar_mensaje_whatsapp(self):
@@ -668,7 +670,7 @@ class ticket_alquiler(models.Model):
 
             
 class ReportTicketAlquiler(models.AbstractModel):
-    _name = 'report.sat.ticket_view'
+    _name = 'report.sat.ticket_alquiler'
 
     @api.model
     def _get_report_values(self, docids, data=None):
