@@ -668,7 +668,7 @@ class ticket_alquiler(models.Model):
 
             
 class ReportTicketAlquiler(models.AbstractModel):
-    _name = 'report.sat.ticket_view'
+    _name = 'report.sat.action_ticket_alquiler'
 
     @api.model
     def _get_report_values(self, docids, data=None):
