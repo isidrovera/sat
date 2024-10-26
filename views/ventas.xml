@@ -162,13 +162,13 @@
           <field name="cliente_nombre" string="Cliente" />
           <field name="tipo_maquina" />
           <field name="marca" />
-          <field name="activador" invisible="1" />
+          <field name="activador" invisible="True" />
           <field name="icono_rojo" widget="html" string=" " invisible="activador == 'no'" />
           <field name="name" />
           <field name="serie_id" />
           <field name="descripcion" optional="hide" />
           <field name="contometro" />
-          <field name="currency_id" string="Tipo de moneda" invisible="1" />
+          <field name="currency_id" string="Tipo de moneda" invisible="True" />
           <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}"
             optional="hide" groups="base.group_system" />
           <field name="ubicacion_id" />

@@ -377,7 +377,7 @@ class SatSat(models.Model):
             
             # Guardar la imagen codificada en el campo qr_image
             record.qr_image = img_base64
-    icono_rojo = fields.Char(compute='_compute_icono_rojo', string=' ')
+    icono_rojo = fields.Html(compute='_compute_icono_rojo', string=' ')
 
     @api.depends('activador')  # Reemplaza con el campo real que afecta la condición
     def _compute_icono_rojo(self):
