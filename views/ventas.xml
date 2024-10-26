@@ -154,25 +154,25 @@
         <list default_order="id desc">
             <header>
                 <div class="oe_stat_buttons">
-                    <button type="button" class="oe_stat_button">
+                    <button name="total_maquinas_button" type="button" class="oe_stat_button">
                         <span class="oe_stat_value">
                             <field name="total_maquinas"/>
                         </span>
                         <span class="oe_stat_text">Total Máquinas</span>
                     </button>
-                    <button type="button" class="oe_stat_button">
+                    <button name="disponibles_maquinas_button" type="button" class="oe_stat_button">
                         <span class="oe_stat_value">
                             <field name="maquinas_disponibles"/>
                         </span>
                         <span class="oe_stat_text">Disponibles</span>
                     </button>
-                    <button type="button" class="oe_stat_button">
+                    <button name="separadas_maquinas_button" type="button" class="oe_stat_button">
                         <span class="oe_stat_value">
                             <field name="maquinas_separadas"/>
                         </span>
                         <span class="oe_stat_text">Separadas</span>
                     </button>
-                    <button type="button" class="oe_stat_button">
+                    <button name="no_disponibles_maquinas_button" type="button" class="oe_stat_button">
                         <span class="oe_stat_value">
                             <field name="maquinas_no_disponibles"/>
                         </span>
