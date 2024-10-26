@@ -675,7 +675,7 @@ class ReportTicketAlquiler(models.AbstractModel):
         docs = self.env['ticket.alquiler'].browse(docids)
         selection_labels = {}
         for doc in docs:
-            # Asegúrate de que get_selection_labels() siempre devuelva un diccionario
+            # Llama al método get_selection_labels() para poblar selection_labels
             selection_labels[doc.id] = doc.get_selection_labels() if doc else {}
         return {
             'doc_ids': docids,
@@ -683,6 +683,7 @@ class ReportTicketAlquiler(models.AbstractModel):
             'docs': docs,
             'selection_labels': selection_labels,
         }
+
 
 
 class TicketAlquilerLine(models.Model):
