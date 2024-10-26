@@ -561,7 +561,7 @@ class Reparaciones(models.Model):
             
     def action_finalizar_reparacion(self):
         # 1. Generar el reporte primero
-        pdf_report = self.env.ref('sat.report_qr_codes_reparaciones_template').report_action(self.ids)
+        pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
 
         # 2. Enviar el mensaje a la asesora
         try:
