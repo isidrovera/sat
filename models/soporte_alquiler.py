@@ -570,7 +570,7 @@ class ticket_alquiler(models.Model):
                             selection_labels[field_name] = option_label
                             break
                 else:
-                    selection_labels[field_name] = 'NA'
+                    selection_labels[field_name] = 'NA'  # Retorna 'NA' si no hay valor
         return selection_labels
 
        
