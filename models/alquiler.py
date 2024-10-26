@@ -88,9 +88,7 @@ class UnidadAlquiler(models.Model):
 
     contacto_id = fields.Char(string='Contacto', tracking=True)
     celular = fields.Char(string='Celular', tracking=True)
-    correo_ = fields.Char(string='Correo', tracking=True)
-    correo_1 = fields.Char(string='Correo', tracking=True)
-    correo_2 = fields.Char(string='Correo', tracking=True)
+    correo_ = fields.Char(string='Correo', tracking=True)    
     cargo = fields.Char(string='Cargo', tracking=True)
     ubicacion_instalacion  = fields.Char(string="Área de instalacion")
     observaciones  = fields.Html(string="Observaciones", tracking=True)
@@ -117,7 +115,7 @@ class UnidadAlquiler(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Tickets',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'res_model': 'ticket.alquiler',
             'domain': [('product_alquiler', '=', self.id)],
             'context': "{'create': True}"
@@ -138,7 +136,7 @@ class UnidadAlquiler(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Pedidos',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'res_model': 'sale.order',
             'domain': [('equipo_id', '=', self.id)],
             'context': "{'create': True}"

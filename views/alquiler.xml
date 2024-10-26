@@ -56,8 +56,7 @@
                                 <field name="contacto_id" required="estado_alquiler_id == 'lista'"/>
                                 <field name="celular" widget="phone" required="estado_alquiler_id == 'lista'"/>
                                 <field name="correo_" widget="email" required="estado_alquiler_id == 'lista'"/>
-                                <field name="correo_1" widget="email"/>
-                                <field name="correo_2" widget="email"/> 
+                                
                                 <!--<field name="image_qr" widget="image" options="{'size': [128, 128]}"/>-->
 
                             </group>
