@@ -342,14 +342,12 @@ class ticket_alquiler(models.Model):
         }
 
     def action_finalizar(self):
-        # Cambiar el estado del ticket a 'finalizado'
-        self.write({'estado': 'finalizado'})  # Asegura que el estado cambie primero
-        
+        # Realizar todas las acciones necesarias antes de cambiar el estado
         # Crear el pedido de venta solo si hay líneas de productos
         if self.line_ids:
             self.create_sale_order()
 
-        # Enviando el segundo correo con la segunda plantilla
+        # Enviar el correo con la plantilla de finalización
         template4 = self.env.ref('sat.email_template_ticket_cliente_finalizacion')
         template4.send_mail(self.id, force_send=True)
 
@@ -358,6 +356,10 @@ class ticket_alquiler(models.Model):
             # Enviar el tercer correo si retorno_id es 'no'
             template5 = self.env.ref('sat.mail_template_retorno')
             template5.send_mail(self.id, force_send=True)
+
+        # Finalmente, cambiar el estado del ticket a 'finalizado'
+        self.write({'estado': 'finalizado'})
+
 
         
 

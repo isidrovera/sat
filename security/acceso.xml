@@ -47,8 +47,8 @@
             <field name="model_id" ref="sat.model_ticket_alquiler"/>
             <field name="groups" eval="[(4, ref('sat.sat_tecnica_group_user'))]"/>
             <field name="domain_force">[
-                ('responsable', '=', user.id) 
-                 
+                ('responsable', '=', user.id), 
+                ('estado', '=', 'proceso') 
                 
             ]</field>
             <field name="perm_read" eval="True"/>   <!-- Permitir lectura -->
