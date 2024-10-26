@@ -152,6 +152,39 @@
       <field name="type">list</field>
       <field name="arch" type="xml">
         <list default_order="id desc">
+            <header>
+                <t t-set="total_maquinas" t-value="model.search_count([])" />
+                <t t-set="maquinas_disponibles" t-value="model.search_count([('disponibilidad_id', '=', 'disponible')])" />
+                <t t-set="maquinas_separadas" t-value="model.search_count([('disponibilidad_id', '=', 'separada')])" />
+                <t t-set="maquinas_no_disponibles" t-value="model.search_count([('disponibilidad_id', '=', 'no_disponible')])" />
+
+                <div class="oe_stat_buttons">
+                    <button type="button" class="oe_stat_button">
+                        <span class="oe_stat_value">
+                            <t t-esc="total_maquinas"/> 
+                        </span>
+                        <span class="oe_stat_text">Total Máquinas</span>
+                    </button>
+                    <button type="button" class="oe_stat_button">
+                        <span class="oe_stat_value">
+                            <t t-esc="maquinas_disponibles"/>
+                        </span>
+                        <span class="oe_stat_text">Disponibles</span>
+                    </button>
+                    <button type="button" class="oe_stat_button">
+                        <span class="oe_stat_value">
+                            <t t-esc="maquinas_separadas"/>
+                        </span>
+                        <span class="oe_stat_text">Separadas</span>
+                    </button>
+                    <button type="button" class="oe_stat_button">
+                        <span class="oe_stat_value">
+                            <t t-esc="maquinas_no_disponibles"/>
+                        </span>
+                        <span class="oe_stat_text">No Disponibles</span>
+                    </button>
+                </div>
+            </header>
           <field name="create_date" string="Ingreso" widget="remaining_days" width="80%"
             optional="hide" />
           <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%"
