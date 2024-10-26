@@ -60,30 +60,7 @@
             <field name="perm_create" eval="True"/>
             <field name="perm_unlink" eval="False"/>
         </record>
-
-        <!-- Regla sin restricciones para reparaciones para ventas y sistema -->
-        <record id="repair_order_no_restriction" model="ir.rule">
-            <field name="name">Acceso completo a reparaciones</field>
-            <field name="model_id" ref="sat.model_reparaciones_reparaciones"/>
-            <field name="groups" eval="[(4, ref('Sat_ventas_group_user')), (4, ref('base.group_system'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>  <!-- Sin restricciones -->
-            <field name="perm_read" eval="True"/>
-            <field name="perm_write" eval="True"/>
-            <field name="perm_create" eval="True"/>
-            <field name="perm_unlink" eval="True"/>
-        </record>
-
-        <!-- Regla sin restricciones para tickets de alquiler para ventas y sistema -->
-        <record id="ticket_order_no_restriction" model="ir.rule">
-            <field name="name">Acceso completo a tickets de alquiler</field>
-            <field name="model_id" ref="sat.model_ticket_alquiler"/>
-            <field name="groups" eval="[(4, ref('Sat_ventas_group_user')), (4, ref('base.group_system'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>  <!-- Sin restricciones -->
-            <field name="perm_read" eval="True"/>
-            <field name="perm_write" eval="True"/>
-            <field name="perm_create" eval="True"/>
-            <field name="perm_unlink" eval="True"/>
-        </record>
+       
 
     </data>
 </odoo>
