@@ -361,10 +361,16 @@ class ticket_alquiler(models.Model):
         # Cambiar el estado del ticket a 'finalizado'
         self.write({'estado': 'finalizado'})
 
-        # Cerrar la vista de formulario después del cambio de estado
+        # Redirigir a la vista de lista de tickets después de finalizar
         return {
-            'type': 'ir.actions.act_window_close'
+            'type': 'ir.actions.act_window',
+            'name': 'Tickets',
+            'view_mode': 'list,form',
+            'res_model': 'ticket.alquiler',
+            'view_id': 'list',  # Puedes especificar una vista de lista si es necesario
+            'target': 'main',
         }
+
 
 
 
