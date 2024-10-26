@@ -120,32 +120,7 @@
     <field name="type">list</field>
     <field name="arch" type="xml">
         <list default_order="id desc">
-            <header>
-                <button name="total_maquinas_button" type="button" class="oe_stat_button">
-                    <span class="oe_stat_value">
-                        <field name="total_maquinas"/>
-                    </span>
-                    <span class="oe_stat_text">Total Máquinas</span>
-                </button>
-                <button name="disponibles_maquinas_button" type="button" class="oe_stat_button">
-                    <span class="oe_stat_value">
-                        <field name="maquinas_disponibles"/>
-                    </span>
-                    <span class="oe_stat_text">Disponibles</span>
-                </button>
-                <button name="separadas_maquinas_button" type="button" class="oe_stat_button">
-                    <span class="oe_stat_value">
-                        <field name="maquinas_separadas"/>
-                    </span>
-                    <span class="oe_stat_text">Separadas</span>
-                </button>
-                <button name="no_disponibles_maquinas_button" type="button" class="oe_stat_button">
-                    <span class="oe_stat_value">
-                        <field name="maquinas_no_disponibles"/>
-                    </span>
-                    <span class="oe_stat_text">No Disponibles</span>
-                </button>
-            </header>
+            
 
             <!-- Lista de registros -->
             <field name="create_date" string="Ingreso" widget="remaining_days" width="80%" optional="hide" />
@@ -156,13 +131,13 @@
             <field name="cliente_nombre" string="Cliente" />
             <field name="tipo_maquina" />
             <field name="marca" />
-            <field name="activador" invisible="True" />
+            <field name="activador" optional="hide" />
             <field name="icono_rojo" widget="html" string=" " invisible="activador == 'no'" />
             <field name="name" />
             <field name="serie_id" />
             <field name="descripcion" optional="hide" />
             <field name="contometro" />
-            <field name="currency_id" string="Tipo de moneda" invisible="True" />
+            <field name="currency_id" string="Tipo de moneda" optional="hide" />
             <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide" groups="base.group_system" />
             <field name="ubicacion_id" />
             <field name="disponibilidad_id" widget="badge" decoration-success="disponibilidad_id == 'disponible'" decoration-warning="disponibilidad_id == 'separada'" decoration-danger="disponibilidad_id == 'no_disponible'" />
