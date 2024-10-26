@@ -325,7 +325,7 @@ class ticket_alquiler(models.Model):
             sale_order_lines.append((0, 0, {
                 'product_id': line.product_id.id,
                 'product_uom_qty': line.product_uom_qty,
-
+                'price_unit': line.price_unit,
             }))
 
         # Agregar las líneas al pedido de venta
