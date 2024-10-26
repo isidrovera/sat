@@ -29,6 +29,7 @@
         'report/informes.xml',
         'report/evaluacion.xml',
         'report/report_qr_codes_reparaciones.xml',
+        'report/report_qr_enlace.xml',
         'report/qr_alquiler.xml',
         'data/cron_data.xml',
         'data/cron_evaluador_diario.xml',
