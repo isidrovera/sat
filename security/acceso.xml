@@ -52,6 +52,26 @@
             <field name="perm_create" eval="True"/> <!-- Permitir creación si es necesario -->
             <field name="perm_unlink" eval="True"/>
         </record>
-        
+        <record id="repair_order_no_restriction" model="ir.rule">
+            <field name="name">Acceso completo a reparaciones</field>
+            <field name="model_id" ref="reparaciones.model_reparaciones_reparaciones"/>
+            <field name="groups" eval="[(4, ref('base.group_user')), (4, ref('base.group_system'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>  <!-- Sin restricciones -->
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+        <record id="ticket_order_no_restriction" model="ir.rule">
+            <field name="name">Acceso completo a tickets de alquiler</field>
+            <field name="model_id" ref="ticket_alquiler.model_ticket_alquiler"/>
+            <field name="groups" eval="[(4, ref('base.group_user')), (4, ref('base.group_system'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>  <!-- Sin restricciones -->
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+                
     </data>
 </odoo>
