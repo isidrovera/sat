@@ -601,7 +601,7 @@ class Reparaciones(models.Model):
         estado_legible = dict(selection).get(self.estado_id)
         return estado_legible
 class ReportReparacionView(models.AbstractModel):
-    _name = 'report.sat.reparacion_view'
+    _name = 'report.sat.report_reparaciones_ventas'
 
     @api.model
     def _get_report_values(self, docids, data=None):
