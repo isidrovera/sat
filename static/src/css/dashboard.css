@@ -3,7 +3,7 @@
 .dashboard-container {
     overflow-y: auto;
     max-height: 100vh;
-    padding-bottom: 20px;
+    padding: 20px 10px; /* Espacio superior para una mejor apariencia */
 
     .dashboard-tiles {
         display: flex;
@@ -11,8 +11,8 @@
         gap: 5px; /* Espacio entre las tiles */
 
         .tot_tasks {
-            padding: 3px; /* Reducir padding */
-            flex: 1 0 12%; /* Reducir el tamaño de cada tarjeta */
+            padding: 2px; /* Reducir padding */
+            flex: 1 0 10%; /* Aumentar el número de tarjetas en una fila */
 
             .oh-card {
                 padding: 5px; /* Reducir padding dentro de la tarjeta */
@@ -20,24 +20,24 @@
                 transition: transform 0.2s;
 
                 &:hover {
-                    transform: translateY(-3px);
+                    transform: translateY(-2px);
                 }
 
                 .oh-card-body {
-                    padding: 5px; /* Reducir padding */
+                    padding: 3px; /* Reducir padding */
                     
                     i {
-                        font-size: 20px; /* Reducir tamaño de icono */
-                        margin-bottom: 5px;
-                    }
-
-                    h3 {
-                        font-size: 12px; /* Reducir tamaño de texto */
+                        font-size: 18px; /* Reducir tamaño de icono */
                         margin-bottom: 3px;
                     }
 
+                    h3 {
+                        font-size: 11px; /* Reducir tamaño de texto */
+                        margin-bottom: 2px;
+                    }
+
                     span {
-                        font-size: 14px; /* Reducir tamaño de texto del número */
+                        font-size: 12px; /* Reducir tamaño de texto del número */
                         font-weight: bold;
                     }
 
