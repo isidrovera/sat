@@ -13,16 +13,18 @@
 
         .tot_tasks {
             padding: 5px;
-            flex: 1 0 15%;
+            flex: 1 0 14%; /* Ajuste para reducir el tamaño de las tiles al 70% aproximadamente */
+            max-width: 14%; /* Limita el ancho máximo */
 
             .oh-card {
-                padding: 10px;
+                padding: 8px;
                 box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.1);
                 border-radius: 6px;
                 transition: transform 0.2s, background-color 0.3s;
-                
+                transform: scale(0.7); /* Reduce el tamaño al 70% */
+
                 &:hover {
-                    transform: translateY(-2px);
+                    transform: translateY(-2px) scale(0.7); /* Mantiene la reducción en hover */
                     background-color: #f7f7f7;
                 }
 
@@ -31,37 +33,37 @@
                     text-align: left;
 
                     i {
-                        font-size: 20px;
-                        margin-bottom: 5px;
+                        font-size: 16px; /* Reducido para ajustar al nuevo tamaño */
+                        margin-bottom: 4px;
                     }
 
                     h3 {
-                        font-size: 14px;
+                        font-size: 12px; /* Reducido para adaptarse al cuadro */
                         margin-bottom: 3px;
                     }
 
                     span {
-                        font-size: 16px;
+                        font-size: 14px; /* Reducido para adaptarse al cuadro */
                         font-weight: bold;
                     }
 
                     /* Colores de los íconos específicos */
-                    .fa-cogs { color: #36A2EB; }           /* Azul claro */
-                    .fa-check-circle { color: #4BC0C0; }   /* Verde */
-                    .fa-pause-circle { color: #FFCE56; }   /* Amarillo */
-                    .fa-times-circle { color: #FF6384; }   /* Rojo */
-                    .fa-wrench { color: #666666; }         /* Gris oscuro */
-                    .fa-spinner { color: #36A2EB; }        /* Azul para revisión */
-                    .fa-exclamation-triangle { color: #FF6384; } /* Rojo para problemas */
-                    .fa-life-ring { color: #FFCE56; }      /* Amarillo para soporte técnico */
-                    .fa-plus-square { color: #4BC0C0; }    /* Verde para tickets nuevos */
-                    .fa-tag { color: #FFCE56; }            /* Amarillo para venta */
-                    .fa-handshake { color: #4BC0C0; }      /* Verde para alquilada */
-                    .fa-shopping-cart { color: #36A2EB; }  /* Azul para vendida */
-                    .fa-box { color: #36A2EB; }            /* Azul claro para stock */
-                    .fa-check-square { color: #4BC0C0; }   /* Verde para lista */
-                    .fa-exclamation-circle { color: #FF6384; } /* Rojo para alquiler con problemas */
-                    .fa-external-link-alt { color: #666666; } /* Gris oscuro para externo */
+                    .fa-cogs { color: #36A2EB; }
+                    .fa-check-circle { color: #4BC0C0; }
+                    .fa-pause-circle { color: #FFCE56; }
+                    .fa-times-circle { color: #FF6384; }
+                    .fa-wrench { color: #666666; }
+                    .fa-spinner { color: #36A2EB; }
+                    .fa-exclamation-triangle { color: #FF6384; }
+                    .fa-life-ring { color: #FFCE56; }
+                    .fa-plus-square { color: #4BC0C0; }
+                    .fa-tag { color: #FFCE56; }
+                    .fa-handshake { color: #4BC0C0; }
+                    .fa-shopping-cart { color: #36A2EB; }
+                    .fa-box { color: #36A2EB; }
+                    .fa-check-square { color: #4BC0C0; }
+                    .fa-exclamation-circle { color: #FF6384; }
+                    .fa-external-link-alt { color: #666666; }
                 }
             }
         }
