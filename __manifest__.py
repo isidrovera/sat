@@ -74,7 +74,8 @@
         
         'sat/static/src/js/dashboard.js',
         'sat/static/src/xml/dashboard.xml',
-        
+        'sat/src/css/dashboard.css',
+        'sat/src/js/estilo_dashboard.js',
         
              
     ],
