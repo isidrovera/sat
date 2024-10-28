@@ -164,6 +164,7 @@ class SatDashboard extends Component {
                 });
                 console.log('Gráfico de disponibilidad renderizado exitosamente');
             }
+            
             // Gráfico de estado
             const estadoCtx = this._getChartContext("estadoChart");
             if (estadoCtx) {
@@ -192,41 +193,47 @@ class SatDashboard extends Component {
                     options: {
                         plugins: {
                             legend: {
-                                display: false // Ocultamos la leyenda ya que mostraremos las etiquetas en el gráfico
+                                display: false // Ocultamos la leyenda predeterminada
                             },
                             datalabels: {
                                 display: true,
-                                color: 'white',
-                                textStrokeColor: 'transparent',
-                                textStrokeWidth: 2,
+                                color: '#000000',
                                 formatter: (value, ctx) => {
                                     const label = ctx.chart.data.labels[ctx.dataIndex];
-                                    return [`${label}`, `${value}`];
+                                    return [`${label}\n${value}`];
                                 },
                                 font: {
-                                    weight: 'bold',
-                                    size: 14
+                                    size: 12,
+                                    weight: 'bold'
                                 },
-                                textAlign: 'center',
-                                anchor: 'center',
-                                align: 'center',
-                                rotation: (ctx) => {
-                                    const angle = ctx.chart.getDatasetMeta(0).data[ctx.dataIndex].startAngle + 
-                                                (ctx.chart.getDatasetMeta(0).data[ctx.dataIndex].endAngle - 
-                                                ctx.chart.getDatasetMeta(0).data[ctx.dataIndex].startAngle) / 2;
-                                    return angle * 180 / Math.PI - 90;
+                                textAlign: 'start',
+                                anchor: 'end',
+                                align: 'end',
+                                offset: 8,
+                                borderWidth: 1,
+                                borderColor: '#666',
+                                borderRadius: 4,
+                                backgroundColor: 'white',
+                                padding: {
+                                    left: 6,
+                                    right: 6,
+                                    top: 4,
+                                    bottom: 4
                                 }
                             }
                         },
                         layout: {
-                            padding: 20
+                            padding: {
+                                top: 50,
+                                bottom: 50,
+                                left: 50,
+                                right: 50
+                            }
                         }
                     }
                 });
                 console.log('Gráfico de estado renderizado exitosamente');
             }
-
-
             // Gráfico de técnicos
             const tecnicosCtx = this._getChartContext("tecnicosChart");
             if (tecnicosCtx) {
