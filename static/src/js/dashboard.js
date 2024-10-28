@@ -178,10 +178,28 @@ class SatDashboard extends Component {
                     options: {
                         plugins: {
                             datalabels: {
-                                color: '#FFFFFF',
+                                anchor: 'end',  // Ubica las etiquetas fuera del gráfico
+                                align: 'end',   // Alinea las etiquetas al borde
+                                color: '#000000',
                                 font: {
                                     weight: 'bold'
-                                }
+                                },
+                                formatter: (value, context) => {
+                                    // Muestra el nombre de la etiqueta y el valor
+                                    return `${context.chart.data.labels[context.dataIndex]}: ${value}`;
+                                },
+                                // Añade líneas de conexión para mejorar la visibilidad
+                                listeners: {
+                                    enter: function(context) {
+                                        context.hovered = true;
+                                        return true;
+                                    },
+                                    leave: function(context) {
+                                        context.hovered = false;
+                                        return true;
+                                    }
+                                },
+                                clip: false,  // Permite que las etiquetas se muestren fuera del área de dibujo
                             }
                         }
                     }
