@@ -7,9 +7,10 @@
 
     .dashboard-tiles {
         .tot_tasks {
-            padding: 20px;
+            padding: 10px; /* Reducir padding */
 
             .oh-card {
+                padding: 10px; /* Reducir padding dentro de la tarjeta */
                 box-shadow: 2px 4px 8px rgba(0,0,0,0.2);
                 transition: transform 0.2s;
 
@@ -18,26 +19,27 @@
                 }
 
                 .oh-card-body {
-                    padding: 20px;
-
+                    padding: 10px; /* Reducir padding */
+                    
                     i {
-                        font-size: 50px;
-                        margin-bottom: 15px;
+                        font-size: 30px; /* Reducir tamaño de icono */
+                        margin-bottom: 10px;
+                    }
 
-                        &.fa-cogs { color: #36A2EB; }
-                        &.fa-check-circle { color: #4BC0C0; }
-                        &.fa-pause-circle { color: #FFCE56; }
-                        &.fa-times-circle { color: #FF6384; }
+                    h3 {
+                        font-size: 16px; /* Reducir tamaño de texto */
+                        margin-bottom: 5px;
                     }
 
                     span {
-                        font-size: 24px;
+                        font-size: 20px; /* Reducir tamaño de texto del número */
                         font-weight: bold;
                     }
                 }
             }
         }
     }
+}
 
     .dashboard-charts {
         padding: 0 10px;
