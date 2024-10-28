@@ -2,20 +2,23 @@
 <templates>
     <t t-name="sat.DashboardTemplate">
         <div class="row">
-            <!-- Indicadores Numéricos -->
-            <div class="col-md-4">
-                <h3>Reparaciones Programadas Hoy: <span id="reparacionesHoy"></span></h3>
-                <h3>Tickets Programados Hoy: <span id="ticketsHoy"></span></h3>
-            </div>
-            
-            <!-- Gráfico de barras para Reparaciones y Tickets por Mes -->
-            <div class="col-md-8">
-                <canvas id="barChartMes"></canvas>
-            </div>
-
-            <!-- Gráfico circular para Reparaciones por Técnico -->
+            <!-- Gráfico de barras para Evaluaciones, Reparaciones, Alquileres y Máquinas en alquiler -->
             <div class="col-md-6">
-                <canvas id="pieReparaciones"></canvas>
+                <canvas id="myBarChart"></canvas>
+            </div>
+            <!-- Gráfico circular para Costes, Ingresos y Beneficio -->
+            <div class="col-md-6">
+                <canvas id="myPieChart"></canvas>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Gráfico tipo Gauge para mostrar la relación Coste vs Beneficio -->
+            <div class="col-md-6">
+                <canvas id="myGaugeChart"></canvas>
+            </div>
+            <!-- Gráfico de línea para la evolución de las puntuaciones de las evaluaciones -->
+            <div class="col-md-6">
+                <canvas id="myLineChart"></canvas>
             </div>
         </div>
     </t>
