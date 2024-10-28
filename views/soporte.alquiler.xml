@@ -301,7 +301,7 @@
             <field name="view_mode">list,form,kanban,search,graph,calendar,pivot</field>
             <field name="view_id" ref="sat.model_name_view_kanban" />
         </record>
-        <menuitem name="Tickets" id="sat.tickets" parent="sat.menu_root"
+        <menuitem name="Tickets" id="sat.tickets" parent="sat_menu_root"
             action="sat.action_soporte_window" sequence="50" />
 
     </data>
