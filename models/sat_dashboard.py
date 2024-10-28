@@ -18,6 +18,7 @@ class SatDashboard(models.Model):
         maquinas_sin_revisar = self.env['sat.sat'].search_count([('estado_ventas_id', '=', 'sin_revisar')])
         maquinas_en_revision = self.env['sat.sat'].search_count([('estado_ventas_id', '=', 'en_revision')])
         maquinas_finalizadas = self.env['sat.sat'].search_count([('estado_ventas_id', '=', 'finalizado')])
+        maquinas_problemas = self.env['sat.sat'].search_count([('estado_ventas_id', '=', 'con_problemas')])
         # Puedes añadir más estados si es necesario.
 
         # Maquinas por asesora
@@ -55,6 +56,7 @@ class SatDashboard(models.Model):
             'maquinas_sin_revisar': maquinas_sin_revisar,
             'maquinas_en_revision': maquinas_en_revision,
             'maquinas_finalizadas': maquinas_finalizadas,
+            'maquinas_problemas': maquinas_problemas,
             'asesora_totales': asesora_totales,
             
             # Datos de `reparaciones.reparaciones`

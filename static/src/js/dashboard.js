@@ -164,7 +164,8 @@ class SatDashboard extends Component {
                             data: [
                                 this.dashboardData.maquinas_sin_revisar,
                                 this.dashboardData.maquinas_en_revision,
-                                this.dashboardData.maquinas_finalizadas
+                                this.dashboardData.maquinas_finalizadas,
+                                this.dashboardData.maquinas_problemas
                             ],
                             backgroundColor: ['#36A2EB', '#FFCE56', '#4BC0C0'],
                         }]
@@ -191,6 +192,12 @@ class SatDashboard extends Component {
                 const tecnicosData = Object.values(this.dashboardData.tecnicos_totales);
                 console.log('Datos de técnicos:', { labels: tecnicosLabels, data: tecnicosData });
 
+                // Array de colores para cada barra
+                const barColors = [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+                    '#E7E9ED', '#71B37C', '#FF6384', '#36A2EB'
+                ];
+
                 new Chart(tecnicosCtx, {
                     type: 'bar',
                     plugins: [ChartDataLabels],
@@ -199,7 +206,7 @@ class SatDashboard extends Component {
                         datasets: [{
                             label: 'Reparaciones',
                             data: tecnicosData,
-                            backgroundColor: '#FF6384',
+                            backgroundColor: barColors.slice(0, tecnicosData.length), // Asignar colores según la cantidad de barras
                         }]
                     },
                     options: {
@@ -224,6 +231,7 @@ class SatDashboard extends Component {
                 });
                 console.log('Gráfico de técnicos renderizado exitosamente');
             }
+
 
             // Gráfico de asesoras
             const asesoraCtx = this._getChartContext("asesoraChart");
