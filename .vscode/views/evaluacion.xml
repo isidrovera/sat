@@ -1,0 +1,159 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <data>
+        <!-- Vista de lista -->
+        <record id="view_evaluacion_personal_tree" model="ir.ui.view">
+            <field name="name">evaluacion.personal.tree</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <list default_order="id desc">
+                    <!-- Definir las columnas de la vista -->
+                    <field name="name"/>
+                    <field name="fecha"/>
+                    <field name="usuario_id"/>
+                    <field name="observacion" optional="hide"/>
+                    <field name="cantidad_reparaciones"/>
+                    <field name="cantidad_alquileres"/>                    
+                    <field name="total_score" widget="progressbar"/>
+                    <field name="worker_level" optional="hide"/>
+                    <field name="fields_to_improve" optional="hide"/>                    
+                </list>
+            </field>
+        </record>
+
+        <!-- Vista de formulario -->
+        <record id="view_evaluacion_personal_form" model="ir.ui.view">
+            <field name="name">evaluacion.personal.form</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <form>
+                     
+                    <!-- Definir los campos del formulario -->
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <!-- Botón inteligente para ver reparaciones -->
+                            <button string="Reparaciones" type="object"
+                                    name="ver_reparaciones"
+                                    class="oe_stat_button" icon="fa-wrench">
+                                <field string="Reparaciones" name="cantidad_reparaciones" widget="statinfo"/>
+                            </button>
+                            
+                            <!-- Botón inteligente para ver servicios -->
+                            <button string="Servicios" type="object"
+                                    name="ver_servicios"
+                                    class="oe_stat_button" icon="fa-cogs">
+                                <field string="Servicios" name="cantidad_alquileres" widget="statinfo"/>
+                            </button>
+                        </div>
+                        <group>
+                            <field name="name"/>
+                            <group>
+                                <field name="usuario_id"/>
+                                <field name="fecha"/>
+                                <field name="observacion"/>
+                            </group>
+                            <group>
+                                <field name="total_score_color" invisible="1"/>
+                                <field name="is_red" invisible="1"/>
+                                <field name="is_yellow" invisible="1"/>
+                                <field name="is_green" invisible="1"/>
+                                <field name="total_score" widget="progressbar"/>
+                                <field name="worker_level"/>
+                                <field name="fields_to_improve"/>
+                                <field name="cantidad_reparaciones"/>
+                                <field name="cantidad_alquileres"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group string="Productividad">
+                                <field name="productividad"/>
+                                <field name="productividad_1"/>
+                                <field name="productividad_2"/>
+                            </group>
+                            <group string="Eficiencia">
+                                <field name="eficiencia"/>
+                                <field name="eficiencia_1"/>
+                                <field name="eficiencia_2"/>
+                            </group>
+                            <group string="Habilidades de organización">
+                                <field name="habilidades"/>
+                                <field name="habilidades_1"/>
+                                <field name="habilidades_2"/>
+                            </group>
+                            <group string="Aprendizaje y desarrollo">
+                                <field name="aprendizaje"/>
+                                <field name="aprendizaje_1"/>
+                                <field name="aprendizaje_2"/>
+                            </group>
+                            <group string="Comunicación">
+                                <field name="comunicacion"/>
+                                <field name="comunicacion_1"/>
+                                <field name="comunicacion_2"/>
+                            </group>
+                            <group string="Realaciones interpersonales">
+                                <field name="relaciones"/>
+                                <field name="relaciones_1"/>
+                                <field name="relaciones_2"/>
+                            </group>
+                            <group string="Asistencia">
+                                <field name="asistencia"/>
+                                <field name="asistencia_1"/>
+                                <field name="asistencia_2"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        
+        <record id="evaluacion_personal_pivot_view" model="ir.ui.view">
+            <field name="name">evaluacion.personal.pivot</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <pivot string="Evaluaciones del Personal">
+                    <field name="anio" type="row"/>
+                    <field name="mes" type="row"/>
+                    <field name="usuario_id" type="row"/>                    
+                    <field name="cantidad_reparaciones" type="measure"/>
+                    <field name="cantidad_alquileres" type="measure"/>
+                    <field name="total_score" type="measure"/>
+                    <!-- Puedes agregar más campos según necesites -->
+                </pivot>
+            </field>
+        </record>
+    
+
+       
+        <!-- Vista de gráficos -->
+        <record id="view_evaluacion_personal_graph" model="ir.ui.view">
+            <field name="name">evaluacion.personal.graph</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <graph string="Evaluaciones por Técnico" type="bar" >
+                    <field name="usuario_id" type="row"/>
+                    <field name="anio" type="row" groupby="year"/>
+                    <field name="mes" type="row" groupby="month"/>
+                    <field name="usuario_id" type="row" groupby="usuario_id"/>
+                    <field name="total_score" type="measure" operator="avg"/>
+                    <field name="cantidad_reparaciones" type="measure"/>
+                    <field name="cantidad_alquileres" type="measure"/>
+                    <field name="worker_level" type="row"/>
+                </graph>
+            </field>
+        </record>
+
+
+
+
+        <!-- Acciones -->
+        <record id="action_evaluacion_personal" model="ir.actions.act_window">
+            <field name="name">Evaluación Personal</field>
+            <field name="res_model">evaluacion.personal</field>
+            <field name="view_mode">list,form,graph,pivot</field>
+        </record>
+
+        <!-- Menú -->
+        <menuitem id="menu_evaluacion_personal" name="Evaluación Personal" parent="sat.menu_root" action="action_evaluacion_personal" sequence="60"/>
+    </data>
+</odoo>

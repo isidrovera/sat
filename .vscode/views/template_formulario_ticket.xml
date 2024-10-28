@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="template_formulario_ticket" name="Formulario de Ticket">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <h1>Reportar un Problema</h1>
+                    <form id="ticket_form" action="/public/ticket/create" method="post">
+                        <div class="form-group">
+                            <label for="partner_name">Empresa:</label>
+                            <input type="text" id="partner_name" name="partner_name" class="form-control" t-att-value="partner_name" readonly="readonly"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="product_name">Modelo de maquina:</label>
+                            <input type="text" id="product_name" name="product_name" class="form-control" t-att-value="product_name" readonly="readonly"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="serie_id">Serie:</label>
+                            <input type="text" id="serie_id" name="serie_id" class="form-control" t-att-value="serie_id" readonly="readonly"/>
+                        </div>
+                        <!-- Más campos si son necesarios -->
+                        <div class="form-group">
+                            <label for="description">Descripción del problema:</label>
+                            <textarea id="description" name="description" class="form-control" placeholder="Describa el problema"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enviar</button>
+                    </form>
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>
+

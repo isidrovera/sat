@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    
+        <template id="report_qr_codes_reparaciones_template">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.html_container">
+                    <t t-call="web.external_layout">
+                        <div class="header-data">
+                            <p style="font-size: 60px;"><strong>MARCA:</strong> <t t-esc="doc.maquina_id.marca"/></p>
+                            <p style="font-size: 60px;"><strong>MODELO:</strong> <t t-esc="doc.maquina_id.name.name"/></p>
+                            <p style="font-size: 60px;"><strong>SERIE:</strong> <t t-esc="doc.serie_id"/></p>
+                            <p style="font-size: 60px;"><strong>CONTOMETRO:</strong> <t t-esc="doc.contometrok_id"/></p>
+                        </div>
+
+                        <div class="page">
+                            <!-- QR Code de Ventas -->
+                            <div style="width: 100%; margin-bottom: 20px;">
+                                <center>
+                                    <img t-att-src="'data:image/png;base64,' + doc.qr_code_ventas.decode('utf-8')" alt="QR Code Ventas" style="width: 25%;"/>
+                                </center>
+                                <p><strong>Almacen</strong></p>
+                            </div>
+                            
+                            <!-- QR Code Principal -->
+                            <div style="width: 100%;">
+                                <center>
+                                    <img t-att-src="'data:image/png;base64,' + doc.qr_image.decode('utf-8')" alt="QR Code Principal" style="width: 25%;"/>
+                                </center>
+                                <p><strong>Reparación</strong></p>
+                            </div>
+                        </div>
+
+                    </t>
+                </t>
+            </t>
+        </template>
+    
+</odoo>

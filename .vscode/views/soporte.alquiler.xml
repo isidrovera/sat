@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="soporte_form_viw" model="ir.ui.view">
+            <field name="name">soporte_ticket.form</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="arch" type="xml">
+                <form string="">
+                    <header>
+                        <field name="estado" widget="statusbar" />
+                        <button string="Cerrar" name="action_finalizar" type="object"
+                            class="btn btn-info" icon="fa-wrench" invisible="estado !='proceso'" />
+                        <button class="oe_highlight" name="enviar_mensaje_whatsapp" type="object"
+                            icon="fa-paper-plane" string="Asignar" invisible="estado != 'nuevo'" />
+                        <button string="Actualizar Mes y Año"
+                            type="object"
+                            name="update_month_year"
+                            class="oe_highlight" />
+                        <button string="Proceso" name="action_proceso" type="object"
+                            class="oe_highlight" />
+                        <button string="Nuevo" name="action_nuevo" type="object"
+                            class="oe_highlight" />
+                    </header>
+                    <sheet>
+                        <div name="button_box">
+                            <button class="oe_stat_button" type="object" name="get_pedidos"
+                                icon="fa-cart-plus">
+                                <field string="Pedido" name="pedidos_count" widget="statinfo" />
+                            </button>
+                            <button class="oe_stat_button" type="object" name="get_repuestos_ticket"
+                                icon="fa-cogs" style="background-color: #FF0000;">
+                                <field string="Repuestos" name="repuestos_count_ticket"
+                                    widget="statinfo" />
+                            </button>
+                        </div>
+                        <div class="oe_title">
+                            <label for="name" />
+                            <h1>
+                                <field name="name" />
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="marca_id_r" />
+                                <field name="product_alquiler" />
+                                <field name="serie_id_r" />
+                                <!--<field name="modelo_id_r" />-->
+                                <field name="contometrok_id" required="estado =='proceso'" />
+                                <field name="contometroc_id"
+                                    required="estado == 'proceso' and tipo_id =='color'" />
+                                <field name="contometros_id" required="estado =='proceso'" />
+                                <field name="total_copias_id" invisible="1" />                                
+                                <field name="tipo_id" invisible="1" />
+                            </group>
+                            <group>
+                                <field name="partner_id" widget="many2one_avatar" />
+                                <field name="direccion_id_r" />
+                                <field name="contacto_id_r" />
+                                <field name="tipo_servicio_id" />
+                                <field name="retorno_id" />
+                                <field name="asistencia_id" />
+                                <field name="agenda" required="estado =='nuevo'" />
+                                <field name="agenda_local" readonly="1" />
+                                <field name="responsable" widget="many2one_avatar"
+                                    required="estado == 'nuevo'" />
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Problema Reportado">
+                                <group>
+                                    <group>
+                                        <field name="description" required="estado == 'nuevo'" />
+                                    </group>
+                                    <group>
+                                        <field name="reporter_name" />
+                                        <field name="reporter_phone" widget="phone" />
+                                        <field name="problem_photo" widget="image" />
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Informe Técnico">
+                                <group>
+                                    <field name="informe_id" required="estado == 'proceso'" />
+                                </group>
+                            </page>
+                            <page string="Accesorios">
+                                <group>
+                                    <group>
+                                        <field name="tray_id"
+                                            placeholder="Detalla la cantidad de caseteras." />
+                                        <field name="adf_simple_id" />
+                                        <field name="adf_dual_id" />
+                                        <field name="finalizador_interno_id" />
+                                        <field name="finalizador_externo_id" />
+                                        <field name="transformador_id" />
+                                        <field name="estabilizador" />
+                                    </group>
+                                    <group>
+                                        <field name="mueble_id" />
+                                        <field name="panel_normal_id" />
+                                        <field name="panel_smart_id" />
+                                        <field name="wi_fi_id" />
+                                        <field name="bluetooth_id" />
+                                        <field name="cable_usb_id" />
+                                        <field name="cable_red_id" />
+
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Check List">
+                                <group>
+                                    <group>
+                                        <field name="calidad_id" required="estado == 'proceso'" />
+                                        <field name="copia_id" required="estado == 'proceso'" />
+                                        <field name="impresion_id" required="estado == 'proceso'" />
+                                        <field name="impresion_usb_id"
+                                            required="estado == 'proceso'" />
+                                        <field name="scaner_smb_id" required="estado == 'proceso'" />
+                                        <field name="scaner_usb_id" required="estado == 'proceso'" />
+                                        <field name="scaner_ftp_id" required="estado == 'proceso'" />
+                                        <field name="scaner_mail_id" required="estado == 'proceso'" />
+                                        <field name="toner_black_id" required="estado == 'proceso'" />
+                                        <field name="toner_magenta_id"
+                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                        <field name="toner_cyan_id"
+                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                        <field name="toner_yellow_id"
+                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                        <field name="bypass_id" required="estado == 'proceso'" />
+                                        <field name="tray1_id" required="estado == 'proceso'" />
+                                    </group>
+                                    <group>
+                                        <field name="tray2_id" required="estado == 'proceso'" />
+                                        <field name="tray3_id" required="estado == 'proceso'" />
+                                        <field name="tray4_id" required="estado == 'proceso'" />
+                                        <field name="adf_id" required="estado == 'proceso'" />
+                                        <field name="finalizador_id" required="estado == 'proceso'" />
+                                        <field name="tacho_id" required="estado == 'proceso'" />
+                                        <field name="fusora_id" required="estado == 'proceso'" />
+                                        <field name="transfer_id" required="estado == 'proceso'" />
+                                        <field name="optico_id" required="estado == 'proceso'" />
+                                        <field name="black_id" required="estado == 'proceso'" />
+                                        <field name="magenta_id"
+                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                        <field name="cyan_id"
+                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                        <field name="yellow_id"
+                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Productos">
+                                <field name="line_ids" context="{'default_ticket_id': id}">
+                                    <list editable="bottom">
+                                        <field name="product_id"/>
+                                        <field name="product_uom_qty"/>
+                                        <field name="price_unit" optional="hide"/>
+                                        <field name="price_subtotal" readonly="True" optional="hide"/>                                        
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter />
+                </form>
+            </field>
+        </record>
+
+        <record id="ticket_tree_view" model="ir.ui.view">
+            <field name="name">ticket_alquiler.tree</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="arch" type="xml">
+                <list default_order="id desc">
+                    <field name="name" optional="hide" />
+                    <field name="partner_id" />
+                    <field name="direccion_id_r" optional="hide" />
+                    <field name="product_alquiler" string="Equipo" />
+                    <field name="serie_id_r" optional="hide" />
+                    <field name="tipo_servicio_id" widget="badge" />
+                    <field name="agenda" widget="remaining_days" />
+                    <field name="asistencia_id" widget="badge" optional="hide" />
+                    <field name="responsable" widget="many2one_avatar" optional="hide" />
+                    <button string=" " name="action_nuevo" type="object" class="oe_highlight"
+                        icon="fa-exchange" />
+                    <field name="estado" widget="badge" decoration-success="estado == 'finalizado' "
+                        decoration-warning="estado == 'proceso' " />
+
+                </list>
+            </field>
+        </record>
+        <record id="model_name_view_kanban" model="ir.ui.view">
+            <field name="name">ticket.view.kanban</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_dashboard" default_group_by="estado">
+                    <field name="name" />
+                    <field name="partner_id" />
+                    <field name="product_alquiler" />
+                    <field name="agenda" />
+                    <field name="tipo_servicio_id" />
+                    <field name="estado" />
+                    <progressbar field="estado"
+                        colors='{"finalizado": "success", "nuevo": "danger","proceso": "info"}' />
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_global_click">
+                                <div class="o_kanban_details">
+                                    <h3 class="o_kanban_record_title">
+                                        <field name="partner_id" />
+                                    </h3>
+                                    <div class="o_kanban_record_subtitle">
+                                        <field name="product_alquiler" />
+                                        <hr style="border-top: 1px solid black; margin: 5px 0;" />
+                                    </div>
+                                    <div class="o_kanban_record_subtitle">
+                                        <field name="description" style="color: red;" />
+                                        <hr style="border-top: 1px solid black; margin: 5px 0;" />
+                                    </div>
+                                    <div class="o_kanban_record_subtitle"
+                                        t-if="record.informe_id.value">
+                                        <field name="informe_id" style="color: green;" />
+                                        <hr style="border-top: 1px solid black; margin: 5px 0;" />
+                                    </div>
+                                    <div class="o_kanban_record_subtitle">
+                                        <field name="agenda" />
+                                    </div>
+                                    <div class="o_kanban_record_bottom">
+                                        <div class="oe_kanban_bottom_right">
+                                            <field name="tipo_servicio_id" widget='badge' />
+                                        </div>
+                                        <div class="oe_kanban_bottom_right">
+                                            <field name="estado" widget='badge'
+                                                decoration-success="estado == 'finalizado'"
+                                                decoration-warning="estado == 'proceso'" />
+                                        </div>
+                                    </div>
+                                    <div class="o_kanban_record_subtitle">
+                                        <field name="responsable" widget="many2one_avatar" />
+                                    </div>
+                                    <hr style="border-top: 6px solid #00008B; margin: 5px 0;" />
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+        <record id="ticket_graph" model="ir.ui.view">
+            <field name="name">ticket.graph</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="arch" type="xml">
+                <graph string="Distribución de Tickets por Servicio" type="bar" stacked="True">
+                    <field name="responsable" />
+                    <field name="tipo_servicio_id" type="row" />
+                </graph>
+            </field>
+        </record>
+        <record id="ticket_search" model="ir.ui.view">
+            <field name="name">ticket.search</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="arch" type="xml">
+                <search string="">
+                    <field name="product_alquiler" />
+                    <field name="partner_id" />
+                    <field name="agenda" />
+                    <field name="tipo_servicio_id" />
+                    <field name="estado" />
+                    <field name="responsable" />
+
+                </search>
+            </field>
+        </record>
+        <record id="ticket_calendar" model="ir.ui.view">
+            <field name="name">ticket.calendar</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="arch" type="xml">
+                <calendar date_start="" color="partner_id" event_limit="5">
+                    <field name="partner_id" filters="1" />
+                    <field name="partner_id" />
+                    <!--<field
+                    name="maintenance_type"/>-->
+                </calendar>
+            </field>
+        </record>
+        <record id="ticket_pivot" model="ir.ui.view">
+            <field name="name">ticket.pivot</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="arch" type="xml">
+                <pivot string="">
+                    <field name="agenda" type="row" />
+                    <field name="partner_id" type="row" />
+                    <field name="product_alquiler" type="row" />
+                    <field name="tipo_servicio_id" type="col" />
+                </pivot>
+            </field>
+        </record>
+        <record model="ir.actions.act_window" id="sat.action_soporte_window">
+            <field name="name">Tickets</field>
+            <field name="res_model">ticket.alquiler</field>
+            <field name="view_mode">list,form,kanban,search,graph,calendar,pivot</field>
+            <field name="view_id" ref="sat.model_name_view_kanban" />
+        </record>
+        <menuitem name="Tickets" id="sat.tickets" parent="sat.menu_root"
+            action="sat.action_soporte_window" sequence="50" />
+
+    </data>
+
+</odoo>

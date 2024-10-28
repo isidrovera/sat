@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <record id="action_action_name" model="ir.actions.report">
+            <field name="name">Reporte de evaluaciones</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">sat.report_evaluaciones</field>
+            <field name="report_file">sat.report_evaluaciones</field>
+            <field name="binding_model_id" ref="model_evaluacion_personal"/>
+            <field name="binding_type">report</field>
+        </record>
+        <template id="report_evaluaciones">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <div class="header">
+                                <h2>Reporte de Evaluaciones</h2>
+                            </div>
+                            <div class="content">
+                                <p class="field">EVALUACIÓN N°: <t t-esc="o.name"/>
+                                </p>                                
+                                <p class="field">Fecha de evaluación: <t t-esc="o.fecha"/>
+                                </p>
+                                <p class="field">Técnico: <t t-esc="o.usuario_id.name"/>
+                                </p>
+                                <p class="field">Observaciones: <t t-esc="o.observacion"/>
+                                </p>
+                                <p class="field">Puntaje: <span t-esc="o.total_score" t-options='{"widget": "percentage"}'/>
+                                </p>
+
+                                <p class="field">Reparaciones: <t t-esc="o.cantidad_reparaciones"/>
+                                </p>
+                                <p class="field">Servicios: <t t-esc="o.cantidad_alquileres"/>
+                                </p>
+                            </div>
+                            <!--Aqui empieza un tabla-->
+                            <h2>
+                                <span/>
+                                <strong>Productividad</strong>
+                            </h2>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Productividad:  </strong>
+                                    <t>
+                                        <span t-field="o.productividad" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Cumple con los plazos y objetivos:  </strong>
+                                    <t>
+                                        <span t-field="o.productividad_1" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Demuestra iniciativa y proactividad:  </strong>
+                                    <t>
+                                        <span t-field="o.productividad_2" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <!--Aqui finaliza la tabla-->
+                            <!--Aqui empieza un tabla-->
+                            <h2>
+                                <span/>
+                                <strong>Eficiencia</strong>
+                            </h2>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Utiliza eficientemente los recursos asignados:  </strong>
+                                    <t>
+                                        <span t-field="o.eficiencia" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Realiza las tareas asignadas de manera oportuna y precisa:  </strong>
+                                    <t>
+                                        <span t-field="o.eficiencia_1" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Propone y aplica mejoras en los procesos de trabajo:  </strong>
+                                    <t>
+                                        <span t-field="o.eficiencia_2" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <!--Aqui finaliza la tabla-->
+                            <!--Aqui empieza un tabla-->
+                            <h2>
+                                <span/>
+                                <strong>Habilidades</strong>
+                            </h2>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Demuestra habilidades técnicas y conocimientos adecuados para el puesto:  </strong>
+                                    <t>
+                                        <span t-field="o.habilidades" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Aplica conocimientos y habilidades para resolver problemas y desafíos:  </strong>
+                                    <t>
+                                        <span t-field="o.habilidades_1" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Actualiza y mejora constantemente sus habilidades y conocimientos:  </strong>
+                                    <t>
+                                        <span t-field="o.habilidades_2" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <!--Aqui finaliza la tabla-->
+                            <!--Aqui empieza un tabla-->
+                            <h2>
+                                <span/>
+                                <strong>Aprendizaje</strong>
+                            </h2>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Demuestra capacidad de aprendizaje y adaptación:  </strong>
+                                    <t>
+                                        <span t-field="o.aprendizaje" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Asume nuevos desafíos y responsabilidades de manera efectiva:  </strong>
+                                    <t>
+                                        <span t-field="o.aprendizaje_1" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Aprovecha las oportunidades de desarrollo y capacitación:  </strong>
+                                    <t>
+                                        <span t-field="o.aprendizaje_2" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <!--Aqui finaliza la tabla-->
+                            <!--Aqui empieza un tabla-->
+                            <h2>
+                                <span/>
+                                <strong>Comunicación</strong>
+                            </h2>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Comunica de manera clara y efectiva:  </strong>
+                                    <t>
+                                        <span t-field="o.comunicacion" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Escucha activamente y busca entender las perspectivas de los demás:  </strong>
+                                    <t>
+                                        <span t-field="o.comunicacion_1" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Colabora y trabaja efectivamente en equipo:  </strong>
+                                    <t>
+                                        <span t-field="o.comunicacion_2" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <!--Aqui finaliza la tabla-->
+                            <!--Aqui empieza un tabla-->
+                            <h2>
+                                <span/>
+                                <strong>Relaciones</strong>
+                            </h2>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Cultiva relaciones positivas y constructivas:  </strong>
+                                    <t>
+                                        <span t-field="o.relaciones" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Colabora y trabaja efectivamente en equipo:  </strong>
+                                    <t>
+                                        <span t-field="o.relaciones_1" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-3 bm-2">
+                                    <strong style="color: blue;">Cultiva relaciones positivas y constructivas:  </strong>
+                                    <t>
+                                        <span t-field="o.relaciones_2" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <!--Aqui finaliza la tabla-->
+                            <!--Aqui empieza un tabla-->
+                            <h2>
+                                <span/>
+                                <strong>Asistencia</strong>
+                            </h2>
+                            <div id="informations" class="row mt32 mb32">
+                                <div class="col-4">
+                                    <strong style="color: blue;">Frecuentemente llega temprano al trabajo:</strong>
+                                    <t>
+                                        <span t-field="o.asistencia" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-4">
+                                    <strong style="color: blue;">Cumple con el horario de trabajo establecido:</strong>
+                                    <t>
+                                        <span t-field="o.asistencia_1" class="m-0"/>
+                                    </t>
+                                </div>
+                                <div class="col-4">
+                                    <strong style="color: blue;">Informa con anticipación sobre ausencias o retrasos:</strong>
+                                    <t>
+                                        <span t-field="o.asistencia_2" class="m-0"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <!--Aqui finaliza la tabla-->
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <!-- Definición del Reporte -->
+        <report 
+            id="report_alquiler_qr" 
+            model="alquiler" 
+            string="QR Codes alquiler" 
+            name="sat.report_qr_alquiler_template" 
+            file="sat.alquiler" 
+            report_type="qweb-pdf" 
+            print_report_name="object.name"/>
+
+        <!-- Template del Reporte -->
+        <template id="report_qr_alquiler_template">
+            <style>
+                .header-data p {
+                font-size: 240px !important; 
+                }
+            </style>
+
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.html_container">
+                    <t t-call="web.external_layout">
+                        
+
+                        <div class="page">
+                            <!-- QR Code de Ventas -->
+                            <div style="width: 100%; margin-bottom: 20px;">
+                                <center>
+                                    <img t-att-src="'data:image/png;base64,' + doc.image_qr.decode('utf-8')" alt="QR Code Ventas" style="width: 25%;"/>
+                                </center>
+                                <p><strong></strong></p>
+                            </div>
+                           
+                        </div>
+
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

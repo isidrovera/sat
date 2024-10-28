@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <report id="report_informes_ventas" model="informes" string="Informes" 
+                name="sat.report_informes_template" file="sat.informes" report_type="qweb-pdf" print_report_name="object.name"/>
+        
+        <template id="report_informes_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <h2>
+                                <span t-field="doc.name"/>
+                            </h2>
+                            
+                            <p>Invoice: <span t-field="doc.invoice"/>
+                            </p>
+                            <p>Proveedor: <span t-field="doc.proveedor_id.name"/>
+                            </p>
+                            <p><span t-field="doc.informe"/>
+                            </p>
+                            <p></p>
+                            <table class="table table-condensed">
+                                <thead>
+                                    <tr>
+                                        <th>Marca</th>
+                                        <th>Modelo</th>
+                                        <th>Serie N°</th>
+                                        <th>Problema</th>
+                                        <th>Foto</th>
+                                        <!-- Agrega más columnas según tus necesidades -->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="doc.detalle_ids" t-as="detalle">
+                                        <tr>
+                                            <td><span t-esc="detalle.marca"/></td>
+                                            <td><span t-esc="detalle.modelo_id"/></td>
+                                            <td><span t-esc="detalle.serie"/></td>
+                                            <td><span t-esc="detalle.descripcion"/></td>
+                                            <td><img t-if="detalle.foto" t-att-src="'data:image/png;base64,%s' % detalle.foto.decode('utf-8')" style="max-height: 40px;"/></td>
+                                            <!-- Agrega más celdas según tus necesidades -->
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>
