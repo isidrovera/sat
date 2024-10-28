@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <template id="dashboard_template" name="Dashboard Template">
-    <t t-call="web.assets_frontend">
-        <!-- Referencias al CSS y JS externos -->
+    <t t-call="web.assets_backend">
+        <!-- Referencias a los CSS y JS externos -->
         <link rel="stylesheet" href="/sat/static/src/css/dashboard.css"/>
         <script type="text/javascript" src="/sat/static/src/js/estilo_dashboard.js"></script>
     </t>
-    
-    <!-- Plantilla del dashboard -->
+
+    <!-- Contenido de la plantilla del dashboard -->
     <t t-name="sat.DashboardTemplate">
         <div class="row main-section" style="overflow-y: auto; max-height: 100vh; padding-bottom: 20px;">
             
-            <!-- Tiles -->
+            <!-- Sección de Tiles -->
             <div class="row">
                 <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
                     <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
@@ -50,7 +50,7 @@
                 </div>
             </div>
 
-            <!-- Gráficos con contenedores expandibles -->
+            <!-- Sección de Gráficos Expandibles -->
             <div class="row">
                 <div class="col-md-6" style="padding: 10px;">
                     <div class="chart-wrapper">
