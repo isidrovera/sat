@@ -193,48 +193,58 @@ class SatDashboard extends Component {
                     options: {
                         plugins: {
                             legend: {
-                                display: false // Ocultamos la leyenda predeterminada
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: false
                             },
                             datalabels: {
                                 display: true,
-                                color: '#000000',
-                                formatter: (value, ctx) => {
-                                    const label = ctx.chart.data.labels[ctx.dataIndex];
-                                    return [`${label}\n${value}`];
+                                // Configuración para los valores dentro del gráfico
+                                formatter: function(value, context) {
+                                    // Crear dos conjuntos diferentes de etiquetas
+                                    return context.datasetIndex === 0 ? value : context.chart.data.labels[context.dataIndex];
                                 },
-                                font: {
-                                    size: 12,
-                                    weight: 'bold'
+                                color: function(context) {
+                                    return context.datasetIndex === 0 ? '#FFFFFF' : '#000000';
                                 },
-                                textAlign: 'start',
-                                anchor: 'end',
-                                align: 'end',
-                                offset: 8,
-                                borderWidth: 1,
-                                borderColor: '#666',
-                                borderRadius: 4,
-                                backgroundColor: 'white',
-                                padding: {
-                                    left: 6,
-                                    right: 6,
-                                    top: 4,
-                                    bottom: 4
-                                }
+                                backgroundColor: function(context) {
+                                    return context.datasetIndex === 0 ? null : 'white';
+                                },
+                                font: function(context) {
+                                    return {
+                                        size: context.datasetIndex === 0 ? 16 : 12,
+                                        weight: 'bold'
+                                    };
+                                },
+                                padding: function(context) {
+                                    return context.datasetIndex === 0 ? 0 : 4;
+                                },
+                                anchor: function(context) {
+                                    return context.datasetIndex === 0 ? 'center' : 'end';
+                                },
+                                align: function(context) {
+                                    return context.datasetIndex === 0 ? 'center' : 'end';
+                                },
+                                offset: function(context) {
+                                    return context.datasetIndex === 0 ? 0 : 10;
+                                },
+                                clamp: true,
                             }
                         },
                         layout: {
                             padding: {
-                                top: 50,
-                                bottom: 50,
-                                left: 50,
-                                right: 50
+                                top: 80,
+                                bottom: 80,
+                                left: 80,
+                                right: 80
                             }
                         }
                     }
                 });
                 console.log('Gráfico de estado renderizado exitosamente');
             }
-            // Gráfico de técnicos
+                        // Gráfico de técnicos
             const tecnicosCtx = this._getChartContext("tecnicosChart");
             if (tecnicosCtx) {
                 console.log('Renderizando gráfico de técnicos...');
