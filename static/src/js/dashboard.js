@@ -158,7 +158,7 @@ class SatDashboard extends Component {
                     type: 'pie',
                     plugins: [ChartDataLabels],
                     data: {
-                        labels: ['Sin Revisar', 'En Revisión', 'Finalizadas'],
+                        labels: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas'],
                         datasets: [{
                             label: 'Máquinas por Estado',
                             data: [
