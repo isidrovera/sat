@@ -23,15 +23,12 @@
         'data/ir.secuense_info.xml',
         'data/ir_secuense_ev.xml',
         'data/print.xml',
-        'report/reparacion_enlace.xml',
-        'report/report_reparaciones_ventas.xml',
-        'report/ticket_enlace.xml',
-        'report/ticket_reporte.xml',
-        'report/informes.xml',
-        'report/evaluacion.xml',
-        'report/report_qr_codes_reparaciones.xml',
-        'report/report_qr_enlace.xml',
-        'report/qr_alquiler.xml',
+        'reports/reparaciones_repor.xml',
+        'reports/ticket_reporte.xml',
+        'reports/informes.xml',
+        'reports/evaluacion.xml',
+        'reports/report_qr_codes_reparaciones.xml',
+        'reports/qr_alquiler.xml',
         'data/cron_data.xml',
         'data/cron_evaluador_diario.xml',
         'views/reporte_cotizacion.xml',
@@ -62,6 +59,7 @@
         'views/graficos.xml',
         'views/customer_records_page.xml',
         'views/importacionexcel.xml',
+        'views/sat_dashboard_menu.xml',
         
         
     ],
@@ -70,6 +68,8 @@
     ],
     'assets': {
     'web.assets_backend': [
+        'sat/static/src/js/dashboard.js',
+        'sat/static/src/xml/dashboard.xml',
         
              
     ],

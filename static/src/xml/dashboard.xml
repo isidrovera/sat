@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates>
+    <t t-name="sat.DashboardTemplate">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5>Total Máquinas</h5>
+                        <p id="total_maquinas">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5>Total Reparaciones</h5>
+                        <p id="total_reparaciones">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5>Total Alquileres</h5>
+                        <p id="total_alquileres">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>
