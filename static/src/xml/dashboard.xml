@@ -8,17 +8,18 @@
                 <div class="col-md-3 col-sm-6 tot_tasks">
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
-                            <i class="fa fa-cogs"></i>
-                            <h3>Total Máquinas</h3>
+                            <i class="fa fa-print"></i> <!-- Cambiado a ícono de impresora -->
+                            <h3>Máquinas</h3>
                             <span id="total_maquinas">0</span>
                         </div>
                     </div>
                 </div>
+                
                 <div class="col-md-3 col-sm-6 tot_tasks">
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-check-circle"></i>
-                            <h3>Máquinas Disponibles</h3>
+                            <h3>Disponibles</h3>
                             <span id="maquinas_disponibles">0</span>
                         </div>
                     </div>
@@ -27,7 +28,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-pause-circle"></i>
-                            <h3>Máquinas Separadas</h3>
+                            <h3>Separadas</h3>
                             <span id="maquinas_separadas">0</span>
                         </div>
                     </div>
@@ -36,7 +37,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-times-circle"></i>
-                            <h3>Máquinas No Disponibles</h3>
+                            <h3>No Disponibles</h3>
                             <span id="maquinas_no_disponibles">0</span>
                         </div>
                     </div>
@@ -50,7 +51,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-wrench"></i> <!-- Icono general de reparaciones -->
-                            <h3>Total Reparaciones</h3>
+                            <h3>Reparaciones</h3>
                             <span id="total_reparaciones">0</span>
                         </div>
                     </div>
@@ -61,7 +62,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-spinner"></i> <!-- Icono de progreso -->
-                            <h3>Reparaciones en Revisión</h3>
+                            <h3>Revisión</h3>
                             <span id="reparaciones_en_revision">0</span>
                         </div>
                     </div>
@@ -71,7 +72,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-check-circle"></i> <!-- Icono de finalizado -->
-                            <h3>Reparaciones Finalizadas</h3>
+                            <h3>Finalizadas</h3>
                             <span id="reparaciones_finalizadas">0</span>
                         </div>
                     </div>
@@ -82,7 +83,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-exclamation-triangle"></i> <!-- Icono de advertencia -->
-                            <h3>Reparaciones con Problemas</h3>
+                            <h3>Problemas</h3>
                             <span id="reparaciones_con_problemas">0</span>
                         </div>
                     </div>
@@ -93,7 +94,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-cogs"></i> <!-- Icono de partes -->
-                            <h3>Reparaciones de Partes</h3>
+                            <h3>Partes</h3>
                             <span id="reparaciones_de_partes">0</span>
                         </div>
                     </div>
@@ -108,7 +109,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-life-ring"></i> <!-- Icono de soporte técnico general -->
-                            <h3>Total Tickets</h3>
+                            <h3>Tickets</h3>
                             <span id="total_tickets">0</span>
                         </div>
                     </div>
@@ -119,7 +120,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-plus-square"></i> <!-- Icono de nuevo ticket de soporte -->
-                            <h3>Tickets Nuevos</h3>
+                            <h3>Nuevos</h3>
                             <span id="tickets_nuevos">0</span>
                         </div>
                     </div>
@@ -130,7 +131,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-cogs"></i> <!-- Icono de ticket en proceso de soporte -->
-                            <h3>Tickets en Proceso</h3>
+                            <h3>Proceso</h3>
                             <span id="tickets_en_proceso">0</span>
                         </div>
                     </div>
@@ -142,7 +143,7 @@
                         <div class="oh-card-body text-center">
                             <i class="fa fa-check-circle"></i> <!-- Icono de ticket de soporte
                             finalizado -->
-                            <h3>Tickets Finalizados</h3>
+                            <h3>Finalizados</h3>
                             <span id="tickets_finalizados">0</span>
                         </div>
                     </div>
@@ -157,7 +158,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-archive"></i> <!-- Icono general de alquiler -->
-                            <h3>Total Alquileres</h3>
+                            <h3>Alquileres</h3>
                             <span id="total_alquileres">0</span>
                         </div>
                     </div>
@@ -168,7 +169,7 @@
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
                             <i class="fa fa-box"></i> <!-- Icono de stock -->
-                            <h3>En Stock</h3>
+                            <h3>Stock</h3>
                             <span id="alquiler_stock">0</span>
                         </div>
                     </div>
