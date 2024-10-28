@@ -2,8 +2,8 @@
 <template id="dashboard_template" name="Dashboard Template">
     <t t-call="web.assets_frontend">
         <!-- Referencias al CSS y JS externos -->
-        <link rel="stylesheet" href="/sat/src/css/dashboard.css"/>
-        <script type="text/javascript" src="/sat/src/js/estilo_dashboard.js"></script>
+        <link rel="stylesheet" href="/sat/static/src/css/dashboard.css"/>
+        <script type="text/javascript" src="/sat/static/src/js/estilo_dashboard.js"></script>
     </t>
     
     <!-- Plantilla del dashboard -->
