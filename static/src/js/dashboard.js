@@ -3,6 +3,17 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component } from "@odoo/owl";
 
+// Cargar Chart.js globalmente desde el CDN
+const loadChartDataLabelsPlugin = () => {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"; // Plugin desde CDN
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("No se pudo cargar ChartDataLabels"));
+        document.head.appendChild(script);
+    });
+};
+
 const actionRegistry = registry.category("actions");
 
 class SatDashboard extends Component {
@@ -12,13 +23,15 @@ class SatDashboard extends Component {
         this._fetch_data();
     }
 
-    _fetch_data() {
-        // Llamamos al método get_dashboard_data del modelo sat.dashboard
-        this.orm.call("sat.dashboard", "get_dashboard_data", []).then((result) => {
-            // Renderizamos las tiles y los gráficos con los datos obtenidos
+    async _fetch_data() {
+        try {
+            await loadChartDataLabelsPlugin(); // Esperar hasta que el plugin esté cargado
+            const result = await this.orm.call("sat.dashboard", "get_dashboard_data", []);
             this._render_tiles(result);
             this._render_charts(result);
-        });
+        } catch (error) {
+            console.error("Error cargando ChartDataLabels: ", error);
+        }
     }
 
     _render_tiles(data) {
@@ -34,7 +47,7 @@ class SatDashboard extends Component {
         var ctx1 = document.getElementById("myBarChart").getContext("2d");
         var myBarChart = new Chart(ctx1, {
             type: 'bar',
-            plugins: [ChartDataLabels], // Incluir el plugin para mostrar las etiquetas
+            plugins: [ChartDataLabels], // Usar el plugin ahora que está disponible
             data: {
                 labels: ['Evaluaciones', 'Reparaciones', 'Alquileres', 'Máquinas en Alquiler'],
                 datasets: [{
