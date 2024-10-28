@@ -1,7 +1,10 @@
 /**@odoo-module **/
+
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component } from "@odoo/owl";
+import Chart from 'chart.js/auto';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 const actionRegistry = registry.category("actions");
 
@@ -15,25 +18,17 @@ class SatDashboard extends Component {
     _fetch_data() {
         // Llamamos al método get_dashboard_data del modelo sat.dashboard
         this.orm.call("sat.dashboard", "get_dashboard_data", []).then((result) => {
-            // Renderizamos las tiles y los gráficos con los datos obtenidos
-            this._render_tiles(result);
+            // Renderizamos los gráficos con los datos obtenidos
             this._render_charts(result);
         });
-    }
-
-    _render_tiles(data) {
-        // Mostrar el número de registros en las tiles
-        document.getElementById('total_evaluaciones').textContent = data.total_evaluaciones;
-        document.getElementById('total_reparaciones').textContent = data.total_reparaciones;
-        document.getElementById('total_alquileres').textContent = data.total_alquileres;
-        document.getElementById('total_maquinas').textContent = data.total_maquinas;
     }
 
     _render_charts(data) {
         // Gráfico de barras: Evaluaciones, Reparaciones, Alquileres, Máquinas en Alquiler
         var ctx1 = document.getElementById("myBarChart").getContext("2d");
-        new Chart(ctx1, {
+        var myBarChart = new Chart(ctx1, {
             type: 'bar',
+            plugins: [ChartDataLabels],
             data: {
                 labels: ['Evaluaciones', 'Reparaciones', 'Alquileres', 'Máquinas en Alquiler'],
                 datasets: [{
@@ -42,9 +37,46 @@ class SatDashboard extends Component {
                     backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0'],
                 }]
             },
+            options: {
+                plugins: {
+                    datalabels: {
+                        color: '#FFFFFF',
+                        anchor: 'end',
+                        align: 'top',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        var index = elements[0].index;
+                        var label = this.chart.data.labels[index];
+                        this.navigateToDetails(label);
+                    }
+                }
+            }
         });
+    }
 
-        // Otros gráficos aquí...
+    navigateToDetails(label) {
+        // Redireccionar basado en la etiqueta
+        switch (label) {
+            case 'Evaluaciones':
+                window.location.href = '/web#action=some_action_id&model=evaluacion.personal&view_type=list';
+                break;
+            case 'Reparaciones':
+                window.location.href = '/web#action=another_action_id&model=reparaciones.reparaciones&view_type=list';
+                break;
+            case 'Alquileres':
+                window.location.href = '/web#action=another_action_id&model=ticket.alquiler&view_type=list';
+                break;
+            case 'Máquinas en Alquiler':
+                window.location.href = '/web#action=another_action_id&model=alquiler&view_type=list';
+                break;
+            default:
+                console.log('No action defined for this category');
+        }
     }
 }
 
