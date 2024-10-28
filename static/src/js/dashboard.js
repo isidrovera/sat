@@ -198,7 +198,11 @@ class SatDashboard extends Component {
                         },
                         plugins: {
                             legend: {
-                                display: false
+                                display: true, // Muestra la leyenda
+                                position: 'right', // Coloca la leyenda a la derecha
+                                labels: {
+                                    boxWidth: 20, // Ancho de la caja de la leyenda
+                                }
                             },
                             datalabels: {
                                 // Configuración para mostrar los valores dentro del gráfico
@@ -208,33 +212,8 @@ class SatDashboard extends Component {
                                     weight: 'bold'
                                 },
                                 formatter: (value) => value,
-                                anchor: 'center',
-                                align: 'center',
-
-                                // Configuración para etiquetas externas con líneas de guía
-                                labels: {
-                                    title: {
-                                        align: 'end',
-                                        anchor: 'end',
-                                        backgroundColor: 'white',
-                                        borderColor: 'black',
-                                        borderWidth: 1,
-                                        borderRadius: 4,
-                                        color: 'black',
-                                        font: {
-                                            size: 12
-                                        },
-                                        formatter: (value, context) => context.chart.data.labels[context.dataIndex]
-                                    },
-                                    connector: {
-                                        display: true,
-                                        borderColor: 'black',
-                                        borderWidth: 1,
-                                        lineDash: [2, 2],
-                                        length: 20,
-                                        endLength: 10
-                                    }
-                                }
+                                anchor: 'end', // Ancla la etiqueta al final
+                                align: 'end', // Alinea la etiqueta al final
                             }
                         }
                     },
