@@ -1,5 +1,4 @@
 /**@odoo-module **/
-
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component } from "@odoo/owl";
@@ -16,9 +15,18 @@ class SatDashboard extends Component {
     _fetch_data() {
         // Llamamos al método get_dashboard_data del modelo sat.dashboard
         this.orm.call("sat.dashboard", "get_dashboard_data", []).then((result) => {
-            // Renderizamos los gráficos con los datos obtenidos
+            // Renderizamos las tiles y los gráficos con los datos obtenidos
+            this._render_tiles(result);
             this._render_charts(result);
         });
+    }
+
+    _render_tiles(data) {
+        // Mostrar el número de registros en las tiles
+        document.getElementById('total_evaluaciones').textContent = data.total_evaluaciones;
+        document.getElementById('total_reparaciones').textContent = data.total_reparaciones;
+        document.getElementById('total_alquileres').textContent = data.total_alquileres;
+        document.getElementById('total_maquinas').textContent = data.total_maquinas;
     }
 
     _render_charts(data) {
@@ -36,55 +44,7 @@ class SatDashboard extends Component {
             },
         });
 
-        // Gráfico circular: Costes, Ingresos, Beneficio
-        var ctx2 = document.getElementById("myPieChart").getContext("2d");
-        new Chart(ctx2, {
-            type: 'pie',
-            data: {
-                labels: ['Costes', 'Ingresos', 'Beneficio'],
-                datasets: [{
-                    data: [data.total_costes, data.total_ingresos, data.total_beneficio],
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
-                }]
-            },
-        });
-
-        // Gráfico de tipo Gauge: Relación entre Coste y Beneficio
-        var ctx3 = document.getElementById("myGaugeChart").getContext("2d");
-        new Chart(ctx3, {
-            type: 'doughnut',
-            data: {
-                labels: ['Coste', 'Beneficio'],
-                datasets: [{
-                    data: [data.total_costes, data.total_beneficio],
-                    backgroundColor: ['#FF6384', '#36A2EB'],
-                    hoverOffset: 4
-                }]
-            },
-            options: {
-                circumference: Math.PI,
-                rotation: Math.PI,
-                cutout: '70%',
-                plugins: {
-                    legend: { display: false }
-                }
-            }
-        });
-
-        // Gráfico adicional de línea: Evolución de las puntuaciones de evaluaciones del personal
-        var ctx4 = document.getElementById("myLineChart").getContext("2d");
-        new Chart(ctx4, {
-            type: 'line',
-            data: {
-                labels: data.puntuaciones_evaluaciones.map((_, idx) => `Evaluación ${idx + 1}`),
-                datasets: [{
-                    label: 'Puntuación de Evaluaciones',
-                    data: data.puntuaciones_evaluaciones,
-                    borderColor: '#36A2EB',
-                    fill: false
-                }]
-            },
-        });
+        // Otros gráficos aquí...
     }
 }
 

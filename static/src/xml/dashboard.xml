@@ -1,25 +1,51 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates>
     <t t-name="sat.DashboardTemplate">
+        <div class="row main-section" style="margin-left: 120px;">
+            <!-- Tile para Evaluaciones -->
+            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
+                <div class="oh-card">
+                    <div class="oh-card-body">
+                        <h3>Total Evaluaciones</h3>
+                        <span id="total_evaluaciones">0</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Tile para Reparaciones -->
+            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
+                <div class="oh-card">
+                    <div class="oh-card-body">
+                        <h3>Total Reparaciones</h3>
+                        <span id="total_reparaciones">0</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Tile para Tickets de Alquiler -->
+            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
+                <div class="oh-card">
+                    <div class="oh-card-body">
+                        <h3>Total Tickets de Alquiler</h3>
+                        <span id="total_alquileres">0</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Tile para Máquinas en Alquiler -->
+            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
+                <div class="oh-card">
+                    <div class="oh-card-body">
+                        <h3>Total Máquinas en Alquiler</h3>
+                        <span id="total_maquinas">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráficos ya existentes -->
         <div class="row">
-            <!-- Gráfico de barras para Evaluaciones, Reparaciones, Alquileres y Máquinas en alquiler -->
             <div class="col-md-6">
                 <canvas id="myBarChart"></canvas>
             </div>
-            <!-- Gráfico circular para Costes, Ingresos y Beneficio -->
-            <div class="col-md-6">
-                <canvas id="myPieChart"></canvas>
-            </div>
-        </div>
-        <div class="row">
-            <!-- Gráfico tipo Gauge para mostrar la relación Coste vs Beneficio -->
-            <div class="col-md-6">
-                <canvas id="myGaugeChart"></canvas>
-            </div>
-            <!-- Gráfico de línea para la evolución de las puntuaciones de las evaluaciones -->
-            <div class="col-md-6">
-                <canvas id="myLineChart"></canvas>
-            </div>
+            <!-- Otros gráficos -->
         </div>
     </t>
 </templates>
