@@ -1,39 +1,89 @@
-.chart-container {
-    position: relative;
-    height: 300px;
-    max-height: 300px;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
+/* Archivo: static/src/css/dashboard.scss */
 
-.chart-container.expanded {
-    height: 500px;
-    max-height: 500px;
-}
+.dashboard-container {
+    overflow-y: auto;
+    max-height: 100vh;
+    padding-bottom: 20px;
 
-.chart-wrapper {
-    background-color: white;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-}
+    .dashboard-tiles {
+        .tot_tasks {
+            padding: 20px;
 
-.chart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
+            .oh-card {
+                box-shadow: 2px 4px 8px rgba(0,0,0,0.2);
+                transition: transform 0.2s;
 
-.expand-button {
-    background: none;
-    border: none;
-    color: #666;
-    cursor: pointer;
-    padding: 5px;
-}
+                &:hover {
+                    transform: translateY(-5px);
+                }
 
-.expand-button:hover {
-    color: #333;
+                .oh-card-body {
+                    padding: 20px;
+
+                    i {
+                        font-size: 50px;
+                        margin-bottom: 15px;
+
+                        &.fa-cogs { color: #36A2EB; }
+                        &.fa-check-circle { color: #4BC0C0; }
+                        &.fa-pause-circle { color: #FFCE56; }
+                        &.fa-times-circle { color: #FF6384; }
+                    }
+
+                    span {
+                        font-size: 24px;
+                        font-weight: bold;
+                    }
+                }
+            }
+        }
+    }
+
+    .dashboard-charts {
+        padding: 0 10px;
+
+        .chart-wrapper {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+
+            .chart-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+
+                h4 {
+                    margin: 0;
+                }
+
+                .expand-button {
+                    background: none;
+                    border: none;
+                    color: #666;
+                    cursor: pointer;
+                    padding: 5px;
+                    transition: color 0.2s;
+
+                    &:hover {
+                        color: #333;
+                    }
+                }
+            }
+
+            .chart-container {
+                position: relative;
+                height: 300px;
+                max-height: 300px;
+                transition: all 0.3s ease;
+
+                &.expanded {
+                    height: 500px;
+                    max-height: 500px;
+                }
+            }
+        }
+    }
 }
