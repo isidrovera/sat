@@ -3,7 +3,7 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component } from "@odoo/owl";
 
-// Cargar Chart.js globalmente desde el CDN
+// Cargar Chart.js desde el CDN y el plugin de etiquetas de datos
 const loadChartDataLabelsPlugin = () => {
     return new Promise((resolve, reject) => {
         const script = document.createElement("script");
@@ -20,58 +20,112 @@ class SatDashboard extends Component {
     setup() {
         super.setup();
         this.orm = useService("orm");
-        this.filter = null;  // Filtro global para aplicar a los gráficos
         this._fetch_data();
     }
 
     async _fetch_data() {
         try {
-            await loadChartDataLabelsPlugin(); // Cargar el plugin
-            const result = await this.orm.call("sat.dashboard", "get_dashboard_data", [this.filter]);
+            await loadChartDataLabelsPlugin(); // Cargar el plugin para etiquetas de datos
+            const result = await this.orm.call("sat.dashboard", "get_dashboard_data", []);
             this._render_tiles(result);
             this._render_charts(result);
         } catch (error) {
-            console.error("Error cargando ChartDataLabels: ", error);
+            console.error("Error cargando datos para el dashboard: ", error);
         }
     }
 
     _render_tiles(data) {
         // Mostrar el número de registros en las tiles
-        const evaluacionesTile = document.getElementById('total_evaluaciones');
-        const reparacionesTile = document.getElementById('total_reparaciones');
-        const alquileresTile = document.getElementById('total_alquileres');
-        const maquinasTile = document.getElementById('total_maquinas');
-    
-        evaluacionesTile.textContent = data.total_evaluaciones;
-        reparacionesTile.textContent = data.total_reparaciones;
-        alquileresTile.textContent = data.total_alquileres;
-        maquinasTile.textContent = data.total_maquinas;
-    
-        // Agregar eventos de clic para aplicar filtros y redirigir
-        evaluacionesTile.addEventListener('click', () => this.applyFilter('evaluaciones'));
-        reparacionesTile.addEventListener('click', () => this.applyFilter('reparaciones'));
-        alquileresTile.addEventListener('click', () => this.applyFilter('alquileres'));
-        maquinasTile.addEventListener('click', () => this.applyFilter('maquinas'));
-    }
-    
-    applyFilter(filter) {
-        // Actualizar el filtro global y recargar los datos
-        this.filter = filter;
-        this._fetch_data();  // Volver a cargar los datos con el filtro aplicado
+        document.getElementById('total_maquinas').textContent = data.total_maquinas;
+        document.getElementById('maquinas_disponibles').textContent = data.maquinas_disponibles;
+        document.getElementById('maquinas_separadas').textContent = data.maquinas_separadas;
+        document.getElementById('maquinas_no_disponibles').textContent = data.maquinas_no_disponibles;
+        
+        document.getElementById('maquinas_sin_revisar').textContent = data.maquinas_sin_revisar;
+        document.getElementById('maquinas_en_revision').textContent = data.maquinas_en_revision;
+        document.getElementById('maquinas_finalizadas').textContent = data.maquinas_finalizadas;
+        
+        document.getElementById('total_reparaciones').textContent = data.total_reparaciones;
+        document.getElementById('reparaciones_hoy').textContent = data.reparaciones_hoy;
+        document.getElementById('reparaciones_mes').textContent = data.reparaciones_mes;
+        document.getElementById('reparaciones_ano').textContent = data.reparaciones_ano;
     }
 
     _render_charts(data) {
-        // Gráfico de barras: Evaluaciones, Reparaciones, Alquileres, Máquinas en Alquiler
-        var ctx1 = document.getElementById("myBarChart").getContext("2d");
-        var myBarChart = new Chart(ctx1, {
+        // Gráfico de barras para máquinas por disponibilidad
+        const disponibilidadCtx = document.getElementById("disponibilidadChart").getContext("2d");
+        new Chart(disponibilidadCtx, {
             type: 'bar',
             plugins: [ChartDataLabels],
             data: {
-                labels: ['Evaluaciones', 'Reparaciones', 'Alquileres', 'Máquinas en Alquiler'],
+                labels: ['Disponibles', 'Separadas', 'No disponibles'],
                 datasets: [{
-                    label: 'Cantidad',
-                    data: [data.total_evaluaciones, data.total_reparaciones, data.total_alquileres, data.total_maquinas],
-                    backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0'],
+                    label: 'Máquinas',
+                    data: [
+                        data.maquinas_disponibles,
+                        data.maquinas_separadas,
+                        data.maquinas_no_disponibles
+                    ],
+                    backgroundColor: ['#4BC0C0', '#FFCE56', '#FF6384'],
+                }]
+            },
+            options: {
+                plugins: {
+                    datalabels: {
+                        color: '#FFFFFF',
+                        anchor: 'end',
+                        align: 'top',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gráfico de pastel para máquinas por estado
+        const estadoCtx = document.getElementById("estadoChart").getContext("2d");
+        new Chart(estadoCtx, {
+            type: 'pie',
+            plugins: [ChartDataLabels],
+            data: {
+                labels: ['Sin Revisar', 'En Revisión', 'Finalizadas'],
+                datasets: [{
+                    label: 'Máquinas por Estado',
+                    data: [
+                        data.maquinas_sin_revisar,
+                        data.maquinas_en_revision,
+                        data.maquinas_finalizadas
+                    ],
+                    backgroundColor: ['#36A2EB', '#FFCE56', '#4BC0C0'],
+                }]
+            },
+            options: {
+                plugins: {
+                    datalabels: {
+                        color: '#FFFFFF',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gráfico de barras para reparaciones por técnico
+        const tecnicosCtx = document.getElementById("tecnicosChart").getContext("2d");
+        const tecnicosLabels = Object.keys(data.tecnicos_totales);
+        const tecnicosData = Object.values(data.tecnicos_totales);
+
+        new Chart(tecnicosCtx, {
+            type: 'bar',
+            plugins: [ChartDataLabels],
+            data: {
+                labels: tecnicosLabels,
+                datasets: [{
+                    label: 'Reparaciones',
+                    data: tecnicosData,
+                    backgroundColor: '#FF6384',
                 }]
             },
             options: {
@@ -85,35 +139,43 @@ class SatDashboard extends Component {
                         }
                     }
                 },
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        var index = elements[0].index;
-                        var label = myBarChart.data.labels[index];
-                        this.applyFilter(label.toLowerCase());  // Aplicar filtro basado en la etiqueta clickeada
+                scales: {
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                        }
                     }
                 }
             }
         });
-    }
 
-    navigateToDetails(label) {
-        // Redireccionar basado en la etiqueta
-        switch (label) {
-            case 'Evaluaciones':
-                window.location.href = '/web#action=your_action_id_for_evaluaciones&model=evaluacion.personal&view_type=list';
-                break;
-            case 'Reparaciones':
-                window.location.href = '/web#action=sat.action_reparaciones_window&model=reparaciones.reparaciones&view_type=list';
-                break;
-            case 'Alquileres':
-                window.location.href = '/web#action=your_action_id_for_alquileres&model=ticket.alquiler&view_type=list';
-                break;
-            case 'Máquinas en Alquiler':
-                window.location.href = '/web#action=your_action_id_for_maquinas&model=alquiler&view_type=list';
-                break;
-            default:
-                console.log('No action defined for this category');
-        }
+        // Gráfico de pastel para máquinas por asesora
+        const asesoraCtx = document.getElementById("asesoraChart").getContext("2d");
+        const asesoraLabels = Object.keys(data.asesora_totales);
+        const asesoraData = Object.values(data.asesora_totales);
+
+        new Chart(asesoraCtx, {
+            type: 'pie',
+            plugins: [ChartDataLabels],
+            data: {
+                labels: asesoraLabels,
+                datasets: [{
+                    label: 'Máquinas por Asesora',
+                    data: asesoraData,
+                    backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0', '#9966FF'],
+                }]
+            },
+            options: {
+                plugins: {
+                    datalabels: {
+                        color: '#FFFFFF',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            }
+        });
     }
 }
 
