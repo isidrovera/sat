@@ -80,6 +80,7 @@ class SatDashboard extends Component {
             { id: 'maquinas_en_revision', value: this.dashboardData.maquinas_en_revision },
             { id: 'maquinas_finalizadas', value: this.dashboardData.maquinas_finalizadas },
             { id: 'total_reparaciones', value: this.dashboardData.total_reparaciones },
+            { id: 'reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision },
             { id: 'reparaciones_hoy', value: this.dashboardData.reparaciones_hoy },
             { id: 'reparaciones_mes', value: this.dashboardData.reparaciones_mes },
             { id: 'reparaciones_ano', value: this.dashboardData.reparaciones_ano }

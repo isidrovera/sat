@@ -27,6 +27,7 @@ class SatDashboard(models.Model):
 
         # Total de reparaciones en `reparaciones.reparaciones`
         total_reparaciones = self.env['reparaciones.reparaciones'].search_count([])
+        reparaciones_en_revision = self.env['reparaciones.reparaciones'].search_count([('estado_id', "=", 'en_revision')])
 
         # Reparaciones diarias, mensuales, y anuales
         today = fields.Date.today()
@@ -61,6 +62,7 @@ class SatDashboard(models.Model):
             
             # Datos de `reparaciones.reparaciones`
             'total_reparaciones': total_reparaciones,
+            'reparaciones_en_revision': reparaciones_en_revision,
             'reparaciones_hoy': reparaciones_hoy,
             'reparaciones_mes': reparaciones_mes,
             'reparaciones_ano': reparaciones_ano,
