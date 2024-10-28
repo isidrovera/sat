@@ -3,23 +3,23 @@
 .dashboard-container {
     overflow-y: auto;
     max-height: 100vh;
-    padding: 20px 10px;
+    padding: 10px;
 
     .dashboard-tiles {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px; /* Reduce el espacio entre las tiles */
+        gap: 4px; /* Reduce aún más el espacio entre las tiles */
         justify-content: flex-start;
 
         .tot_tasks {
-            flex: 1 0 auto; /* Permite que el ancho se ajuste automáticamente */
-            max-width: 12%; /* Ajuste del ancho máximo */
-            padding: 0; /* Elimina el padding adicional para más compactación */
+            flex: 1 0 auto;
+            max-width: 11%; /* Reduce el ancho máximo */
+            padding: 0;
 
             .oh-card {
-                padding: 8px;
-                box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.1);
-                border-radius: 6px;
+                padding: 6px; /* Reduce el padding de la tarjeta */
+                box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
+                border-radius: 4px; /* Redondeado más pequeño */
                 transition: transform 0.2s, background-color 0.3s;
 
                 &:hover {
@@ -28,21 +28,21 @@
                 }
 
                 .oh-card-body {
-                    padding: 8px;
+                    padding: 4px; /* Reduce el padding dentro de la tarjeta */
                     text-align: center;
 
                     i {
-                        font-size: 20px; /* Tamaño adecuado del icono */
-                        margin-bottom: 4px;
+                        font-size: 18px; /* Tamaño del icono más pequeño */
+                        margin-bottom: 2px;
                     }
 
                     h3 {
-                        font-size: 12px; /* Tamaño reducido del texto del título */
+                        font-size: 10px; /* Reduce el tamaño del texto del título */
                         margin-bottom: 2px;
                     }
 
                     span {
-                        font-size: 14px; /* Tamaño adecuado del número */
+                        font-size: 12px; /* Reduce el tamaño del texto del número */
                         font-weight: bold;
                     }
 
@@ -69,28 +69,28 @@
     }
 
     .maquinas-tiles, .reparaciones-tiles, .tickets-tiles, .alquiler-tiles {
-        margin-bottom: 10px;
+        margin-bottom: 8px; /* Reduce el espacio entre filas */
         display: flex;
         flex-wrap: wrap;
-        gap: 8px; /* Reduce el espacio entre tiles de cada categoría */
+        gap: 4px; /* Reduce el espacio entre tiles de cada categoría */
         justify-content: flex-start;
     }
 
     .dashboard-charts {
-        padding: 0 10px;
+        padding: 0 8px;
 
         .chart-wrapper {
             background-color: white;
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 6px;
+            padding: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-bottom: 15px;
+            margin-bottom: 12px;
 
             .chart-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 8px;
+                margin-bottom: 6px;
 
                 h4 {
                     margin: 0;
@@ -101,7 +101,7 @@
                     border: none;
                     color: #666;
                     cursor: pointer;
-                    padding: 3px;
+                    padding: 2px;
                     transition: color 0.2s;
 
                     &:hover {
@@ -112,13 +112,13 @@
 
             .chart-container {
                 position: relative;
-                height: 250px;
-                max-height: 250px;
+                height: 200px;
+                max-height: 200px;
                 transition: all 0.3s ease;
 
                 &.expanded {
-                    height: 450px;
-                    max-height: 450px;
+                    height: 400px;
+                    max-height: 400px;
                 }
             }
         }
