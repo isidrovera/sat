@@ -176,8 +176,8 @@ class SatDashboard extends Component {
                         labels: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas'],
                         datasets: [
                             {
-                                // Dataset para los valores
-                                label: 'Valores',
+                                // Dataset principal
+                                label: 'Máquinas por Estado',
                                 data: [
                                     this.dashboardData.maquinas_sin_revisar,
                                     this.dashboardData.maquinas_en_revision,
@@ -190,23 +190,6 @@ class SatDashboard extends Component {
                                     '#4BC0C0',  // Finalizadas (Verde)
                                     '#FF6384'   // Problemas (Rojo)
                                 ],
-                            },
-                            {
-                                // Dataset para las etiquetas
-                                label: 'Etiquetas',
-                                data: [
-                                    this.dashboardData.maquinas_sin_revisar,
-                                    this.dashboardData.maquinas_en_revision,
-                                    this.dashboardData.maquinas_finalizadas,
-                                    this.dashboardData.maquinas_problemas
-                                ],
-                                backgroundColor: [
-                                    '#36A2EB',
-                                    '#FFCE56',
-                                    '#4BC0C0',
-                                    '#FF6384'
-                                ],
-                                weight: 0  // Este dataset no afecta al gráfico visual
                             }
                         ]
                     },
@@ -215,58 +198,68 @@ class SatDashboard extends Component {
                             legend: {
                                 display: false
                             },
-                            tooltip: {
-                                enabled: false
-                            },
                             datalabels: {
-                                color: function(context) {
-                                    return context.datasetIndex === 0 ? '#FFFFFF' : '#000000';
-                                },
+                                display: true,
                                 formatter: function(value, context) {
+                                    const labels = context.chart.data.labels;
                                     if (context.datasetIndex === 0) {
-                                        return value;  // Muestra solo el número para el primer dataset
-                                    } else {
-                                        return context.chart.data.labels[context.dataIndex];  // Muestra la etiqueta para el segundo dataset
+                                        return [{
+                                            text: value.toString(),
+                                            font: {
+                                                size: 16,
+                                                weight: 'bold'
+                                            },
+                                            color: 'white'
+                                        }, {
+                                            text: labels[context.dataIndex],
+                                            font: {
+                                                size: 12,
+                                            },
+                                            color: 'black'
+                                        }];
                                     }
                                 },
-                                font: function(context) {
-                                    return {
-                                        size: context.datasetIndex === 0 ? 16 : 12,
-                                        weight: 'bold'
-                                    };
-                                },
-                                anchor: function(context) {
-                                    return context.datasetIndex === 0 ? 'center' : 'end';
-                                },
-                                align: function(context) {
-                                    return context.datasetIndex === 0 ? 'center' : 'outer';
-                                },
-                                offset: function(context) {
-                                    return context.datasetIndex === 0 ? 0 : 8;
-                                },
-                                backgroundColor: function(context) {
-                                    return context.datasetIndex === 0 ? null : 'white';
-                                },
-                                borderRadius: 4,
-                                padding: function(context) {
-                                    return context.datasetIndex === 0 ? 0 : 4;
-                                },
-                                display: true
+                                labels: {
+                                    value: {
+                                        anchor: 'center',
+                                        align: 'center',
+                                        offset: 0,
+                                        color: 'white',
+                                        font: {
+                                            size: 16,
+                                            weight: 'bold'
+                                        }
+                                    },
+                                    name: {
+                                        anchor: 'end',
+                                        align: 'outer',
+                                        offset: 8,
+                                        color: 'black',
+                                        font: {
+                                            size: 12
+                                        },
+                                        formatter: function(value, context) {
+                                            return context.chart.data.labels[context.dataIndex];
+                                        },
+                                        backgroundColor: 'white',
+                                        borderRadius: 4,
+                                        padding: 4,
+                                    }
+                                }
                             }
                         },
                         layout: {
                             padding: {
                                 top: 50,
+                                right: 100,
                                 bottom: 50,
-                                left: 50,
-                                right: 50
+                                left: 100
                             }
                         }
                     }
                 });
                 console.log('Gráfico de estado renderizado exitosamente');
-            }
-                                    // Gráfico de técnicos
+            }                              // Gráfico de técnicos
             const tecnicosCtx = this._getChartContext("tecnicosChart");
             if (tecnicosCtx) {
                 console.log('Renderizando gráfico de técnicos...');
