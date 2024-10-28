@@ -194,52 +194,48 @@ class SatDashboard extends Component {
                         responsive: true,
                         maintainAspectRatio: false,
                         layout: {
-                            padding: {
-                                top: 100,
-                                right: 100,
-                                bottom: 100,
-                                left: 100
-                            }
+                            padding: 20,
                         },
                         plugins: {
                             legend: {
                                 display: false
                             },
-                            datalabels: [{
-                                // Configuración para los valores internos
-                                align: 'center',
-                                anchor: 'center',
+                            datalabels: {
+                                // Configuración para mostrar los valores dentro del gráfico
                                 color: 'white',
                                 font: {
                                     size: 16,
                                     weight: 'bold'
                                 },
-                                formatter: function(value) {
-                                    return value;
+                                formatter: (value) => value,
+                                anchor: 'center',
+                                align: 'center',
+
+                                // Configuración para etiquetas externas con líneas de guía
+                                labels: {
+                                    title: {
+                                        align: 'end',
+                                        anchor: 'end',
+                                        backgroundColor: 'white',
+                                        borderColor: 'black',
+                                        borderWidth: 1,
+                                        borderRadius: 4,
+                                        color: 'black',
+                                        font: {
+                                            size: 12
+                                        },
+                                        formatter: (value, context) => context.chart.data.labels[context.dataIndex]
+                                    },
+                                    connector: {
+                                        display: true,
+                                        borderColor: 'black',
+                                        borderWidth: 1,
+                                        lineDash: [2, 2],
+                                        length: 20,
+                                        endLength: 10
+                                    }
                                 }
-                            }, {
-                                // Configuración para las etiquetas externas
-                                align: 'outer',
-                                anchor: 'end',
-                                backgroundColor: 'white',
-                                borderColor: 'black',
-                                borderWidth: 1,
-                                borderRadius: 4,
-                                color: 'black',
-                                font: {
-                                    size: 12
-                                },
-                                formatter: function(value, context) {
-                                    return context.chart.data.labels[context.dataIndex];
-                                },
-                                offset: 8,
-                                padding: {
-                                    top: 4,
-                                    right: 4,
-                                    bottom: 4,
-                                    left: 4
-                                }
-                            }]
+                            }
                         }
                     },
                     plugins: [{
@@ -260,7 +256,8 @@ class SatDashboard extends Component {
                     }]
                 });
                 console.log('Gráfico de estado renderizado exitosamente');
-            }                              // Gráfico de técnicos
+            }
+            // Gráfico de técnicos
             const tecnicosCtx = this._getChartContext("tecnicosChart");
             if (tecnicosCtx) {
                 console.log('Renderizando gráfico de técnicos...');
