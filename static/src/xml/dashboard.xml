@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates>
     <t t-name="sat.DashboardTemplate">
-        <div class="row main-section">
+        <div class="row main-section" style="overflow-y: auto; max-height: 100vh; padding-bottom: 20px;">
             <!-- Tile para Total Máquinas -->
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
                 <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
@@ -12,6 +12,7 @@
                     </div>
                 </div>
             </div>
+            
             <!-- Tile para Máquinas Disponibles -->
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
                 <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
@@ -22,6 +23,7 @@
                     </div>
                 </div>
             </div>
+
             <!-- Tile para Máquinas Separadas -->
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
                 <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
@@ -32,6 +34,7 @@
                     </div>
                 </div>
             </div>
+
             <!-- Tile para Máquinas No Disponibles -->
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
                 <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
@@ -53,7 +56,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Otros tiles para Reparaciones Hoy, Mes y Año -->
 
             <!-- Gráficos -->
             <div class="row">
