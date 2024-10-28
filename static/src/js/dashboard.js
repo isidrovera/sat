@@ -136,21 +136,35 @@ class SatDashboard extends Component {
                     },
                     options: {
                         plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
                             datalabels: {
+                                display: true,
                                 color: '#FFFFFF',
-                                anchor: 'end',
-                                align: 'top',
+                                anchor: 'center', // Centra la etiqueta en la barra
+                                align: 'center',  // Alinea el texto al centro
                                 font: {
-                                    weight: 'bold'
-                                }
+                                    weight: 'bold',
+                                    size: 14
+                                },
+                                formatter: function(value) {
+                                    return value; // Muestra el valor numérico
+                                },
+                                padding: 6
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
                             }
                         }
                     }
                 });
                 console.log('Gráfico de disponibilidad renderizado exitosamente');
             }
-
-           // Gráfico de estado
+                    // Gráfico de estado
             const estadoCtx = this._getChartContext("estadoChart");
             if (estadoCtx) {
                 console.log('Renderizando gráfico de estado...');
@@ -177,35 +191,39 @@ class SatDashboard extends Component {
                     },
                     options: {
                         plugins: {
-                            datalabels: [
-                                {
-                                    // Configuración para etiquetas externas (nombre del estado)
-                                    anchor: 'end',
-                                    align: 'end',
-                                    color: '#000000',
-                                    font: {
-                                        size: 12,
-                                        weight: 'bold'
-                                    },
-                                    formatter: (value, context) => {
-                                        return context.chart.data.labels[context.dataIndex]; // Nombre del estado
-                                    },
-                                    clip: false, // Permite mostrar etiquetas fuera del gráfico
-                                },
-                                {
-                                    // Configuración para etiquetas internas (cantidad)
-                                    anchor: 'center',
-                                    align: 'center',
-                                    color: '#FFFFFF',
-                                    font: {
-                                        size: 14,
-                                        weight: 'bold'
-                                    },
-                                    formatter: (value) => {
-                                        return value; // Muestra la cantidad dentro de la sección
+                            datalabels: {
+                                // Configuración para nombres fuera y valores dentro
+                                display: 'auto',
+                                formatter: (value, context) => {
+                                    // Si es el valor, muestra dentro
+                                    if (context.datasetIndex === 0) {
+                                        return value;  // Muestra el número en el centro
+                                    } else {
+                                        // Muestra el nombre del estado afuera
+                                        return context.chart.data.labels[context.dataIndex];
                                     }
-                                }
-                            ]
+                                },
+                                color: (context) => {
+                                    // Si es el valor, lo hace blanco, sino negro
+                                    return context.datasetIndex === 0 ? '#FFFFFF' : '#000000';
+                                },
+                                font: (context) => {
+                                    // Aumenta el tamaño de la fuente para el valor y el nombre
+                                    return {
+                                        size: context.datasetIndex === 0 ? 14 : 12,
+                                        weight: 'bold'
+                                    };
+                                },
+                                anchor: (context) => {
+                                    // Nombres fuera, valores centrados
+                                    return context.datasetIndex === 0 ? 'center' : 'end';
+                                },
+                                align: (context) => {
+                                    // Nombres alineados afuera, valores centrados
+                                    return context.datasetIndex === 0 ? 'center' : 'end';
+                                },
+                                clip: false
+                            }
                         },
                         layout: {
                             padding: {
