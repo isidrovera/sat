@@ -8,13 +8,13 @@
     .dashboard-tiles {
         display: flex;
         flex-wrap: wrap;
-        gap: 5px; /* Reduce el espacio entre las tiles */
+        gap: 8px; /* Reduce el espacio entre las tiles */
         justify-content: flex-start;
 
         .tot_tasks {
-            padding: 3px;
-            flex: 1 0 14%;
-            max-width: 14%;
+            flex: 1 0 auto; /* Permite que el ancho se ajuste automáticamente */
+            max-width: 12%; /* Ajuste del ancho máximo */
+            padding: 0; /* Elimina el padding adicional para más compactación */
 
             .oh-card {
                 padding: 8px;
@@ -28,21 +28,21 @@
                 }
 
                 .oh-card-body {
-                    padding: 5px;
-                    text-align: left;
+                    padding: 8px;
+                    text-align: center;
 
                     i {
-                        font-size: 22px; /* Aumenta el tamaño del icono */
-                        margin-bottom: 6px;
-                    }
-
-                    h3 {
-                        font-size: 14px; /* Aumenta el tamaño del texto del título */
+                        font-size: 20px; /* Tamaño adecuado del icono */
                         margin-bottom: 4px;
                     }
 
+                    h3 {
+                        font-size: 12px; /* Tamaño reducido del texto del título */
+                        margin-bottom: 2px;
+                    }
+
                     span {
-                        font-size: 16px; /* Aumenta el tamaño del texto del número */
+                        font-size: 14px; /* Tamaño adecuado del número */
                         font-weight: bold;
                     }
 
@@ -69,10 +69,10 @@
     }
 
     .maquinas-tiles, .reparaciones-tiles, .tickets-tiles, .alquiler-tiles {
-        margin-bottom: 10px; /* Reduce el espacio entre filas */
+        margin-bottom: 10px;
         display: flex;
         flex-wrap: wrap;
-        gap: 5px; /* Reduce el espacio entre tiles de cada categoría */
+        gap: 8px; /* Reduce el espacio entre tiles de cada categoría */
         justify-content: flex-start;
     }
 
