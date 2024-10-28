@@ -330,11 +330,11 @@
     <menuitem name="Sistema de taller" id="sat.menu_root" web_icon="sat,static/description/icon.png" />
     <!-- menu categories -->
     <menuitem name="Maquinas" id="sat.stock_maquinas" parent="sat_menu_root" action="sat.action_window" sequence="10" />
-    <menuitem name="Reparaciones" id="sat.reparaciones" parent="sat.menu_root" action="sat.action_reparaciones_window" sequence="20" />
-    <menuitem name="Alquiler" id="sat.alquiler" parent="sat.menu_root" action="sat.action_alquiler_window" sequence="30" />
-    <menuitem name="Repuestos" id="sat.repuestos" parent="sat.menu_root" action="sat.action_repuestos_window" sequence="40" />
+    <menuitem name="Reparaciones" id="sat.reparaciones" parent="sat_menu_root" action="sat.action_reparaciones_window" sequence="20" />
+    <menuitem name="Alquiler" id="sat.alquiler" parent="sat_menu_root" action="sat.action_alquiler_window" sequence="30" />
+    <menuitem name="Repuestos" id="sat.repuestos" parent="sat_menu_root" action="sat.action_repuestos_window" sequence="40" />
 
-    <menuitem name="Configuración" id="sat.ajustes" parent="sat.menu_root" sequence="70" />
+    <menuitem name="Configuración" id="sat.ajustes" parent="sat_menu_root" sequence="70" />
     <!-- actions -->
     <menuitem name="Marcas" id="sat.menu_marca" parent="sat.ajustes" action="sat.action_marca_window" />
     <menuitem name="Modelo" id="sat.menu_modelo" parent="sat.ajustes" action="sat.action_modelo_window" />
