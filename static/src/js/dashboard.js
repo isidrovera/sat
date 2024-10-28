@@ -21,21 +21,21 @@ class SatDashboard extends Component {
     }
 
     _render_charts(data) {
-        // Gráfico de barras
+        // Gráfico de barras (máquinas, reparaciones, alquileres)
         var ctx1 = document.getElementById("myBarChart").getContext("2d");
         new Chart(ctx1, {
             type: 'bar',
             data: {
-                labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'], // Ejemplo
+                labels: ['Máquinas', 'Reparaciones', 'Alquileres'],
                 datasets: [{
-                    label: 'Total Facturación',
-                    data: data.total_facturacion_meses, // Ejemplo de datos
-                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    label: 'Cantidad',
+                    data: [data.total_maquinas, data.total_reparaciones, data.total_alquileres],
+                    backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56'],
                 }]
             },
         });
 
-        // Gráfico circular
+        // Gráfico circular (Costes, Ingresos, Beneficio)
         var ctx2 = document.getElementById("myPieChart").getContext("2d");
         new Chart(ctx2, {
             type: 'pie',
@@ -46,6 +46,28 @@ class SatDashboard extends Component {
                     backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
                 }]
             },
+        });
+
+        // Gráfico de tipo "Gauge" o medidor para representar el beneficio sobre el coste
+        var ctx3 = document.getElementById("myGaugeChart").getContext("2d");
+        new Chart(ctx3, {
+            type: 'doughnut',
+            data: {
+                labels: ['Coste', 'Beneficio'],
+                datasets: [{
+                    data: [data.total_costes, data.total_beneficio],
+                    backgroundColor: ['#FF6384', '#36A2EB'],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                circumference: Math.PI,
+                rotation: Math.PI,
+                cutout: '70%',
+                plugins: {
+                    legend: { display: false }
+                }
+            }
         });
     }
 }

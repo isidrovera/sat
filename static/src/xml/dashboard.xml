@@ -2,13 +2,17 @@
 <templates>
     <t t-name="sat.DashboardTemplate">
         <div class="row">
-            <!-- Gráfico de barras para facturación mensual -->
-            <div class="col-md-6">
+            <!-- Gráfico de barras para Máquinas, Reparaciones y Alquileres -->
+            <div class="col-md-4">
                 <canvas id="myBarChart"></canvas>
             </div>
-            <!-- Gráfico circular para la distribución de ingresos, costos y beneficios -->
-            <div class="col-md-6">
+            <!-- Gráfico circular para Costes, Ingresos y Beneficio -->
+            <div class="col-md-4">
                 <canvas id="myPieChart"></canvas>
+            </div>
+            <!-- Gráfico tipo Gauge (medidor) para mostrar la relación Coste vs Beneficio -->
+            <div class="col-md-4">
+                <canvas id="myGaugeChart"></canvas>
             </div>
         </div>
     </t>
