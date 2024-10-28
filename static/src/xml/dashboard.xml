@@ -2,17 +2,23 @@
 <templates>
     <t t-name="sat.DashboardTemplate">
         <div class="row">
-            <!-- Gráfico de barras para Máquinas, Reparaciones y Alquileres -->
-            <div class="col-md-4">
+            <!-- Gráfico de barras para Evaluaciones, Reparaciones, Alquileres y Máquinas en alquiler -->
+            <div class="col-md-6">
                 <canvas id="myBarChart"></canvas>
             </div>
             <!-- Gráfico circular para Costes, Ingresos y Beneficio -->
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <canvas id="myPieChart"></canvas>
             </div>
-            <!-- Gráfico tipo Gauge (medidor) para mostrar la relación Coste vs Beneficio -->
-            <div class="col-md-4">
+        </div>
+        <div class="row">
+            <!-- Gráfico tipo Gauge para mostrar la relación Coste vs Beneficio -->
+            <div class="col-md-6">
                 <canvas id="myGaugeChart"></canvas>
+            </div>
+            <!-- Gráfico de línea para la evolución de las puntuaciones de las evaluaciones -->
+            <div class="col-md-6">
+                <canvas id="myLineChart"></canvas>
             </div>
         </div>
     </t>

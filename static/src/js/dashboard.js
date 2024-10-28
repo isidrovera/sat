@@ -14,28 +14,29 @@ class SatDashboard extends Component {
     }
 
     _fetch_data() {
+        // Llamamos al método get_dashboard_data del modelo sat.dashboard
         this.orm.call("sat.dashboard", "get_dashboard_data", []).then((result) => {
-            // Actualizamos los valores en los gráficos
+            // Renderizamos los gráficos con los datos obtenidos
             this._render_charts(result);
         });
     }
 
     _render_charts(data) {
-        // Gráfico de barras (máquinas, reparaciones, alquileres)
+        // Gráfico de barras: Evaluaciones, Reparaciones, Alquileres, Máquinas en Alquiler
         var ctx1 = document.getElementById("myBarChart").getContext("2d");
         new Chart(ctx1, {
             type: 'bar',
             data: {
-                labels: ['Máquinas', 'Reparaciones', 'Alquileres'],
+                labels: ['Evaluaciones', 'Reparaciones', 'Alquileres', 'Máquinas en Alquiler'],
                 datasets: [{
                     label: 'Cantidad',
-                    data: [data.total_maquinas, data.total_reparaciones, data.total_alquileres],
-                    backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56'],
+                    data: [data.total_evaluaciones, data.total_reparaciones, data.total_alquileres, data.total_maquinas],
+                    backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0'],
                 }]
             },
         });
 
-        // Gráfico circular (Costes, Ingresos, Beneficio)
+        // Gráfico circular: Costes, Ingresos, Beneficio
         var ctx2 = document.getElementById("myPieChart").getContext("2d");
         new Chart(ctx2, {
             type: 'pie',
@@ -48,7 +49,7 @@ class SatDashboard extends Component {
             },
         });
 
-        // Gráfico de tipo "Gauge" o medidor para representar el beneficio sobre el coste
+        // Gráfico de tipo Gauge: Relación entre Coste y Beneficio
         var ctx3 = document.getElementById("myGaugeChart").getContext("2d");
         new Chart(ctx3, {
             type: 'doughnut',
@@ -68,6 +69,21 @@ class SatDashboard extends Component {
                     legend: { display: false }
                 }
             }
+        });
+
+        // Gráfico adicional de línea: Evolución de las puntuaciones de evaluaciones del personal
+        var ctx4 = document.getElementById("myLineChart").getContext("2d");
+        new Chart(ctx4, {
+            type: 'line',
+            data: {
+                labels: data.puntuaciones_evaluaciones.map((_, idx) => `Evaluación ${idx + 1}`),
+                datasets: [{
+                    label: 'Puntuación de Evaluaciones',
+                    data: data.puntuaciones_evaluaciones,
+                    borderColor: '#36A2EB',
+                    fill: false
+                }]
+            },
         });
     }
 }
