@@ -10,7 +10,7 @@
     'category': 'Services',
     'depends': ['base','mail','contacts','sale_management','portal','web', 'stock'],
     'data': [
-        
+        'views/sat_dashboard_menu.xml',
         'views/ventas.xml',
         'views/templates.xml',
         'data/ir_secuense.xml',
@@ -62,7 +62,7 @@
         'views/graficos.xml',
         'views/customer_records_page.xml',
         'views/importacionexcel.xml',
-        'views/sat_dashboard_menu.xml',
+        
         
     ],
     'demo': [
