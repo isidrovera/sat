@@ -6,11 +6,15 @@
     padding-bottom: 20px;
 
     .dashboard-tiles {
+        display: flex;
+        flex-wrap: wrap;
+
         .tot_tasks {
-            padding: 10px; /* Reducir padding */
+            padding: 5px; /* Reducir padding */
+            flex: 1 0 15%; /* Para ajustar más tarjetas en una fila */
 
             .oh-card {
-                padding: 10px; /* Reducir padding dentro de la tarjeta */
+                padding: 5px; /* Reducir padding dentro de la tarjeta */
                 box-shadow: 2px 4px 8px rgba(0,0,0,0.2);
                 transition: transform 0.2s;
 
@@ -19,27 +23,33 @@
                 }
 
                 .oh-card-body {
-                    padding: 10px; /* Reducir padding */
+                    padding: 5px; /* Reducir padding */
                     
                     i {
-                        font-size: 30px; /* Reducir tamaño de icono */
-                        margin-bottom: 10px;
+                        font-size: 24px; /* Reducir tamaño de icono */
+                        margin-bottom: 8px;
                     }
 
                     h3 {
-                        font-size: 16px; /* Reducir tamaño de texto */
-                        margin-bottom: 5px;
+                        font-size: 14px; /* Reducir tamaño de texto */
+                        margin-bottom: 3px;
                     }
 
                     span {
-                        font-size: 20px; /* Reducir tamaño de texto del número */
+                        font-size: 16px; /* Reducir tamaño de texto del número */
                         font-weight: bold;
                     }
+
+                    /* Colores de los íconos */
+                    .fa-cogs { color: #36A2EB; }          /* Azul claro */
+                    .fa-check-circle { color: #4BC0C0; }  /* Verde */
+                    .fa-pause-circle { color: #FFCE56; }  /* Amarillo */
+                    .fa-times-circle { color: #FF6384; }  /* Rojo */
+                    .fa-wrench { color: #666666; }        /* Gris oscuro */
                 }
             }
         }
     }
-}
 
     .dashboard-charts {
         padding: 0 10px;
