@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates>
     <t t-name="sat.DashboardTemplate">
-        <div class="row main-section" style="margin-left: 120px;">
-            <!-- Tile para Máquinas Totales -->
+        <div class="row main-section">
+            <!-- Tile para Total Máquinas -->
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
                 <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
                     <div class="oh-card-body text-center">
-                        <i class="fa fa-cogs" style="font-size: 50px; color: #4BC0C0;"></i>
+                        <i class="fa fa-cogs" style="font-size: 50px; color: #36A2EB;"></i>
                         <h3>Total Máquinas</h3>
                         <span id="total_maquinas" style="font-size: 24px; font-weight: bold;">0</span>
                     </div>
@@ -16,7 +16,7 @@
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
                 <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
                     <div class="oh-card-body text-center">
-                        <i class="fa fa-check-circle" style="font-size: 50px; color: #36A2EB;"></i>
+                        <i class="fa fa-check-circle" style="font-size: 50px; color: #4BC0C0;"></i>
                         <h3>Máquinas Disponibles</h3>
                         <span id="maquinas_disponibles" style="font-size: 24px; font-weight: bold;">0</span>
                     </div>
@@ -42,7 +42,8 @@
                     </div>
                 </div>
             </div>
-            <!-- Tile para Reparaciones Totales -->
+
+            <!-- Tile para Total Reparaciones -->
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
                 <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
                     <div class="oh-card-body text-center">
@@ -52,62 +53,26 @@
                     </div>
                 </div>
             </div>
-            <!-- Tile para Reparaciones Hoy -->
-            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
-                    <div class="oh-card-body text-center">
-                        <i class="fa fa-calendar-day" style="font-size: 50px; color: #36A2EB;"></i>
-                        <h3>Reparaciones Hoy</h3>
-                        <span id="reparaciones_hoy" style="font-size: 24px; font-weight: bold;">0</span>
-                    </div>
+            <!-- Otros tiles para Reparaciones Hoy, Mes y Año -->
+
+            <!-- Gráficos -->
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Máquinas por Disponibilidad</h4>
+                    <canvas id="disponibilidadChart"></canvas>
                 </div>
-            </div>
-            <!-- Tile para Reparaciones Mes -->
-            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
-                    <div class="oh-card-body text-center">
-                        <i class="fa fa-calendar-alt" style="font-size: 50px; color: #FFCE56;"></i>
-                        <h3>Reparaciones del Mes</h3>
-                        <span id="reparaciones_mes" style="font-size: 24px; font-weight: bold;">0</span>
-                    </div>
+                <div class="col-md-6">
+                    <h4>Máquinas por Estado</h4>
+                    <canvas id="estadoChart"></canvas>
                 </div>
-            </div>
-            <!-- Tile para Reparaciones Año -->
-            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
-                    <div class="oh-card-body text-center">
-                        <i class="fa fa-calendar" style="font-size: 50px; color: #4BC0C0;"></i>
-                        <h3>Reparaciones del Año</h3>
-                        <span id="reparaciones_ano" style="font-size: 24px; font-weight: bold;">0</span>
-                    </div>
+                <div class="col-md-6">
+                    <h4>Reparaciones por Técnico</h4>
+                    <canvas id="tecnicosChart"></canvas>
                 </div>
-            </div>
-        </div>
-
-        <!-- Gráficos -->
-        <div class="row">
-            <!-- Gráfico de Disponibilidad -->
-            <div class="col-md-6">
-                <h4>Máquinas por Disponibilidad</h4>
-                <canvas id="disponibilidadChart"></canvas>
-            </div>
-
-            <!-- Gráfico de Estado -->
-            <div class="col-md-6">
-                <h4>Máquinas por Estado</h4>
-                <canvas id="estadoChart"></canvas>
-            </div>
-
-            <!-- Gráfico de Reparaciones por Técnico -->
-            <div class="col-md-6">
-                <h4>Reparaciones por Técnico</h4>
-                <canvas id="tecnicosChart"></canvas>
-            </div>
-
-            <!-- Gráfico de Máquinas por Asesora -->
-            <div class="col-md-6">
-                <h4>Máquinas por Asesora</h4>
-                <canvas id="asesoraChart"></canvas>
+                <div class="col-md-6">
+                    <h4>Máquinas por Asesora</h4>
+                    <canvas id="asesoraChart"></canvas>
+                </div>
             </div>
         </div>
     </t>
