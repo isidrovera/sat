@@ -174,21 +174,41 @@ class SatDashboard extends Component {
                     plugins: [ChartDataLabels],
                     data: {
                         labels: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas'],
-                        datasets: [{
-                            label: 'Máquinas por Estado',
-                            data: [
-                                this.dashboardData.maquinas_sin_revisar,
-                                this.dashboardData.maquinas_en_revision,
-                                this.dashboardData.maquinas_finalizadas,
-                                this.dashboardData.maquinas_problemas
-                            ],
-                            backgroundColor: [
-                                '#36A2EB',  // Sin Revisar (Azul claro)
-                                '#FFCE56',  // En Revisión (Amarillo)
-                                '#4BC0C0',  // Finalizadas (Verde)
-                                '#FF6384'   // Problemas (Rojo)
-                            ],
-                        }]
+                        datasets: [
+                            {
+                                // Dataset para los valores
+                                label: 'Valores',
+                                data: [
+                                    this.dashboardData.maquinas_sin_revisar,
+                                    this.dashboardData.maquinas_en_revision,
+                                    this.dashboardData.maquinas_finalizadas,
+                                    this.dashboardData.maquinas_problemas
+                                ],
+                                backgroundColor: [
+                                    '#36A2EB',  // Sin Revisar (Azul claro)
+                                    '#FFCE56',  // En Revisión (Amarillo)
+                                    '#4BC0C0',  // Finalizadas (Verde)
+                                    '#FF6384'   // Problemas (Rojo)
+                                ],
+                            },
+                            {
+                                // Dataset para las etiquetas
+                                label: 'Etiquetas',
+                                data: [
+                                    this.dashboardData.maquinas_sin_revisar,
+                                    this.dashboardData.maquinas_en_revision,
+                                    this.dashboardData.maquinas_finalizadas,
+                                    this.dashboardData.maquinas_problemas
+                                ],
+                                backgroundColor: [
+                                    '#36A2EB',
+                                    '#FFCE56',
+                                    '#4BC0C0',
+                                    '#FF6384'
+                                ],
+                                weight: 0  // Este dataset no afecta al gráfico visual
+                            }
+                        ]
                     },
                     options: {
                         plugins: {
@@ -199,17 +219,15 @@ class SatDashboard extends Component {
                                 enabled: false
                             },
                             datalabels: {
-                                display: true,
-                                // Configuración para los valores dentro del gráfico
-                                formatter: function(value, context) {
-                                    // Crear dos conjuntos diferentes de etiquetas
-                                    return context.datasetIndex === 0 ? value : context.chart.data.labels[context.dataIndex];
-                                },
                                 color: function(context) {
                                     return context.datasetIndex === 0 ? '#FFFFFF' : '#000000';
                                 },
-                                backgroundColor: function(context) {
-                                    return context.datasetIndex === 0 ? null : 'white';
+                                formatter: function(value, context) {
+                                    if (context.datasetIndex === 0) {
+                                        return value;  // Muestra solo el número para el primer dataset
+                                    } else {
+                                        return context.chart.data.labels[context.dataIndex];  // Muestra la etiqueta para el segundo dataset
+                                    }
                                 },
                                 font: function(context) {
                                     return {
@@ -217,34 +235,38 @@ class SatDashboard extends Component {
                                         weight: 'bold'
                                     };
                                 },
-                                padding: function(context) {
-                                    return context.datasetIndex === 0 ? 0 : 4;
-                                },
                                 anchor: function(context) {
                                     return context.datasetIndex === 0 ? 'center' : 'end';
                                 },
                                 align: function(context) {
-                                    return context.datasetIndex === 0 ? 'center' : 'end';
+                                    return context.datasetIndex === 0 ? 'center' : 'outer';
                                 },
                                 offset: function(context) {
-                                    return context.datasetIndex === 0 ? 0 : 10;
+                                    return context.datasetIndex === 0 ? 0 : 8;
                                 },
-                                clamp: true,
+                                backgroundColor: function(context) {
+                                    return context.datasetIndex === 0 ? null : 'white';
+                                },
+                                borderRadius: 4,
+                                padding: function(context) {
+                                    return context.datasetIndex === 0 ? 0 : 4;
+                                },
+                                display: true
                             }
                         },
                         layout: {
                             padding: {
-                                top: 80,
-                                bottom: 80,
-                                left: 80,
-                                right: 80
+                                top: 50,
+                                bottom: 50,
+                                left: 50,
+                                right: 50
                             }
                         }
                     }
                 });
                 console.log('Gráfico de estado renderizado exitosamente');
             }
-                        // Gráfico de técnicos
+                                    // Gráfico de técnicos
             const tecnicosCtx = this._getChartContext("tecnicosChart");
             if (tecnicosCtx) {
                 console.log('Renderizando gráfico de técnicos...');
