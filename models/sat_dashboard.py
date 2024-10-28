@@ -9,7 +9,7 @@ class SatDashboard(models.Model):
         # Obtener datos de los modelos
         total_maquinas = self.env['sat.sat'].search_count([])
         total_reparaciones = self.env['reparaciones.reparaciones'].search_count([])
-        total_alquileres = self.env['sat.alquiler'].search_count([])
+        total_alquileres = self.env['ticket.alquiler'].search_count([])
 
         return {
             'total_maquinas': total_maquinas,
