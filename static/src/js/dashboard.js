@@ -2,8 +2,6 @@
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component } from "@odoo/owl";
-import Chart from 'chart.js/auto';
-import ChartDataLabels from 'chartjs-plugin-datalabels'; // Asegúrate de incluir este plugin en tus assets
 
 const actionRegistry = registry.category("actions");
 
@@ -59,7 +57,7 @@ class SatDashboard extends Component {
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
                         var index = elements[0].index;
-                        var label = this.chart.data.labels[index];
+                        var label = myBarChart.data.labels[index];
                         this.navigateToDetails(label);
                     }
                 }
