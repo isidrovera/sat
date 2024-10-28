@@ -164,7 +164,7 @@ class SatDashboard extends Component {
                 });
                 console.log('Gráfico de disponibilidad renderizado exitosamente');
             }
-                    // Gráfico de estado
+            // Gráfico de estado
             const estadoCtx = this._getChartContext("estadoChart");
             if (estadoCtx) {
                 console.log('Renderizando gráfico de estado...');
@@ -191,45 +191,35 @@ class SatDashboard extends Component {
                     },
                     options: {
                         plugins: {
+                            legend: {
+                                display: false // Ocultamos la leyenda ya que mostraremos las etiquetas en el gráfico
+                            },
                             datalabels: {
-                                // Configuración para nombres fuera y valores dentro
-                                display: 'auto',
-                                formatter: (value, context) => {
-                                    // Si es el valor, muestra dentro
-                                    if (context.datasetIndex === 0) {
-                                        return value;  // Muestra el número en el centro
-                                    } else {
-                                        // Muestra el nombre del estado afuera
-                                        return context.chart.data.labels[context.dataIndex];
-                                    }
+                                display: true,
+                                color: 'white',
+                                textStrokeColor: 'transparent',
+                                textStrokeWidth: 2,
+                                formatter: (value, ctx) => {
+                                    const label = ctx.chart.data.labels[ctx.dataIndex];
+                                    return [`${label}`, `${value}`];
                                 },
-                                color: (context) => {
-                                    // Si es el valor, lo hace blanco, sino negro
-                                    return context.datasetIndex === 0 ? '#FFFFFF' : '#000000';
+                                font: {
+                                    weight: 'bold',
+                                    size: 14
                                 },
-                                font: (context) => {
-                                    // Aumenta el tamaño de la fuente para el valor y el nombre
-                                    return {
-                                        size: context.datasetIndex === 0 ? 14 : 12,
-                                        weight: 'bold'
-                                    };
-                                },
-                                anchor: (context) => {
-                                    // Nombres fuera, valores centrados
-                                    return context.datasetIndex === 0 ? 'center' : 'end';
-                                },
-                                align: (context) => {
-                                    // Nombres alineados afuera, valores centrados
-                                    return context.datasetIndex === 0 ? 'center' : 'end';
-                                },
-                                clip: false
+                                textAlign: 'center',
+                                anchor: 'center',
+                                align: 'center',
+                                rotation: (ctx) => {
+                                    const angle = ctx.chart.getDatasetMeta(0).data[ctx.dataIndex].startAngle + 
+                                                (ctx.chart.getDatasetMeta(0).data[ctx.dataIndex].endAngle - 
+                                                ctx.chart.getDatasetMeta(0).data[ctx.dataIndex].startAngle) / 2;
+                                    return angle * 180 / Math.PI - 90;
+                                }
                             }
                         },
                         layout: {
-                            padding: {
-                                top: 20,
-                                bottom: 20
-                            }
+                            padding: 20
                         }
                     }
                 });
