@@ -12,7 +12,7 @@
 
         .tot_tasks {
             padding: 2px; /* Reducir padding */
-            flex: 1 0 10%; /* Aumentar el número de tarjetas en una fila */
+            flex: 1 0 15%; /* Ajuste para más tiles en cada fila */
 
             .oh-card {
                 padding: 5px; /* Reducir padding dentro de la tarjeta */
@@ -50,6 +50,14 @@
                 }
             }
         }
+    }
+
+    /* Filas específicas para cada categoría */
+    .maquinas-tiles, .reparaciones-tiles, .tickets-tiles, .alquiler-tiles {
+        margin-bottom: 15px; /* Espacio entre filas */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
     }
 
     .dashboard-charts {
