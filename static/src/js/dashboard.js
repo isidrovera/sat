@@ -7,7 +7,7 @@ import { Component } from "@odoo/owl";
 const loadChartDataLabelsPlugin = () => {
     return new Promise((resolve, reject) => {
         const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"; // Plugin desde CDN
+        script.src = "https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels";
         script.onload = () => resolve();
         script.onerror = () => reject(new Error("No se pudo cargar ChartDataLabels"));
         document.head.appendChild(script);
@@ -20,13 +20,14 @@ class SatDashboard extends Component {
     setup() {
         super.setup();
         this.orm = useService("orm");
+        this.filter = null;  // Filtro global para aplicar a los gráficos
         this._fetch_data();
     }
 
     async _fetch_data() {
         try {
-            await loadChartDataLabelsPlugin(); // Esperar hasta que el plugin esté cargado
-            const result = await this.orm.call("sat.dashboard", "get_dashboard_data", []);
+            await loadChartDataLabelsPlugin(); // Cargar el plugin
+            const result = await this.orm.call("sat.dashboard", "get_dashboard_data", [this.filter]);
             this._render_tiles(result);
             this._render_charts(result);
         } catch (error) {
@@ -36,10 +37,27 @@ class SatDashboard extends Component {
 
     _render_tiles(data) {
         // Mostrar el número de registros en las tiles
-        document.getElementById('total_evaluaciones').textContent = data.total_evaluaciones;
-        document.getElementById('total_reparaciones').textContent = data.total_reparaciones;
-        document.getElementById('total_alquileres').textContent = data.total_alquileres;
-        document.getElementById('total_maquinas').textContent = data.total_maquinas;
+        const evaluacionesTile = document.getElementById('total_evaluaciones');
+        const reparacionesTile = document.getElementById('total_reparaciones');
+        const alquileresTile = document.getElementById('total_alquileres');
+        const maquinasTile = document.getElementById('total_maquinas');
+    
+        evaluacionesTile.textContent = data.total_evaluaciones;
+        reparacionesTile.textContent = data.total_reparaciones;
+        alquileresTile.textContent = data.total_alquileres;
+        maquinasTile.textContent = data.total_maquinas;
+    
+        // Agregar eventos de clic para aplicar filtros y redirigir
+        evaluacionesTile.addEventListener('click', () => this.applyFilter('evaluaciones'));
+        reparacionesTile.addEventListener('click', () => this.applyFilter('reparaciones'));
+        alquileresTile.addEventListener('click', () => this.applyFilter('alquileres'));
+        maquinasTile.addEventListener('click', () => this.applyFilter('maquinas'));
+    }
+    
+    applyFilter(filter) {
+        // Actualizar el filtro global y recargar los datos
+        this.filter = filter;
+        this._fetch_data();  // Volver a cargar los datos con el filtro aplicado
     }
 
     _render_charts(data) {
@@ -47,7 +65,7 @@ class SatDashboard extends Component {
         var ctx1 = document.getElementById("myBarChart").getContext("2d");
         var myBarChart = new Chart(ctx1, {
             type: 'bar',
-            plugins: [ChartDataLabels], // Usar el plugin ahora que está disponible
+            plugins: [ChartDataLabels],
             data: {
                 labels: ['Evaluaciones', 'Reparaciones', 'Alquileres', 'Máquinas en Alquiler'],
                 datasets: [{
@@ -71,7 +89,7 @@ class SatDashboard extends Component {
                     if (elements.length > 0) {
                         var index = elements[0].index;
                         var label = myBarChart.data.labels[index];
-                        this.navigateToDetails(label);
+                        this.applyFilter(label.toLowerCase());  // Aplicar filtro basado en la etiqueta clickeada
                     }
                 }
             }
