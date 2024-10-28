@@ -66,6 +66,16 @@
                         </div>
                     </div>
                 </div>
+                <!-- Reparaciones Finalizadas -->
+                <div class="col-md-2 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-check-circle"></i> <!-- Icono de finalizado -->
+                            <h3>Reparaciones Finalizadas</h3>
+                            <span id="reparaciones_finalizadas">0</span>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Reparaciones con Problemas -->
                 <div class="col-md-3 col-sm-6 tot_tasks">
@@ -91,19 +101,54 @@
             </div>
 
 
-            <!-- Fila para Tickets -->
+            <!-- Fila para Tickets de Soporte Técnico -->
             <div class="row dashboard-tiles tickets-tiles">
+                <!-- Total Tickets -->
                 <div class="col-md-3 col-sm-6 tot_tasks">
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
-                            <i class="fa fa-ticket"></i>
+                            <i class="fa fa-life-ring"></i> <!-- Icono de soporte técnico general -->
                             <h3>Total Tickets</h3>
                             <span id="total_tickets">0</span>
                         </div>
                     </div>
                 </div>
-                <!-- Aquí puedes agregar más tiles para otras métricas de tickets -->
+
+                <!-- Tickets Nuevos -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-plus-square"></i> <!-- Icono de nuevo ticket de soporte -->
+                            <h3>Tickets Nuevos</h3>
+                            <span id="tickets_nuevos">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tickets en Proceso -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-cogs"></i> <!-- Icono de ticket en proceso de soporte -->
+                            <h3>Tickets en Proceso</h3>
+                            <span id="tickets_en_proceso">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tickets Finalizados -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-check-circle"></i> <!-- Icono de ticket de soporte
+                            finalizado -->
+                            <h3>Tickets Finalizados</h3>
+                            <span id="tickets_finalizados">0</span>
+                        </div>
+                    </div>
+                </div>
             </div>
+
 
             <!-- Fila para Alquiler -->
             <div class="row dashboard-tiles alquiler-tiles">
