@@ -8,35 +8,36 @@
     .dashboard-tiles {
         display: flex;
         flex-wrap: wrap;
+        gap: 5px; /* Espacio entre las tiles */
 
         .tot_tasks {
-            padding: 5px; /* Reducir padding */
-            flex: 1 0 15%; /* Para ajustar más tarjetas en una fila */
+            padding: 3px; /* Reducir padding */
+            flex: 1 0 12%; /* Reducir el tamaño de cada tarjeta */
 
             .oh-card {
                 padding: 5px; /* Reducir padding dentro de la tarjeta */
-                box-shadow: 2px 4px 8px rgba(0,0,0,0.2);
+                box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
                 transition: transform 0.2s;
 
                 &:hover {
-                    transform: translateY(-5px);
+                    transform: translateY(-3px);
                 }
 
                 .oh-card-body {
                     padding: 5px; /* Reducir padding */
                     
                     i {
-                        font-size: 24px; /* Reducir tamaño de icono */
-                        margin-bottom: 8px;
+                        font-size: 20px; /* Reducir tamaño de icono */
+                        margin-bottom: 5px;
                     }
 
                     h3 {
-                        font-size: 14px; /* Reducir tamaño de texto */
+                        font-size: 12px; /* Reducir tamaño de texto */
                         margin-bottom: 3px;
                     }
 
                     span {
-                        font-size: 16px; /* Reducir tamaño de texto del número */
+                        font-size: 14px; /* Reducir tamaño de texto del número */
                         font-weight: bold;
                     }
 
@@ -52,20 +53,20 @@
     }
 
     .dashboard-charts {
-        padding: 0 10px;
+        padding: 0 5px;
 
         .chart-wrapper {
             background-color: white;
             border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
 
             .chart-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
 
                 h4 {
                     margin: 0;
@@ -76,7 +77,7 @@
                     border: none;
                     color: #666;
                     cursor: pointer;
-                    padding: 5px;
+                    padding: 3px;
                     transition: color 0.2s;
 
                     &:hover {
@@ -87,13 +88,13 @@
 
             .chart-container {
                 position: relative;
-                height: 300px;
-                max-height: 300px;
+                height: 250px;
+                max-height: 250px;
                 transition: all 0.3s ease;
 
                 &.expanded {
-                    height: 500px;
-                    max-height: 500px;
+                    height: 450px;
+                    max-height: 450px;
                 }
             }
         }
