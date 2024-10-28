@@ -174,89 +174,90 @@ class SatDashboard extends Component {
                     plugins: [ChartDataLabels],
                     data: {
                         labels: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas'],
-                        datasets: [
-                            {
-                                // Dataset principal
-                                label: 'Máquinas por Estado',
-                                data: [
-                                    this.dashboardData.maquinas_sin_revisar,
-                                    this.dashboardData.maquinas_en_revision,
-                                    this.dashboardData.maquinas_finalizadas,
-                                    this.dashboardData.maquinas_problemas
-                                ],
-                                backgroundColor: [
-                                    '#36A2EB',  // Sin Revisar (Azul claro)
-                                    '#FFCE56',  // En Revisión (Amarillo)
-                                    '#4BC0C0',  // Finalizadas (Verde)
-                                    '#FF6384'   // Problemas (Rojo)
-                                ],
-                            }
-                        ]
+                        datasets: [{
+                            label: 'Máquinas por Estado',
+                            data: [
+                                this.dashboardData.maquinas_sin_revisar,
+                                this.dashboardData.maquinas_en_revision,
+                                this.dashboardData.maquinas_finalizadas,
+                                this.dashboardData.maquinas_problemas
+                            ],
+                            backgroundColor: [
+                                '#36A2EB',  // Sin Revisar (Azul claro)
+                                '#FFCE56',  // En Revisión (Amarillo)
+                                '#4BC0C0',  // Finalizadas (Verde)
+                                '#FF6384'   // Problemas (Rojo)
+                            ],
+                        }]
                     },
                     options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                top: 100,
+                                right: 100,
+                                bottom: 100,
+                                left: 100
+                            }
+                        },
                         plugins: {
                             legend: {
                                 display: false
                             },
-                            datalabels: {
-                                display: true,
-                                formatter: function(value, context) {
-                                    const labels = context.chart.data.labels;
-                                    if (context.datasetIndex === 0) {
-                                        return [{
-                                            text: value.toString(),
-                                            font: {
-                                                size: 16,
-                                                weight: 'bold'
-                                            },
-                                            color: 'white'
-                                        }, {
-                                            text: labels[context.dataIndex],
-                                            font: {
-                                                size: 12,
-                                            },
-                                            color: 'black'
-                                        }];
-                                    }
+                            datalabels: [{
+                                // Configuración para los valores internos
+                                align: 'center',
+                                anchor: 'center',
+                                color: 'white',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold'
                                 },
-                                labels: {
-                                    value: {
-                                        anchor: 'center',
-                                        align: 'center',
-                                        offset: 0,
-                                        color: 'white',
-                                        font: {
-                                            size: 16,
-                                            weight: 'bold'
-                                        }
-                                    },
-                                    name: {
-                                        anchor: 'end',
-                                        align: 'outer',
-                                        offset: 8,
-                                        color: 'black',
-                                        font: {
-                                            size: 12
-                                        },
-                                        formatter: function(value, context) {
-                                            return context.chart.data.labels[context.dataIndex];
-                                        },
-                                        backgroundColor: 'white',
-                                        borderRadius: 4,
-                                        padding: 4,
-                                    }
+                                formatter: function(value) {
+                                    return value;
                                 }
-                            }
-                        },
-                        layout: {
-                            padding: {
-                                top: 50,
-                                right: 100,
-                                bottom: 50,
-                                left: 100
-                            }
+                            }, {
+                                // Configuración para las etiquetas externas
+                                align: 'outer',
+                                anchor: 'end',
+                                backgroundColor: 'white',
+                                borderColor: 'black',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                color: 'black',
+                                font: {
+                                    size: 12
+                                },
+                                formatter: function(value, context) {
+                                    return context.chart.data.labels[context.dataIndex];
+                                },
+                                offset: 8,
+                                padding: {
+                                    top: 4,
+                                    right: 4,
+                                    bottom: 4,
+                                    left: 4
+                                }
+                            }]
                         }
-                    }
+                    },
+                    plugins: [{
+                        beforeDraw: function(chart) {
+                            const width = chart.width;
+                            const height = chart.height;
+                            const ctx = chart.ctx;
+                            ctx.restore();
+                            const fontSize = 16;
+                            ctx.font = fontSize + "px Arial";
+                            ctx.textBaseline = "middle";
+                            const text = "Máquinas por Estado";
+                            const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                            const textY = Math.round((height + chart.chartArea.top) / 2);
+                            ctx.fillText(text, textX, textY);
+                            ctx.save();
+                        }
+                    }]
                 });
                 console.log('Gráfico de estado renderizado exitosamente');
             }                              // Gráfico de técnicos
