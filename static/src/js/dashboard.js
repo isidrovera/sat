@@ -177,32 +177,35 @@ class SatDashboard extends Component {
                     },
                     options: {
                         plugins: {
-                            datalabels: {
-                                // Etiquetas externas para nombres de estados
-                                display: (context) => context.dataset.data[context.dataIndex] > 0,
-                                anchor: 'end',       // Asegura que las etiquetas se ubiquen fuera
-                                align: 'end',        // Alinea las etiquetas al borde
-                                formatter: (value, context) => {
-                                    return context.chart.data.labels[context.dataIndex]; // Solo nombre de estado
-                                },
-                                color: '#000000',
-                                font: {
-                                    size: 12,
-                                    weight: 'bold'
-                                },
-                                // Etiquetas internas para valores
-                                listeners: {
-                                    enter: function(context) {
-                                        context.hovered = true;
-                                        return true;
+                            datalabels: [
+                                {
+                                    // Configuración para etiquetas externas (nombre del estado)
+                                    anchor: 'end',
+                                    align: 'end',
+                                    color: '#000000',
+                                    font: {
+                                        size: 12,
+                                        weight: 'bold'
                                     },
-                                    leave: function(context) {
-                                        context.hovered = false;
-                                        return true;
-                                    }
+                                    formatter: (value, context) => {
+                                        return context.chart.data.labels[context.dataIndex]; // Nombre del estado
+                                    },
+                                    clip: false, // Permite mostrar etiquetas fuera del gráfico
                                 },
-                                clip: false,  // Permite que las etiquetas se muestren fuera del área de dibujo
-                            }
+                                {
+                                    // Configuración para etiquetas internas (cantidad)
+                                    anchor: 'center',
+                                    align: 'center',
+                                    color: '#FFFFFF',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    },
+                                    formatter: (value) => {
+                                        return value; // Muestra la cantidad dentro de la sección
+                                    }
+                                }
+                            ]
                         },
                         layout: {
                             padding: {
@@ -214,6 +217,7 @@ class SatDashboard extends Component {
                 });
                 console.log('Gráfico de estado renderizado exitosamente');
             }
+
 
             // Gráfico de técnicos
             const tecnicosCtx = this._getChartContext("tecnicosChart");
