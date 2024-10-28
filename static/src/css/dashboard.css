@@ -3,17 +3,17 @@
 .dashboard-container {
     overflow-y: auto;
     max-height: 100vh;
-    padding: 20px 10px; /* Espacio superior para una mejor apariencia */
+    padding: 20px 10px;
 
     .dashboard-tiles {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px; /* Espacio entre las tiles */
-        justify-content: flex-start; /* Alineación a la izquierda */
+        gap: 10px;
+        justify-content: flex-start;
 
         .tot_tasks {
             padding: 5px;
-            flex: 1 0 15%; /* Ajuste para más tiles en cada fila */
+            flex: 1 0 15%;
 
             .oh-card {
                 padding: 10px;
@@ -28,7 +28,7 @@
 
                 .oh-card-body {
                     padding: 5px;
-                    text-align: left; /* Alinear contenido a la izquierda */
+                    text-align: left;
 
                     i {
                         font-size: 20px;
@@ -46,33 +46,35 @@
                     }
 
                     /* Colores de los íconos específicos */
-                    .fa-cogs { color: #36A2EB; }          /* Azul claro */
-                    .fa-check-circle { color: #4BC0C0; }  /* Verde */
-                    .fa-pause-circle { color: #FFCE56; }  /* Amarillo */
-                    .fa-times-circle { color: #FF6384; }  /* Rojo */
-                    .fa-wrench { color: #666666; }        /* Gris oscuro */
-                    .fa-life-ring { color: #FFCE56; }     /* Amarillo para soporte técnico */
-                    .fa-plus-circle { color: #4BC0C0; }   /* Verde para nuevos */
-                    .fa-spinner { color: #36A2EB; }       /* Azul para en proceso */
+                    .fa-cogs { color: #36A2EB; }           /* Azul claro */
+                    .fa-check-circle { color: #4BC0C0; }   /* Verde */
+                    .fa-pause-circle { color: #FFCE56; }   /* Amarillo */
+                    .fa-times-circle { color: #FF6384; }   /* Rojo */
+                    .fa-wrench { color: #666666; }         /* Gris oscuro */
+                    .fa-spinner { color: #36A2EB; }        /* Azul para revisión */
                     .fa-exclamation-triangle { color: #FF6384; } /* Rojo para problemas */
-                    .fa-tag { color: #FFCE56; }           /* Amarillo para venta */
-                    .fa-handshake { color: #4BC0C0; }     /* Verde para alquilada */
-                    .fa-shopping-cart { color: #36A2EB; } /* Azul para vendida */
+                    .fa-life-ring { color: #FFCE56; }      /* Amarillo para soporte técnico */
+                    .fa-plus-square { color: #4BC0C0; }    /* Verde para tickets nuevos */
+                    .fa-tag { color: #FFCE56; }            /* Amarillo para venta */
+                    .fa-handshake { color: #4BC0C0; }      /* Verde para alquilada */
+                    .fa-shopping-cart { color: #36A2EB; }  /* Azul para vendida */
+                    .fa-box { color: #36A2EB; }            /* Azul claro para stock */
+                    .fa-check-square { color: #4BC0C0; }   /* Verde para lista */
+                    .fa-exclamation-circle { color: #FF6384; } /* Rojo para alquiler con problemas */
+                    .fa-external-link-alt { color: #666666; } /* Gris oscuro para externo */
                 }
             }
         }
     }
 
-    /* Filas específicas para cada categoría */
     .maquinas-tiles, .reparaciones-tiles, .tickets-tiles, .alquiler-tiles {
-        margin-bottom: 15px; /* Espacio entre filas */
+        margin-bottom: 15px;
         display: flex;
         flex-wrap: wrap;
-        gap: 10px; /* Espacio entre tiles de cada categoría */
+        gap: 10px;
         justify-content: flex-start;
     }
 
-    /* Estilos para las secciones de gráficos */
     .dashboard-charts {
         padding: 0 10px;
 
