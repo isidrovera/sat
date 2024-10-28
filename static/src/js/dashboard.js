@@ -150,7 +150,7 @@ class SatDashboard extends Component {
                 console.log('Gráfico de disponibilidad renderizado exitosamente');
             }
 
-            // Gráfico de estado
+           // Gráfico de estado
             const estadoCtx = this._getChartContext("estadoChart");
             if (estadoCtx) {
                 console.log('Renderizando gráfico de estado...');
@@ -167,7 +167,12 @@ class SatDashboard extends Component {
                                 this.dashboardData.maquinas_finalizadas,
                                 this.dashboardData.maquinas_problemas
                             ],
-                            backgroundColor: ['#36A2EB', '#FFCE56', '#4BC0C0'],
+                            backgroundColor: [
+                                '#36A2EB',  // Sin Revisar (Azul claro)
+                                '#FFCE56',  // En Revisión (Amarillo)
+                                '#4BC0C0',  // Finalizadas (Verde)
+                                '#FF6384'   // Problemas (Rojo)
+                            ],
                         }]
                     },
                     options: {
