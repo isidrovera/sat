@@ -4,43 +4,47 @@
         <div class="row main-section" style="margin-left: 120px;">
             <!-- Tile para Evaluaciones -->
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card">
-                    <div class="oh-card-body">
+                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
+                    <div class="oh-card-body text-center">
+                        <i class="fa fa-users" style="font-size: 50px; color: #36A2EB;"></i>
                         <h3>Total Evaluaciones</h3>
-                        <span id="total_evaluaciones">0</span>
+                        <span id="total_evaluaciones" style="font-size: 24px; font-weight: bold;">0</span>
                     </div>
                 </div>
             </div>
             <!-- Tile para Reparaciones -->
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card">
-                    <div class="oh-card-body">
+                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
+                    <div class="oh-card-body text-center">
+                        <i class="fa fa-wrench" style="font-size: 50px; color: #FF6384;"></i>
                         <h3>Total Reparaciones</h3>
-                        <span id="total_reparaciones">0</span>
+                        <span id="total_reparaciones" style="font-size: 24px; font-weight: bold;">0</span>
                     </div>
                 </div>
             </div>
             <!-- Tile para Tickets de Alquiler -->
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card">
-                    <div class="oh-card-body">
+                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
+                    <div class="oh-card-body text-center">
+                        <i class="fa fa-file-text" style="font-size: 50px; color: #FFCE56;"></i>
                         <h3>Total Tickets de Alquiler</h3>
-                        <span id="total_alquileres">0</span>
+                        <span id="total_alquileres" style="font-size: 24px; font-weight: bold;">0</span>
                     </div>
                 </div>
             </div>
             <!-- Tile para Máquinas en Alquiler -->
             <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card">
-                    <div class="oh-card-body">
+                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
+                    <div class="oh-card-body text-center">
+                        <i class="fa fa-desktop" style="font-size: 50px; color: #4BC0C0;"></i>
                         <h3>Total Máquinas en Alquiler</h3>
-                        <span id="total_maquinas">0</span>
+                        <span id="total_maquinas" style="font-size: 24px; font-weight: bold;">0</span>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Gráficos ya existentes -->
+
+        <!-- Gráficos -->
         <div class="row">
             <div class="col-md-6">
                 <canvas id="myBarChart"></canvas>
