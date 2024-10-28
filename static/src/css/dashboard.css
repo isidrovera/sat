@@ -8,45 +8,56 @@
     .dashboard-tiles {
         display: flex;
         flex-wrap: wrap;
-        gap: 5px; /* Espacio entre las tiles */
+        gap: 10px; /* Espacio entre las tiles */
+        justify-content: flex-start; /* Alineación a la izquierda */
 
         .tot_tasks {
-            padding: 2px; /* Reducir padding */
+            padding: 5px;
             flex: 1 0 15%; /* Ajuste para más tiles en cada fila */
 
             .oh-card {
-                padding: 5px; /* Reducir padding dentro de la tarjeta */
-                box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
-                transition: transform 0.2s;
-
+                padding: 10px;
+                box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.1);
+                border-radius: 6px;
+                transition: transform 0.2s, background-color 0.3s;
+                
                 &:hover {
                     transform: translateY(-2px);
+                    background-color: #f7f7f7;
                 }
 
                 .oh-card-body {
-                    padding: 3px; /* Reducir padding */
-                    
+                    padding: 5px;
+                    text-align: left; /* Alinear contenido a la izquierda */
+
                     i {
-                        font-size: 18px; /* Reducir tamaño de icono */
-                        margin-bottom: 3px;
+                        font-size: 20px;
+                        margin-bottom: 5px;
                     }
 
                     h3 {
-                        font-size: 11px; /* Reducir tamaño de texto */
-                        margin-bottom: 2px;
+                        font-size: 14px;
+                        margin-bottom: 3px;
                     }
 
                     span {
-                        font-size: 12px; /* Reducir tamaño de texto del número */
+                        font-size: 16px;
                         font-weight: bold;
                     }
 
-                    /* Colores de los íconos */
+                    /* Colores de los íconos específicos */
                     .fa-cogs { color: #36A2EB; }          /* Azul claro */
                     .fa-check-circle { color: #4BC0C0; }  /* Verde */
                     .fa-pause-circle { color: #FFCE56; }  /* Amarillo */
                     .fa-times-circle { color: #FF6384; }  /* Rojo */
                     .fa-wrench { color: #666666; }        /* Gris oscuro */
+                    .fa-life-ring { color: #FFCE56; }     /* Amarillo para soporte técnico */
+                    .fa-plus-circle { color: #4BC0C0; }   /* Verde para nuevos */
+                    .fa-spinner { color: #36A2EB; }       /* Azul para en proceso */
+                    .fa-exclamation-triangle { color: #FF6384; } /* Rojo para problemas */
+                    .fa-tag { color: #FFCE56; }           /* Amarillo para venta */
+                    .fa-handshake { color: #4BC0C0; }     /* Verde para alquilada */
+                    .fa-shopping-cart { color: #36A2EB; } /* Azul para vendida */
                 }
             }
         }
@@ -57,11 +68,13 @@
         margin-bottom: 15px; /* Espacio entre filas */
         display: flex;
         flex-wrap: wrap;
-        gap: 5px;
+        gap: 10px; /* Espacio entre tiles de cada categoría */
+        justify-content: flex-start;
     }
 
+    /* Estilos para las secciones de gráficos */
     .dashboard-charts {
-        padding: 0 5px;
+        padding: 0 10px;
 
         .chart-wrapper {
             background-color: white;
