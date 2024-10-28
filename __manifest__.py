@@ -70,9 +70,10 @@
     ],
     'assets': {
     'web.assets_backend': [
+        'https://cdn.jsdelivr.net/npm/chart.js',
         'sat/static/src/js/dashboard.js',
         'sat/static/src/xml/dashboard.xml',
-        'https://cdn.jsdelivr.net/npm/chart.js',
+        
         
              
     ],
