@@ -54,6 +54,15 @@
                         </div>
                     </div>
                 </div>
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-wrench"></i>
+                            <h3>Total Reparaciones</h3>
+                            <span id="reparaciones_en_revision">0</span>
+                        </div>
+                    </div>
+                </div>
                 <!-- Aquí puedes agregar más tiles para otras métricas de reparaciones -->
             </div>
 
