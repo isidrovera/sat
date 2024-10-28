@@ -570,8 +570,10 @@ class ticket_alquiler(models.Model):
                             selection_labels[field_name] = option_label
                             break
                 else:
-                    selection_labels[field_name] = 'NA'
+                    selection_labels[field_name] = 'NA'  # Retorna 'NA' si no hay valor seleccionado
+        _logger.info('Selection labels for %s: %s', self.name, selection_labels)
         return selection_labels
+
 
        
     def enviar_mensaje_whatsapp(self):
@@ -668,24 +670,23 @@ class ticket_alquiler(models.Model):
 
             
 class ReportTicketAlquiler(models.AbstractModel):
-    _name = 'report.sat.ticket_view'
+    _name = 'report.sat.ticket_alquiler'
 
     @api.model
     def _get_report_values(self, docids, data=None):
         docs = self.env['ticket.alquiler'].browse(docids)
-        report_data = []
+        selection_labels = {}
         for doc in docs:
-            selection_labels = doc.get_selection_labels()
-            report_data.append({
-                'doc': doc,
-                'selection_labels': selection_labels,
-            })
+            # Llama al método get_selection_labels() para poblar selection_labels
+            selection_labels[doc.id] = doc.get_selection_labels() if doc else {}
         return {
             'doc_ids': docids,
             'doc_model': 'ticket.alquiler',
             'docs': docs,
-            'selection_labels': {doc.id: doc.get_selection_labels() for doc in docs},
+            'selection_labels': selection_labels,
         }
+
+
 
 class TicketAlquilerLine(models.Model):
     _name = 'ticket.alquiler.line'

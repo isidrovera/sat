@@ -536,7 +536,7 @@ class Reparaciones(models.Model):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         
         # Generar la URL del PDF
-        pdf_url = f"{base_url}/report/pdf/sat.reparacion_view/{self.id}?cid=1"
+        pdf_url = f"{base_url}/report/pdf/sat.report_reparaciones_ventas/{self.id}?cid=1"
 
         return pdf_url
 
@@ -560,11 +560,31 @@ class Reparaciones(models.Model):
 
             
     def action_finalizar_reparacion(self):
-        self.estado_id = "finalizado"
-        template_id = self.env.ref('sat.email_template_finalizacion_reparacion')        
-        self.enviar_mensaje_finalizacion_asesora()
+        # 1. Generar el reporte primero
+        pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
+
+        # 2. Enviar el mensaje a la asesora
+        try:
+            self.enviar_mensaje_finalizacion_asesora()
+        except Exception as e:
+            _logger.error(f"Error enviando el mensaje a la asesora: {e}")
+
+        # 3. Crear la siguiente reparación
         self._create_next_reparacion()
-        return self.env.ref('sat.report_reparaciones_qr').report_action(self)
+
+        # 4. Enviar el correo electrónico
+        try:
+            template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
+            template_id.send_mail(self.id, force_send=True)
+        except Exception as e:
+            _logger.error(f"Error enviando el correo: {e}")
+
+        # 5. Finalmente, cambiar el estado a "finalizado"
+        self.estado_id = "finalizado"
+
+        # 6. Devolver el reporte generado
+        return pdf_report
+
     
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
@@ -601,7 +621,7 @@ class Reparaciones(models.Model):
         estado_legible = dict(selection).get(self.estado_id)
         return estado_legible
 class ReportReparacionView(models.AbstractModel):
-    _name = 'report.sat.reparacion_view'
+    _name = 'report.sat.report_reparaciones_ventas'
 
     @api.model
     def _get_report_values(self, docids, data=None):

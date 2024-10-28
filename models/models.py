@@ -377,7 +377,7 @@ class SatSat(models.Model):
             
             # Guardar la imagen codificada en el campo qr_image
             record.qr_image = img_base64
-    icono_rojo = fields.Char(compute='_compute_icono_rojo', string=' ')
+    icono_rojo = fields.Html(compute='_compute_icono_rojo', string=' ')
 
     @api.depends('activador')  # Reemplaza con el campo real que afecta la condición
     def _compute_icono_rojo(self):
@@ -569,3 +569,18 @@ class SatSat(models.Model):
                 'view_mode': 'form',
                 'target': 'new',
             }
+
+
+
+    total_maquinas = fields.Integer(compute='_compute_maquinas')
+    maquinas_disponibles = fields.Integer(compute='_compute_maquinas')
+    maquinas_separadas = fields.Integer(compute='_compute_maquinas')
+    maquinas_no_disponibles = fields.Integer(compute='_compute_maquinas')
+
+    @api.depends('disponibilidad_id')
+    def _compute_maquinas(self):
+        for record in self:
+            record.total_maquinas = self.search_count([])
+            record.maquinas_disponibles = self.search_count([('disponibilidad_id', '=', 'disponible')])
+            record.maquinas_separadas = self.search_count([('disponibilidad_id', '=', 'separada')])
+            record.maquinas_no_disponibles = self.search_count([('disponibilidad_id', '=', 'no_disponible')])

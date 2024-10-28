@@ -1,0 +1,236 @@
+<odoo>
+    <template id="ticket_alquiler">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="ticket">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <div class="oe_structure"/>
+
+                        <style>
+        .header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            background-color: black;
+            color: white;
+            padding: 5px;
+            margin-top: 20px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .info-table th, .info-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        .info-table th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
+        .color-cyan {
+            background-color: cyan;
+            color: black;
+        }
+        .color-magenta {
+            background-color: magenta;
+            color: white;
+        }
+        .color-yellow {
+            background-color: yellow;
+            color: black;
+        }
+        .color-black {
+            background-color: black;
+            color: white;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #007BFF;
+        }
+                        </style>
+
+                        <h2 class="header">
+                            <span t-field="ticket.name"/>
+                        </h2>
+
+                        <div id="informationss" class="avoid-page-break">
+                            <table class="info-table">
+                                <tr>
+                                    <th>Fecha de visita</th>
+                                    <td><t t-esc="ticket.agenda_local"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Marca</th>
+                                    <td><t t-esc="ticket.marca_id_r"/></td>
+                                    <th>Maquina</th>
+                                    <td><t t-esc="ticket.product_alquiler.name.name"/></td>
+                                    <th>Serie</th>
+                                    <td><t t-esc="ticket.product_alquiler.serie"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Contometro Black</th>
+                                    <td><t t-esc="ticket.contometrok_id"/></td>
+                                    <th>Contometro Color</th>
+                                    <td><t t-esc="ticket.contometroc_id"/></td>
+                                    <th>Contometro Scanner</th>
+                                    <td><t t-esc="ticket.contometros_id"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Calidad</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('calidad_id', 'NA')"/></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div>
+                            <h2 class="section-title">Informe Técnico</h2>
+                            <p><t t-esc="ticket.informe_id"/></p>
+                        </div>
+
+                        <div class="oe_structure"/>
+                        <h2 class="section-title avoid-page-break">ACCESORIOS</h2>
+
+                        <div id="informations" class="avoid-page-break">
+                            <table class="info-table">
+                                <tr>
+                                    <th>Caseteras N°</th>
+                                    <td><t t-esc="ticket.tray_id"/></td>
+                                    <th>ADF simple</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('adf_simple_id', 'NA')"/></td>
+                                    <th>ADF dual scan</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('adf_dual_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Finalizador interno</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('finalizador_interno_id', 'NA')"/></td>
+                                    <th>Finalizador externo</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('finalizador_externo_id', 'NA')"/></td>
+                                    <th>Mueble</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('mueble_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Transformador</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('transformador_id', 'NA')"/></td>
+                                    <th>Wi-Fi</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('wi_fi_id', 'NA')"/></td>
+                                    <th>Estabilizador</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('estabilizador', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Panel normal</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('panel_normal_id', 'NA')"/></td>
+                                    <th>Panel smart</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('panel_smart_id', 'NA')"/></td>
+                                    <th>Cable de impresión USB</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('cable_usb_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Cable de red</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('cable_red_id', 'NA')"/></td>
+                                    <th>Bluetooth</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('bluetooth_id', 'NA')"/></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="oe_structure"/>
+                        <h2 class="section-title avoid-page-break">CHECK LIST</h2>
+
+                        <div id="informations" class="avoid-page-break">
+                            <table class="info-table">
+                                <tr>
+                                    <th>Copia</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('copia_id', 'NA')"/></td>
+                                    <th>Impresión</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('impresion_id', 'NA')"/></td>
+                                    <th>Impresión USB</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('impresion_usb_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Scaner SMB</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('scaner_smb_id', 'NA')"/></td>
+                                    <th>Scaner USB</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('scaner_usb_id', 'NA')"/></td>
+                                    <th>Scaner FTP</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('scaner_ftp_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Scaner Mail</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('scaner_mail_id', 'NA')"/></td>
+                                    <th>Bypass</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('bypass_id', 'NA')"/></td>
+                                    <th>Tray 1</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('tray1_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Tray 2</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('tray2_id', 'NA')"/></td>
+                                    <th>Tray 3</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('tray3_id', 'NA')"/></td>
+                                    <th>Tray 4</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('tray4_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>ADF</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('adf_id', 'NA')"/></td>
+                                    <th>Finalizador</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('finalizador_id', 'NA')"/></td>
+                                    <th>Tacho residual</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('tacho_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Faja fusora</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('fusora_id', 'NA')"/></td>
+                                    <th>Faja de transferencia</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('transfer_id', 'NA')"/></td>
+                                    <th>Optico</th>
+                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('optico_id', 'NA')"/></td>
+                                </tr>
+                                <tr>                                        
+                                    <th>Unidad Imagen cyan</th>
+                                    <td class="color-cyan"><t t-esc="selection_labels.get(ticket.id, {}).get('cyan_id', 'NA')"/></td>
+                                    <th>Unidad Imagen black</th>
+                                    <td class="color-black"><t t-esc="selection_labels.get(ticket.id, {}).get('black_id', 'NA')"/></td>
+                                    <th>Unidad Imagen magenta</th>
+                                    <td class="color-magenta"><t t-esc="selection_labels.get(ticket.id, {}).get('magenta_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Unidad Imagen yellow</th>
+                                    <td class="color-yellow"><t t-esc="selection_labels.get(ticket.id, {}).get('yellow_id', 'NA')"/></td>
+                                    <th>Toner yellow</th>
+                                    <td class="color-yellow"><t t-esc="selection_labels.get(ticket.id, {}).get('toner_yellow_id', 'NA')"/></td>
+                                    <th>Toner black</th>
+                                    <td class="color-black"><t t-esc="selection_labels.get(ticket.id, {}).get('toner_black_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Toner cyan</th>
+                                    <td class="color-cyan"><t t-esc="selection_labels.get(ticket.id, {}).get('toner_cyan_id', 'NA')"/></td>
+                                    <th>Toner magenta</th>
+                                    <td class="color-magenta"><t t-esc="selection_labels.get(ticket.id, {}).get('toner_magenta_id', 'NA')"/></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div id="informations" class="row mt32 mb32">
+                            <div class="col-3 bm-2">
+                                <strong>Técnico</strong>
+                                <t><span t-esc="ticket.responsable.name"/></t>
+                            </div>
+                            <div class="col-3 bm-2">
+                                <strong>DNI</strong>
+                                <t><span t-esc="ticket.responsable.vat"/></t>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
