@@ -8,23 +8,22 @@
     .dashboard-tiles {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 5px; /* Reduce el espacio entre las tiles */
         justify-content: flex-start;
 
         .tot_tasks {
-            padding: 5px;
-            flex: 1 0 14%; /* Ajuste para reducir el tamaño de las tiles al 70% aproximadamente */
-            max-width: 14%; /* Limita el ancho máximo */
+            padding: 3px;
+            flex: 1 0 14%;
+            max-width: 14%;
 
             .oh-card {
                 padding: 8px;
                 box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.1);
                 border-radius: 6px;
                 transition: transform 0.2s, background-color 0.3s;
-                transform: scale(0.7); /* Reduce el tamaño al 70% */
 
                 &:hover {
-                    transform: translateY(-2px) scale(0.7); /* Mantiene la reducción en hover */
+                    transform: translateY(-2px);
                     background-color: #f7f7f7;
                 }
 
@@ -33,17 +32,17 @@
                     text-align: left;
 
                     i {
-                        font-size: 16px; /* Reducido para ajustar al nuevo tamaño */
-                        margin-bottom: 4px;
+                        font-size: 22px; /* Aumenta el tamaño del icono */
+                        margin-bottom: 6px;
                     }
 
                     h3 {
-                        font-size: 12px; /* Reducido para adaptarse al cuadro */
-                        margin-bottom: 3px;
+                        font-size: 14px; /* Aumenta el tamaño del texto del título */
+                        margin-bottom: 4px;
                     }
 
                     span {
-                        font-size: 14px; /* Reducido para adaptarse al cuadro */
+                        font-size: 16px; /* Aumenta el tamaño del texto del número */
                         font-weight: bold;
                     }
 
@@ -70,10 +69,10 @@
     }
 
     .maquinas-tiles, .reparaciones-tiles, .tickets-tiles, .alquiler-tiles {
-        margin-bottom: 15px;
+        margin-bottom: 10px; /* Reduce el espacio entre filas */
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 5px; /* Reduce el espacio entre tiles de cada categoría */
         justify-content: flex-start;
     }
 
