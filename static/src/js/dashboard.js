@@ -1,4 +1,4 @@
-/** @odoo-module **/
+/**@odoo-module **/
 
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
@@ -17,52 +17,83 @@ class SatDashboard extends Component {
         this.orm.call("sat.dashboard", "get_dashboard_data", []).then((result) => {
             // Actualizamos los valores en los gráficos
             this._render_charts(result);
-        }).catch((error) => {
-            console.error("Error al obtener datos del servidor:", error);
         });
     }
 
     _render_charts(data) {
-        // Verificar que data tenga todos los campos necesarios antes de usarlos
-        if (!data) {
-            console.error("Los datos no son válidos.");
-            return;
-        }
-
-        // Gráfico de barras para reparaciones y tickets por mes
-        var ctx1 = document.getElementById("barChartMes").getContext("2d");
+        // Gráfico de barras (Evaluaciones, Reparaciones, Alquileres)
+        var ctx1 = document.getElementById("myBarChart").getContext("2d");
         new Chart(ctx1, {
             type: 'bar',
             data: {
-                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+                labels: ['Evaluaciones', 'Reparaciones', 'Alquileres', 'Máquinas en Alquiler'],
                 datasets: [{
-                    label: 'Reparaciones',
-                    data: data.reparaciones_por_mes ? Object.values(data.reparaciones_por_mes) : [],
-                    backgroundColor: '#36A2EB',
-                }, {
-                    label: 'Tickets de Alquiler',
-                    data: data.tickets_por_mes ? Object.values(data.tickets_por_mes) : [],
-                    backgroundColor: '#FF6384',
-                }]
-            },
-        });
-
-        // Gráfico circular para reparaciones por técnico
-        var ctx2 = document.getElementById("pieReparaciones").getContext("2d");
-        new Chart(ctx2, {
-            type: 'pie',
-            data: {
-                labels: data.reparaciones_por_tecnico ? Object.keys(data.reparaciones_por_tecnico) : [],
-                datasets: [{
-                    data: data.reparaciones_por_tecnico ? Object.values(data.reparaciones_por_tecnico) : [],
+                    label: 'Cantidad',
+                    data: [data.total_evaluaciones, data.total_reparaciones, data.total_alquileres, data.total_maquinas_alquiler],
                     backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0'],
                 }]
+            },
+            options: {
+                plugins: {
+                    datalabels: {
+                        display: true,  // Mostrar etiquetas
+                        color: 'black', // Color de las etiquetas
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
             }
         });
 
-        // Indicadores de reparaciones y tickets para hoy
-        document.getElementById('reparacionesHoy').textContent = data.reparaciones_hoy || 0;
-        document.getElementById('ticketsHoy').textContent = data.tickets_hoy || 0;
+        // Gráfico circular (Costes, Ingresos, Beneficio)
+        var ctx2 = document.getElementById("myPieChart").getContext("2d");
+        new Chart(ctx2, {
+            type: 'pie',
+            data: {
+                labels: ['Costes', 'Ingresos', 'Beneficio'],
+                datasets: [{
+                    data: [data.total_costes, data.total_ingresos, data.total_beneficio],
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
+                }]
+            },
+            options: {
+                plugins: {
+                    datalabels: {
+                        display: true,  // Mostrar etiquetas en el gráfico circular
+                        color: 'black'
+                    }
+                }
+            }
+        });
+
+        // Gráfico de tipo "Gauge" o medidor para representar el beneficio sobre el coste
+        var ctx3 = document.getElementById("myGaugeChart").getContext("2d");
+        new Chart(ctx3, {
+            type: 'doughnut',
+            data: {
+                labels: ['Coste', 'Beneficio'],
+                datasets: [{
+                    data: [data.total_costes, data.total_beneficio],
+                    backgroundColor: ['#FF6384', '#36A2EB'],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                circumference: Math.PI,
+                rotation: Math.PI,
+                cutout: '70%',
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        display: true,
+                        color: 'black'
+                    }
+                }
+            }
+        });
     }
 }
 
