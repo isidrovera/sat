@@ -150,19 +150,108 @@
             </div>
 
 
-            <!-- Fila para Alquiler -->
+            <!-- Fila para Alquiler de Fotocopiadoras -->
             <div class="row dashboard-tiles alquiler-tiles">
+                <!-- Total Alquileres -->
                 <div class="col-md-3 col-sm-6 tot_tasks">
                     <div class="oh-card">
                         <div class="oh-card-body text-center">
-                            <i class="fa fa-archive"></i>
+                            <i class="fa fa-archive"></i> <!-- Icono general de alquiler -->
                             <h3>Total Alquileres</h3>
                             <span id="total_alquileres">0</span>
                         </div>
                     </div>
                 </div>
-                <!-- Aquí puedes agregar más tiles para otras métricas de alquiler -->
+
+                <!-- Alquileres en Stock -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-box"></i> <!-- Icono de stock -->
+                            <h3>En Stock</h3>
+                            <span id="alquiler_stock">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alquileres Lista -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-check-square"></i> <!-- Icono de lista -->
+                            <h3>Lista</h3>
+                            <span id="alquiler_lista">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alquileres Para Venta -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-tag"></i> <!-- Icono de venta -->
+                            <h3>Para Venta</h3>
+                            <span id="alquiler_para_venta">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alquileres Alquilada -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-handshake"></i> <!-- Icono de alquilada -->
+                            <h3>Alquilada</h3>
+                            <span id="alquiler_alquilada">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alquileres con Problemas -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-exclamation-circle"></i> <!-- Icono de problemas -->
+                            <h3>Con Problemas</h3>
+                            <span id="alquiler_con_problemas">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alquileres de Partes -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-cogs"></i> <!-- Icono de partes -->
+                            <h3>De Partes</h3>
+                            <span id="alquiler_partes">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alquileres Externos -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-external-link-alt"></i> <!-- Icono de externo -->
+                            <h3>Externo</h3>
+                            <span id="alquiler_externo">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alquileres Vendidos -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-shopping-cart"></i> <!-- Icono de vendido -->
+                            <h3>Vendida</h3>
+                            <span id="alquiler_vendida">0</span>
+                        </div>
+                    </div>
+                </div>
             </div>
+
 
             <!-- Gráficos -->
             <div class="row dashboard-charts">
