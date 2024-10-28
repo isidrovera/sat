@@ -154,6 +154,6 @@
         </record>
 
         <!-- Menú -->
-        <menuitem id="menu_evaluacion_personal" name="Evaluación Personal" parent="sat.menu_root" action="action_evaluacion_personal" sequence="60"/>
+        <menuitem id="menu_evaluacion_personal" name="Evaluación Personal" parent="sat_menu_root" action="action_evaluacion_personal" sequence="60"/>
     </data>
 </odoo>
