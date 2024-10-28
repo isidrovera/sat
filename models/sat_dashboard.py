@@ -12,7 +12,7 @@ class SatDashboard(models.Model):
         
         # Datos adicionales para hoy
         today = fields.Date.today()
-        total_reparaciones_hoy = self.env['reparaciones.reparaciones'].search_count([('create', '=', today)])
+        total_reparaciones_hoy = self.env['reparaciones.reparaciones'].search_count([('create_date', '=', today)])
         total_alquileres_hoy = self.env['ticket.alquiler'].search_count([('agenda', '=', today)])
 
         return {
