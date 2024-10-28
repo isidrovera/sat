@@ -178,17 +178,19 @@ class SatDashboard extends Component {
                     options: {
                         plugins: {
                             datalabels: {
-                                anchor: 'end',  // Ubica las etiquetas fuera del gráfico
-                                align: 'end',   // Alinea las etiquetas al borde
+                                // Etiquetas externas para nombres de estados
+                                display: (context) => context.dataset.data[context.dataIndex] > 0,
+                                anchor: 'end',       // Asegura que las etiquetas se ubiquen fuera
+                                align: 'end',        // Alinea las etiquetas al borde
+                                formatter: (value, context) => {
+                                    return context.chart.data.labels[context.dataIndex]; // Solo nombre de estado
+                                },
                                 color: '#000000',
                                 font: {
+                                    size: 12,
                                     weight: 'bold'
                                 },
-                                formatter: (value, context) => {
-                                    // Muestra el nombre de la etiqueta y el valor
-                                    return `${context.chart.data.labels[context.dataIndex]}: ${value}`;
-                                },
-                                // Añade líneas de conexión para mejorar la visibilidad
+                                // Etiquetas internas para valores
                                 listeners: {
                                     enter: function(context) {
                                         context.hovered = true;
@@ -200,6 +202,12 @@ class SatDashboard extends Component {
                                     }
                                 },
                                 clip: false,  // Permite que las etiquetas se muestren fuera del área de dibujo
+                            }
+                        },
+                        layout: {
+                            padding: {
+                                top: 20,
+                                bottom: 20
                             }
                         }
                     }
