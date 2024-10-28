@@ -18,6 +18,7 @@ from . import reparaciones
 from . import repuestos_alquiler
 from . import incidencias
 from . import importacionexcel
+from . import sat_dashboard
 
 
 

@@ -62,7 +62,7 @@
         'views/graficos.xml',
         'views/customer_records_page.xml',
         'views/importacionexcel.xml',
-        
+        'views/sat_dashboard_menu.xml',
         
     ],
     'demo': [
@@ -70,6 +70,8 @@
     ],
     'assets': {
     'web.assets_backend': [
+        'sat/static/src/js/dashboard.js',
+        'sat/static/src/xml/dashboard.xml',
         
              
     ],
