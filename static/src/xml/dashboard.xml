@@ -2,76 +2,61 @@
 <templates>
     <t t-name="sat.DashboardTemplate">
         <div class="row main-section" style="overflow-y: auto; max-height: 100vh; padding-bottom: 20px;">
-            <!-- Tile para Total Máquinas -->
-            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
-                    <div class="oh-card-body text-center">
-                        <i class="fa fa-cogs" style="font-size: 50px; color: #36A2EB;"></i>
-                        <h3>Total Máquinas</h3>
-                        <span id="total_maquinas" style="font-size: 24px; font-weight: bold;">0</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Tile para Máquinas Disponibles -->
-            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
-                    <div class="oh-card-body text-center">
-                        <i class="fa fa-check-circle" style="font-size: 50px; color: #4BC0C0;"></i>
-                        <h3>Máquinas Disponibles</h3>
-                        <span id="maquinas_disponibles" style="font-size: 24px; font-weight: bold;">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tile para Máquinas Separadas -->
-            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
-                    <div class="oh-card-body text-center">
-                        <i class="fa fa-pause-circle" style="font-size: 50px; color: #FFCE56;"></i>
-                        <h3>Máquinas Separadas</h3>
-                        <span id="maquinas_separadas" style="font-size: 24px; font-weight: bold;">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tile para Máquinas No Disponibles -->
-            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
-                    <div class="oh-card-body text-center">
-                        <i class="fa fa-times-circle" style="font-size: 50px; color: #FF6384;"></i>
-                        <h3>Máquinas No Disponibles</h3>
-                        <span id="maquinas_no_disponibles" style="font-size: 24px; font-weight: bold;">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tile para Total Reparaciones -->
-            <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
-                <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
-                    <div class="oh-card-body text-center">
-                        <i class="fa fa-wrench" style="font-size: 50px; color: #FF6384;"></i>
-                        <h3>Total Reparaciones</h3>
-                        <span id="total_reparaciones" style="font-size: 24px; font-weight: bold;">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Gráficos -->
+            <!-- Tiles -->
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
+                    <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-cogs" style="font-size: 50px; color: #36A2EB;"></i>
+                            <h3>Total Máquinas</h3>
+                            <span id="total_maquinas" style="font-size: 24px; font-weight: bold;">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
+                    <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-check-circle" style="font-size: 50px; color: #4BC0C0;"></i>
+                            <h3>Máquinas Disponibles</h3>
+                            <span id="maquinas_disponibles" style="font-size: 24px; font-weight: bold;">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
+                    <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-pause-circle" style="font-size: 50px; color: #FFCE56;"></i>
+                            <h3>Máquinas Separadas</h3>
+                            <span id="maquinas_separadas" style="font-size: 24px; font-weight: bold;">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 tot_tasks" style="padding: 20px;">
+                    <div class="oh-card" style="box-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-times-circle" style="font-size: 50px; color: #FF6384;"></i>
+                            <h3>Máquinas No Disponibles</h3>
+                            <span id="maquinas_no_disponibles" style="font-size: 24px; font-weight: bold;">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos - cada uno ocupando el ancho completo -->
+            <div class="row">
+                <div class="col-12" style="padding: 20px;">
                     <h4>Máquinas por Disponibilidad</h4>
                     <canvas id="disponibilidadChart"></canvas>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12" style="padding: 20px;">
                     <h4>Máquinas por Estado</h4>
                     <canvas id="estadoChart"></canvas>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12" style="padding: 20px;">
                     <h4>Reparaciones por Técnico</h4>
                     <canvas id="tecnicosChart"></canvas>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12" style="padding: 20px;">
                     <h4>Máquinas por Asesora</h4>
                     <canvas id="asesoraChart"></canvas>
                 </div>
