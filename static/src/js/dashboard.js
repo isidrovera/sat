@@ -1,7 +1,7 @@
 /**@odoo-module **/
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { Component } from "@odoo/owl";
+import { Component, onMounted } from "@odoo/owl";
 
 // Cargar Chart.js desde el CDN y el plugin de etiquetas de datos
 const loadChartDataLabelsPlugin = () => {
@@ -29,7 +29,13 @@ class SatDashboard extends Component {
         super.setup();
         this.orm = useService("orm");
         console.log('Servicio ORM inicializado');
-        this._fetch_data();
+        this.dashboardData = null;
+
+        // Usar onMounted para asegurarnos que el DOM está listo
+        onMounted(() => {
+            console.log('Componente montado, iniciando fetch de datos...');
+            this._fetch_data();
+        });
     }
 
     async _fetch_data() {
@@ -40,176 +46,217 @@ class SatDashboard extends Component {
             const result = await this.orm.call("sat.dashboard", "get_dashboard_data", []);
             console.log('Datos recibidos del servidor:', result);
             
-            this._render_tiles(result);
-            this._render_charts(result);
+            this.dashboardData = result;
+            this._render_tiles();
+            this._render_charts();
         } catch (error) {
             console.error("Error cargando datos para el dashboard: ", error);
         }
     }
 
-    _render_tiles(data) {
-        console.log('Iniciando renderizado de tiles con datos:', data);
-        try {
-            // Mostrar el número de registros en las tiles
-            document.getElementById('total_maquinas').textContent = data.total_maquinas;
-            document.getElementById('maquinas_disponibles').textContent = data.maquinas_disponibles;
-            document.getElementById('maquinas_separadas').textContent = data.maquinas_separadas;
-            document.getElementById('maquinas_no_disponibles').textContent = data.maquinas_no_disponibles;
-            
-            document.getElementById('maquinas_sin_revisar').textContent = data.maquinas_sin_revisar;
-            document.getElementById('maquinas_en_revision').textContent = data.maquinas_en_revision;
-            document.getElementById('maquinas_finalizadas').textContent = data.maquinas_finalizadas;
-            
-            document.getElementById('total_reparaciones').textContent = data.total_reparaciones;
-            document.getElementById('reparaciones_hoy').textContent = data.reparaciones_hoy;
-            document.getElementById('reparaciones_mes').textContent = data.reparaciones_mes;
-            document.getElementById('reparaciones_ano').textContent = data.reparaciones_ano;
-            
-            console.log('Tiles renderizadas exitosamente');
-        } catch (error) {
-            console.error('Error al renderizar tiles:', error);
+    _updateElementContent(elementId, value) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = value;
+            console.log(`Actualizado elemento ${elementId} con valor ${value}`);
+        } else {
+            console.warn(`Elemento no encontrado: ${elementId}`);
         }
     }
 
-    _render_charts(data) {
+    _render_tiles() {
+        console.log('Iniciando renderizado de tiles...');
+        if (!this.dashboardData) {
+            console.error('No hay datos disponibles para renderizar las tiles');
+            return;
+        }
+
+        const elements = [
+            { id: 'total_maquinas', value: this.dashboardData.total_maquinas },
+            { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles },
+            { id: 'maquinas_separadas', value: this.dashboardData.maquinas_separadas },
+            { id: 'maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles },
+            { id: 'maquinas_sin_revisar', value: this.dashboardData.maquinas_sin_revisar },
+            { id: 'maquinas_en_revision', value: this.dashboardData.maquinas_en_revision },
+            { id: 'maquinas_finalizadas', value: this.dashboardData.maquinas_finalizadas },
+            { id: 'total_reparaciones', value: this.dashboardData.total_reparaciones },
+            { id: 'reparaciones_hoy', value: this.dashboardData.reparaciones_hoy },
+            { id: 'reparaciones_mes', value: this.dashboardData.reparaciones_mes },
+            { id: 'reparaciones_ano', value: this.dashboardData.reparaciones_ano }
+        ];
+
+        let successCount = 0;
+        elements.forEach(({ id, value }) => {
+            try {
+                this._updateElementContent(id, value);
+                successCount++;
+            } catch (error) {
+                console.error(`Error actualizando elemento ${id}:`, error);
+            }
+        });
+
+        console.log(`Tiles renderizadas: ${successCount} de ${elements.length}`);
+    }
+
+    _getChartContext(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            console.error(`Canvas no encontrado: ${canvasId}`);
+            return null;
+        }
+        return canvas.getContext("2d");
+    }
+
+    _render_charts() {
         console.log('Iniciando renderizado de gráficos...');
+        if (!this.dashboardData) {
+            console.error('No hay datos disponibles para renderizar los gráficos');
+            return;
+        }
 
         try {
-            // Gráfico de barras para máquinas por disponibilidad
-            console.log('Renderizando gráfico de disponibilidad...');
-            const disponibilidadCtx = document.getElementById("disponibilidadChart").getContext("2d");
-            new Chart(disponibilidadCtx, {
-                type: 'bar',
-                plugins: [ChartDataLabels],
-                data: {
-                    labels: ['Disponibles', 'Separadas', 'No disponibles'],
-                    datasets: [{
-                        label: 'Máquinas',
-                        data: [
-                            data.maquinas_disponibles,
-                            data.maquinas_separadas,
-                            data.maquinas_no_disponibles
-                        ],
-                        backgroundColor: ['#4BC0C0', '#FFCE56', '#FF6384'],
-                    }]
-                },
-                options: {
-                    plugins: {
-                        datalabels: {
-                            color: '#FFFFFF',
-                            anchor: 'end',
-                            align: 'top',
-                            font: {
-                                weight: 'bold'
-                            }
-                        }
-                    }
-                }
-            });
-            console.log('Gráfico de disponibilidad renderizado');
-
-            // Gráfico de pastel para máquinas por estado
-            console.log('Renderizando gráfico de estado...');
-            const estadoCtx = document.getElementById("estadoChart").getContext("2d");
-            new Chart(estadoCtx, {
-                type: 'pie',
-                plugins: [ChartDataLabels],
-                data: {
-                    labels: ['Sin Revisar', 'En Revisión', 'Finalizadas'],
-                    datasets: [{
-                        label: 'Máquinas por Estado',
-                        data: [
-                            data.maquinas_sin_revisar,
-                            data.maquinas_en_revision,
-                            data.maquinas_finalizadas
-                        ],
-                        backgroundColor: ['#36A2EB', '#FFCE56', '#4BC0C0'],
-                    }]
-                },
-                options: {
-                    plugins: {
-                        datalabels: {
-                            color: '#FFFFFF',
-                            font: {
-                                weight: 'bold'
-                            }
-                        }
-                    }
-                }
-            });
-            console.log('Gráfico de estado renderizado');
-
-            // Gráfico de barras para reparaciones por técnico
-            console.log('Renderizando gráfico de técnicos...');
-            const tecnicosCtx = document.getElementById("tecnicosChart").getContext("2d");
-            const tecnicosLabels = Object.keys(data.tecnicos_totales);
-            const tecnicosData = Object.values(data.tecnicos_totales);
-            console.log('Datos de técnicos:', { labels: tecnicosLabels, data: tecnicosData });
-
-            new Chart(tecnicosCtx, {
-                type: 'bar',
-                plugins: [ChartDataLabels],
-                data: {
-                    labels: tecnicosLabels,
-                    datasets: [{
-                        label: 'Reparaciones',
-                        data: tecnicosData,
-                        backgroundColor: '#FF6384',
-                    }]
-                },
-                options: {
-                    plugins: {
-                        datalabels: {
-                            color: '#FFFFFF',
-                            anchor: 'end',
-                            align: 'top',
-                            font: {
-                                weight: 'bold'
-                            }
-                        }
+            // Gráfico de disponibilidad
+            const disponibilidadCtx = this._getChartContext("disponibilidadChart");
+            if (disponibilidadCtx) {
+                console.log('Renderizando gráfico de disponibilidad...');
+                new Chart(disponibilidadCtx, {
+                    type: 'bar',
+                    plugins: [ChartDataLabels],
+                    data: {
+                        labels: ['Disponibles', 'Separadas', 'No disponibles'],
+                        datasets: [{
+                            label: 'Máquinas',
+                            data: [
+                                this.dashboardData.maquinas_disponibles,
+                                this.dashboardData.maquinas_separadas,
+                                this.dashboardData.maquinas_no_disponibles
+                            ],
+                            backgroundColor: ['#4BC0C0', '#FFCE56', '#FF6384'],
+                        }]
                     },
-                    scales: {
-                        x: {
-                            ticks: {
-                                autoSkip: false,
+                    options: {
+                        plugins: {
+                            datalabels: {
+                                color: '#FFFFFF',
+                                anchor: 'end',
+                                align: 'top',
+                                font: {
+                                    weight: 'bold'
+                                }
                             }
                         }
                     }
-                }
-            });
-            console.log('Gráfico de técnicos renderizado');
+                });
+                console.log('Gráfico de disponibilidad renderizado exitosamente');
+            }
 
-            // Gráfico de pastel para máquinas por asesora
-            console.log('Renderizando gráfico de asesoras...');
-            const asesoraCtx = document.getElementById("asesoraChart").getContext("2d");
-            const asesoraLabels = Object.keys(data.asesora_totales);
-            const asesoraData = Object.values(data.asesora_totales);
-            console.log('Datos de asesoras:', { labels: asesoraLabels, data: asesoraData });
-
-            new Chart(asesoraCtx, {
-                type: 'pie',
-                plugins: [ChartDataLabels],
-                data: {
-                    labels: asesoraLabels,
-                    datasets: [{
-                        label: 'Máquinas por Asesora',
-                        data: asesoraData,
-                        backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0', '#9966FF'],
-                    }]
-                },
-                options: {
-                    plugins: {
-                        datalabels: {
-                            color: '#FFFFFF',
-                            font: {
-                                weight: 'bold'
+            // Gráfico de estado
+            const estadoCtx = this._getChartContext("estadoChart");
+            if (estadoCtx) {
+                console.log('Renderizando gráfico de estado...');
+                new Chart(estadoCtx, {
+                    type: 'pie',
+                    plugins: [ChartDataLabels],
+                    data: {
+                        labels: ['Sin Revisar', 'En Revisión', 'Finalizadas'],
+                        datasets: [{
+                            label: 'Máquinas por Estado',
+                            data: [
+                                this.dashboardData.maquinas_sin_revisar,
+                                this.dashboardData.maquinas_en_revision,
+                                this.dashboardData.maquinas_finalizadas
+                            ],
+                            backgroundColor: ['#36A2EB', '#FFCE56', '#4BC0C0'],
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            datalabels: {
+                                color: '#FFFFFF',
+                                font: {
+                                    weight: 'bold'
+                                }
                             }
                         }
                     }
-                }
-            });
-            console.log('Gráfico de asesoras renderizado');
-            console.log('Todos los gráficos han sido renderizados exitosamente');
+                });
+                console.log('Gráfico de estado renderizado exitosamente');
+            }
+
+            // Gráfico de técnicos
+            const tecnicosCtx = this._getChartContext("tecnicosChart");
+            if (tecnicosCtx) {
+                console.log('Renderizando gráfico de técnicos...');
+                const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales);
+                const tecnicosData = Object.values(this.dashboardData.tecnicos_totales);
+                console.log('Datos de técnicos:', { labels: tecnicosLabels, data: tecnicosData });
+
+                new Chart(tecnicosCtx, {
+                    type: 'bar',
+                    plugins: [ChartDataLabels],
+                    data: {
+                        labels: tecnicosLabels,
+                        datasets: [{
+                            label: 'Reparaciones',
+                            data: tecnicosData,
+                            backgroundColor: '#FF6384',
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            datalabels: {
+                                color: '#FFFFFF',
+                                anchor: 'end',
+                                align: 'top',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    autoSkip: false,
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('Gráfico de técnicos renderizado exitosamente');
+            }
+
+            // Gráfico de asesoras
+            const asesoraCtx = this._getChartContext("asesoraChart");
+            if (asesoraCtx) {
+                console.log('Renderizando gráfico de asesoras...');
+                const asesoraLabels = Object.keys(this.dashboardData.asesora_totales);
+                const asesoraData = Object.values(this.dashboardData.asesora_totales);
+                console.log('Datos de asesoras:', { labels: asesoraLabels, data: asesoraData });
+
+                new Chart(asesoraCtx, {
+                    type: 'pie',
+                    plugins: [ChartDataLabels],
+                    data: {
+                        labels: asesoraLabels,
+                        datasets: [{
+                            label: 'Máquinas por Asesora',
+                            data: asesoraData,
+                            backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0', '#9966FF'],
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            datalabels: {
+                                color: '#FFFFFF',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('Gráfico de asesoras renderizado exitosamente');
+            }
         } catch (error) {
             console.error('Error al renderizar gráficos:', error);
         }
