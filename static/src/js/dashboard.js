@@ -19,6 +19,10 @@ class SatDashboard extends Component {
     }
 
     _render_charts(data) {
+        // Verificar si data.reparaciones_por_mes está definido y no es null
+        const reparacionesPorMes = data.reparaciones_por_mes ? Object.values(data.reparaciones_por_mes) : [];
+        const ticketsPorMes = data.tickets_por_mes ? Object.values(data.tickets_por_mes) : [];
+    
         // Gráfico de barras para reparaciones y tickets por mes
         var ctx1 = document.getElementById("barChartMes").getContext("2d");
         new Chart(ctx1, {
@@ -27,34 +31,35 @@ class SatDashboard extends Component {
                 labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
                 datasets: [{
                     label: 'Reparaciones',
-                    data: Object.values(data.reparaciones_por_mes),
+                    data: reparacionesPorMes,
                     backgroundColor: '#36A2EB',
                 }, {
                     label: 'Tickets de Alquiler',
-                    data: Object.values(data.tickets_por_mes),
+                    data: ticketsPorMes,
                     backgroundColor: '#FF6384',
                 }]
             },
         });
-
+    
+        // Verificar si data.reparaciones_por_tecnico está definido y no es null
+        const reparacionesPorTecnico = data.reparaciones_por_tecnico ? Object.values(data.reparaciones_por_tecnico) : [];
+        const nombresTecnicos = data.reparaciones_por_tecnico ? Object.keys(data.reparaciones_por_tecnico) : [];
+    
         // Gráfico circular para reparaciones por técnico
         var ctx2 = document.getElementById("pieReparaciones").getContext("2d");
         new Chart(ctx2, {
             type: 'pie',
             data: {
-                labels: Object.keys(data.reparaciones_por_tecnico),
+                labels: nombresTecnicos,
                 datasets: [{
-                    data: Object.values(data.reparaciones_por_tecnico),
+                    data: reparacionesPorTecnico,
                     backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0'],
                 }]
             }
         });
-
+    
         // Indicadores de reparaciones y tickets para hoy
-        document.getElementById('reparacionesHoy').textContent = data.reparaciones_hoy;
-        document.getElementById('ticketsHoy').textContent = data.tickets_hoy;
+        document.getElementById('reparacionesHoy').textContent = data.reparaciones_hoy || 0;
+        document.getElementById('ticketsHoy').textContent = data.tickets_hoy || 0;
     }
-}
-
-SatDashboard.template = "sat.DashboardTemplate";
-actionRegistry.add("sat_dashboard_tag", SatDashboard);
+    
