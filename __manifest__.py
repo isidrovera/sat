@@ -72,6 +72,7 @@
     'web.assets_backend': [
         'sat/static/src/js/dashboard.js',
         'sat/static/src/xml/dashboard.xml',
+        'https://cdn.jsdelivr.net/npm/chart.js',
         
              
     ],
