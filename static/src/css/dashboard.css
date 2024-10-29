@@ -5,30 +5,24 @@
     max-height: 100vh;
     padding: 10px;
 
-    /* Configuración de grid para pantallas grandes */
     .dashboard-tiles {
         display: grid;
-        gap: 8px;
+        gap: 10px;
         justify-content: center;
 
-        /* Para pantallas grandes, muestra 5 columnas */
+        /* Limita el número de columnas para pantallas grandes */
         @media (min-width: 1200px) {
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(4, 1fr); /* Máximo 4 columnas */
         }
 
-        /* Para pantallas medianas, muestra 4 columnas */
-        @media (min-width: 992px) and (max-width: 1199px) {
-            grid-template-columns: repeat(4, 1fr);
+        /* Configuración para pantallas medianas */
+        @media (min-width: 768px) and (max-width: 1199px) {
+            grid-template-columns: repeat(3, 1fr); /* Máximo 3 columnas */
         }
 
-        /* Para pantallas más pequeñas, muestra 3 columnas */
-        @media (min-width: 768px) and (max-width: 991px) {
-            grid-template-columns: repeat(3, 1fr);
-        }
-
-        /* Para dispositivos móviles, usa ajuste automático */
+        /* Configuración para pantallas pequeñas y móviles */
         @media (max-width: 767px) {
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(2, 1fr); /* Máximo 2 columnas en móviles */
         }
 
         .tot_tasks {
@@ -37,6 +31,7 @@
                 box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
                 border-radius: 6px;
                 transition: transform 0.2s, background-color 0.3s;
+                min-height: 100px; /* Asegura una altura uniforme */
 
                 &:hover {
                     transform: translateY(-2px);
@@ -88,7 +83,7 @@
     .dashboard-charts {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 8px;
+        gap: 10px;
         padding: 10px;
 
         .chart-wrapper {
