@@ -29,6 +29,7 @@ class SatDashboard extends Component {
         super.setup();
         this.orm = useService("orm");
         console.log('Servicio ORM inicializado');
+        this.action = useService("action"); // Añade el servicio de acción
         this.dashboardData = null;
 
         // Usar onMounted para asegurarnos que el DOM está listo
@@ -72,32 +73,43 @@ class SatDashboard extends Component {
         }
 
         const elements = [
-            { id: 'total_maquinas', value: this.dashboardData.total_maquinas },
-            { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles },
-            { id: 'maquinas_separadas', value: this.dashboardData.maquinas_separadas },
-            { id: 'maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles },
-            { id: 'maquinas_sin_revisar', value: this.dashboardData.maquinas_sin_revisar },
-            { id: 'maquinas_en_revision', value: this.dashboardData.maquinas_en_revision },
-            { id: 'maquinas_finalizadas', value: this.dashboardData.maquinas_finalizadas },
-            { id: 'total_reparaciones', value: this.dashboardData.total_reparaciones },
-            { id: 'reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision },
-            { id: 'reparaciones_hoy', value: this.dashboardData.reparaciones_hoy },
-            { id: 'reparaciones_mes', value: this.dashboardData.reparaciones_mes },
-            { id: 'reparaciones_ano', value: this.dashboardData.reparaciones_ano }
+            { id: 'total_maquinas', value: this.dashboardData.total_maquinas, model: 'maquina', domain: [] },
+            { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, model: 'maquina', domain: [['estado', '=', 'disponible']] },
+            { id: 'maquinas_separadas', value: this.dashboardData.maquinas_separadas, model: 'maquina', domain: [['estado', '=', 'separada']] },
+            { id: 'maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, model: 'maquina', domain: [['estado', '=', 'no_disponible']] },
+            { id: 'maquinas_sin_revisar', value: this.dashboardData.maquinas_sin_revisar, model: 'maquina', domain: [['estado', '=', 'sin_revisar']] },
+            { id: 'maquinas_en_revision', value: this.dashboardData.maquinas_en_revision, model: 'maquina', domain: [['estado', '=', 'en_revision']] },
+            { id: 'maquinas_finalizadas', value: this.dashboardData.maquinas_finalizadas, model: 'maquina', domain: [['estado', '=', 'finalizado']] },
+            { id: 'total_reparaciones', value: this.dashboardData.total_reparaciones, model: 'reparacion', domain: [] },
+            { id: 'reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, model: 'reparacion', domain: [['estado', '=', 'en_revision']] },
+            { id: 'reparaciones_hoy', value: this.dashboardData.reparaciones_hoy, model: 'reparacion', domain: [['fecha', '=', new Date().toISOString().split('T')[0]]] },
+            { id: 'reparaciones_mes', value: this.dashboardData.reparaciones_mes, model: 'reparacion', domain: [['mes', '=', new Date().getMonth() + 1]] },
+            { id: 'reparaciones_ano', value: this.dashboardData.reparaciones_ano, model: 'reparacion', domain: [['ano', '=', new Date().getFullYear()]] }
         ];
 
-        let successCount = 0;
-        elements.forEach(({ id, value }) => {
-            try {
-                this._updateElementContent(id, value);
-                successCount++;
-            } catch (error) {
-                console.error(`Error actualizando elemento ${id}:`, error);
+        elements.forEach(({ id, value, model, domain }) => {
+            this._updateElementContent(id, value);
+            const element = document.getElementById(id);
+
+            if (element) {
+                element.onclick = () => this._openFilteredView(model, domain);
             }
         });
 
-        console.log(`Tiles renderizadas: ${successCount} de ${elements.length}`);
+        console.log('Tiles renderizadas y eventos asignados');
     }
+
+    _openFilteredView(model, domain) {
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            name: `Registros filtrados de ${model}`,
+            res_model: model,
+            view_mode: 'tree,form',
+            domain: domain,
+            target: 'current'
+        });
+    }
+
 
     _getChartElement(elementId) {
         const element = document.getElementById(elementId);
