@@ -270,7 +270,7 @@ class SatDashboard extends Component {
                 console.log('Renderizando gráfico de técnicos...');
                 const tecnicosChart = echarts.init(tecnicosElement);
 
-                // Preparamos los datos en el formato de dataset
+                // Preparar los datos en el formato de dataset
                 const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales);
                 const tecnicosData = Object.values(this.dashboardData.tecnicos_totales);
                 const datasetSource = tecnicosLabels.map((label, index) => [tecnicosData[index], label]);
@@ -286,14 +286,14 @@ class SatDashboard extends Component {
                         }
                     },
                     grid: {
-                        containLabel: true, // Asegura que el espacio contenga las etiquetas
-                        left: '10%',
+                        containLabel: true,
+                        left: '25%', // Da más espacio al eje Y
                         right: '10%',
                         top: '15%',
                         bottom: '10%',
                     },
                     dataset: {
-                        source: [['amount', 'technician'], ...datasetSource] // Añadimos los datos al dataset
+                        source: [['amount', 'technician'], ...datasetSource]
                     },
                     xAxis: { 
                         name: 'Reparaciones',
@@ -307,7 +307,7 @@ class SatDashboard extends Component {
                         axisLabel: {
                             fontSize: 12,
                             fontWeight: 'bold',
-                            overflow: 'truncate', // Permite que los nombres largos no se corten
+                            interval: 0, // Asegura que todas las etiquetas se muestren
                         }
                     },
                     visualMap: {
@@ -315,33 +315,32 @@ class SatDashboard extends Component {
                         left: 'center',
                         min: Math.min(...tecnicosData),
                         max: Math.max(...tecnicosData),
-                        dimension: 0, // Mapea el valor de reparaciones para aplicar color
+                        dimension: 0,
                         inRange: {
-                            color: ['#65B581', '#FFCE34', '#FD665F'] // Colores en gradiente
+                            color: ['#65B581', '#FFCE34', '#FD665F']
                         }
                     },
                     series: [
                         {
                             type: 'bar',
                             encode: {
-                                x: 'amount', // Mapea el valor en el eje X
-                                y: 'technician' // Mapea el nombre del técnico en el eje Y
+                                x: 'amount',
+                                y: 'technician'
                             },
                             label: {
                                 show: true,
-                                position: 'right', // Coloca la cantidad al final de cada barra
-                                formatter: '{c}', // Solo muestra la cantidad
+                                position: 'right',
+                                formatter: '{c}', // Solo muestra la cantidad sin nombre
                                 fontSize: 14,
                                 fontWeight: 'bold'
                             },
-                            barWidth: '50%' // Controla el ancho de las barras para ocupar el espacio
+                            barWidth: '50%'
                         }
                     ]
                 });
 
                 console.log('Gráfico de técnicos renderizado exitosamente');
             }
-
 
 
             // Gráfico de asesoras
