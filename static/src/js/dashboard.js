@@ -210,7 +210,7 @@ class SatDashboard extends Component {
                     },
                     tooltip: { 
                         trigger: 'item',
-                        formatter: '{b}: {c} ({d}%)' // Muestra el nombre, valor y porcentaje
+                        formatter: '{b}: {c} ({d}%)'
                     },
                     legend: {
                         orient: 'vertical',
@@ -221,8 +221,8 @@ class SatDashboard extends Component {
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: '50%', // Ajuste para que el gráfico ocupe el 50% del contenedor
-                        center: ['60%', '50%'], // Centrar el gráfico hacia la derecha
+                        radius: '70%', // Aumenta el tamaño del gráfico
+                        center: ['50%', '50%'], // Centrar el gráfico
                         data: [
                             { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
                             { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
@@ -239,8 +239,8 @@ class SatDashboard extends Component {
                         label: {
                             show: true,
                             position: 'outside',
-                            formatter: '{b}: {c} ({d}%)', // Muestra el nombre, cantidad y porcentaje en las etiquetas
-                            fontSize: 12,
+                            formatter: '{b}: {c} ({d}%)',
+                            fontSize: 10, // Ajusta el tamaño de las etiquetas
                             fontWeight: 'bold',
                             color: '#333',
                         },
@@ -258,6 +258,7 @@ class SatDashboard extends Component {
                     animationDuration: 1000,
                     animationEasing: 'cubicInOut'
                 });
+                
 
                 console.log('Gráfico de estado renderizado exitosamente');
             }
