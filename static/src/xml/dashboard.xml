@@ -225,6 +225,20 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Gráfico 4: Máquinas por Asesora -->
+                    <div class="col-md-6">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Máquinas por Asesora</h4>
+                                <button class="expand-button">
+                                    <i class="fa fa-expand"></i>
+                                </button>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="asesoraChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div> <!-- Cierra el contenedor content-scroll -->
         </div>
