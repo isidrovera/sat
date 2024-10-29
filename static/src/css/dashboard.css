@@ -19,8 +19,22 @@
 
         .tot_tasks {
             flex: 1 0 auto;
-            max-width: 11%;
             padding: 0;
+
+            /* Ajuste de tamaño para diferentes pantallas */
+            @media (min-width: 1200px) { /* Pantallas grandes */
+                max-width: 23%;
+            }
+            @media (min-width: 992px) and (max-width: 1199px) { /* Pantallas medianas */
+                max-width: 31%;
+            }
+            @media (min-width: 768px) and (max-width: 991px) { /* Tablets */
+                max-width: 48%;
+            }
+            @media (max-width: 767px) { /* Teléfonos */
+                max-width: 100%; /* Ocupa toda la fila en dispositivos móviles */
+                margin-bottom: 8px; /* Espacio extra en la parte inferior */
+            }
 
             .oh-card {
                 padding: 6px;
@@ -91,6 +105,13 @@
             padding: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             margin-bottom: 12px;
+
+            /* Adaptación del tamaño del gráfico en pantallas pequeñas */
+            @media (max-width: 767px) {
+                .chart-container {
+                    height: 150px; /* Ajusta la altura en pantallas móviles */
+                }
+            }
 
             .chart-header {
                 display: flex;
