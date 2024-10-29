@@ -5,11 +5,31 @@
     max-height: 100vh;
     padding: 10px;
 
+    /* Configuración de grid para pantallas grandes */
     .dashboard-tiles {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* Ajuste automático para pantallas */
-        gap: 8px; /* Espacio entre las tiles */
+        gap: 8px;
         justify-content: center;
+
+        /* Para pantallas grandes, muestra 5 columnas */
+        @media (min-width: 1200px) {
+            grid-template-columns: repeat(5, 1fr);
+        }
+
+        /* Para pantallas medianas, muestra 4 columnas */
+        @media (min-width: 992px) and (max-width: 1199px) {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        /* Para pantallas más pequeñas, muestra 3 columnas */
+        @media (min-width: 768px) and (max-width: 991px) {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* Para dispositivos móviles, usa ajuste automático */
+        @media (max-width: 767px) {
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        }
 
         .tot_tasks {
             .oh-card {
@@ -28,17 +48,17 @@
                     text-align: center;
 
                     i {
-                        font-size: 20px; /* Tamaño del icono adaptable */
+                        font-size: 20px;
                         margin-bottom: 4px;
                     }
 
                     h3 {
-                        font-size: 12px; /* Tamaño del texto adaptable */
+                        font-size: 12px;
                         margin-bottom: 2px;
                     }
 
                     span {
-                        font-size: 14px; /* Tamaño del número adaptable */
+                        font-size: 14px;
                         font-weight: bold;
                     }
 
@@ -67,7 +87,7 @@
     /* Gráficos responsivos */
     .dashboard-charts {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Adaptable para gráficos */
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 8px;
         padding: 10px;
 
@@ -104,7 +124,7 @@
 
             .chart-container {
                 position: relative;
-                height: 250px; /* Altura adaptable */
+                height: 250px;
                 max-height: 100%;
                 transition: all 0.3s ease;
 
@@ -113,29 +133,6 @@
                     max-height: 100%;
                 }
             }
-        }
-    }
-
-    /* Media query para dispositivos móviles */
-    @media (max-width: 768px) {
-        .dashboard-tiles {
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Reajusta los recuadros para pantallas pequeñas */
-        }
-
-        .dashboard-charts {
-            grid-template-columns: 1fr; /* Gráficos en una sola columna en pantallas pequeñas */
-        }
-
-        .oh-card-body i {
-            font-size: 18px; /* Ajusta el tamaño del icono en móviles */
-        }
-
-        .oh-card-body h3 {
-            font-size: 10px; /* Ajusta el tamaño del texto en móviles */
-        }
-
-        .oh-card-body span {
-            font-size: 12px; /* Ajusta el tamaño del número en móviles */
         }
     }
 }
