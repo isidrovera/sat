@@ -99,17 +99,25 @@ class SatDashboard extends Component {
     async _openFilteredView(action_id, res_model, domain) {
         try {
             if (action_id) {
-                await this.action.doAction(action_id, {
-                    additional_context: { domain: domain }
+                await this.action.doAction({
+                    type: 'ir.actions.act_window',
+                    res_model: res_model,
+                    view_mode: 'list,form',
+                    views: [[false, 'list'], [false, 'form']],
+                    target: 'current',
+                    domain: domain,
+                    context: {
+                        search_view_id: "sat.Sat_search_view" // ID del search view
+                    }
                 });
             } else {
                 console.error("action_id no definido para _openFilteredView");
             }
         } catch (error) {
             console.error("Error en _openFilteredView:", error);
-            console.error("Detalles adicionales del error:", error.message);
         }
     }
+    
     
     
     _getChartElement(elementId) {
