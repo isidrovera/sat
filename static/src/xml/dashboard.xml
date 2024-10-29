@@ -230,7 +230,28 @@
                     </div>
                 </div>
 
-                
+                <!-- Alquileres Externos -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-external-link-alt"></i> <!-- Icono de externo -->
+                            <h3>Externo</h3>
+                            <span id="alquiler_externo">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alquileres Vendidos -->
+                <div class="col-md-3 col-sm-6 tot_tasks">
+                    <div class="oh-card">
+                        <div class="oh-card-body text-center">
+                            <i class="fa fa-shopping-cart"></i> <!-- Icono de vendido -->
+                            <h3>Vendida</h3>
+                            <span id="alquiler_vendida">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
 
             <!-- Gráficos -->
