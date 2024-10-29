@@ -107,8 +107,10 @@ class SatDashboard extends Component {
             }
         } catch (error) {
             console.error("Error en _openFilteredView:", error);
+            console.error("Detalles adicionales del error:", error.message);
         }
     }
+    
     
     _getChartElement(elementId) {
         const element = document.getElementById(elementId);
