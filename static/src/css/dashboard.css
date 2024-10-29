@@ -18,29 +18,35 @@
         justify-content: flex-start;
 
         .tot_tasks {
-            flex: 1 0 auto;
+            flex: 1 1 15%; /* Permite que se muestren hasta seis tarjetas por fila en pantallas grandes */
+            max-width: 15%; /* Máximo de seis tarjetas en filas grandes */
             padding: 0;
 
             /* Ajuste de tamaño para diferentes pantallas */
-            @media (min-width: 1200px) { /* Pantallas grandes */
-                max-width: 23%;
+            @media (min-width: 1200px) { /* Pantallas extra grandes */
+                max-width: 15%; /* Seis tarjetas por fila */
             }
             @media (min-width: 992px) and (max-width: 1199px) { /* Pantallas medianas */
-                max-width: 31%;
+                max-width: 20%; /* Cinco tarjetas por fila */
             }
             @media (min-width: 768px) and (max-width: 991px) { /* Tablets */
-                max-width: 48%;
+                max-width: 25%; /* Cuatro tarjetas por fila */
             }
             @media (max-width: 767px) { /* Teléfonos */
-                max-width: 100%; /* Ocupa toda la fila en dispositivos móviles */
+                max-width: 48%; /* Dos tarjetas por fila en dispositivos móviles */
                 margin-bottom: 8px; /* Espacio extra en la parte inferior */
             }
 
             .oh-card {
-                padding: 6px;
+                padding: 10px; /* Ajuste de padding para el contenido */
                 box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
                 border-radius: 4px;
                 transition: transform 0.2s, background-color 0.3s;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: auto; /* Ajusta la altura automáticamente según el contenido */
 
                 &:hover {
                     transform: translateY(-2px);
@@ -50,19 +56,22 @@
                 .oh-card-body {
                     padding: 4px;
                     text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
 
                     i {
-                        font-size: 18px;
-                        margin-bottom: 2px;
+                        font-size: 24px; /* Tamaño del icono ajustado */
+                        margin-bottom: 4px;
                     }
 
                     h3 {
-                        font-size: 10px;
+                        font-size: 14px; /* Tamaño del texto del título */
                         margin-bottom: 2px;
                     }
 
                     span {
-                        font-size: 12px;
+                        font-size: 16px; /* Tamaño del texto del número */
                         font-weight: bold;
                     }
 
