@@ -214,19 +214,13 @@ class SatDashboard extends Component {
                         formatter: '{b}: {c} ({d}%)'
                     },
                     legend: {
-                        orient: 'vertical', 
-                        right: '5%', 
-                        top: 'middle',
-                        data: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas'],
-                        textStyle: {
-                            fontSize: 10,
-                        }
+                        show: false // Oculta la leyenda para evitar redundancia
                     },
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: ['30%', '80%'], // Maximiza el área del gráfico
-                        center: ['35%', '50%'], // Centra el gráfico hacia la izquierda
+                        radius: ['40%', '70%'], // Ajusta el radio para optimizar el uso del espacio
+                        center: ['50%', '50%'], // Centra el gráfico en el contenedor
                         data: [
                             { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
                             { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
@@ -242,19 +236,27 @@ class SatDashboard extends Component {
                         },
                         label: {
                             show: true,
-                            position: 'inner', // Coloca las etiquetas dentro del gráfico
-                            formatter: '{b}\n{d}%', // Muestra solo el nombre y porcentaje para simplificar
-                            fontSize: 10,
-                            color: '#fff',
+                            position: 'outside', // Coloca las etiquetas fuera del gráfico
+                            formatter: '{b}: {d}%', // Muestra solo el nombre y el porcentaje
+                            fontSize: 12,
+                            color: '#333',
                             fontWeight: 'bold'
                         },
                         labelLine: {
-                            show: false, // Oculta las líneas de etiquetas para reducir el desorden visual
+                            show: true,
+                            length: 20, // Ajusta la longitud de las líneas de etiquetas
+                            length2: 15,
+                            smooth: true,
+                            lineStyle: {
+                                width: 1,
+                                type: 'solid'
+                            }
                         }
                     }],
                     animationDuration: 1000,
                     animationEasing: 'cubicInOut'
                 });
+                
                 
                 
 
