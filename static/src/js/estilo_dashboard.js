@@ -52,7 +52,7 @@ export class Dashboard extends Component {
             if (this.charts[chartId]) {
                 this.charts[chartId].resize();
             }
-        }, 500); // Aumentado a 500ms para asegurar la transición completa
+        }, 300);
     }
 
     /**
@@ -65,11 +65,81 @@ export class Dashboard extends Component {
         await this.initAsesoraChart();
     }
 
-    // Métodos de inicialización de gráficos (sin cambios)
-    async initDisponibilidadChart() { /* ... */ }
-    async initEstadoChart() { /* ... */ }
-    async initTecnicosChart() { /* ... */ }
-    async initAsesoraChart() { /* ... */ }
+    /**
+     * Inicializa el gráfico de disponibilidad
+     */
+    async initDisponibilidadChart() {
+        const ctx = document.getElementById('disponibilidadChart');
+        if (!ctx) return;
+
+        this.charts.disponibilidadChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                // Configurar datos del gráfico
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    /**
+     * Inicializa el gráfico de estado
+     */
+    async initEstadoChart() {
+        const ctx = document.getElementById('estadoChart');
+        if (!ctx) return;
+
+        this.charts.estadoChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                // Configurar datos del gráfico
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    /**
+     * Inicializa el gráfico de técnicos
+     */
+    async initTecnicosChart() {
+        const ctx = document.getElementById('tecnicosChart');
+        if (!ctx) return;
+
+        this.charts.tecnicosChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                // Configurar datos del gráfico
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    /**
+     * Inicializa el gráfico de asesoras
+     */
+    async initAsesoraChart() {
+        const ctx = document.getElementById('asesoraChart');
+        if (!ctx) return;
+
+        this.charts.asesoraChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                // Configurar datos del gráfico
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
 
     /**
      * Actualiza los datos de los gráficos

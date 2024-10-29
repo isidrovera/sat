@@ -6,18 +6,21 @@
     padding: 10px;
 
     .dashboard-tiles {
-        display: grid;
-        gap: 10px;
-        justify-content: center;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Ajuste automático */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px; /* Reduce aún más el espacio entre las tiles */
+        justify-content: flex-start;
 
         .tot_tasks {
+            flex: 1 0 auto;
+            max-width: 11%; /* Reduce el ancho máximo */
+            padding: 0;
+
             .oh-card {
-                padding: 8px;
+                padding: 6px; /* Reduce el padding de la tarjeta */
                 box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
-                border-radius: 6px;
+                border-radius: 4px; /* Redondeado más pequeño */
                 transition: transform 0.2s, background-color 0.3s;
-                min-height: 100px;
 
                 &:hover {
                     transform: translateY(-2px);
@@ -25,21 +28,21 @@
                 }
 
                 .oh-card-body {
-                    padding: 6px;
+                    padding: 4px; /* Reduce el padding dentro de la tarjeta */
                     text-align: center;
 
                     i {
-                        font-size: 20px;
-                        margin-bottom: 4px;
+                        font-size: 18px; /* Tamaño del icono más pequeño */
+                        margin-bottom: 2px;
                     }
 
                     h3 {
-                        font-size: 12px;
+                        font-size: 10px; /* Reduce el tamaño del texto del título */
                         margin-bottom: 2px;
                     }
 
                     span {
-                        font-size: 14px;
+                        font-size: 12px; /* Reduce el tamaño del texto del número */
                         font-weight: bold;
                     }
 
@@ -65,18 +68,23 @@
         }
     }
 
-    /* Gráficos responsivos */
+    .maquinas-tiles, .reparaciones-tiles, .tickets-tiles, .alquiler-tiles {
+        margin-bottom: 8px; /* Reduce el espacio entre filas */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px; /* Reduce el espacio entre tiles de cada categoría */
+        justify-content: flex-start;
+    }
+
     .dashboard-charts {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 10px;
-        padding: 10px;
+        padding: 0 8px;
 
         .chart-wrapper {
             background-color: white;
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 6px;
+            padding: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 12px;
 
             .chart-header {
                 display: flex;
@@ -85,7 +93,6 @@
                 margin-bottom: 6px;
 
                 h4 {
-                    font-size: 14px;
                     margin: 0;
                 }
 
@@ -105,14 +112,13 @@
 
             .chart-container {
                 position: relative;
-                width: 100%; /* Ajuste de anchura */
-                height: 250px; /* Altura inicial */
-                max-height: 100%;
+                height: 200px;
+                max-height: 200px;
                 transition: all 0.3s ease;
 
                 &.expanded {
-                    height: 450px;
-                    max-height: 100%;
+                    height: 400px;
+                    max-height: 400px;
                 }
             }
         }
