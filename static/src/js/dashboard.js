@@ -269,9 +269,9 @@ class SatDashboard extends Component {
             if (tecnicosElement) {
                 console.log('Renderizando gráfico de técnicos...');
                 const tecnicosChart = echarts.init(tecnicosElement);
-                
-                const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales); // Nombres de técnicos
-                const tecnicosData = Object.values(this.dashboardData.tecnicos_totales); // Datos de cantidad por técnico
+
+                const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales);
+                const tecnicosData = Object.values(this.dashboardData.tecnicos_totales);
 
                 tecnicosChart.setOption({
                     title: { 
@@ -285,39 +285,46 @@ class SatDashboard extends Component {
                     },
                     tooltip: { 
                         trigger: 'item',
-                        formatter: '{b}: {c}' // Muestra nombre del técnico y cantidad
+                        formatter: '{b}: {c}'
                     },
                     grid: {
-                        left: '3%',
-                        right: '4%',
-                        bottom: '3%',
-                        containLabel: true
+                        left: '20%',  // Ajusta el margen izquierdo
+                        right: '10%',  // Ajusta el margen derecho
+                        bottom: '10%', // Ajusta el margen inferior
+                        top: '20%'    // Ajusta el margen superior
                     },
                     xAxis: {
                         type: 'value',
-                        boundaryGap: [0, 0.01]
+                        boundaryGap: [0, 0.01],
+                        axisLabel: {
+                            show: false  // Oculta etiquetas de valores en el eje X
+                        }
                     },
                     yAxis: {
                         type: 'category',
                         data: tecnicosLabels,
-                        inverse: true // Muestra el gráfico de arriba hacia abajo
+                        inverse: true,
+                        axisLabel: {
+                            fontSize: 12,
+                            fontWeight: 'bold'
+                        }
                     },
                     series: [{
                         type: 'bar',
                         data: tecnicosData.map((value, index) => ({
                             value,
                             itemStyle: {
-                                color: `hsl(${(index / tecnicosLabels.length) * 360}, 70%, 50%)` // Asigna colores distintos a cada barra
+                                color: `hsl(${(index / tecnicosLabels.length) * 360}, 70%, 50%)`
                             }
                         })),
                         label: {
                             show: true,
-                            position: 'right',
-                            formatter: '{c}', // Muestra cantidad en la etiqueta
-                            fontSize: 12,
+                            position: 'right', // Coloca la cantidad al final de cada barra
+                            formatter: '{c}',
+                            fontSize: 14,
                             fontWeight: 'bold'
                         },
-                        barWidth: '60%', // Ajusta el ancho de las barras
+                        barWidth: '50%' // Aumenta el ancho de las barras
                     }],
                     animationDuration: 0,
                     animationDurationUpdate: 2000,
@@ -327,6 +334,7 @@ class SatDashboard extends Component {
 
                 console.log('Gráfico de técnicos renderizado exitosamente');
             }
+
 
 
             // Gráfico de asesoras
