@@ -206,19 +206,15 @@ class SatDashboard extends Component {
                                 }
                             },
                             datalabels: {
-                                display: true,
-                                color: '#FFFFFF',
+                                display: true, // Muestra los datos en las secciones
+                                color: 'white',
                                 font: {
                                     size: 16,
                                     weight: 'bold'
                                 },
-                                formatter: (value, ctx) => {
-                                    let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                    let percentage = ((value / sum) * 100).toFixed(0) + "%";
-                                    return percentage; // Muestra el porcentaje
-                                },
-                                anchor: 'center',
-                                align: 'center'
+                                formatter: (value) => value, // Muestra el valor numérico
+                                anchor: 'center', // Posiciona la etiqueta en el centro de cada sección
+                                align: 'center'  // Centra el texto dentro de cada sección
                             }
                         }
                     },
@@ -241,7 +237,6 @@ class SatDashboard extends Component {
                 });
                 console.log('Gráfico de estado renderizado exitosamente');
             }
-
 
             // Gráfico de técnicos
             const tecnicosCtx = this._getChartContext("tecnicosChart");
