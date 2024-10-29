@@ -9,21 +9,7 @@
         display: grid;
         gap: 10px;
         justify-content: center;
-
-        /* Limita el número de columnas para pantallas grandes */
-        @media (min-width: 1200px) {
-            grid-template-columns: repeat(4, 1fr); /* Máximo 4 columnas */
-        }
-
-        /* Configuración para pantallas medianas */
-        @media (min-width: 768px) and (max-width: 1199px) {
-            grid-template-columns: repeat(3, 1fr); /* Máximo 3 columnas */
-        }
-
-        /* Configuración para pantallas pequeñas y móviles */
-        @media (max-width: 767px) {
-            grid-template-columns: repeat(2, 1fr); /* Máximo 2 columnas en móviles */
-        }
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Ajuste automático */
 
         .tot_tasks {
             .oh-card {
@@ -31,7 +17,7 @@
                 box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
                 border-radius: 6px;
                 transition: transform 0.2s, background-color 0.3s;
-                min-height: 100px; /* Asegura una altura uniforme */
+                min-height: 100px;
 
                 &:hover {
                     transform: translateY(-2px);
@@ -119,7 +105,8 @@
 
             .chart-container {
                 position: relative;
-                height: 250px;
+                width: 100%; /* Ajuste de anchura */
+                height: 250px; /* Altura inicial */
                 max-height: 100%;
                 transition: all 0.3s ease;
 
