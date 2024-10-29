@@ -70,7 +70,7 @@ class SatDashboard extends Component {
             console.error('No hay datos disponibles para renderizar las tiles');
             return;
         }
-
+    
         const elements = [
             { id: 'total_maquinas', value: this.dashboardData.total_maquinas, res_model: 'sat.sat', action_id: 'sat.sat.action_window', domain: [] },
             { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, res_model: 'sat.sat', action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'disponible']] },
@@ -82,11 +82,11 @@ class SatDashboard extends Component {
             { id: 'reparaciones_mes', value: this.dashboardData.reparaciones_mes, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['mes', '=', new Date().getMonth() + 1]] },
             { id: 'reparaciones_ano', value: this.dashboardData.reparaciones_ano, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['ano', '=', new Date().getFullYear()]] }
         ];
-
+    
         elements.forEach(({ id, value, res_model, action_id, domain }) => {
             this._updateElementContent(id, value);
-            const element = document.getElementById(id);
-
+            const element = document.getElementById(`tile_${id}`); // Selecciona el contenedor del "tile"
+    
             if (element) {
                 element.onclick = () => {
                     this._openFilteredView(action_id, res_model, domain);
@@ -94,6 +94,7 @@ class SatDashboard extends Component {
             }
         });
     }
+    
 
     async _openFilteredView(action_id, res_model, domain) {
         try {
