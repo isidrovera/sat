@@ -121,6 +121,15 @@ class SatDashboard extends Component {
 
     _openFilteredView(model, domain) {
         try {
+            // Validar el modelo y el dominio antes de pasar a doAction
+            if (!model) {
+                throw new Error("Modelo indefinido en _openFilteredView");
+            }
+            if (!Array.isArray(domain)) {
+                throw new Error("Dominio no es un array válido en _openFilteredView");
+            }
+
+            // Llamada a doAction con valores verificados
             this.action.doAction({
                 type: 'ir.actions.act_window',
                 name: `Registros filtrados de ${model}`,
@@ -130,9 +139,10 @@ class SatDashboard extends Component {
                 target: 'current'
             });
         } catch (error) {
-            console.error("Error ejecutando doAction:", error);
+            console.error("Error en _openFilteredView:", error);
         }
     }
+
     
 
 
