@@ -117,7 +117,7 @@ class SatDashboard extends Component {
                 value: this.dashboardData.reparaciones_en_revision, 
                 res_model: 'reparaciones.reparaciones', 
                 action_id: 'sat.action_reparaciones_window', 
-                domain: [['estado', '=', 'en_revision']], 
+                domain: [['estado_id', '=', 'en_revision']], 
                 search_view_id: 'sat.reparaciones_search_view' 
             },
             { 
