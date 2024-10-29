@@ -70,7 +70,7 @@
     ],
     'assets': {
     'web.assets_backend': [
-        'https://cdn.jsdelivr.net/npm/chart.js',
+        'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
         
         'sat/static/src/js/dashboard.js',
         'sat/static/src/xml/dashboard.xml',
