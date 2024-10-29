@@ -138,11 +138,11 @@ class SatDashboard extends Component {
                     },
                     xAxis: {
                         type: 'category',
-                        data: ['Disponibles', 'Separadas', 'No Disponibles'], // Asegúrate de que esta lista esté completa
+                        data: ['Disponibles', 'Separadas', 'No Disponibles'],
                         axisLabel: {
                             fontSize: 12,
                             fontWeight: 'bold',
-                            interval: 0, // Mostrar todas las etiquetas en el eje X sin omitir
+                            interval: 0, // Mostrar todas las etiquetas en el eje X
                         }
                     },
                     yAxis: {
@@ -155,13 +155,19 @@ class SatDashboard extends Component {
                         name: 'Máquinas',
                         type: 'bar',
                         data: [
-                            this.dashboardData.maquinas_disponibles,
-                            this.dashboardData.maquinas_separadas,
-                            this.dashboardData.maquinas_no_disponibles
+                            {
+                                value: this.dashboardData.maquinas_disponibles,
+                                itemStyle: { color: '#4CAF50' } // Verde para "Disponibles"
+                            },
+                            {
+                                value: this.dashboardData.maquinas_separadas,
+                                itemStyle: { color: '#FF9800' } // Naranja para "Separadas"
+                            },
+                            {
+                                value: this.dashboardData.maquinas_no_disponibles,
+                                itemStyle: { color: '#F44336' } // Rojo para "No Disponibles"
+                            }
                         ],
-                        itemStyle: {
-                            color: '#4BC0C0' // Color personalizado para las barras
-                        },
                         label: {
                             show: true,
                             position: 'top',
