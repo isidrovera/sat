@@ -2,6 +2,7 @@
 // Archivo: static/src/js/dashboard.js
 
 import { Component } from "@odoo/owl";
+import { Chart } from 'chart.js/auto';
 
 export class Dashboard extends Component {
     setup() {
@@ -75,7 +76,11 @@ export class Dashboard extends Component {
         this.charts.disponibilidadChart = new Chart(ctx, {
             type: 'pie',
             data: {
-                // Configurar datos del gráfico
+                labels: ['Disponibles', 'Separadas', 'No Disponibles'],
+                datasets: [{
+                    data: [50, 30, 20],
+                    backgroundColor: ['#4BC0C0', '#FFCE56', '#FF6384']
+                }]
             },
             options: {
                 responsive: true,
@@ -94,7 +99,11 @@ export class Dashboard extends Component {
         this.charts.estadoChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                // Configurar datos del gráfico
+                labels: ['Revisión', 'Finalizadas', 'Con Problemas', 'De Partes'],
+                datasets: [{
+                    data: [25, 40, 15, 20],
+                    backgroundColor: ['#36A2EB', '#4BC0C0', '#FF6384', '#FFCE56']
+                }]
             },
             options: {
                 responsive: true,
@@ -113,7 +122,11 @@ export class Dashboard extends Component {
         this.charts.tecnicosChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                // Configurar datos del gráfico
+                labels: ['Técnico A', 'Técnico B', 'Técnico C', 'Técnico D'],
+                datasets: [{
+                    data: [15, 20, 12, 18],
+                    backgroundColor: ['#36A2EB', '#4BC0C0', '#FF6384', '#FFCE56']
+                }]
             },
             options: {
                 responsive: true,
@@ -132,7 +145,11 @@ export class Dashboard extends Component {
         this.charts.asesoraChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                // Configurar datos del gráfico
+                labels: ['Asesora A', 'Asesora B', 'Asesora C', 'Asesora D'],
+                datasets: [{
+                    data: [25, 18, 22, 20],
+                    backgroundColor: ['#36A2EB', '#4BC0C0', '#FF6384', '#FFCE56']
+                }]
             },
             options: {
                 responsive: true,

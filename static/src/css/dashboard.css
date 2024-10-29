@@ -8,18 +8,18 @@
     .dashboard-tiles {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px; /* Reduce aún más el espacio entre las tiles */
+        gap: 4px;
         justify-content: flex-start;
 
         .tot_tasks {
             flex: 1 0 auto;
-            max-width: 11%; /* Reduce el ancho máximo */
+            max-width: 11%;
             padding: 0;
 
             .oh-card {
-                padding: 6px; /* Reduce el padding de la tarjeta */
+                padding: 6px;
                 box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
-                border-radius: 4px; /* Redondeado más pequeño */
+                border-radius: 4px;
                 transition: transform 0.2s, background-color 0.3s;
 
                 &:hover {
@@ -28,21 +28,21 @@
                 }
 
                 .oh-card-body {
-                    padding: 4px; /* Reduce el padding dentro de la tarjeta */
+                    padding: 4px;
                     text-align: center;
 
                     i {
-                        font-size: 18px; /* Tamaño del icono más pequeño */
+                        font-size: 18px;
                         margin-bottom: 2px;
                     }
 
                     h3 {
-                        font-size: 10px; /* Reduce el tamaño del texto del título */
+                        font-size: 10px;
                         margin-bottom: 2px;
                     }
 
                     span {
-                        font-size: 12px; /* Reduce el tamaño del texto del número */
+                        font-size: 12px;
                         font-weight: bold;
                     }
 
@@ -69,10 +69,10 @@
     }
 
     .maquinas-tiles, .reparaciones-tiles, .tickets-tiles, .alquiler-tiles {
-        margin-bottom: 8px; /* Reduce el espacio entre filas */
+        margin-bottom: 8px;
         display: flex;
         flex-wrap: wrap;
-        gap: 4px; /* Reduce el espacio entre tiles de cada categoría */
+        gap: 4px;
         justify-content: flex-start;
     }
 
