@@ -203,7 +203,7 @@ class SatDashboard extends Component {
                     title: { 
                         text: 'Estado de Máquinas',
                         left: 'center',
-                        top: 'top',
+                        top: '2%',
                         textStyle: {
                             fontSize: 14,
                             fontWeight: 'bold',
@@ -214,8 +214,8 @@ class SatDashboard extends Component {
                         formatter: '{b}: {c} ({d}%)'
                     },
                     legend: {
-                        orient: 'horizontal',
-                        bottom: '0%', // Coloca la leyenda en la parte inferior para liberar espacio
+                        orient: 'horizontal', 
+                        top: 'bottom', // Mueve la leyenda al borde inferior
                         data: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas'],
                         textStyle: {
                             fontSize: 10,
@@ -224,9 +224,8 @@ class SatDashboard extends Component {
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: ['40%', '70%'], // Expande el tamaño del gráfico para ocupar más espacio
-                        center: ['50%', '50%'], // Centra el gráfico en el contenedor
-                        avoidLabelOverlap: false,
+                        radius: ['40%', '70%'], // Ajusta para que el gráfico ocupe más espacio
+                        center: ['50%', '50%'], 
                         data: [
                             { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
                             { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
@@ -249,8 +248,8 @@ class SatDashboard extends Component {
                         },
                         labelLine: {
                             show: true,
-                            length: 10,
-                            length2: 10,
+                            length: 15, // Aumenta el largo de las líneas de etiquetas
+                            length2: 20, // Aumenta la separación adicional
                             smooth: true,
                             lineStyle: {
                                 width: 1,
@@ -260,7 +259,7 @@ class SatDashboard extends Component {
                     }],
                     animationDuration: 1000,
                     animationEasing: 'cubicInOut'
-                });
+                });            
                 
                 
                 
