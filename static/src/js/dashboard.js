@@ -104,7 +104,7 @@ class SatDashboard extends Component {
             type: 'ir.actions.act_window',
             name: `Registros filtrados de ${model}`,
             res_model: model,
-            view_mode: 'tree,form',
+            view_mode: 'list,form',
             domain: domain,
             target: 'current'
         });
