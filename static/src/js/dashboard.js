@@ -72,31 +72,93 @@ class SatDashboard extends Component {
         }
     
         const elements = [
-            { id: 'total_maquinas', value: this.dashboardData.total_maquinas, res_model: 'sat.sat', action_id: 'sat.action_window', domain: [] },
-            { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, res_model: 'sat.sat', action_id: 'sat.action_window', domain: [['disponibilidad_id', '=', 'disponible']] },
-            { id: 'maquinas_separadas', value: this.dashboardData.maquinas_separadas, res_model: 'sat.sat', action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'separada']] },
-            { id: 'maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, res_model: 'sat.sat', action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'no_disponible']] },
-            { id: 'total_reparaciones', value: this.dashboardData.total_reparaciones, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [] },
-            { id: 'reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['estado', '=', 'en_revision']] },
-            { id: 'reparaciones_hoy', value: this.dashboardData.reparaciones_hoy, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['fecha', '=', new Date().toISOString().split('T')[0]]] },
-            { id: 'reparaciones_mes', value: this.dashboardData.reparaciones_mes, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['mes', '=', new Date().getMonth() + 1]] },
-            { id: 'reparaciones_ano', value: this.dashboardData.reparaciones_ano, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['ano', '=', new Date().getFullYear()]] }
+            { 
+                id: 'total_maquinas', 
+                value: this.dashboardData.total_maquinas, 
+                res_model: 'sat.sat', 
+                action_id: 'sat.action_window', 
+                domain: [], 
+                search_view_id: 'sat.maquinas_kanban_view' 
+            },
+            { 
+                id: 'maquinas_disponibles', 
+                value: this.dashboardData.maquinas_disponibles, 
+                res_model: 'sat.sat', 
+                action_id: 'sat.action_window', 
+                domain: [['disponibilidad_id', '=', 'disponible']], 
+                search_view_id: 'sat.Sat_search_view' 
+            },
+            { 
+                id: 'maquinas_separadas', 
+                value: this.dashboardData.maquinas_separadas, 
+                res_model: 'sat.sat', 
+                action_id: 'your_module.action_sat_sat_view', 
+                domain: [['estado', '=', 'separada']], 
+                search_view_id: 'sat.Sat_search_view' 
+            },
+            { 
+                id: 'maquinas_no_disponibles', 
+                value: this.dashboardData.maquinas_no_disponibles, 
+                res_model: 'sat.sat', 
+                action_id: 'your_module.action_sat_sat_view', 
+                domain: [['estado', '=', 'no_disponible']], 
+                search_view_id: 'sat.Sat_search_view' 
+            },
+            { 
+                id: 'total_reparaciones', 
+                value: this.dashboardData.total_reparaciones, 
+                res_model: 'reparaciones.reparaciones', 
+                action_id: 'your_module.action_reparaciones_reparaciones_view', 
+                domain: [], 
+                search_view_id: 'reparaciones.Reparaciones_search_view' 
+            },
+            { 
+                id: 'reparaciones_en_revision', 
+                value: this.dashboardData.reparaciones_en_revision, 
+                res_model: 'reparaciones.reparaciones', 
+                action_id: 'your_module.action_reparaciones_reparaciones_view', 
+                domain: [['estado', '=', 'en_revision']], 
+                search_view_id: 'reparaciones.Reparaciones_search_view' 
+            },
+            { 
+                id: 'reparaciones_hoy', 
+                value: this.dashboardData.reparaciones_hoy, 
+                res_model: 'reparaciones.reparaciones', 
+                action_id: 'your_module.action_reparaciones_reparaciones_view', 
+                domain: [['fecha', '=', new Date().toISOString().split('T')[0]]], 
+                search_view_id: 'reparaciones.Reparaciones_search_view' 
+            },
+            { 
+                id: 'reparaciones_mes', 
+                value: this.dashboardData.reparaciones_mes, 
+                res_model: 'reparaciones.reparaciones', 
+                action_id: 'your_module.action_reparaciones_reparaciones_view', 
+                domain: [['mes', '=', new Date().getMonth() + 1]], 
+                search_view_id: 'reparaciones.Reparaciones_search_view' 
+            },
+            { 
+                id: 'reparaciones_ano', 
+                value: this.dashboardData.reparaciones_ano, 
+                res_model: 'reparaciones.reparaciones', 
+                action_id: 'your_module.action_reparaciones_reparaciones_view', 
+                domain: [['ano', '=', new Date().getFullYear()]], 
+                search_view_id: 'reparaciones.Reparaciones_search_view' 
+            }
         ];
     
-        elements.forEach(({ id, value, res_model, action_id, domain }) => {
+        elements.forEach(({ id, value, res_model, action_id, domain, search_view_id }) => {
             this._updateElementContent(id, value);
             const element = document.getElementById(`tile_${id}`); // Selecciona el contenedor del "tile"
     
             if (element) {
                 element.onclick = () => {
-                    this._openFilteredView(action_id, res_model, domain);
+                    this._openFilteredView(action_id, res_model, domain, search_view_id);
                 };
             }
         });
     }
-    
 
-    async _openFilteredView(action_id, res_model, domain) {
+    async _openFilteredView(action_id, res_model, domain, search_view_id = null) {
         try {
             if (action_id) {
                 await this.action.doAction({
@@ -107,7 +169,7 @@ class SatDashboard extends Component {
                     target: 'current',
                     domain: domain,
                     context: {
-                        search_view_id: "sat.Sat_search_view" // ID del search view
+                        search_view_id: search_view_id // ID de la vista de búsqueda específica
                     }
                 });
             } else {
