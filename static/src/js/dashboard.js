@@ -90,55 +90,38 @@ class SatDashboard extends Component {
             return;
         }
 
+        // Actualiza los `action_id` con los IDs correspondientes a tus vistas
         const elements = [
-            { id: 'tile_total_maquinas', value: this.dashboardData.total_maquinas, model: 'sat.sat', domain: [] },
-            { id: 'tile_maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, model: 'sat.sat', domain: [['estado', '=', 'disponible']] },
-            { id: 'tile_maquinas_separadas', value: this.dashboardData.maquinas_separadas, model: 'sat.sat', domain: [['estado', '=', 'separada']] },
-            { id: 'tile_maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, model: 'sat.sat', domain: [['estado', '=', 'no_disponible']] },
-            { id: 'tile_total_reparaciones', value: this.dashboardData.total_reparaciones, model: 'reparaciones.reparaciones', domain: [] },
-            { id: 'tile_reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, model: 'reparaciones.reparaciones', domain: [['estado', '=', 'en_revision']] },
-            { id: 'tile_reparaciones_finalizadas', value: this.dashboardData.reparaciones_finalizadas, model: 'reparaciones.reparaciones', domain: [['estado', '=', 'finalizado']] },
-            { id: 'tile_reparaciones_con_problemas', value: this.dashboardData.reparaciones_con_problemas, model: 'reparaciones.reparaciones', domain: [['estado', '=', 'con_problemas']] }
+            { id: 'tile_total_maquinas', value: this.dashboardData.total_maquinas, action_id: 'sat.sat.action_window', domain: [] },
+            { id: 'tile_maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'disponible']] },
+            { id: 'tile_maquinas_separadas', value: this.dashboardData.maquinas_separadas, action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'separada']] },
+            { id: 'tile_maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'no_disponible']] },
+            { id: 'tile_total_reparaciones', value: this.dashboardData.total_reparaciones, action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [] },
+            { id: 'tile_reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['estado', '=', 'en_revision']] }
         ];
 
-        elements.forEach(({ id, value, model, domain }) => {
+        elements.forEach(({ id, value, action_id, domain }) => {
             this._updateElementContent(id.replace('tile_', ''), value);
             const element = document.getElementById(id);
 
             if (element) {
                 element.onclick = () => {
-                    if (model && Array.isArray(domain)) {
-                        this._openFilteredView(model, domain);
-                    } else {
-                        console.error(`Model o Domain inválido para ${id}:`, { model, domain });
-                    }
+                    console.log(`Intentando abrir acción ${action_id} con dominio`, domain);
+                    this._openFilteredView(action_id, domain);
                 };
             }
         });
     }
     
 
-    _openFilteredView(model, domain) {
+    async _openFilteredView(action_id, domain) {
         try {
-            if (!model) {
-                throw new Error("Modelo indefinido en _openFilteredView");
-            }
-            if (!Array.isArray(domain)) {
-                throw new Error("Dominio no es un array válido en _openFilteredView");
-            }
-
-            this.action.doAction({
-                type: 'ir.actions.act_window',
-                name: `Registros filtrados de ${model}`,
-                res_model: model,
-                view_mode: 'list,form',
-                domain: domain,
-                target: 'current'
-            });
+            // Llama a la acción usando el `External ID` y aplica el dominio
+            await this.action.doAction(action_id, { additional_context: { domain } });
         } catch (error) {
             console.error("Error en _openFilteredView:", error);
         }
-    }    
+    }
 
 
 
