@@ -306,7 +306,8 @@ class SatDashboard extends Component {
                         type: 'category',
                         axisLabel: {
                             fontSize: 12,
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            overflow: 'truncate', // Permite que los nombres largos no se corten
                         }
                     },
                     visualMap: {
@@ -328,18 +329,19 @@ class SatDashboard extends Component {
                             },
                             label: {
                                 show: true,
-                                position: 'right',
-                                formatter: '{c}', // Muestra el valor
-                                fontSize: 12,
+                                position: 'right', // Coloca la cantidad al final de cada barra
+                                formatter: '{c}', // Solo muestra la cantidad
+                                fontSize: 14,
                                 fontWeight: 'bold'
                             },
-                            barWidth: '50%' // Controla el ancho de las barras
+                            barWidth: '50%' // Controla el ancho de las barras para ocupar el espacio
                         }
                     ]
                 });
 
                 console.log('Gráfico de técnicos renderizado exitosamente');
             }
+
 
 
             // Gráfico de asesoras
