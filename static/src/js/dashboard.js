@@ -243,6 +243,68 @@ class SatDashboard extends Component {
             }
 
 
+            // Gráfico de técnicos
+            const tecnicosCtx = this._getChartContext("tecnicosChart");
+            if (tecnicosCtx) {
+                console.log('Renderizando gráfico de técnicos...');
+                const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales);
+                const tecnicosData = Object.values(this.dashboardData.tecnicos_totales);
+                console.log('Datos de técnicos:', { labels: tecnicosLabels, data: tecnicosData });
+
+                // Array de colores para cada barra
+                const barColors = [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+                    '#E7E9ED', '#71B37C', '#FF6384', '#36A2EB'
+                ];
+
+                new Chart(tecnicosCtx, {
+                    type: 'bar',
+                    plugins: [ChartDataLabels],
+                    data: {
+                        labels: tecnicosLabels,
+                        datasets: [{
+                            label: 'Reparaciones',
+                            data: tecnicosData,
+                            backgroundColor: barColors.slice(0, tecnicosData.length), // Asignar colores según la cantidad de barras
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            datalabels: {
+                                display: true,
+                                color: '#FFFFFF',
+                                anchor: 'center', // Centra la etiqueta en la barra
+                                align: 'center',  // Alinea el texto al centro
+                                font: {
+                                    weight: 'bold',
+                                    size: 14
+                                },
+                                formatter: function(value) {
+                                    return value; // Muestra el valor numérico
+                                },
+                                padding: 6
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            },
+                            x: {
+                                ticks: {
+                                    autoSkip: false,
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('Gráfico de técnicos renderizado exitosamente');
+            }
+
+
             // Gráfico de asesoras
             const asesoraCtx = this._getChartContext("asesoraChart");
             if (asesoraCtx) {
