@@ -270,11 +270,9 @@ class SatDashboard extends Component {
                 console.log('Renderizando gráfico de técnicos...');
                 const tecnicosChart = echarts.init(tecnicosElement);
                 
-                // Asumiendo que los datos vienen en el formato:
-                // this.dashboardData.tecnicos_totales = { "Técnico1": 50, "Técnico2": 75, ... }
                 const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales);
                 const tecnicosData = Object.values(this.dashboardData.tecnicos_totales);
-            
+
                 tecnicosChart.setOption({
                     title: {
                         text: 'Reparaciones por Técnico',
@@ -289,17 +287,15 @@ class SatDashboard extends Component {
                         trigger: 'axis',
                         axisPointer: {
                             type: 'shadow'
-                        },
-                        formatter: function(params) {
-                            return `${params[0].name}: ${params[0].value}`;
                         }
                     },
                     grid: {
                         top: '15%',
-                        bottom: '3%',
-                        left: '15%',
-                        right: '10%',
-                        containLabel: true
+                        bottom: '15%',    // Aumentado para dar espacio al visualMap
+                        left: '3%',       // Reducido para usar más espacio horizontal
+                        right: '5%',      // Reducido para usar más espacio horizontal
+                        containLabel: true,
+                        height: '70%'     // Controla la altura del área del gráfico
                     },
                     xAxis: {
                         type: 'value',
@@ -308,6 +304,9 @@ class SatDashboard extends Component {
                             lineStyle: {
                                 type: 'dashed'
                             }
+                        },
+                        axisLabel: {
+                            fontSize: 12
                         }
                     },
                     yAxis: {
@@ -315,24 +314,32 @@ class SatDashboard extends Component {
                         data: tecnicosLabels,
                         axisLabel: {
                             interval: 0,
-                            width: 130,
+                            width: 150,      // Aumentado para nombres más largos
                             overflow: 'break',
+                            fontSize: 12,
                             formatter: function(value) {
-                                return value.length > 25 ? value.substring(0, 25) + '...' : value;
+                                // Manejar nombres largos en múltiples líneas si es necesario
+                                const maxLength = 30;
+                                if (value.length > maxLength) {
+                                    return value.substring(0, maxLength) + '...';
+                                }
+                                return value;
                             }
                         }
                     },
                     visualMap: {
                         orient: 'horizontal',
                         left: 'center',
-                        bottom: '0%',
+                        bottom: '2%',
                         min: Math.min(...tecnicosData),
                         max: Math.max(...tecnicosData),
                         text: ['High Score', 'Low Score'],
                         dimension: 0,
                         inRange: {
-                            color: ['#91CC75', '#FAC858', '#EE6666']
-                        }
+                            color: ['#FFE7BA', '#FFB366']  // Tonos amarillos como en tu imagen
+                        },
+                        itemWidth: 15,
+                        itemHeight: 200
                     },
                     series: [{
                         name: 'Reparaciones',
@@ -341,22 +348,36 @@ class SatDashboard extends Component {
                         label: {
                             show: true,
                             position: 'right',
-                            formatter: '{c}',  // Muestra solo el valor numérico
+                            formatter: '{c}',
                             fontSize: 12,
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            distance: 5
                         },
-                        barWidth: '60%'
+                        barWidth: '40%',    // Ajustado para mejor proporción
+                        barMaxWidth: 60     // Máximo ancho de las barras
                     }]
                 });
                 
+                // Asegurar que el gráfico ocupe todo el espacio disponible
+                const parentElement = tecnicosElement.parentElement;
+                if (parentElement) {
+                    tecnicosChart.resize({
+                        width: parentElement.offsetWidth,
+                        height: parentElement.offsetHeight
+                    });
+                }
+                
                 // Manejar el redimensionamiento de la ventana
                 window.addEventListener('resize', () => {
-                    tecnicosChart.resize();
+                    tecnicosChart.resize({
+                        width: parentElement?.offsetWidth,
+                        height: parentElement?.offsetHeight
+                    });
                 });
                 
                 console.log('Gráfico de técnicos renderizado exitosamente');
             }
-            // Gráfico de asesoras
+                        // Gráfico de asesoras
             const asesoraElement = this._getChartElement("asesoraChart");
             if (asesoraElement) {
                 console.log('Renderizando gráfico de asesoras...');
