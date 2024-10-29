@@ -73,7 +73,7 @@ class SatDashboard extends Component {
     
         const elements = [
             { id: 'total_maquinas', value: this.dashboardData.total_maquinas, res_model: 'sat.sat', action_id: 'sat.action_window', domain: [] },
-            { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, res_model: 'sat.sat', action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'disponible']] },
+            { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, res_model: 'sat.sat', action_id: 'sat.action_window', domain: [['disponibilidad_id', '=', 'disponible']] },
             { id: 'maquinas_separadas', value: this.dashboardData.maquinas_separadas, res_model: 'sat.sat', action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'separada']] },
             { id: 'maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, res_model: 'sat.sat', action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'no_disponible']] },
             { id: 'total_reparaciones', value: this.dashboardData.total_reparaciones, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [] },
