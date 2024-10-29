@@ -99,7 +99,6 @@ class SatDashboard extends Component {
             { id: 'tile_reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, model: 'reparaciones.reparaciones', domain: [['estado', '=', 'en_revision']] },
             { id: 'tile_reparaciones_finalizadas', value: this.dashboardData.reparaciones_finalizadas, model: 'reparaciones.reparaciones', domain: [['estado', '=', 'finalizado']] },
             { id: 'tile_reparaciones_con_problemas', value: this.dashboardData.reparaciones_con_problemas, model: 'reparaciones.reparaciones', domain: [['estado', '=', 'con_problemas']] }
-            // Puedes agregar más elementos según lo necesites
         ];
 
         elements.forEach(({ id, value, model, domain }) => {
@@ -121,7 +120,6 @@ class SatDashboard extends Component {
 
     _openFilteredView(model, domain) {
         try {
-            // Validar el modelo y el dominio antes de pasar a doAction
             if (!model) {
                 throw new Error("Modelo indefinido en _openFilteredView");
             }
@@ -129,7 +127,6 @@ class SatDashboard extends Component {
                 throw new Error("Dominio no es un array válido en _openFilteredView");
             }
 
-            // Llamada a doAction con valores verificados
             this.action.doAction({
                 type: 'ir.actions.act_window',
                 name: `Registros filtrados de ${model}`,
@@ -141,9 +138,7 @@ class SatDashboard extends Component {
         } catch (error) {
             console.error("Error en _openFilteredView:", error);
         }
-    }
-
-    
+    }    
 
 
 
