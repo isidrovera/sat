@@ -65,37 +65,53 @@ class SatDashboard extends Component {
         }
     }
 
+    async _fetch_data() {
+        try {
+            const result = await this.orm.call("sat.dashboard", "get_dashboard_data", []);
+            this.dashboardData = result;
+            this._render_tiles();
+        } catch (error) {
+            console.error("Error cargando datos para el dashboard:", error);
+        }
+    }
+
+    _updateElementContent(elementId, value) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = value;
+        } else {
+            console.warn(`Elemento no encontrado: ${elementId}`);
+        }
+    }
+
     _render_tiles() {
         if (!this.dashboardData) {
             console.error('No hay datos disponibles para renderizar las tiles');
             return;
         }
-    
+
         const elements = [
-            { id: 'tile_total_maquinas', value: this.dashboardData.total_maquinas, model: 'maquina', domain: [] },
-            { id: 'tile_maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, model: 'maquina', domain: [['estado', '=', 'disponible']] },
-            { id: 'tile_maquinas_separadas', value: this.dashboardData.maquinas_separadas, model: 'maquina', domain: [['estado', '=', 'separada']] },
-            { id: 'tile_maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, model: 'maquina', domain: [['estado', '=', 'no_disponible']] },
-            { id: 'tile_total_reparaciones', value: this.dashboardData.total_reparaciones, model: 'reparacion', domain: [] },
-            { id: 'tile_reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, model: 'reparacion', domain: [['estado', '=', 'en_revision']] },
-            { id: 'tile_reparaciones_finalizadas', value: this.dashboardData.reparaciones_finalizadas, model: 'reparacion', domain: [['estado', '=', 'finalizado']] },
-            { id: 'tile_reparaciones_con_problemas', value: this.dashboardData.reparaciones_con_problemas, model: 'reparacion', domain: [['estado', '=', 'con_problemas']] },
-            { id: 'tile_total_tickets', value: this.dashboardData.total_tickets, model: 'ticket', domain: [] },
-            { id: 'tile_tickets_nuevos', value: this.dashboardData.tickets_nuevos, model: 'ticket', domain: [['estado', '=', 'nuevo']] },
-            { id: 'tile_tickets_en_proceso', value: this.dashboardData.tickets_en_proceso, model: 'ticket', domain: [['estado', '=', 'en_proceso']] },
-            { id: 'tile_tickets_finalizados', value: this.dashboardData.tickets_finalizados, model: 'ticket', domain: [['estado', '=', 'finalizado']] }
+            { id: 'tile_total_maquinas', value: this.dashboardData.total_maquinas, model: 'sat.sat', domain: [] },
+            { id: 'tile_maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, model: 'sat.sat', domain: [['estado', '=', 'disponible']] },
+            { id: 'tile_maquinas_separadas', value: this.dashboardData.maquinas_separadas, model: 'sat.sat', domain: [['estado', '=', 'separada']] },
+            { id: 'tile_maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, model: 'sat.sat', domain: [['estado', '=', 'no_disponible']] },
+            { id: 'tile_total_reparaciones', value: this.dashboardData.total_reparaciones, model: 'reparaciones.reparaciones', domain: [] },
+            { id: 'tile_reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, model: 'reparaciones.reparaciones', domain: [['estado', '=', 'en_revision']] },
+            { id: 'tile_reparaciones_finalizadas', value: this.dashboardData.reparaciones_finalizadas, model: 'reparaciones.reparaciones', domain: [['estado', '=', 'finalizado']] },
+            { id: 'tile_reparaciones_con_problemas', value: this.dashboardData.reparaciones_con_problemas, model: 'reparaciones.reparaciones', domain: [['estado', '=', 'con_problemas']] }
+            // Puedes agregar más elementos según lo necesites
         ];
-    
+
         elements.forEach(({ id, value, model, domain }) => {
             this._updateElementContent(id.replace('tile_', ''), value);
             const element = document.getElementById(id);
-    
+
             if (element) {
                 element.onclick = () => {
                     if (model && Array.isArray(domain)) {
                         this._openFilteredView(model, domain);
                     } else {
-                        console.error(`Model o Domain inválido para ${id}: `, { model, domain });
+                        console.error(`Model o Domain inválido para ${id}:`, { model, domain });
                     }
                 };
             }
