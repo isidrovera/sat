@@ -215,7 +215,7 @@ class SatDashboard extends Component {
                     },
                     legend: {
                         orient: 'vertical', 
-                        right: '5%', // Mueve la leyenda más a la derecha
+                        right: '5%', 
                         top: 'middle',
                         data: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas'],
                         textStyle: {
@@ -225,8 +225,8 @@ class SatDashboard extends Component {
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: ['40%', '70%'], // Mantiene el gráfico de dona
-                        center: ['35%', '50%'], // Mueve el gráfico más hacia la izquierda
+                        radius: ['30%', '80%'], // Maximiza el área del gráfico
+                        center: ['35%', '50%'], // Centra el gráfico hacia la izquierda
                         data: [
                             { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
                             { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
@@ -242,25 +242,20 @@ class SatDashboard extends Component {
                         },
                         label: {
                             show: true,
-                            position: 'outside',
-                            formatter: '{b}: {c} ({d}%)', // Muestra nombres completos
+                            position: 'inner', // Coloca las etiquetas dentro del gráfico
+                            formatter: '{b}\n{d}%', // Muestra solo el nombre y porcentaje para simplificar
                             fontSize: 10,
-                            color: '#333',
+                            color: '#fff',
+                            fontWeight: 'bold'
                         },
                         labelLine: {
-                            show: true,
-                            length: 25, // Aumenta la longitud de las líneas de etiquetas
-                            length2: 20, // Incrementa la distancia para mayor claridad
-                            smooth: true,
-                            lineStyle: {
-                                width: 1,
-                                type: 'solid'
-                            }
+                            show: false, // Oculta las líneas de etiquetas para reducir el desorden visual
                         }
                     }],
                     animationDuration: 1000,
                     animationEasing: 'cubicInOut'
                 });
+                
                 
 
                 console.log('Gráfico de estado renderizado exitosamente');
