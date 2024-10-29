@@ -68,13 +68,13 @@ class SatDashboard extends Component {
     async _fetch_data() {
         try {
             const result = await this.orm.call("sat.dashboard", "get_dashboard_data", []);
+            console.log("Datos de dashboard obtenidos:", result); // Confirmar contenido de dashboardData
             this.dashboardData = result;
             this._render_tiles();
         } catch (error) {
             console.error("Error cargando datos para el dashboard:", error);
         }
     }
-
     _updateElementContent(elementId, value) {
         const element = document.getElementById(elementId);
         if (element) {
