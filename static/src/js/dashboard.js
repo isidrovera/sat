@@ -264,16 +264,29 @@ class SatDashboard extends Component {
                     },
                     options: {
                         plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
                             datalabels: {
+                                display: true,
                                 color: '#FFFFFF',
-                                anchor: 'end',
-                                align: 'top',
+                                anchor: 'center', // Centra la etiqueta en la barra
+                                align: 'center',  // Alinea el texto al centro
                                 font: {
-                                    weight: 'bold'
-                                }
+                                    weight: 'bold',
+                                    size: 14
+                                },
+                                formatter: function(value) {
+                                    return value; // Muestra el valor numérico
+                                },
+                                padding: 6
                             }
                         },
                         scales: {
+                            y: {
+                                beginAtZero: true
+                            },
                             x: {
                                 ticks: {
                                     autoSkip: false,
