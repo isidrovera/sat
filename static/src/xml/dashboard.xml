@@ -15,11 +15,11 @@
                 <!-- Fila para Máquinas -->
                 <div class="row dashboard-tiles maquinas-tiles">
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
-                        <div class="oh-card" id="total_maquinas"> <!-- id debe coincidir con el valor en JavaScript -->
+                        <div class="oh-card" id="tile_total_maquinas">
                             <div class="oh-card-body text-center">
                                 <i class="fa fa-print"></i>
                                 <h3>Máquinas</h3>
-                                <span>0</span> <!-- Este valor será actualizado por el JavaScript -->
+                                <span id="total_maquinas">0</span>
                             </div>
                         </div>
                     </div>
