@@ -78,7 +78,7 @@ class SatDashboard extends Component {
                 res_model: 'sat.sat', 
                 action_id: 'sat.action_window', 
                 domain: [], 
-                search_view_id: 'sat.maquinas_kanban_view' 
+                search_view_id: 'sat.Sat_search_view' 
             },
             { 
                 id: 'maquinas_disponibles', 
@@ -108,31 +108,31 @@ class SatDashboard extends Component {
                 id: 'total_reparaciones', 
                 value: this.dashboardData.total_reparaciones, 
                 res_model: 'reparaciones.reparaciones', 
-                action_id: 'your_module.action_reparaciones_reparaciones_view', 
+                action_id: 'sat.action_reparaciones_window', 
                 domain: [], 
-                search_view_id: 'reparaciones.Reparaciones_search_view' 
+                search_view_id: 'reparaciones_search_view' 
             },
             { 
                 id: 'reparaciones_en_revision', 
                 value: this.dashboardData.reparaciones_en_revision, 
                 res_model: 'reparaciones.reparaciones', 
-                action_id: 'your_module.action_reparaciones_reparaciones_view', 
+                action_id: 'sat.action_reparaciones_window', 
                 domain: [['estado', '=', 'en_revision']], 
-                search_view_id: 'reparaciones.Reparaciones_search_view' 
+                search_view_id: 'reparaciones_search_view' 
             },
             { 
                 id: 'reparaciones_hoy', 
                 value: this.dashboardData.reparaciones_hoy, 
                 res_model: 'reparaciones.reparaciones', 
-                action_id: 'your_module.action_reparaciones_reparaciones_view', 
+                action_id: 'sat.action_reparaciones_window', 
                 domain: [['fecha', '=', new Date().toISOString().split('T')[0]]], 
-                search_view_id: 'reparaciones.Reparaciones_search_view' 
+                search_view_id: 'reparaciones_search_view' 
             },
             { 
                 id: 'reparaciones_mes', 
                 value: this.dashboardData.reparaciones_mes, 
                 res_model: 'reparaciones.reparaciones', 
-                action_id: 'your_module.action_reparaciones_reparaciones_view', 
+                action_id: 'sat.action_reparaciones_window', 
                 domain: [['mes', '=', new Date().getMonth() + 1]], 
                 search_view_id: 'reparaciones.Reparaciones_search_view' 
             },
