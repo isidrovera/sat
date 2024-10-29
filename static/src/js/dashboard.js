@@ -269,20 +269,65 @@ class SatDashboard extends Component {
             if (tecnicosElement) {
                 console.log('Renderizando gráfico de técnicos...');
                 const tecnicosChart = echarts.init(tecnicosElement);
-                const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales);
-                const tecnicosData = Object.values(this.dashboardData.tecnicos_totales);
+                
+                const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales); // Nombres de técnicos
+                const tecnicosData = Object.values(this.dashboardData.tecnicos_totales); // Datos de cantidad por técnico
+
                 tecnicosChart.setOption({
-                    title: { text: 'Reparaciones por Técnico' },
-                    tooltip: {},
-                    xAxis: { type: 'category', data: tecnicosLabels },
-                    yAxis: {},
+                    title: { 
+                        text: 'Reparaciones por Técnico', 
+                        left: 'center',
+                        top: '0%',
+                        textStyle: {
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                        }
+                    },
+                    tooltip: { 
+                        trigger: 'item',
+                        formatter: '{b}: {c}' // Muestra nombre del técnico y cantidad
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'value',
+                        boundaryGap: [0, 0.01]
+                    },
+                    yAxis: {
+                        type: 'category',
+                        data: tecnicosLabels,
+                        inverse: true // Muestra el gráfico de arriba hacia abajo
+                    },
                     series: [{
                         type: 'bar',
-                        data: tecnicosData
-                    }]
+                        data: tecnicosData.map((value, index) => ({
+                            value,
+                            itemStyle: {
+                                color: `hsl(${(index / tecnicosLabels.length) * 360}, 70%, 50%)` // Asigna colores distintos a cada barra
+                            }
+                        })),
+                        label: {
+                            show: true,
+                            position: 'right',
+                            formatter: '{c}', // Muestra cantidad en la etiqueta
+                            fontSize: 12,
+                            fontWeight: 'bold'
+                        },
+                        barWidth: '60%', // Ajusta el ancho de las barras
+                    }],
+                    animationDuration: 0,
+                    animationDurationUpdate: 2000,
+                    animationEasing: 'linear',
+                    animationEasingUpdate: 'linear'
                 });
+
                 console.log('Gráfico de técnicos renderizado exitosamente');
             }
+
 
             // Gráfico de asesoras
             const asesoraElement = this._getChartElement("asesoraChart");
