@@ -203,9 +203,9 @@ class SatDashboard extends Component {
                     title: { 
                         text: 'Estado de Máquinas',
                         left: 'center',
-                        top: '5%', // Mueve el título más arriba
+                        top: 'top',
                         textStyle: {
-                            fontSize: 14, // Ajusta el tamaño del texto del título
+                            fontSize: 14,
                             fontWeight: 'bold',
                         }
                     },
@@ -214,18 +214,19 @@ class SatDashboard extends Component {
                         formatter: '{b}: {c} ({d}%)'
                     },
                     legend: {
-                        orient: 'horizontal', // Cambia a horizontal para ocupar menos espacio
-                        bottom: '0%', // Coloca la leyenda en la parte inferior
+                        orient: 'horizontal',
+                        bottom: '0%', // Coloca la leyenda en la parte inferior para liberar espacio
                         data: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas'],
                         textStyle: {
-                            fontSize: 10, // Reduce el tamaño de las etiquetas de la leyenda
+                            fontSize: 10,
                         }
                     },
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: '70%',
-                        center: ['50%', '50%'], // Centra el gráfico
+                        radius: ['40%', '70%'], // Expande el tamaño del gráfico para ocupar más espacio
+                        center: ['50%', '50%'], // Centra el gráfico en el contenedor
+                        avoidLabelOverlap: false,
                         data: [
                             { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
                             { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
@@ -244,12 +245,11 @@ class SatDashboard extends Component {
                             position: 'outside',
                             formatter: '{b}: {c} ({d}%)',
                             fontSize: 10,
-                            fontWeight: 'normal', // Cambia a 'normal' para que las etiquetas sean menos llamativas
                             color: '#333',
                         },
                         labelLine: {
                             show: true,
-                            length: 8,
+                            length: 10,
                             length2: 10,
                             smooth: true,
                             lineStyle: {
@@ -261,6 +261,7 @@ class SatDashboard extends Component {
                     animationDuration: 1000,
                     animationEasing: 'cubicInOut'
                 });
+                
                 
                 
 
