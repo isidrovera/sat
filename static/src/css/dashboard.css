@@ -1,12 +1,9 @@
 /* Archivo: static/src/css/dashboard.scss */
 
 .dashboard-container {
-    overflow-y: auto; /* Permitir scroll vertical */
-    height: 100vh; /* Llenar toda la altura de la ventana */
+    overflow-y: auto;
+    max-height: 100vh;
     padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Espacio entre secciones */
 
     .dashboard-tiles {
         display: flex;
@@ -82,13 +79,16 @@
     .dashboard-charts {
         display: flex;
         flex-wrap: wrap;
-        gap: 20px;
+        gap: 4px; /* Añade espacio entre los gráficos */
+        padding: 0 8px;
+
         .chart-wrapper {
             background-color: white;
             border-radius: 6px;
             padding: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             margin-bottom: 12px;
+            flex: 1 1 calc(50% - 4px); /* Hace que los gráficos ocupen el 50% del ancho del contenedor */
 
             .chart-header {
                 display: flex;
