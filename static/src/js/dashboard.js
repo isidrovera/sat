@@ -166,7 +166,7 @@ class SatDashboard extends Component {
                 console.log('Gráfico de disponibilidad renderizado exitosamente');
             }
             
-           // Gráfico de estado
+            // Gráfico de estado
             const estadoCtx = this._getChartContext("estadoChart");
             if (estadoCtx) {
                 console.log('Renderizando gráfico de estado...');
@@ -199,22 +199,22 @@ class SatDashboard extends Component {
                         },
                         plugins: {
                             legend: {
-                                display: true,
-                                position: 'right',
+                                display: true, // Muestra la leyenda
+                                position: 'right', // Coloca la leyenda a la derecha
                                 labels: {
-                                    boxWidth: 20,
+                                    boxWidth: 20, // Ancho de la caja de la leyenda
                                 }
                             },
                             datalabels: {
-                                display: true, // Muestra los datos en las secciones
+                                // Configuración para mostrar los valores dentro del gráfico
                                 color: 'white',
                                 font: {
                                     size: 16,
                                     weight: 'bold'
                                 },
-                                formatter: (value) => value, // Muestra el valor numérico
-                                anchor: 'center', // Posiciona la etiqueta en el centro de cada sección
-                                align: 'center'  // Centra el texto dentro de cada sección
+                                formatter: (value) => value,
+                                anchor: 'end', // Ancla la etiqueta al final
+                                align: 'end', // Alinea la etiqueta al final
                             }
                         }
                     },
@@ -237,7 +237,6 @@ class SatDashboard extends Component {
                 });
                 console.log('Gráfico de estado renderizado exitosamente');
             }
-
             // Gráfico de técnicos
             const tecnicosCtx = this._getChartContext("tecnicosChart");
             if (tecnicosCtx) {
