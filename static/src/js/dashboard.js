@@ -122,11 +122,34 @@ class SatDashboard extends Component {
             if (disponibilidadElement) {
                 console.log('Renderizando gráfico de disponibilidad...');
                 const disponibilidadChart = echarts.init(disponibilidadElement);
+
                 disponibilidadChart.setOption({
-                    title: { text: 'Disponibilidad de Máquinas' },
-                    tooltip: {},
-                    xAxis: { data: ['Disponibles', 'Separadas', 'No Disponibles'] },
-                    yAxis: {},
+                    title: { 
+                        text: 'Disponibilidad de Máquinas',
+                        left: 'center',
+                        textStyle: {
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: { type: 'shadow' }
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: ['Disponibles', 'Separadas', 'No Disponibles'],
+                        axisLabel: {
+                            fontSize: 12,
+                            fontWeight: 'bold',
+                        }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: {
+                            fontSize: 12,
+                        }
+                    },
                     series: [{
                         name: 'Máquinas',
                         type: 'bar',
@@ -134,9 +157,32 @@ class SatDashboard extends Component {
                             this.dashboardData.maquinas_disponibles,
                             this.dashboardData.maquinas_separadas,
                             this.dashboardData.maquinas_no_disponibles
-                        ]
-                    }]
+                        ],
+                        itemStyle: {
+                            color: '#4BC0C0' // Color personalizado para las barras
+                        },
+                        label: {
+                            show: true,
+                            position: 'top',
+                            fontSize: 12,
+                            fontWeight: 'bold',
+                            color: '#333',
+                            formatter: '{c}', // Muestra el valor numérico
+                        },
+                        emphasis: {
+                            focus: 'series'
+                        },
+                        animationDuration: 1000,
+                        animationEasing: 'cubicInOut'
+                    }],
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    }
                 });
+
                 console.log('Gráfico de disponibilidad renderizado exitosamente');
             }
 
