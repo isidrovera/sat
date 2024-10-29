@@ -61,7 +61,7 @@
                 <!-- Fila para Reparaciones -->
                 <div class="row dashboard-tiles reparaciones-tiles">
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
-                        <div class="oh-card" id="total_reparaciones">
+                        <div class="oh-card" >
                             <div class="oh-card-body text-center">
                                 <i class="fa fa-wrench"></i>
                                 <h3>Reparaciones</h3>
