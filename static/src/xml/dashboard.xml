@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates>
     <t t-name="sat.DashboardTemplate">
-        <div class="row main-section dashboard-container">
+        <div class="row main-section dashboard-container" style="height: 100vh; overflow-y: auto;">
 
             <!-- Fila para Máquinas -->
             <div class="row dashboard-tiles maquinas-tiles">

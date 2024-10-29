@@ -1,7 +1,8 @@
 /* Archivo: static/src/css/dashboard.scss */
 
 .dashboard-container {
-    overflow-y: auto;
+    overflow-y: auto; /* Permitir scroll vertical */
+    height: 100vh; /* Ajusta la altura para llenar toda la pantalla */
     max-height: 100vh;
     padding: 10px;
     display: flex;
@@ -79,11 +80,10 @@
     }
 
     .dashboard-charts {
+        flex-grow: 1; /* Permitir que este contenedor ocupe el espacio sobrante */
+        overflow-y: auto; /* Permitir scroll vertical en el área de gráficos */
+        max-height: calc(100vh - 200px); /* Ajusta el tamaño según sea necesario */
         padding: 0 8px;
-        flex-grow: 1; /* Permite que el contenedor de gráficos ocupe el espacio restante */
-        overflow-y: auto; /* Habilita el desplazamiento vertical dentro de los gráficos */
-        max-height: calc(100vh - 200px); /* Ajusta la altura máxima para permitir scroll si es necesario */
-
         .chart-wrapper {
             background-color: white;
             border-radius: 6px;
