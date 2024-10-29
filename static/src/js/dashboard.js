@@ -203,7 +203,7 @@ class SatDashboard extends Component {
                     title: { 
                         text: 'Estado de Máquinas',
                         left: 'center',
-                        top: '2%',
+                        top: '0%', // Mueve el título más arriba
                         textStyle: {
                             fontSize: 14,
                             fontWeight: 'bold',
@@ -220,7 +220,7 @@ class SatDashboard extends Component {
                         name: 'Estado',
                         type: 'pie',
                         radius: ['40%', '70%'], // Gráfico de dona
-                        center: ['50%', '50%'], // Centra el gráfico
+                        center: ['50%', '55%'], // Centra el gráfico en el eje vertical
                         data: [
                             { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
                             { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
@@ -240,6 +240,7 @@ class SatDashboard extends Component {
                             formatter: '{b}: {c} ({d}%)', // Muestra nombres completos, valores y porcentajes
                             fontSize: 12,
                             color: '#333',
+                            overflow: 'break', // Intenta evitar el recorte
                         },
                         labelLine: {
                             show: true,
@@ -255,6 +256,7 @@ class SatDashboard extends Component {
                     animationDuration: 1000,
                     animationEasing: 'cubicInOut'
                 });
+                
                 
 
                 console.log('Gráfico de estado renderizado exitosamente');
