@@ -167,7 +167,7 @@
                 <!-- Fila para Gráficos -->
                 <div class="row dashboard-charts">
                     <!-- Gráfico 1: Máquinas por Disponibilidad -->
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <div class="chart-wrapper">
                             <div class="chart-header">
                                 <h4>Máquinas por Disponibilidad</h4>
@@ -182,7 +182,7 @@
                     </div>
 
                     <!-- Gráfico 2: Estado de las Máquinas -->
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <div class="chart-wrapper">
                             <div class="chart-header">
                                 <h4>Estado de las Máquinas</h4>
@@ -197,7 +197,7 @@
                     </div>
 
                     <!-- Gráfico 3: Reparaciones por Técnico -->
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <div class="chart-wrapper">
                             <div class="chart-header">
                                 <h4>Reparaciones por Técnico</h4>
@@ -212,7 +212,7 @@
                     </div>
 
                     <!-- Gráfico 4: Máquinas por Asesora -->
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <div class="chart-wrapper">
                             <div class="chart-header">
                                 <h4>Máquinas por Asesora</h4>
