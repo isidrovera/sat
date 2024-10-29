@@ -29,6 +29,7 @@ class SatDashboard extends Component {
         super.setup();
         this.orm = useService("orm");
         console.log('Servicio ORM inicializado');
+        this.action = useService("action"); 
         this.dashboardData = null;
 
         // Usar onMounted para asegurarnos que el DOM está listo
@@ -53,7 +54,6 @@ class SatDashboard extends Component {
             console.error("Error cargando datos para el dashboard: ", error);
         }
     }
-
     _updateElementContent(elementId, value) {
         const element = document.getElementById(elementId);
         if (element) {
@@ -72,31 +72,42 @@ class SatDashboard extends Component {
         }
 
         const elements = [
-            { id: 'total_maquinas', value: this.dashboardData.total_maquinas },
-            { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles },
-            { id: 'maquinas_separadas', value: this.dashboardData.maquinas_separadas },
-            { id: 'maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles },
-            { id: 'maquinas_sin_revisar', value: this.dashboardData.maquinas_sin_revisar },
-            { id: 'maquinas_en_revision', value: this.dashboardData.maquinas_en_revision },
-            { id: 'maquinas_finalizadas', value: this.dashboardData.maquinas_finalizadas },
-            { id: 'total_reparaciones', value: this.dashboardData.total_reparaciones },
-            { id: 'reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision },
-            { id: 'reparaciones_hoy', value: this.dashboardData.reparaciones_hoy },
-            { id: 'reparaciones_mes', value: this.dashboardData.reparaciones_mes },
-            { id: 'reparaciones_ano', value: this.dashboardData.reparaciones_ano }
+            { id: 'total_maquinas', value: this.dashboardData.total_maquinas, res_model: 'sat.sat', action_id: 'sat.sat.action_window', domain: [] },
+            { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, res_model: 'sat.sat', action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'disponible']] },
+            { id: 'maquinas_separadas', value: this.dashboardData.maquinas_separadas, res_model: 'sat.sat', action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'separada']] },
+            { id: 'maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, res_model: 'sat.sat', action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'no_disponible']] },
+            { id: 'total_reparaciones', value: this.dashboardData.total_reparaciones, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [] },
+            { id: 'reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['estado', '=', 'en_revision']] },
+            { id: 'reparaciones_hoy', value: this.dashboardData.reparaciones_hoy, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['fecha', '=', new Date().toISOString().split('T')[0]]] },
+            { id: 'reparaciones_mes', value: this.dashboardData.reparaciones_mes, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['mes', '=', new Date().getMonth() + 1]] },
+            { id: 'reparaciones_ano', value: this.dashboardData.reparaciones_ano, res_model: 'reparaciones.reparaciones', action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['ano', '=', new Date().getFullYear()]] }
         ];
 
-        let successCount = 0;
-        elements.forEach(({ id, value }) => {
-            try {
-                this._updateElementContent(id, value);
-                successCount++;
-            } catch (error) {
-                console.error(`Error actualizando elemento ${id}:`, error);
+        elements.forEach(({ id, value, res_model, action_id, domain }) => {
+            this._updateElementContent(id, value);
+            const element = document.getElementById(id);
+
+            if (element) {
+                element.onclick = () => {
+                    this._openFilteredView(action_id, res_model, domain);
+                };
             }
         });
+    }
 
-        console.log(`Tiles renderizadas: ${successCount} de ${elements.length}`);
+    async _openFilteredView(action_id, res_model, domain) {
+        try {
+            await this.action.doAction({
+                type: 'ir.actions.act_window',
+                res_model: res_model,
+                name: `Vista Filtrada de ${res_model}`,
+                view_mode: 'list,form',
+                domain: domain,
+                target: 'current'
+            });
+        } catch (error) {
+            console.error("Error en _openFilteredView:", error);
+        }
     }
 
     _getChartElement(elementId) {
