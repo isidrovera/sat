@@ -138,10 +138,11 @@ class SatDashboard extends Component {
                     },
                     xAxis: {
                         type: 'category',
-                        data: ['Disponibles', 'Separadas', 'No Disponibles'],
+                        data: ['Disponibles', 'Separadas', 'No Disponibles'], // Asegúrate de que esta lista esté completa
                         axisLabel: {
                             fontSize: 12,
                             fontWeight: 'bold',
+                            interval: 0, // Mostrar todas las etiquetas en el eje X sin omitir
                         }
                     },
                     yAxis: {
@@ -178,7 +179,7 @@ class SatDashboard extends Component {
                     grid: {
                         left: '3%',
                         right: '4%',
-                        bottom: '3%',
+                        bottom: '10%', // Ajustar el margen inferior para evitar la superposición
                         containLabel: true
                     }
                 });
