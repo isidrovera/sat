@@ -198,7 +198,7 @@ class SatDashboard extends Component {
             if (estadoElement) {
                 console.log('Renderizando gráfico de estado...');
                 const estadoChart = echarts.init(estadoElement);
-                
+
                 estadoChart.setOption({
                     title: { 
                         text: 'Estado de Máquinas',
@@ -210,67 +210,58 @@ class SatDashboard extends Component {
                     },
                     tooltip: { 
                         trigger: 'item',
-                        formatter: '{a} <br/>{b} : {c} ({d}%)' // Muestra el nombre, valor y porcentaje
+                        formatter: '{b}: {c} ({d}%)' // Muestra el nombre, valor y porcentaje
                     },
                     legend: {
-                        orient: 'horizontal',
-                        bottom: 10,
-                        left: 'center',
+                        orient: 'vertical',
+                        left: 'left',
+                        top: 'middle',
                         data: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas']
                     },
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: ['40%', '70%'], // Ajuste para ocupar más espacio y mantener un anillo amplio
-                        center: ['50%', '50%'],
-                        avoidLabelOverlap: true,
+                        radius: '50%', // Ajuste para que el gráfico ocupe el 50% del contenedor
+                        center: ['60%', '50%'], // Centrar el gráfico hacia la derecha
                         data: [
                             { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
                             { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
                             { value: this.dashboardData.maquinas_finalizadas, name: 'Finalizadas', itemStyle: { color: '#FFCA28' } },
                             { value: this.dashboardData.maquinas_problemas, name: 'Problemas', itemStyle: { color: '#EF5350' } }
                         ],
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        },
                         label: {
                             show: true,
                             position: 'outside',
-                            formatter: '{b}: {c} ({d}%)', // Muestra el nombre, valor y porcentaje
+                            formatter: '{b}: {c} ({d}%)', // Muestra el nombre, cantidad y porcentaje en las etiquetas
                             fontSize: 12,
                             fontWeight: 'bold',
                             color: '#333',
-                            alignTo: 'edge',
-                            bleedMargin: 10 // Evita que las etiquetas se superpongan con los bordes
                         },
                         labelLine: {
                             show: true,
-                            length: 15,
-                            length2: 10,
+                            length: 10,
+                            length2: 15,
                             smooth: true,
                             lineStyle: {
                                 width: 1,
                                 type: 'solid'
                             }
-                        },
-                        emphasis: {
-                            label: {
-                                show: true,
-                                fontSize: 14,
-                                fontWeight: 'bold',
-                            }
                         }
                     }],
-                    grid: {
-                        left: '0%',
-                        right: '0%',
-                        top: '0%',
-                        bottom: '0%',
-                        containLabel: true
-                    },
                     animationDuration: 1000,
                     animationEasing: 'cubicInOut'
                 });
 
                 console.log('Gráfico de estado renderizado exitosamente');
             }
+
 
 
             // Gráfico de técnicos
