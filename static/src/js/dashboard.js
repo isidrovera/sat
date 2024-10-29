@@ -70,7 +70,7 @@ class SatDashboard extends Component {
             console.error('No hay datos disponibles para renderizar las tiles');
             return;
         }
-
+    
         const elements = [
             { id: 'tile_total_maquinas', value: this.dashboardData.total_maquinas, model: 'maquina', domain: [] },
             { id: 'tile_maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, model: 'maquina', domain: [['estado', '=', 'disponible']] },
@@ -85,29 +85,39 @@ class SatDashboard extends Component {
             { id: 'tile_tickets_en_proceso', value: this.dashboardData.tickets_en_proceso, model: 'ticket', domain: [['estado', '=', 'en_proceso']] },
             { id: 'tile_tickets_finalizados', value: this.dashboardData.tickets_finalizados, model: 'ticket', domain: [['estado', '=', 'finalizado']] }
         ];
-
+    
         elements.forEach(({ id, value, model, domain }) => {
-            this._updateElementContent(id.replace('tile_', ''), value); // Actualiza el contenido de `span`
+            this._updateElementContent(id.replace('tile_', ''), value);
             const element = document.getElementById(id);
-
+    
             if (element) {
                 element.onclick = () => {
-                    this._openFilteredView(model, domain);
+                    if (model && Array.isArray(domain)) {
+                        this._openFilteredView(model, domain);
+                    } else {
+                        console.error(`Model o Domain inválido para ${id}: `, { model, domain });
+                    }
                 };
             }
         });
     }
+    
 
     _openFilteredView(model, domain) {
-        this.action.doAction({
-            type: 'ir.actions.act_window',
-            name: `Registros filtrados de ${model}`,
-            res_model: model,
-            view_mode: 'list,form',
-            domain: domain,
-            target: 'current'
-        });
+        try {
+            this.action.doAction({
+                type: 'ir.actions.act_window',
+                name: `Registros filtrados de ${model}`,
+                res_model: model,
+                view_mode: 'list,form',
+                domain: domain,
+                target: 'current'
+            });
+        } catch (error) {
+            console.error("Error ejecutando doAction:", error);
+        }
     }
+    
 
 
 
