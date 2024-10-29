@@ -29,7 +29,6 @@ class SatDashboard extends Component {
         super.setup();
         this.orm = useService("orm");
         console.log('Servicio ORM inicializado');
-        this.action = useService("action"); // Añade el servicio de acción
         this.dashboardData = null;
 
         // Usar onMounted para asegurarnos que el DOM está listo
@@ -65,65 +64,40 @@ class SatDashboard extends Component {
         }
     }
 
-    async _fetch_data() {
-        try {
-            const result = await this.orm.call("sat.dashboard", "get_dashboard_data", []);
-            console.log("Datos de dashboard obtenidos:", result); // Confirmar contenido de dashboardData
-            this.dashboardData = result;
-            this._render_tiles();
-        } catch (error) {
-            console.error("Error cargando datos para el dashboard:", error);
-        }
-    }
-    _updateElementContent(elementId, value) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.textContent = value;
-        } else {
-            console.warn(`Elemento no encontrado: ${elementId}`);
-        }
-    }
-
     _render_tiles() {
+        console.log('Iniciando renderizado de tiles...');
         if (!this.dashboardData) {
             console.error('No hay datos disponibles para renderizar las tiles');
             return;
         }
 
-        // Actualiza los `action_id` con los IDs correspondientes a tus vistas
         const elements = [
-            { id: 'tile_total_maquinas', value: this.dashboardData.total_maquinas, action_id: 'sat.sat.action_window', domain: [] },
-            { id: 'tile_maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'disponible']] },
-            { id: 'tile_maquinas_separadas', value: this.dashboardData.maquinas_separadas, action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'separada']] },
-            { id: 'tile_maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, action_id: 'your_module.action_sat_sat_view', domain: [['estado', '=', 'no_disponible']] },
-            { id: 'tile_total_reparaciones', value: this.dashboardData.total_reparaciones, action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [] },
-            { id: 'tile_reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, action_id: 'your_module.action_reparaciones_reparaciones_view', domain: [['estado', '=', 'en_revision']] }
+            { id: 'total_maquinas', value: this.dashboardData.total_maquinas },
+            { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles },
+            { id: 'maquinas_separadas', value: this.dashboardData.maquinas_separadas },
+            { id: 'maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles },
+            { id: 'maquinas_sin_revisar', value: this.dashboardData.maquinas_sin_revisar },
+            { id: 'maquinas_en_revision', value: this.dashboardData.maquinas_en_revision },
+            { id: 'maquinas_finalizadas', value: this.dashboardData.maquinas_finalizadas },
+            { id: 'total_reparaciones', value: this.dashboardData.total_reparaciones },
+            { id: 'reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision },
+            { id: 'reparaciones_hoy', value: this.dashboardData.reparaciones_hoy },
+            { id: 'reparaciones_mes', value: this.dashboardData.reparaciones_mes },
+            { id: 'reparaciones_ano', value: this.dashboardData.reparaciones_ano }
         ];
 
-        elements.forEach(({ id, value, action_id, domain }) => {
-            this._updateElementContent(id.replace('tile_', ''), value);
-            const element = document.getElementById(id);
-
-            if (element) {
-                element.onclick = () => {
-                    console.log(`Intentando abrir acción ${action_id} con dominio`, domain);
-                    this._openFilteredView(action_id, domain);
-                };
+        let successCount = 0;
+        elements.forEach(({ id, value }) => {
+            try {
+                this._updateElementContent(id, value);
+                successCount++;
+            } catch (error) {
+                console.error(`Error actualizando elemento ${id}:`, error);
             }
         });
+
+        console.log(`Tiles renderizadas: ${successCount} de ${elements.length}`);
     }
-    
-
-    async _openFilteredView(action_id, domain) {
-        try {
-            // Llama a la acción usando el `External ID` y aplica el dominio
-            await this.action.doAction(action_id, { additional_context: { domain } });
-        } catch (error) {
-            console.error("Error en _openFilteredView:", error);
-        }
-    }
-
-
 
     _getChartElement(elementId) {
         const element = document.getElementById(elementId);
