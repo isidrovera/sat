@@ -3,7 +3,7 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component, onMounted } from "@odoo/owl";
 
-// Cargar Chart.js desde el CDN y el plugin de etiquetas de datos
+// Cargar ECharts desde el CDN
 const loadECharts = () => {
     console.log('Iniciando carga de Apache ECharts...');
     return new Promise((resolve, reject) => {
@@ -41,7 +41,7 @@ class SatDashboard extends Component {
     async _fetch_data() {
         console.log('Iniciando fetch de datos del dashboard...');
         try {
-            await loadChartDataLabelsPlugin();
+            await loadECharts();  // Cargar ECharts en lugar de Chart.js
             console.log('Realizando llamada ORM a get_dashboard_data...');
             const result = await this.orm.call("sat.dashboard", "get_dashboard_data", []);
             console.log('Datos recibidos del servidor:', result);
@@ -99,13 +99,14 @@ class SatDashboard extends Component {
         console.log(`Tiles renderizadas: ${successCount} de ${elements.length}`);
     }
 
-    _getChartContext(canvasId) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) {
-            console.error(`Canvas no encontrado: ${canvasId}`);
+    _getChartElement(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.error(`Elemento de gráfico no encontrado: ${elementId}`);
             return null;
         }
-        return canvas.getContext("2d");
+        console.log(`Elemento de gráfico encontrado: ${elementId}`);
+        return element;
     }
 
     _render_charts() {
@@ -116,10 +117,10 @@ class SatDashboard extends Component {
         }
 
         try {
-
             // Gráfico de disponibilidad
             const disponibilidadElement = this._getChartElement("disponibilidadChart");
             if (disponibilidadElement) {
+                console.log('Renderizando gráfico de disponibilidad...');
                 const disponibilidadChart = echarts.init(disponibilidadElement);
                 disponibilidadChart.setOption({
                     title: { text: 'Disponibilidad de Máquinas' },
@@ -136,11 +137,13 @@ class SatDashboard extends Component {
                         ]
                     }]
                 });
+                console.log('Gráfico de disponibilidad renderizado exitosamente');
             }
 
             // Gráfico de estado
             const estadoElement = this._getChartElement("estadoChart");
             if (estadoElement) {
+                console.log('Renderizando gráfico de estado...');
                 const estadoChart = echarts.init(estadoElement);
                 estadoChart.setOption({
                     title: { text: 'Estado de Máquinas' },
@@ -156,10 +159,13 @@ class SatDashboard extends Component {
                         ]
                     }]
                 });
+                console.log('Gráfico de estado renderizado exitosamente');
             }
+
             // Gráfico de técnicos
             const tecnicosElement = this._getChartElement("tecnicosChart");
             if (tecnicosElement) {
+                console.log('Renderizando gráfico de técnicos...');
                 const tecnicosChart = echarts.init(tecnicosElement);
                 const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales);
                 const tecnicosData = Object.values(this.dashboardData.tecnicos_totales);
@@ -173,10 +179,13 @@ class SatDashboard extends Component {
                         data: tecnicosData
                     }]
                 });
+                console.log('Gráfico de técnicos renderizado exitosamente');
             }
+
             // Gráfico de asesoras
             const asesoraElement = this._getChartElement("asesoraChart");
             if (asesoraElement) {
+                console.log('Renderizando gráfico de asesoras...');
                 const asesoraChart = echarts.init(asesoraElement);
                 const asesoraLabels = Object.keys(this.dashboardData.asesora_totales);
                 const asesoraData = Object.values(this.dashboardData.asesora_totales);
@@ -188,12 +197,9 @@ class SatDashboard extends Component {
                         data: asesoraLabels.map((label, index) => ({ value: asesoraData[index], name: label }))
                     }]
                 });
+                console.log('Gráfico de asesoras renderizado exitosamente');
             }
-        }
-
-        // Gráfico de asesoras
-
-        catch (error) {
+        } catch (error) {
             console.error('Error al renderizar gráficos:', error);
         }
     }
