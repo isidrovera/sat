@@ -98,19 +98,18 @@ class SatDashboard extends Component {
 
     async _openFilteredView(action_id, res_model, domain) {
         try {
-            await this.action.doAction({
-                type: 'ir.actions.act_window',
-                res_model: res_model,
-                name: `Vista Filtrada de ${res_model}`,
-                view_mode: 'list,form',
-                domain: domain,
-                target: 'current'
-            });
+            if (action_id) {
+                await this.action.doAction(action_id, {
+                    additional_context: { domain: domain }
+                });
+            } else {
+                console.error("action_id no definido para _openFilteredView");
+            }
         } catch (error) {
             console.error("Error en _openFilteredView:", error);
         }
     }
-
+    
     _getChartElement(elementId) {
         const element = document.getElementById(elementId);
         if (!element) {
