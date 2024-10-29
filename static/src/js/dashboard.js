@@ -269,80 +269,93 @@ class SatDashboard extends Component {
             if (tecnicosElement) {
                 console.log('Renderizando gráfico de técnicos...');
                 const tecnicosChart = echarts.init(tecnicosElement);
-
-                // Preparar los datos en el formato de dataset
+                
+                // Asumiendo que los datos vienen en el formato:
+                // this.dashboardData.tecnicos_totales = { "Técnico1": 50, "Técnico2": 75, ... }
                 const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales);
                 const tecnicosData = Object.values(this.dashboardData.tecnicos_totales);
-                const datasetSource = tecnicosLabels.map((label, index) => [tecnicosData[index], label]);
-
+            
                 tecnicosChart.setOption({
-                    title: { 
-                        text: 'Reparaciones por Técnico', 
+                    title: {
+                        text: 'Reparaciones por Técnico',
                         left: 'center',
                         top: '2%',
                         textStyle: {
                             fontSize: 16,
-                            fontWeight: 'bold',
+                            fontWeight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        },
+                        formatter: function(params) {
+                            return `${params[0].name}: ${params[0].value}`;
                         }
                     },
                     grid: {
-                        containLabel: true,
-                        left: '25%', // Da más espacio al eje Y
-                        right: '10%',
                         top: '15%',
-                        bottom: '10%',
+                        bottom: '3%',
+                        left: '15%',
+                        right: '10%',
+                        containLabel: true
                     },
-                    dataset: {
-                        source: [['amount', 'technician'], ...datasetSource]
-                    },
-                    xAxis: { 
-                        name: 'Reparaciones',
+                    xAxis: {
                         type: 'value',
-                        axisLabel: {
-                            fontSize: 12,
+                        splitLine: {
+                            show: true,
+                            lineStyle: {
+                                type: 'dashed'
+                            }
                         }
                     },
-                    yAxis: { 
+                    yAxis: {
                         type: 'category',
+                        data: tecnicosLabels,
                         axisLabel: {
-                            fontSize: 12,
-                            fontWeight: 'bold',
-                            interval: 0, // Asegura que todas las etiquetas se muestren
+                            interval: 0,
+                            width: 130,
+                            overflow: 'break',
+                            formatter: function(value) {
+                                return value.length > 25 ? value.substring(0, 25) + '...' : value;
+                            }
                         }
                     },
                     visualMap: {
                         orient: 'horizontal',
                         left: 'center',
+                        bottom: '0%',
                         min: Math.min(...tecnicosData),
                         max: Math.max(...tecnicosData),
+                        text: ['High Score', 'Low Score'],
                         dimension: 0,
                         inRange: {
-                            color: ['#65B581', '#FFCE34', '#FD665F']
+                            color: ['#91CC75', '#FAC858', '#EE6666']
                         }
                     },
-                    series: [
-                        {
-                            type: 'bar',
-                            encode: {
-                                x: 'amount',
-                                y: 'technician'
-                            },
-                            label: {
-                                show: true,
-                                position: 'right',
-                                formatter: '{c}', // Solo muestra la cantidad sin nombre
-                                fontSize: 14,
-                                fontWeight: 'bold'
-                            },
-                            barWidth: '50%'
-                        }
-                    ]
+                    series: [{
+                        name: 'Reparaciones',
+                        type: 'bar',
+                        data: tecnicosData,
+                        label: {
+                            show: true,
+                            position: 'right',
+                            formatter: '{c}',  // Muestra solo el valor numérico
+                            fontSize: 12,
+                            fontWeight: 'bold'
+                        },
+                        barWidth: '60%'
+                    }]
                 });
-
+                
+                // Manejar el redimensionamiento de la ventana
+                window.addEventListener('resize', () => {
+                    tecnicosChart.resize();
+                });
+                
                 console.log('Gráfico de técnicos renderizado exitosamente');
             }
-
-
             // Gráfico de asesoras
             const asesoraElement = this._getChartElement("asesoraChart");
             if (asesoraElement) {
