@@ -126,7 +126,7 @@ class SatDashboard extends Component {
                 res_model: 'reparaciones.reparaciones', 
                 action_id: 'sat.action_reparaciones_window', 
                 domain: [['fecha', '=', new Date().toISOString().split('T')[0]]], 
-                search_view_id: 'reparaciones_search_view' 
+                search_view_id: 'sat.reparaciones_search_view' 
             },
             { 
                 id: 'reparaciones_mes', 
@@ -134,31 +134,47 @@ class SatDashboard extends Component {
                 res_model: 'reparaciones.reparaciones', 
                 action_id: 'sat.action_reparaciones_window', 
                 domain: [['mes', '=', new Date().getMonth() + 1]], 
-                search_view_id: 'reparaciones.Reparaciones_search_view' 
+                search_view_id: 'sat.reparaciones_search_view' 
             },
             { 
                 id: 'reparaciones_ano', 
                 value: this.dashboardData.reparaciones_ano, 
                 res_model: 'reparaciones.reparaciones', 
-                action_id: 'your_module.action_reparaciones_reparaciones_view', 
+                action_id: 'sat.action_reparaciones_window', 
                 domain: [['ano', '=', new Date().getFullYear()]], 
-                search_view_id: 'reparaciones.Reparaciones_search_view' 
+                search_view_id: 'sat.reparaciones_search_view' 
             }
         ];
     
         elements.forEach(({ id, value, res_model, action_id, domain, search_view_id }) => {
+            console.log(`Configurando tile: ${id}`);
+            console.log(` - Valor: ${value}`);
+            console.log(` - Modelo: ${res_model}`);
+            console.log(` - Acción ID: ${action_id}`);
+            console.log(` - Dominio: ${JSON.stringify(domain)}`);
+            console.log(` - Search View ID: ${search_view_id}`);
+    
             this._updateElementContent(id, value);
             const element = document.getElementById(`tile_${id}`); // Selecciona el contenedor del "tile"
     
             if (element) {
                 element.onclick = () => {
+                    console.log(`Tile ${id} clickeado, abriendo vista...`);
                     this._openFilteredView(action_id, res_model, domain, search_view_id);
                 };
+            } else {
+                console.warn(`Elemento no encontrado para tile: ${id}`);
             }
         });
     }
-
+    
     async _openFilteredView(action_id, res_model, domain, search_view_id = null) {
+        console.log(`Ejecutando _openFilteredView`);
+        console.log(` - Acción ID: ${action_id}`);
+        console.log(` - Modelo: ${res_model}`);
+        console.log(` - Dominio: ${JSON.stringify(domain)}`);
+        console.log(` - Search View ID: ${search_view_id}`);
+    
         try {
             if (action_id) {
                 await this.action.doAction({
@@ -172,6 +188,7 @@ class SatDashboard extends Component {
                         search_view_id: search_view_id // ID de la vista de búsqueda específica
                     }
                 });
+                console.log("Vista abierta correctamente");
             } else {
                 console.error("action_id no definido para _openFilteredView");
             }
@@ -179,6 +196,7 @@ class SatDashboard extends Component {
             console.error("Error en _openFilteredView:", error);
         }
     }
+    
     
     
     
