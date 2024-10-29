@@ -198,22 +198,64 @@ class SatDashboard extends Component {
             if (estadoElement) {
                 console.log('Renderizando gráfico de estado...');
                 const estadoChart = echarts.init(estadoElement);
+                
                 estadoChart.setOption({
-                    title: { text: 'Estado de Máquinas' },
-                    tooltip: { trigger: 'item' },
+                    title: { 
+                        text: 'Estado de Máquinas',
+                        left: 'center',
+                        textStyle: {
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                        }
+                    },
+                    tooltip: { 
+                        trigger: 'item',
+                        formatter: '{a} <br/>{b} : {c} ({d}%)' // Muestra el nombre, valor y porcentaje
+                    },
+                    legend: {
+                        orient: 'horizontal',
+                        bottom: 10,
+                        left: 'center',
+                        data: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas']
+                    },
                     series: [{
                         name: 'Estado',
                         type: 'pie',
+                        radius: '60%', // Tamaño del gráfico de pastel
+                        center: ['50%', '50%'],
                         data: [
                             { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar' },
                             { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión' },
                             { value: this.dashboardData.maquinas_finalizadas, name: 'Finalizadas' },
                             { value: this.dashboardData.maquinas_problemas, name: 'Problemas' }
-                        ]
-                    }]
+                        ],
+                        itemStyle: {
+                            borderRadius: 8,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: true,
+                            position: 'outside',
+                            formatter: '{b}: {c} ({d}%)', // Muestra el nombre, valor y porcentaje en cada sector
+                            fontSize: 12,
+                            fontWeight: 'bold'
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: 14,
+                                fontWeight: 'bold',
+                            }
+                        }
+                    }],
+                    animationDuration: 1000,
+                    animationEasing: 'cubicInOut'
                 });
+
                 console.log('Gráfico de estado renderizado exitosamente');
             }
+
 
             // Gráfico de técnicos
             const tecnicosElement = this._getChartElement("tecnicosChart");
