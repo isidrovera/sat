@@ -2,11 +2,11 @@
 
 .dashboard-container {
     overflow-y: auto; /* Permitir scroll vertical */
-    height: 100vh; /* Ajusta la altura para llenar toda la pantalla */
-    max-height: 100vh;
+    height: 100vh; /* Llenar toda la altura de la ventana */
     padding: 10px;
     display: flex;
     flex-direction: column;
+    gap: 20px; /* Espacio entre secciones */
 
     .dashboard-tiles {
         display: flex;
@@ -80,10 +80,9 @@
     }
 
     .dashboard-charts {
-        flex-grow: 1; /* Permitir que este contenedor ocupe el espacio sobrante */
-        overflow-y: auto; /* Permitir scroll vertical en el área de gráficos */
-        max-height: calc(100vh - 200px); /* Ajusta el tamaño según sea necesario */
-        padding: 0 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
         .chart-wrapper {
             background-color: white;
             border-radius: 6px;
