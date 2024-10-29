@@ -193,7 +193,7 @@ class SatDashboard extends Component {
                 console.log('Gráfico de disponibilidad renderizado exitosamente');
             }
 
-            // Gráfico de estado
+           // Gráfico de estado
             const estadoElement = this._getChartElement("estadoChart");
             if (estadoElement) {
                 console.log('Renderizando gráfico de estado...');
@@ -221,25 +221,34 @@ class SatDashboard extends Component {
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: '60%', // Tamaño del gráfico de pastel
+                        radius: ['40%', '70%'], // Ajuste para ocupar más espacio y mantener un anillo amplio
                         center: ['50%', '50%'],
+                        avoidLabelOverlap: true,
                         data: [
-                            { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar' },
-                            { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión' },
-                            { value: this.dashboardData.maquinas_finalizadas, name: 'Finalizadas' },
-                            { value: this.dashboardData.maquinas_problemas, name: 'Problemas' }
+                            { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
+                            { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
+                            { value: this.dashboardData.maquinas_finalizadas, name: 'Finalizadas', itemStyle: { color: '#FFCA28' } },
+                            { value: this.dashboardData.maquinas_problemas, name: 'Problemas', itemStyle: { color: '#EF5350' } }
                         ],
-                        itemStyle: {
-                            borderRadius: 8,
-                            borderColor: '#fff',
-                            borderWidth: 2
-                        },
                         label: {
                             show: true,
                             position: 'outside',
-                            formatter: '{b}: {c} ({d}%)', // Muestra el nombre, valor y porcentaje en cada sector
+                            formatter: '{b}: {c} ({d}%)', // Muestra el nombre, valor y porcentaje
                             fontSize: 12,
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            color: '#333',
+                            alignTo: 'edge',
+                            bleedMargin: 10 // Evita que las etiquetas se superpongan con los bordes
+                        },
+                        labelLine: {
+                            show: true,
+                            length: 15,
+                            length2: 10,
+                            smooth: true,
+                            lineStyle: {
+                                width: 1,
+                                type: 'solid'
+                            }
                         },
                         emphasis: {
                             label: {
@@ -249,6 +258,13 @@ class SatDashboard extends Component {
                             }
                         }
                     }],
+                    grid: {
+                        left: '0%',
+                        right: '0%',
+                        top: '0%',
+                        bottom: '0%',
+                        containLabel: true
+                    },
                     animationDuration: 1000,
                     animationEasing: 'cubicInOut'
                 });
