@@ -1,5 +1,5 @@
 /** @odoo-module */
-// Archivo: static/src/js/dashboard.js
+// Archivo: static/src/js/estilo_dashboard.js
 
 import { Component } from "@odoo/owl";
 
