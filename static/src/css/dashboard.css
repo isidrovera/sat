@@ -4,6 +4,8 @@
     overflow-y: auto;
     max-height: 100vh;
     padding: 10px;
+    display: flex;
+    flex-direction: column;
 
     .dashboard-tiles {
         display: flex;
@@ -78,6 +80,9 @@
 
     .dashboard-charts {
         padding: 0 8px;
+        flex-grow: 1; /* Permite que el contenedor de gráficos ocupe el espacio restante */
+        overflow-y: auto; /* Habilita el desplazamiento vertical dentro de los gráficos */
+        max-height: calc(100vh - 200px); /* Ajusta la altura máxima para permitir scroll si es necesario */
 
         .chart-wrapper {
             background-color: white;
