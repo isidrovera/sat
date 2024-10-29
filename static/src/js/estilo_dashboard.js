@@ -1,5 +1,5 @@
 /** @odoo-module */
-// Archivo: static/src/js/dashboard.js
+// Archivo: static/src/js/estilo_dashboard.js
 
 import { Component } from "@odoo/owl";
 
@@ -73,9 +73,14 @@ export class Dashboard extends Component {
         if (!ctx) return;
 
         this.charts.disponibilidadChart = new Chart(ctx, {
-            type: 'pie',
+            type: 'bar',
             data: {
-                // Configurar datos del gráfico
+                labels: ['Disponibles', 'No Disponibles'],
+                datasets: [{
+                    label: 'Máquinas',
+                    data: [10, 5], // Aquí irían los datos reales
+                    backgroundColor: ['#36A2EB', '#FF6384']
+                }]
             },
             options: {
                 responsive: true,
@@ -92,9 +97,13 @@ export class Dashboard extends Component {
         if (!ctx) return;
 
         this.charts.estadoChart = new Chart(ctx, {
-            type: 'bar',
+            type: 'pie',
             data: {
-                // Configurar datos del gráfico
+                labels: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas'],
+                datasets: [{
+                    data: [12, 19, 3, 5], // Aquí irían los datos reales
+                    backgroundColor: ['#36A2EB', '#FFCE56', '#4BC0C0', '#FF6384']
+                }]
             },
             options: {
                 responsive: true,
@@ -113,7 +122,12 @@ export class Dashboard extends Component {
         this.charts.tecnicosChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                // Configurar datos del gráfico
+                labels: ['Técnico 1', 'Técnico 2', 'Técnico 3'],
+                datasets: [{
+                    label: 'Reparaciones',
+                    data: [10, 20, 15], // Aquí irían los datos reales
+                    backgroundColor: '#36A2EB'
+                }]
             },
             options: {
                 responsive: true,
@@ -130,9 +144,13 @@ export class Dashboard extends Component {
         if (!ctx) return;
 
         this.charts.asesoraChart = new Chart(ctx, {
-            type: 'bar',
+            type: 'pie',
             data: {
-                // Configurar datos del gráfico
+                labels: ['Asesora 1', 'Asesora 2', 'Asesora 3'],
+                datasets: [{
+                    data: [5, 15, 8], // Aquí irían los datos reales
+                    backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56']
+                }]
             },
             options: {
                 responsive: true,
