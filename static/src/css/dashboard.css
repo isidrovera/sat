@@ -81,7 +81,6 @@
         flex-wrap: wrap;
         gap: 20px; /* Añade espacio entre los gráficos */
         padding: 0 8px;
-        justify-content: space-between; /* Asegura que los gráficos se distribuyan uniformemente */
 
         .chart-wrapper {
             background-color: white;
@@ -89,7 +88,8 @@
             padding: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             margin-bottom: 12px;
-            flex: 1 1 calc(50% - 20px); /* Los gráficos ocupan el 50% del ancho con espacio entre ellos */
+            flex: 1 1 48%; /* Cada gráfico ocupa el 48% del ancho de la fila */
+            max-width: 48%; /* Limita el ancho máximo para que solo entren dos gráficos por fila */
 
             .chart-header {
                 display: flex;
@@ -129,4 +129,3 @@
         }
     }
 }
-
