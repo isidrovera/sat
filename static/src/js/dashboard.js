@@ -110,7 +110,7 @@ class SatDashboard extends Component {
                 res_model: 'reparaciones.reparaciones', 
                 action_id: 'sat.action_reparaciones_window', 
                 domain: [], 
-                search_view_id: 'reparaciones_search_view' 
+                search_view_id: 'sat.reparaciones_search_view' 
             },
             { 
                 id: 'reparaciones_en_revision', 
@@ -118,7 +118,7 @@ class SatDashboard extends Component {
                 res_model: 'reparaciones.reparaciones', 
                 action_id: 'sat.action_reparaciones_window', 
                 domain: [['estado', '=', 'en_revision']], 
-                search_view_id: 'reparaciones_search_view' 
+                search_view_id: 'sat.reparaciones_search_view' 
             },
             { 
                 id: 'reparaciones_hoy', 
