@@ -1,28 +1,56 @@
 /* Archivo: static/src/css/dashboard.scss */
 
+/* Estilos base para el scroll y responsividad */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
 .dashboard-container {
     overflow-y: auto;
-    height: 100vh; /* Ajusta la altura para permitir scroll si es necesario */
+    height: calc(100vh - 20px); /* Resta el padding total */
     padding: 10px;
-    display: flex;
-    flex-direction: column;
+    width: 100%;
+    box-sizing: border-box;
 
     .dashboard-tiles {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px; /* Reduce aún más el espacio entre las tiles */
+        gap: 4px;
         justify-content: flex-start;
+        width: 100%;
+        margin-bottom: 8px;
 
         .tot_tasks {
-            flex: 1 0 auto;
-            max-width: 11%; /* Reduce el ancho máximo */
+            flex: 1 1 calc(11% - 4px); /* Ajuste para gap */
+            min-width: 120px; /* Mínimo ancho para mantener legibilidad */
+            max-width: calc(11% - 4px);
             padding: 0;
 
+            @media (max-width: 1200px) {
+                min-width: 100px;
+                max-width: calc(16.66% - 4px); /* 6 elementos por fila */
+            }
+
+            @media (max-width: 768px) {
+                min-width: 90px;
+                max-width: calc(25% - 4px); /* 4 elementos por fila */
+            }
+
+            @media (max-width: 480px) {
+                min-width: 80px;
+                max-width: calc(33.33% - 4px); /* 3 elementos por fila */
+            }
+
             .oh-card {
-                padding: 6px; /* Reduce el padding de la tarjeta */
+                padding: 6px;
                 box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
-                border-radius: 4px; /* Redondeado más pequeño */
+                border-radius: 4px;
                 transition: transform 0.2s, background-color 0.3s;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
 
                 &:hover {
                     transform: translateY(-2px);
@@ -30,21 +58,30 @@
                 }
 
                 .oh-card-body {
-                    padding: 4px; /* Reduce el padding dentro de la tarjeta */
+                    padding: 4px;
                     text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    flex: 1;
 
                     i {
-                        font-size: 18px; /* Tamaño del icono más pequeño */
+                        font-size: 18px;
                         margin-bottom: 2px;
+
+                        @media (max-width: 768px) {
+                            font-size: 16px;
+                        }
                     }
 
                     h3 {
-                        font-size: 10px; /* Reduce el tamaño del texto del título */
+                        font-size: 10px;
                         margin-bottom: 2px;
+                        word-wrap: break-word;
                     }
 
                     span {
-                        font-size: 12px; /* Reduce el tamaño del texto del número */
+                        font-size: 12px;
                         font-weight: bold;
                     }
 
@@ -70,19 +107,28 @@
         }
     }
 
-    .maquinas-tiles, .reparaciones-tiles, .tickets-tiles, .alquiler-tiles {
-        margin-bottom: 8px; /* Reduce el espacio entre filas */
+    .maquinas-tiles,
+    .reparaciones-tiles,
+    .tickets-tiles,
+    .alquiler-tiles {
+        margin-bottom: 8px;
         display: flex;
         flex-wrap: wrap;
-        gap: 4px; /* Reduce el espacio entre tiles de cada categoría */
+        gap: 4px;
         justify-content: flex-start;
+        width: 100%;
     }
 
     .dashboard-charts {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px; /* Añade espacio entre los gráficos */
         padding: 0 8px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 12px;
+        width: 100%;
+
+        @media (max-width: 768px) {
+            grid-template-columns: 1fr; /* Una columna en móviles */
+        }
 
         .chart-wrapper {
             background-color: white;
@@ -90,7 +136,7 @@
             padding: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             margin-bottom: 12px;
-            flex: 1 1 calc(50% - 20px); /* Los gráficos ocupan el 50% del ancho con espacio entre ellos */
+            min-height: 200px;
 
             .chart-header {
                 display: flex;
@@ -100,6 +146,11 @@
 
                 h4 {
                     margin: 0;
+                    font-size: 14px;
+                    
+                    @media (max-width: 768px) {
+                        font-size: 12px;
+                    }
                 }
 
                 .expand-button {
@@ -125,8 +176,20 @@
                 &.expanded {
                     height: 400px;
                     max-height: 400px;
+
+                    @media (max-width: 768px) {
+                        height: 300px; /* Altura menor en móviles cuando está expandido */
+                        max-height: 300px;
+                    }
                 }
             }
         }
     }
+}
+
+/* Asegurar que los contenedores padres permitan scroll */
+.o_action_manager,
+.o_content {
+    overflow: auto !important;
+    height: 100% !important;
 }
