@@ -214,13 +214,19 @@ class SatDashboard extends Component {
                         formatter: '{b}: {c} ({d}%)'
                     },
                     legend: {
-                        show: false // Oculta la leyenda para evitar redundancia
+                        orient: 'vertical', 
+                        right: '10%', // Mueve la leyenda a la derecha
+                        top: 'middle',
+                        data: ['Sin Revisar', 'En Revisión', 'Finalizadas', 'Problemas'],
+                        textStyle: {
+                            fontSize: 12,
+                        }
                     },
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: ['40%', '70%'], // Ajusta el radio para optimizar el uso del espacio
-                        center: ['50%', '50%'], // Centra el gráfico en el contenedor
+                        radius: ['40%', '70%'], // Grafico de dona
+                        center: ['40%', '50%'], // Centra el gráfico hacia la izquierda
                         data: [
                             { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
                             { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
@@ -236,15 +242,14 @@ class SatDashboard extends Component {
                         },
                         label: {
                             show: true,
-                            position: 'outside', // Coloca las etiquetas fuera del gráfico
-                            formatter: '{b}: {d}%', // Muestra solo el nombre y el porcentaje
+                            position: 'outside',
+                            formatter: '{b}: {c} ({d}%)', // Muestra nombres completos, valores y porcentajes
                             fontSize: 12,
                             color: '#333',
-                            fontWeight: 'bold'
                         },
                         labelLine: {
                             show: true,
-                            length: 20, // Ajusta la longitud de las líneas de etiquetas
+                            length: 20, // Aumenta la longitud de las líneas de etiquetas
                             length2: 15,
                             smooth: true,
                             lineStyle: {
@@ -256,9 +261,6 @@ class SatDashboard extends Component {
                     animationDuration: 1000,
                     animationEasing: 'cubicInOut'
                 });
-                
-                
-                
 
                 console.log('Gráfico de estado renderizado exitosamente');
             }
