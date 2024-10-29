@@ -66,37 +66,36 @@ class SatDashboard extends Component {
     }
 
     _render_tiles() {
-        console.log('Iniciando renderizado de tiles...');
         if (!this.dashboardData) {
             console.error('No hay datos disponibles para renderizar las tiles');
             return;
         }
 
         const elements = [
-            { id: 'total_maquinas', value: this.dashboardData.total_maquinas, model: 'maquina', domain: [] },
-            { id: 'maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, model: 'maquina', domain: [['estado', '=', 'disponible']] },
-            { id: 'maquinas_separadas', value: this.dashboardData.maquinas_separadas, model: 'maquina', domain: [['estado', '=', 'separada']] },
-            { id: 'maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, model: 'maquina', domain: [['estado', '=', 'no_disponible']] },
-            { id: 'maquinas_sin_revisar', value: this.dashboardData.maquinas_sin_revisar, model: 'maquina', domain: [['estado', '=', 'sin_revisar']] },
-            { id: 'maquinas_en_revision', value: this.dashboardData.maquinas_en_revision, model: 'maquina', domain: [['estado', '=', 'en_revision']] },
-            { id: 'maquinas_finalizadas', value: this.dashboardData.maquinas_finalizadas, model: 'maquina', domain: [['estado', '=', 'finalizado']] },
-            { id: 'total_reparaciones', value: this.dashboardData.total_reparaciones, model: 'reparacion', domain: [] },
-            { id: 'reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, model: 'reparacion', domain: [['estado', '=', 'en_revision']] },
-            { id: 'reparaciones_hoy', value: this.dashboardData.reparaciones_hoy, model: 'reparacion', domain: [['fecha', '=', new Date().toISOString().split('T')[0]]] },
-            { id: 'reparaciones_mes', value: this.dashboardData.reparaciones_mes, model: 'reparacion', domain: [['mes', '=', new Date().getMonth() + 1]] },
-            { id: 'reparaciones_ano', value: this.dashboardData.reparaciones_ano, model: 'reparacion', domain: [['ano', '=', new Date().getFullYear()]] }
+            { id: 'tile_total_maquinas', value: this.dashboardData.total_maquinas, model: 'maquina', domain: [] },
+            { id: 'tile_maquinas_disponibles', value: this.dashboardData.maquinas_disponibles, model: 'maquina', domain: [['estado', '=', 'disponible']] },
+            { id: 'tile_maquinas_separadas', value: this.dashboardData.maquinas_separadas, model: 'maquina', domain: [['estado', '=', 'separada']] },
+            { id: 'tile_maquinas_no_disponibles', value: this.dashboardData.maquinas_no_disponibles, model: 'maquina', domain: [['estado', '=', 'no_disponible']] },
+            { id: 'tile_total_reparaciones', value: this.dashboardData.total_reparaciones, model: 'reparacion', domain: [] },
+            { id: 'tile_reparaciones_en_revision', value: this.dashboardData.reparaciones_en_revision, model: 'reparacion', domain: [['estado', '=', 'en_revision']] },
+            { id: 'tile_reparaciones_finalizadas', value: this.dashboardData.reparaciones_finalizadas, model: 'reparacion', domain: [['estado', '=', 'finalizado']] },
+            { id: 'tile_reparaciones_con_problemas', value: this.dashboardData.reparaciones_con_problemas, model: 'reparacion', domain: [['estado', '=', 'con_problemas']] },
+            { id: 'tile_total_tickets', value: this.dashboardData.total_tickets, model: 'ticket', domain: [] },
+            { id: 'tile_tickets_nuevos', value: this.dashboardData.tickets_nuevos, model: 'ticket', domain: [['estado', '=', 'nuevo']] },
+            { id: 'tile_tickets_en_proceso', value: this.dashboardData.tickets_en_proceso, model: 'ticket', domain: [['estado', '=', 'en_proceso']] },
+            { id: 'tile_tickets_finalizados', value: this.dashboardData.tickets_finalizados, model: 'ticket', domain: [['estado', '=', 'finalizado']] }
         ];
 
         elements.forEach(({ id, value, model, domain }) => {
-            this._updateElementContent(id, value);
+            this._updateElementContent(id.replace('tile_', ''), value); // Actualiza el contenido de `span`
             const element = document.getElementById(id);
 
             if (element) {
-                element.onclick = () => this._openFilteredView(model, domain);
+                element.onclick = () => {
+                    this._openFilteredView(model, domain);
+                };
             }
         });
-
-        console.log('Tiles renderizadas y eventos asignados');
     }
 
     _openFilteredView(model, domain) {
@@ -109,6 +108,7 @@ class SatDashboard extends Component {
             target: 'current'
         });
     }
+
 
 
     _getChartElement(elementId) {
