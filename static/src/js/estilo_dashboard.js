@@ -1,4 +1,4 @@
-/** @odoo-module */
+/** @odoo-module **/
 // Archivo: static/src/js/estilo_dashboard.js
 
 import { Component } from "@odoo/owl";
@@ -15,7 +15,6 @@ export class Dashboard extends Component {
      */
     async mounted() {
         this.setupChartExpansion();
-        await this.initializeCharts();
     }
 
     /**
@@ -48,110 +47,10 @@ export class Dashboard extends Component {
         
         // Actualizar el gráfico después de la transición
         setTimeout(() => {
-            const chartId = container.querySelector('canvas').id;
+            const chartId = container.querySelector('[id^="chart"]'); // Selecciona el primer gráfico con id que contenga 'chart'
             if (this.charts[chartId]) {
                 this.charts[chartId].resize();
             }
         }, 300);
-    }
-
-    /**
-     * Inicializa todos los gráficos
-     */
-    async initializeCharts() {
-        await this.initDisponibilidadChart();
-        await this.initEstadoChart();
-        await this.initTecnicosChart();
-        await this.initAsesoraChart();
-    }
-
-    /**
-     * Inicializa el gráfico de disponibilidad
-     */
-    async initDisponibilidadChart() {
-        const ctx = document.getElementById('disponibilidadChart');
-        if (!ctx) return;
-
-        this.charts.disponibilidadChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                // Configurar datos del gráfico
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
-
-    /**
-     * Inicializa el gráfico de estado
-     */
-    async initEstadoChart() {
-        const ctx = document.getElementById('estadoChart');
-        if (!ctx) return;
-
-        this.charts.estadoChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                // Configurar datos del gráfico
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
-
-    /**
-     * Inicializa el gráfico de técnicos
-     */
-    async initTecnicosChart() {
-        const ctx = document.getElementById('tecnicosChart');
-        if (!ctx) return;
-
-        this.charts.tecnicosChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                // Configurar datos del gráfico
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
-
-    /**
-     * Inicializa el gráfico de asesoras
-     */
-    async initAsesoraChart() {
-        const ctx = document.getElementById('asesoraChart');
-        if (!ctx) return;
-
-        this.charts.asesoraChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                // Configurar datos del gráfico
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
-
-    /**
-     * Actualiza los datos de los gráficos
-     * @param {Object} data - Nuevos datos para actualizar los gráficos
-     */
-    updateCharts(data) {
-        // Actualizar los datos de cada gráfico
-        Object.keys(this.charts).forEach(chartId => {
-            if (this.charts[chartId] && data[chartId]) {
-                this.charts[chartId].data = data[chartId];
-                this.charts[chartId].update();
-            }
-        });
     }
 }
