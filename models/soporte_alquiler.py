@@ -556,6 +556,8 @@ class ticket_alquiler(models.Model):
         records = self.search([])
         for record in records:
             record._compute_month_year()
+
+            
     def get_selection_labels(self):
         selection_labels = {}
         for field_name, field in self._fields.items():

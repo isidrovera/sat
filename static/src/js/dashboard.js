@@ -774,69 +774,166 @@ class SatDashboard extends Component {
             }
 
 
+            
             // Gráfico de Tickets por Año
             const ticketsAnoElement = this._getChartElement("ticketsAnoChart");
+            console.log('Iniciando renderización del gráfico de Tickets por Año...', ticketsAnoElement);
+
             if (ticketsAnoElement) {
-                console.log('Renderizando gráfico de tickets por año...');
+                // Establecer estilo inicial del contenedor
+                ticketsAnoElement.style.height = '250px';
+                ticketsAnoElement.style.width = '100%';
+                ticketsAnoElement.style.position = 'relative';
+                console.log('Dimensiones establecidas del contenedor:', {
+                    height: ticketsAnoElement.style.height,
+                    width: ticketsAnoElement.style.width
+                });
 
-                if (this.dashboardData.tickets_ano !== undefined) {
-                    console.log('Total de tickets por año:', this.dashboardData.tickets_ano);
+                // Obtener el año actual y definir los últimos 5 años (o más si lo deseas)
+                const añoActual = new Date().getFullYear();
+                const añosAMostrar = Array.from({ length: 5 }, (_, i) => añoActual - i).reverse();
+                console.log('Años a mostrar en el gráfico:', añosAMostrar);
+
+                // Inicializar datos de tickets con ceros para cada año
+                let datosTicketsAno = new Array(añosAMostrar.length).fill(0);
+                console.log('Datos inicializados de Tickets por Año (relleno con ceros):', datosTicketsAno);
+
+                // Procesar datos recibidos de `dashboardData.tickets_por_año`
+                if (this.dashboardData && this.dashboardData.tickets_por_año) {
+                    console.log('Estado inicial de dashboardData:', {
+                        completo: this.dashboardData,
+                        tickets_por_año: this.dashboardData.tickets_por_año,
+                        tipo: typeof this.dashboardData.tickets_por_año
+                    });
+
+                    // Cargar valores de `tickets_por_año` en `datosTicketsAno`
+                    añosAMostrar.forEach((año, index) => {
+                        const valor = this.dashboardData.tickets_por_año[año] || 0;
+                        datosTicketsAno[index] = valor;
+                        console.log(`Año ${año} (índice ${index}): valor encontrado = ${valor}`);
+                    });
                 } else {
-                    console.warn('Advertencia: tickets_ano no está definido en dashboardData');
+                    console.log('No se encontraron datos válidos en `tickets_por_año` dentro de dashboardData.');
                 }
 
-                const ticketsAnoChart = echarts.init(ticketsAnoElement);
-                ticketsAnoChart.setOption({
-                    title: {
-                        text: 'Tickets por Año',
-                        left: 'center',
-                        top: '2%',
-                        textStyle: {
-                            fontSize: 16,
-                            fontWeight: 'bold'
-                        }
-                    },
-                    tooltip: {
-                        trigger: 'item',
-                        formatter: '{a} <br/>{b} : {c} ({d}%)'
-                    },
-                    series: [{
-                        name: 'Tickets',
-                        type: 'pie',
-                        radius: '55%',
-                        center: ['50%', '60%'],
-                        data: [
-                            {value: this.dashboardData.tickets_ano, name: 'Este Año'}
-                        ],
-                        emphasis: {
-                            itemStyle: {
-                                shadowBlur: 10,
-                                shadowOffsetX: 0,
-                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                console.log('Datos procesados finales para el gráfico de Tickets por Año:', datosTicketsAno);
+
+                try {
+                    // Inicializar el gráfico
+                    const ticketsAnoChart = echarts.init(ticketsAnoElement);
+                    console.log('Gráfico de Tickets por Año inicializado');
+
+                    // Configuración del gráfico
+                    const opcionAno = {
+                        title: {
+                            text: 'Tickets por Año',
+                            left: 'center',
+                            top: '2%',
+                            textStyle: {
+                                fontSize: 14,
+                                fontWeight: 'bold'
                             }
-                        }
-                    }]
-                });
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'shadow'
+                            },
+                            formatter: '{b}: {c} tickets'
+                        },
+                        grid: {
+                            left: '5%',
+                            right: '5%',
+                            bottom: '10%',
+                            top: '15%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: añosAMostrar,
+                            axisLabel: {
+                                interval: 0,
+                                rotate: 30,
+                                fontSize: 11
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            name: 'Tickets',
+                            nameTextStyle: {
+                                fontSize: 11
+                            },
+                            minInterval: 1,
+                            min: 0,
+                            axisLabel: {
+                                formatter: '{value}',
+                                fontSize: 11
+                            }
+                        },
+                        series: [{
+                            name: 'Tickets',
+                            type: 'bar',
+                            data: datosTicketsAno,
+                            itemStyle: {
+                                color: '#FF6B6B',
+                                borderRadius: [4, 4, 0, 0]
+                            },
+                            label: {
+                                show: true,
+                                position: 'top',
+                                formatter: '{c}',
+                                fontSize: 11
+                            },
+                            barWidth: '40%'
+                        }]
+                    };
 
-                const parentElementAno = ticketsAnoElement.parentElement;
-                if (parentElementAno) {
-                    ticketsAnoChart.resize({
-                        width: parentElementAno.offsetWidth,
-                        height: parentElementAno.offsetHeight
+                    console.log('Configuración del gráfico de Tickets por Año:', opcionAno);
+                    ticketsAnoChart.setOption(opcionAno);
+
+                    // Redimensionamiento responsivo con logs detallados
+                    const parentElementAno = ticketsAnoElement.parentElement;
+                    if (parentElementAno) {
+                        console.log('Dimensiones del contenedor padre:', {
+                            width: parentElementAno.offsetWidth,
+                            height: parentElementAno.offsetHeight
+                        });
+
+                        parentElementAno.style.height = '250px';
+                        parentElementAno.style.marginBottom = '20px';
+
+                        ticketsAnoChart.resize({
+                            width: parentElementAno.offsetWidth,
+                            height: 250
+                        });
+                    }
+
+                    // Listener para redimensionar el gráfico al cambiar tamaño de ventana
+                    let resizeTimeout;
+                    window.addEventListener('resize', () => {
+                        clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            if (parentElementAno) {
+                                console.log('Redimensionando gráfico de Tickets por Año:', {
+                                    width: parentElementAno.offsetWidth,
+                                    height: 250
+                                });
+                                ticketsAnoChart.resize({
+                                    width: parentElementAno.offsetWidth,
+                                    height: 250
+                                });
+                            }
+                        }, 250);
                     });
+
+                    console.log('Gráfico de Tickets por Año renderizado exitosamente');
+                } catch (error) {
+                    console.error('Error al renderizar el gráfico de Tickets por Año:', error);
                 }
-
-                window.addEventListener('resize', () => {
-                    ticketsAnoChart.resize({
-                        width: parentElementAno?.offsetWidth,
-                        height: parentElementAno?.offsetHeight
-                    });
-                });
-
-                console.log('Gráfico de tickets por año renderizado exitosamente');
             } else {
-                console.error('Error: No se encontró el elemento de gráfico ticketsAnoChart en el DOM');
+                console.error('Error: No se encontró el elemento ticketsAnoChart');
             }
+
 
 
 
