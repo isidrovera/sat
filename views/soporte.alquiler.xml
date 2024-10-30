@@ -13,10 +13,7 @@
                             class="btn btn-info" icon="fa-wrench" invisible="estado !='proceso'" />
                         <button class="oe_highlight" name="enviar_mensaje_whatsapp" type="object"
                             icon="fa-paper-plane" string="Asignar" invisible="estado != 'nuevo'" />
-                        <button string="Actualizar Mes y Año"
-                            type="object"
-                            name="update_month_year"
-                            class="oe_highlight" />
+                        
                         <button string="Proceso" name="action_proceso" type="object"
                             class="oe_highlight" />
                         <button string="Nuevo" name="action_nuevo" type="object"

@@ -540,24 +540,8 @@ class ticket_alquiler(models.Model):
         }  
 
       
-    month_year = fields.Char(string='Mes y Año', compute='_compute_month_year', store=True)
+    
 
-    def _compute_month_year(self):
-        for record in self:
-            if record.agenda:
-                # Formatear la fecha para que el año aparezca primero, lo cual facilita el ordenamiento
-                record.month_year = record.agenda.strftime('%Y-%m')
-            else:
-                record.month_year = ''
-
-    @api.model
-    def update_month_year(self, *args, **kwargs):
-        """Método para forzar la actualización del campo en todos los registros existentes."""
-        records = self.search([])
-        for record in records:
-            record._compute_month_year()
-
-            
     def get_selection_labels(self):
         selection_labels = {}
         for field_name, field in self._fields.items():
