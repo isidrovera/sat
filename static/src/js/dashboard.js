@@ -613,16 +613,31 @@ class SatDashboard extends Component {
             if (ticketsMesElement) {
                 console.log('Renderizando gráfico de tickets por mes...');
 
-                if (this.dashboardData.tickets_mes !== undefined) {
-                    console.log('Total de tickets por mes:', this.dashboardData.tickets_mes);
-                } else {
-                    console.warn('Advertencia: tickets_mes no está definido en dashboardData');
+                // Obtener el año actual
+                const añoActual = new Date().getFullYear();
+                
+                // Obtener el mes actual (0-11)
+                const mesActual = new Date().getMonth();
+                
+                // Crear array con solo los meses transcurridos del año actual
+                const mesesDelAño = [
+                    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                ].slice(0, mesActual + 1);
+
+                // Verificar y procesar datos
+                let datosTickets = [];
+                if (this.dashboardData && this.dashboardData.tickets_mes) {
+                    console.log('Datos recibidos:', this.dashboardData.tickets_mes);
+                    datosTickets = Array.isArray(this.dashboardData.tickets_mes) 
+                        ? this.dashboardData.tickets_mes.slice(0, mesActual + 1)
+                        : [this.dashboardData.tickets_mes]; // Si es un solo valor
                 }
 
                 const ticketsMesChart = echarts.init(ticketsMesElement);
                 ticketsMesChart.setOption({
                     title: {
-                        text: 'Tickets por Mes',
+                        text: `Tickets por Mes ${añoActual}`,
                         left: 'center',
                         top: '2%',
                         textStyle: {
@@ -640,16 +655,13 @@ class SatDashboard extends Component {
                     grid: {
                         left: '3%',
                         right: '4%',
-                        bottom: '8%',
+                        bottom: '15%',
                         top: '15%',
                         containLabel: true
                     },
                     xAxis: {
                         type: 'category',
-                        data: [
-                            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-                            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-                        ],
+                        data: mesesDelAño,
                         axisLabel: {
                             interval: 0,
                             rotate: 30
@@ -660,6 +672,8 @@ class SatDashboard extends Component {
                         name: 'Cantidad de Tickets',
                         nameLocation: 'middle',
                         nameGap: 50,
+                        minInterval: 1, // Forzar valores enteros
+                        min: 0, // Comenzar desde 0
                         axisLabel: {
                             formatter: '{value}'
                         }
@@ -667,9 +681,7 @@ class SatDashboard extends Component {
                     series: [{
                         name: 'Tickets',
                         type: 'bar',
-                        data: Array.isArray(this.dashboardData.tickets_mes) 
-                            ? this.dashboardData.tickets_mes 
-                            : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        data: datosTickets,
                         itemStyle: {
                             color: '#4ECDC4',
                             borderRadius: [4, 4, 0, 0]
@@ -682,7 +694,9 @@ class SatDashboard extends Component {
                         label: {
                             show: true,
                             position: 'top',
-                            formatter: '{c}'
+                            formatter: '{c}',
+                            fontSize: 12,
+                            fontWeight: 'bold'
                         }
                     }],
                     dataZoom: [{
@@ -699,22 +713,24 @@ class SatDashboard extends Component {
                 if (parentElementMes) {
                     ticketsMesChart.resize({
                         width: parentElementMes.offsetWidth,
-                        height: parentElementMes.offsetHeight
+                        height: 400 // Altura fija para mejor visualización
                     });
                 }
 
                 window.addEventListener('resize', () => {
-                    ticketsMesChart.resize({
-                        width: parentElementMes?.offsetWidth,
-                        height: parentElementMes?.offsetHeight
-                    });
+                    if (parentElementMes) {
+                        ticketsMesChart.resize({
+                            width: parentElementMes.offsetWidth,
+                            height: 400
+                        });
+                    }
                 });
 
                 console.log('Gráfico de tickets por mes renderizado exitosamente');
             } else {
                 console.error('Error: No se encontró el elemento de gráfico ticketsMesChart en el DOM');
             }
-            // Gráfico de Tickets por Año
+                        // Gráfico de Tickets por Año
             const ticketsAnoElement = this._getChartElement("ticketsAnoChart");
             if (ticketsAnoElement) {
                 console.log('Renderizando gráfico de tickets por año...');
