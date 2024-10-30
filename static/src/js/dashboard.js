@@ -486,8 +486,8 @@ class SatDashboard extends Component {
                 console.log('Renderizando gráfico de tickets por técnico...');
 
                 // Función para renderizar el gráfico, con datos filtrados o sin filtrar
-                function renderTicketsTecnicoChart(filteredData, titleText = 'Tickets por Técnico') {
-                    // Obtener etiquetas y datos de técnicos a partir de los datos filtrados o los datos completos
+                function renderTicketsTecnicoChart(filteredData = null, titleText = 'Tickets por Técnico') {
+                    // Usar los datos filtrados si existen, si no, usar todos los datos
                     const ticketsTecnicoLabels = Object.keys(filteredData || this.dashboardData.tecnicos_totales_tickets || {});
                     const ticketsTecnicoData = Object.values(filteredData || this.dashboardData.tecnicos_totales_tickets || {});
 
@@ -540,13 +540,10 @@ class SatDashboard extends Component {
                                 width: 150,
                                 overflow: 'break',
                                 fontSize: 12,
-                                align: 'left', // Alinear etiquetas a la izquierda
+                                align: 'left',
                                 formatter: function(value) {
                                     const maxLength = 30;
-                                    if (value.length > maxLength) {
-                                        return value.substring(0, maxLength) + '...';
-                                    }
-                                    return value;
+                                    return value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
                                 }
                             }
                         },
@@ -581,68 +578,76 @@ class SatDashboard extends Component {
                         }]
                     });
 
-                    // Redimensionar el gráfico para ocupar el espacio disponible
-                    const parentElement = ticketsTecnicoElement.parentElement;
-                    if (parentElement) {
-                        ticketsTecnicoChart.resize({
-                            width: parentElement.offsetWidth,
-                            height: parentElement.offsetHeight
-                        });
-                    }
+                    // Manejar el redimensionamiento
+                    const handleResize = () => {
+                        const parentElement = ticketsTecnicoElement.parentElement;
+                        if (parentElement) {
+                            ticketsTecnicoChart.resize({
+                                width: parentElement.offsetWidth,
+                                height: parentElement.offsetHeight
+                            });
+                        }
+                    };
 
-                    // Manejar el redimensionamiento de la ventana
-                    window.addEventListener('resize', () => {
-                        ticketsTecnicoChart.resize({
-                            width: parentElement?.offsetWidth,
-                            height: parentElement?.offsetHeight
-                        });
-                    });
-
-                    console.log('Gráfico de tickets por técnico renderizado exitosamente');
+                    handleResize();
+                    window.addEventListener('resize', handleResize);
                 }
 
                 // Función para aplicar el filtro de fecha
                 function applyDateFilter() {
-                    const startDate = new Date(document.getElementById("startDate").value);
-                    const endDate = new Date(document.getElementById("endDate").value);
-
-                    // Si los filtros están en blanco, mostrar todos los datos
-                    if (isNaN(startDate) || isNaN(endDate)) {
-                        console.log("Campos de fecha vacíos, mostrando todos los datos.");
-                        renderTicketsTecnicoChart();
-                        return;
-                    }
-
-                    // Validar el rango de fechas si ambos campos están completos
-                    if (startDate > endDate) {
-                        alert("Por favor, selecciona un rango de fechas válido.");
-                        return;
-                    }
-
-                    console.log(`Aplicando filtro de fecha - Inicio: ${startDate.toISOString().split('T')[0]}, Fin: ${endDate.toISOString().split('T')[0]}`);
+                    const startDateInput = document.getElementById("startDate");
+                    const endDateInput = document.getElementById("endDate");
                     
-                    // Filtrar los datos de técnicos dentro del rango de fechas
-                    const filteredData = {};
-                    for (const [tecnico, tickets] of Object.entries(this.dashboardData.tecnicos_totales_tickets || {})) {
-                        // Suponiendo que `dashboardData.tecnicos_totales_tickets` tiene datos agregados por fecha
-                        // Ajusta esta lógica si los datos están organizados de otra forma
-                        filteredData[tecnico] = tickets; // Aquí aplica el filtro según las fechas
+                    // Si ambos campos están vacíos, mostrar todos los datos
+                    if (!startDateInput.value && !endDateInput.value) {
+                        console.log("Sin filtros de fecha aplicados, mostrando todos los datos");
+                        renderTicketsTecnicoChart.call(this, null, 'Tickets por Técnico');
+                        return;
                     }
+
+                    // Si solo uno de los campos está lleno, mostrar mensaje de error
+                    if ((!startDateInput.value && endDateInput.value) || (startDateInput.value && !endDateInput.value)) {
+                        alert("Por favor, completa ambas fechas para aplicar el filtro");
+                        return;
+                    }
+
+                    const startDate = new Date(startDateInput.value);
+                    const endDate = new Date(endDateInput.value);
+
+                    // Validar el rango de fechas
+                    if (startDate > endDate) {
+                        alert("La fecha de inicio no puede ser posterior a la fecha final");
+                        return;
+                    }
+
+                    console.log(`Aplicando filtro de fecha - Inicio: ${startDate.toLocaleDateString()}, Fin: ${endDate.toLocaleDateString()}`);
+
+                    // Filtrar los datos según el rango de fechas
+                    const filteredData = {};
+                    Object.entries(this.dashboardData.tecnicos_totales_tickets || {}).forEach(([tecnico, tickets]) => {
+                        // Aquí deberías implementar la lógica específica de filtrado según la estructura de tus datos
+                        // Este es solo un ejemplo, ajústalo según tu estructura de datos real
+                        if (/* condición de filtrado según tus datos */) {
+                            filteredData[tecnico] = tickets;
+                        }
+                    });
 
                     const titleText = `Tickets por Técnico (desde ${startDate.toLocaleDateString()} hasta ${endDate.toLocaleDateString()})`;
-                    renderTicketsTecnicoChart(filteredData, titleText);
+                    renderTicketsTecnicoChart.call(this, filteredData, titleText);
                 }
 
-                // Event listener para aplicar el filtro al hacer clic en el botón
-                document.getElementById("applyFilter").addEventListener("click", applyDateFilter.bind(this));
+                // Event listener para el botón de filtro
+                const filterButton = document.getElementById("applyFilter");
+                if (filterButton) {
+                    filterButton.removeEventListener("click", applyDateFilter); // Remover listener anterior si existe
+                    filterButton.addEventListener("click", applyDateFilter.bind(this));
+                }
 
-                // Renderizar el gráfico con todos los datos por defecto
-                renderTicketsTecnicoChart();
+                // Renderizar el gráfico inicial con todos los datos
+                renderTicketsTecnicoChart.call(this);
             } else {
                 console.error('Error: No se encontró el elemento de gráfico ticketsTecnicoChart en el DOM');
             }
-
-
 
             // Gráfico de Tickets por Mes
             const ticketsMesElement = this._getChartElement("ticketsMesChart");
