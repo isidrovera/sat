@@ -485,18 +485,18 @@ class SatDashboard extends Component {
             if (ticketsTecnicoElement) {
                 console.log('Renderizando gráfico de tickets por técnico...');
 
-                // Función para renderizar el gráfico, con datos filtrados o sin filtrar
-                function renderTicketsTecnicoChart(filteredData = null, titleText = 'Tickets por Técnico') {
-                    // Usar los datos filtrados si existen, si no, usar todos los datos
-                    const ticketsTecnicoLabels = Object.keys(filteredData || this.dashboardData.tecnicos_totales_tickets || {});
-                    const ticketsTecnicoData = Object.values(filteredData || this.dashboardData.tecnicos_totales_tickets || {});
+                const renderTicketsTecnicoChart = (filteredData = null, titleText = 'Tickets por Técnico') => {
+                    // Obtener datos
+                    const dataToUse = filteredData || this.dashboardData.tecnicos_totales_tickets || {};
+                    const ticketsTecnicoLabels = Object.keys(dataToUse);
+                    const ticketsTecnicoData = Object.values(dataToUse);
 
-                    console.log('Etiquetas de técnicos para tickets:', ticketsTecnicoLabels);
-                    console.log('Datos de técnicos para tickets:', ticketsTecnicoData);
+                    console.log('Etiquetas de técnicos:', ticketsTecnicoLabels);
+                    console.log('Datos de tickets:', ticketsTecnicoData);
 
-                    // Inicializar el gráfico usando ECharts
+                    // Crear y configurar el gráfico
                     const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement);
-                    ticketsTecnicoChart.setOption({
+                    const option = {
                         title: {
                             text: titleText,
                             left: 'center',
@@ -541,7 +541,7 @@ class SatDashboard extends Component {
                                 overflow: 'break',
                                 fontSize: 12,
                                 align: 'left',
-                                formatter: function(value) {
+                                formatter: (value) => {
                                     const maxLength = 30;
                                     return value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
                                 }
@@ -576,7 +576,9 @@ class SatDashboard extends Component {
                             barWidth: '40%',
                             barMaxWidth: 60
                         }]
-                    });
+                    };
+
+                    ticketsTecnicoChart.setOption(option);
 
                     // Manejar el redimensionamiento
                     const handleResize = () => {
@@ -591,23 +593,22 @@ class SatDashboard extends Component {
 
                     handleResize();
                     window.addEventListener('resize', handleResize);
-                }
+                };
 
-                // Función para aplicar el filtro de fecha
-                function applyDateFilter() {
+                const applyDateFilter = () => {
                     const startDateInput = document.getElementById("startDate");
                     const endDateInput = document.getElementById("endDate");
                     
-                    // Si ambos campos están vacíos, mostrar todos los datos
+                    // Si no hay fechas seleccionadas, mostrar todos los datos
                     if (!startDateInput.value && !endDateInput.value) {
-                        console.log("Sin filtros de fecha aplicados, mostrando todos los datos");
-                        renderTicketsTecnicoChart.call(this, null, 'Tickets por Técnico');
+                        console.log("Mostrando todos los datos sin filtros");
+                        renderTicketsTecnicoChart(null, 'Tickets por Técnico');
                         return;
                     }
 
-                    // Si solo uno de los campos está lleno, mostrar mensaje de error
-                    if ((!startDateInput.value && endDateInput.value) || (startDateInput.value && !endDateInput.value)) {
-                        alert("Por favor, completa ambas fechas para aplicar el filtro");
+                    // Validar que ambas fechas estén presentes
+                    if (!startDateInput.value || !endDateInput.value) {
+                        alert("Por favor, selecciona ambas fechas para aplicar el filtro");
                         return;
                     }
 
@@ -620,34 +621,29 @@ class SatDashboard extends Component {
                         return;
                     }
 
-                    console.log(`Aplicando filtro de fecha - Inicio: ${startDate.toLocaleDateString()}, Fin: ${endDate.toLocaleDateString()}`);
+                    console.log(`Aplicando filtro - Desde: ${startDate.toLocaleDateString()} hasta: ${endDate.toLocaleDateString()}`);
 
-                    // Filtrar los datos según el rango de fechas
-                    const filteredData = {};
-                    Object.entries(this.dashboardData.tecnicos_totales_tickets || {}).forEach(([tecnico, tickets]) => {
-                        // Aquí deberías implementar la lógica específica de filtrado según la estructura de tus datos
-                        // Este es solo un ejemplo, ajústalo según tu estructura de datos real
-                        if (/* condición de filtrado según tus datos */) {
-                            filteredData[tecnico] = tickets;
-                        }
-                    });
-
+                    // Aquí aplicamos el filtro según las fechas
+                    // Por ahora, solo actualizamos el título ya que necesitamos la estructura específica de tus datos
                     const titleText = `Tickets por Técnico (desde ${startDate.toLocaleDateString()} hasta ${endDate.toLocaleDateString()})`;
-                    renderTicketsTecnicoChart.call(this, filteredData, titleText);
-                }
+                    renderTicketsTecnicoChart(this.dashboardData.tecnicos_totales_tickets, titleText);
+                };
 
-                // Event listener para el botón de filtro
+                // Configurar el event listener para el botón de filtro
                 const filterButton = document.getElementById("applyFilter");
                 if (filterButton) {
-                    filterButton.removeEventListener("click", applyDateFilter); // Remover listener anterior si existe
-                    filterButton.addEventListener("click", applyDateFilter.bind(this));
+                    // Remover listeners previos para evitar duplicados
+                    const newFilterButton = filterButton.cloneNode(true);
+                    filterButton.parentNode.replaceChild(newFilterButton, filterButton);
+                    newFilterButton.addEventListener("click", applyDateFilter);
                 }
 
-                // Renderizar el gráfico inicial con todos los datos
-                renderTicketsTecnicoChart.call(this);
+                // Renderizar el gráfico inicial
+                renderTicketsTecnicoChart();
             } else {
-                console.error('Error: No se encontró el elemento de gráfico ticketsTecnicoChart en el DOM');
+                console.error('No se encontró el elemento del gráfico en el DOM');
             }
+
 
             // Gráfico de Tickets por Mes
             const ticketsMesElement = this._getChartElement("ticketsMesChart");
