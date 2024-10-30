@@ -483,11 +483,24 @@ class SatDashboard extends Component {
             const ticketsTecnicoElement = this._getChartElement("ticketsTecnicoChart");
             if (ticketsTecnicoElement) {
                 console.log('Renderizando gráfico de tickets por técnico...');
-                const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement);
-                
-                const ticketsTecnicoLabels = Object.keys(this.dashboardData.tecnicos_totales_tickets);
-                const ticketsTecnicoData = Object.values(this.dashboardData.tecnicos_totales_tickets);
 
+                // Verificar la disponibilidad de datos en this.dashboardData
+                console.log('Datos de dashboard recibidos:', this.dashboardData);
+
+                // Verificar que tecnicos_totales_tickets está definido
+                if (this.dashboardData.tecnicos_totales_tickets) {
+                    console.log('Datos de técnicos para tickets:', this.dashboardData.tecnicos_totales_tickets);
+                } else {
+                    console.warn('Advertencia: tecnicos_totales_tickets no está definido en dashboardData');
+                }
+
+                const ticketsTecnicoLabels = Object.keys(this.dashboardData.tecnicos_totales_tickets || {});
+                const ticketsTecnicoData = Object.values(this.dashboardData.tecnicos_totales_tickets || {});
+
+                console.log('Etiquetas de técnicos para tickets:', ticketsTecnicoLabels);
+                console.log('Datos de técnicos para tickets:', ticketsTecnicoData);
+
+                const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement);
                 ticketsTecnicoChart.setOption({
                     title: {
                         text: 'Tickets por Técnico',
@@ -550,7 +563,7 @@ class SatDashboard extends Component {
                         text: ['High', 'Low'],
                         dimension: 0,
                         inRange: {
-                            color: ['#E1F5FE', '#0288D1']  // Tonos azules para diferenciarlos de otros gráficos
+                            color: ['#E1F5FE', '#0288D1']
                         },
                         itemWidth: 15,
                         itemHeight: 200
@@ -580,7 +593,7 @@ class SatDashboard extends Component {
                         height: parentElement.offsetHeight
                     });
                 }
-                
+
                 // Manejar el redimensionamiento de la ventana
                 window.addEventListener('resize', () => {
                     ticketsTecnicoChart.resize({
@@ -588,9 +601,12 @@ class SatDashboard extends Component {
                         height: parentElement?.offsetHeight
                     });
                 });
-                
+
                 console.log('Gráfico de tickets por técnico renderizado exitosamente');
+            } else {
+                console.error('Error: No se encontró el elemento de gráfico ticketsTecnicoChart en el DOM');
             }
+
 
 
                         // Gráfico de asesoras
