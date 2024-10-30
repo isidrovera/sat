@@ -607,6 +607,135 @@ class SatDashboard extends Component {
                 console.error('Error: No se encontró el elemento de gráfico ticketsTecnicoChart en el DOM');
             }
 
+            // Gráfico de Tickets por Mes
+            const ticketsMesElement = this._getChartElement("ticketsMesChart");
+            if (ticketsMesElement) {
+                console.log('Renderizando gráfico de tickets por mes...');
+
+                if (this.dashboardData.tickets_mes !== undefined) {
+                    console.log('Total de tickets por mes:', this.dashboardData.tickets_mes);
+                } else {
+                    console.warn('Advertencia: tickets_mes no está definido en dashboardData');
+                }
+
+                const ticketsMesChart = echarts.init(ticketsMesElement);
+                ticketsMesChart.setOption({
+                    title: {
+                        text: 'Tickets por Mes',
+                        left: 'center',
+                        top: '2%',
+                        textStyle: {
+                            fontSize: 16,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{a} <br/>{b} : {c} ({d}%)'
+                    },
+                    series: [{
+                        name: 'Tickets',
+                        type: 'pie',
+                        radius: '55%',
+                        center: ['50%', '60%'],
+                        data: [
+                            {value: this.dashboardData.tickets_mes, name: 'Este Mes'}
+                        ],
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }]
+                });
+
+                const parentElementMes = ticketsMesElement.parentElement;
+                if (parentElementMes) {
+                    ticketsMesChart.resize({
+                        width: parentElementMes.offsetWidth,
+                        height: parentElementMes.offsetHeight
+                    });
+                }
+
+                window.addEventListener('resize', () => {
+                    ticketsMesChart.resize({
+                        width: parentElementMes?.offsetWidth,
+                        height: parentElementMes?.offsetHeight
+                    });
+                });
+
+                console.log('Gráfico de tickets por mes renderizado exitosamente');
+            } else {
+                console.error('Error: No se encontró el elemento de gráfico ticketsMesChart en el DOM');
+            }
+
+            // Gráfico de Tickets por Año
+            const ticketsAnoElement = this._getChartElement("ticketsAnoChart");
+            if (ticketsAnoElement) {
+                console.log('Renderizando gráfico de tickets por año...');
+
+                if (this.dashboardData.tickets_ano !== undefined) {
+                    console.log('Total de tickets por año:', this.dashboardData.tickets_ano);
+                } else {
+                    console.warn('Advertencia: tickets_ano no está definido en dashboardData');
+                }
+
+                const ticketsAnoChart = echarts.init(ticketsAnoElement);
+                ticketsAnoChart.setOption({
+                    title: {
+                        text: 'Tickets por Año',
+                        left: 'center',
+                        top: '2%',
+                        textStyle: {
+                            fontSize: 16,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{a} <br/>{b} : {c} ({d}%)'
+                    },
+                    series: [{
+                        name: 'Tickets',
+                        type: 'pie',
+                        radius: '55%',
+                        center: ['50%', '60%'],
+                        data: [
+                            {value: this.dashboardData.tickets_ano, name: 'Este Año'}
+                        ],
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }]
+                });
+
+                const parentElementAno = ticketsAnoElement.parentElement;
+                if (parentElementAno) {
+                    ticketsAnoChart.resize({
+                        width: parentElementAno.offsetWidth,
+                        height: parentElementAno.offsetHeight
+                    });
+                }
+
+                window.addEventListener('resize', () => {
+                    ticketsAnoChart.resize({
+                        width: parentElementAno?.offsetWidth,
+                        height: parentElementAno?.offsetHeight
+                    });
+                });
+
+                console.log('Gráfico de tickets por año renderizado exitosamente');
+            } else {
+                console.error('Error: No se encontró el elemento de gráfico ticketsAnoChart en el DOM');
+            }
+
+
 
 
                         // Gráfico de asesoras

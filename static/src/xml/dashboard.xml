@@ -69,7 +69,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card" id="tile_reparaciones_en_revision">
                             <div class="oh-card-body text-center">
@@ -240,6 +240,36 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Gráfico: Tickets por Mes -->
+                    <div class="col-lg-6 col-md-12">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Tickets por Mes</h4>
+                                <button class="expand-button">
+                                    <i class="fa fa-expand"></i>
+                                </button>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="ticketsMesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico: Tickets por Año -->
+                    <div class="col-lg-6 col-md-12">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Tickets por Año</h4>
+                                <button class="expand-button">
+                                    <i class="fa fa-expand"></i>
+                                </button>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="ticketsAnoChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
 
                     <!-- Gráfico 4: Máquinas por Asesora -->
                     <div class="col-lg-6 col-md-12">
