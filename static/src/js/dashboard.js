@@ -621,59 +621,44 @@ class SatDashboard extends Component {
                     width: ticketsMesElement.style.width
                 });
 
-                // Obtener fechas y datos
+                // Obtener fechas y definir los meses del año hasta el mes actual
                 const añoActual = new Date().getFullYear();
-                const mesActual = new Date().getMonth();
+                const mesActual = new Date().getMonth(); // Mes actual (0 = Enero, 11 = Diciembre)
                 console.log('Fecha actual:', { año: añoActual, mes: mesActual });
 
-                // Definir los meses a mostrar en el gráfico hasta el mes actual
                 const mesesDelAño = [
                     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-                ].slice(0, mesActual + 1);
-                console.log('Meses a mostrar:', mesesDelAño);
+                ].slice(0, mesActual + 1); // Solo mostrar meses hasta el actual
+                console.log('Meses a mostrar en el gráfico:', mesesDelAño);
 
-                // Inicializar datos de tickets con ceros para cada mes
+                // Inicializar datos de tickets con ceros para cada mes hasta el actual
                 let datosTickets = new Array(mesActual + 1).fill(0);
                 console.log('Datos inicializados de Tickets (relleno con ceros):', datosTickets);
 
-                // Validar y procesar los datos de `tickets_mes` de manera dinámica
-                if (this.dashboardData && this.dashboardData.tickets_mes) {
+                // Procesar datos recibidos de `dashboardData.tickets_por_mes`
+                if (this.dashboardData && this.dashboardData.tickets_por_mes) {
                     console.log('Estado inicial de dashboardData:', {
                         completo: this.dashboardData,
-                        tickets_mes: this.dashboardData.tickets_mes,
-                        tipo: typeof this.dashboardData.tickets_mes
+                        tickets_por_mes: this.dashboardData.tickets_por_mes,
+                        tipo: typeof this.dashboardData.tickets_por_mes
                     });
 
-                    // Si `tickets_mes` es un objeto (meses como claves)
-                    if (typeof this.dashboardData.tickets_mes === 'object' && !Array.isArray(this.dashboardData.tickets_mes)) {
-                        console.log('tickets_mes es un objeto:', this.dashboardData.tickets_mes);
-                        mesesDelAño.forEach((mes, index) => {
-                            const mesLower = mes.toLowerCase();
-                            const valor = this.dashboardData.tickets_mes[mesLower] || 0;
-                            datosTickets[index] = valor;
-                            console.log(`Mes ${mes} (índice ${index}): valor encontrado = ${valor}`);
-                        });
-                    } 
-                    // Si `tickets_mes` es un array
-                    else if (Array.isArray(this.dashboardData.tickets_mes)) {
-                        console.log('tickets_mes es un array:', this.dashboardData.tickets_mes);
-                        datosTickets = this.dashboardData.tickets_mes.slice(0, mesActual + 1);
-                        console.log('Datos de tickets obtenidos del array:', datosTickets);
-                    } 
-                    // Si `tickets_mes` es un número único
-                    else {
-                        console.log('tickets_mes es un valor único:', this.dashboardData.tickets_mes);
-                        datosTickets[0] = this.dashboardData.tickets_mes;
-                        console.log('Asignando valor único al primer mes:', datosTickets);
-                    }
+                    // Cargar valores de `tickets_por_mes` en `datosTickets`
+                    mesesDelAño.forEach((mes, index) => {
+                        const mesNumero = index + 1; // Convertir índice a mes numérico (1 = Enero, 12 = Diciembre)
+                        const valor = this.dashboardData.tickets_por_mes[mesNumero] || 0;
+                        datosTickets[index] = valor;
+                        console.log(`Mes ${mes} (índice ${index}): valor encontrado = ${valor}`);
+                    });
                 } else {
-                    console.log('No se encontraron datos en dashboardData o tickets_mes.');
+                    console.log('No se encontraron datos válidos en `tickets_por_mes` dentro de dashboardData.');
                 }
 
                 console.log('Datos procesados finales para el gráfico:', datosTickets);
 
                 try {
+                    // Inicializar el gráfico
                     const ticketsMesChart = echarts.init(ticketsMesElement);
                     console.log('Gráfico de Tickets por Mes inicializado');
 
@@ -745,7 +730,7 @@ class SatDashboard extends Component {
                     console.log('Configuración del gráfico:', opcion);
                     ticketsMesChart.setOption(opcion);
 
-                    // Manejo del responsive con logs
+                    // Redimensionamiento responsivo con logs detallados
                     const parentElementMes = ticketsMesElement.parentElement;
                     if (parentElementMes) {
                         console.log('Dimensiones del contenedor padre:', {
@@ -762,7 +747,7 @@ class SatDashboard extends Component {
                         });
                     }
 
-                    // Listener para redimensionar con logs detallados
+                    // Listener para redimensionar el gráfico al cambiar tamaño de ventana
                     let resizeTimeout;
                     window.addEventListener('resize', () => {
                         clearTimeout(resizeTimeout);
@@ -787,6 +772,7 @@ class SatDashboard extends Component {
             } else {
                 console.error('Error: No se encontró el elemento ticketsMesChart');
             }
+
 
             // Gráfico de Tickets por Año
             const ticketsAnoElement = this._getChartElement("ticketsAnoChart");
