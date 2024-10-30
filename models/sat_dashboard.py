@@ -1,4 +1,5 @@
 from odoo import models, fields, api
+from datetime import date
 
 class SatDashboard(models.Model):
     _name = 'sat.dashboard'
@@ -9,25 +10,24 @@ class SatDashboard(models.Model):
         # Total de máquinas en `sat.sat`
         total_maquinas = self.env['sat.sat'].search_count([])
 
-        # Maquinas por disponibilidad
+        # Máquinas por disponibilidad
         maquinas_disponibles = self.env['sat.sat'].search_count([('disponibilidad_id', '=', 'disponible')])
         maquinas_separadas = self.env['sat.sat'].search_count([('disponibilidad_id', '=', 'separada')])
         maquinas_no_disponibles = self.env['sat.sat'].search_count([('disponibilidad_id', '=', 'no_disponible')])
 
-        # Maquinas por estado
+        # Máquinas por estado
         maquinas_sin_revisar = self.env['sat.sat'].search_count([('estado_ventas_id', '=', 'sin_revisar')])
         maquinas_en_revision = self.env['sat.sat'].search_count([('estado_ventas_id', '=', 'en_revision')])
         maquinas_finalizadas = self.env['sat.sat'].search_count([('estado_ventas_id', '=', 'finalizado')])
         maquinas_problemas = self.env['sat.sat'].search_count([('estado_ventas_id', '=', 'con_problemas')])
-        # Puedes añadir más estados si es necesario.
 
-        # Maquinas por asesora
+        # Máquinas por asesora
         asesora_data = self.env['sat.sat'].read_group([('asesora_id', '!=', False)], ['asesora_id'], ['asesora_id'])
         asesora_totales = {a['asesora_id'][1]: a['asesora_id_count'] for a in asesora_data}
 
         # Total de reparaciones en `reparaciones.reparaciones`
         total_reparaciones = self.env['reparaciones.reparaciones'].search_count([])
-        reparaciones_en_revision = self.env['reparaciones.reparaciones'].search_count([('estado_id', "=", 'en_revision')])
+        reparaciones_en_revision = self.env['reparaciones.reparaciones'].search_count([('estado_id', '=', 'en_revision')])
 
         # Reparaciones diarias, mensuales, y anuales
         today = fields.Date.today()
@@ -51,10 +51,6 @@ class SatDashboard(models.Model):
         total_tickets = self.env['ticket.alquiler'].search_count([])
 
         # Tickets por mes, año y día usando 'agenda'
-        today = fields.Date.today()
-        start_month = today.replace(day=1)
-        start_year = today.replace(month=1, day=1)
-        
         tickets_dia = self.env['ticket.alquiler'].search_count([('agenda', '>=', today)])
         tickets_mes = self.env['ticket.alquiler'].search_count([('agenda', '>=', start_month)])
         tickets_ano = self.env['ticket.alquiler'].search_count([('agenda', '>=', start_year)])
@@ -83,6 +79,19 @@ class SatDashboard(models.Model):
         )
         maquinas_totales_tickets = {m['product_alquiler'][1]: m['product_alquiler_count'] for m in tickets_por_maquina}
 
+        # Tickets por mes en el año actual
+        tickets_por_mes = {}
+        for mes in range(1, 13):
+            inicio_mes = date(today.year, mes, 1)
+            if mes == 12:
+                fin_mes = date(today.year + 1, 1, 1)
+            else:
+                fin_mes = date(today.year, mes + 1, 1)
+            tickets_count_mes = self.env['ticket.alquiler'].search_count([
+                ('agenda', '>=', inicio_mes),
+                ('agenda', '<', fin_mes)
+            ])
+            tickets_por_mes[mes] = tickets_count_mes
 
         # Devolver todos los datos en un diccionario para el dashboard
         return {
@@ -96,7 +105,7 @@ class SatDashboard(models.Model):
             'maquinas_finalizadas': maquinas_finalizadas,
             'maquinas_problemas': maquinas_problemas,
             'asesora_totales': asesora_totales,
-            
+
             # Datos de `reparaciones.reparaciones`
             'total_reparaciones': total_reparaciones,
             'reparaciones_en_revision': reparaciones_en_revision,
@@ -104,7 +113,8 @@ class SatDashboard(models.Model):
             'reparaciones_mes': reparaciones_mes,
             'reparaciones_ano': reparaciones_ano,
             'tecnicos_totales': tecnicos_totales,
-            #Datos de tickets
+
+            # Datos de tickets
             'total_tickets': total_tickets,
             'tickets_dia': tickets_dia,
             'tickets_mes': tickets_mes,
@@ -112,4 +122,5 @@ class SatDashboard(models.Model):
             'tecnicos_totales_tickets': tecnicos_totales_tickets,
             'clientes_totales_tickets': clientes_totales_tickets,
             'maquinas_totales_tickets': maquinas_totales_tickets,
+            'tickets_por_mes': tickets_por_mes,
         }
