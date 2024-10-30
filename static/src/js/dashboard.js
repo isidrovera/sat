@@ -607,6 +607,7 @@ class SatDashboard extends Component {
                 console.error('Error: No se encontró el elemento de gráfico ticketsTecnicoChart en el DOM');
             }
 
+            
             // Gráfico de Tickets por Mes
             const ticketsMesElement = this._getChartElement("ticketsMesChart");
             if (ticketsMesElement) {
@@ -630,27 +631,70 @@ class SatDashboard extends Component {
                         }
                     },
                     tooltip: {
-                        trigger: 'item',
-                        formatter: '{a} <br/>{b} : {c} ({d}%)'
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        },
+                        formatter: '{b}: {c} tickets'
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '8%',
+                        top: '15%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: [
+                            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                        ],
+                        axisLabel: {
+                            interval: 0,
+                            rotate: 30
+                        }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: 'Cantidad de Tickets',
+                        nameLocation: 'middle',
+                        nameGap: 50,
+                        axisLabel: {
+                            formatter: '{value}'
+                        }
                     },
                     series: [{
                         name: 'Tickets',
-                        type: 'pie',
-                        radius: '55%',
-                        center: ['50%', '60%'],
-                        data: [
-                            {value: this.dashboardData.tickets_mes, name: 'Este Mes'}
-                        ],
+                        type: 'bar',
+                        data: Array.isArray(this.dashboardData.tickets_mes) 
+                            ? this.dashboardData.tickets_mes 
+                            : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        itemStyle: {
+                            color: '#4ECDC4',
+                            borderRadius: [4, 4, 0, 0]
+                        },
                         emphasis: {
                             itemStyle: {
-                                shadowBlur: 10,
-                                shadowOffsetX: 0,
-                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                color: '#45B7D1'
                             }
+                        },
+                        label: {
+                            show: true,
+                            position: 'top',
+                            formatter: '{c}'
                         }
+                    }],
+                    dataZoom: [{
+                        type: 'slider',
+                        show: true,
+                        start: 0,
+                        end: 100,
+                        bottom: 0
                     }]
                 });
 
+                // Manejo del responsive
                 const parentElementMes = ticketsMesElement.parentElement;
                 if (parentElementMes) {
                     ticketsMesChart.resize({
@@ -670,7 +714,6 @@ class SatDashboard extends Component {
             } else {
                 console.error('Error: No se encontró el elemento de gráfico ticketsMesChart en el DOM');
             }
-
             // Gráfico de Tickets por Año
             const ticketsAnoElement = this._getChartElement("ticketsAnoChart");
             if (ticketsAnoElement) {
