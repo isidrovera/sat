@@ -607,150 +607,177 @@ class SatDashboard extends Component {
                 console.error('Error: No se encontró el elemento de gráfico ticketsTecnicoChart en el DOM');
             }
 
-            
             // Gráfico de Tickets por Mes
             const ticketsMesElement = this._getChartElement("ticketsMesChart");
-            if (ticketsMesElement) {
-                console.log('Renderizando gráfico de tickets por mes...');
+            console.log('Iniciando renderización del gráfico...', ticketsMesElement);
 
-                // Obtener el año actual
+            if (ticketsMesElement) {
+                // Establecer estilo inicial del contenedor
+                ticketsMesElement.style.height = '250px';
+                ticketsMesElement.style.width = '100%';
+                ticketsMesElement.style.position = 'relative';
+                console.log('Dimensiones establecidas del contenedor:', {
+                    height: ticketsMesElement.style.height,
+                    width: ticketsMesElement.style.width
+                });
+
+                // Obtener fechas y datos
                 const añoActual = new Date().getFullYear();
-                
-                // Obtener el mes actual (0-11)
                 const mesActual = new Date().getMonth();
-                
-                // Crear array con solo los meses transcurridos del año actual
+                console.log('Fecha actual:', { año: añoActual, mes: mesActual });
+
                 const mesesDelAño = [
                     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
                 ].slice(0, mesActual + 1);
+                
+                console.log('Meses a mostrar:', mesesDelAño);
 
-                // Verificar y procesar datos con más detalle
+                // Debug datos entrantes
+                console.log('Estado inicial de dashboardData:', {
+                    completo: this.dashboardData,
+                    tickets_mes: this.dashboardData?.tickets_mes,
+                    tipo: typeof this.dashboardData?.tickets_mes
+                });
+
+                // Procesar datos con logs detallados
                 let datosTickets = [];
                 if (this.dashboardData && this.dashboardData.tickets_mes) {
-                    console.log('Datos originales:', this.dashboardData.tickets_mes);
+                    console.log('Procesando datos de tickets_mes...');
                     
-                    // Si es un objeto, convertir a array procesando mes por mes
-                    if (typeof this.dashboardData.tickets_mes === 'object' && !Array.isArray(this.dashboardData.tickets_mes)) {
-                        datosTickets = mesesDelAño.map(mes => {
-                            const valor = this.dashboardData.tickets_mes[mes.toLowerCase()] || 0;
-                            console.log(`Mes: ${mes}, Valor: ${valor}`);
+                    if (typeof this.dashboardData.tickets_mes === 'object') {
+                        console.log('tickets_mes es un objeto:', this.dashboardData.tickets_mes);
+                        // Si es un objeto con meses como claves
+                        datosTickets = mesesDelAño.map((mes, index) => {
+                            const mesLower = mes.toLowerCase();
+                            const valor = this.dashboardData.tickets_mes[mesLower] || 0;
+                            console.log(`Mes ${mes}: valor encontrado = ${valor}`);
                             return valor;
                         });
-                    } 
-                    // Si es un array, usar directamente
-                    else if (Array.isArray(this.dashboardData.tickets_mes)) {
+                    } else if (Array.isArray(this.dashboardData.tickets_mes)) {
+                        console.log('tickets_mes es un array:', this.dashboardData.tickets_mes);
                         datosTickets = this.dashboardData.tickets_mes.slice(0, mesActual + 1);
-                    }
-                    // Si es un número único, crear array con ese valor
-                    else if (typeof this.dashboardData.tickets_mes === 'number') {
+                    } else {
+                        console.log('tickets_mes es un valor único:', this.dashboardData.tickets_mes);
                         datosTickets = [this.dashboardData.tickets_mes];
                     }
                 }
 
                 console.log('Datos procesados finales:', datosTickets);
 
-                const ticketsMesChart = echarts.init(ticketsMesElement);
-                ticketsMesChart.setOption({
-                    title: {
-                        text: `Tickets por Mes ${añoActual}`,
-                        left: 'center',
-                        top: '2%',
-                        textStyle: {
-                            fontSize: 16,
-                            fontWeight: 'bold'
-                        }
-                    },
-                    tooltip: {
-                        trigger: 'axis',
-                        axisPointer: {
-                            type: 'shadow'
-                        },
-                        formatter: '{b}: {c} tickets'
-                    },
-                    grid: {
-                        left: '5%',
-                        right: '5%',
-                        bottom: '15%',
-                        top: '15%',
-                        containLabel: true,
-                        height: '70%' // Controlar altura del área del gráfico
-                    },
-                    xAxis: {
-                        type: 'category',
-                        data: mesesDelAño,
-                        axisLabel: {
-                            interval: 0,
-                            rotate: 30,
-                            fontSize: 11
-                        }
-                    },
-                    yAxis: {
-                        type: 'value',
-                        name: 'Cantidad de Tickets',
-                        nameLocation: 'middle',
-                        nameGap: 40,
-                        minInterval: 1,
-                        min: 0,
-                        axisLabel: {
-                            formatter: '{value}'
-                        }
-                    },
-                    series: [{
-                        name: 'Tickets',
-                        type: 'bar',
-                        data: datosTickets,
-                        itemStyle: {
-                            color: '#4ECDC4',
-                            borderRadius: [4, 4, 0, 0]
-                        },
-                        emphasis: {
-                            itemStyle: {
-                                color: '#45B7D1'
+                try {
+                    const ticketsMesChart = echarts.init(ticketsMesElement);
+                    console.log('Gráfico inicializado');
+
+                    const opcion = {
+                        title: {
+                            text: `Tickets por Mes ${añoActual}`,
+                            left: 'center',
+                            top: '2%',
+                            textStyle: {
+                                fontSize: 14,
+                                fontWeight: 'bold'
                             }
                         },
-                        label: {
-                            show: true,
-                            position: 'top',
-                            formatter: '{c}',
-                            fontSize: 11
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'shadow'
+                            },
+                            formatter: '{b}: {c} tickets'
                         },
-                        barWidth: '50%' // Controlar ancho de las barras
-                    }]
-                });
+                        grid: {
+                            left: '5%',
+                            right: '5%',
+                            bottom: '10%',
+                            top: '15%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: mesesDelAño,
+                            axisLabel: {
+                                interval: 0,
+                                rotate: 30,
+                                fontSize: 11
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            name: 'Tickets',
+                            nameTextStyle: {
+                                fontSize: 11
+                            },
+                            minInterval: 1,
+                            min: 0,
+                            axisLabel: {
+                                formatter: '{value}',
+                                fontSize: 11
+                            }
+                        },
+                        series: [{
+                            name: 'Tickets',
+                            type: 'bar',
+                            data: datosTickets,
+                            itemStyle: {
+                                color: '#4ECDC4',
+                                borderRadius: [4, 4, 0, 0]
+                            },
+                            label: {
+                                show: true,
+                                position: 'top',
+                                formatter: '{c}',
+                                fontSize: 11
+                            },
+                            barWidth: '40%'
+                        }]
+                    };
 
-                // Ajustar tamaño del contenedor y gráfico
-                const parentElementMes = ticketsMesElement.parentElement;
-                if (parentElementMes) {
-                    // Establecer altura fija del contenedor
-                    parentElementMes.style.height = '300px'; // Altura fija más pequeña
-                    parentElementMes.style.marginBottom = '20px'; // Margen inferior para evitar superposición
-                    
-                    ticketsMesChart.resize({
-                        width: parentElementMes.offsetWidth,
-                        height: 300
+                    console.log('Configuración del gráfico:', opcion);
+                    ticketsMesChart.setOption(opcion);
+
+                    // Manejo del responsive
+                    const parentElementMes = ticketsMesElement.parentElement;
+                    if (parentElementMes) {
+                        console.log('Dimensiones del contenedor padre:', {
+                            width: parentElementMes.offsetWidth,
+                            height: parentElementMes.offsetHeight
+                        });
+
+                        parentElementMes.style.height = '250px';
+                        parentElementMes.style.marginBottom = '20px';
+                        
+                        ticketsMesChart.resize({
+                            width: parentElementMes.offsetWidth,
+                            height: 250
+                        });
+                    }
+
+                    // Listener para resize con debugging
+                    let resizeTimeout;
+                    window.addEventListener('resize', () => {
+                        clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            if (parentElementMes) {
+                                console.log('Redimensionando gráfico:', {
+                                    width: parentElementMes.offsetWidth,
+                                    height: 250
+                                });
+                                ticketsMesChart.resize({
+                                    width: parentElementMes.offsetWidth,
+                                    height: 250
+                                });
+                            }
+                        }, 250);
                     });
+
+                    console.log('Gráfico renderizado exitosamente');
+                } catch (error) {
+                    console.error('Error al renderizar el gráfico:', error);
                 }
-
-                // Listener para resize con debounce
-                let resizeTimeout;
-                window.addEventListener('resize', () => {
-                    clearTimeout(resizeTimeout);
-                    resizeTimeout = setTimeout(() => {
-                        if (parentElementMes) {
-                            ticketsMesChart.resize({
-                                width: parentElementMes.offsetWidth,
-                                height: 300
-                            });
-                        }
-                    }, 250);
-                });
-
-                console.log('Gráfico de tickets por mes renderizado exitosamente');
             } else {
-                console.error('Error: No se encontró el elemento de gráfico ticketsMesChart en el DOM');
-            }
-                                    // Gráfico de Tickets por Año
+                console.error('Error: No se encontró el elemento ticketsMesChart');
+            }                               // Gráfico de Tickets por Año
             const ticketsAnoElement = this._getChartElement("ticketsAnoChart");
             if (ticketsAnoElement) {
                 console.log('Renderizando gráfico de tickets por año...');
