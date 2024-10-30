@@ -226,20 +226,35 @@
                         </div>
                     </div>
 
-                    <!-- Gráfico: Tickets por Técnico -->
+                    <!-- Contenedor principal para el gráfico de Tickets por Técnico -->
                     <div class="col-lg-6 col-md-12">
                         <div class="chart-wrapper">
+                            <!-- Encabezado del gráfico con título y botón de expansión -->
                             <div class="chart-header">
-                                <h4></h4>
+                                <h4>Tickets por Técnico</h4>
                                 <button class="expand-button">
                                     <i class="fa fa-expand"></i>
                                 </button>
                             </div>
+
+                            <!-- Filtros de Fecha para el Gráfico -->
+                            <div class="filter-section mb-3">
+                                <label for="startDate">Fecha de Inicio:</label>
+                                <input type="date" id="startDate" class="form-control mb-2" />
+
+                                <label for="endDate">Fecha de Fin:</label>
+                                <input type="date" id="endDate" class="form-control mb-2" />
+
+                                <button id="applyFilter" class="btn btn-primary">Aplicar Filtros</button>
+                            </div>
+
+                            <!-- Contenedor del gráfico -->
                             <div class="chart-container">
                                 <canvas id="ticketsTecnicoChart"></canvas>
                             </div>
                         </div>
                     </div>
+
                     <!-- Gráfico: Tickets por Mes -->
                     <div class="col-lg-6 col-md-12">
                         <div class="chart-wrapper">

@@ -16,8 +16,7 @@
                         <!--<button
                         string="QR" name="action_generate_qr_for_all" type="object"
                         class="oe_highlight"/>-->
-                        <button string="Actualizar Mes y Año" type="object" name="update_month_year"
-                            class="oe_highlight" />
+                        
                         <field name="estado_id" widget="statusbar" readonly="True"
                             statusbar_visible="true" />
                     </header>
