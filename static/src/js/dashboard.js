@@ -480,7 +480,6 @@ class SatDashboard extends Component {
             }
 
             // Gráfico de tickets por técnico
-            
             const ticketsTecnicoElement = this._getChartElement("ticketsTecnicoChart");
 
             if (ticketsTecnicoElement) {
@@ -557,7 +556,7 @@ class SatDashboard extends Component {
                             bottom: '2%',
                             min: Math.min(...ticketsTecnicoData),
                             max: Math.max(...ticketsTecnicoData),
-                            text: ['High', 'Low'],
+                            text: ['Low', 'High'],
                             dimension: 0,
                             inRange: {
                                 color: ['#E1F5FE', '#0288D1']
@@ -607,8 +606,15 @@ class SatDashboard extends Component {
                     const startDate = new Date(document.getElementById("startDate").value);
                     const endDate = new Date(document.getElementById("endDate").value);
 
-                    // Validar el rango de fechas
-                    if (isNaN(startDate) || isNaN(endDate) || startDate > endDate) {
+                    // Si los filtros están en blanco, mostrar todos los datos
+                    if (isNaN(startDate) || isNaN(endDate)) {
+                        console.log("Campos de fecha vacíos, mostrando todos los datos.");
+                        renderTicketsTecnicoChart();
+                        return;
+                    }
+
+                    // Validar el rango de fechas si ambos campos están completos
+                    if (startDate > endDate) {
                         alert("Por favor, selecciona un rango de fechas válido.");
                         return;
                     }
@@ -619,7 +625,7 @@ class SatDashboard extends Component {
                     const filteredData = {};
                     for (const [tecnico, tickets] of Object.entries(this.dashboardData.tecnicos_totales_tickets || {})) {
                         // Suponiendo que `dashboardData.tecnicos_totales_tickets` tiene datos agregados por fecha
-                        // Ajusta esta lógica según cómo estén organizados tus datos
+                        // Ajusta esta lógica si los datos están organizados de otra forma
                         filteredData[tecnico] = tickets; // Aquí aplica el filtro según las fechas
                     }
 
@@ -635,6 +641,7 @@ class SatDashboard extends Component {
             } else {
                 console.error('Error: No se encontró el elemento de gráfico ticketsTecnicoChart en el DOM');
             }
+
 
 
             // Gráfico de Tickets por Mes

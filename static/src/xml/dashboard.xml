@@ -237,13 +237,15 @@
                                 </button>
                             </div>
 
-                            <!-- Filtros de Fecha para el Gráfico -->
-                            <div class="filter-section mb-3">
-                                <label for="startDate">Fecha de Inicio:</label>
-                                <input type="date" id="startDate" class="form-control mb-2" />
+                            <!-- Filtros de Fecha en una sola fila -->
+                            <div class="filter-section mb-3 d-flex align-items-center">
+                                <label for="startDate" class="mr-2">Fecha de Inicio:</label>
+                                <input type="date" id="startDate" class="form-control mr-2"
+                                    style="width: auto;" />
 
-                                <label for="endDate">Fecha de Fin:</label>
-                                <input type="date" id="endDate" class="form-control mb-2" />
+                                <label for="endDate" class="mr-2">Fecha de Fin:</label>
+                                <input type="date" id="endDate" class="form-control mr-2"
+                                    style="width: auto;" />
 
                                 <button id="applyFilter" class="btn btn-primary">Aplicar Filtros</button>
                             </div>
@@ -254,6 +256,7 @@
                             </div>
                         </div>
                     </div>
+
 
                     <!-- Gráfico: Tickets por Mes -->
                     <div class="col-lg-6 col-md-12">
