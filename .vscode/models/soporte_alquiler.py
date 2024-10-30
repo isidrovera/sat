@@ -551,11 +551,10 @@ class ticket_alquiler(models.Model):
                 record.month_year = ''
 
     @api.model
-    def update_month_year(self, *args, **kwargs):
-        """Método para forzar la actualización del campo en todos los registros existentes."""
-        records = self.search([])
-        for record in records:
-            record._compute_month_year()
+    def update_month_year(self):
+        """Método para forzar la actualización del campo 'month_year' en todos los registros existentes."""
+        self.search([])._compute_month_year()
+
     def get_selection_labels(self):
         selection_labels = {}
         for field_name, field in self._fields.items():

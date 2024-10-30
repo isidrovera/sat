@@ -226,17 +226,17 @@
                         </div>
                     </div>
 
-                    <!-- Gráfico 4: Máquinas por Asesora -->
+                    <!-- Gráfico: Tickets por Técnico -->
                     <div class="col-lg-6 col-md-12">
                         <div class="chart-wrapper">
                             <div class="chart-header">
-                                <h4>Máquinas por Asesora</h4>
+                                <h4>Tickets por Técnico</h4>
                                 <button class="expand-button">
                                     <i class="fa fa-expand"></i>
                                 </button>
                             </div>
                             <div class="chart-container">
-                                <canvas id="asesoraChart"></canvas>
+                                <canvas id="ticketsTecnicoChart"></canvas>
                             </div>
                         </div>
                     </div>

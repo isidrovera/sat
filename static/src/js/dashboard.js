@@ -478,6 +478,121 @@ class SatDashboard extends Component {
                 
                 console.log('Gráfico de técnicos renderizado exitosamente');
             }
+
+            // Gráfico de tickets por técnico
+            const ticketsTecnicoElement = this._getChartElement("ticketsTecnicoChart");
+            if (ticketsTecnicoElement) {
+                console.log('Renderizando gráfico de tickets por técnico...');
+                const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement);
+                
+                const ticketsTecnicoLabels = Object.keys(this.dashboardData.tecnicos_totales_tickets);
+                const ticketsTecnicoData = Object.values(this.dashboardData.tecnicos_totales_tickets);
+
+                ticketsTecnicoChart.setOption({
+                    title: {
+                        text: 'Tickets por Técnico',
+                        left: 'center',
+                        top: '2%',
+                        textStyle: {
+                            fontSize: 16,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    grid: {
+                        top: '15%',
+                        bottom: '15%',
+                        left: '3%',
+                        right: '5%',
+                        containLabel: true,
+                        height: '70%'
+                    },
+                    xAxis: {
+                        type: 'value',
+                        splitLine: {
+                            show: true,
+                            lineStyle: {
+                                type: 'dashed'
+                            }
+                        },
+                        axisLabel: {
+                            fontSize: 12
+                        }
+                    },
+                    yAxis: {
+                        type: 'category',
+                        data: ticketsTecnicoLabels,
+                        axisLabel: {
+                            interval: 0,
+                            width: 150,
+                            overflow: 'break',
+                            fontSize: 12,
+                            formatter: function(value) {
+                                const maxLength = 30;
+                                if (value.length > maxLength) {
+                                    return value.substring(0, maxLength) + '...';
+                                }
+                                return value;
+                            }
+                        }
+                    },
+                    visualMap: {
+                        orient: 'horizontal',
+                        left: 'center',
+                        bottom: '2%',
+                        min: Math.min(...ticketsTecnicoData),
+                        max: Math.max(...ticketsTecnicoData),
+                        text: ['High', 'Low'],
+                        dimension: 0,
+                        inRange: {
+                            color: ['#E1F5FE', '#0288D1']  // Tonos azules para diferenciarlos de otros gráficos
+                        },
+                        itemWidth: 15,
+                        itemHeight: 200
+                    },
+                    series: [{
+                        name: 'Tickets',
+                        type: 'bar',
+                        data: ticketsTecnicoData,
+                        label: {
+                            show: true,
+                            position: 'right',
+                            formatter: '{c}',
+                            fontSize: 12,
+                            fontWeight: 'bold',
+                            distance: 5
+                        },
+                        barWidth: '40%',
+                        barMaxWidth: 60
+                    }]
+                });
+
+                // Asegurar que el gráfico ocupe todo el espacio disponible
+                const parentElement = ticketsTecnicoElement.parentElement;
+                if (parentElement) {
+                    ticketsTecnicoChart.resize({
+                        width: parentElement.offsetWidth,
+                        height: parentElement.offsetHeight
+                    });
+                }
+                
+                // Manejar el redimensionamiento de la ventana
+                window.addEventListener('resize', () => {
+                    ticketsTecnicoChart.resize({
+                        width: parentElement?.offsetWidth,
+                        height: parentElement?.offsetHeight
+                    });
+                });
+                
+                console.log('Gráfico de tickets por técnico renderizado exitosamente');
+            }
+
+
                         // Gráfico de asesoras
             const asesoraElement = this._getChartElement("asesoraChart");
             if (asesoraElement) {

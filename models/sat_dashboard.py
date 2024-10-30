@@ -47,6 +47,43 @@ class SatDashboard(models.Model):
         )
         tecnicos_totales = {r['responsable_id'][1]: r['responsable_id_count'] for r in reparaciones_por_tecnico}
 
+        # Total de tickets en `ticket.alquiler`
+        total_tickets = self.env['ticket.alquiler'].search_count([])
+
+        # Tickets por mes, año y día usando 'agenda'
+        today = fields.Date.today()
+        start_month = today.replace(day=1)
+        start_year = today.replace(month=1, day=1)
+        
+        tickets_dia = self.env['ticket.alquiler'].search_count([('agenda', '>=', today)])
+        tickets_mes = self.env['ticket.alquiler'].search_count([('agenda', '>=', start_month)])
+        tickets_ano = self.env['ticket.alquiler'].search_count([('agenda', '>=', start_year)])
+
+        # Tickets por Técnico/Responsable
+        tickets_por_tecnico = self.env['ticket.alquiler'].read_group(
+            [('responsable', '!=', False)], 
+            ['responsable'], 
+            ['responsable']
+        )
+        tecnicos_totales_tickets = {t['responsable'][1]: t['responsable_count'] for t in tickets_por_tecnico}
+
+        # Tickets por Cliente
+        tickets_por_cliente = self.env['ticket.alquiler'].read_group(
+            [('partner_id', '!=', False)], 
+            ['partner_id'], 
+            ['partner_id']
+        )
+        clientes_totales_tickets = {c['partner_id'][1]: c['partner_id_count'] for c in tickets_por_cliente}
+
+        # Tickets por Máquina
+        tickets_por_maquina = self.env['ticket.alquiler'].read_group(
+            [('product_alquiler', '!=', False)], 
+            ['product_alquiler'], 
+            ['product_alquiler']
+        )
+        maquinas_totales_tickets = {m['product_alquiler'][1]: m['product_alquiler_count'] for m in tickets_por_maquina}
+
+
         # Devolver todos los datos en un diccionario para el dashboard
         return {
             # Datos de `sat.sat`
@@ -67,4 +104,12 @@ class SatDashboard(models.Model):
             'reparaciones_mes': reparaciones_mes,
             'reparaciones_ano': reparaciones_ano,
             'tecnicos_totales': tecnicos_totales,
+            #Datos de tickets
+            'total_tickets': total_tickets,
+            'tickets_dia': tickets_dia,
+            'tickets_mes': tickets_mes,
+            'tickets_ano': tickets_ano,
+            'tecnicos_totales_tickets': tecnicos_totales_tickets,
+            'clientes_totales_tickets': clientes_totales_tickets,
+            'maquinas_totales_tickets': maquinas_totales_tickets,
         }
