@@ -625,14 +625,30 @@ class SatDashboard extends Component {
                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
                 ].slice(0, mesActual + 1);
 
-                // Verificar y procesar datos
+                // Verificar y procesar datos con más detalle
                 let datosTickets = [];
                 if (this.dashboardData && this.dashboardData.tickets_mes) {
-                    console.log('Datos recibidos:', this.dashboardData.tickets_mes);
-                    datosTickets = Array.isArray(this.dashboardData.tickets_mes) 
-                        ? this.dashboardData.tickets_mes.slice(0, mesActual + 1)
-                        : [this.dashboardData.tickets_mes]; // Si es un solo valor
+                    console.log('Datos originales:', this.dashboardData.tickets_mes);
+                    
+                    // Si es un objeto, convertir a array procesando mes por mes
+                    if (typeof this.dashboardData.tickets_mes === 'object' && !Array.isArray(this.dashboardData.tickets_mes)) {
+                        datosTickets = mesesDelAño.map(mes => {
+                            const valor = this.dashboardData.tickets_mes[mes.toLowerCase()] || 0;
+                            console.log(`Mes: ${mes}, Valor: ${valor}`);
+                            return valor;
+                        });
+                    } 
+                    // Si es un array, usar directamente
+                    else if (Array.isArray(this.dashboardData.tickets_mes)) {
+                        datosTickets = this.dashboardData.tickets_mes.slice(0, mesActual + 1);
+                    }
+                    // Si es un número único, crear array con ese valor
+                    else if (typeof this.dashboardData.tickets_mes === 'number') {
+                        datosTickets = [this.dashboardData.tickets_mes];
+                    }
                 }
+
+                console.log('Datos procesados finales:', datosTickets);
 
                 const ticketsMesChart = echarts.init(ticketsMesElement);
                 ticketsMesChart.setOption({
@@ -653,27 +669,29 @@ class SatDashboard extends Component {
                         formatter: '{b}: {c} tickets'
                     },
                     grid: {
-                        left: '3%',
-                        right: '4%',
+                        left: '5%',
+                        right: '5%',
                         bottom: '15%',
                         top: '15%',
-                        containLabel: true
+                        containLabel: true,
+                        height: '70%' // Controlar altura del área del gráfico
                     },
                     xAxis: {
                         type: 'category',
                         data: mesesDelAño,
                         axisLabel: {
                             interval: 0,
-                            rotate: 30
+                            rotate: 30,
+                            fontSize: 11
                         }
                     },
                     yAxis: {
                         type: 'value',
                         name: 'Cantidad de Tickets',
                         nameLocation: 'middle',
-                        nameGap: 50,
-                        minInterval: 1, // Forzar valores enteros
-                        min: 0, // Comenzar desde 0
+                        nameGap: 40,
+                        minInterval: 1,
+                        min: 0,
                         axisLabel: {
                             formatter: '{value}'
                         }
@@ -695,42 +713,44 @@ class SatDashboard extends Component {
                             show: true,
                             position: 'top',
                             formatter: '{c}',
-                            fontSize: 12,
-                            fontWeight: 'bold'
-                        }
-                    }],
-                    dataZoom: [{
-                        type: 'slider',
-                        show: true,
-                        start: 0,
-                        end: 100,
-                        bottom: 0
+                            fontSize: 11
+                        },
+                        barWidth: '50%' // Controlar ancho de las barras
                     }]
                 });
 
-                // Manejo del responsive
+                // Ajustar tamaño del contenedor y gráfico
                 const parentElementMes = ticketsMesElement.parentElement;
                 if (parentElementMes) {
+                    // Establecer altura fija del contenedor
+                    parentElementMes.style.height = '300px'; // Altura fija más pequeña
+                    parentElementMes.style.marginBottom = '20px'; // Margen inferior para evitar superposición
+                    
                     ticketsMesChart.resize({
                         width: parentElementMes.offsetWidth,
-                        height: 400 // Altura fija para mejor visualización
+                        height: 300
                     });
                 }
 
+                // Listener para resize con debounce
+                let resizeTimeout;
                 window.addEventListener('resize', () => {
-                    if (parentElementMes) {
-                        ticketsMesChart.resize({
-                            width: parentElementMes.offsetWidth,
-                            height: 400
-                        });
-                    }
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => {
+                        if (parentElementMes) {
+                            ticketsMesChart.resize({
+                                width: parentElementMes.offsetWidth,
+                                height: 300
+                            });
+                        }
+                    }, 250);
                 });
 
                 console.log('Gráfico de tickets por mes renderizado exitosamente');
             } else {
                 console.error('Error: No se encontró el elemento de gráfico ticketsMesChart en el DOM');
             }
-                        // Gráfico de Tickets por Año
+                                    // Gráfico de Tickets por Año
             const ticketsAnoElement = this._getChartElement("ticketsAnoChart");
             if (ticketsAnoElement) {
                 console.log('Renderizando gráfico de tickets por año...');
