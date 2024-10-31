@@ -561,7 +561,12 @@ class Reparaciones(models.Model):
     def action_finalizar_reparacion(self):
         _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
         
-        # Verificar si el contometro fue actualizado
+        # Verificar que contometrok_id y contometro_inicial sean cadenas
+        if not isinstance(self.contometrok_id, str) or not isinstance(self.contometro_inicial, str):
+            _logger.error("Los campos contometrok_id o contometro_inicial no son del tipo esperado (str).")
+            raise UserError(_("⚠️❗ <b>Error</b>: Los datos del contómetro son incorrectos. Verifique e intente nuevamente."))
+
+        # Verificar si el contómetro fue actualizado
         if self.contometrok_id == self.contometro_inicial:
             _logger.warning("El contómetro no ha sido actualizado.")
             raise UserError(_("⚠️❗ <b>Error</b>: El contómetro debe ser actualizado y no puede ser igual al inicial."))
