@@ -41,7 +41,7 @@ class Reparaciones(models.Model):
             vals['contometro_inicial'] = self.env['maquina.model'].browse(vals.get('maquina_id')).contometro or '0'  # Ajusta 'maquina.model' al modelo de la máquina
 
         # Crear el registro
-        record = super(ReparacionesReparaciones, self).create(vals)
+        record = super(Reparaciones, self).create(vals)
         
         # Registro de la creación en el log
         _logger.info("Record created with ID: %s", record.id)
