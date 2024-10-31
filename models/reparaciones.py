@@ -33,8 +33,15 @@ class Reparaciones(models.Model):
         # Genera un número secuencial único para el campo 'name'
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         
-        # Aquí usa la clase `Reparaciones` correctamente, en mayúscula
-        record = super(Reparaciones, self).create(vals)
+        # Inicializa contometro_inicial con el valor de contometrok_id si está presente en vals
+        if 'contometrok_id' in vals:
+            vals['contometro_inicial'] = vals['contometrok_id']
+        else:
+            # Si no está en vals, asigna el valor actual de contometro de la máquina
+            vals['contometro_inicial'] = self.env['maquina.model'].browse(vals.get('maquina_id')).contometro or '0'  # Ajusta 'maquina.model' al modelo de la máquina
+
+        # Crear el registro
+        record = super(ReparacionesReparaciones, self).create(vals)
         
         # Registro de la creación en el log
         _logger.info("Record created with ID: %s", record.id)
@@ -234,8 +241,7 @@ class Reparaciones(models.Model):
     contometro_inicial = fields.Char(
         string="Contometro Inicial",
         readonly=True,
-        tracking=True,
-        default=lambda self: self.maquina_id.contometro
+        tracking=True
     )
 
     
