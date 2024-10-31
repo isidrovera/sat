@@ -61,6 +61,7 @@
                                 <field name="contometro_inicial" invisible="True"/>
                                 <field name="nombre_maquina" invisible='True' />
                                 <field name="nombre_proveedor" invisible='True' />
+                                <field name="contometro_autorizado"/>
                             </group>
                         </group>
                         <notebook>
