@@ -485,6 +485,9 @@ class SatDashboard extends Component {
             if (ticketsTecnicoElement) {
                 console.log('Renderizando gráfico de tickets por técnico...');
 
+                // Crear una instancia única del gráfico
+                const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement);
+
                 const renderTicketsTecnicoChart = (filteredData = null, titleText = 'Tickets por Técnico') => {
                     // Obtener datos
                     const dataToUse = filteredData || this.dashboardData.tecnicos_totales_tickets || {};
@@ -494,8 +497,7 @@ class SatDashboard extends Component {
                     console.log('Etiquetas de técnicos:', ticketsTecnicoLabels);
                     console.log('Datos de tickets:', ticketsTecnicoData);
 
-                    // Crear y configurar el gráfico
-                    const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement);
+                    // Configuración del gráfico
                     const option = {
                         title: {
                             text: titleText,
@@ -578,21 +580,8 @@ class SatDashboard extends Component {
                         }]
                     };
 
+                    // Establecer opciones en el gráfico existente
                     ticketsTecnicoChart.setOption(option);
-
-                    // Manejar el redimensionamiento
-                    const handleResize = () => {
-                        const parentElement = ticketsTecnicoElement.parentElement;
-                        if (parentElement) {
-                            ticketsTecnicoChart.resize({
-                                width: parentElement.offsetWidth,
-                                height: parentElement.offsetHeight
-                            });
-                        }
-                    };
-
-                    handleResize();
-                    window.addEventListener('resize', handleResize);
                 };
 
                 const applyDateFilter = () => {
@@ -623,8 +612,7 @@ class SatDashboard extends Component {
 
                     console.log(`Aplicando filtro - Desde: ${startDate.toLocaleDateString()} hasta: ${endDate.toLocaleDateString()}`);
 
-                    // Aquí aplicamos el filtro según las fechas
-                    // Por ahora, solo actualizamos el título ya que necesitamos la estructura específica de tus datos
+                    // Actualizar el título con el rango de fechas
                     const titleText = `Tickets por Técnico (desde ${startDate.toLocaleDateString()} hasta ${endDate.toLocaleDateString()})`;
                     renderTicketsTecnicoChart(this.dashboardData.tecnicos_totales_tickets, titleText);
                 };
@@ -640,6 +628,20 @@ class SatDashboard extends Component {
 
                 // Renderizar el gráfico inicial
                 renderTicketsTecnicoChart();
+
+                // Ajuste de tamaño automático
+                const handleResize = () => {
+                    const parentElement = ticketsTecnicoElement.parentElement;
+                    if (parentElement) {
+                        ticketsTecnicoChart.resize({
+                            width: parentElement.offsetWidth,
+                            height: parentElement.offsetHeight
+                        });
+                    }
+                };
+
+                window.addEventListener('resize', handleResize);
+                handleResize();  // Ejecuta el ajuste inicial
             } else {
                 console.error('No se encontró el elemento del gráfico en el DOM');
             }
