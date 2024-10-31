@@ -557,21 +557,42 @@ class Reparaciones(models.Model):
 
     contometro_autorizado = fields.Boolean(string="Autorización de Modificación", default=False)
             
+    from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+
+class Reparaciones(models.Model):
+    _name = 'reparaciones.reparaciones'
+    
+    contometro_inicial = fields.Char(string="Contometro Inicial", tracking=True)
+    contometrok_id = fields.Char(string="Contometro Actual", tracking=True)
+    contometro_autorizado = fields.Boolean(string="Autorización de Modificación", default=False)
+
+    @api.model
+    def create(self, vals):
+        # Asignar el valor del contómetro inicial al crear la reparación
+        vals['contometro_inicial'] = vals.get('contometrok_id', '0')
+        vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
+        record = super(Reparaciones, self).create(vals)
+        _logger.info("Record created with ID: %s", record.id)
+        record.generate_qr_code()
+        return record
+
     def action_finalizar_reparacion(self):
-        # Asegurar que ambos campos están definidos y son strings
+        # Convertir ambos valores a cadenas para asegurar comparaciones correctas
         contometro_inicial = self.contometro_inicial or ''
         contometrok_id = self.contometrok_id or ''
 
-        # Validación de modificación del contómetro y cantidad de dígitos
+        # Primera validación: verificar que el contómetro actual haya sido actualizado
         if contometrok_id == contometro_inicial:
-            raise UserError("⚠️❗ <b>Error de Contómetro</b>: No se puede finalizar la reparación sin actualizar el contómetro. "
-                            "<br>Por favor, asegúrese de que el valor actual es mayor o menor que el inicial.")
-        
+            raise UserError("⚠️❗ <b>Error de Contómetro No Actualizado</b>: El contómetro actual no ha sido actualizado desde el valor inicial. "
+                            "<br>Por favor, asegúrese de ingresar un valor diferente al inicial.")
+
+        # Segunda validación: verificar la cantidad de dígitos si no tiene autorización
         if not self.contometro_autorizado:
             if len(contometrok_id) != len(contometro_inicial):
                 raise UserError("⚠️❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro no coincide con el inicial. "
                                 "<br>Contacte al administrador para obtener autorización.")
-        
+
         # Ejecutar lógica original de finalización
         pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
         
@@ -590,6 +611,7 @@ class Reparaciones(models.Model):
 
         self.estado_id = "finalizado"
         return pdf_report
+
     
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
