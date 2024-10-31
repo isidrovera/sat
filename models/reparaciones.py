@@ -564,18 +564,18 @@ class Reparaciones(models.Model):
         # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
         if not self.contometrok_id or not self.contometro_inicial:
             _logger.error("Los datos del contómetro no están configurados correctamente.")
-            raise UserError(_("❗ <b>Error en el Contómetro</b>: Los valores del contómetro no están configurados correctamente. Verifique e intente nuevamente."))
+            raise UserError(_("❗ Error en el Contómetro: Los valores del contómetro no están configurados correctamente. Verifique e intente nuevamente."))
 
         # Verificar si el contómetro fue actualizado
         if self.contometrok_id == self.contometro_inicial:
             _logger.warning("El contómetro no ha sido actualizado.")
-            raise UserError(_("❗ <b>Error en el Contómetro</b>: El contómetro no ha sido actualizado. Debe ser diferente del valor inicial."))
+            raise UserError(_("❗ Error en el Contómetro El contómetro no ha sido actualizado. Debe ser diferente del valor inicial."))
 
         # Validar la cantidad de dígitos
         if len(self.contometrok_id) != len(self.contometro_inicial):
             if not self.autorizacion_cambio_digitos:
                 _logger.warning("Diferencia en la cantidad de dígitos del contómetro y sin autorización.")
-                raise UserError(_("❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
+                raise UserError(_("❗ Error en el Número de Dígitos: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
 
         # Continuar con el proceso de finalización
         _logger.info(f"Generando reporte para reparación ID: {self.id}")

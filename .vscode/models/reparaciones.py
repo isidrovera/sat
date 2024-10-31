@@ -493,7 +493,10 @@ class Reparaciones(models.Model):
         return res        
     def _create_next_reparacion(self):
         # Verificar si el técnico tiene algún registro en estado 'en_revision'
-        if self.env['reparaciones.reparaciones'].search_count([('responsable_id', '=', self.responsable_id.id), ('estado_id', '=', 'en_revision')]) > 0:
+        if self.env['reparaciones.reparaciones'].search_count([
+            ('responsable_id', '=', self.responsable_id.id), 
+            ('estado_id', '=', 'en_revision')
+        ]) > 0:
             return
 
         # Buscar la siguiente máquina en estado 'para_revision', ordenada por fecha_para_revision
@@ -519,6 +522,7 @@ class Reparaciones(models.Model):
                 nueva_reparacion = self.env['reparaciones.reparaciones'].create({
                     'maquina_id': next_maquina.id,
                     'responsable_id': self.responsable_id.id,
+                    'contometro_inicial': self.contometrok_id,  # Asignar contometro actual como valor inicial
                 })
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
