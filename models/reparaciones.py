@@ -557,26 +557,7 @@ class Reparaciones(models.Model):
 
     contometro_autorizado = fields.Boolean(string="Autorización de Modificación", default=False)
             
-    from odoo import models, fields, api, _
-from odoo.exceptions import UserError
-
-class Reparaciones(models.Model):
-    _name = 'reparaciones.reparaciones'
     
-    contometro_inicial = fields.Char(string="Contometro Inicial", tracking=True)
-    contometrok_id = fields.Char(string="Contometro Actual", tracking=True)
-    contometro_autorizado = fields.Boolean(string="Autorización de Modificación", default=False)
-
-    @api.model
-    def create(self, vals):
-        # Asignar el valor del contómetro inicial al crear la reparación
-        vals['contometro_inicial'] = vals.get('contometrok_id', '0')
-        vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
-        record = super(Reparaciones, self).create(vals)
-        _logger.info("Record created with ID: %s", record.id)
-        record.generate_qr_code()
-        return record
-
     def action_finalizar_reparacion(self):
         # Convertir ambos valores a cadenas para asegurar comparaciones correctas
         contometro_inicial = self.contometro_inicial or ''
