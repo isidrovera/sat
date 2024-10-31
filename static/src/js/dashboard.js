@@ -481,14 +481,10 @@ class SatDashboard extends Component {
 
             
             // Gráfico de tickets por técnico
-             
             const ticketsTecnicoElement = this._getChartElement("ticketsTecnicoChart");
 
             if (ticketsTecnicoElement) {
                 console.log('Renderizando gráfico de tickets por técnico...');
-
-                // Crear una instancia única del gráfico
-                const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement);
 
                 const renderTicketsTecnicoChart = (filteredData = null, titleText = 'Tickets por Técnico') => {
                     // Obtener datos
@@ -496,11 +492,17 @@ class SatDashboard extends Component {
                     const ticketsTecnicoLabels = Object.keys(dataToUse);
                     const ticketsTecnicoData = Object.values(dataToUse);
 
+                    console.log('Datos filtrados:', filteredData);
                     console.log('Etiquetas de técnicos:', ticketsTecnicoLabels);
                     console.log('Datos de tickets:', ticketsTecnicoData);
 
-                    // Configuración del gráfico
-                    ticketsTecnicoChart.setOption({
+                    // Validar datos de colores en visualMap
+                    const minDataValue = ticketsTecnicoData.length ? Math.min(...ticketsTecnicoData) : 0;
+                    const maxDataValue = ticketsTecnicoData.length ? Math.max(...ticketsTecnicoData) : 1;
+
+                    // Crear y configurar el gráfico
+                    const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement);
+                    const option = {
                         title: {
                             text: titleText,
                             left: 'center',
@@ -518,11 +520,11 @@ class SatDashboard extends Component {
                         },
                         grid: {
                             top: '15%',
-                            bottom: '15%',    // Espacio para el visualMap
-                            left: '3%',       // Espacio horizontal optimizado
-                            right: '5%',      // Espacio horizontal optimizado
+                            bottom: '15%',
+                            left: '3%',
+                            right: '5%',
                             containLabel: true,
-                            height: '70%'     // Controla la altura del área del gráfico
+                            height: '70%'
                         },
                         xAxis: {
                             type: 'value',
@@ -544,7 +546,8 @@ class SatDashboard extends Component {
                                 width: 150,
                                 overflow: 'break',
                                 fontSize: 12,
-                                formatter: function(value) {
+                                align: 'left',
+                                formatter: (value) => {
                                     const maxLength = 30;
                                     return value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
                                 }
@@ -554,8 +557,8 @@ class SatDashboard extends Component {
                             orient: 'horizontal',
                             left: 'center',
                             bottom: '2%',
-                            min: Math.min(...ticketsTecnicoData),
-                            max: Math.max(...ticketsTecnicoData),
+                            min: minDataValue,
+                            max: maxDataValue,
                             text: ['Low', 'High'],
                             dimension: 0,
                             inRange: {
@@ -576,16 +579,36 @@ class SatDashboard extends Component {
                                 fontWeight: 'bold',
                                 distance: 5
                             },
-                            barWidth: '40%',    // Ajuste de ancho para mejor proporción
-                            barMaxWidth: 60     // Máximo ancho de las barras
+                            barWidth: '40%',
+                            barMaxWidth: 60
                         }]
-                    });
+                    };
+
+                    ticketsTecnicoChart.setOption(option);
+
+                    // Manejar el redimensionamiento
+                    const handleResize = () => {
+                        const parentElement = ticketsTecnicoElement.parentElement;
+                        if (parentElement) {
+                            ticketsTecnicoChart.resize({
+                                width: parentElement.offsetWidth,
+                                height: parentElement.offsetHeight
+                            });
+                        }
+                    };
+
+                    handleResize();
+                    window.addEventListener('resize', handleResize);
                 };
 
                 const applyDateFilter = () => {
                     const startDateInput = document.getElementById("startDate");
                     const endDateInput = document.getElementById("endDate");
-                    
+
+                    console.log("Aplicando filtro de fecha...");
+                    console.log("Fecha de inicio:", startDateInput.value);
+                    console.log("Fecha de fin:", endDateInput.value);
+
                     // Si no hay fechas seleccionadas, mostrar todos los datos
                     if (!startDateInput.value && !endDateInput.value) {
                         console.log("Mostrando todos los datos sin filtros");
@@ -610,12 +633,17 @@ class SatDashboard extends Component {
 
                     console.log(`Aplicando filtro - Desde: ${startDate.toLocaleDateString()} hasta: ${endDate.toLocaleDateString()}`);
 
-                    // Aquí aplicamos el filtro según las fechas en los datos de `dashboardData`
-                    // En este ejemplo, asumo que puedes filtrar `this.dashboardData.tecnicos_totales_tickets` según el rango de fechas.
-                    // Necesitarás adaptar esta lógica si tienes una estructura específica en `dashboardData`.
-                    const filteredData = {}; // Filtra los datos aquí según el rango de fechas
+                    // Filtrar datos según las fechas seleccionadas
+                    const filteredData = {}; // Ajustar esto con el formato correcto para filtrar tu dataset
+                    Object.keys(this.dashboardData.tecnicos_totales_tickets).forEach((key) => {
+                        // Aquí debes implementar la lógica de filtro para el rango de fechas
+                        // Por ahora, solo paso los datos tal cual para demostrar
+                        filteredData[key] = this.dashboardData.tecnicos_totales_tickets[key];
+                    });
 
-                    // Actualizar el título con el rango de fechas
+                    console.log("Datos después de aplicar el filtro:", filteredData);
+
+                    // Actualizar el gráfico con los datos filtrados
                     const titleText = `Tickets por Técnico (desde ${startDate.toLocaleDateString()} hasta ${endDate.toLocaleDateString()})`;
                     renderTicketsTecnicoChart(filteredData, titleText);
                 };
@@ -623,36 +651,16 @@ class SatDashboard extends Component {
                 // Configurar el event listener para el botón de filtro
                 const filterButton = document.getElementById("applyFilter");
                 if (filterButton) {
-                    // Remover listeners previos para evitar duplicados
-                    const newFilterButton = filterButton.cloneNode(true);
-                    filterButton.parentNode.replaceChild(newFilterButton, filterButton);
-                    newFilterButton.addEventListener("click", applyDateFilter);
+                    filterButton.removeEventListener("click", applyDateFilter); // Asegura no duplicar eventos
+                    filterButton.addEventListener("click", applyDateFilter);
                 }
 
                 // Renderizar el gráfico inicial
                 renderTicketsTecnicoChart();
-
-                // Asegurar que el gráfico ocupe todo el espacio disponible
-                const parentElement = ticketsTecnicoElement.parentElement;
-                if (parentElement) {
-                    ticketsTecnicoChart.resize({
-                        width: parentElement.offsetWidth,
-                        height: parentElement.offsetHeight
-                    });
-                }
-                
-                // Manejar el redimensionamiento de la ventana
-                window.addEventListener('resize', () => {
-                    ticketsTecnicoChart.resize({
-                        width: parentElement?.offsetWidth,
-                        height: parentElement?.offsetHeight
-                    });
-                });
-                
-                console.log('Gráfico de tickets por técnico renderizado exitosamente');
             } else {
                 console.error('No se encontró el elemento del gráfico en el DOM');
             }
+
 
 
 
