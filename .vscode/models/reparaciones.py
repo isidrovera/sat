@@ -493,18 +493,14 @@ class Reparaciones(models.Model):
         return res        
     def _create_next_reparacion(self):
         # Verificar si el técnico tiene algún registro en estado 'en_revision'
-        if self.env['reparaciones.reparaciones'].search_count([
-            ('responsable_id', '=', self.responsable_id.id), 
-            ('estado_id', '=', 'en_revision')
-        ]) > 0:
+        if self.env['reparaciones.reparaciones'].search_count([('responsable_id', '=', self.responsable_id.id), ('estado_id', '=', 'en_revision')]) > 0:
             return
 
-        # Buscar la siguiente máquina en estado 'para_revision', ordenada por fecha_para_revision
+        # Buscar la siguiente máquina en estado 'para_revision'
         next_maquina = self.env['sat.sat'].search([
             ('estado_ventas_id', '=', 'para_revision')
         ], order='fecha_para_revision asc', limit=1)
 
-        # Si no hay ninguna máquina en estado 'para_revision', buscar en estado 'sin_revisar' y 'disponible', ordenada por fecha de creación
         if not next_maquina:
             next_maquina = self.env['sat.sat'].search([
                 ('estado_ventas_id', '=', 'sin_revisar'),
@@ -513,12 +509,11 @@ class Reparaciones(models.Model):
             ], order='create_date asc', limit=1)
 
         if next_maquina:
-            empleado = self.env['hr.employee'].search([('user_id', '=', self.responsable_id.id)], limit=1)
-            
-            # Verificar y loguear el valor de contometrok_id
-            contometro_actual = self.contometrok_id or "No asignado"
-            _logger.info(f"Valor de contometrok_id en la reparación actual: {contometro_actual}")
+            # Verificación del valor de contometro
+            if not next_maquina.contometro or int(next_maquina.contometro) == 0:
+                raise ValidationError("La máquina seleccionada no tiene un valor de contómetro válido.")
 
+            empleado = self.env['hr.employee'].search([('user_id', '=', self.responsable_id.id)], limit=1)
             if empleado:
                 next_maquina.write({
                     'estado_ventas_id': 'en_revision',
@@ -527,9 +522,9 @@ class Reparaciones(models.Model):
                 nueva_reparacion = self.env['reparaciones.reparaciones'].create({
                     'maquina_id': next_maquina.id,
                     'responsable_id': self.responsable_id.id,
-                    'contometro_inicial': contometro_actual,  # Asignar contometro actual como valor inicial
+                    'contometro_inicial': next_maquina.contometro,  # Contómetro inicial
+                    'contometrok_id': next_maquina.contometro
                 })
-                _logger.info(f"Reparación creada con contometro_inicial: {nueva_reparacion.contometro_inicial}")
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
