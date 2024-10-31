@@ -579,7 +579,7 @@ class Reparaciones(models.Model):
         if len(self.contometrok_id) != len(self.contometro_inicial):
             if not self.autorizacion_cambio_digitos:
                 _logger.warning("Diferencia en la cantidad de dígitos del contómetro y sin autorización.")
-                raise UserError(_("❗ Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
+                raise UserError(_("❗ Error en el Número de Dígitos: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
 
         # Continuar con el proceso de finalización
         _logger.info(f"Generando reporte para reparación ID: {self.id}")
