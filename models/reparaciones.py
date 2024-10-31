@@ -33,23 +33,18 @@ class Reparaciones(models.Model):
         # Genera un número secuencial único para el campo 'name'
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
         
-        # Inicializa contometro_inicial con el valor de contometrok_id si está presente en vals
+        # Inicializa `contometro_inicial` con el valor de `contometrok_id` si está presente
         if 'contometrok_id' in vals:
             vals['contometro_inicial'] = vals['contometrok_id']
-        else:
-            # Si no está en vals, asigna el valor actual de contometro de la máquina
-            vals['contometro_inicial'] = self.env['sat.sat'].browse(vals.get('maquina_id')).contometro or '0'  # Ajusta 'maquina.model' al modelo de la máquina
-
-        # Crear el registro
-        record = super(Reparaciones, self).create(vals)
         
-        # Registro de la creación en el log
+        record = super(Reparaciones, self).create(vals)
         _logger.info("Record created with ID: %s", record.id)
         
-        # Llama a la función para generar el código QR
+        # Genera el código QR
         record.generate_qr_code()
         
         return record
+
 
       
     maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True )
@@ -563,42 +558,31 @@ class Reparaciones(models.Model):
             
     def action_finalizar_reparacion(self):
         for record in self:
-            # Limpiar espacios en blanco antes de la comparación
-            contometrok_actual = str(record.contometrok_id).strip()
-            contometro_inicial = str(record.contometro_inicial).strip()
-            
-            _logger.info(f"Contometro actual: '{contometrok_actual}', Contometro inicial: '{contometro_inicial}'")
-            
-            # Comparación y validación
-            if contometrok_actual == contometro_inicial:
+            # Verificación del contómetro antes de finalizar
+            if record.contometrok_id == record.contometro_inicial:
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO HA CAMBIADO\n\n"
-                    "Debe actualizar el contómetro antes de finalizar la reparación.")
+                      "Debe actualizar el contómetro antes de finalizar la reparación.")
                 )
-            if contometrok_actual == '0':
+            if record.contometrok_id == '0':
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
-                    "Debe ingresar el valor ACTUAL del contómetro.")
+                      "Debe ingresar el valor ACTUAL del contómetro.")
                 )
 
-        # Continuar con el proceso de finalización si la validación pasa
-        pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
+            # Cambiar el estado a "finalizado"
+            record.estado_id = "finalizado"
 
-        try:
-            self.enviar_mensaje_finalizacion_asesora()
-        except Exception as e:
-            _logger.error(f"Error enviando el mensaje a la asesora: {e}")
-
-        self._create_next_reparacion()
-
-        try:
+            # Enviar mensaje y crear la siguiente reparación
+            record.enviar_mensaje_finalizacion_asesora()
+            record._create_next_reparacion()
+            
+            # Enviar el correo electrónico de finalización
             template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
-            template_id.send_mail(self.id, force_send=True)
-        except Exception as e:
-            _logger.error(f"Error enviando el correo: {e}")
-
-        self.estado_id = "finalizado"
-        return pdf_report
+            template_id.send_mail(record.id, force_send=True)
+        
+        # Retornar el reporte de la reparación finalizada
+        return self.env.ref('sat.report_reparaciones_qr').report_action(self)
 
     
     @api.depends('tipo_revision')
