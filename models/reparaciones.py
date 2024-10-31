@@ -559,40 +559,58 @@ class Reparaciones(models.Model):
             
     
     def action_finalizar_reparacion(self):
-        # Convertir ambos valores a cadenas para asegurar comparaciones correctas
-        contometro_inicial = self.contometro_inicial or ''
-        contometrok_id = self.contometrok_id or ''
+        _logger.info("Iniciando proceso de finalización para reparación ID: %s", self.id)
 
-        # Primera validación: verificar que el contómetro actual haya sido actualizado
-        if contometrok_id == contometro_inicial:
-            raise UserError("⚠️❗ <b>Error de Contómetro No Actualizado</b>: El contómetro actual no ha sido actualizado desde el valor inicial. "
-                            "<br>Por favor, asegúrese de ingresar un valor diferente al inicial.")
+        # Verificar si el contómetro ha sido actualizado
+        if not self.contometrok_id:
+            _logger.warning("Contómetro no actualizado en reparación ID: %s", self.id)
+            raise UserError("⚠️❗ <b>Error</b>: Debe actualizar el contómetro antes de finalizar la reparación.")
+        else:
+            _logger.info("Contómetro actualizado: %s", self.contometrok_id)
 
-        # Segunda validación: verificar la cantidad de dígitos si no tiene autorización
-        if not self.contometro_autorizado:
-            if len(contometrok_id) != len(contometro_inicial):
-                raise UserError("⚠️❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro no coincide con el inicial. "
-                                "<br>Contacte al administrador para obtener autorización.")
+        # Verificar si la cantidad de dígitos coincide con el contómetro inicial
+        if len(self.contometrok_id) != len(self.contometro_inicial):
+            _logger.warning("Diferencia en la cantidad de dígitos del contómetro para reparación ID: %s", self.id)
+            if not self.autorizacion_cambio_digitos:
+                raise UserError("⚠️❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro no coincide con el inicial. <br>Contacte al administrador para obtener autorización.")
+            else:
+                _logger.info("Cambio de dígitos autorizado para reparación ID: %s", self.id)
 
-        # Ejecutar lógica original de finalización
+        # 1. Generar el reporte
+        _logger.info("Generando reporte para reparación ID: %s", self.id)
         pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
-        
+        _logger.info("Reporte generado para reparación ID: %s", self.id)
+
+        # 2. Enviar mensaje a la asesora
         try:
+            _logger.info("Enviando mensaje a la asesora para reparación ID: %s", self.id)
             self.enviar_mensaje_finalizacion_asesora()
+            _logger.info("Mensaje enviado a la asesora para reparación ID: %s", self.id)
         except Exception as e:
-            _logger.error(f"Error enviando el mensaje a la asesora: {e}")
+            _logger.error("Error enviando el mensaje a la asesora en reparación ID: %s - Error: %s", self.id, e)
 
+        # 3. Crear la siguiente reparación
+        _logger.info("Creando siguiente reparación para ID actual: %s", self.id)
         self._create_next_reparacion()
+        _logger.info("Siguiente reparación creada para ID: %s", self.id)
 
+        # 4. Enviar correo electrónico
         try:
+            _logger.info("Enviando correo de finalización para reparación ID: %s", self.id)
             template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
             template_id.send_mail(self.id, force_send=True)
+            _logger.info("Correo enviado para reparación ID: %s", self.id)
         except Exception as e:
-            _logger.error(f"Error enviando el correo: {e}")
+            _logger.error("Error enviando el correo para reparación ID: %s - Error: %s", self.id, e)
 
+        # 5. Cambiar el estado a "finalizado"
+        _logger.info("Cambiando estado a 'finalizado' para reparación ID: %s", self.id)
         self.estado_id = "finalizado"
-        return pdf_report
+        _logger.info("Estado cambiado a 'finalizado' para reparación ID: %s", self.id)
 
+        # 6. Retornar el reporte generado
+        _logger.info("Proceso de finalización completado para reparación ID: %s", self.id)
+        return pdf_report
     
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
