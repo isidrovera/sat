@@ -238,23 +238,7 @@ class Reparaciones(models.Model):
         default=lambda self: self.maquina_id.contometro
     )
 
-    @api.constrains('contometrok_id')
-    def _check_contometro_values(self):
-        for record in self:
-            # Si el contómetro inicial existe y es igual al contómetro actual, no debe continuar
-            if record.contometro_inicial and record.contometrok_id == record.contometro_inicial:
-                raise ValidationError(
-                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO HA CAMBIADO\n\n"
-                      "Debe actualizar el contómetro antes de finalizar la reparación.")
-                )
-
-            # Verifica que el contómetro no sea 0
-            if record.contometrok_id == '0':
-                raise ValidationError(
-                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
-                      "Debe ingresar el valor ACTUAL del contómetro.")
-                )
-
+    
 
     calidad_id = fields.Selection(
         [("buena", "Buena"), ("regular", "Regular"), ("mala", "Mala")], string="Calidad", tracking=True)
@@ -572,29 +556,37 @@ class Reparaciones(models.Model):
     
             
     def action_finalizar_reparacion(self):
-        # 1. Generar el reporte primero
+        for record in self:
+            # Verifica si el contómetro actual es igual al inicial
+            if record.contometrok_id == record.contometro_inicial:
+                raise ValidationError(
+                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO HA CAMBIADO\n\n"
+                    "Debe actualizar el contómetro antes de finalizar la reparación.")
+                )
+            # Verifica si el contómetro actual es 0
+            if record.contometrok_id == '0':
+                raise ValidationError(
+                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
+                    "Debe ingresar el valor ACTUAL del contómetro.")
+                )
+
+        # Procede con el resto del código si la validación se supera
         pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
 
-        # 2. Enviar el mensaje a la asesora
         try:
             self.enviar_mensaje_finalizacion_asesora()
         except Exception as e:
             _logger.error(f"Error enviando el mensaje a la asesora: {e}")
 
-        # 3. Crear la siguiente reparación
         self._create_next_reparacion()
 
-        # 4. Enviar el correo electrónico
         try:
             template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
             template_id.send_mail(self.id, force_send=True)
         except Exception as e:
             _logger.error(f"Error enviando el correo: {e}")
 
-        # 5. Finalmente, cambiar el estado a "finalizado"
         self.estado_id = "finalizado"
-
-        # 6. Devolver el reporte generado
         return pdf_report
 
     
