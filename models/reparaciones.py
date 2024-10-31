@@ -38,7 +38,7 @@ class Reparaciones(models.Model):
             vals['contometro_inicial'] = vals['contometrok_id']
         else:
             # Si no está en vals, asigna el valor actual de contometro de la máquina
-            vals['contometro_inicial'] = self.env['maquina.model'].browse(vals.get('maquina_id')).contometro or '0'  # Ajusta 'maquina.model' al modelo de la máquina
+            vals['contometro_inicial'] = self.env['sat.sat'].browse(vals.get('maquina_id')).contometro or '0'  # Ajusta 'maquina.model' al modelo de la máquina
 
         # Crear el registro
         record = super(Reparaciones, self).create(vals)
