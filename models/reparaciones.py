@@ -231,6 +231,31 @@ class Reparaciones(models.Model):
 
                                  )
 
+    contometro_inicial = fields.Char(
+        string="Contometro Inicial",
+        readonly=True,
+        tracking=True,
+        default=lambda self: self.maquina_id.contometro
+    )
+
+    @api.constrains('contometrok_id')
+    def _check_contometro_values(self):
+        for record in self:
+            # Si el contómetro inicial existe y es igual al contómetro actual, no debe continuar
+            if record.contometro_inicial and record.contometrok_id == record.contometro_inicial:
+                raise ValidationError(
+                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO HA CAMBIADO\n\n"
+                      "Debe actualizar el contómetro antes de finalizar la reparación.")
+                )
+
+            # Verifica que el contómetro no sea 0
+            if record.contometrok_id == '0':
+                raise ValidationError(
+                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
+                      "Debe ingresar el valor ACTUAL del contómetro.")
+                )
+
+
     calidad_id = fields.Selection(
         [("buena", "Buena"), ("regular", "Regular"), ("mala", "Mala")], string="Calidad", tracking=True)
     responsable_id = fields.Many2one(
@@ -542,19 +567,11 @@ class Reparaciones(models.Model):
         if self.asesora_mobile_clean:
             phone_number = self.asesora_mobile_clean
             self.send_whatsapp_message(phone_number, msg)
-    contometro_inicial = fields.Char(
-        string="Contometro Inicial",
-        readonly=True,
-        tracking=True,
-        default=lambda self: self.maquina_id.contometro
-    )
+    
+
+    
             
     def action_finalizar_reparacion(self):
-        for record in self:
-            # Validar que el contómetro actual sea diferente del contómetro inicial
-            if record.contometrok_id == record.contometro_inicial:
-                raise ValidationError("Debe actualizar el contómetro antes de finalizar la reparación.")
-        
         # 1. Generar el reporte primero
         pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
 
