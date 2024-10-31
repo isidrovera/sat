@@ -561,23 +561,21 @@ class Reparaciones(models.Model):
     def action_finalizar_reparacion(self):
         _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
         
-        # Verificar que contometrok_id y contometro_inicial sean cadenas
-        if not isinstance(self.contometrok_id, str) or not isinstance(self.contometro_inicial, str):
-            _logger.error("Los campos contometrok_id o contometro_inicial no son del tipo esperado (str).")
-            raise UserError(_("⚠️❗ <b>Error</b>: Los datos del contómetro son incorrectos. Verifique e intente nuevamente."))
+        # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
+        if not self.contometrok_id or not self.contometro_inicial:
+            _logger.error("Los datos del contómetro no están configurados correctamente.")
+            raise UserError(_("❗ <b>Error en el Contómetro</b>: Los valores del contómetro no están configurados correctamente. Verifique e intente nuevamente."))
 
         # Verificar si el contómetro fue actualizado
         if self.contometrok_id == self.contometro_inicial:
             _logger.warning("El contómetro no ha sido actualizado.")
-            raise UserError(_("⚠️❗ <b>Error</b>: El contómetro debe ser actualizado y no puede ser igual al inicial."))
+            raise UserError(_("❗ <b>Error en el Contómetro</b>: El contómetro no ha sido actualizado. Debe ser diferente del valor inicial."))
 
         # Validar la cantidad de dígitos
         if len(self.contometrok_id) != len(self.contometro_inicial):
             if not self.autorizacion_cambio_digitos:
                 _logger.warning("Diferencia en la cantidad de dígitos del contómetro y sin autorización.")
-                raise UserError(_("⚠️❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro no coincide con el inicial. <br>Contacte al administrador para obtener autorización."))
-            else:
-                _logger.info("Autorización de cambio de dígitos concedida por administrador.")
+                raise UserError(_("❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
 
         # Continuar con el proceso de finalización
         _logger.info(f"Generando reporte para reparación ID: {self.id}")
