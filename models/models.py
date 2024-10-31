@@ -55,7 +55,7 @@ class SatSat(models.Model):
             "domain": [("maquina_id", "=", self.id)],
             "context": "{'create': True}",
         }
-
+    autorizacion_cambio_digitos = fields.Boolean(string="Autorización de Modificación", default=False)
     def action_partes(self):
         self.estado_ventas_id = "de_partes"
 

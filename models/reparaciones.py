@@ -559,7 +559,7 @@ class Reparaciones(models.Model):
             self.send_whatsapp_message(phone_number, msg)
     
 
-    autorizacion_cambio_digitos = fields.Boolean(string="Autorización de Modificación", default=False)
+    autorizacion_cambio_digitos = fields.Boolean(related='maquina_id.autorizacion_cambio_digitos',readonly=False, string="Autorización de Modificación")
             
     
     def action_finalizar_reparacion(self):

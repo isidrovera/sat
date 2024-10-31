@@ -70,6 +70,7 @@
                 <field name="trabajadores_id" widget="many2one_avatar" />
                 <field name="asesora_id" />
                 <field name="fecha_para_revision" />
+                <field name="autorizacion_cambio_digitos"/>
               </group>
             </group>
 
