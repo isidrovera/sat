@@ -542,9 +542,19 @@ class Reparaciones(models.Model):
         if self.asesora_mobile_clean:
             phone_number = self.asesora_mobile_clean
             self.send_whatsapp_message(phone_number, msg)
-
+    contometro_inicial = fields.Char(
+        string="Contometro Inicial",
+        readonly=True,
+        tracking=True,
+        default=lambda self: self.maquina_id.contometro
+    )
             
     def action_finalizar_reparacion(self):
+        for record in self:
+            # Validar que el contómetro actual sea diferente del contómetro inicial
+            if record.contometrok_id == record.contometro_inicial:
+                raise ValidationError("Debe actualizar el contómetro antes de finalizar la reparación.")
+        
         # 1. Generar el reporte primero
         pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
 
