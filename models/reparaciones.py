@@ -558,13 +558,17 @@ class Reparaciones(models.Model):
     contometro_autorizado = fields.Boolean(string="Autorización de Modificación", default=False)
             
     def action_finalizar_reparacion(self):
+        # Asegurar que ambos campos están definidos y son strings
+        contometro_inicial = self.contometro_inicial or ''
+        contometrok_id = self.contometrok_id or ''
+
         # Validación de modificación del contómetro y cantidad de dígitos
-        if self.contometrok_id == self.contometro_inicial:
+        if contometrok_id == contometro_inicial:
             raise UserError("⚠️❗ <b>Error de Contómetro</b>: No se puede finalizar la reparación sin actualizar el contómetro. "
                             "<br>Por favor, asegúrese de que el valor actual es mayor o menor que el inicial.")
         
         if not self.contometro_autorizado:
-            if len(self.contometrok_id) != len(self.contometro_inicial):
+            if len(contometrok_id) != len(contometro_inicial):
                 raise UserError("⚠️❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro no coincide con el inicial. "
                                 "<br>Contacte al administrador para obtener autorización.")
         
