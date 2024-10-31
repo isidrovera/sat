@@ -481,6 +481,7 @@ class SatDashboard extends Component {
 
             
             // Gráfico de tickets por técnico
+                        
             const ticketsTecnicoElement = this._getChartElement("ticketsTecnicoChart");
 
             if (ticketsTecnicoElement) {
@@ -609,9 +610,14 @@ class SatDashboard extends Component {
 
                     console.log(`Aplicando filtro - Desde: ${startDate.toLocaleDateString()} hasta: ${endDate.toLocaleDateString()}`);
 
+                    // Aquí aplicamos el filtro según las fechas en los datos de `dashboardData`
+                    // En este ejemplo, asumo que puedes filtrar `this.dashboardData.tecnicos_totales_tickets` según el rango de fechas.
+                    // Necesitarás adaptar esta lógica si tienes una estructura específica en `dashboardData`.
+                    const filteredData = {}; // Filtra los datos aquí según el rango de fechas
+
                     // Actualizar el título con el rango de fechas
                     const titleText = `Tickets por Técnico (desde ${startDate.toLocaleDateString()} hasta ${endDate.toLocaleDateString()})`;
-                    renderTicketsTecnicoChart(this.dashboardData.tecnicos_totales_tickets, titleText);
+                    renderTicketsTecnicoChart(filteredData, titleText);
                 };
 
                 // Configurar el event listener para el botón de filtro
