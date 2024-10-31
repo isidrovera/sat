@@ -495,10 +495,11 @@ class SatDashboard extends Component {
                     const dataToUse = filteredData || this.dashboardData.tecnicos_totales_tickets || {};
                     const ticketsTecnicoLabels = Object.keys(dataToUse);
                     const ticketsTecnicoData = Object.values(dataToUse);
-
-                    console.log('Etiquetas de técnicos:', ticketsTecnicoLabels);
-                    console.log('Datos de tickets:', ticketsTecnicoData);
-
+                
+                    // Validar datos de colores en visualMap
+                    const minDataValue = ticketsTecnicoData.length ? Math.min(...ticketsTecnicoData) : 0;
+                    const maxDataValue = ticketsTecnicoData.length ? Math.max(...ticketsTecnicoData) : 1; // Usa 1 para evitar 'undefined'
+                
                     // Configuración del gráfico
                     ticketsTecnicoChart.setOption({
                         title: {
@@ -518,11 +519,11 @@ class SatDashboard extends Component {
                         },
                         grid: {
                             top: '15%',
-                            bottom: '15%',    // Espacio para el visualMap
-                            left: '3%',       // Espacio horizontal optimizado
-                            right: '5%',      // Espacio horizontal optimizado
+                            bottom: '15%',
+                            left: '3%',
+                            right: '5%',
                             containLabel: true,
-                            height: '70%'     // Controla la altura del área del gráfico
+                            height: '70%'
                         },
                         xAxis: {
                             type: 'value',
@@ -554,12 +555,12 @@ class SatDashboard extends Component {
                             orient: 'horizontal',
                             left: 'center',
                             bottom: '2%',
-                            min: Math.min(...ticketsTecnicoData),
-                            max: Math.max(...ticketsTecnicoData),
+                            min: minDataValue,
+                            max: maxDataValue,
                             text: ['Low', 'High'],
                             dimension: 0,
                             inRange: {
-                                color: ['#E1F5FE', '#0288D1']
+                                color: ['#E1F5FE', '#0288D1'] // Asegura que siempre haya un color definido
                             },
                             itemWidth: 15,
                             itemHeight: 200
@@ -576,11 +577,12 @@ class SatDashboard extends Component {
                                 fontWeight: 'bold',
                                 distance: 5
                             },
-                            barWidth: '40%',    // Ajuste de ancho para mejor proporción
-                            barMaxWidth: 60     // Máximo ancho de las barras
+                            barWidth: '40%',
+                            barMaxWidth: 60
                         }]
                     });
                 };
+                
 
                 const applyDateFilter = () => {
                     const startDateInput = document.getElementById("startDate");
