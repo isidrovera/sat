@@ -32,18 +32,16 @@ class Reparaciones(models.Model):
     def create(self, vals):
         # Genera un número secuencial único para el campo 'name'
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
-        
-        # Inicializa `contometro_inicial` con el valor de `contometrok_id` si está presente
+
+        # Asigna el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
         if 'contometrok_id' in vals:
             vals['contometro_inicial'] = vals['contometrok_id']
-        
-        # Crear el registro
+
+        # Crea el registro
         record = super(Reparaciones, self).create(vals)
-        
-        # Registro de la creación en el log
         _logger.info("Record created with ID: %s", record.id)
         
-        # Llama a la función para generar el código QR
+        # Genera el código QR
         record.generate_qr_code()
         
         return record
@@ -560,44 +558,42 @@ class Reparaciones(models.Model):
     
             
     def action_finalizar_reparacion(self):
+        # Verificar contómetro antes de finalizar
         for record in self:
-            # Verificación del contómetro antes de finalizar
-            if record.contometrok_id == record.contometro_inicial:
+            contometro_actual = record.contometrok_id or "0"
+            contometro_inicial = record.contometro_inicial or "0"
+
+            # Validar que el contómetro actual sea diferente al inicial
+            if contometro_actual == contometro_inicial:
                 raise ValidationError(
-                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO HA CAMBIADO\n\n"
-                    "Debe actualizar el contómetro antes de finalizar la reparación.")
-                )
-            if record.contometrok_id == '0':
-                raise ValidationError(
-                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
-                    "Debe ingresar el valor ACTUAL del contómetro.")
+                    _("El valor del contómetro actual no ha cambiado desde el inicio. "
+                    "Por favor, asegúrese de que el contómetro esté actualizado.")
                 )
 
-            # 1. Generar el reporte primero
-            pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(record.ids)
+        # 1. Generar el reporte primero
+        pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
 
-            # 2. Enviar el mensaje a la asesora
-            try:
-                record.enviar_mensaje_finalizacion_asesora()
-            except Exception as e:
-                _logger.error(f"Error enviando el mensaje a la asesora: {e}")
+        # 2. Enviar el mensaje a la asesora
+        try:
+            self.enviar_mensaje_finalizacion_asesora()
+        except Exception as e:
+            _logger.error(f"Error enviando el mensaje a la asesora: {e}")
 
-            # 3. Crear la siguiente reparación
-            record._create_next_reparacion()
+        # 3. Crear la siguiente reparación
+        self._create_next_reparacion()
 
-            # 4. Enviar el correo electrónico
-            try:
-                template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
-                template_id.send_mail(record.id, force_send=True)
-            except Exception as e:
-                _logger.error(f"Error enviando el correo: {e}")
+        # 4. Enviar el correo electrónico
+        try:
+            template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
+            template_id.send_mail(self.id, force_send=True)
+        except Exception as e:
+            _logger.error(f"Error enviando el correo: {e}")
 
-            # 5. Finalmente, cambiar el estado a "finalizado"
-            record.estado_id = "finalizado"
+        # 5. Cambiar el estado a "finalizado"
+        self.estado_id = "finalizado"
 
-            # 6. Devolver el reporte generado
-            return pdf_report
-
+        # 6. Devolver el reporte generado
+        return pdf_report
     
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
