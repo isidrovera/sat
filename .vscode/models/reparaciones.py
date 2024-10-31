@@ -514,6 +514,11 @@ class Reparaciones(models.Model):
 
         if next_maquina:
             empleado = self.env['hr.employee'].search([('user_id', '=', self.responsable_id.id)], limit=1)
+            
+            # Verificar y loguear el valor de contometrok_id
+            contometro_actual = self.contometrok_id or "No asignado"
+            _logger.info(f"Valor de contometrok_id en la reparación actual: {contometro_actual}")
+
             if empleado:
                 next_maquina.write({
                     'estado_ventas_id': 'en_revision',
@@ -522,8 +527,9 @@ class Reparaciones(models.Model):
                 nueva_reparacion = self.env['reparaciones.reparaciones'].create({
                     'maquina_id': next_maquina.id,
                     'responsable_id': self.responsable_id.id,
-                    'contometro_inicial': self.contometrok_id,  # Asignar contometro actual como valor inicial
+                    'contometro_inicial': contometro_actual,  # Asignar contometro actual como valor inicial
                 })
+                _logger.info(f"Reparación creada con contometro_inicial: {nueva_reparacion.contometro_inicial}")
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
