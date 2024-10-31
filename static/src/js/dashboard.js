@@ -573,8 +573,8 @@ class SatDashboard extends Component {
                                 fontWeight: 'bold',
                                 distance: 5
                             },
-                            barWidth: '40%',
-                            barMaxWidth: 60
+                            barWidth: '20%',
+                            barMaxWidth: 40
                         }]
                     };
 
