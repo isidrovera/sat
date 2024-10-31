@@ -37,10 +37,13 @@ class Reparaciones(models.Model):
         if 'contometrok_id' in vals:
             vals['contometro_inicial'] = vals['contometrok_id']
         
+        # Crear el registro
         record = super(Reparaciones, self).create(vals)
+        
+        # Registro de la creación en el log
         _logger.info("Record created with ID: %s", record.id)
         
-        # Genera el código QR
+        # Llama a la función para generar el código QR
         record.generate_qr_code()
         
         return record
@@ -562,27 +565,38 @@ class Reparaciones(models.Model):
             if record.contometrok_id == record.contometro_inicial:
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO HA CAMBIADO\n\n"
-                      "Debe actualizar el contómetro antes de finalizar la reparación.")
+                    "Debe actualizar el contómetro antes de finalizar la reparación.")
                 )
             if record.contometrok_id == '0':
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
-                      "Debe ingresar el valor ACTUAL del contómetro.")
+                    "Debe ingresar el valor ACTUAL del contómetro.")
                 )
 
-            # Cambiar el estado a "finalizado"
+            # 1. Generar el reporte primero
+            pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(record.ids)
+
+            # 2. Enviar el mensaje a la asesora
+            try:
+                record.enviar_mensaje_finalizacion_asesora()
+            except Exception as e:
+                _logger.error(f"Error enviando el mensaje a la asesora: {e}")
+
+            # 3. Crear la siguiente reparación
+            record._create_next_reparacion()
+
+            # 4. Enviar el correo electrónico
+            try:
+                template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
+                template_id.send_mail(record.id, force_send=True)
+            except Exception as e:
+                _logger.error(f"Error enviando el correo: {e}")
+
+            # 5. Finalmente, cambiar el estado a "finalizado"
             record.estado_id = "finalizado"
 
-            # Enviar mensaje y crear la siguiente reparación
-            record.enviar_mensaje_finalizacion_asesora()
-            record._create_next_reparacion()
-            
-            # Enviar el correo electrónico de finalización
-            template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
-            template_id.send_mail(record.id, force_send=True)
-        
-        # Retornar el reporte de la reparación finalizada
-        return self.env.ref('sat.report_reparaciones_qr').report_action(self)
+            # 6. Devolver el reporte generado
+            return pdf_report
 
     
     @api.depends('tipo_revision')
