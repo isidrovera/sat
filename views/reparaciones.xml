@@ -58,7 +58,7 @@
                                     options="{'no_create': True}" />
                                 <field name="serie_id" />
                                 <field name="contometrok_id" />
-                                <field name="contometro_inicial" invisible="True"/>
+                                <field name="contometro_inicial" />
                                 <field name="nombre_maquina" invisible='True' />
                                 <field name="nombre_proveedor" invisible='True' />
                                 <field name="autorizacion_cambio_digitos"/>
