@@ -568,13 +568,18 @@ class Reparaciones(models.Model):
         else:
             _logger.info("Contómetro actualizado: %s", self.contometrok_id)
 
-        # Verificar si la cantidad de dígitos coincide con el contómetro inicial
-        if len(self.contometrok_id) != len(self.contometro_inicial):
-            _logger.warning("Diferencia en la cantidad de dígitos del contómetro para reparación ID: %s", self.id)
-            if not self.autorizacion_cambio_digitos:
-                raise UserError("⚠️❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro no coincide con el inicial. <br>Contacte al administrador para obtener autorización.")
-            else:
-                _logger.info("Cambio de dígitos autorizado para reparación ID: %s", self.id)
+        # Verificar que ambos campos son cadenas antes de comparar sus longitudes
+        if isinstance(self.contometrok_id, str) and isinstance(self.contometro_inicial, str):
+            if len(self.contometrok_id) != len(self.contometro_inicial):
+                _logger.warning("Diferencia en la cantidad de dígitos del contómetro para reparación ID: %s", self.id)
+                if not self.autorizacion_cambio_digitos:
+                    raise UserError("⚠️❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro no coincide con el inicial. <br>Contacte al administrador para obtener autorización.")
+                else:
+                    _logger.info("Cambio de dígitos autorizado para reparación ID: %s", self.id)
+        else:
+            _logger.error("Tipo incorrecto para contómetro: contometrok_id = %s (%s), contometro_inicial = %s (%s)", 
+                          self.contometrok_id, type(self.contometrok_id), self.contometro_inicial, type(self.contometro_inicial))
+            raise UserError("⚠️❗ <b>Error</b>: Los datos del contómetro son incorrectos. Verifique e intente nuevamente.")
 
         # 1. Generar el reporte
         _logger.info("Generando reporte para reparación ID: %s", self.id)
