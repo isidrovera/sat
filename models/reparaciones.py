@@ -557,20 +557,25 @@ class Reparaciones(models.Model):
             
     def action_finalizar_reparacion(self):
         for record in self:
-            # Verifica si el contómetro actual es igual al inicial
-            if record.contometrok_id == record.contometro_inicial:
+            # Limpiar espacios en blanco antes de la comparación
+            contometrok_actual = str(record.contometrok_id).strip()
+            contometro_inicial = str(record.contometro_inicial).strip()
+            
+            _logger.info(f"Contometro actual: '{contometrok_actual}', Contometro inicial: '{contometro_inicial}'")
+            
+            # Comparación y validación
+            if contometrok_actual == contometro_inicial:
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO HA CAMBIADO\n\n"
                     "Debe actualizar el contómetro antes de finalizar la reparación.")
                 )
-            # Verifica si el contómetro actual es 0
-            if record.contometrok_id == '0':
+            if contometrok_actual == '0':
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
                     "Debe ingresar el valor ACTUAL del contómetro.")
                 )
 
-        # Procede con el resto del código si la validación se supera
+        # Continuar con el proceso de finalización si la validación pasa
         pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
 
         try:
