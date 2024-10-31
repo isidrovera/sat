@@ -555,66 +555,50 @@ class Reparaciones(models.Model):
             self.send_whatsapp_message(phone_number, msg)
     
 
-    contometro_autorizado = fields.Boolean(string="Autorización de Modificación", default=False)
+    autorizacion_cambio_digitos = fields.Boolean(string="Autorización de Modificación", default=False)
             
     
     def action_finalizar_reparacion(self):
-        _logger.info("Iniciando proceso de finalización para reparación ID: %s", self.id)
+        _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
+        
+        # Verificar si el contometro fue actualizado
+        if self.contometrok_id == self.contometro_inicial:
+            _logger.warning("El contómetro no ha sido actualizado.")
+            raise UserError(_("⚠️❗ <b>Error</b>: El contómetro debe ser actualizado y no puede ser igual al inicial."))
 
-        # Verificar si el contómetro ha sido actualizado
-        if not self.contometrok_id:
-            _logger.warning("Contómetro no actualizado en reparación ID: %s", self.id)
-            raise UserError("⚠️❗ <b>Error</b>: Debe actualizar el contómetro antes de finalizar la reparación.")
-        else:
-            _logger.info("Contómetro actualizado: %s", self.contometrok_id)
+        # Validar la cantidad de dígitos
+        if len(self.contometrok_id) != len(self.contometro_inicial):
+            if not self.autorizacion_cambio_digitos:
+                _logger.warning("Diferencia en la cantidad de dígitos del contómetro y sin autorización.")
+                raise UserError(_("⚠️❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro no coincide con el inicial. <br>Contacte al administrador para obtener autorización."))
+            else:
+                _logger.info("Autorización de cambio de dígitos concedida por administrador.")
 
-        # Verificar que ambos campos son cadenas antes de comparar sus longitudes
-        if isinstance(self.contometrok_id, str) and isinstance(self.contometro_inicial, str):
-            if len(self.contometrok_id) != len(self.contometro_inicial):
-                _logger.warning("Diferencia en la cantidad de dígitos del contómetro para reparación ID: %s", self.id)
-                if not self.autorizacion_cambio_digitos:
-                    raise UserError("⚠️❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro no coincide con el inicial. <br>Contacte al administrador para obtener autorización.")
-                else:
-                    _logger.info("Cambio de dígitos autorizado para reparación ID: %s", self.id)
-        else:
-            _logger.error("Tipo incorrecto para contómetro: contometrok_id = %s (%s), contometro_inicial = %s (%s)", 
-                          self.contometrok_id, type(self.contometrok_id), self.contometro_inicial, type(self.contometro_inicial))
-            raise UserError("⚠️❗ <b>Error</b>: Los datos del contómetro son incorrectos. Verifique e intente nuevamente.")
-
-        # 1. Generar el reporte
-        _logger.info("Generando reporte para reparación ID: %s", self.id)
+        # Continuar con el proceso de finalización
+        _logger.info(f"Generando reporte para reparación ID: {self.id}")
         pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
-        _logger.info("Reporte generado para reparación ID: %s", self.id)
 
-        # 2. Enviar mensaje a la asesora
         try:
-            _logger.info("Enviando mensaje a la asesora para reparación ID: %s", self.id)
+            _logger.info(f"Enviando mensaje a la asesora para reparación ID: {self.id}")
             self.enviar_mensaje_finalizacion_asesora()
-            _logger.info("Mensaje enviado a la asesora para reparación ID: %s", self.id)
         except Exception as e:
-            _logger.error("Error enviando el mensaje a la asesora en reparación ID: %s - Error: %s", self.id, e)
+            _logger.error(f"Error enviando el mensaje a la asesora: {e}")
 
-        # 3. Crear la siguiente reparación
-        _logger.info("Creando siguiente reparación para ID actual: %s", self.id)
+        _logger.info(f"Creando siguiente reparación para ID actual: {self.id}")
         self._create_next_reparacion()
-        _logger.info("Siguiente reparación creada para ID: %s", self.id)
 
-        # 4. Enviar correo electrónico
         try:
-            _logger.info("Enviando correo de finalización para reparación ID: %s", self.id)
+            _logger.info(f"Enviando correo de finalización para reparación ID: {self.id}")
             template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
             template_id.send_mail(self.id, force_send=True)
-            _logger.info("Correo enviado para reparación ID: %s", self.id)
         except Exception as e:
-            _logger.error("Error enviando el correo para reparación ID: %s - Error: %s", self.id, e)
+            _logger.error(f"Error enviando el correo: {e}")
 
-        # 5. Cambiar el estado a "finalizado"
-        _logger.info("Cambiando estado a 'finalizado' para reparación ID: %s", self.id)
+        _logger.info(f"Cambiando estado a 'finalizado' para reparación ID: {self.id}")
         self.estado_id = "finalizado"
-        _logger.info("Estado cambiado a 'finalizado' para reparación ID: %s", self.id)
+        _logger.info(f"Estado cambiado a 'finalizado' para reparación ID: {self.id}")
 
-        # 6. Retornar el reporte generado
-        _logger.info("Proceso de finalización completado para reparación ID: %s", self.id)
+        _logger.info(f"Proceso de finalización completado para reparación ID: {self.id}")
         return pdf_report
     
     @api.depends('tipo_revision')
