@@ -492,12 +492,11 @@ class Reparaciones(models.Model):
         if self.env['reparaciones.reparaciones'].search_count([('responsable_id', '=', self.responsable_id.id), ('estado_id', '=', 'en_revision')]) > 0:
             return
 
-        # Buscar la siguiente máquina en estado 'para_revision', ordenada por fecha_para_revision
+        # Buscar la siguiente máquina en estado 'para_revision'
         next_maquina = self.env['sat.sat'].search([
             ('estado_ventas_id', '=', 'para_revision')
         ], order='fecha_para_revision asc', limit=1)
 
-        # Si no hay ninguna máquina en estado 'para_revision', buscar en estado 'sin_revisar' y 'disponible', ordenada por fecha de creación
         if not next_maquina:
             next_maquina = self.env['sat.sat'].search([
                 ('estado_ventas_id', '=', 'sin_revisar'),
@@ -506,6 +505,10 @@ class Reparaciones(models.Model):
             ], order='create_date asc', limit=1)
 
         if next_maquina:
+            # Verificación del valor de contometro
+            if not next_maquina.contometro or int(next_maquina.contometro) == 0:
+                raise ValidationError("La máquina seleccionada no tiene un valor de contómetro válido.")
+
             empleado = self.env['hr.employee'].search([('user_id', '=', self.responsable_id.id)], limit=1)
             if empleado:
                 next_maquina.write({
@@ -515,11 +518,12 @@ class Reparaciones(models.Model):
                 nueva_reparacion = self.env['reparaciones.reparaciones'].create({
                     'maquina_id': next_maquina.id,
                     'responsable_id': self.responsable_id.id,
+                    'contometro_inicial': next_maquina.contometro,  # Contómetro inicial
+                    'contometrok_id': next_maquina.contometro
                 })
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
-
 
     def generate_pdf_report_url(self):
         # Obtener el reporte
@@ -564,7 +568,7 @@ class Reparaciones(models.Model):
         # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
         if not self.contometrok_id or not self.contometro_inicial:
             _logger.error("Los datos del contómetro no están configurados correctamente.")
-            raise UserError(_("❗ Error en el Contómetro: Los valores del contómetro no están configurados correctamente. Verifique e intente nuevamente."))
+            raise UserError(_("❗ <b>Error en el Contómetro</b>: Los valores del contómetro no están configurados correctamente. Verifique e intente nuevamente."))
 
         # Verificar si el contómetro fue actualizado
         if self.contometrok_id == self.contometro_inicial:
@@ -575,7 +579,7 @@ class Reparaciones(models.Model):
         if len(self.contometrok_id) != len(self.contometro_inicial):
             if not self.autorizacion_cambio_digitos:
                 _logger.warning("Diferencia en la cantidad de dígitos del contómetro y sin autorización.")
-                raise UserError(_("❗ Error en el Número de Dígitos: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
+                raise UserError(_("❗ Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
 
         # Continuar con el proceso de finalización
         _logger.info(f"Generando reporte para reparación ID: {self.id}")
