@@ -555,44 +555,36 @@ class Reparaciones(models.Model):
             self.send_whatsapp_message(phone_number, msg)
     
 
-    
+    contometro_autorizado = fields.Boolean(string="Autorización de Modificación", default=False)
             
     def action_finalizar_reparacion(self):
-        # Verificar contómetro antes de finalizar
-        for record in self:
-            contometro_actual = record.contometrok_id or "0"
-            contometro_inicial = record.contometro_inicial or "0"
-
-            # Validar que el contómetro actual sea diferente al inicial
-            if contometro_actual == contometro_inicial:
-                raise ValidationError(
-                    _("El valor del contómetro actual no ha cambiado desde el inicio. "
-                    "Por favor, asegúrese de que el contómetro esté actualizado.")
-                )
-
-        # 1. Generar el reporte primero
+        # Validación de modificación del contómetro y cantidad de dígitos
+        if self.contometrok_id == self.contometro_inicial:
+            raise UserError("⚠️❗ <b>Error de Contómetro</b>: No se puede finalizar la reparación sin actualizar el contómetro. "
+                            "<br>Por favor, asegúrese de que el valor actual es mayor o menor que el inicial.")
+        
+        if not self.contometro_autorizado:
+            if len(self.contometrok_id) != len(self.contometro_inicial):
+                raise UserError("⚠️❗ <b>Error en el Número de Dígitos</b>: La cantidad de dígitos del contómetro no coincide con el inicial. "
+                                "<br>Contacte al administrador para obtener autorización.")
+        
+        # Ejecutar lógica original de finalización
         pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
-
-        # 2. Enviar el mensaje a la asesora
+        
         try:
             self.enviar_mensaje_finalizacion_asesora()
         except Exception as e:
             _logger.error(f"Error enviando el mensaje a la asesora: {e}")
 
-        # 3. Crear la siguiente reparación
         self._create_next_reparacion()
 
-        # 4. Enviar el correo electrónico
         try:
             template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
             template_id.send_mail(self.id, force_send=True)
         except Exception as e:
             _logger.error(f"Error enviando el correo: {e}")
 
-        # 5. Cambiar el estado a "finalizado"
         self.estado_id = "finalizado"
-
-        # 6. Devolver el reporte generado
         return pdf_report
     
     @api.depends('tipo_revision')
