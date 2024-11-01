@@ -1,4 +1,4 @@
-from odoo import _, models, fields, api
+from odoo import _, models, fields, api, exceptions, _
 from dateutil.relativedelta import relativedelta
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
