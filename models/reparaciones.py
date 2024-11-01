@@ -45,19 +45,21 @@ class Reparaciones(models.Model):
         record.generate_qr_code()
         
         return record
+ 
 
     @api.model
     def default_get(self, fields):
         res = super(Reparaciones, self).default_get(fields)
         
         # Verificar si el usuario pertenece al grupo que necesita autenticación
-        grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')  # Reemplaza 'tu_modulo.group_autenticacion_reparacion' con el ID de tu grupo
+        grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')  # Reemplaza 'tu_modulo' con el nombre de tu módulo
         if grupo_validacion in self.env.user.groups_id:
             # Si pertenece al grupo, redirigir al wizard de autenticación en lugar de abrir el formulario directamente
             return {
                 'type': 'ir.actions.act_window',
                 'res_model': 'reparacion.autenticacion.wizard',
                 'view_mode': 'form',
+                'view_id': self.env.ref('sat.view_reparacion_autenticacion_wizard_form').id,  # ID de la vista de formulario del wizard
                 'target': 'new',
                 'context': {'default_active_id': self.id},
             }
