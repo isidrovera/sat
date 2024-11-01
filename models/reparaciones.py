@@ -47,7 +47,15 @@ class Reparaciones(models.Model):
         return record
     
 
-    
+    def abrir_wizard_autenticacion(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'reparacion.autenticacion.wizard',
+            'view_mode': 'form',
+            'view_id': self.env.ref('sat.view_reparacion_autenticacion_wizard_form').id,  # ID de la vista de tu wizard
+            'target': 'new',
+            'context': {'default_active_id': self.id},
+        }
 
     @api.model
     def default_get(self, fields):
