@@ -600,7 +600,7 @@ class Reparaciones(models.Model):
         # Verificar si la autenticación ya fue realizada
         if not self.autenticacion_correcta:
             # Verificar si el usuario pertenece al grupo que necesita autenticación
-            grupo_validacion = self.env.ref('tu_modulo.tu_grupo_de_autenticacion')  # Reemplaza con el grupo correcto
+            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')  # Reemplaza con el grupo correcto
             if grupo_validacion in self.env.user.groups_id:
                 # Llamar al wizard de autenticación
                 return {
