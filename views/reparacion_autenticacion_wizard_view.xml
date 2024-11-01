@@ -1,19 +1,20 @@
 <?xml version='1.0' encoding='utf-8'?>
-<odoo>
-    <record id="view_reparacion_autenticacion_wizard_form" model="ir.ui.view">
-        <field name="name">reparacion.autenticacion.wizard.form</field>
-        <field name="model">reparacion.autenticacion.wizard</field>
-        <field name="arch" type="xml">
-            <form string="Autenticación de Serie y Modelo">
-                <group>
-                    <field name="serie"/>
-                    <field name="modelo_id"/>
-                </group>
-                <footer>
-                    <button string="Validar" type="object" name="validar_acceso" class="btn-primary"/>
-                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
-                </footer>
-            </form>
-        </field>
-    </record>
-</odoo>
+<record id="view_reparacion_autenticacion_wizard_form" model="ir.ui.view">
+    <field name="name">Autenticación de Serie y Modelo</field>
+    <field name="model">reparacion.autenticacion.wizard</field>
+    <field name="arch" type="xml">
+        <form string="Autenticación de Serie y Modelo" class="oe_form_custom">
+            <group>
+                <p>
+                    <b>Instrucciones:</b> Antes de continuar, verifique físicamente la <b>serie</b> y el <b>modelo</b> en la máquina. Asegúrese de que coincidan con los valores registrados en el sistema. Si no coinciden, contacte al administrador antes de proceder.
+                </p>
+                <field name="serie" placeholder="Ingrese la serie del equipo"/>
+                <field name="modelo_id" placeholder="Seleccione el modelo del equipo"/>
+            </group>
+            <footer>
+                <button string="Confirmar Autenticación" type="object" name="validar_acceso" class="btn-primary"/>
+                <button string="Cancelar" class="btn-secondary" special="cancel"/>
+            </footer>
+        </form>
+    </field>
+</record>
