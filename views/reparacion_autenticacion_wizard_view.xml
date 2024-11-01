@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <record id="view_reparacion_autenticacion_wizard_form" model="ir.ui.view">
+        <field name="name">reparacion.autenticacion.wizard.form</field>
+        <field name="model">reparacion.autenticacion.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Autenticación de Serie y Modelo">
+                <group>
+                    <field name="serie"/>
+                    <field name="modelo_id"/>
+                </group>
+                <footer>
+                    <button string="Validar" type="object" name="validar_acceso" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
