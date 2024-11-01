@@ -13,24 +13,23 @@ class ReparacionAutenticacionWizard(models.TransientModel):
     modelo_id = fields.Many2one('modelo.maquina', string="Modelo del Equipo", required=True)
     
     def validar_acceso(self):
-        # Obtener la reparación y el equipo asignado desde el contexto
         reparacion_id = self.env.context.get('active_id')
         reparacion = self.env['reparaciones.reparaciones'].browse(reparacion_id)
-        equipo_asignado = reparacion.maquina_id
 
-        # Normalizar la serie para comparar sin importar mayúsculas o espacios
-        serie_ingresada = re.sub(r'\s+', '', self.serie.strip().lower())
-        serie_equipo = re.sub(r'\s+', '', equipo_asignado.serie_id.strip().lower())
+        # Normalizar las series para comparar
+        serie_ingresada = self.serie.strip().lower().replace(" ", "")
+        serie_registrada = reparacion.maquina_id.serie_id.strip().lower().replace(" ", "")
 
-        # Validar la serie
-        if serie_ingresada != serie_equipo:
+        if serie_ingresada != serie_registrada:
             raise exceptions.ValidationError(_("❗ Error: La serie ingresada no coincide con la serie registrada en el sistema. Revise nuevamente la serie física en la máquina."))
 
-        # Validar el modelo seleccionado
-        if self.modelo_id != equipo_asignado.name:
-            raise exceptions.ValidationError(_("❗ Error: El modelo seleccionado no coincide con el modelo registrado en el sistema. Revise nuevamente el modelo físico en la máquina."))
+        if self.modelo_id != reparacion.maquina_id.name:
+            raise exceptions.ValidationError(_("❗ Error: El modelo seleccionado no coincide con el equipo asignado. Revise el modelo físico en la máquina."))
 
-        # Confirmación de que la revisión física se ha hecho correctamente
+        # Marcar la autenticación como correcta
+        reparacion.autenticacion_correcta = True
+
+        # Redirigir al formulario de reparación tras autenticación exitosa
         return {
             'type': 'ir.actions.act_window',
             'name': 'Editar Reparación',

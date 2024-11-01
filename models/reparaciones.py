@@ -594,47 +594,56 @@ class Reparaciones(models.Model):
     autorizacion_cambio_digitos = fields.Boolean(related='maquina_id.autorizacion_cambio_digitos',readonly=False, string="Autorización de Modificación")
             
     
+    autenticacion_correcta = fields.Boolean(string="Autenticación Correcta", default=False)
+
     def action_finalizar_reparacion(self):
-        # Llamar al wizard de autenticación antes de proceder con la finalización
-        return {
-            'type': 'ir.actions.act_window',
-            'name': 'Autenticación de Serie y Modelo',
-            'res_model': 'reparacion.autenticacion.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {'default_active_id': self.id}
-        }
+        # Verificar si la autenticación ya fue realizada
+        if not self.autenticacion_correcta:
+            # Verificar si el usuario pertenece al grupo que necesita autenticación
+            grupo_validacion = self.env.ref('tu_modulo.tu_grupo_de_autenticacion')  # Reemplaza con el grupo correcto
+            if grupo_validacion in self.env.user.groups_id:
+                # Llamar al wizard de autenticación
+                return {
+                    'type': 'ir.actions.act_window',
+                    'res_model': 'reparacion.autenticacion.wizard',
+                    'view_mode': 'form',
+                    'target': 'new',
+                    'context': {'default_reparacion_id': self.id},
+                }
+
+        # Continuar con el proceso de finalización
         _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
-        
-        # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
+
+        # Verificar que contometrok_id y contometro_inicial sean válidos
         if not self.contometrok_id or not self.contometro_inicial:
             _logger.error("Los datos del contómetro no están configurados correctamente.")
-            raise UserError(_("❗ <b>Error en el Contómetro</b>: Los valores del contómetro no están configurados correctamente. Verifique e intente nuevamente."))
+            raise exceptions.UserError(_("❗ <b>Error en el Contómetro</b>: Los valores del contómetro no están configurados correctamente. Verifique e intente nuevamente."))
 
-        # Verificar si el contómetro fue actualizado
         if self.contometrok_id == self.contometro_inicial:
             _logger.warning("El contómetro no ha sido actualizado.")
-            raise UserError(_("❗ Error en el Contómetro El contómetro no ha sido actualizado. Debe ser diferente del valor inicial."))
+            raise exceptions.UserError(_("❗ Error en el Contómetro: El contómetro no ha sido actualizado. Debe ser diferente del valor inicial."))
 
-        # Validar la cantidad de dígitos
         if len(self.contometrok_id) != len(self.contometro_inicial):
             if not self.autorizacion_cambio_digitos:
                 _logger.warning("Diferencia en la cantidad de dígitos del contómetro y sin autorización.")
-                raise UserError(_("❗ Error en el Número de Dígitos: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
+                raise exceptions.UserError(_("❗ Error en el Número de Dígitos: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
 
-        # Continuar con el proceso de finalización
+        # Generar reporte PDF
         _logger.info(f"Generando reporte para reparación ID: {self.id}")
         pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
 
+        # Enviar mensaje a la asesora
         try:
             _logger.info(f"Enviando mensaje a la asesora para reparación ID: {self.id}")
             self.enviar_mensaje_finalizacion_asesora()
         except Exception as e:
             _logger.error(f"Error enviando el mensaje a la asesora: {e}")
 
+        # Crear la siguiente reparación
         _logger.info(f"Creando siguiente reparación para ID actual: {self.id}")
         self._create_next_reparacion()
 
+        # Enviar correo de finalización
         try:
             _logger.info(f"Enviando correo de finalización para reparación ID: {self.id}")
             template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
@@ -642,13 +651,13 @@ class Reparaciones(models.Model):
         except Exception as e:
             _logger.error(f"Error enviando el correo: {e}")
 
+        # Cambiar estado a 'finalizado'
         _logger.info(f"Cambiando estado a 'finalizado' para reparación ID: {self.id}")
         self.estado_id = "finalizado"
         _logger.info(f"Estado cambiado a 'finalizado' para reparación ID: {self.id}")
 
         _logger.info(f"Proceso de finalización completado para reparación ID: {self.id}")
         return pdf_report
-    
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
         tipo_revision_legible = ""

@@ -63,6 +63,7 @@
                                 <field name="nombre_maquina" invisible='True' />
                                 <field name="nombre_proveedor" invisible='True' />
                                 <field name="autorizacion_cambio_digitos" invisible="True"/>
+                                <field name="autenticacion_correcta" invisible="True"/>
                             </group>
                         </group>
                         <notebook>
