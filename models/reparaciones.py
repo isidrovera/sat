@@ -620,7 +620,7 @@ class Reparaciones(models.Model):
         # Verificar si la autenticación ya fue realizada
         if not self.autenticacion_correcta:
             # Verificar si el usuario pertenece al grupo que necesita autenticación
-            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')  # Reemplaza con el grupo correcto
+            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')
             if grupo_validacion in self.env.user.groups_id:
                 # Llamar al wizard de autenticación
                 return {
@@ -631,7 +631,7 @@ class Reparaciones(models.Model):
                     'context': {'default_reparacion_id': self.id},
                 }
         _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
-        
+
         # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
         if not self.contometrok_id or not self.contometro_inicial:
             _logger.error("Los datos del contómetro no están configurados correctamente.")
@@ -640,7 +640,7 @@ class Reparaciones(models.Model):
         # Verificar si el contómetro fue actualizado
         if self.contometrok_id == self.contometro_inicial:
             _logger.warning("El contómetro no ha sido actualizado.")
-            raise UserError(_("❗ Error en el Contómetro El contómetro no ha sido actualizado. Debe ser diferente del valor inicial."))
+            raise UserError(_("❗ Error en el Contómetro: El contómetro no ha sido actualizado. Debe ser diferente del valor inicial."))
 
         # Validar la cantidad de dígitos
         if len(self.contometrok_id) != len(self.contometro_inicial):
@@ -674,6 +674,7 @@ class Reparaciones(models.Model):
 
         _logger.info(f"Proceso de finalización completado para reparación ID: {self.id}")
         return pdf_report
+
 
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
