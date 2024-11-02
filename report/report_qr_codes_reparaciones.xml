@@ -6,8 +6,8 @@
                 <t t-call="web.html_container">
                     <t t-call="web.external_layout">
                         <div class="header-data">
-                            <p style="font-size: 60px;"><strong>MARCA:</strong> <t t-esc="doc.maquina_id.sudo().marca"/></p>
-                            <p style="font-size: 60px;"><strong>MODELO:</strong> <t t-esc="doc.maquina_id.sudo().name.name"/></p>
+                            <p style="font-size: 60px;"><strong>MARCA:</strong> <t t-esc="doc.sudo().maquina_id.marca"/></p>
+                            <p style="font-size: 60px;"><strong>MODELO:</strong> <t t-esc="doc.sudo().maquina_id.name.name"/></p>
                             <p style="font-size: 60px;"><strong>SERIE:</strong> <t t-esc="doc.sudo().serie_id"/></p>
                             <p style="font-size: 60px;"><strong>CONTOMETRO:</strong> <t t-esc="doc.sudo().contometrok_id"/></p>
                         </div>
