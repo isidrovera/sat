@@ -576,9 +576,15 @@ class Reparaciones(models.Model):
     
     autenticacion_correcta = fields.Boolean(string="Autenticación Correcta", default=False)
     def action_test_create_next_reparacion(self):
-        self.estado_id='finalizado'
+        _logger.info('Inicio de la función action_test_create_next_reparacion para el registro con ID %s', self.id)
+        self.estado_id = 'finalizado'
+        _logger.info('El estado_id se ha establecido en "finalizado" para el registro con ID %s', self.id)
+        
         try:
+            _logger.info('Intentando ejecutar la función _create_next_reparacion para el registro con ID %s', self.id)
             self.sudo()._create_next_reparacion()
+            _logger.info('La función _create_next_reparacion se ejecutó correctamente para el registro con ID %s', self.id)
+            
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -590,6 +596,8 @@ class Reparaciones(models.Model):
                 }
             }
         except Exception as e:
+            _logger.error('Error al ejecutar la función _create_next_reparacion para el registro con ID %s: %s', self.id, e)
+            
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -599,7 +607,8 @@ class Reparaciones(models.Model):
                     'type': 'danger',
                     'sticky': True,
                 }
-            }
+        }
+
 
     def _create_next_reparacion(self):
         # Verificar si el técnico tiene algún registro en estado 'en_revision'
