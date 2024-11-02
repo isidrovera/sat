@@ -27,25 +27,23 @@ class Reparaciones(models.Model):
                        required=True,
                        readonly=True)
 
-        
     @api.model
     def create(self, vals):
-        # Ejecutar como superusuario
-        self = self.sudo()
         _logger.info("Iniciando el proceso de creación de una reparación con los siguientes valores: %s", vals)
 
-        try:
-            # Genera un número secuencial único para el campo 'name'
+        # Asegurarte de que el nombre se genere si no está presente o tiene el valor por defecto 'New'
+        if not vals.get('name') or vals['name'] == 'New':
             vals['name'] = self.env['ir.sequence'].sudo().next_by_code('reparaciones.reparaciones') or '/'
             _logger.info("Número secuencial asignado al campo 'name': %s", vals['name'])
 
+        try:
             # Asigna el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
             if 'contometrok_id' in vals:
                 vals['contometro_inicial'] = vals['contometrok_id']
                 _logger.info("Asignado 'contometro_inicial' a partir de 'contometrok_id': %s", vals['contometro_inicial'])
 
             # Crea el registro
-            record = super(Reparaciones, self.sudo()).create(vals)
+            record = super(Reparaciones, self).create(vals)
             _logger.info("Registro de reparación creado exitosamente con ID: %s", record.id)
 
             # Genera el código QR
@@ -57,9 +55,14 @@ class Reparaciones(models.Model):
 
             return record
 
+        except KeyError as e:
+            _logger.error("KeyError: Campo faltante o no definido - %s", str(e))
+            raise UserError(_("Ocurrió un error al intentar crear la reparación. Verifique los campos: %s") % str(e))
+
         except Exception as create_error:
             _logger.error("Error durante la creación de la reparación: %s", str(create_error))
             raise
+
 
 
 
