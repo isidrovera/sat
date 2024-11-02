@@ -650,7 +650,8 @@ class Reparaciones(models.Model):
 
         # Continuar con el proceso de finalización
         _logger.info(f"Generando reporte para reparación ID: {self.id}")
-        pdf_report = self.env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
+        pdf_report = self.sudo().env.ref('sat.action_report_qr_codes_reparaciones_template').report_action(self.ids)
+
 
         try:
             _logger.info(f"Enviando mensaje a la asesora para reparación ID: {self.id}")
