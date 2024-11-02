@@ -611,8 +611,11 @@ class Reparaciones(models.Model):
 
 
     def _create_next_reparacion(self):
+        _logger.info('Inicio de la función _create_next_reparacion para el registro con ID %s', self.id)
+
         # Verificar si el técnico tiene algún registro en estado 'en_revision'
         if self.env['reparaciones.reparaciones'].search_count([('responsable_id', '=', self.responsable_id.id), ('estado_id', '=', 'en_revision')]) > 0:
+            _logger.info('El técnico con ID %s ya tiene un registro en estado "en_revision". Saliendo de la función.', self.responsable_id.id)
             return
 
         # Buscar la siguiente máquina en estado 'para_revision'
@@ -621,6 +624,7 @@ class Reparaciones(models.Model):
         ], order='fecha_para_revision asc', limit=1)
 
         if not next_maquina:
+            _logger.info('No se encontró ninguna máquina en estado "para_revision", buscando máquinas "sin_revisar" y disponibles en ubicaciones específicas.')
             next_maquina = self.env['sat.sat'].search([
                 ('estado_ventas_id', '=', 'sin_revisar'),
                 ('disponibilidad_id', '=', 'disponible'),
@@ -628,25 +632,37 @@ class Reparaciones(models.Model):
             ], order='create_date asc', limit=1)
 
         if next_maquina:
+            _logger.info('Máquina seleccionada con ID %s para revisión.', next_maquina.id)
             # Verificación del valor de contometro
             if not next_maquina.contometro or int(next_maquina.contometro) == 0:
+                _logger.error('La máquina con ID %s no tiene un valor de contómetro válido.', next_maquina.id)
                 raise ValidationError("La máquina seleccionada no tiene un valor de contómetro válido.")
 
             empleado = self.env['hr.employee'].search([('user_id', '=', self.responsable_id.id)], limit=1)
             if empleado:
+                _logger.info('Empleado encontrado con ID %s vinculado al usuario responsable.', empleado.id)
                 next_maquina.write({
                     'estado_ventas_id': 'en_revision',
                     'trabajadores_id': empleado.id
                 })
+                _logger.info('Estado de la máquina con ID %s actualizado a "en_revision" y asignado al empleado con ID %s.', next_maquina.id, empleado.id)
+                
                 nueva_reparacion = self.env['reparaciones.reparaciones'].create({
                     'maquina_id': next_maquina.id,
                     'responsable_id': self.responsable_id.id,
                     'contometro_inicial': next_maquina.contometro,  # Contómetro inicial
                     'contometrok_id': next_maquina.contometro
                 })
+                _logger.info('Nueva reparación creada con ID %s.', nueva_reparacion.id)
+                
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
+                _logger.info('Mensaje de WhatsApp enviado para la reparación con ID %s.', nueva_reparacion.id)
             else:
+                _logger.error('El responsable con ID %s no está vinculado a ningún empleado.', self.responsable_id.id)
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
+        else:
+            _logger.info('No se encontró ninguna máquina que cumpla con los criterios de selección.')
+
 
     def action_finalizar_reparacion(self):
         # Deshabilitar las reglas de acceso temporalmente para evitar restricciones
