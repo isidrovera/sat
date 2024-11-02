@@ -30,36 +30,22 @@ class Reparaciones(models.Model):
         
     @api.model
     def create(self, vals):
-        _logger.info("Inicio del método create para reparaciones")
-        _logger.debug("Valores recibidos para create: %s", vals)
-        
         # Genera un número secuencial único para el campo 'name'
         vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
-        _logger.debug("Número secuencial generado: %s", vals['name'])
-        
+
         # Asigna el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
         if 'contometrok_id' in vals:
-            _logger.debug("Asignando valor de 'contometrok_id' a 'contometro_inicial': %s", vals['contometrok_id'])
             vals['contometro_inicial'] = vals['contometrok_id']
 
         # Crea el registro
-        try:
-            record = super(Reparaciones, self).create(vals)
-            _logger.info("Registro creado con ID: %s", record.id)
-        except Exception as e:
-            _logger.error("Error al crear el registro: %s", str(e))
-            raise e
+        record = super(Reparaciones, self).create(vals)
+        _logger.info("Record created with ID: %s", record.id)
         
         # Genera el código QR
-        try:
-            record.generate_qr_code()
-            _logger.info("Código QR generado para el registro con ID: %s", record.id)
-        except Exception as e:
-            _logger.error("Error al generar el código QR: %s", str(e))
-            raise e
+        record.generate_qr_code()
         
         return record
-
+    
 
 
     @api.model
@@ -605,7 +591,7 @@ class Reparaciones(models.Model):
             self.send_whatsapp_message(phone_number, msg)
     
 
-    autorizacion_cambio_digitos = fields.Boolean(readonly=False, string="Autorización de Modificación")
+    autorizacion_cambio_digitos = fields.Boolean(related='maquina_id.autorizacion_cambio_digitos',readonly=False, string="Autorización de Modificación")
             
     
     autenticacion_correcta = fields.Boolean(string="Autenticación Correcta", default=False)
