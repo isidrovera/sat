@@ -28,7 +28,9 @@ access_reparaciones_reparaciones_sat,reparaciones.reparaciones_sat,model_reparac
 access_tipo_maquina_sat,tipo.maquina_sat,model_tipo_maquina,base.group_system,1,1,1,1
 access_ajustes_ajustes_sat,ajustes.ajustes_sat,model_ajustes_ajustes,base.group_system,1,1,1,1
 access_modelo_maquina_sat,modelo.maquina_sat,model_modelo_maquina,base.group_system,1,1,1,1
+access_modelo_maquina_tecnicos,modelo.maquina_sat_tecnicos,model_modelo_maquina,sat.sat_tecnica_group_use,1,1,1,1
 access_marca_marca_sat,marca.marca_sat,model_marca_marca,base.group_system,1,1,1,1
+access_marca_marca_tecnico,marca.marca_sat_tecnico,model_marca_marca,sat.sat_tecnica_group_user,1,1,1,1
 access_repuestos_alquiler_sat,repuestos.alquiler_sat,model_repuestos_alquiler,base.group_system,1,1,1,1
 access_fallas_sat,fallas_sat,model_fallas,base.group_system,1,1,1,1
 access_informes_sat,informes_sat,model_informes,base.group_system,1,1,1,1
