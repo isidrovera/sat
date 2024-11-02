@@ -614,19 +614,22 @@ class Reparaciones(models.Model):
 
 
     def action_finalizar_reparacion(self):
+        # Deshabilitar las reglas de acceso temporalmente para evitar restricciones
+        self = self.sudo()  # Utilizamos sudo() para evitar restricciones de acceso
+
         # Verificar si la autenticación ya fue realizada
-        #if not self.autenticacion_correcta:
+        if not self.autenticacion_correcta:
             # Verificar si el usuario pertenece al grupo que necesita autenticación
-         #   grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')  # Reemplaza con el grupo correcto
-          #  if grupo_validacion in self.env.user.groups_id:
+            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')  # Reemplaza con el grupo correcto
+            if grupo_validacion in self.env.user.groups_id:
                 # Llamar al wizard de autenticación
-           #     return {
-                 #   'type': 'ir.actions.act_window',
-                #    'res_model': 'reparacion.autenticacion.wizard',
-               #     'view_mode': 'form',
-              #      'target': 'new',
-             #       'context': {'default_reparacion_id': self.id},
-            #    }
+                return {
+                    'type': 'ir.actions.act_window',
+                    'res_model': 'reparacion.autenticacion.wizard',
+                    'view_mode': 'form',
+                    'target': 'new',
+                    'context': {'default_reparacion_id': self.id},
+                }
         _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
         
         # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
@@ -671,6 +674,7 @@ class Reparaciones(models.Model):
 
         _logger.info(f"Proceso de finalización completado para reparación ID: {self.id}")
         return pdf_report
+
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
         tipo_revision_legible = ""
