@@ -576,7 +576,7 @@ class Reparaciones(models.Model):
     
     autenticacion_correcta = fields.Boolean(string="Autenticación Correcta", default=False)
     def action_test_create_next_reparacion(self):
-        self.estado_id='finalizado',
+        self.estado_id='finalizado'
         try:
             self.sudo()._create_next_reparacion()
             return {
