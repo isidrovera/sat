@@ -661,13 +661,10 @@ class Reparaciones(models.Model):
         except Exception as e:
             _logger.error(f"Error enviando el mensaje a la asesora para reparación ID {self.id}: {e}")
 
-        # Verificar el estado antes de crear la próxima reparación
-        _logger.info(f"Verificando el estado de la reparación ID: {self.id}, estado actual: {self.estado_id}")
-        if self.estado_id == 'en_revision':  # Reemplaza 'en_revision' con el identificador correcto de estado
-            _logger.info(f"Creando siguiente reparación para reparación ID: {self.id}")
-            self.sudo()._create_next_reparacion()
-        else:
-            _logger.info(f"No se creó la siguiente reparación ya que el estado no es 'en_revision'. Estado actual: {self.estado_id}")
+        # Crear la próxima reparación sin verificar el estado
+        _logger.info(f"Creando siguiente reparación para reparación ID: {self.id}")
+        self.sudo()._create_next_reparacion()
+        
 
         try:
             _logger.info(f"Enviando correo de finalización para reparación ID: {self.id}")
