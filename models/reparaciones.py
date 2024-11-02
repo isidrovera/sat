@@ -633,10 +633,17 @@ class Reparaciones(models.Model):
 
         if next_maquina:
             _logger.info('Máquina seleccionada con ID %s para revisión.', next_maquina.id)
+            
             # Verificación del valor de contometro
             if not next_maquina.contometro or int(next_maquina.contometro) == 0:
                 _logger.error('La máquina con ID %s no tiene un valor de contómetro válido.', next_maquina.id)
                 raise ValidationError("La máquina seleccionada no tiene un valor de contómetro válido.")
+
+            # Verificar duplicado de serie_id
+            existing_record = self.env['reparaciones.reparaciones'].search([('serie_id', '=', next_maquina.serie_id)])
+            if existing_record:
+                _logger.error('Ya existe un registro con el serie_id %s', next_maquina.serie_id)
+                raise ValidationError(_('Ya existe un registro con el serie_id %s.') % next_maquina.serie_id)
 
             empleado = self.env['hr.employee'].search([('user_id', '=', self.responsable_id.id)], limit=1)
             if empleado:
@@ -650,7 +657,7 @@ class Reparaciones(models.Model):
                 nueva_reparacion = self.env['reparaciones.reparaciones'].create({
                     'maquina_id': next_maquina.id,
                     'responsable_id': self.responsable_id.id,
-                    'contometro_inicial': next_maquina.contometro,  # Contómetro inicial
+                    'contometro_inicial': next_maquina.contometro,
                     'contometrok_id': next_maquina.contometro
                 })
                 _logger.info('Nueva reparación creada con ID %s.', nueva_reparacion.id)
