@@ -601,18 +601,18 @@ class Reparaciones(models.Model):
 
     def action_finalizar_reparacion(self):
         # Verificar si la autenticación ya fue realizada
-        if not self.autenticacion_correcta:
+        #if not self.autenticacion_correcta:
             # Verificar si el usuario pertenece al grupo que necesita autenticación
-            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')  # Reemplaza con el grupo correcto
-            if grupo_validacion in self.env.user.groups_id:
+         #   grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')  # Reemplaza con el grupo correcto
+          #  if grupo_validacion in self.env.user.groups_id:
                 # Llamar al wizard de autenticación
-                return {
-                    'type': 'ir.actions.act_window',
-                    'res_model': 'reparacion.autenticacion.wizard',
-                    'view_mode': 'form',
-                    'target': 'new',
-                    'context': {'default_reparacion_id': self.id},
-                }
+           #     return {
+                 #   'type': 'ir.actions.act_window',
+                #    'res_model': 'reparacion.autenticacion.wizard',
+               #     'view_mode': 'form',
+              #      'target': 'new',
+             #       'context': {'default_reparacion_id': self.id},
+            #    }
         _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
         
         # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
