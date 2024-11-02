@@ -534,48 +534,7 @@ class Reparaciones(models.Model):
                     })
 
         return res        
-    def _create_next_reparacion(self):
-        # Ejecutar como superusuario
-        self = self.sudo()
         
-        # Verificar si el técnico tiene algún registro en estado 'en_revision'
-        if self.env['reparaciones.reparaciones'].sudo().search_count([('responsable_id', '=', self.responsable_id.id), ('estado_id', '=', 'en_revision')]) > 0:
-            return
-
-        # Buscar la siguiente máquina en estado 'para_revision'
-        next_maquina = self.env['sat.sat'].sudo().search([
-            ('estado_ventas_id', '=', 'para_revision')
-        ], order='fecha_para_revision asc', limit=1)
-
-        if not next_maquina:
-            next_maquina = self.env['sat.sat'].sudo().search([
-                ('estado_ventas_id', '=', 'sin_revisar'),
-                ('disponibilidad_id', '=', 'disponible'),
-                ('ubicacion_id', 'in', ['primer_piso', 'tercer_piso'])
-            ], order='create_date asc', limit=1)
-
-        if next_maquina:
-            # Verificación del valor de contometro
-            if not next_maquina.contometro or int(next_maquina.contometro) == 0:
-                raise ValidationError("La máquina seleccionada no tiene un valor de contómetro válido.")
-
-            empleado = self.env['hr.employee'].sudo().search([('user_id', '=', self.responsable_id.id)], limit=1)
-            if empleado:
-                next_maquina.sudo().write({
-                    'estado_ventas_id': 'en_revision',
-                    'trabajadores_id': empleado.id
-                })
-                nueva_reparacion = self.env['reparaciones.reparaciones'].sudo().create({
-                    'maquina_id': next_maquina.id,
-                    'responsable_id': self.responsable_id.id,
-                    'contometro_inicial': next_maquina.contometro  # Contómetro inicial
-                })
-                nueva_reparacion.sudo().enviar_mensaje_whatsapp_reparaciones()
-            else:
-                raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
-
-  
-    
 
   
     def generate_pdf_report_url(self):
@@ -618,18 +577,58 @@ class Reparaciones(models.Model):
     autenticacion_correcta = fields.Boolean(string="Autenticación Correcta", default=False)
 
 
+    def _create_next_reparacion(self):
+        # Ejecutar como superusuario
+        self = self.sudo()
+        
+        # Verificar si el técnico tiene algún registro en estado 'en_revision'
+        if self.env['reparaciones.reparaciones'].sudo().search_count([('responsable_id', '=', self.responsable_id.id), ('estado_id', '=', 'en_revision')]) > 0:
+            return
 
+        # Buscar la siguiente máquina en estado 'para_revision'
+        next_maquina = self.env['sat.sat'].sudo().search([
+            ('estado_ventas_id', '=', 'para_revision')
+        ], order='fecha_para_revision asc', limit=1)
+
+        if not next_maquina:
+            next_maquina = self.env['sat.sat'].sudo().search([
+                ('estado_ventas_id', '=', 'sin_revisar'),
+                ('disponibilidad_id', '=', 'disponible'),
+                ('ubicacion_id', 'in', ['primer_piso', 'tercer_piso'])
+            ], order='create_date asc', limit=1)
+
+        if next_maquina:
+            # Verificación del valor de contometro
+            if not next_maquina.contometro or int(next_maquina.contometro) == 0:
+                raise ValidationError("La máquina seleccionada no tiene un valor de contómetro válido.")
+
+            empleado = self.env['hr.employee'].sudo().search([('user_id', '=', self.responsable_id.id)], limit=1)
+            if empleado:
+                next_maquina.sudo().write({
+                    'estado_ventas_id': 'en_revision',
+                    'trabajadores_id': empleado.id
+                })
+                nueva_reparacion = self.env['reparaciones.reparaciones'].sudo().create({
+                    'maquina_id': next_maquina.id,
+                    'responsable_id': self.responsable_id.id,
+                    'contometro_inicial': next_maquina.contometro  # Contómetro inicial
+                })
+                nueva_reparacion.sudo().enviar_mensaje_whatsapp_reparaciones()
+            else:
+                raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
 
     def action_finalizar_reparacion(self):
         # Deshabilitar las reglas de acceso temporalmente para evitar restricciones
         self = self.sudo()  # Utilizamos sudo() para evitar restricciones de acceso
 
+        _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
+
         # Verificar si la autenticación ya fue realizada
         if not self.autenticacion_correcta:
-            # Verificar si el usuario pertenece al grupo que necesita autenticación
+            _logger.info(f"Autenticación requerida para el usuario {self.env.user.id}")
             grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')
             if grupo_validacion in self.env.user.groups_id:
-                # Llamar al wizard de autenticación
+                _logger.info("Usuario pertenece al grupo que necesita autenticación. Llamando al wizard de autenticación.")
                 return {
                     'type': 'ir.actions.act_window',
                     'res_model': 'reparacion.autenticacion.wizard',
@@ -637,22 +636,21 @@ class Reparaciones(models.Model):
                     'target': 'new',
                     'context': {'default_reparacion_id': self.id},
                 }
-        _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
 
         # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
         if not self.contometrok_id or not self.contometro_inicial:
-            _logger.error("Los datos del contómetro no están configurados correctamente.")
+            _logger.error(f"Reparación ID {self.id}: Los datos del contómetro no están configurados correctamente.")
             raise UserError(_("❗ <b>Error en el Contómetro</b>: Los valores del contómetro no están configurados correctamente. Verifique e intente nuevamente."))
 
         # Verificar si el contómetro fue actualizado
         if self.contometrok_id == self.contometro_inicial:
-            _logger.warning("El contómetro no ha sido actualizado.")
+            _logger.warning(f"Reparación ID {self.id}: El contómetro no ha sido actualizado. Contómetro actual: {self.contometrok_id}")
             raise UserError(_("❗ Error en el Contómetro: El contómetro no ha sido actualizado. Debe ser diferente del valor inicial."))
 
         # Validar la cantidad de dígitos
         if len(self.contometrok_id) != len(self.contometro_inicial):
             if not self.autorizacion_cambio_digitos:
-                _logger.warning("Diferencia en la cantidad de dígitos del contómetro y sin autorización.")
+                _logger.warning(f"Reparación ID {self.id}: Diferencia en la cantidad de dígitos del contómetro y sin autorización. Contómetro actual: {self.contometrok_id}, Contómetro inicial: {self.contometro_inicial}")
                 raise UserError(_("❗ Error en el Número de Dígitos: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
 
         # Continuar con el proceso de finalización
@@ -663,19 +661,22 @@ class Reparaciones(models.Model):
             _logger.info(f"Enviando mensaje a la asesora para reparación ID: {self.id}")
             self.enviar_mensaje_finalizacion_asesora()
         except Exception as e:
-            _logger.error(f"Error enviando el mensaje a la asesora: {e}")
+            _logger.error(f"Error enviando el mensaje a la asesora para reparación ID {self.id}: {e}")
 
         # Verificar el estado antes de crear la próxima reparación
-        if self.estado_id == 'en_revision':  # Reemplaza 'revision' con el identificador correcto de estado
-            _logger.info(f"Creando siguiente reparación para ID actual: {self.id}")
+        _logger.info(f"Verificando el estado de la reparación ID: {self.id}, estado actual: {self.estado_id}")
+        if self.estado_id == 'en_revision':  # Reemplaza 'en_revision' con el identificador correcto de estado
+            _logger.info(f"Creando siguiente reparación para reparación ID: {self.id}")
             self.sudo()._create_next_reparacion()
+        else:
+            _logger.info(f"No se creó la siguiente reparación ya que el estado no es 'en_revision'. Estado actual: {self.estado_id}")
 
         try:
             _logger.info(f"Enviando correo de finalización para reparación ID: {self.id}")
             template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
             template_id.send_mail(self.id, force_send=True)
         except Exception as e:
-            _logger.error(f"Error enviando el correo: {e}")
+            _logger.error(f"Error enviando el correo para reparación ID {self.id}: {e}")
 
         _logger.info(f"Cambiando estado a 'finalizado' para reparación ID: {self.id}")
         self.estado_id = "finalizado"
@@ -689,7 +690,6 @@ class Reparaciones(models.Model):
             'view_id': False,  # Puedes especificar una vista de lista si es necesario
             'target': 'main',
         }
-
 
 
     @api.depends('tipo_revision')
