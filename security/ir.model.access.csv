@@ -1,11 +1,9 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_sat_sat,sat.sat,model_sat_sat,base.group_user,1,1,1,1
 access_reparaciones_reparaciones,reparaciones.reparaciones,model_reparaciones_reparaciones,base.group_user,1,1,1,1
-access_reparaciones_reparaciones_tecnicos,reparaciones.reparaciones_tecnicos,model_reparaciones_reparaciones,sat.sat_tecnica_group_user,1,1,1,1
 access_linea_pedidos_user,ticket.alquiler.line-user,model_ticket_alquiler_line,base.group_user,1,1,1,1
 access_linea_pedidos_system,ticket.alquiler.line-system,model_ticket_alquiler_line,base.group_system,1,1,1,1
 access_sat_dashboard_system,sat_dashboard-system,model_sat_dashboard,base.group_system,1,1,1,1
-access_reparacion_autenticacion_wizard,reparacion_autenticacion_wizard,model_reparacion_autenticacion_wizard,base.group_user,1,1,1,1
 
 access_linea_pedidos,ticket.alquiler.line,model_ticket_alquiler_line,sat.sat_tecnica_group_user,1,1,1,1
 access_tipo_maquina,tipo.maquina,model_tipo_maquina,base.group_user,1,1,0,0
@@ -21,16 +19,13 @@ access_ticket,ticket_alquiler,model_ticket_alquiler,base.group_user,1,1,1,1
 access_ticket_alquiler_technician,ticket_alquiler_technician,model_ticket_alquiler,sat.sat_tecnica_group_user,1,1,1,1
 
 access_sat_sat_sat,sat.sat_sat,model_sat_sat,base.group_system,1,1,1,1
-access_sat_sat_tecnicos,sat.sat_sat_tecnicos,model_sat_sat,sat.sat_tecnica_group_user,1,1,1,1
 access_excel_import_model_manager,excel.import.model,model_excel_import_model,base.group_system,1,1,1,1
 access_taller_incidencia,taller_incidencia,model_taller_incidencia,base.group_system,1,1,1,1
 access_reparaciones_reparaciones_sat,reparaciones.reparaciones_sat,model_reparaciones_reparaciones,base.group_system,1,1,1,1
 access_tipo_maquina_sat,tipo.maquina_sat,model_tipo_maquina,base.group_system,1,1,1,1
 access_ajustes_ajustes_sat,ajustes.ajustes_sat,model_ajustes_ajustes,base.group_system,1,1,1,1
 access_modelo_maquina_sat,modelo.maquina_sat,model_modelo_maquina,base.group_system,1,1,1,1
-access_modelo_maquina_tecnicos,modelo.maquina_sat_tecnicos,model_modelo_maquina,sat.sat_tecnica_group_user,1,1,1,1
 access_marca_marca_sat,marca.marca_sat,model_marca_marca,base.group_system,1,1,1,1
-access_marca_marca_tecnico,marca.marca_sat_tecnico,model_marca_marca,sat.sat_tecnica_group_user,1,1,1,1
 access_repuestos_alquiler_sat,repuestos.alquiler_sat,model_repuestos_alquiler,base.group_system,1,1,1,1
 access_fallas_sat,fallas_sat,model_fallas,base.group_system,1,1,1,1
 access_informes_sat,informes_sat,model_informes,base.group_system,1,1,1,1

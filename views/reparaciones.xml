@@ -13,7 +13,6 @@
                             type="object" class="btn btn-danger" icon="fa-exclamation-triangle" />
                         <button string="Asignar" name="enviar_mensaje_whatsapp_reparaciones"
                             type="object" class="oe_highlight" />
-                        
                         <!--<button
                         string="QR" name="action_generate_qr_for_all" type="object"
                         class="oe_highlight"/>-->
@@ -63,7 +62,6 @@
                                 <field name="nombre_maquina" invisible='True' />
                                 <field name="nombre_proveedor" invisible='True' />
                                 <field name="autorizacion_cambio_digitos" invisible="True"/>
-                                <field name="autenticacion_correcta" invisible="True"/>
                             </group>
                         </group>
                         <notebook>
