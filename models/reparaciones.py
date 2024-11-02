@@ -684,11 +684,7 @@ class Reparaciones(models.Model):
         except Exception as e:
             _logger.error(f"Error enviando el mensaje a la asesora para reparación ID {self.id}: {e}")
 
-        # Crear la próxima reparación sin verificar el estado
-        _logger.info(f"Creando siguiente reparación para reparación ID: {self.id}")
-        self.sudo()._create_next_reparacion()
         
-
         try:
             _logger.info(f"Enviando correo de finalización para reparación ID: {self.id}")
             template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
