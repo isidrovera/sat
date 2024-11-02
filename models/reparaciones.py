@@ -575,7 +575,30 @@ class Reparaciones(models.Model):
             
     
     autenticacion_correcta = fields.Boolean(string="Autenticación Correcta", default=False)
-
+    def action_test_create_next_reparacion(self):
+        try:
+            self.sudo()._create_next_reparacion()
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Éxito'),
+                    'message': _('La función _create_next_reparacion se ejecutó correctamente.'),
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+        except Exception as e:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Error'),
+                    'message': _('Error al ejecutar la función: %s') % str(e),
+                    'type': 'danger',
+                    'sticky': True,
+                }
+            }
 
     def _create_next_reparacion(self):
         # Verificar si el técnico tiene algún registro en estado 'en_revision'
