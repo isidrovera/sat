@@ -661,8 +661,10 @@ class Reparaciones(models.Model):
         except Exception as e:
             _logger.error(f"Error enviando el mensaje a la asesora: {e}")
 
-        _logger.info(f"Creando siguiente reparación para ID actual: {self.id}")
-        self._create_next_reparacion()
+        # Verificar el estado antes de crear la próxima reparación
+        if self.estado_id == 'revision':  # Reemplaza 'revision' con el identificador correcto de estado
+            _logger.info(f"Creando siguiente reparación para ID actual: {self.id}")
+            self._create_next_reparacion()
 
         try:
             _logger.info(f"Enviando correo de finalización para reparación ID: {self.id}")
@@ -676,11 +678,14 @@ class Reparaciones(models.Model):
         _logger.info(f"Estado cambiado a 'finalizado' para reparación ID: {self.id}")
 
         _logger.info(f"Proceso de finalización completado para reparación ID: {self.id}")
-
-        # Redirigir a la vista anterior
         return {
-            'type': 'ir.actions.act_window_close'
+            'type': 'ir.actions.act_window',
+            'view_mode': 'form',
+            'res_model': 'reparaciones.reparaciones',
+            'target': 'current',
+            'res_id': self.id,
         }
+
 
 
     @api.depends('tipo_revision')
