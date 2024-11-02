@@ -23,8 +23,8 @@ class ReparacionAutenticacionWizard(models.TransientModel):
         if serie_ingresada != serie_registrada:
             raise exceptions.ValidationError(_("❗ Error: La serie ingresada no coincide con la serie registrada en el sistema. Revise nuevamente la serie física en la máquina."))
 
-        if self.modelo_id.id != reparacion.maquina_id.modelo_id.id:
-            raise exceptions.ValidationError(_("❗ Error: El modelo seleccionado no coincide con el equipo asignado. Revise el modelo físico en la máquina."))
+        if self.modelo_id.id != reparacion.maquina_id.name.id:
+             raise exceptions.ValidationError(_("❗ Error: El modelo seleccionado no coincide con el equipo asignado. Revise el modelo físico en la máquina."))
 
 
         # Marcar la autenticación como correcta
