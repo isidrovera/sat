@@ -662,9 +662,9 @@ class Reparaciones(models.Model):
             _logger.error(f"Error enviando el mensaje a la asesora: {e}")
 
         # Verificar el estado antes de crear la próxima reparación
-        if self.estado_id == 'revision':  # Reemplaza 'revision' con el identificador correcto de estado
+        if self.estado_id == 'en_revision':  # Reemplaza 'revision' con el identificador correcto de estado
             _logger.info(f"Creando siguiente reparación para ID actual: {self.id}")
-            self._create_next_reparacion()
+            self.sudo()._create_next_reparacion()
 
         try:
             _logger.info(f"Enviando correo de finalización para reparación ID: {self.id}")
