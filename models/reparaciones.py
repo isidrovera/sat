@@ -31,7 +31,7 @@ class Reparaciones(models.Model):
     @api.model
     def create(self, vals):
         # Genera un número secuencial único para el campo 'name'
-        vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
+        #vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
 
         # Asigna el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
         if 'contometrok_id' in vals:
