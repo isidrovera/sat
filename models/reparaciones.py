@@ -48,6 +48,7 @@ class Reparaciones(models.Model):
     
 
 
+
     @api.model
     def default_get(self, fields):
         _logger.info("Inicio del método default_get en el modelo reparaciones.reparaciones")
@@ -550,13 +551,13 @@ class Reparaciones(models.Model):
                 nueva_reparacion = self.env['reparaciones.reparaciones'].create({
                     'maquina_id': next_maquina.id,
                     'responsable_id': self.responsable_id.id,
-                    'contometro_inicial': next_maquina.contometro,  # Contómetro inicial
-                    'contometrok_id': next_maquina.contometro
+                    'contometro_inicial': next_maquina.contometro  # Contómetro inicial
+                    
                 })
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
-
+  
     def generate_pdf_report_url(self):
         # Obtener el reporte
         report = self.env.ref('sat.report_reparaciones_ventas')
