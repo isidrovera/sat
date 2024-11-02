@@ -571,6 +571,9 @@ class Reparaciones(models.Model):
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
   
+    
+
+  
     def generate_pdf_report_url(self):
         # Obtener el reporte
         report = self.env.ref('sat.report_reparaciones_ventas')
