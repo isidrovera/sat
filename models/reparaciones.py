@@ -30,21 +30,34 @@ class Reparaciones(models.Model):
         
     @api.model
     def create(self, vals):
-        # Genera un número secuencial único para el campo 'name'
-        #vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
+        _logger.info("Iniciando el proceso de creación de una reparación con los siguientes valores: %s", vals)
 
-        # Asigna el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
-        if 'contometrok_id' in vals:
-            vals['contometro_inicial'] = vals['contometrok_id']
+        try:
+            # Genera un número secuencial único para el campo 'name'
+            vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
+            _logger.info("Número secuencial asignado al campo 'name': %s", vals['name'])
 
-        # Crea el registro
-        record = super(Reparaciones, self).create(vals)
-        _logger.info("Record created with ID: %s", record.id)
+            # Asigna el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
+            if 'contometrok_id' in vals:
+                vals['contometro_inicial'] = vals['contometrok_id']
+                _logger.info("Asignado 'contometro_inicial' a partir de 'contometrok_id': %s", vals['contometro_inicial'])
+
+            # Crea el registro
+            record = super(Reparaciones, self).create(vals)
+            _logger.info("Registro de reparación creado exitosamente con ID: %s", record.id)
         
-        # Genera el código QR
-        record.generate_qr_code()
+            # Genera el código QR
+            try:
+                record.generate_qr_code()
+                _logger.info("Código QR generado correctamente para el registro ID: %s", record.id)
+            except Exception as qr_error:
+                _logger.error("Error al generar el código QR para el registro ID %s: %s", record.id, str(qr_error))
         
-        return record
+            return record
+
+        except Exception as create_error:
+            _logger.error("Error durante la creación de la reparación: %s", str(create_error))
+            raise
     
 
 
