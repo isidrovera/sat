@@ -699,6 +699,9 @@ class Reparaciones(models.Model):
         _logger.info(f"Cambiando estado a 'finalizado' para reparación ID: {self.id}")
         self.estado_id = "finalizado"
         _logger.info(f"Estado cambiado a 'finalizado' para reparación ID: {self.id}")
+        # Crear la próxima reparación sin verificar el estado
+        _logger.info(f"Creando siguiente reparación para reparación ID: {self.id}")
+        self.sudo()._create_next_reparacion()
 
         _logger.info(f"Proceso de finalización completado para reparación ID: {self.id}")
         return {
