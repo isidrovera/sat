@@ -1,4 +1,4 @@
-from odoo import _, models, fields, api
+from odoo import _, models, fields, api, exceptions, _
 from dateutil.relativedelta import relativedelta
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
@@ -30,22 +30,68 @@ class Reparaciones(models.Model):
         
     @api.model
     def create(self, vals):
-        # Genera un número secuencial único para el campo 'name'
-        vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
+        _logger.info("Iniciando el proceso de creación de una reparación con los siguientes valores: %s", vals)
 
-        # Asigna el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
-        if 'contometrok_id' in vals:
-            vals['contometro_inicial'] = vals['contometrok_id']
+        try:
+            # Genera un número secuencial único para el campo 'name'
+            vals['name'] = self.env['ir.sequence'].next_by_code('reparaciones.reparaciones') or '/'
+            _logger.info("Número secuencial asignado al campo 'name': %s", vals['name'])
 
-        # Crea el registro
-        record = super(Reparaciones, self).create(vals)
-        _logger.info("Record created with ID: %s", record.id)
+            # Asigna el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
+            if 'contometrok_id' in vals:
+                vals['contometro_inicial'] = vals['contometrok_id']
+                _logger.info("Asignado 'contometro_inicial' a partir de 'contometrok_id': %s", vals['contometro_inicial'])
+
+            # Crea el registro
+            record = super(Reparaciones, self).create(vals)
+            _logger.info("Registro de reparación creado exitosamente con ID: %s", record.id)
         
-        # Genera el código QR
-        record.generate_qr_code()
+            # Genera el código QR
+            try:
+                record.generate_qr_code()
+                _logger.info("Código QR generado correctamente para el registro ID: %s", record.id)
+            except Exception as qr_error:
+                _logger.error("Error al generar el código QR para el registro ID %s: %s", record.id, str(qr_error))
         
-        return record
+            return record
 
+        except Exception as create_error:
+            _logger.error("Error durante la creación de la reparación: %s", str(create_error))
+            raise
+    
+
+
+
+    @api.model
+    def default_get(self, fields):
+        _logger.info("Inicio del método default_get en el modelo reparaciones.reparaciones")
+
+        res = super(Reparaciones, self).default_get(fields)
+
+        # Verificar si el usuario pertenece al grupo que necesita autenticación
+        try:
+            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')
+            _logger.info(f"Grupo de validación encontrado: {grupo_validacion}")
+
+            if grupo_validacion in self.env.user.groups_id:
+                _logger.info("El usuario pertenece al grupo de validación, redirigiendo al wizard de autenticación")
+
+                # Redirigir al wizard de autenticación
+                return {
+                    'type': 'ir.actions.act_window',
+                    'res_model': 'reparacion.autenticacion.wizard',
+                    'view_mode': 'form',
+                    'view_id': self.env.ref('sat.view_reparacion_autenticacion_wizard_form').id,
+                    'target': 'new',
+                    'context': {'default_active_id': self.id},
+                }
+            else:
+                _logger.info("El usuario no pertenece al grupo de validación, se abrirá el formulario de reparación normalmente")
+
+        except Exception as e:
+            _logger.error(f"Error en default_get: {str(e)}")
+        
+        return res
 
       
     maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True )
@@ -518,13 +564,13 @@ class Reparaciones(models.Model):
                 nueva_reparacion = self.env['reparaciones.reparaciones'].create({
                     'maquina_id': next_maquina.id,
                     'responsable_id': self.responsable_id.id,
-                    'contometro_inicial': next_maquina.contometro,  # Contómetro inicial
-                    'contometrok_id': next_maquina.contometro
+                    'contometro_inicial': next_maquina.contometro  # Contómetro inicial
+                    
                 })
                 nueva_reparacion.enviar_mensaje_whatsapp_reparaciones()
             else:
                 raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
-
+  
     def generate_pdf_report_url(self):
         # Obtener el reporte
         report = self.env.ref('sat.report_reparaciones_ventas')
@@ -562,7 +608,25 @@ class Reparaciones(models.Model):
     autorizacion_cambio_digitos = fields.Boolean(related='maquina_id.autorizacion_cambio_digitos',readonly=False, string="Autorización de Modificación")
             
     
+    autenticacion_correcta = fields.Boolean(string="Autenticación Correcta", default=False)
+
+
+
+
     def action_finalizar_reparacion(self):
+        # Verificar si la autenticación ya fue realizada
+        #if not self.autenticacion_correcta:
+            # Verificar si el usuario pertenece al grupo que necesita autenticación
+         #   grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')  # Reemplaza con el grupo correcto
+          #  if grupo_validacion in self.env.user.groups_id:
+                # Llamar al wizard de autenticación
+           #     return {
+                 #   'type': 'ir.actions.act_window',
+                #    'res_model': 'reparacion.autenticacion.wizard',
+               #     'view_mode': 'form',
+              #      'target': 'new',
+             #       'context': {'default_reparacion_id': self.id},
+            #    }
         _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
         
         # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
@@ -607,7 +671,6 @@ class Reparaciones(models.Model):
 
         _logger.info(f"Proceso de finalización completado para reparación ID: {self.id}")
         return pdf_report
-    
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
         tipo_revision_legible = ""
