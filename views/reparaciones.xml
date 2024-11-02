@@ -13,7 +13,11 @@
                             type="object" class="btn btn-danger" icon="fa-exclamation-triangle" />
                         <button string="Asignar" name="enviar_mensaje_whatsapp_reparaciones"
                             type="object" class="oe_highlight" />
-                        
+                        <button name="action_test_create_next_reparacion"
+                        type="object"
+                        string="Probar Crear Próxima Reparación"
+                        class="btn-primary"
+                        icon="fa-cogs"/>
                         <!--<button
                         string="QR" name="action_generate_qr_for_all" type="object"
                         class="oe_highlight"/>-->
