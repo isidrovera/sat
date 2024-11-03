@@ -29,11 +29,12 @@ class Reparaciones(models.Model):
 
     @api.model
     def create(self, vals):
+        self = self.sudo()
         _logger.info("Iniciando el proceso de creación de una reparación con los siguientes valores: %s", vals)
 
         # Asegurarte de que el nombre se genere si no está presente o tiene el valor por defecto 'New'
         if not vals.get('name') or vals['name'] == 'New':
-            vals['name'] = self.env['ir.sequence'].sudo().next_by_code('reparaciones.reparaciones') or '/'
+            vals['name'] = self.env['ir.sequence'].sudo().sudo().next_by_code('reparaciones.reparaciones') or '/'
             _logger.info("Número secuencial asignado al campo 'name': %s", vals['name'])
 
         try:
