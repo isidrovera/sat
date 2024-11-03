@@ -65,36 +65,6 @@ class Reparaciones(models.Model):
 
 
 
-    @api.model
-    def default_get(self, fields):
-        _logger.info("Inicio del método default_get en el modelo reparaciones.reparaciones")
-
-        res = super(Reparaciones, self).default_get(fields)
-
-        # Verificar si el usuario pertenece al grupo que necesita autenticación
-        try:
-            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')
-            _logger.info(f"Grupo de validación encontrado: {grupo_validacion}")
-
-            if grupo_validacion in self.env.user.groups_id:
-                _logger.info("El usuario pertenece al grupo de validación, redirigiendo al wizard de autenticación")
-
-                # Redirigir al wizard de autenticación
-                return {
-                    'type': 'ir.actions.act_window',
-                    'res_model': 'reparacion.autenticacion.wizard',
-                    'view_mode': 'form',
-                    'view_id': self.env.ref('sat.view_reparacion_autenticacion_wizard_form').id,
-                    'target': 'new',
-                    'context': {'default_active_id': self.id},
-                }
-            else:
-                _logger.info("El usuario no pertenece al grupo de validación, se abrirá el formulario de reparación normalmente")
-
-        except Exception as e:
-            _logger.error(f"Error en default_get: {str(e)}")
-        
-        return res
 
       
     maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True )
