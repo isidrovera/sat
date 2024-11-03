@@ -220,7 +220,6 @@
                 <list string="Reparaciones" default_order="id desc">
                     <field name="create_date" string="Agendado" widget="remaining_days" width="80%" />
                     <field name="name" />
-                    <field name="name" />
                     <field name="cliente_id" widget="many2one_avatar" />
                     <field name="marca" />
                     <field name="maquina_id" />
@@ -237,10 +236,11 @@
                         decoration-warning="estado_id == 'entregada'" />
                 </list>
                 <!-- Aplicar el dominio solo para el grupo técnico -->
-                <field name="domain" eval="[( '|', ('create_uid', '=', user.id), ('responsable_id', '=', user.id) )]" groups="sat.sat_tecnica_group_user"/>
+                
             </field>
-        </record>
 
+
+        </record>
         <record id="reparaciones_search_view" model="ir.ui.view">
             <field name="name">reparaciones.reparaciones.search</field>
             <field name="model">reparaciones.reparaciones</field>
