@@ -679,20 +679,7 @@ class Reparaciones(models.Model):
 
         _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
 
-        # Verificar si la autenticación ya fue realizada
-        if not self.autenticacion_correcta:
-            _logger.info(f"Autenticación requerida para el usuario {self.env.user.id}")
-            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')
-            if grupo_validacion in self.env.user.groups_id:
-                _logger.info("Usuario pertenece al grupo que necesita autenticación. Llamando al wizard de autenticación.")
-                return {
-                    'type': 'ir.actions.act_window',
-                    'res_model': 'reparacion.autenticacion.wizard',
-                    'view_mode': 'form',
-                    'target': 'new',
-                    'context': {'default_reparacion_id': self.id},
-                }
-
+        
         # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
         if not self.contometrok_id or not self.contometro_inicial:
             _logger.error(f"Reparación ID {self.id}: Los datos del contómetro no están configurados correctamente.")
