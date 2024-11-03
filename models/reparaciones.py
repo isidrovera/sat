@@ -22,39 +22,37 @@ class Reparaciones(models.Model):
     _description = 'Reparaciones Ventas'
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Char('Reparacion N°', default='New',
-                       copy=False,
-                       required=True,
-                       readonly=True)
+    name = fields.Char('Reparacion N°', default=lambda self: _('New'),
+                       copy=False, readonly=True, required=True, tracking=True)
 
-    @api.model
-    def create(self, vals):
-        self = self.sudo()
-        _logger.info("Iniciando el proceso de creación de una reparación con los siguientes valores: %s", vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        """ Crea una secuencia para el modelo de reparaciones """
+        for vals in vals_list:
+            # Asegurarte de que el nombre se genere si no está presente o tiene el valor por defecto 'New'
+            if vals.get('name', _('New')) == _('New'):
+                vals['name'] = self.env['ir.sequence'].sudo().next_by_code('reparaciones.reparaciones') or '/'
+                _logger.info("Número secuencial asignado al campo 'name': %s", vals['name'])
 
-        # Asegurarte de que el nombre se genere si no está presente o tiene el valor por defecto 'New'
-        if not vals.get('name') or vals['name'] == 'New':
-            vals['name'] = self.env['ir.sequence'].sudo().sudo().next_by_code('reparaciones.reparaciones') or '/'
-            _logger.info("Número secuencial asignado al campo 'name': %s", vals['name'])
-
-        try:
             # Asigna el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
             if 'contometrok_id' in vals:
                 vals['contometro_inicial'] = vals['contometrok_id']
                 _logger.info("Asignado 'contometro_inicial' a partir de 'contometrok_id': %s", vals['contometro_inicial'])
 
-            # Crea el registro
-            record = super(Reparaciones, self).create(vals)
-            _logger.info("Registro de reparación creado exitosamente con ID: %s", record.id)
+        try:
+            # Crea los registros
+            records = super(Reparaciones, self).create(vals_list)
+            for record in records:
+                _logger.info("Registro de reparación creado exitosamente con ID: %s", record.id)
 
-            # Genera el código QR
-            try:
-                record.sudo().generate_qr_code()
-                _logger.info("Código QR generado correctamente para el registro ID: %s", record.id)
-            except Exception as qr_error:
-                _logger.error("Error al generar el código QR para el registro ID %s: %s", record.id, str(qr_error))
+                # Genera el código QR
+                try:
+                    record.sudo().generate_qr_code()
+                    _logger.info("Código QR generado correctamente para el registro ID: %s", record.id)
+                except Exception as qr_error:
+                    _logger.error("Error al generar el código QR para el registro ID %s: %s", record.id, str(qr_error))
 
-            return record
+            return records
 
         except KeyError as e:
             _logger.error("KeyError: Campo faltante o no definido - %s", str(e))
