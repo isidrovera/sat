@@ -5,16 +5,19 @@
     <field name="model">reparacion.autenticacion.wizard</field>
     <field name="arch" type="xml">
         <form string="Autenticación de Serie y Modelo" class="oe_form_custom">
-            <group>
-                <p>
-                    <b>Instrucciones:</b> Antes de continuar, verifique físicamente la <b>serie</b> y el <b>modelo</b> en la máquina. Asegúrese de que coincidan con los valores registrados en el sistema. Si no coinciden, contacte al administrador antes de proceder.
-                </p>
-                <field name="serie" placeholder="Ingrese la serie del equipo"/>
-                <field name="modelo_id" placeholder="Seleccione el modelo del equipo"/>
-            </group>
+            <sheet>
+                <div class="alert alert-warning o_default_snippet_text" role="alert" style="margin-bottom: 20px;">
+                    <i class="fa fa-exclamation-triangle" aria-hidden="true" style="color: #FFA500;"></i>
+                    <b> Instrucciones:</b> Antes de continuar, verifique físicamente la <b>serie</b> y el <b>modelo</b> en la máquina. Asegúrese de que coincidan con los valores registrados en el sistema. Si no coinciden, contacte al administrador antes de proceder.
+                </div>
+                <group>
+                    <field name="serie" placeholder="Ingrese la serie del equipo" class="oe_highlight"/>
+                    <field name="modelo_id" placeholder="Seleccione el modelo del equipo" class="oe_highlight"/>
+                </group>
+            </sheet>
             <footer>
-                <button string="Confirmar Autenticación" type="object" name="validar_acceso" class="btn-primary"/>
-                <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                <button string="Confirmar Autenticación" type="object" name="validar_acceso" class="btn-primary oe_highlight" icon="fa-check-circle"/>
+                <button string="Cancelar" class="btn-secondary" special="cancel" icon="fa-times-circle"/>
             </footer>
         </form>
     </field>
