@@ -20,7 +20,7 @@ class ReparacionFotoGallery extends Component {
 
     async downloadPhoto(photo) {
         try {
-            if (photo.url_foto) {
+            if (photo && photo.url_foto) {
                 window.open(photo.url_foto, '_blank');
             } else {
                 this.notification.add(this.env._t("URL de foto no disponible"), {
@@ -35,8 +35,10 @@ class ReparacionFotoGallery extends Component {
     }
 
     openPhotoModal(photo) {
-        this.state.selectedPhoto = photo;
-        this.state.isModalOpen = true;
+        if (photo) {
+            this.state.selectedPhoto = photo;
+            this.state.isModalOpen = true;
+        }
     }
 
     closePhotoModal() {
