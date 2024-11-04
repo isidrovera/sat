@@ -2,33 +2,34 @@
 <templates xml:space="preserve">
     <t t-name="reparaciones.GalleryWidget">
         <div class="reparacion-photo-gallery">
-            <!-- Sección de subida de fotos -->
-            <div class="upload-section mb-4">
+            <div t-if="!props.readonly" class="upload-section mb-4">
                 <label class="btn btn-primary">
                     <i class="fa fa-upload me-2"/>Subir Foto
                     <input type="file" 
                            class="d-none" 
                            accept="image/*"
-                           t-on-change="uploadPhoto"/>
+                           t-on-change="(ev) => this.uploadPhoto(ev)"/>
                 </label>
             </div>
 
-            <!-- Grid de fotos -->
             <div class="photo-grid">
                 <t t-foreach="photos" t-as="photo" t-key="photo.id">
-                    <div t-if="photo" class="photo-card" t-on-click="() => this.openPhotoModal(photo)">
+                    <div t-if="photo and photo.id" class="photo-card" t-on-click="() => this.openPhotoModal(photo)">
                         <div class="photo-container">
                             <img t-if="photo.url_foto" 
                                  t-att-src="photo.url_foto" 
                                  t-att-alt="photo.nombre_foto || ''"
                                  class="photo-image"/>
+                            <div t-else="" class="photo-placeholder">
+                                <i class="fa fa-image fa-2x"/>
+                            </div>
                         </div>
                         <div class="photo-overlay">
                             <div class="photo-info">
                                 <span class="photo-name" t-esc="photo.nombre_foto || ''"/>
-                                <button class="btn btn-light btn-sm download-btn" 
-                                        t-if="photo.url_foto"
-                                        t-on-click.stop="() => this.downloadPhoto(photo)">
+                                <button t-if="photo.url_foto"
+                                        class="btn btn-light btn-sm download-btn" 
+                                        t-on-click="(ev) => this.downloadPhoto(photo, ev)">
                                     <i class="fa fa-download"/> Descargar
                                 </button>
                             </div>
@@ -37,9 +38,8 @@
                 </t>
             </div>
 
-            <!-- Modal de vista previa -->
             <Dialog t-if="state.isModalOpen and state.selectedPhoto"
-                    title="'Vista Previa'"
+                    title="'Vista Previa de Foto'"
                     size="'lg'"
                     t-on-close="() => this.closePhotoModal()">
                 <div class="photo-preview">
@@ -49,9 +49,9 @@
                          class="preview-image"/>
                     <div class="preview-info">
                         <h5 class="preview-title" t-esc="state.selectedPhoto.nombre_foto || ''"/>
-                        <button class="btn btn-primary"
-                                t-if="state.selectedPhoto.url_foto"
-                                t-on-click="() => this.downloadPhoto(state.selectedPhoto)">
+                        <button t-if="state.selectedPhoto.url_foto"
+                                class="btn btn-primary"
+                                t-on-click="(ev) => this.downloadPhoto(state.selectedPhoto, ev)">
                             <i class="fa fa-download"/> Descargar
                         </button>
                     </div>

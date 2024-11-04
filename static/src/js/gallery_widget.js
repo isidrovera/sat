@@ -4,15 +4,26 @@ import { useService } from "@web/core/utils/hooks";
 import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { Component, useState } from "@odoo/owl";
 import { Dialog } from "@web/core/dialog/dialog";
+import { Field } from "@web/views/fields/field";
 
-class GalleryWidget extends Component {
+class GalleryWidget extends Field {
     static template = "reparaciones.GalleryWidget";
     static components = { Dialog };
+
     static props = {
         ...standardFieldProps,
+        record: { type: Object },
+        name: { type: String },
+        update: { type: Function },
+        readonly: { type: Boolean, optional: true },
+    };
+
+    static defaultProps = {
+        readonly: false,
     };
 
     setup() {
+        super.setup();
         this.state = useState({
             selectedPhoto: null,
             isModalOpen: false
@@ -22,7 +33,9 @@ class GalleryWidget extends Component {
     }
 
     get photos() {
-        return this.props.value || [];
+        // Asegurarse de que tenemos un array válido
+        const value = this.props.record.data[this.props.name];
+        return Array.isArray(value) ? value : [];
     }
 
     async uploadPhoto(ev) {
@@ -46,6 +59,7 @@ class GalleryWidget extends Component {
                     type: 'success',
                 });
             } catch (error) {
+                console.error('Error al subir foto:', error);
                 this.notification.add("Error al subir la foto", {
                     type: 'danger',
                 });
@@ -55,8 +69,10 @@ class GalleryWidget extends Component {
     }
 
     openPhotoModal(photo) {
-        this.state.selectedPhoto = photo;
-        this.state.isModalOpen = true;
+        if (photo) {
+            this.state.selectedPhoto = photo;
+            this.state.isModalOpen = true;
+        }
     }
 
     closePhotoModal() {
@@ -64,7 +80,8 @@ class GalleryWidget extends Component {
         this.state.selectedPhoto = null;
     }
 
-    downloadPhoto(photo) {
+    downloadPhoto(photo, ev) {
+        ev?.stopPropagation();
         if (photo?.url_foto) {
             window.open(photo.url_foto, '_blank');
         } else {
