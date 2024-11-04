@@ -207,33 +207,13 @@
                                     </group>
                                 </group>
                             </page>
-                            <kanban class="o_kanban_view o_kanban_card">
-                                <templates>
-                                    <t t-name="kanban-box">
-                                        <div class="oe_kanban_global_click o_kanban_record">
-                                            <div class="o_kanban_image">
-                                                <t t-if="record.url_foto">
-                                                    <img t-att-src="record.url_foto.raw_value" class="img-thumbnail" style="max-width: 150px; max-height: 150px;" />
-                                                </t>
-                                                <t t-else="">
-                                                    <div class="text-center text-muted" style="width: 150px; height: 150px; line-height: 150px; border: 1px dashed #ccc;">
-                                                        Sin imagen
-                                                    </div>
-                                                </t>
-                                            </div>
-                                            <div class="o_kanban_details">
-                                                <div class="o_kanban_record_title">
-                                                    <t t-esc="record.nombre_foto.raw_value or 'Sin nombre'"/>
-                                                </div>
-                                                <t t-if="record.url_foto">
-                                                    <a t-att-href="record.url_foto.raw_value" download="record.nombre_foto.raw_value or 'foto.jpg'" class="btn btn-primary btn-sm mt8">Descargar</a>
-                                                </t>
-                                            </div>
-                                        </div>
-                                    </t>
-                                </templates>
-                            </kanban>
-                            
+                            <page string="Galería de Fotos">
+                                <field name="fotos_ids">
+                                    <div>
+                                        <field name="fotos_ids" widget="photo_gallery"/>
+                                    </div>
+                                </field>
+                            </page>                            
                                                         
                         </notebook>
                     </sheet>
