@@ -66,6 +66,7 @@
         'views/customer_records_page.xml',
         'views/importacionexcel.xml',
         'views/reparacion_autenticacion_wizard_view.xml',
+        'views/fotos_reparaciones.xml',
         
         
     ],
