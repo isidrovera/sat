@@ -49,30 +49,38 @@ class ReparacionFoto(models.Model):
         # Obtener el ID de la carpeta
         folder_name = f"{reparacion.maquina_id.name.name}_{reparacion.serie_id or 'sin_serie'}"
         folder_id = self._obtener_folder_id(folder_name, pcloud_config)
-        
+
         if not folder_id:
             raise ValidationError(f"No se encontró la carpeta {folder_name} en pCloud")
 
-        # Subir el archivo
+        # Preparar la URL y los parámetros para la solicitud
         url = f"{pcloud_config.hostname}/uploadfile"
-        files = {
-            'file': (nombre_archivo, archivo_binario, 'application/octet-stream')
-        }
         params = {
             'access_token': pcloud_config.access_token,
             'folderid': folder_id,
-            'nopartial': 1
+            'nopartial': 1,  # Para evitar subidas parciales
+            'renameifexists': 1  # Renombrar si existe un archivo con el mismo nombre
+        }
+        files = {
+            'file': (nombre_archivo, archivo_binario, 'application/octet-stream')
         }
 
-        response = requests.post(url, params=params, files=files)
-        result = response.json()
+        try:
+            # Enviar la solicitud a la API de pCloud
+            response = requests.post(url, params=params, files=files)
+            result = response.json()
 
-        if response.status_code != 200 or 'metadata' not in result:
-            _logger.error(f"Error en la respuesta de pCloud: {result}")
-            raise ValidationError(f"Error al subir la foto: {result.get('error')}")
+            # Verificar la respuesta
+            _logger.info("Respuesta de pCloud al subir el archivo: %s", json.dumps(result, indent=4))
+            if response.status_code == 200 and 'metadata' in result:
+                return result['metadata'][0]['fileid']
+            else:
+                error_message = result.get('error', 'Error desconocido')
+                raise ValidationError(f"Error al subir la foto a pCloud: {error_message}")
 
-        # Generar y retornar la URL de la foto
-        return self._generar_url_foto(result)
+        except requests.exceptions.RequestException as e:
+            _logger.error(f"Error de conexión con pCloud: {str(e)}")
+            raise ValidationError("Error de conexión con pCloud: %s" % str(e))
 
     def _obtener_folder_id(self, folder_name, pcloud_config):
         """Método privado para obtener el ID de la carpeta"""
