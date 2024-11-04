@@ -2,92 +2,92 @@
 <templates xml:space="preserve">
     <t t-name="reparaciones.GalleryWidget">
         <div class="reparacion-photo-gallery">
-            <div class="gallery-header d-flex justify-content-between align-items-center mb-4">
-                <div class="gallery-actions">
-                    <div t-if="!props.readonly" class="btn-group">
-                        <label class="btn btn-primary">
-                            <i class="fa fa-upload me-2"/>Subir Fotos
-                            <input type="file" 
-                                   class="d-none" 
-                                   accept="image/*"
-                                   multiple="true"
-                                   t-on-change="uploadPhoto"/>
-                        </label>
-                        <button class="btn btn-secondary" 
-                                t-att-class="{'active': state.selectMode}"
-                                t-on-click="toggleSelectMode">
-                            <i class="fa fa-check-square me-2"/>Seleccionar
-                        </button>
-                    </div>
-                </div>
-                
-                <div t-if="state.selectMode" class="selection-actions">
-                    <button class="btn btn-link me-2" t-on-click="selectAll">
-                        <t t-if="state.selectedPhotos.size === state.photos.length">
-                            Deseleccionar Todo
-                        </t>
-                        <t t-else="">
-                            Seleccionar Todo
-                        </t>
-                    </button>
-                    <button class="btn btn-primary" 
-                            t-on-click="downloadSelectedPhotos"
-                            t-att-disabled="state.selectedPhotos.size === 0">
-                        Descargar Seleccionadas 
-                        (<t t-esc="state.selectedPhotos.size"/>)
+            <!-- Debug Info -->
+            <div t-if="env.debug" class="debug-info alert alert-info">
+                <p>Debug Info:</p>
+                <pre t-esc="JSON.stringify(debugInfo, null, 2)"/>
+            </div>
+
+            <div class="gallery-actions mb-3">
+                <div class="btn-group">
+                    <label class="btn btn-primary">
+                        <i class="fa fa-upload me-2"/>Subir Foto
+                        <input type="file" 
+                               class="d-none" 
+                               accept="image/*"
+                               t-on-change="uploadPhoto"/>
+                    </label>
+                    <button t-if="hasPhotos"
+                            class="btn btn-secondary" 
+                            t-on-click="toggleSelectMode">
+                        <i class="fa fa-check-square-o me-2"/>
+                        <t t-if="state.selectMode">Cancelar Selección</t>
+                        <t t-else="">Seleccionar</t>
                     </button>
                 </div>
             </div>
 
+            <!-- Loading State -->
             <div t-if="state.isLoading" class="text-center py-4">
                 <i class="fa fa-spinner fa-spin fa-2x"/>
                 <p>Cargando fotos...</p>
             </div>
 
-            <div t-elif="state.photos.length" class="photo-grid">
+            <!-- Error State -->
+            <div t-if="state.error" class="alert alert-danger">
+                <i class="fa fa-exclamation-triangle me-2"/>
+                <span t-esc="state.error"/>
+            </div>
+
+            <!-- Photos Grid -->
+            <div t-if="hasPhotos" class="photo-grid">
                 <t t-foreach="state.photos" t-as="photo" t-key="photo.id">
-                    <div class="photo-item" 
-                         t-att-class="{'selected': state.selectedPhotos.has(photo.id)}"
-                         t-on-click="() => openPhotoModal(photo)">
+                    <div class="debug-photo-info" t-if="env.debug">
+                        <pre t-esc="JSON.stringify(photo, null, 2)"/>
+                    </div>
+                    <div class="photo-item" t-on-click="() => openPhotoModal(photo)">
                         <div class="photo-container">
-                            <img t-att-src="photo.preview_url" 
-                                 t-att-alt="photo.nombre_foto"
-                                 class="photo-image"/>
-                            <div t-if="state.selectMode" 
-                                 class="select-overlay"
-                                 t-on-click.stop="(ev) => togglePhotoSelection(photo, ev)">
-                                <div class="checkbox-container">
-                                    <i t-if="state.selectedPhotos.has(photo.id)" 
-                                       class="fa fa-check-square fa-2x"/>
-                                    <i t-else="" class="fa fa-square-o fa-2x"/>
+                            <t t-if="photo.url_foto">
+                                <img t-att-src="photo.url_foto" 
+                                     t-att-alt="photo.nombre_foto"
+                                     class="photo-image"/>
+                            </t>
+                            <t t-else="">
+                                <div class="photo-placeholder">
+                                    <i class="fa fa-image fa-3x"/>
                                 </div>
-                            </div>
+                            </t>
                         </div>
                         <div class="photo-info">
                             <span class="photo-name" t-esc="photo.nombre_foto"/>
+                            <t t-if="env.debug">
+                                <small class="text-muted d-block">
+                                    ID: <t t-esc="photo.id"/>
+                                </small>
+                            </t>
                         </div>
                     </div>
                 </t>
             </div>
             
-            <div t-elif="!state.isLoading" class="text-center text-muted py-4">
+            <div t-if="!state.isLoading && !hasPhotos" class="text-center text-muted py-4">
                 No hay fotos disponibles
             </div>
 
             <Dialog t-if="state.isModalOpen"
                     title="'Vista Previa'"
                     size="'lg'"
-                    t-on-close="closePhotoModal">
-                <div class="photo-preview" t-if="state.selectedPhoto">
-                    <img t-att-src="state.selectedPhoto.preview_url"
+                    t-on-close="() => this.closePhotoModal()">
+                <div t-if="state.selectedPhoto" class="photo-preview">
+                    <img t-if="state.selectedPhoto.url_foto"
+                         t-att-src="state.selectedPhoto.url_foto"
                          t-att-alt="state.selectedPhoto.nombre_foto"
                          class="preview-image"/>
                     <div class="preview-info mt-3">
                         <h5 t-esc="state.selectedPhoto.nombre_foto"/>
-                        <button class="btn btn-primary"
-                                t-on-click="() => downloadSelectedPhotos([state.selectedPhoto])">
-                            <i class="fa fa-download"/> Descargar
-                        </button>
+                        <t t-if="env.debug">
+                            <pre t-esc="JSON.stringify(state.selectedPhoto, null, 2)"/>
+                        </t>
                     </div>
                 </div>
             </Dialog>

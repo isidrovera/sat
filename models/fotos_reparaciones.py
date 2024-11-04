@@ -15,15 +15,28 @@ class ReparacionFoto(models.Model):
     nombre_foto = fields.Char(string="Nombre de la Foto")
     foto_binario = fields.Binary(string="Subir Foto")
     reparacion_id = fields.Many2one('reparaciones.reparaciones', string="Reparación")
+    file_id = fields.Char(string="File ID pCloud")
 
     @api.model
     def create(self, vals):
         """Sobrescribe el método create para manejar la subida de fotos"""
-        if 'foto_binario' in vals:  # Asegúrate de enviar la foto en formato binario
+        _logger.info(f"Creando nueva foto con valores: {vals}")
+        
+        if 'url_foto' in vals:
+            _logger.info(f"URL proporcionada: {vals['url_foto']}")
+            # Si se proporciona una URL, intentar extraer el file_id
+            file_id = vals.get('url_foto', '').split('/')[-1]
+            if file_id:
+                vals['file_id'] = file_id
+                _logger.info(f"File ID extraído de URL: {file_id}")
+
+        if 'foto_binario' in vals:
+            _logger.info("Procesando foto binaria")
             try:
                 # Obtener la reparación relacionada
                 reparacion = self.env['reparaciones.reparaciones'].browse(vals.get('reparacion_id'))
                 if not reparacion:
+                    _logger.error("No se encontró la reparación relacionada")
                     raise ValidationError("No se encontró la reparación relacionada")
 
                 # Subir la foto a pCloud
@@ -31,11 +44,11 @@ class ReparacionFoto(models.Model):
                 nombre_archivo = vals.get('nombre_foto', 'foto.jpg')
                 url_foto = self._subir_foto_pcloud(archivo_binario, nombre_archivo, reparacion)
                 
-                # Actualizar los valores con la URL de la foto
                 vals['url_foto'] = url_foto
-                del vals['foto_binario']  # Eliminar el binario ya que no lo necesitamos guardar
+                del vals['foto_binario']
+                _logger.info(f"Foto subida exitosamente. URL: {url_foto}")
             except Exception as e:
-                _logger.error(f"Error al subir la foto a pCloud: {str(e)}")
+                _logger.exception(f"Error al subir la foto a pCloud: {str(e)}")
                 raise ValidationError(f"Error al subir la foto: {str(e)}")
 
         return super(ReparacionFoto, self).create(vals)
@@ -126,32 +139,42 @@ class ReparacionFoto(models.Model):
         raise ValidationError("No se pudo generar la URL de la foto")
 
 
-    def get_preview_url(self):
-        """Obtiene la URL de previsualización desde pCloud"""
-        self.ensure_one()
-        if not self.file_id:
-            return False
+    @api.model
+    def get_photos_preview(self, reparacion_id):
+        """Obtiene todas las fotos con sus previsualizaciones"""
+        _logger.info(f"Obteniendo fotos para reparación ID: {reparacion_id}")
+        
+        photos = []
+        domain = [('reparacion_id', '=', reparacion_id)]
+        fotos = self.search(domain)
+        
+        _logger.info(f"Fotos encontradas: {len(fotos)}")
+        for foto in fotos:
+            _logger.info(f"Procesando foto ID: {foto.id}")
+            _logger.info(f"Datos de foto: nombre={foto.nombre_foto}, url={foto.url_foto}, file_id={foto.file_id}")
+            
+            try:
+                # Intentar obtener URL directamente del campo url_foto
+                url = foto.url_foto
+                if not url:
+                    # Si no hay URL, intentar obtenerla de pCloud
+                    url = foto.get_download_url()
+                
+                if url:
+                    _logger.info(f"URL obtenida para foto {foto.id}: {url}")
+                    photos.append({
+                        'id': foto.id,
+                        'nombre_foto': foto.nombre_foto,
+                        'url_foto': url,
+                    })
+                else:
+                    _logger.warning(f"No se pudo obtener URL para foto {foto.id}")
+            except Exception as e:
+                _logger.exception(f"Error procesando foto {foto.id}: {str(e)}")
+                continue
 
-        pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-        if not pcloud_config or not pcloud_config.access_token:
-            return False
-
-        try:
-            url = f"{pcloud_config.hostname}/getfilelink"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'fileid': self.file_id
-            }
-            
-            response = requests.get(url, params=params)
-            result = response.json()
-            
-            if response.status_code == 200 and result.get('result') == 0:
-                return f"https://{result['hosts'][0]}{result['path']}"
-            
-            return False
-        except Exception:
-            return False
+        _logger.info(f"Total de fotos procesadas con éxito: {len(photos)}")
+        return photos
 
     @api.model
     def get_photos_zip(self, foto_ids):
@@ -184,4 +207,47 @@ class ReparacionFoto(models.Model):
 
             return f'/web/content/{attachment.id}?download=true'
         except Exception:
+            return False
+
+
+    def get_download_url(self):
+        """Obtiene la URL de descarga desde pCloud"""
+        self.ensure_one()
+        _logger.info(f"Obteniendo URL de descarga para foto ID: {self.id}")
+        _logger.info(f"URL actual: {self.url_foto}")
+        _logger.info(f"File ID: {self.file_id}")
+
+        if self.url_foto:
+            _logger.info("Usando URL existente")
+            return self.url_foto
+
+        pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+        if not pcloud_config or not pcloud_config.access_token:
+            _logger.error("No se encontró configuración de pCloud")
+            return False
+
+        try:
+            url = f"{pcloud_config.hostname}/getfilelink"
+            params = {
+                'access_token': pcloud_config.access_token,
+                'fileid': self.file_id or self.url_foto,
+                'forcedownload': 1
+            }
+            
+            _logger.info(f"Realizando petición a pCloud con parámetros: {params}")
+            response = requests.get(url, params=params)
+            _logger.info(f"Respuesta de pCloud: {response.text}")
+            result = response.json()
+            
+            if response.status_code == 200 and result.get('result') == 0:
+                download_url = f"https://{result['hosts'][0]}{result['path']}"
+                _logger.info(f"URL de descarga generada: {download_url}")
+                return download_url
+            else:
+                _logger.error(f"Error en respuesta de pCloud: {result}")
+            
+            return False
+
+        except Exception as e:
+            _logger.exception(f"Error al obtener URL de descarga: {str(e)}")
             return False
