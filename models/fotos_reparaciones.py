@@ -13,7 +13,7 @@ class ReparacionFoto(models.Model):
 
     url_foto = fields.Char(string="URL de Foto")
     nombre_foto = fields.Char(string="Nombre de la Foto")
-    foto_binario = fields.Binary(string="Subir Foto" attachment=True)
+    foto_binario = fields.Binary(string="Subir Foto", attachment=True)
     reparacion_id = fields.Many2one('reparaciones.reparaciones', string="Reparación")
     file_id = fields.Char(string="File ID pCloud")
 
