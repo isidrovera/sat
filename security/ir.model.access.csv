@@ -49,3 +49,7 @@ access_repuestos_alquiler_ventas,repuestos.alquiler_ventas_access,model_repuesto
 access_fallas_ventas,fallas.ventas_access,model_fallas,sat.Sat_ventas_group_user,1,1,0,0
 access_informes_ventas,informes.ventas_access,model_informes,sat.Sat_ventas_group_user,1,1,0,0
 access_ticket_alquiler_ventas,ticket.alquiler_ventas_access,model_ticket_alquiler,sat.Sat_ventas_group_user,1,1,0,0
+
+access_reparaciones_foto_user,reparaciones.foto_user_access,model_reparaciones_foto,base.group_user,1,1,1,1
+access_reparaciones_foto_system,reparaciones.foto_system_access,model_reparaciones_foto,base.group_system,1,1,1,1
+access_reparaciones_foto_tecnico,reparaciones.foto_tecnico_access,model_reparaciones_foto,sat.sat_tecnica_group_user,1,1,1,1

@@ -750,10 +750,9 @@ class Reparaciones(models.Model):
         return estado_legible
 
 
-    # Nuevo campo para mostrar galería de fotos
-    foto_galeria = fields.Binary(string='Galería de Fotos', attachment=True)
-    fotos_ids = fields.One2many('reparaciones.foto', 'reparacion_id', string="Galería de Fotos")
-    foto_galeria_nombre = fields.Char(string='Nombre de Archivo')
+    # Campo para galería de fotos
+    fotos_ids = fields.One2many('reparaciones.foto', 'reparacion_id', string='Galería de Fotos')
+    foto_galeria_nombre = fields.Char(string='Nombre de Carpeta')
 
     def create_folder_in_pcloud(self):
         """Crea una carpeta en pCloud dentro de 'fotos_reparaciones' usando modelo_id y serie."""
@@ -809,11 +808,12 @@ class Reparaciones(models.Model):
             
             # Obtener y mostrar fotos en la galería
             fotos = record.list_photos_in_pcloud(folder_id)
-            record.foto_galeria = [(0, 0, {
-                'name': foto['name'],
-                'datas': base64.b64encode(requests.get(f"{pcloud_config.hostname}/getfilelink?fileid={foto['fileid']}").content),
-            }) for foto in fotos]
-            
+            for foto in fotos:
+                self.env['reparaciones.foto'].create({
+                    'foto': base64.b64encode(requests.get(f"{pcloud_config.hostname}/getfilelink?fileid={foto['fileid']}").content),
+                    'reparacion_id': record.id
+                })
+        
         return records
 
     def tomar_y_subir_foto(self, archivo_binario, nombre_archivo):
@@ -839,6 +839,14 @@ class Reparaciones(models.Model):
         else:
             _logger.error(f"Error al subir la foto: {result}")
             raise ValidationError(f"No se pudo subir la foto: {result.get('error')}")
+
+
+class ReparacionFoto(models.Model):
+    _name = 'reparaciones.foto'
+    _description = 'Fotos de Reparaciones'
+
+    foto = fields.Binary(string="Foto", attachment=True)
+    reparacion_id = fields.Many2one('reparaciones.reparaciones', string="Reparación")
 
 
 class ReportReparacionView(models.AbstractModel):
