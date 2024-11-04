@@ -208,7 +208,7 @@
                                 </group>
                             </page>
                             <page string="Galería de Fotos" name="fotos">
-                                <field name="fotos_ids" widget="reparacion_foto_gallery"/>
+                                <field name="fotos_ids" widget="gallery_widget"/>
                             </page>                          
 
                         </notebook>
