@@ -210,8 +210,8 @@
                             <page string="Galería de Fotos">
                                 <field name="fotos_ids">
                                     <list editable="bottom">
-                                        <field name="foto" widget="image" options="{'size': [150, 150]}" />
-                                        <field name="nombre_foto" invisible="1"/>
+                                        <field name="foto" widget="image" class="img-thumbnail" />
+                                        
                                     </list>
                                     <kanban class="o_kanban_view o_kanban_card">
                                         <templates>
