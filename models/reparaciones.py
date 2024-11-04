@@ -752,6 +752,7 @@ class Reparaciones(models.Model):
 
     # Nuevo campo para mostrar galería de fotos
     foto_galeria = fields.Binary(string='Galería de Fotos', attachment=True)
+    fotos_ids = fields.One2many('reparaciones.foto', 'reparacion_id', string="Galería de Fotos")
     foto_galeria_nombre = fields.Char(string='Nombre de Archivo')
 
     def create_folder_in_pcloud(self):

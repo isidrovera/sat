@@ -208,15 +208,12 @@
                                 </group>
                             </page>
                             <page string="Galería de Fotos">
-                                <div class="o_field_widget o_field_binary o_field_widget_image_gallery">
-                                    <t t-foreach="record.foto_galeria" t-as="foto">
-                                        <div class="gallery-item">
-                                            <img t-att-src="'data:image/png;base64,' + foto.datas" class="gallery-img" />
-                                            <a t-att-href="'data:image/png;base64,' + foto.datas" download="foto.name">Descargar</a>
-                                            <button t-on-click="compartirFoto(foto)">Compartir</button>
-                                        </div>
-                                    </t>
-                                </div>
+                                <field name="fotos_ids">
+                                    <list editable="bottom">
+                                        <field name="foto" widget="image" />
+                                        <field name="name" />
+                                    </list>
+                                </field>
                             </page>
                         </notebook>
                     </sheet>
