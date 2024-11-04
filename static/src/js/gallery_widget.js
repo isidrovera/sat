@@ -11,7 +11,6 @@ class PhotoGallery extends Component {
     }
 
     async addPhoto() {
-        // Aquí puedes agregar la lógica para capturar la foto y guardarla
         this.dialogService.add({
             title: "Agregar Foto",
             body: "Funcionalidad para capturar y agregar una foto",
@@ -19,10 +18,9 @@ class PhotoGallery extends Component {
     }
 }
 
-PhotoGallery.template = "photo_gallery_template";
+PhotoGallery.template = "your_module_name.PhotoGalleryTemplate";
 PhotoGallery.props = {
     photos: { type: Array },
 };
 
-// Registro del componente en Odoo
 registry.category("fields").add("photo_gallery", PhotoGallery);

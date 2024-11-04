@@ -1,17 +1,8 @@
 <odoo>
-    <templates>
-        <t t-name="photo_gallery_template">
-            <div class="photo-gallery-container">
-                <t t-foreach="props.photos" t-as="photo">
-                    <div class="photo-item">
-                        <img t-att-src="photo.url" class="img-thumbnail" style="max-width: 150px; max-height: 150px;" />
-                        <div class="photo-name">
-                            <t t-esc="photo.name" />
-                        </div>
-                    </div>
-                </t>
-                <button type="button" class="btn btn-primary mt8" t-on-click="addPhoto">Agregar Foto</button>
-            </div>
-        </t>
-    </templates>
+    <template id="assets_backend" name="Photo Gallery Widget" inherit_id="web.assets_backend">
+        <xpath expr="." position="inside">
+            <script type="module" src="/sat/static/src/js/gallery_widget.js"></script>
+            
+        </xpath>
+    </template>
 </odoo>
