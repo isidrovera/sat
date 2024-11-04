@@ -211,6 +211,7 @@
                                 <field name="fotos_ids">
                                     <list editable="bottom">
                                         <field name="url_foto" widget="image" class="img-thumbnail" />
+                                        <field name="foto_binario" widget="image" class="img-thumbnail" />
                                     </list>
                                     <kanban class="o_kanban_view o_kanban_card">
                                         <templates>
