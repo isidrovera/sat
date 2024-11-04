@@ -48,7 +48,7 @@ class Reparaciones(models.Model):
                 # Crear la carpeta en pCloud
                 try:
                     folder_id = record.create_folder_in_pcloud()  # Crear la carpeta automáticamente
-                    record.foto_galeria_nombre = f"{record.maquina_id.name}_{record.serie_id or 'sin_serie'}"  # Guardar el nombre de la carpeta
+                    record.foto_galeria_nombre = f"{record.maquina_id.name.name}_{record.serie_id or 'sin_serie'}"  # Guardar el nombre de la carpeta
                     _logger.info("Carpeta en pCloud creada o asignada correctamente para el registro ID: %s", record.id)
                 except Exception as folder_error:
                     _logger.error("Error al crear la carpeta en pCloud para el registro ID %s: %s", record.id, str(folder_error))
