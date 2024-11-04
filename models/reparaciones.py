@@ -27,25 +27,34 @@ class Reparaciones(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """ Crea una secuencia para el modelo de reparaciones """
+        """ Crea una secuencia para el modelo de reparaciones y gestiona la creación de carpetas en pCloud """
         for vals in vals_list:
-            # Asegurarte de que el nombre se genere si no está presente o tiene el valor por defecto 'New'
+            # Asegurar que el nombre se genere si no está presente o tiene el valor por defecto 'New'
             if vals.get('name', _('New')) == _('New'):
                 vals['name'] = self.env['ir.sequence'].sudo().next_by_code('reparaciones.reparaciones') or '/'
                 _logger.info("Número secuencial asignado al campo 'name': %s", vals['name'])
 
-            # Asigna el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
+            # Asignar el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
             if 'contometrok_id' in vals:
                 vals['contometro_inicial'] = vals['contometrok_id']
                 _logger.info("Asignado 'contometro_inicial' a partir de 'contometrok_id': %s", vals['contometro_inicial'])
 
         try:
-            # Crea los registros
+            # Crear los registros
             records = super(Reparaciones, self).create(vals_list)
             for record in records:
                 _logger.info("Registro de reparación creado exitosamente con ID: %s", record.id)
 
-                # Genera el código QR
+                # Crear la carpeta en pCloud
+                try:
+                    folder_id = record.create_folder_in_pcloud()  # Crear la carpeta automáticamente
+                    record.foto_galeria_nombre = f"{record.maquina_id.name}_{record.serie_id or 'sin_serie'}"  # Guardar el nombre de la carpeta
+                    _logger.info("Carpeta en pCloud creada o asignada correctamente para el registro ID: %s", record.id)
+                except Exception as folder_error:
+                    _logger.error("Error al crear la carpeta en pCloud para el registro ID %s: %s", record.id, str(folder_error))
+                    raise ValidationError(_("Error al crear la carpeta en pCloud: %s") % str(folder_error))
+
+                # Generar el código QR
                 try:
                     record.sudo().generate_qr_code()
                     _logger.info("Código QR generado correctamente para el registro ID: %s", record.id)
@@ -61,8 +70,6 @@ class Reparaciones(models.Model):
         except Exception as create_error:
             _logger.error("Error durante la creación de la reparación: %s", str(create_error))
             raise
-
-
 
 
     
@@ -758,30 +765,54 @@ class Reparaciones(models.Model):
         """Crea una carpeta en pCloud dentro de 'fotos_reparaciones' usando modelo_id y serie."""
         pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
         if not pcloud_config or not pcloud_config.access_token:
-            raise ValidationError("Configuración de pCloud no encontrada o falta el token de acceso.")
-        
+            raise ValidationError(_("Configuración de pCloud no encontrada o falta el token de acceso."))
+
         folder_name = f"{self.maquina_id.name}_{self.serie_id or 'sin_serie'}"
-        folder_path = f"fotos_reparaciones/{folder_name}"
-        url = f"{pcloud_config.hostname}/createfolderifnotexists"
+        url = f"{pcloud_config.hostname}/createfolder"
         params = {
             'access_token': pcloud_config.access_token,
-            'path': folder_path
+            'folderid': pcloud_config.main_folder_id,  # ID de la carpeta 'fotos_reparaciones'
+            'name': folder_name
         }
         response = requests.post(url, params=params)
         result = response.json()
         if response.status_code == 200 and 'metadata' in result:
-            _logger.info(f"Carpeta '{folder_path}' creada exitosamente en pCloud.")
+            _logger.info(f"Carpeta '{folder_name}' creada exitosamente en pCloud.")
             return result['metadata']['folderid']
+        elif response.status_code == 200 and result.get('result') == 2004:  # Código para carpeta existente
+            _logger.info(f"La carpeta '{folder_name}' ya existe en pCloud.")
+            return self.get_folder_id(folder_name)
         else:
             _logger.error(f"Error al crear la carpeta: {result}")
-            raise ValidationError(f"No se pudo crear la carpeta: {result.get('error')}")
+            raise ValidationError(_("No se pudo crear la carpeta: %s") % result.get('error'))
 
-    def list_photos_in_pcloud(self, folder_id):
-        """Obtiene la lista de fotos en una carpeta de pCloud."""
+
+    def get_folder_id(self, folder_name):
+        """Obtiene el folderid de una carpeta existente en pCloud."""
+        pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+        url = f"{pcloud_config.hostname}/listfolder"
+        params = {
+            'access_token': pcloud_config.access_token,
+            'folderid': pcloud_config.main_folder_id  # ID de la carpeta 'fotos_reparaciones'
+        }
+        response = requests.get(url, params=params)
+        result = response.json()
+        if response.status_code == 200 and result.get('result') == 0:
+            for folder in result['metadata']['contents']:
+                if folder['isfolder'] and folder['name'] == folder_name:
+                    return folder['folderid']
+        raise ValidationError(_("No se encontró la carpeta '%s' en pCloud.") % folder_name)
+
+    def listar_fotos_pcloud(self):
+        """Obtiene y lista las fotos en la carpeta de pCloud asociada a la reparación."""
         pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
         if not pcloud_config or not pcloud_config.access_token:
-            raise ValidationError("Configuración de pCloud no encontrada o falta el token de acceso.")
-        
+            raise ValidationError(_("Configuración de pCloud no encontrada o falta el token de acceso."))
+
+        folder_id = self.get_folder_id(self.foto_galeria_nombre)
+        if not folder_id:
+            raise ValidationError(_("No se encontró la carpeta de pCloud para listar las fotos."))
+
         url = f"{pcloud_config.hostname}/listfolder"
         params = {
             'access_token': pcloud_config.access_token,
@@ -791,40 +822,18 @@ class Reparaciones(models.Model):
         result = response.json()
         if response.status_code == 200 and result.get('result') == 0:
             return [item for item in result['metadata']['contents'] if not item['isfolder']]
-        else:
-            _logger.error(f"Error al listar fotos: {result}")
-            raise ValidationError(f"No se pudo listar las fotos: {result.get('error')}")
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        records = super(Reparaciones, self).create(vals_list)
-        pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-        if not pcloud_config or not pcloud_config.access_token:
-            raise ValidationError("Configuración de pCloud no encontrada o falta el token de acceso.")
-        
-        for record in records:
-            folder_id = record.create_folder_in_pcloud()  # Crear carpeta automáticamente
-            record.foto_galeria_nombre = f"{record.maquina_id.name}_{record.serie_id or 'sin_serie'}"  # Guardar el nombre de la carpeta
-            
-            # Obtener y mostrar fotos en la galería
-            fotos = record.list_photos_in_pcloud(folder_id)
-            for foto in fotos:
-                self.env['reparaciones.foto'].create({
-                    'foto': base64.b64encode(requests.get(f"{pcloud_config.hostname}/getfilelink?fileid={foto['fileid']}").content),
-                    'reparacion_id': record.id
-                })
-        
-        return records
+    
 
     def tomar_y_subir_foto(self, archivo_binario, nombre_archivo):
-        """Sube una nueva foto al almacenamiento de pCloud."""
+        """Sube una nueva foto al almacenamiento de pCloud y guarda el enlace en el registro."""
         pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
         if not pcloud_config or not pcloud_config.access_token:
-            raise ValidationError("Configuración de pCloud no encontrada o falta el token de acceso.")
-        
-        folder_name = self.foto_galeria_nombre or f"{self.maquina_id.name}_{self.serie_id or 'sin_serie'}"
-        folder_id = self.create_folder_in_pcloud()
-        
+            raise ValidationError(_("Configuración de pCloud no encontrada o falta el token de acceso."))
+
+        folder_id = self.get_folder_id(self.foto_galeria_nombre)
+        if not folder_id:
+            raise ValidationError(_("No se encontró la carpeta de pCloud para subir la foto."))
+
         url = f"{pcloud_config.hostname}/uploadfile"
         params = {
             'access_token': pcloud_config.access_token,
@@ -833,20 +842,50 @@ class Reparaciones(models.Model):
         files = {'file': (nombre_archivo, archivo_binario)}
         response = requests.post(url, params=params, files=files)
         result = response.json()
-        if response.status_code == 200:
+        if response.status_code == 200 and 'metadata' in result:
+            file_metadata = result['metadata'][0]
+            file_url = f"https://{result['hosts'][0]}{result['path']}"  # Generar enlace de descarga
+
+            # Crear el registro de la foto en Odoo
+            self.env['reparaciones.foto'].create({
+                'url_foto': file_url,
+                'nombre_foto': nombre_archivo,
+                'reparacion_id': self.id
+            })
             _logger.info(f"Foto '{nombre_archivo}' subida exitosamente a pCloud.")
-            self.foto_galeria_nombre = folder_name  # Actualizar el nombre de la carpeta
         else:
             _logger.error(f"Error al subir la foto: {result}")
-            raise ValidationError(f"No se pudo subir la foto: {result.get('error')}")
+            raise ValidationError(_("No se pudo subir la foto: %s") % result.get('error'))
 
 
 class ReparacionFoto(models.Model):
     _name = 'reparaciones.foto'
     _description = 'Fotos de Reparaciones'
 
-    foto = fields.Binary(string="Foto", attachment=True)
+    url_foto = fields.Char(string="URL de Foto")
+    nombre_foto = fields.Char(string="Nombre de la Foto")
     reparacion_id = fields.Many2one('reparaciones.reparaciones', string="Reparación")
+
+    def obtener_link_descarga_foto(self, file_id):
+        """Genera un enlace de descarga para una foto específica en pCloud."""
+        pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+        if not pcloud_config or not pcloud_config.access_token:
+            raise ValidationError(_("Configuración de pCloud no encontrada o falta el token de acceso."))
+
+        url = f"{pcloud_config.hostname}/getfilelink"
+        params = {
+            'access_token': pcloud_config.access_token,
+            'fileid': file_id
+        }
+        response = requests.get(url, params=params)
+        result = response.json()
+        if response.status_code == 200 and result.get('result') == 0:
+            download_link = f"https://{result['hosts'][0]}{result['path']}"
+            _logger.info(f"Enlace de descarga generado: {download_link}")
+            return download_link
+        else:
+            _logger.error(f"Error al obtener el enlace de descarga: {result}")
+            raise ValidationError(_("No se pudo obtener el enlace de descarga: %s") % result.get('error'))
 
 
 class ReportReparacionView(models.AbstractModel):

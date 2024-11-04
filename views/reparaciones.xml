@@ -210,18 +210,17 @@
                             <page string="Galería de Fotos">
                                 <field name="fotos_ids">
                                     <list editable="bottom">
-                                        <field name="foto" widget="image" class="img-thumbnail" />
-                                        
+                                        <field name="url_foto" widget="image" class="img-thumbnail" />
                                     </list>
                                     <kanban class="o_kanban_view o_kanban_card">
                                         <templates>
                                             <t t-name="kanban-box">
                                                 <div class="oe_kanban_global_click o_kanban_record">
                                                     <div class="o_kanban_image">
-                                                        <img t-att-src="kanban_image('reparaciones.foto', 'foto', record.id.raw_value)" class="img-thumbnail" style="max-width: 150px; max-height: 150px;" />
+                                                        <img t-att-src="record.url_foto.raw_value" class="img-thumbnail" style="max-width: 150px; max-height: 150px;" />
                                                     </div>
                                                     <div class="o_kanban_details">
-                                                        <a t-att-href="'data:image/png;base64,' + record.foto.raw_value" download="record.nombre_foto.raw_value" class="btn btn-primary btn-sm mt8">Descargar</a>
+                                                        <a t-att-href="record.url_foto.raw_value" download="record.nombre_foto.raw_value" class="btn btn-primary btn-sm mt8">Descargar</a>
                                                     </div>
                                                 </div>
                                             </t>
@@ -229,6 +228,7 @@
                                     </kanban>
                                 </field>
                             </page>
+                            
                                                         
                         </notebook>
                     </sheet>
