@@ -3,10 +3,12 @@
     <t t-name="reparaciones.GalleryWidget">
         <div class="reparacion-photo-gallery">
             <!-- Debug Info -->
-            <div t-if="env.debug" class="debug-info alert alert-info">
-                <p>Debug Info:</p>
-                <pre t-esc="JSON.stringify(debugInfo, null, 2)"/>
-            </div>
+            <t t-if="env.debug">
+                <div class="debug-info alert alert-info">
+                    <p>Debug Info:</p>
+                    <pre t-esc="JSON.stringify(debugInfo, null, 2)"/>
+                </div>
+            </t>
 
             <div class="gallery-actions mb-3">
                 <div class="btn-group">
@@ -17,80 +19,98 @@
                                accept="image/*"
                                t-on-change="uploadPhoto"/>
                     </label>
-                    <button t-if="hasPhotos"
-                            class="btn btn-secondary" 
-                            t-on-click="toggleSelectMode">
-                        <i class="fa fa-check-square-o me-2"/>
-                        <t t-if="state.selectMode">Cancelar Selección</t>
-                        <t t-else="">Seleccionar</t>
-                    </button>
+                    <t t-if="hasPhotos">
+                        <button class="btn btn-secondary" 
+                                t-on-click="toggleSelectMode">
+                            <i class="fa fa-check-square-o me-2"/>
+                            <t t-if="state.selectMode">Cancelar Selección</t>
+                            <t t-else="">Seleccionar</t>
+                        </button>
+                    </t>
                 </div>
             </div>
 
             <!-- Loading State -->
-            <div t-if="state.isLoading" class="text-center py-4">
-                <i class="fa fa-spinner fa-spin fa-2x"/>
-                <p>Cargando fotos...</p>
-            </div>
+            <t t-if="state.isLoading">
+                <div class="text-center py-4">
+                    <i class="fa fa-spinner fa-spin fa-2x"/>
+                    <p>Cargando fotos...</p>
+                </div>
+            </t>
 
             <!-- Error State -->
-            <div t-if="state.error" class="alert alert-danger">
-                <i class="fa fa-exclamation-triangle me-2"/>
-                <span t-esc="state.error"/>
-            </div>
+            <t t-if="state.error">
+                <div class="alert alert-danger">
+                    <i class="fa fa-exclamation-triangle me-2"/>
+                    <span t-esc="state.error"/>
+                </div>
+            </t>
 
             <!-- Photos Grid -->
-            <div t-if="hasPhotos" class="photo-grid">
-                <t t-foreach="state.photos" t-as="photo" t-key="photo.id">
-                    <div class="debug-photo-info" t-if="env.debug">
-                        <pre t-esc="JSON.stringify(photo, null, 2)"/>
-                    </div>
-                    <div class="photo-item" t-on-click="() => openPhotoModal(photo)">
-                        <div class="photo-container">
-                            <t t-if="photo.url_foto">
-                                <img t-att-src="photo.url_foto" 
-                                     t-att-alt="photo.nombre_foto"
-                                     class="photo-image"/>
-                            </t>
-                            <t t-else="">
-                                <div class="photo-placeholder">
-                                    <i class="fa fa-image fa-3x"/>
-                                </div>
-                            </t>
+            <t t-if="hasPhotos">
+                <div class="photo-grid">
+                    <t t-foreach="state.photos" t-as="photo" t-key="photo.id">
+                        <t t-if="env.debug">
+                            <div class="debug-photo-info">
+                                <pre t-esc="JSON.stringify(photo, null, 2)"/>
+                            </div>
+                        </t>
+                        <div class="photo-item" t-on-click="() => openPhotoModal(photo)">
+                            <div class="photo-container">
+                                <t t-if="photo.url_foto">
+                                    <img t-att-src="photo.url_foto" 
+                                         t-att-alt="photo.nombre_foto"
+                                         class="photo-image"/>
+                                </t>
+                                <t t-else="">
+                                    <div class="photo-placeholder">
+                                        <i class="fa fa-image fa-3x"/>
+                                        <small class="text-muted">Sin imagen</small>
+                                    </div>
+                                </t>
+                            </div>
+                            <div class="photo-info">
+                                <span class="photo-name" t-esc="photo.nombre_foto || 'Sin nombre'"/>
+                                <t t-if="env.debug">
+                                    <small class="text-muted d-block">
+                                        ID: <t t-esc="photo.id"/>
+                                    </small>
+                                </t>
+                            </div>
                         </div>
-                        <div class="photo-info">
-                            <span class="photo-name" t-esc="photo.nombre_foto"/>
-                            <t t-if="env.debug">
-                                <small class="text-muted d-block">
-                                    ID: <t t-esc="photo.id"/>
-                                </small>
-                            </t>
-                        </div>
+                    </t>
+                </div>
+            </t>
+            
+            <t t-if="!state.isLoading">
+                <t t-if="!hasPhotos">
+                    <div class="text-center text-muted py-4">
+                        No hay fotos disponibles
                     </div>
                 </t>
-            </div>
-            
-            <div t-if="!state.isLoading && !hasPhotos" class="text-center text-muted py-4">
-                No hay fotos disponibles
-            </div>
+            </t>
 
-            <Dialog t-if="state.isModalOpen"
-                    title="'Vista Previa'"
-                    size="'lg'"
-                    t-on-close="() => this.closePhotoModal()">
-                <div t-if="state.selectedPhoto" class="photo-preview">
-                    <img t-if="state.selectedPhoto.url_foto"
-                         t-att-src="state.selectedPhoto.url_foto"
-                         t-att-alt="state.selectedPhoto.nombre_foto"
-                         class="preview-image"/>
-                    <div class="preview-info mt-3">
-                        <h5 t-esc="state.selectedPhoto.nombre_foto"/>
-                        <t t-if="env.debug">
-                            <pre t-esc="JSON.stringify(state.selectedPhoto, null, 2)"/>
-                        </t>
-                    </div>
-                </div>
-            </Dialog>
+            <t t-if="state.isModalOpen">
+                <Dialog title="'Vista Previa'"
+                        size="'lg'"
+                        t-on-close="() => closePhotoModal()">
+                    <t t-if="state.selectedPhoto">
+                        <div class="photo-preview">
+                            <t t-if="state.selectedPhoto.url_foto">
+                                <img t-att-src="state.selectedPhoto.url_foto"
+                                     t-att-alt="state.selectedPhoto.nombre_foto"
+                                     class="preview-image"/>
+                            </t>
+                            <div class="preview-info mt-3">
+                                <h5 t-esc="state.selectedPhoto.nombre_foto || 'Sin nombre'"/>
+                                <t t-if="env.debug">
+                                    <pre t-esc="JSON.stringify(state.selectedPhoto, null, 2)"/>
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                </Dialog>
+            </t>
         </div>
     </t>
 </templates>
