@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="reparaciones.PhotoGallery">
         <div class="reparacion-photo-gallery">
@@ -13,20 +14,18 @@
 
             <div class="photo-grid">
                 <t t-foreach="props.value" t-as="photo" t-key="photo.id">
-                    <t t-if="photo && photo.nombre_foto && photo.url_foto">
-                        <div class="photo-item" t-on-click="() => this.openPhotoModal(photo)">
-                            <img t-att-src="photo.url_foto" 
-                                 t-att-alt="photo.nombre_foto"
-                                 class="img-fluid"/>
-                            <div class="photo-overlay">
-                                <span class="photo-name" t-esc="photo.nombre_foto"/>
-                                <button class="btn btn-light btn-sm" 
-                                        t-on-click.stop="() => this.downloadPhoto(photo)">
-                                    <i class="fa fa-download"/> Descargar
-                                </button>
-                            </div>
+                    <div class="photo-item" t-on-click="() => this.openPhotoModal(photo)">
+                        <img t-att-src="photo.url_foto" 
+                             t-att-alt="photo.nombre_foto"
+                             class="img-fluid"/>
+                        <div class="photo-overlay">
+                            <span class="photo-name" t-esc="photo.nombre_foto"/>
+                            <button class="btn btn-light btn-sm" 
+                                    t-on-click.stop="() => this.downloadPhoto(photo)">
+                                <i class="fa fa-download"/> Descargar
+                            </button>
                         </div>
-                    </t>
+                    </div>
                 </t>
             </div>
 
@@ -35,11 +34,11 @@
                     size="'lg'"
                     t-on-close="() => this.closePhotoModal()">
                 <div class="photo-preview">
-                    <img t-if="state.selectedPhoto && state.selectedPhoto.url_foto"
+                    <img t-if="state.selectedPhoto"
                          t-att-src="state.selectedPhoto.url_foto"
                          class="img-fluid"/>
-                    <div class="photo-info mt-3" t-if="state.selectedPhoto">
-                        <h5 t-esc="state.selectedPhoto.nombre_foto"/>
+                    <div class="photo-info mt-3">
+                        <h5 t-esc="state.selectedPhoto?.nombre_foto"/>
                         <button class="btn btn-primary"
                                 t-on-click="() => this.downloadPhoto(state.selectedPhoto)">
                             <i class="fa fa-download"/> Descargar
