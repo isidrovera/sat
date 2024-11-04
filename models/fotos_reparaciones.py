@@ -83,22 +83,41 @@ class ReparacionFoto(models.Model):
             raise ValidationError("Error de conexión con pCloud: %s" % str(e))
 
     def _obtener_folder_id(self, folder_name, pcloud_config):
-        """Método privado para obtener el ID de la carpeta"""
+        """Método privado para obtener el ID de una subcarpeta específica dentro de 'fotos_reparaciones'."""
+        # Paso 1: Buscar la carpeta principal 'fotos_reparaciones'
         url = f"{pcloud_config.hostname}/listfolder"
         params = {
             'access_token': pcloud_config.access_token,
-            'folderid': 0,  # Carpeta raíz
-            'recursive': 1  # Buscar en subcarpetas
+            'folderid': 0  # Carpeta raíz
         }
 
         response = requests.get(url, params=params)
         result = response.json()
 
         if response.status_code == 200 and result.get('result') == 0:
+            fotos_reparaciones_id = None
             for folder in result['metadata']['contents']:
-                if folder['isfolder'] and folder['name'] == folder_name:
-                    return folder['folderid']
-        return None
+                if folder['isfolder'] and folder['name'] == 'fotos_reparaciones':
+                    fotos_reparaciones_id = folder['folderid']
+                    break
+
+            if not fotos_reparaciones_id:
+                raise ValidationError("No se encontró la carpeta 'fotos_reparaciones' en pCloud.")
+
+            # Paso 2: Buscar la subcarpeta específica dentro de 'fotos_reparaciones'
+            params['folderid'] = fotos_reparaciones_id
+            response = requests.get(url, params=params)
+            result = response.json()
+
+            if response.status_code == 200 and result.get('result') == 0:
+                for folder in result['metadata']['contents']:
+                    if folder['isfolder'] and folder['name'] == folder_name:
+                        return folder['folderid']
+
+            return None  # No se encontró la subcarpeta
+        else:
+            raise ValidationError("Error al listar carpetas en pCloud: %s" % result.get('error'))
+
 
     def _generar_url_foto(self, result):
         """Método privado para generar la URL de la foto"""
