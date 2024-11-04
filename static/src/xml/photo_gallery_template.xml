@@ -12,27 +12,31 @@
                 </label>
             </div>
 
-            <div class="photo-grid">
+            <div class="photo-grid" t-if="photos.length">
                 <t t-foreach="photos" t-as="photo" t-key="photo.id">
-                    <t t-if="photo">
-                        <t t-if="photo.nombre_foto">
-                            <t t-if="photo.url_foto">
-                                <div class="photo-item" t-on-click="() => openPhotoModal(photo)">
-                                    <img t-att-src="photo.url_foto" 
-                                         t-att-alt="photo.nombre_foto"
-                                         class="img-fluid"/>
-                                    <div class="photo-overlay">
-                                        <span class="photo-name" t-esc="photo.nombre_foto"/>
-                                        <button class="btn btn-light btn-sm" 
-                                                t-on-click.stop="() => downloadPhoto(photo)">
-                                            <i class="fa fa-download"/> Descargar
-                                        </button>
-                                    </div>
+                    <t t-if="photo.url_foto">
+                        <div class="photo-item" t-on-click="() => openPhotoModal(photo)">
+                            <div class="photo-container">
+                                <img t-att-src="'/web/content/reparaciones.foto/' + photo.id + '/url_foto'"
+                                     t-att-alt="photo.nombre_foto"
+                                     class="photo-image"/>
+                            </div>
+                            <div class="photo-overlay">
+                                <div class="photo-info">
+                                    <span class="photo-name" t-esc="photo.nombre_foto"/>
+                                    <button class="btn btn-light btn-sm" 
+                                            t-on-click.stop="(ev) => downloadPhoto(photo, ev)">
+                                        <i class="fa fa-download"/> Descargar
+                                    </button>
                                 </div>
-                            </t>
-                        </t>
+                            </div>
+                        </div>
                     </t>
                 </t>
+            </div>
+            
+            <div t-if="!photos.length" class="text-center text-muted py-4">
+                No hay fotos disponibles
             </div>
 
             <Dialog t-if="state.isModalOpen"
@@ -41,15 +45,14 @@
                     t-on-close="closePhotoModal">
                 <t t-if="state.selectedPhoto">
                     <div class="photo-preview">
-                        <t t-if="state.selectedPhoto.url_foto">
-                            <img t-att-src="state.selectedPhoto.url_foto"
-                                 t-att-alt="state.selectedPhoto.nombre_foto"
-                                 class="img-fluid"/>
-                        </t>
+                        <img t-if="state.selectedPhoto.url_foto"
+                             t-att-src="'/web/content/reparaciones.foto/' + state.selectedPhoto.id + '/url_foto'"
+                             t-att-alt="state.selectedPhoto.nombre_foto"
+                             class="preview-image"/>
                         <div class="photo-info mt-3">
                             <h5 t-esc="state.selectedPhoto.nombre_foto"/>
                             <button class="btn btn-primary"
-                                    t-on-click="() => downloadPhoto(state.selectedPhoto)">
+                                    t-on-click="(ev) => downloadPhoto(state.selectedPhoto, ev)">
                                 <i class="fa fa-download"/> Descargar
                             </button>
                         </div>

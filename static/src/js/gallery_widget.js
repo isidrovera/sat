@@ -18,7 +18,8 @@ class GalleryWidget extends Component {
     }
 
     get photos() {
-        return this.props.value || [];
+        // Asegurarse de que estamos obteniendo el array de fotos correctamente
+        return this.props.record.data[this.props.name] || [];
     }
 
     async uploadPhoto(ev) {
@@ -37,17 +38,30 @@ class GalleryWidget extends Component {
                         reparacion_id: this.props.record.resId,
                     }]
                 );
+                // Recargar el registro para actualizar la lista de fotos
                 await this.props.record.load();
                 this.notification.add("Foto subida exitosamente", {
                     type: 'success',
                 });
             } catch (error) {
+                console.error('Error al subir foto:', error);
                 this.notification.add("Error al subir la foto", {
                     type: 'danger',
                 });
             }
         };
         reader.readAsDataURL(file);
+    }
+
+    downloadPhoto(photo, ev) {
+        ev?.stopPropagation();
+        if (photo?.url_foto) {
+            window.open(`/web/content/reparaciones.foto/${photo.id}/url_foto?download=true`, '_blank');
+        } else {
+            this.notification.add("URL de foto no disponible", {
+                type: 'warning',
+            });
+        }
     }
 
     openPhotoModal(photo) {
@@ -59,26 +73,15 @@ class GalleryWidget extends Component {
         this.state.isModalOpen = false;
         this.state.selectedPhoto = null;
     }
-
-    downloadPhoto(photo, ev) {
-        ev?.stopPropagation();
-        if (photo?.url_foto) {
-            window.open(photo.url_foto, '_blank');
-        } else {
-            this.notification.add("URL de foto no disponible", {
-                type: 'warning',
-            });
-        }
-    }
 }
 
 export const galleryWidget = {
     component: GalleryWidget,
-    supportedTypes: ['many2many'],
+    supportedTypes: ['one2many', 'many2many'],
     extractProps: ({ attrs, field }) => ({
-        readonly: attrs.readonly,
-        value: field.value,
+        name: field.name,
         record: field.record,
+        readonly: attrs.readonly === "1" || attrs.readonly === true,
     }),
 };
 
