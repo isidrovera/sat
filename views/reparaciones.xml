@@ -209,10 +209,6 @@
                             </page>
                             <page string="Galería de Fotos">
                                 <field name="fotos_ids">
-                                    <list editable="bottom">
-                                        <field name="url_foto"  />
-                                        <field name="foto_binario" widget="image" class="img-thumbnail" />
-                                    </list>
                                     <kanban class="o_kanban_view o_kanban_card">
                                         <templates>
                                             <t t-name="kanban-box">
@@ -221,6 +217,9 @@
                                                         <img t-att-src="record.url_foto.raw_value" class="img-thumbnail" style="max-width: 150px; max-height: 150px;" />
                                                     </div>
                                                     <div class="o_kanban_details">
+                                                        <div class="o_kanban_record_title">
+                                                            <field name="nombre_foto"/>
+                                                        </div>
                                                         <a t-att-href="record.url_foto.raw_value" download="record.nombre_foto.raw_value" class="btn btn-primary btn-sm mt8">Descargar</a>
                                                     </div>
                                                 </div>
@@ -228,7 +227,9 @@
                                         </templates>
                                     </kanban>
                                 </field>
+                                <button string="Descargar Todas las Fotos" type="object" name="descargar_fotos_zip" class="btn btn-secondary mt8" icon="fa-download"/>
                             </page>
+                            
                             
                                                         
                         </notebook>

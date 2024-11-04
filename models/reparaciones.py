@@ -15,7 +15,9 @@ import requests
 import json
 from odoo.tools import config
 from odoo.exceptions import UserError
-
+import zipfile
+import io
+from odoo.http import request
 
 class Reparaciones(models.Model):
     _name = 'reparaciones.reparaciones'
@@ -225,6 +227,35 @@ class Reparaciones(models.Model):
     _sql_constraints = [
         ('unique_serie_id', 'unique(serie_id)', 'El número de serie ya existe.')
     ]
+    def descargar_fotos_zip(self):
+        """Crea un archivo ZIP con todas las fotos y permite su descarga."""
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, 'w') as zip_file:
+            for foto in self.fotos_ids:
+                if foto.url_foto:
+                    response = requests.get(foto.url_foto)
+                    if response.status_code == 200:
+                        zip_file.writestr(foto.nombre_foto or 'foto.jpg', response.content)
+
+        buffer.seek(0)
+        zip_data = base64.b64encode(buffer.read())
+        buffer.close()
+
+        # Crear un adjunto para permitir la descarga
+        attachment = self.env['ir.attachment'].create({
+            'name': 'fotos_reparaciones.zip',
+            'type': 'binary',
+            'datas': zip_data,
+            'res_model': 'reparaciones.reparaciones',
+            'res_id': self.id,
+            'mimetype': 'application/zip'
+        })
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/web/content/%s?download=true' % attachment.id,
+            'target': 'self',
+        }
 
     marca = fields.Char(string='Marca', related='maquina_id.marca', readonly=True, store=True)
     importacion = fields.Char(string='Importación',
