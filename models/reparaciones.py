@@ -163,6 +163,10 @@ class Reparaciones(models.Model):
         }
         files = {'file': (nombre_archivo, archivo_binario)}
         response = requests.post(url, params=params, files=files)
+        
+        # Agregar registros en los logs para depurar la respuesta
+        _logger.info("Respuesta de la API de pCloud: %s", response.text)
+
         result = response.json()
         if response.status_code == 200 and 'metadata' in result:
             file_metadata = result['metadata'][0]
@@ -178,8 +182,9 @@ class Reparaciones(models.Model):
         else:
             _logger.error(f"Error al subir la foto: {result}")
             raise ValidationError(_("No se pudo subir la foto: %s") % result.get('error'))
-    
-      
+
+        
+        
     maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True )
      # Restricción SQL para evitar duplicados de serie_id
     _sql_constraints = [
