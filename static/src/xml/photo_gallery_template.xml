@@ -2,40 +2,75 @@
 <templates xml:space="preserve">
     <t t-name="reparaciones.GalleryWidget">
         <div class="reparacion-photo-gallery">
-            <div t-if="!props.readonly" class="upload-section mb-4">
-                <label class="btn btn-primary">
-                    <i class="fa fa-upload me-2"/>Subir Foto
-                    <input type="file" 
-                           class="d-none" 
-                           accept="image/*"
-                           t-on-change="uploadPhoto"/>
-                </label>
+            <div class="gallery-header d-flex justify-content-between align-items-center mb-4">
+                <div class="gallery-actions">
+                    <div t-if="!props.readonly" class="btn-group">
+                        <label class="btn btn-primary">
+                            <i class="fa fa-upload me-2"/>Subir Fotos
+                            <input type="file" 
+                                   class="d-none" 
+                                   accept="image/*"
+                                   multiple="true"
+                                   t-on-change="uploadPhoto"/>
+                        </label>
+                        <button class="btn btn-secondary" 
+                                t-att-class="{'active': state.selectMode}"
+                                t-on-click="toggleSelectMode">
+                            <i class="fa fa-check-square me-2"/>Seleccionar
+                        </button>
+                    </div>
+                </div>
+                
+                <div t-if="state.selectMode" class="selection-actions">
+                    <button class="btn btn-link me-2" t-on-click="selectAll">
+                        <t t-if="state.selectedPhotos.size === state.photos.length">
+                            Deseleccionar Todo
+                        </t>
+                        <t t-else="">
+                            Seleccionar Todo
+                        </t>
+                    </button>
+                    <button class="btn btn-primary" 
+                            t-on-click="downloadSelectedPhotos"
+                            t-att-disabled="state.selectedPhotos.size === 0">
+                        Descargar Seleccionadas 
+                        (<t t-esc="state.selectedPhotos.size"/>)
+                    </button>
+                </div>
             </div>
 
-            <div class="photo-grid" t-if="photos.length">
-                <t t-foreach="photos" t-as="photo" t-key="photo.id">
-                    <t t-if="photo.url_foto">
-                        <div class="photo-item" t-on-click="() => openPhotoModal(photo)">
-                            <div class="photo-container">
-                                <img t-att-src="'/web/content/reparaciones.foto/' + photo.id + '/url_foto'"
-                                     t-att-alt="photo.nombre_foto"
-                                     class="photo-image"/>
-                            </div>
-                            <div class="photo-overlay">
-                                <div class="photo-info">
-                                    <span class="photo-name" t-esc="photo.nombre_foto"/>
-                                    <button class="btn btn-light btn-sm" 
-                                            t-on-click.stop="(ev) => downloadPhoto(photo, ev)">
-                                        <i class="fa fa-download"/> Descargar
-                                    </button>
+            <div t-if="state.isLoading" class="text-center py-4">
+                <i class="fa fa-spinner fa-spin fa-2x"/>
+                <p>Cargando fotos...</p>
+            </div>
+
+            <div t-elif="state.photos.length" class="photo-grid">
+                <t t-foreach="state.photos" t-as="photo" t-key="photo.id">
+                    <div class="photo-item" 
+                         t-att-class="{'selected': state.selectedPhotos.has(photo.id)}"
+                         t-on-click="() => openPhotoModal(photo)">
+                        <div class="photo-container">
+                            <img t-att-src="photo.preview_url" 
+                                 t-att-alt="photo.nombre_foto"
+                                 class="photo-image"/>
+                            <div t-if="state.selectMode" 
+                                 class="select-overlay"
+                                 t-on-click.stop="(ev) => togglePhotoSelection(photo, ev)">
+                                <div class="checkbox-container">
+                                    <i t-if="state.selectedPhotos.has(photo.id)" 
+                                       class="fa fa-check-square fa-2x"/>
+                                    <i t-else="" class="fa fa-square-o fa-2x"/>
                                 </div>
                             </div>
                         </div>
-                    </t>
+                        <div class="photo-info">
+                            <span class="photo-name" t-esc="photo.nombre_foto"/>
+                        </div>
+                    </div>
                 </t>
             </div>
             
-            <div t-if="!photos.length" class="text-center text-muted py-4">
+            <div t-elif="!state.isLoading" class="text-center text-muted py-4">
                 No hay fotos disponibles
             </div>
 
@@ -43,21 +78,18 @@
                     title="'Vista Previa'"
                     size="'lg'"
                     t-on-close="closePhotoModal">
-                <t t-if="state.selectedPhoto">
-                    <div class="photo-preview">
-                        <img t-if="state.selectedPhoto.url_foto"
-                             t-att-src="'/web/content/reparaciones.foto/' + state.selectedPhoto.id + '/url_foto'"
-                             t-att-alt="state.selectedPhoto.nombre_foto"
-                             class="preview-image"/>
-                        <div class="photo-info mt-3">
-                            <h5 t-esc="state.selectedPhoto.nombre_foto"/>
-                            <button class="btn btn-primary"
-                                    t-on-click="(ev) => downloadPhoto(state.selectedPhoto, ev)">
-                                <i class="fa fa-download"/> Descargar
-                            </button>
-                        </div>
+                <div class="photo-preview" t-if="state.selectedPhoto">
+                    <img t-att-src="state.selectedPhoto.preview_url"
+                         t-att-alt="state.selectedPhoto.nombre_foto"
+                         class="preview-image"/>
+                    <div class="preview-info mt-3">
+                        <h5 t-esc="state.selectedPhoto.nombre_foto"/>
+                        <button class="btn btn-primary"
+                                t-on-click="() => downloadSelectedPhotos([state.selectedPhoto])">
+                            <i class="fa fa-download"/> Descargar
+                        </button>
                     </div>
-                </t>
+                </div>
             </Dialog>
         </div>
     </t>

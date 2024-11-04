@@ -74,7 +74,24 @@ class Reparaciones(models.Model):
         except Exception as create_error:
             _logger.error("Error durante la creación de la reparación: %s", str(create_error))
             raise
-
+    def get_photos_with_preview(self):
+        """Obtiene todas las fotos con sus previsualizaciones"""
+        self.ensure_one()
+        photos = []
+        for foto in self.fotos_ids:
+            try:
+                url = foto.get_download_url()
+                preview_url = foto.get_preview_url()
+                if url and preview_url:
+                    photos.append({
+                        'id': foto.id,
+                        'nombre_foto': foto.nombre_foto,
+                        'download_url': url,
+                        'preview_url': preview_url,
+                    })
+            except Exception as e:
+                continue
+        return photos
     def create_folder_in_pcloud(self):
         """Crea una carpeta en pCloud dentro de 'fotos_reparaciones' usando modelo_id y serie."""
         pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)

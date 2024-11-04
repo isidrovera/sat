@@ -124,3 +124,64 @@ class ReparacionFoto(models.Model):
         if 'hosts' in result and 'path' in result:
             return f"https://{result['hosts'][0]}{result['path']}"
         raise ValidationError("No se pudo generar la URL de la foto")
+
+
+    def get_preview_url(self):
+        """Obtiene la URL de previsualización desde pCloud"""
+        self.ensure_one()
+        if not self.file_id:
+            return False
+
+        pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+        if not pcloud_config or not pcloud_config.access_token:
+            return False
+
+        try:
+            url = f"{pcloud_config.hostname}/getfilelink"
+            params = {
+                'access_token': pcloud_config.access_token,
+                'fileid': self.file_id
+            }
+            
+            response = requests.get(url, params=params)
+            result = response.json()
+            
+            if response.status_code == 200 and result.get('result') == 0:
+                return f"https://{result['hosts'][0]}{result['path']}"
+            
+            return False
+        except Exception:
+            return False
+
+    @api.model
+    def get_photos_zip(self, foto_ids):
+        """Crea un ZIP con las fotos seleccionadas"""
+        fotos = self.browse(foto_ids)
+        if not fotos:
+            return False
+
+        try:
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for foto in fotos:
+                    url = foto.get_download_url()
+                    if url:
+                        try:
+                            response = requests.get(url)
+                            if response.status_code == 200:
+                                filename = foto.nombre_foto or f'foto_{foto.id}.jpg'
+                                zip_file.writestr(filename, response.content)
+                        except Exception:
+                            continue
+
+            zip_buffer.seek(0)
+            attachment = self.env['ir.attachment'].create({
+                'name': 'fotos_seleccionadas.zip',
+                'type': 'binary',
+                'datas': base64.b64encode(zip_buffer.read()),
+                'mimetype': 'application/zip',
+            })
+
+            return f'/web/content/{attachment.id}?download=true'
+        except Exception:
+            return False
