@@ -12,7 +12,7 @@
                 </div>
                 <group>
                     <field name="serie" placeholder="Ingrese la serie del equipo" class="oe_highlight"/>
-                    <field name="modelo_id" placeholder="Seleccione el modelo del equipo" class="oe_highlight"/>
+                    <field name="modelo_id" placeholder="Seleccione el modelo del equipo" class="oe_highlight" options="{'no_create': True}"/>
                 </group>
             </sheet>
             <footer>

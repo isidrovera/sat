@@ -119,11 +119,11 @@
                                         <field name="scaner_mail_id" required="estado == 'proceso'" />
                                         <field name="toner_black_id" required="estado == 'proceso'" />
                                         <field name="toner_magenta_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" />
                                         <field name="toner_cyan_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'"/>
                                         <field name="toner_yellow_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'"/>
                                         <field name="bypass_id" required="estado == 'proceso'" />
                                         <field name="tray1_id" required="estado == 'proceso'" />
                                     </group>
@@ -139,11 +139,11 @@
                                         <field name="optico_id" required="estado == 'proceso'" />
                                         <field name="black_id" required="estado == 'proceso'" />
                                         <field name="magenta_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" />
                                         <field name="cyan_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" />
                                         <field name="yellow_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" />
+                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'"/>
                                     </group>
                                 </group>
                             </page>

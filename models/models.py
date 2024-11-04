@@ -219,27 +219,7 @@ class SatSat(models.Model):
 
 
 
-    def action_whatsap(self):
-        msg = "Cliente: %s" % (self.cliente_id.name)
-        msg1 = " Modelo: %s" % (self.name.name)
-        msg2 = " Serie: %s" % (self.serie_id)
-        msg3 = " Importación: %s" % (self.importacion)
-        msg4 = " Proveedor: %s" % (self.proveedor_id.name)
-        msg5 = " Marca: %s" % (self.marca)
-        msg6 = " Ubicación: %s" % (self.ubicacion_id)
-        msg7 = " Estado: %s" % (self.obtener_estado_ventas_display(self.estado_ventas_id))
-
-        # msg2 = (f'{msg}{msg1}')
-
-        whatsapp_iu_url = 'https://api.whatsapp.com/send?phone=%s&text=%s' % (
-            self.trabajadores_id.mobile_phone, (f'{msg3}%0A{msg4}%0A{msg}%0A{msg5}%0A{msg1}%0A{msg2}%0A{msg6}%0A{msg7}'))
-        return {
-            'type': 'ir.actions.act_url',
-                    'target': 'new',
-                    'url': whatsapp_iu_url
-        }
-
-
+    
     reparacion_id = fields.Many2one('reparaciones.reparaciones',string='Reparacion', )  
 
     fecha_separacion = fields.Date(string="Fecha de separado")
