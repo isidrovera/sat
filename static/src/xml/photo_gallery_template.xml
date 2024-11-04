@@ -2,18 +2,11 @@
 <templates xml:space="preserve">
     <t t-name="reparaciones.GalleryWidget">
         <div class="reparacion-photo-gallery">
-            <t t-if="env.debug">
-                <div class="debug-info alert alert-info">
-                    <p>Debug Info:</p>
-                    <pre t-esc="JSON.stringify(debugInfo, null, 2)"/>
-                </div>
-            </t>
-
             <div class="gallery-actions mb-3">
                 <div class="btn-group">
                     <t t-if="!props.readonly">
                         <label class="btn btn-primary">
-                            <i class="fa fa-upload me-2"/>Subir Foto
+                            <i class="fa fa-upload me-2"/>Subir Fotos
                             <input type="file" 
                                    class="d-none" 
                                    accept="image/*"
@@ -50,23 +43,30 @@
                 <div class="photo-grid">
                     <t t-foreach="state.photos" t-as="photo" t-key="photo.id">
                         <div class="photo-item" 
-                             t-att-class="{'selected': state.selectedPhotos.has(photo.id)}"
-                             t-on-click="() => openPhotoModal(photo)">
+                             t-on-click="() => onPhotoClick(photo)"
+                             t-att-class="{'selected': state.selectedPhotos.has(photo.id)}">
                             <div class="photo-container">
-                                <t t-if="photo.url_foto">
-                                    <img t-att-src="photo.url_foto" 
-                                         t-att-alt="photo.nombre_foto"
-                                         class="photo-image"/>
-                                </t>
-                                <t t-else="">
-                                    <div class="photo-placeholder">
-                                        <i class="fa fa-image fa-3x"/>
-                                    </div>
-                                </t>
+                                <img t-att-src="photo.imageUrl" 
+                                     t-att-alt="photo.nombre_foto"
+                                     class="photo-image"/>
                             </div>
                             <div class="photo-info">
-                                <span class="photo-name" t-esc="photo.nombre_foto || 'Sin nombre'"/>
+                                <div class="photo-name" t-esc="photo.nombre_foto || 'Sin nombre'"/>
+                                <button class="btn btn-sm btn-light mt-2" 
+                                        t-on-click.stop="(ev) => downloadPhoto(photo, ev)">
+                                    <i class="fa fa-download"/> Descargar
+                                </button>
                             </div>
+                            <t t-if="state.selectMode">
+                                <div class="select-overlay">
+                                    <div class="checkbox">
+                                        <i t-if="state.selectedPhotos.has(photo.id)" 
+                                           class="fa fa-check-square fa-2x"/>
+                                        <i t-else="" 
+                                           class="fa fa-square-o fa-2x"/>
+                                    </div>
+                                </div>
+                            </t>
                         </div>
                     </t>
                 </div>
@@ -84,13 +84,11 @@
                     t-on-close="closePhotoModal">
                 <t t-if="state.selectedPhoto">
                     <div class="photo-preview">
-                        <t t-if="state.selectedPhoto.url_foto">
-                            <img t-att-src="state.selectedPhoto.url_foto"
-                                 t-att-alt="state.selectedPhoto.nombre_foto"
-                                 class="preview-image"/>
-                        </t>
+                        <img t-att-src="state.selectedPhoto.imageUrl"
+                             t-att-alt="state.selectedPhoto.nombre_foto"
+                             class="preview-image"/>
                         <div class="preview-info mt-3">
-                            <h5 t-esc="state.selectedPhoto.nombre_foto || 'Sin nombre'"/>
+                            <h5 t-esc="state.selectedPhoto.nombre_foto"/>
                             <button class="btn btn-primary"
                                     t-on-click="(ev) => downloadPhoto(state.selectedPhoto, ev)">
                                 <i class="fa fa-download"/> Descargar

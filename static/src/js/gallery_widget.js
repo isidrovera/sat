@@ -3,14 +3,12 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component, useState, onMounted } from "@odoo/owl";
 import { Dialog } from "@web/core/dialog/dialog";
-import { Field } from "@web/views/fields/field";
 
-class GalleryWidget extends Field {
+class GalleryWidget extends Component {
     static template = "reparaciones.GalleryWidget";
     static components = { Dialog };
 
     setup() {
-        super.setup();
         this.state = useState({
             selectedPhoto: null,
             isModalOpen: false,
@@ -27,31 +25,62 @@ class GalleryWidget extends Field {
     }
 
     async loadPhotos() {
-        console.log("Iniciando carga de fotos");
+        console.log("Cargando fotos para record:", this.props.record.resId);
         try {
             this.state.isLoading = true;
-            const photos = await this.orm.call(
+            this.state.error = null;
+            const result = await this.orm.call(
                 'reparaciones.foto',
-                'get_photos_preview',
-                [[this.props.record.resId]]
+                'search_read',
+                [[['reparacion_id', '=', this.props.record.resId]]],
+                {
+                    fields: ['id', 'nombre_foto', 'url_foto']
+                }
             );
-            console.log("Fotos obtenidas:", photos);
-            this.state.photos = photos || [];
+            console.log("Fotos obtenidas:", result);
+            this.state.photos = result.map(photo => ({
+                ...photo,
+                imageUrl: `/web/image/reparaciones.foto/${photo.id}/foto_binario`
+            }));
         } catch (error) {
             console.error('Error al cargar fotos:', error);
-            this.state.error = error.message || "Error al cargar las fotos";
-            this.notification.add(this.state.error, {
-                type: 'danger',
-            });
+            this.state.error = "Error al cargar las fotos";
+            this.notification.add(this.state.error, { type: 'danger' });
         } finally {
             this.state.isLoading = false;
         }
     }
 
+    onPhotoClick(photo) {
+        if (!this.state.selectMode) {
+            this.openPhotoModal(photo);
+        } else {
+            this.togglePhotoSelection(photo);
+        }
+    }
+
+    openPhotoModal(photo) {
+        if (photo) {
+            this.state.selectedPhoto = photo;
+            this.state.isModalOpen = true;
+        }
+    }
+
+    closePhotoModal() {
+        this.state.isModalOpen = false;
+        this.state.selectedPhoto = null;
+    }
+
     toggleSelectMode() {
         this.state.selectMode = !this.state.selectMode;
-        if (!this.state.selectMode) {
-            this.state.selectedPhotos.clear();
+        this.state.selectedPhotos.clear();
+    }
+
+    togglePhotoSelection(photo) {
+        if (this.state.selectedPhotos.has(photo.id)) {
+            this.state.selectedPhotos.delete(photo.id);
+        } else {
+            this.state.selectedPhotos.add(photo.id);
         }
     }
 
@@ -82,40 +111,21 @@ class GalleryWidget extends Field {
             reader.readAsDataURL(file);
         }
 
-        // Recargar fotos después de la subida
-        await this.loadPhotos();
+        // Esperar un poco antes de recargar las fotos
+        setTimeout(() => this.loadPhotos(), 1000);
     }
 
     async downloadPhoto(photo, ev) {
-        if (!photo?.url_foto) return;
         ev?.stopPropagation();
-        window.open(photo.url_foto, '_blank');
-    }
-
-    openPhotoModal(photo) {
-        if (!this.state.selectMode && photo) {
-            this.state.selectedPhoto = photo;
-            this.state.isModalOpen = true;
+        try {
+            window.open(`/web/content/reparaciones.foto/${photo.id}/foto_binario?download=true`, '_blank');
+        } catch (error) {
+            this.notification.add("Error al descargar la foto", { type: 'danger' });
         }
     }
 
-    closePhotoModal() {
-        this.state.isModalOpen = false;
-        this.state.selectedPhoto = null;
-    }
-
     get hasPhotos() {
-        return this.state.photos && this.state.photos.length > 0;
-    }
-
-    get debugInfo() {
-        return {
-            totalPhotos: this.state.photos.length,
-            selectedCount: this.state.selectedPhotos.size,
-            error: this.state.error,
-            loading: this.state.isLoading,
-            recordId: this.props.record.resId,
-        };
+        return this.state.photos.length > 0;
     }
 }
 
