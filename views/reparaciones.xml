@@ -207,48 +207,10 @@
                                     </group>
                                 </group>
                             </page>
-                            <page string="Galería de Fotos" name="gallery">
-                                <field name="fotos_ids" options="{'create': true, 'delete': true}">
-                                    <kanban class="o_kanban_mobile" create="true">
-                                        <field name="id"/>
-                                        <field name="nombre_foto"/>
-                                        <field name="url_foto"/>
-                                        <templates>
-                                            <t t-name="kanban-box">
-                                                <div class="oe_kanban_global_click o_kanban_record_has_image_fill o_photo_gallery_kanban">
-                                                    <div class="o_kanban_image_fill_left d-none d-md-block"
-                                                         t-attf-style="background-image: url(#{record.url_foto.raw_value});">
-                                                        <img class="o_kanban_image_inner_pic"
-                                                             t-att-src="record.url_foto.raw_value"/>
-                                                    </div>
-                                                    <div class="oe_kanban_details d-flex flex-column">
-                                                        <div class="o_kanban_record_title mb-1">
-                                                            <strong><field name="nombre_foto"/></strong>
-                                                        </div>
-                                                        <div class="o_kanban_record_bottom">
-                                                            <a t-att-href="record.url_foto.raw_value" 
-                                                               download="true"
-                                                               class="btn btn-primary btn-sm">
-                                                                <i class="fa fa-download"/> Descargar
-                                                            </a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </t>
-                                        </templates>
-                                    </kanban>
-                                </field>
-                                <div class="oe_button_box" name="button_box">
-                                    <button string="Descargar Todas las Fotos" 
-                                            type="object"
-                                            name="descargar_fotos_zip"
-                                            class="oe_stat_button"
-                                            icon="fa-download"/>
-                                </div>
-                            </page>
-                            
-                            
-                                                        
+                            <page string="Galería de Fotos" name="fotos">
+                                <field name="fotos_ids" widget="reparacion_foto_gallery"/>
+                            </page>                          
+
                         </notebook>
                     </sheet>
                     <chatter />

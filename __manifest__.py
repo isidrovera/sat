@@ -82,8 +82,9 @@
         'sat/static/src/css/dashboard.css',
         'sat/static/src/js/estilo_dashboard.js',
         'sat/static/src/js/foto_galeria.js',
-        #'sat/static/src/js/gallery_widget.js',
-        #'sat/static/src/xml/photo_gallery_template.xml',
+        'sat/static/src/js/gallery_widget.js',
+        'sat/static/scr/scss/photo_gallery.scss',
+        'sat/static/src/xml/photo_gallery_template.xml',
         
              
     ],

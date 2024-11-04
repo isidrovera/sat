@@ -1,8 +1,51 @@
-<odoo>
-    <template id="assets_backend" name="Photo Gallery Widget" inherit_id="web.assets_backend">
-        <xpath expr="." position="inside">
-            <script type="module" src="/sat/static/src/js/gallery_widget.js"></script>
-            
-        </xpath>
-    </template>
-</odoo>
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="reparaciones.PhotoGallery">
+        <div class="reparacion-photo-gallery">
+            <div class="photo-upload-section mb-3">
+                <label class="btn btn-primary">
+                    <i class="fa fa-upload me-2"/>Subir Foto
+                    <input type="file" 
+                           class="d-none" 
+                           accept="image/*"
+                           t-on-change="uploadPhoto"/>
+                </label>
+            </div>
+
+            <div class="photo-grid">
+                <t t-foreach="props.value" t-as="photo" t-key="photo.id">
+                    <div class="photo-item" t-on-click="() => this.openPhotoModal(photo)">
+                        <img t-att-src="photo.url_foto" 
+                             t-att-alt="photo.nombre_foto"
+                             class="img-fluid"/>
+                        <div class="photo-overlay">
+                            <span class="photo-name" t-esc="photo.nombre_foto"/>
+                            <button class="btn btn-light btn-sm" 
+                                    t-on-click.stop="() => this.downloadPhoto(photo)">
+                                <i class="fa fa-download"/> Descargar
+                            </button>
+                        </div>
+                    </div>
+                </t>
+            </div>
+
+            <Dialog t-if="state.isModalOpen"
+                    title="'Vista Previa'"
+                    size="'lg'"
+                    t-on-close="() => this.closePhotoModal()">
+                <div class="photo-preview">
+                    <img t-if="state.selectedPhoto"
+                         t-att-src="state.selectedPhoto.url_foto"
+                         class="img-fluid"/>
+                    <div class="photo-info mt-3">
+                        <h5 t-esc="state.selectedPhoto?.nombre_foto"/>
+                        <button class="btn btn-primary"
+                                t-on-click="() => this.downloadPhoto(state.selectedPhoto)">
+                            <i class="fa fa-download"/> Descargar
+                        </button>
+                    </div>
+                </div>
+            </Dialog>
+        </div>
+    </t>
+</templates>
