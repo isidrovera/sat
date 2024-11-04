@@ -1,29 +1,14 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { Component, useState } from "@odoo/owl";
 import { Dialog } from "@web/core/dialog/dialog";
-import { Field } from "@web/views/fields/field";
 
-class GalleryWidget extends Field {
+class GalleryWidget extends Component {
     static template = "reparaciones.GalleryWidget";
     static components = { Dialog };
 
-    static props = {
-        ...standardFieldProps,
-        record: { type: Object },
-        name: { type: String },
-        update: { type: Function },
-        readonly: { type: Boolean, optional: true },
-    };
-
-    static defaultProps = {
-        readonly: false,
-    };
-
     setup() {
-        super.setup();
         this.state = useState({
             selectedPhoto: null,
             isModalOpen: false
@@ -33,9 +18,7 @@ class GalleryWidget extends Field {
     }
 
     get photos() {
-        // Asegurarse de que tenemos un array válido
-        const value = this.props.record.data[this.props.name];
-        return Array.isArray(value) ? value : [];
+        return this.props.value || [];
     }
 
     async uploadPhoto(ev) {
@@ -59,7 +42,6 @@ class GalleryWidget extends Field {
                     type: 'success',
                 });
             } catch (error) {
-                console.error('Error al subir foto:', error);
                 this.notification.add("Error al subir la foto", {
                     type: 'danger',
                 });
@@ -69,10 +51,8 @@ class GalleryWidget extends Field {
     }
 
     openPhotoModal(photo) {
-        if (photo) {
-            this.state.selectedPhoto = photo;
-            this.state.isModalOpen = true;
-        }
+        this.state.selectedPhoto = photo;
+        this.state.isModalOpen = true;
     }
 
     closePhotoModal() {
@@ -92,6 +72,14 @@ class GalleryWidget extends Field {
     }
 }
 
-registry.category("fields").add("gallery_widget", GalleryWidget);
+export const galleryWidget = {
+    component: GalleryWidget,
+    supportedTypes: ['many2many'],
+    extractProps: ({ attrs, field }) => ({
+        readonly: attrs.readonly,
+        value: field.value,
+        record: field.record,
+    }),
+};
 
-export default GalleryWidget;
+registry.category("fields").add("gallery_widget", galleryWidget);

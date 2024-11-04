@@ -8,54 +8,53 @@
                     <input type="file" 
                            class="d-none" 
                            accept="image/*"
-                           t-on-change="(ev) => this.uploadPhoto(ev)"/>
+                           t-on-change="uploadPhoto"/>
                 </label>
             </div>
 
             <div class="photo-grid">
-                <t t-foreach="photos" t-as="photo" t-key="photo.id">
-                    <div t-if="photo and photo.id" class="photo-card" t-on-click="() => this.openPhotoModal(photo)">
-                        <div class="photo-container">
-                            <img t-if="photo.url_foto" 
-                                 t-att-src="photo.url_foto" 
-                                 t-att-alt="photo.nombre_foto || ''"
-                                 class="photo-image"/>
-                            <div t-else="" class="photo-placeholder">
-                                <i class="fa fa-image fa-2x"/>
+                <t t-foreach="photos" t-as="photo">
+                    <t t-if="photo">
+                        <div class="photo-card" t-on-click="() => openPhotoModal(photo)">
+                            <div class="photo-container">
+                                <img t-if="photo.url_foto" 
+                                     t-att-src="photo.url_foto" 
+                                     t-att-alt="photo.nombre_foto || ''"
+                                     class="photo-image"/>
+                            </div>
+                            <div class="photo-overlay">
+                                <div class="photo-info">
+                                    <span class="photo-name" t-esc="photo.nombre_foto || ''"/>
+                                    <button class="btn btn-light btn-sm download-btn" 
+                                            t-on-click="(ev) => downloadPhoto(photo, ev)">
+                                        <i class="fa fa-download"/> Descargar
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="photo-overlay">
-                            <div class="photo-info">
-                                <span class="photo-name" t-esc="photo.nombre_foto || ''"/>
-                                <button t-if="photo.url_foto"
-                                        class="btn btn-light btn-sm download-btn" 
-                                        t-on-click="(ev) => this.downloadPhoto(photo, ev)">
-                                    <i class="fa fa-download"/> Descargar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    </t>
                 </t>
             </div>
 
-            <Dialog t-if="state.isModalOpen and state.selectedPhoto"
+            <Dialog t-if="state.isModalOpen"
                     title="'Vista Previa de Foto'"
                     size="'lg'"
-                    t-on-close="() => this.closePhotoModal()">
-                <div class="photo-preview">
-                    <img t-if="state.selectedPhoto.url_foto"
-                         t-att-src="state.selectedPhoto.url_foto"
-                         t-att-alt="state.selectedPhoto.nombre_foto || ''"
-                         class="preview-image"/>
-                    <div class="preview-info">
-                        <h5 class="preview-title" t-esc="state.selectedPhoto.nombre_foto || ''"/>
-                        <button t-if="state.selectedPhoto.url_foto"
-                                class="btn btn-primary"
-                                t-on-click="(ev) => this.downloadPhoto(state.selectedPhoto, ev)">
-                            <i class="fa fa-download"/> Descargar
-                        </button>
+                    t-on-close="closePhotoModal">
+                <t t-if="state.selectedPhoto">
+                    <div class="photo-preview">
+                        <img t-if="state.selectedPhoto.url_foto"
+                             t-att-src="state.selectedPhoto.url_foto"
+                             t-att-alt="state.selectedPhoto.nombre_foto || ''"
+                             class="preview-image"/>
+                        <div class="preview-info">
+                            <h5 t-esc="state.selectedPhoto.nombre_foto || ''"/>
+                            <button class="btn btn-primary"
+                                    t-on-click="(ev) => downloadPhoto(state.selectedPhoto, ev)">
+                                <i class="fa fa-download"/> Descargar
+                            </button>
+                        </div>
                     </div>
-                </div>
+                </t>
             </Dialog>
         </div>
     </t>
