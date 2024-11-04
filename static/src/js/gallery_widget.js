@@ -1,49 +1,28 @@
 /** @odoo-module **/
-import { Component, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { standardFieldProps } from "@web/views/fields/standard_field_props";
+import { Component, useState } from "@odoo/owl";
+import { Dialog } from "@web/core/dialog/dialog";
 
-/**
- * Widget para galería de fotos de reparaciones
- */
-class ReparacionFotoGallery extends Component {
+class GalleryWidget extends Component {
+    static template = "reparaciones.GalleryWidget";
+    static components = { Dialog };
+    static props = {
+        ...standardFieldProps,
+    };
+
     setup() {
         this.state = useState({
             selectedPhoto: null,
-            isModalOpen: false,
+            isModalOpen: false
         });
-        this.action = useService("action");
         this.notification = useService("notification");
         this.orm = useService("orm");
     }
 
-    async downloadPhoto(photo) {
-        try {
-            if (photo && photo.url_foto) {
-                window.open(photo.url_foto, '_blank');
-            } else {
-                this.notification.add(this.env._t("URL de foto no disponible"), {
-                    type: 'warning',
-                });
-            }
-        } catch (error) {
-            this.notification.add(this.env._t("Error al descargar la foto"), {
-                type: 'danger',
-            });
-        }
-    }
-
-    openPhotoModal(photo) {
-        if (photo) {
-            this.state.selectedPhoto = photo;
-            this.state.isModalOpen = true;
-        }
-    }
-
-    closePhotoModal() {
-        this.state.isModalOpen = false;
-        this.state.selectedPhoto = null;
+    get photos() {
+        return this.props.value || [];
     }
 
     async uploadPhoto(ev) {
@@ -62,25 +41,40 @@ class ReparacionFotoGallery extends Component {
                         reparacion_id: this.props.record.resId,
                     }]
                 );
-                // Recargar el record
                 await this.props.record.load();
-                this.notification.add(this.env._t("Foto subida correctamente"), {
+                this.notification.add("Foto subida exitosamente", {
                     type: 'success',
                 });
             } catch (error) {
-                this.notification.add(this.env._t("Error al subir la foto"), {
+                this.notification.add("Error al subir la foto", {
                     type: 'danger',
                 });
             }
         };
         reader.readAsDataURL(file);
     }
+
+    openPhotoModal(photo) {
+        this.state.selectedPhoto = photo;
+        this.state.isModalOpen = true;
+    }
+
+    closePhotoModal() {
+        this.state.isModalOpen = false;
+        this.state.selectedPhoto = null;
+    }
+
+    downloadPhoto(photo) {
+        if (photo?.url_foto) {
+            window.open(photo.url_foto, '_blank');
+        } else {
+            this.notification.add("URL de foto no disponible", {
+                type: 'warning',
+            });
+        }
+    }
 }
 
-ReparacionFotoGallery.template = 'reparaciones.PhotoGallery';
-ReparacionFotoGallery.props = {
-    ...standardFieldProps,
-};
+registry.category("fields").add("gallery_widget", GalleryWidget);
 
-// Registrar el widget
-registry.category("fields").add("reparacion_foto_gallery", ReparacionFotoGallery);
+export default GalleryWidget;

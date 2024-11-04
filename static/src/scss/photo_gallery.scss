@@ -1,31 +1,41 @@
 .reparacion-photo-gallery {
     padding: 1rem;
+    
+    .upload-section {
+        display: flex;
+        justify-content: flex-end;
+    }
 
     .photo-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1rem;
+        gap: 1.5rem;
+        padding: 1rem 0;
     }
 
-    .photo-item {
+    .photo-card {
         position: relative;
-        aspect-ratio: 1;
-        border-radius: 8px;
+        border-radius: 0.5rem;
         overflow: hidden;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         cursor: pointer;
-        transition: transform 0.2s;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
 
         &:hover {
             transform: translateY(-2px);
-            
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+
             .photo-overlay {
                 opacity: 1;
             }
         }
 
-        img {
+        .photo-container {
+            aspect-ratio: 1;
+            background-color: #f8f9fa;
+        }
+
+        .photo-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -36,10 +46,13 @@
             bottom: 0;
             left: 0;
             right: 0;
-            padding: 1rem;
             background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            padding: 1rem;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: opacity 0.2s ease;
+        }
+
+        .photo-info {
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
@@ -53,23 +66,41 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        .download-btn {
+            align-self: flex-start;
+            
+            &:hover {
+                background-color: white;
+            }
+        }
+    }
+}
+
+.photo-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+
+    .preview-image {
+        max-height: 70vh;
+        width: auto;
+        margin: 0 auto;
+        object-fit: contain;
     }
 
-    .photo-preview {
-        text-align: center;
-        
-        img {
-            max-height: 70vh;
-            object-fit: contain;
-        }
+    .preview-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
 
-        .photo-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            background: var(--gray-100);
-            border-radius: 8px;
+        .preview-title {
+            margin: 0;
+            font-weight: 500;
         }
     }
 }
