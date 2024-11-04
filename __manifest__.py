@@ -80,6 +80,7 @@
         'sat/static/src/xml/dashboard.xml',
         'sat/static/src/css/dashboard.css',
         'sat/static/src/js/estilo_dashboard.js',
+        'sat/static/src/js/foto_galeria.js',
         
              
     ],
