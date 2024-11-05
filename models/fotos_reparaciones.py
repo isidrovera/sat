@@ -735,6 +735,7 @@ class ReparacionFoto(models.Model):
             pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
             if not pcloud_config:
                 raise ValidationError("No se encontró configuración de pCloud")
+            _logger.info(f"[ZIP] Configuración de pCloud encontrada: {pcloud_config}")
 
             # Crear un buffer en memoria para el archivo ZIP
             zip_buffer = io.BytesIO()
@@ -749,6 +750,7 @@ class ReparacionFoto(models.Model):
                             'fileid': foto.file_id,
                             'forcedownload': 1
                         }
+                        _logger.info(f"[ZIP] Solicitando link de descarga para foto ID {foto.id} con URL: {url} y params: {params}")
                         
                         # Realizar la solicitud a pCloud
                         response = requests.get(url, params=params)
@@ -757,6 +759,7 @@ class ReparacionFoto(models.Model):
                         # Verificar si la respuesta es exitosa
                         if response.status_code == 200 and result.get('result') == 0:
                             download_url = f"https://{result['hosts'][0]}{result['path']}"
+                            _logger.info(f"[ZIP] Enlace de descarga obtenido para foto {foto.id}: {download_url}")
                             file_response = requests.get(download_url)
                             
                             # Descargar y agregar el archivo al ZIP
@@ -764,6 +767,8 @@ class ReparacionFoto(models.Model):
                                 filename = foto.nombre_foto or f'foto_{foto.id}.png'
                                 zip_file.writestr(filename, file_response.content)
                                 _logger.info(f"[ZIP] Foto {foto.id} agregada al ZIP")
+                            else:
+                                _logger.error(f"[ZIP] Error al descargar la foto {foto.id}: Status {file_response.status_code}")
                         else:
                             _logger.error(f"[ZIP] No se pudo obtener el link de descarga para la foto {foto.id}")
                     except Exception as e:
