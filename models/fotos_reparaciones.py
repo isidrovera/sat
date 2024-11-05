@@ -264,45 +264,39 @@ class ReparacionFoto(models.Model):
     @api.model
     def get_photos_preview(self, reparacion_id):
         """Obtiene todas las fotos con sus previsualizaciones"""
-        _logger.info("[PREVIEW] Iniciando para reparación ID: %s", reparacion_id)
+        _logger.info(f"[GET_PHOTOS_PREVIEW] Iniciando para reparación ID: {reparacion_id}")
         
         photos = []
         domain = [('reparacion_id', 'in', [reparacion_id] if isinstance(reparacion_id, int) else reparacion_id)]
-        fotos = self.search(domain, order='sequence')
-        
-        _logger.info("[PREVIEW] Encontradas %d fotos", len(fotos))
+        fotos = self.search(domain, order='sequence, id')
         
         pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
         if not pcloud_config or not pcloud_config.access_token:
-            _logger.error("[PREVIEW] No se encontró configuración de pCloud")
+            _logger.error("[GET_PHOTOS_PREVIEW] No se encontró configuración de pCloud")
             return photos
+
+        # Renovar token si es necesario
+        if not self._check_token_valid(pcloud_config):
+            self._refresh_pcloud_token(pcloud_config)
 
         for foto in fotos:
             try:
                 if foto.file_id:
-                    thumb_url = self._get_thumb_url(foto.file_id, pcloud_config)
-                    download_url = self._get_file_url(foto.file_id, pcloud_config)
-                    
-                    if thumb_url and download_url:
+                    # Obtener URLs públicas que no requieran IP
+                    public_link = self._get_public_link(foto.file_id, pcloud_config)
+                    if public_link:
                         photos.append({
                             'id': foto.id,
-                            'nombre_foto': foto.name,
-                            'sequence': foto.sequence,
-                            'thumb_url': thumb_url,
-                            'download_url': download_url,
-                            'file_id': foto.file_id,
-                            'public_link': foto.public_link,
-                            'mimetype': foto.mimetype,
-                            'size': foto.size
+                            'nombre_foto': foto.nombre_foto,
+                            'thumb_url': public_link.get('thumb_url'),
+                            'download_url': public_link.get('download_url'),
+                            'file_id': foto.file_id
                         })
-                        _logger.info("[PREVIEW] Foto %s procesada exitosamente", foto.id)
-                    else:
-                        _logger.warning("[PREVIEW] No se pudieron obtener URLs para foto %s", foto.id)
+                        _logger.info(f"[GET_PHOTOS_PREVIEW] Foto {foto.id} procesada con éxito")
             except Exception as e:
-                _logger.exception("[PREVIEW] Error procesando foto %s: %s", foto.id, str(e))
+                _logger.exception(f"[GET_PHOTOS_PREVIEW] Error procesando foto {foto.id}: {str(e)}")
                 continue
 
-        _logger.info("[PREVIEW] Total de fotos procesadas: %d", len(photos))
         return photos
 
     def share_photo(self):
@@ -630,3 +624,61 @@ class ReparacionFoto(models.Model):
         except Exception as e:
             _logger.exception(f"[ZIP] Error al crear ZIP: {str(e)}")
             raise ValidationError(f"Error al crear el archivo ZIP: {str(e)}")
+
+    def _get_public_link(self, file_id, pcloud_config):
+        """Obtener links públicos para la foto"""
+        try:
+            # Crear link público
+            url = f"{pcloud_config.hostname}/getfilepublink"
+            params = {
+                'access_token': pcloud_config.access_token,
+                'fileid': file_id
+            }
+
+            response = requests.get(url, params=params)
+            result = response.json()
+
+            if response.status_code == 200 and result.get('link'):
+                # Obtener link de thumbnail
+                thumb_url = f"{pcloud_config.hostname}/getthumblink"
+                thumb_params = {
+                    'access_token': pcloud_config.access_token,
+                    'fileid': file_id,
+                    'size': '256x256',
+                    'crop': 1,
+                    'public': 1
+                }
+
+                thumb_response = requests.get(thumb_url, thumb_params)
+                thumb_result = thumb_response.json()
+
+                if thumb_response.status_code == 200 and thumb_result.get('path'):
+                    return {
+                        'download_url': result['link'],
+                        'thumb_url': f"https://{thumb_result['hosts'][0]}{thumb_result['path']}"
+                    }
+
+            return False
+
+        except Exception as e:
+            _logger.exception(f"[PUBLIC_LINK] Error: {str(e)}")
+            return False
+
+    def _check_token_valid(self, pcloud_config):
+        """Verificar si el token de pCloud es válido"""
+        try:
+            url = f"{pcloud_config.hostname}/userinfo"
+            params = {'access_token': pcloud_config.access_token}
+            response = requests.get(url, params=params)
+            return response.status_code == 200 and response.json().get('result') == 0
+        except:
+            return False
+
+    def _refresh_pcloud_token(self, pcloud_config):
+        """Renovar token de pCloud si es necesario"""
+        try:
+            # Implementa aquí la lógica para renovar el token
+            # Esto dependerá de cómo manejes la autenticación con pCloud
+            pass
+        except Exception as e:
+            _logger.exception(f"[REFRESH_TOKEN] Error: {str(e)}")
