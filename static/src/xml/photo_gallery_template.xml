@@ -2,129 +2,82 @@
 <templates xml:space="preserve">
     <t t-name="reparaciones.GalleryWidget">
         <div class="reparacion-photo-gallery">
-            <!-- Barra de acciones superior -->
-            <div class="actions-header mb-3">
+            <div class="gallery-header mb-3">
                 <div class="btn-toolbar" role="toolbar">
                     <div class="btn-group me-2">
                         <t t-if="!props.readonly">
-                            <label class="btn btn-primary position-relative">
-                                <i class="fa fa-upload me-2"/>
-                                <t t-if="state.isUploading">
-                                    Subiendo... (<t t-esc="state.processedFiles"/>/<t t-esc="state.totalFiles"/>)
-                                </t>
-                                <t t-else="">
-                                    Subir Fotos
-                                </t>
+                            <label class="btn btn-primary">
+                                <i class="fa fa-upload me-2"/>Subir Fotos
                                 <input type="file" 
                                        class="d-none" 
                                        accept="image/*"
                                        multiple="true"
-                                       t-att-disabled="state.isUploading"
-                                       t-on-change="uploadPhotos"/>
+                                       t-on-change="uploadPhoto"/>
                             </label>
                         </t>
-                        <t t-if="state.photos.length">
+                    </div>
+                    <t t-if="hasPhotos">
+                        <div class="btn-group me-2">
                             <button class="btn btn-secondary" 
                                     t-att-class="{'active': state.selectMode}"
                                     t-on-click="toggleSelectMode">
                                 <i class="fa fa-check-square-o me-2"/>
-                                <t t-if="state.selectMode">Cancelar</t>
+                                <t t-if="state.selectMode">Cancelar Selección</t>
                                 <t t-else="">Seleccionar</t>
                             </button>
-                        </t>
-                    </div>
-
-                    <t t-if="state.selectMode">
-                        <div class="btn-group">
-                            <button class="btn btn-outline-secondary" 
-                                    t-on-click="selectAll">
-                                <i class="fa fa-square-o me-2"/>
-                                <t t-if="selectedCount === state.photos.length">
-                                    Deseleccionar Todo
-                                </t>
-                                <t t-else="">
-                                    Seleccionar Todo
-                                </t>
+                        </div>
+                        <div t-if="state.selectMode" class="btn-group">
+                            <button class="btn btn-primary" 
+                                    t-att-disabled="selectedCount === 0"
+                                    t-on-click="downloadSelectedPhotos">
+                                <i class="fa fa-download me-2"/>
+                                Descargar Seleccionadas (<t t-esc="selectedCount"/>)
                             </button>
-                            <t t-if="selectedCount">
-                                <button class="btn btn-primary" 
-                                        t-on-click="downloadSelectedPhotos">
-                                    <i class="fa fa-download me-2"/>
-                                    Descargar (<t t-esc="selectedCount"/>)
-                                </button>
-                                <button class="btn btn-danger" 
-                                        t-on-click="deleteSelectedPhotos">
-                                    <i class="fa fa-trash me-2"/>
-                                    Eliminar
-                                </button>
-                            </t>
                         </div>
                     </t>
                 </div>
-
-                <t t-if="state.isUploading">
-                    <div class="progress mt-2">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" 
-                             t-att-style="'width: ' + state.uploadProgress + '%'"
-                             t-att-aria-valuenow="state.uploadProgress"
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                            <t t-esc="state.uploadProgress"/>%
-                        </div>
-                    </div>
-                </t>
             </div>
 
             <t t-if="state.isLoading">
-                <div class="loading-state">
-                    <i class="fa fa-spinner fa-spin fa-2x mb-2"/>
+                <div class="text-center py-4">
+                    <i class="fa fa-spinner fa-spin fa-2x"/>
                     <p>Cargando fotos...</p>
                 </div>
             </t>
 
-            <t t-elif="state.photos.length">
+            <t t-elif="hasPhotos">
                 <div class="photo-grid">
                     <t t-foreach="state.photos" t-as="photo" t-key="photo.id">
                         <div class="photo-item" 
-                             t-att-class="{'selected': isPhotoSelected(photo.id)}"
-                             t-on-click="() => openPhotoModal(photo)">
+                             t-att-class="{'selected': state.selectedPhotos.has(photo.id)}"
+                             t-on-click="() => onPhotoClick(photo)">
                             <div class="photo-container">
                                 <t t-if="photo.thumb_url">
                                     <img t-att-src="photo.thumb_url" 
                                          t-att-alt="photo.nombre_foto"
-                                         class="photo-image"/>
+                                         class="photo-thumb"
+                                         onerror="this.src='/web/static/img/placeholder.png';"/>
                                 </t>
                                 <t t-else="">
                                     <div class="photo-placeholder">
                                         <i class="fa fa-image fa-3x"/>
                                     </div>
                                 </t>
-
                                 <t t-if="state.selectMode">
-                                    <div class="select-overlay"
-                                         t-on-click.stop="() => togglePhotoSelection(photo)">
-                                        <t t-if="isPhotoSelected(photo.id)">
-                                            <i class="fa fa-check-circle fa-2x text-primary"/>
-                                        </t>
-                                        <t t-else="">
-                                            <i class="fa fa-circle-o fa-2x"/>
-                                        </t>
+                                    <div class="select-overlay">
+                                        <div class="select-checkbox">
+                                            <i t-if="state.selectedPhotos.has(photo.id)" 
+                                               class="fa fa-check-square-o fa-2x"/>
+                                            <i t-else="" 
+                                               class="fa fa-square-o fa-2x"/>
+                                        </div>
                                     </div>
                                 </t>
                             </div>
-
                             <div class="photo-info">
-                                <div class="photo-name" t-esc="photo.nombre_foto"/>
-                                <t t-if="photo.size">
-                                    <div class="photo-details">
-                                        <small class="text-muted">
-                                            <t t-esc="formatFileSize(photo.size)"/>
-                                        </small>
-                                    </div>
-                                </t>
+                                <div class="photo-name" t-esc="photo.nombre_foto || 'Sin nombre'"/>
                                 <button class="btn btn-sm btn-light mt-1" 
-                                        t-on-click.stop="(ev) => downloadPhoto(photo, ev)">
+                                        t-on-click="(ev) => downloadPhoto(photo, ev)">
                                     <i class="fa fa-download"/> Descargar
                                 </button>
                             </div>
@@ -134,95 +87,41 @@
             </t>
 
             <t t-else="">
-                <div class="empty-state">
-                    <i class="fa fa-picture-o fa-3x mb-3"/>
-                    <p>No hay fotos disponibles</p>
-                    <t t-if="!props.readonly">
-                        <p class="text-muted">
-                            Haz clic en "Subir Fotos" para comenzar
-                        </p>
-                    </t>
+                <div class="text-center text-muted py-4">
+                    No hay fotos disponibles
                 </div>
             </t>
 
-            <t t-if="state.isModalOpen">
-                <Dialog title="state.selectedPhoto?.nombre_foto || 'Vista Previa'"
-                        size="'lg'"
-                        t-on-close="closePhotoModal">
-                    <div class="photo-preview-modal">
-                        <div class="preview-container text-center">
-                            <t t-if="state.selectedPhoto">
-                                <t t-if="state.selectedPhoto.download_url">
-                                    <img t-att-src="state.selectedPhoto.download_url"
-                                         t-att-alt="state.selectedPhoto.nombre_foto"
-                                         class="preview-image img-fluid"/>
-                                </t>
-                                <t t-else="">
-                                    <div class="preview-placeholder">
-                                        <i class="fa fa-image fa-5x"/>
-                                        <p class="text-muted mt-3">No se puede previsualizar la imagen</p>
-                                    </div>
-                                </t>
-
-                                <div class="preview-info mt-3">
-                                    <div class="row align-items-center">
-                                        <div class="col">
-                                            <h5 class="mb-1" t-esc="state.selectedPhoto.nombre_foto"/>
-                                            <t t-if="state.selectedPhoto.size">
-                                                <small class="text-muted">
-                                                    Tamaño: <t t-esc="formatFileSize(state.selectedPhoto.size)"/>
-                                                </small>
-                                            </t>
-                                        </div>
-                                        <div class="col-auto">
-                                            <div class="btn-group">
-                                                <button class="btn btn-primary"
-                                                        t-on-click="(ev) => downloadPhoto(state.selectedPhoto, ev)">
-                                                    <i class="fa fa-download"/> Descargar
-                                                </button>
-                                                <t t-if="!props.readonly">
-                                                    <button class="btn btn-danger"
-                                                            t-on-click="() => deleteSelectedPhotos([state.selectedPhoto.id])">
-                                                        <i class="fa fa-trash"/>
-                                                    </button>
-                                                </t>
-                                            </div>
-                                        </div>
-                                    </div>
+            <Dialog t-if="state.isModalOpen"
+                    title="'Vista Previa'"
+                    size="'lg'"
+                    t-on-close="closePhotoModal">
+                <t t-if="state.selectedPhoto">
+                    <div class="photo-preview">
+                        <div class="preview-container">
+                            <t t-if="state.selectedPhoto.download_url">
+                                <img t-att-src="state.selectedPhoto.download_url"
+                                     t-att-alt="state.selectedPhoto.nombre_foto"
+                                     class="preview-image"/>
+                            </t>
+                            <t t-else="">
+                                <div class="preview-placeholder">
+                                    <i class="fa fa-image fa-5x"/>
                                 </div>
                             </t>
                         </div>
-                    </div>
-
-                    <t t-set-slot="footer">
-                        <button class="btn btn-secondary" t-on-click="closePhotoModal">
-                            Cerrar
-                        </button>
-                    </t>
-                </Dialog>
-            </t>
-
-            <t t-if="state.selectMode">
-                <t t-if="selectedCount">
-                    <div class="actions-bar">
-                        <div class="selected-count">
-                            <t t-esc="selectedCount"/> foto(s) seleccionada(s)
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn btn-primary" 
-                                    t-on-click="downloadSelectedPhotos">
-                                <i class="fa fa-download me-2"/>
-                                Descargar Seleccionadas
-                            </button>
-                            <button class="btn btn-danger" 
-                                    t-on-click="deleteSelectedPhotos">
-                                <i class="fa fa-trash me-2"/>
-                                Eliminar Seleccionadas
-                            </button>
+                        <div class="preview-info mt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0" t-esc="state.selectedPhoto.nombre_foto"/>
+                                <button class="btn btn-primary"
+                                        t-on-click="(ev) => downloadPhoto(state.selectedPhoto, ev)">
+                                    <i class="fa fa-download"/> Descargar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </t>
-            </t>
+            </Dialog>
         </div>
     </t>
 </templates>
