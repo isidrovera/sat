@@ -716,16 +716,16 @@ class ReparacionFoto(models.Model):
 
     def get_photos_zip(self, foto_ids=None):
         """Crear un archivo ZIP en memoria con las fotos seleccionadas desde pCloud"""
-        
-        # Validar si se proporcionaron IDs de fotos
+
+        # Log inicial de verificación de IDs recibidos
         if not foto_ids:
-            _logger.warning("[ZIP] No se proporcionaron foto_ids.")
+            _logger.warning("[ZIP] No se proporcionaron foto_ids o el valor es None.")
             return False
 
-        _logger.info(f"[ZIP] foto_ids recibido: {foto_ids}")
-        
+        _logger.info(f"[ZIP] foto_ids recibidos: {foto_ids}")
+
         try:
-            # Obtener los registros de fotos correspondientes
+            # Obtener los registros de fotos
             fotos = self.browse(foto_ids)
             if not fotos:
                 _logger.warning("[ZIP] No se encontraron fotos con los IDs proporcionados.")
@@ -734,48 +734,48 @@ class ReparacionFoto(models.Model):
             # Obtener configuración de pCloud
             pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
             if not pcloud_config:
+                _logger.error("[ZIP] No se encontró configuración de pCloud.")
                 raise ValidationError("No se encontró configuración de pCloud")
-            _logger.info(f"[ZIP] Configuración de pCloud encontrada: {pcloud_config}")
 
-            # Crear un buffer en memoria para el archivo ZIP
+            _logger.info("[ZIP] Configuración de pCloud obtenida con éxito")
+
+            # Crear ZIP en memoria
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                # Iterar sobre cada foto para descargar y agregar al ZIP
                 for foto in fotos:
                     try:
-                        # Construir la URL para obtener el enlace de descarga desde pCloud
+                        _logger.info(f"[ZIP] Procesando foto ID: {foto.id}")
+
+                        # Obtener contenido de la foto desde pCloud
                         url = f"{pcloud_config.hostname}/getfilelink"
                         params = {
                             'access_token': pcloud_config.access_token,
                             'fileid': foto.file_id,
                             'forcedownload': 1
                         }
-                        _logger.info(f"[ZIP] Solicitando link de descarga para foto ID {foto.id} con URL: {url} y params: {params}")
+                        _logger.info(f"[ZIP] Solicitando link de descarga para foto ID: {foto.id}")
                         
-                        # Realizar la solicitud a pCloud
                         response = requests.get(url, params=params)
                         result = response.json()
-                        
-                        # Verificar si la respuesta es exitosa
+                        _logger.info(f"[ZIP] Respuesta recibida de pCloud para foto ID: {foto.id}: {result}")
+
                         if response.status_code == 200 and result.get('result') == 0:
                             download_url = f"https://{result['hosts'][0]}{result['path']}"
-                            _logger.info(f"[ZIP] Enlace de descarga obtenido para foto {foto.id}: {download_url}")
                             file_response = requests.get(download_url)
                             
-                            # Descargar y agregar el archivo al ZIP
                             if file_response.status_code == 200:
                                 filename = foto.nombre_foto or f'foto_{foto.id}.png'
                                 zip_file.writestr(filename, file_response.content)
-                                _logger.info(f"[ZIP] Foto {foto.id} agregada al ZIP")
+                                _logger.info(f"[ZIP] Foto ID: {foto.id} agregada al ZIP")
                             else:
-                                _logger.error(f"[ZIP] Error al descargar la foto {foto.id}: Status {file_response.status_code}")
+                                _logger.error(f"[ZIP] Error al descargar la foto ID: {foto.id}")
                         else:
-                            _logger.error(f"[ZIP] No se pudo obtener el link de descarga para la foto {foto.id}")
+                            _logger.error(f"[ZIP] No se pudo obtener el link de descarga para la foto ID: {foto.id}")
                     except Exception as e:
-                        _logger.error(f"[ZIP] Error al procesar foto {foto.id}: {str(e)}")
+                        _logger.error(f"[ZIP] Error al procesar la foto ID: {foto.id}: {str(e)}")
                         continue
 
-            # Preparar el contenido del ZIP para retornar en base64
+            # Devolver el ZIP como contenido base64
             zip_buffer.seek(0)
             content = base64.b64encode(zip_buffer.getvalue()).decode('utf-8')
             
