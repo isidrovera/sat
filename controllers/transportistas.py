@@ -30,4 +30,4 @@ class PublicPageController(http.Controller):
             'mensaje': 'Bienvenido a la página pública',
             # Puedes pasar más valores si es necesario
         }
-        return request.render('sat.reparaciones.GalleryWidget', valores)
+        return request.render('reparaciones.GalleryWidget', valores)
