@@ -56,29 +56,7 @@ class SatSat(models.Model):
             "context": "{'create': True}",
         }
     autorizacion_cambio_digitos = fields.Boolean(string="Autorización de Modificación", default=False)
-    def action_partes(self):
-        self.estado_ventas_id = "de_partes"
-
-        self.disponibilidad_id = "no_disponible"
-
-    def action_problemas(self):
-        self.estado_ventas_id = "con_problemas"
-        self.disponibilidad_id = "no_disponible"
-
-    def action_sin_revisar(self):
-        self.estado_ventas_id = "sin_revisar"
-
-    def action_finalizado(self):
-        self.estado_ventas_id = "finalizado"
-
-    def action_en_revision(self):
-        self.estado_ventas_id = "en_revision"
-
-    def action_entregada(self):
-        self.estado_ventas_id = "entregada"
-
-    def action_disponible(self):
-        self.disponibilidad_id = 'disponible'
+    
 
     @api.model
     def _default_currency_id(self):
