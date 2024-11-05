@@ -716,14 +716,16 @@ class ReparacionFoto(models.Model):
 
     def get_photos_zip(self, foto_ids):
         """Crear ZIP con las fotos seleccionadas"""
-        _logger.info(f"[ZIP] Creando ZIP para fotos: {foto_ids}")
+        _logger.info(f"[ZIP] foto_ids recibido: {foto_ids}")
         
         if not foto_ids:
+            _logger.warning("[ZIP] No se proporcionaron foto_ids.")
             return False
 
         try:
             fotos = self.browse(foto_ids)
             if not fotos:
+                _logger.warning("[ZIP] No se encontraron fotos con los IDs proporcionados.")
                 return False
 
             pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
@@ -735,7 +737,7 @@ class ReparacionFoto(models.Model):
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
                 for foto in fotos:
                     try:
-                        # Obtener contenido de la foto
+                        # Obtener contenido de la foto desde pCloud
                         url = f"{pcloud_config.hostname}/getfilelink"
                         params = {
                             'access_token': pcloud_config.access_token,
@@ -754,6 +756,8 @@ class ReparacionFoto(models.Model):
                                 filename = foto.nombre_foto or f'foto_{foto.id}.png'
                                 zip_file.writestr(filename, file_response.content)
                                 _logger.info(f"[ZIP] Foto {foto.id} agregada al ZIP")
+                        else:
+                            _logger.error(f"[ZIP] No se pudo obtener el link de descarga para la foto {foto.id}")
                     except Exception as e:
                         _logger.error(f"[ZIP] Error al procesar foto {foto.id}: {str(e)}")
                         continue
@@ -772,7 +776,4 @@ class ReparacionFoto(models.Model):
         except Exception as e:
             _logger.exception(f"[ZIP] Error al crear ZIP: {str(e)}")
             return False
-
-
-
 
