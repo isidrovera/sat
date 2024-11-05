@@ -22,7 +22,15 @@ class GalleryWidget extends Component {
         this.notification = useService("notification");
         this.orm = useService("orm");
 
-        // Cargar fotos al iniciar el componente
+        // Bindeamos los métodos para evitar errores de contexto
+        this.uploadPhotos = this.uploadPhotos.bind(this);
+        this.downloadPhoto = this.downloadPhoto.bind(this);
+        this.toggleSelectMode = this.toggleSelectMode.bind(this);
+        this.togglePhotoSelection = this.togglePhotoSelection.bind(this);
+        this.openPhotoModal = this.openPhotoModal.bind(this);
+        this.closePhotoModal = this.closePhotoModal.bind(this);
+        this.downloadSelectedPhotos = this.downloadSelectedPhotos.bind(this);
+
         onWillStart(async () => {
             await this.loadPhotos();
         });
@@ -30,6 +38,7 @@ class GalleryWidget extends Component {
 
     async loadPhotos() {
         try {
+            this.state.isLoading = true;
             const photos = await this.orm.call(
                 'reparaciones.foto',
                 'get_photos_preview',
@@ -80,10 +89,9 @@ class GalleryWidget extends Component {
             }
         }
 
+        // Recargar las fotos después de subir
         await this.loadPhotos();
-        this.notification.add("Fotos subidas exitosamente", {
-            type: 'success',
-        });
+        // Limpiar el input
         ev.target.value = '';
     }
 
@@ -92,7 +100,8 @@ class GalleryWidget extends Component {
         this.state.selectedPhotos.clear();
     }
 
-    togglePhotoSelection(photo) {
+    togglePhotoSelection(photo, ev) {
+        ev?.stopPropagation();
         if (this.state.selectedPhotos.has(photo.id)) {
             this.state.selectedPhotos.delete(photo.id);
         } else {
@@ -100,25 +109,25 @@ class GalleryWidget extends Component {
         }
     }
 
+    openPhotoModal(photo) {
+        if (this.state.selectMode) {
+            this.togglePhotoSelection(photo);
+        } else {
+            this.state.selectedPhoto = photo;
+            this.state.isModalOpen = true;
+        }
+    }
+
+    closePhotoModal() {
+        this.state.isModalOpen = false;
+        this.state.selectedPhoto = null;
+    }
+
     async downloadPhoto(photo, ev) {
         ev?.stopPropagation();
         try {
-            const result = await this.orm.call(
-                'reparaciones.foto',
-                'get_download_content',
-                [[photo.id]]
-            );
-            if (result && result.content) {
-                // Crear un blob y descargar
-                const blob = new Blob([atob(result.content)], { type: result.mimetype });
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = result.filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
+            if (photo?.download_url) {
+                window.open(photo.download_url, '_blank');
             }
         } catch (error) {
             console.error('Error al descargar foto:', error);
@@ -145,7 +154,6 @@ class GalleryWidget extends Component {
             );
 
             if (result && result.content) {
-                // Crear un blob y descargar
                 const blob = new Blob([atob(result.content)], { type: 'application/zip' });
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -155,8 +163,7 @@ class GalleryWidget extends Component {
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
-                this.state.selectMode = false;
-                this.state.selectedPhotos.clear();
+                this.toggleSelectMode();
             }
         } catch (error) {
             console.error('Error al descargar fotos:', error);
@@ -166,18 +173,12 @@ class GalleryWidget extends Component {
         }
     }
 
-    openPhotoModal(photo) {
-        if (this.state.selectMode) {
-            this.togglePhotoSelection(photo);
-        } else {
-            this.state.selectedPhoto = photo;
-            this.state.isModalOpen = true;
-        }
+    get hasPhotos() {
+        return this.state.photos.length > 0;
     }
 
-    closePhotoModal() {
-        this.state.isModalOpen = false;
-        this.state.selectedPhoto = null;
+    get selectedCount() {
+        return this.state.selectedPhotos.size;
     }
 }
 
