@@ -1,8 +1,10 @@
+/* Archivo: static/src/css/photo-gallery.css */
+
 .reparacion-photo-gallery {
     padding: 1rem;
 }
 
-.reparacion-photo-gallery .photo-grid {
+.photo-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1rem;
@@ -10,32 +12,31 @@
     padding: 1rem 0;
 }
 
-/* Responsive grid */
 @media (min-width: 576px) {
-    .reparacion-photo-gallery .photo-grid {
+    .photo-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (min-width: 768px) {
-    .reparacion-photo-gallery .photo-grid {
+    .photo-grid {
         grid-template-columns: repeat(3, 1fr);
     }
 }
 
 @media (min-width: 992px) {
-    .reparacion-photo-gallery .photo-grid {
+    .photo-grid {
         grid-template-columns: repeat(4, 1fr);
     }
 }
 
 @media (min-width: 1200px) {
-    .reparacion-photo-gallery .photo-grid {
+    .photo-grid {
         grid-template-columns: repeat(5, 1fr);
     }
 }
 
-.reparacion-photo-gallery .photo-item {
+.photo-item {
     position: relative;
     border-radius: 8px;
     overflow: hidden;
@@ -46,30 +47,30 @@
     cursor: pointer;
 }
 
-.reparacion-photo-gallery .photo-item:hover {
+.photo-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.reparacion-photo-gallery .photo-item.selected {
+.photo-item.selected {
     outline: 3px solid #037AFC;
     outline-offset: -3px;
 }
 
-.reparacion-photo-gallery .photo-container {
+.photo-container {
     width: 100%;
     height: 100%;
     position: relative;
     background: #f8f9fa;
 }
 
-.reparacion-photo-gallery .photo-container img {
+.photo-container img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.reparacion-photo-gallery .photo-info {
+.photo-info {
     position: absolute;
     bottom: 0;
     left: 0;
@@ -79,7 +80,7 @@
     color: white;
 }
 
-.reparacion-photo-gallery .photo-name {
+.photo-name {
     font-size: 0.875rem;
     margin-bottom: 0.5rem;
     overflow: hidden;
@@ -87,13 +88,13 @@
     white-space: nowrap;
 }
 
-.reparacion-photo-gallery .photo-info .btn {
+.photo-info .btn {
     width: 100%;
     padding: 0.25rem 0.5rem;
     font-size: 0.875rem;
 }
 
-.reparacion-photo-gallery .select-overlay {
+.select-overlay {
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
@@ -106,8 +107,7 @@
     justify-content: center;
 }
 
-/* Loading state */
-.reparacion-photo-gallery .loading-state {
+.loading-state {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -116,8 +116,7 @@
     color: #6c757d;
 }
 
-/* Empty state */
-.reparacion-photo-gallery .empty-state {
+.empty-state {
     padding: 2rem;
     text-align: center;
     color: #6c757d;
