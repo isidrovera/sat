@@ -1,0 +1,26 @@
+<!-- QWeb Template (static/src/xml/status_widget.xml) -->
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="StatusWidgetTemplate">
+        <div class="status-widget" t-att-class="{'readonly': readonly}">
+            <div class="status-bar">
+                <div class="current-status">
+                    <t t-foreach="selection" t-as="option">
+                        <t t-if="option[0] === current_value">
+                            <span t-esc="option[1]"/>
+                        </t>
+                    </t>
+                    <i t-if="!readonly" class="fa fa-chevron-down ml-2"/>
+                </div>
+                <div class="status-dropdown" t-if="!readonly">
+                    <t t-foreach="selection" t-as="option">
+                        <div class="status-option" t-att-data-value="option[0]" 
+                             t-att-style="'border-left: 4px solid ' + status_colors[option[0]]">
+                            <span t-esc="option[1]"/>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>
