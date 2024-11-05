@@ -82,7 +82,7 @@
         'sat/static/src/css/dashboard.css',
         'sat/static/src/js/estilo_dashboard.js',        
         'sat/static/src/js/gallery_widget.js',
-        'sat/static/scr/css/photo_gallery.css',
+        #'sat/static/scr/css/photo_gallery.css',
         'sat/static/src/xml/photo_gallery_template.xml',
         
              
