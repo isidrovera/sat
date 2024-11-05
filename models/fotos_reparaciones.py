@@ -601,7 +601,7 @@ class ReparacionFoto(models.Model):
             _logger.exception(f"[DOWNLOAD] Error al obtener contenido: {str(e)}")
             raise ValidationError(f"Error al descargar la foto: {str(e)}")
     def get_photos_zip(self, foto_ids):
-        """Crear ZIP con las fotos seleccionadas"""
+        """Crear ZIP con las fotos seleccionadas usando downloadfile"""
         _logger.info(f"[ZIP] Creando ZIP para fotos: {foto_ids}")
         
         if not foto_ids:
@@ -621,29 +621,29 @@ class ReparacionFoto(models.Model):
             # Crear ZIP en memoria
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                urls = []
+                file_names = []
+
+                # Obtener URLs y nombres
                 for foto in fotos:
-                    try:
-                        # Obtener contenido de la foto
-                        url = f"{pcloud_config.hostname}/getfilelink"
-                        params = {
-                            'access_token': pcloud_config.access_token,
-                            'fileid': foto.file_id
-                        }
+                    url = f"{pcloud_config.hostname}/getfilelink"
+                    params = {
+                        'access_token': pcloud_config.access_token,
+                        'fileid': foto.file_id,
+                        'forcedownload': 1
+                    }
+                    
+                    response = requests.get(url, params=params)
+                    result = response.json()
+                    
+                    if response.status_code == 200 and result.get('result') == 0:
+                        download_url = f"https://{result['hosts'][0]}{result['path']}"
+                        file_response = requests.get(download_url)
                         
-                        response = requests.get(url, params=params)
-                        result = response.json()
-                        
-                        if response.status_code == 200 and result.get('result') == 0:
-                            download_url = f"https://{result['hosts'][0]}{result['path']}"
-                            file_response = requests.get(download_url)
-                            
-                            if file_response.status_code == 200:
-                                filename = foto.nombre_foto or f'foto_{foto.id}.jpg'
-                                zip_file.writestr(filename, file_response.content)
-                                _logger.info(f"[ZIP] Foto {foto.id} agregada al ZIP")
-                    except Exception as e:
-                        _logger.error(f"[ZIP] Error al procesar foto {foto.id}: {str(e)}")
-                        continue
+                        if file_response.status_code == 200:
+                            filename = foto.nombre_foto or f'foto_{foto.id}.jpg'
+                            zip_file.writestr(filename, file_response.content)
+                            _logger.info(f"[ZIP] Foto {foto.id} agregada al ZIP")
 
             zip_buffer.seek(0)
             zip_content = base64.b64encode(zip_buffer.getvalue()).decode('utf-8')
@@ -717,12 +717,12 @@ class ReparacionFoto(models.Model):
             _logger.exception(f"[REFRESH_TOKEN] Error: {str(e)}")
 
 
-
+        
 
 
 
     def get_download_link(self):
-        """Obtener un nuevo link de descarga para una foto"""
+        """Obtener un enlace de descarga para una foto"""
         self.ensure_one()
         _logger.info(f"[DOWNLOAD_LINK] Obteniendo link para foto {self.id}")
         
@@ -731,11 +731,12 @@ class ReparacionFoto(models.Model):
             if not pcloud_config or not pcloud_config.access_token:
                 raise ValidationError("No se encontró configuración de pCloud")
 
-            # Obtener URL de pCloud
+            # Usar downloadfile para forzar la descarga
             url = f"{pcloud_config.hostname}/getfilelink"
             params = {
                 'access_token': pcloud_config.access_token,
-                'fileid': self.file_id
+                'fileid': self.file_id,
+                'forcedownload': 1
             }
             
             _logger.info(f"[DOWNLOAD_LINK] Solicitando a pCloud con params: {params}")
@@ -745,17 +746,21 @@ class ReparacionFoto(models.Model):
             if response.status_code == 200 and result.get('result') == 0:
                 download_url = f"https://{result['hosts'][0]}{result['path']}"
                 _logger.info(f"[DOWNLOAD_LINK] URL generada: {download_url}")
-                return {
-                    'download_url': download_url
-                }
+                
+                # Obtener el contenido del archivo
+                file_response = requests.get(download_url)
+                if file_response.status_code == 200:
+                    return {
+                        'content': base64.b64encode(file_response.content).decode('utf-8'),
+                        'filename': self.nombre_foto,
+                        'mimetype': file_response.headers.get('content-type', 'application/octet-stream')
+                    }
             
             _logger.error(f"[DOWNLOAD_LINK] Error en respuesta: {result}")
             return False
-
         except Exception as e:
             _logger.exception(f"[DOWNLOAD_LINK] Error: {str(e)}")
             return False
-
 
 
 
