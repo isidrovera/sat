@@ -39,7 +39,7 @@
             </div>
 
             <t t-if="state.isLoading">
-                <div class="text-center py-4">
+                <div class="text-center py-4 loading-state">
                     <i class="fa fa-spinner fa-spin fa-2x"/>
                     <p>Cargando fotos...</p>
                 </div>
@@ -87,7 +87,7 @@
             </t>
 
             <t t-else="">
-                <div class="text-center text-muted py-4">
+                <div class="text-center text-muted py-4 empty-state">
                     No hay fotos disponibles
                 </div>
             </t>
