@@ -189,24 +189,30 @@ class GalleryWidget extends Component {
     }
 
     async downloadSelectedPhotos() {
+        // Verificar que haya fotos seleccionadas
+        console.log("Iniciando descarga de fotos seleccionadas.");
         if (this.state.selectedPhotos.size === 0) {
+            console.warn("No hay fotos seleccionadas.");
             this.notification.add("Selecciona al menos una foto", {
                 type: 'warning',
             });
             return;
         }
-
+    
         try {
-            // Convertir los IDs seleccionados a una lista
+            // Obtener los IDs de las fotos seleccionadas y verificar el resultado
             const selectedIds = Array.from(this.state.selectedPhotos.keys());
-
-            // Realizar la llamada al backend para obtener el ZIP con las fotos seleccionadas
+            console.log("IDs de fotos seleccionadas:", selectedIds);
+    
+            // Llamada al backend para obtener el ZIP con las fotos seleccionadas
             const result = await this.orm.call(
                 'reparaciones.foto',
                 'get_photos_zip',
                 [selectedIds]
             );
-
+    
+            console.log("Respuesta del backend para ZIP:", result);
+    
             if (result && result.content) {
                 // Crear blob y forzar la descarga del archivo ZIP
                 const blob = new Blob(
@@ -221,13 +227,16 @@ class GalleryWidget extends Component {
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
-
+    
+                console.log("Descarga del archivo ZIP completada.");
+    
                 // Limpiar la selección y mostrar una notificación de éxito
                 this.toggleSelectMode();
                 this.notification.add("Fotos descargadas exitosamente", {
                     type: 'success',
                 });
             } else {
+                console.error("No se pudo crear el archivo ZIP. Respuesta del backend:", result);
                 throw new Error("No se pudo crear el archivo ZIP");
             }
         } catch (error) {
@@ -237,6 +246,7 @@ class GalleryWidget extends Component {
             });
         }
     }
+    
 
     toggleSelectMode() {
         this.state.selectMode = !this.state.selectMode;
