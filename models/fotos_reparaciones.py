@@ -714,20 +714,21 @@ class ReparacionFoto(models.Model):
 
 
 
-    def get_photos_zip(self, foto_ids):
+    def get_photos_zip(self, foto_ids=None):
         """Crear ZIP con las fotos seleccionadas"""
-        _logger.info(f"[ZIP] foto_ids recibido: {foto_ids}")
-        
         if not foto_ids:
             _logger.warning("[ZIP] No se proporcionaron foto_ids.")
             return False
 
+        _logger.info(f"[ZIP] foto_ids recibido: {foto_ids}")
+        
         try:
             fotos = self.browse(foto_ids)
             if not fotos:
                 _logger.warning("[ZIP] No se encontraron fotos con los IDs proporcionados.")
                 return False
 
+            # Obtener configuración de pCloud
             pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
             if not pcloud_config:
                 raise ValidationError("No se encontró configuración de pCloud")
@@ -776,4 +777,3 @@ class ReparacionFoto(models.Model):
         except Exception as e:
             _logger.exception(f"[ZIP] Error al crear ZIP: {str(e)}")
             return False
-

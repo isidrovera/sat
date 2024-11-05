@@ -234,6 +234,7 @@ class GalleryWidget extends Component {
             });
         }
     }
+
     toggleSelectMode() {
         this.state.selectMode = !this.state.selectMode;
         this.state.selectedPhotos.clear();
