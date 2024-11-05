@@ -1,3 +1,4 @@
+
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
@@ -13,25 +14,22 @@ class GalleryWidget extends Component {
             selectedPhoto: null,
             isModalOpen: false,
             isLoading: true,
+            isUploading: false,
             photos: [],
-            selectedPhotos: new Set(),
+            selectedPhotos: new Map(),
             selectMode: false,
-            error: null
+            error: null,
+            uploadProgress: 0,
+            totalFiles: 0,
+            processedFiles: 0
         });
+        
         this.notification = useService("notification");
         this.orm = useService("orm");
-
-        // Bindeamos los métodos
-        this.onPhotoClick = this.onPhotoClick.bind(this);
-        this.openPhotoModal = this.openPhotoModal.bind(this);
-        this.closePhotoModal = this.closePhotoModal.bind(this);
-        this.downloadPhoto = this.downloadPhoto.bind(this);
-        this.toggleSelectMode = this.toggleSelectMode.bind(this);
-        this.togglePhotoSelection = this.togglePhotoSelection.bind(this);
-
-        onMounted(() => this.loadPhotos());
+        this.dialogService = useService("dialog");
     }
 
+    // Carga inicial de fotos
     async loadPhotos() {
         console.log("Cargando fotos para record:", this.props.record.resId);
         try {
@@ -49,26 +47,28 @@ class GalleryWidget extends Component {
         } catch (error) {
             console.error('Error al cargar fotos:', error);
             this.state.error = "Error al cargar las fotos";
-            this.notification.add(this.state.error, {
-                type: 'danger',
-            });
+            this.notification.add(this.state.error, { type: 'danger' });
         } finally {
             this.state.isLoading = false;
         }
     }
 
-    async uploadPhoto(ev) {
+    // Subida de fotos
+    async uploadPhotos(ev) {
         const files = Array.from(ev.target.files || []);
         if (!files.length) return;
 
-        this.state.isLoading = true;
+        this.state.isUploading = true;
+        this.state.totalFiles = files.length;
+        this.state.processedFiles = 0;
+        this.state.uploadProgress = 0;
+
         try {
-            for (const file of files) {
-                const reader = new FileReader();
-                await new Promise((resolve, reject) => {
+            const uploadPromises = files.map((file, index) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
                     reader.onload = async (e) => {
                         try {
-                            console.log(`Subiendo archivo: ${file.name}`);
                             const base64Data = e.target.result.split(',')[1];
                             await this.orm.create(
                                 'reparaciones.foto',
@@ -78,53 +78,50 @@ class GalleryWidget extends Component {
                                     reparacion_id: this.props.record.resId,
                                 }]
                             );
+                            this.state.processedFiles++;
+                            this.state.uploadProgress = (this.state.processedFiles / this.state.totalFiles) * 100;
                             resolve();
                         } catch (error) {
-                            console.error('Error al subir archivo:', error);
+                            console.error(`Error al subir ${file.name}:`, error);
                             reject(error);
                         }
                     };
                     reader.onerror = reject;
                     reader.readAsDataURL(file);
                 });
-            }
+            });
 
+            await Promise.allSettled(uploadPromises);
             await this.loadPhotos();
-            this.notification.add("Fotos subidas exitosamente", {
-                type: 'success',
-            });
+
+            const successCount = this.state.processedFiles;
+            const failCount = files.length - successCount;
+
+            if (failCount > 0) {
+                this.notification.add(
+                    `Se subieron ${successCount} fotos. ${failCount} fotos fallaron.`,
+                    { type: 'warning' }
+                );
+            } else {
+                this.notification.add(
+                    `Se subieron ${successCount} fotos exitosamente`,
+                    { type: 'success' }
+                );
+            }
         } catch (error) {
-            console.error('Error al subir fotos:', error);
-            this.notification.add("Error al subir algunas fotos", {
-                type: 'danger',
-            });
+            console.error('Error en la subida masiva:', error);
+            this.notification.add("Error al subir las fotos", { type: 'danger' });
         } finally {
-            this.state.isLoading = false;
+            this.state.isUploading = false;
+            this.state.uploadProgress = 0;
+            this.state.totalFiles = 0;
+            this.state.processedFiles = 0;
+            ev.target.value = ''; // Resetear input para permitir subir los mismos archivos
         }
     }
 
-    onPhotoClick(photo) {
-        console.log("Click en foto:", photo);
-        if (!this.state.selectMode) {
-            this.openPhotoModal(photo);
-        } else {
-            this.togglePhotoSelection(photo);
-        }
-    }
-
-    openPhotoModal(photo) {
-        console.log("Abriendo modal con foto:", photo);
-        this.state.selectedPhoto = photo;
-        this.state.isModalOpen = true;
-    }
-
-    closePhotoModal() {
-        this.state.isModalOpen = false;
-        this.state.selectedPhoto = null;
-    }
-
-    toggleSelectMode(ev) {
-        ev?.preventDefault();
+    // Manejo de selección
+    toggleSelectMode() {
         this.state.selectMode = !this.state.selectMode;
         this.state.selectedPhotos.clear();
     }
@@ -133,42 +130,31 @@ class GalleryWidget extends Component {
         if (this.state.selectedPhotos.has(photo.id)) {
             this.state.selectedPhotos.delete(photo.id);
         } else {
-            this.state.selectedPhotos.add(photo.id);
+            this.state.selectedPhotos.set(photo.id, photo);
         }
     }
 
-    async downloadPhoto(photo, ev) {
-        ev?.stopPropagation();
-        if (!photo) return;
-
-        try {
-            if (photo.download_url) {
-                window.open(photo.download_url, '_blank');
-            } else {
-                // Intentar obtener la URL de descarga
-                const url = await this.orm.call(
-                    'reparaciones.foto',
-                    'get_download_url',
-                    [[photo.id]]
-                );
-                if (url) {
-                    window.open(url, '_blank');
-                } else {
-                    this.notification.add("No se pudo obtener la URL de descarga", {
-                        type: 'warning',
-                    });
-                }
-            }
-        } catch (error) {
-            console.error('Error al descargar foto:', error);
-            this.notification.add("Error al descargar la foto", {
-                type: 'danger',
+    selectAll() {
+        if (this.state.selectedPhotos.size === this.state.photos.length) {
+            this.state.selectedPhotos.clear();
+        } else {
+            this.state.photos.forEach(photo => {
+                this.state.selectedPhotos.set(photo.id, photo);
             });
         }
     }
 
+    isPhotoSelected(photoId) {
+        return this.state.selectedPhotos.has(photoId);
+    }
+
+    get selectedCount() {
+        return this.state.selectedPhotos.size;
+    }
+
+    // Manejo de descargas
     async downloadSelectedPhotos() {
-        if (this.state.selectedPhotos.size === 0) {
+        if (this.selectedCount === 0) {
             this.notification.add("Selecciona al menos una foto", {
                 type: 'warning',
             });
@@ -176,19 +162,18 @@ class GalleryWidget extends Component {
         }
 
         try {
-            const zipUrl = await this.orm.call(
+            const selectedIds = Array.from(this.state.selectedPhotos.keys());
+            const result = await this.orm.call(
                 'reparaciones.foto',
-                'get_photos_zip',
-                [[...this.state.selectedPhotos]]
+                'download_multiple',
+                [selectedIds]
             );
-            if (zipUrl) {
-                window.open(zipUrl, '_blank');
-                this.state.selectMode = false;
-                this.state.selectedPhotos.clear();
+
+            if (result && result.url) {
+                window.location.href = result.url;
+                this.toggleSelectMode();
             } else {
-                this.notification.add("Error al crear el archivo ZIP", {
-                    type: 'warning',
-                });
+                throw new Error("No se pudo crear el archivo ZIP");
             }
         } catch (error) {
             console.error('Error al descargar fotos:', error);
@@ -198,12 +183,86 @@ class GalleryWidget extends Component {
         }
     }
 
-    get hasPhotos() {
-        return this.state.photos.length > 0;
+    async downloadPhoto(photo, ev) {
+        ev?.stopPropagation();
+        if (!photo?.download_url) return;
+
+        try {
+            const url = await this.orm.call(
+                'reparaciones.foto',
+                'get_download_url',
+                [[photo.id]]
+            );
+            
+            if (url) {
+                window.open(url, '_blank');
+            } else {
+                throw new Error("No se pudo obtener la URL de descarga");
+            }
+        } catch (error) {
+            console.error('Error al descargar foto:', error);
+            this.notification.add("Error al descargar la foto", {
+                type: 'danger',
+            });
+        }
     }
 
-    get selectedCount() {
-        return this.state.selectedPhotos.size;
+    // Manejo del modal de vista previa
+    openPhotoModal(photo) {
+        if (this.state.selectMode) {
+            this.togglePhotoSelection(photo);
+        } else {
+            this.state.selectedPhoto = { ...photo }; // Clonar el objeto
+            this.state.isModalOpen = true;
+        }
+    }
+
+    closePhotoModal() {
+        this.state.selectedPhoto = null;
+        this.state.isModalOpen = false;
+    }
+
+    // Manejo de eliminación
+    async deleteSelectedPhotos() {
+        if (this.selectedCount === 0) return;
+
+        const confirmed = await new Promise(resolve => {
+            this.dialogService.add(Dialog, {
+                title: "Confirmar Eliminación",
+                body: `¿Estás seguro de que deseas eliminar ${this.selectedCount} foto(s)?`,
+                confirmLabel: "Eliminar",
+                cancelLabel: "Cancelar",
+                confirm: () => resolve(true),
+                cancel: () => resolve(false),
+            });
+        });
+
+        if (confirmed) {
+            try {
+                const selectedIds = Array.from(this.state.selectedPhotos.keys());
+                await this.orm.unlink('reparaciones.foto', selectedIds);
+                await this.loadPhotos();
+                this.toggleSelectMode();
+                this.notification.add(
+                    `${selectedIds.length} foto(s) eliminada(s) correctamente`,
+                    { type: 'success' }
+                );
+            } catch (error) {
+                console.error('Error al eliminar fotos:', error);
+                this.notification.add("Error al eliminar las fotos", {
+                    type: 'danger',
+                });
+            }
+        }
+    }
+
+    // Utilidades
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 }
 
