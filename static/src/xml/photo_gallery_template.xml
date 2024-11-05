@@ -52,8 +52,9 @@
                              t-att-class="{'selected': state.selectedPhotos.has(photo.id)}"
                              t-on-click="() => onPhotoClick(photo)">
                             <div class="photo-container">
-                                <t t-if="photo.thumb_url">
-                                    <img t-att-src="photo.thumb_url" 
+                                <!-- Reemplaza 'photo.thumb_url' con el valor que tenías originalmente -->
+                                <t t-if="photo.url">
+                                    <img t-att-src="photo.url" 
                                          t-att-alt="photo.nombre_foto"
                                          class="photo-thumb"
                                          onerror="this.src='/web/static/img/placeholder.png';"/>
