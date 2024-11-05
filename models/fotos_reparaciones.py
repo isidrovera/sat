@@ -574,3 +574,59 @@ class ReparacionFoto(models.Model):
         except Exception as e:
             _logger.exception("[GET_OR_CREATE] Error: %s", str(e))
             return False
+
+    def get_download_content(self):
+        """Obtiene el contenido de la foto para descargar"""
+        self.ensure_one()
+        _logger.info(f"[DOWNLOAD] Obteniendo contenido para foto {self.id}")
+
+        try:
+            if not self.file_id:
+                raise ValidationError("No se encontró el archivo")
+
+            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+            if not pcloud_config:
+                raise ValidationError("No se encontró configuración de pCloud")
+
+            # Obtener contenido del archivo
+            url = self._get_file_url(self.file_id, pcloud_config)
+            if not url:
+                raise ValidationError("No se pudo obtener la URL de descarga")
+
+            response = requests.get(url)
+            if response.status_code != 200:
+                raise ValidationError("No se pudo descargar el archivo")
+
+            return {
+                'content': base64.b64encode(response.content).decode('utf-8'),
+                'filename': self.nombre_foto,
+                'mimetype': response.headers.get('content-type', 'application/octet-stream')
+            }
+
+        except Exception as e:
+            _logger.exception(f"[DOWNLOAD] Error al obtener contenido: {str(e)}")
+            raise ValidationError(f"Error al descargar la foto: {str(e)}")
+    def get_photos_zip(self, foto_ids):
+        """Crea un ZIP con las fotos seleccionadas"""
+        _logger.info(f"[ZIP] Creando ZIP para fotos: {foto_ids}")
+        
+        try:
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for foto in self.browse(foto_ids):
+                    content = foto.get_download_content()
+                    if content:
+                        zip_file.writestr(
+                            content['filename'],
+                            base64.b64decode(content['content'])
+                        )
+
+            return {
+                'content': base64.b64encode(buffer.getvalue()).decode('utf-8'),
+                'filename': 'fotos_seleccionadas.zip',
+                'mimetype': 'application/zip'
+            }
+
+        except Exception as e:
+            _logger.exception(f"[ZIP] Error al crear ZIP: {str(e)}")
+            raise ValidationError(f"Error al crear el archivo ZIP: {str(e)}")

@@ -11,7 +11,7 @@
     'depends': ['base','mail','contacts','sale_management',
     'portal','web', 'stock', 'crm','purchase','project','hr_holidays','calendar'
     ,'im_livechat','survey',
-    'hr_attendance','hr','website'],
+    'hr_attendance','hr','website','bus'],
     'data': [
         'views/sat_dashboard_menu.xml',
         'views/ventas.xml',

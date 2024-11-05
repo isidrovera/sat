@@ -1,7 +1,8 @@
+
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { Component, useState, onMounted } from "@odoo/owl";
+import { Component, useState, onWillStart } from "@odoo/owl";
 import { Dialog } from "@web/core/dialog/dialog";
 
 class GalleryWidget extends Component {
@@ -14,42 +15,30 @@ class GalleryWidget extends Component {
             isModalOpen: false,
             isLoading: true,
             photos: [],
-            selectedPhotos: new Set(),
+            selectedPhotos: new Map(),
             selectMode: false,
-            error: null
         });
+        
         this.notification = useService("notification");
         this.orm = useService("orm");
 
-        // Bindeamos los métodos
-        this.onPhotoClick = this.onPhotoClick.bind(this);
-        this.openPhotoModal = this.openPhotoModal.bind(this);
-        this.closePhotoModal = this.closePhotoModal.bind(this);
-        this.downloadPhoto = this.downloadPhoto.bind(this);
-        this.toggleSelectMode = this.toggleSelectMode.bind(this);
-        this.togglePhotoSelection = this.togglePhotoSelection.bind(this);
-
-        onMounted(() => this.loadPhotos());
+        // Cargar fotos al iniciar el componente
+        onWillStart(async () => {
+            await this.loadPhotos();
+        });
     }
 
     async loadPhotos() {
-        console.log("Cargando fotos para record:", this.props.record.resId);
         try {
-            this.state.isLoading = true;
-            this.state.error = null;
-            
             const photos = await this.orm.call(
                 'reparaciones.foto',
                 'get_photos_preview',
                 [[this.props.record.resId]]
             );
-            
-            console.log("Fotos obtenidas:", photos);
             this.state.photos = photos || [];
         } catch (error) {
             console.error('Error al cargar fotos:', error);
-            this.state.error = "Error al cargar las fotos";
-            this.notification.add(this.state.error, {
+            this.notification.add("Error al cargar las fotos", {
                 type: 'danger',
             });
         } finally {
@@ -57,74 +46,48 @@ class GalleryWidget extends Component {
         }
     }
 
-    async uploadPhoto(ev) {
+    async uploadPhotos(ev) {
         const files = Array.from(ev.target.files || []);
         if (!files.length) return;
 
-        this.state.isLoading = true;
-        try {
-            for (const file of files) {
+        for (const file of files) {
+            try {
                 const reader = new FileReader();
                 await new Promise((resolve, reject) => {
                     reader.onload = async (e) => {
                         try {
-                            console.log(`Subiendo archivo: ${file.name}`);
-                            const base64Data = e.target.result.split(',')[1];
                             await this.orm.create(
                                 'reparaciones.foto',
                                 [{
                                     nombre_foto: file.name,
-                                    foto_binario: base64Data,
+                                    foto_binario: e.target.result.split(',')[1],
                                     reparacion_id: this.props.record.resId,
                                 }]
                             );
                             resolve();
                         } catch (error) {
-                            console.error('Error al subir archivo:', error);
                             reject(error);
                         }
                     };
                     reader.onerror = reject;
                     reader.readAsDataURL(file);
                 });
+            } catch (error) {
+                console.error(`Error al subir ${file.name}:`, error);
+                this.notification.add(`Error al subir ${file.name}`, {
+                    type: 'danger',
+                });
             }
-
-            await this.loadPhotos();
-            this.notification.add("Fotos subidas exitosamente", {
-                type: 'success',
-            });
-        } catch (error) {
-            console.error('Error al subir fotos:', error);
-            this.notification.add("Error al subir algunas fotos", {
-                type: 'danger',
-            });
-        } finally {
-            this.state.isLoading = false;
         }
+
+        await this.loadPhotos();
+        this.notification.add("Fotos subidas exitosamente", {
+            type: 'success',
+        });
+        ev.target.value = '';
     }
 
-    onPhotoClick(photo) {
-        console.log("Click en foto:", photo);
-        if (!this.state.selectMode) {
-            this.openPhotoModal(photo);
-        } else {
-            this.togglePhotoSelection(photo);
-        }
-    }
-
-    openPhotoModal(photo) {
-        console.log("Abriendo modal con foto:", photo);
-        this.state.selectedPhoto = photo;
-        this.state.isModalOpen = true;
-    }
-
-    closePhotoModal() {
-        this.state.isModalOpen = false;
-        this.state.selectedPhoto = null;
-    }
-
-    toggleSelectMode(ev) {
-        ev?.preventDefault();
+    toggleSelectMode() {
         this.state.selectMode = !this.state.selectMode;
         this.state.selectedPhotos.clear();
     }
@@ -133,31 +96,29 @@ class GalleryWidget extends Component {
         if (this.state.selectedPhotos.has(photo.id)) {
             this.state.selectedPhotos.delete(photo.id);
         } else {
-            this.state.selectedPhotos.add(photo.id);
+            this.state.selectedPhotos.set(photo.id, photo);
         }
     }
 
     async downloadPhoto(photo, ev) {
         ev?.stopPropagation();
-        if (!photo) return;
-
         try {
-            if (photo.download_url) {
-                window.open(photo.download_url, '_blank');
-            } else {
-                // Intentar obtener la URL de descarga
-                const url = await this.orm.call(
-                    'reparaciones.foto',
-                    'get_download_url',
-                    [[photo.id]]
-                );
-                if (url) {
-                    window.open(url, '_blank');
-                } else {
-                    this.notification.add("No se pudo obtener la URL de descarga", {
-                        type: 'warning',
-                    });
-                }
+            const result = await this.orm.call(
+                'reparaciones.foto',
+                'get_download_content',
+                [[photo.id]]
+            );
+            if (result && result.content) {
+                // Crear un blob y descargar
+                const blob = new Blob([atob(result.content)], { type: result.mimetype });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = result.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
             }
         } catch (error) {
             console.error('Error al descargar foto:', error);
@@ -176,19 +137,26 @@ class GalleryWidget extends Component {
         }
 
         try {
-            const zipUrl = await this.orm.call(
+            const selectedIds = Array.from(this.state.selectedPhotos.keys());
+            const result = await this.orm.call(
                 'reparaciones.foto',
                 'get_photos_zip',
-                [[...this.state.selectedPhotos]]
+                [selectedIds]
             );
-            if (zipUrl) {
-                window.open(zipUrl, '_blank');
+
+            if (result && result.content) {
+                // Crear un blob y descargar
+                const blob = new Blob([atob(result.content)], { type: 'application/zip' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'fotos_seleccionadas.zip';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
                 this.state.selectMode = false;
                 this.state.selectedPhotos.clear();
-            } else {
-                this.notification.add("Error al crear el archivo ZIP", {
-                    type: 'warning',
-                });
             }
         } catch (error) {
             console.error('Error al descargar fotos:', error);
@@ -198,12 +166,18 @@ class GalleryWidget extends Component {
         }
     }
 
-    get hasPhotos() {
-        return this.state.photos.length > 0;
+    openPhotoModal(photo) {
+        if (this.state.selectMode) {
+            this.togglePhotoSelection(photo);
+        } else {
+            this.state.selectedPhoto = photo;
+            this.state.isModalOpen = true;
+        }
     }
 
-    get selectedCount() {
-        return this.state.selectedPhotos.size;
+    closePhotoModal() {
+        this.state.isModalOpen = false;
+        this.state.selectedPhoto = null;
     }
 }
 
