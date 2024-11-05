@@ -163,10 +163,22 @@ class GalleryWidget extends Component {
                 [[photo.id]]
             );
             
-            if (result && result.download_url) {
-                window.open(result.download_url, '_blank');
+            if (result && result.content) {
+                // Crear blob y forzar descarga
+                const blob = new Blob(
+                    [Uint8Array.from(atob(result.content), c => c.charCodeAt(0))],
+                    { type: result.mimetype }
+                );
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = result.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
             } else {
-                throw new Error("No se pudo obtener el link de descarga");
+                throw new Error("No se pudo obtener el contenido de la foto");
             }
         } catch (error) {
             console.error('Error al descargar foto:', error);
@@ -183,25 +195,25 @@ class GalleryWidget extends Component {
             });
             return;
         }
-    
+
         try {
             const selectedIds = Array.from(this.state.selectedPhotos.keys());
             const result = await this.orm.call(
                 'reparaciones.foto',
                 'get_photos_zip',
-                [selectedIds]  // Enviar array de IDs como primer argumento
+                [selectedIds]
             );
-    
+
             if (result && result.content) {
-                // Crear y descargar el archivo ZIP
+                // Crear blob y forzar descarga
                 const blob = new Blob(
-                    [Uint8Array.from(atob(result.content), c => c.charCodeAt(0))], 
-                    { type: result.mimetype || 'application/zip' }
+                    [Uint8Array.from(atob(result.content), c => c.charCodeAt(0))],
+                    { type: result.mimetype }
                 );
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = result.filename || 'fotos_reparacion.zip';
+                link.download = result.filename;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -222,7 +234,6 @@ class GalleryWidget extends Component {
             });
         }
     }
-
     toggleSelectMode() {
         this.state.selectMode = !this.state.selectMode;
         this.state.selectedPhotos.clear();
