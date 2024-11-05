@@ -21,6 +21,14 @@ class GalleryWidget extends Component {
         this.notification = useService("notification");
         this.orm = useService("orm");
 
+        // Bindeamos los métodos
+        this.onPhotoClick = this.onPhotoClick.bind(this);
+        this.openPhotoModal = this.openPhotoModal.bind(this);
+        this.closePhotoModal = this.closePhotoModal.bind(this);
+        this.downloadPhoto = this.downloadPhoto.bind(this);
+        this.toggleSelectMode = this.toggleSelectMode.bind(this);
+        this.togglePhotoSelection = this.togglePhotoSelection.bind(this);
+
         onMounted(() => this.loadPhotos());
     }
 
@@ -37,17 +45,7 @@ class GalleryWidget extends Component {
             );
             
             console.log("Fotos obtenidas:", photos);
-            
-            // Mapear las fotos para asegurar que la URL sea correcta
-            this.state.photos = photos.map(photo => ({
-                ...photo,
-                imageUrl: photo.url_foto,
-                downloadUrl: photo.file_id ? 
-                    `https://my.pcloud.com/publink/show?code=${photo.file_id}` : 
-                    photo.url_foto
-            }));
-            
-            console.log("Fotos procesadas:", this.state.photos);
+            this.state.photos = photos || [];
         } catch (error) {
             console.error('Error al cargar fotos:', error);
             this.state.error = "Error al cargar las fotos";
@@ -64,37 +62,39 @@ class GalleryWidget extends Component {
         if (!files.length) return;
 
         this.state.isLoading = true;
-        const uploadPromises = files.map(file => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    try {
-                        const base64Data = e.target.result.split(',')[1];
-                        await this.orm.create(
-                            'reparaciones.foto',
-                            [{
-                                nombre_foto: file.name,
-                                foto_binario: base64Data,
-                                reparacion_id: this.props.record.resId,
-                            }]
-                        );
-                        resolve();
-                    } catch (error) {
-                        console.error('Error al subir foto:', error);
-                        reject(error);
-                    }
-                };
-                reader.readAsDataURL(file);
-            });
-        });
-
         try {
-            await Promise.all(uploadPromises);
+            for (const file of files) {
+                const reader = new FileReader();
+                await new Promise((resolve, reject) => {
+                    reader.onload = async (e) => {
+                        try {
+                            console.log(`Subiendo archivo: ${file.name}`);
+                            const base64Data = e.target.result.split(',')[1];
+                            await this.orm.create(
+                                'reparaciones.foto',
+                                [{
+                                    nombre_foto: file.name,
+                                    foto_binario: base64Data,
+                                    reparacion_id: this.props.record.resId,
+                                }]
+                            );
+                            resolve();
+                        } catch (error) {
+                            console.error('Error al subir archivo:', error);
+                            reject(error);
+                        }
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
             await this.loadPhotos();
             this.notification.add("Fotos subidas exitosamente", {
                 type: 'success',
             });
         } catch (error) {
+            console.error('Error al subir fotos:', error);
             this.notification.add("Error al subir algunas fotos", {
                 type: 'danger',
             });
@@ -124,6 +124,7 @@ class GalleryWidget extends Component {
     }
 
     toggleSelectMode(ev) {
+        ev?.preventDefault();
         this.state.selectMode = !this.state.selectMode;
         this.state.selectedPhotos.clear();
     }
@@ -133,6 +134,36 @@ class GalleryWidget extends Component {
             this.state.selectedPhotos.delete(photo.id);
         } else {
             this.state.selectedPhotos.add(photo.id);
+        }
+    }
+
+    async downloadPhoto(photo, ev) {
+        ev?.stopPropagation();
+        if (!photo) return;
+
+        try {
+            if (photo.download_url) {
+                window.open(photo.download_url, '_blank');
+            } else {
+                // Intentar obtener la URL de descarga
+                const url = await this.orm.call(
+                    'reparaciones.foto',
+                    'get_download_url',
+                    [[photo.id]]
+                );
+                if (url) {
+                    window.open(url, '_blank');
+                } else {
+                    this.notification.add("No se pudo obtener la URL de descarga", {
+                        type: 'warning',
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error al descargar foto:', error);
+            this.notification.add("Error al descargar la foto", {
+                type: 'danger',
+            });
         }
     }
 
@@ -154,6 +185,10 @@ class GalleryWidget extends Component {
                 window.open(zipUrl, '_blank');
                 this.state.selectMode = false;
                 this.state.selectedPhotos.clear();
+            } else {
+                this.notification.add("Error al crear el archivo ZIP", {
+                    type: 'warning',
+                });
             }
         } catch (error) {
             console.error('Error al descargar fotos:', error);
@@ -163,39 +198,12 @@ class GalleryWidget extends Component {
         }
     }
 
-    async downloadPhoto(photo, ev) {
-        ev?.stopPropagation();
-        console.log("Descargando foto:", photo);
-        
-        if (photo?.file_id) {
-            try {
-                // Primero intentamos obtener una URL de descarga directa
-                const downloadUrl = await this.orm.call(
-                    'reparaciones.foto',
-                    'get_download_url',
-                    [[photo.id]]
-                );
-                
-                if (downloadUrl) {
-                    window.open(downloadUrl, '_blank');
-                } else {
-                    // Si no hay URL de descarga directa, abrimos la vista en pCloud
-                    window.open(`https://my.pcloud.com/publink/show?code=${photo.file_id}`, '_blank');
-                }
-            } catch (error) {
-                console.error('Error al obtener URL de descarga:', error);
-                // Si falla, intentamos al menos abrir la vista en pCloud
-                window.open(`https://my.pcloud.com/publink/show?code=${photo.file_id}`, '_blank');
-            }
-        } else {
-            this.notification.add("No se puede descargar la foto", {
-                type: 'warning',
-            });
-        }
-    }
-
     get hasPhotos() {
         return this.state.photos.length > 0;
+    }
+
+    get selectedCount() {
+        return this.state.selectedPhotos.size;
     }
 }
 

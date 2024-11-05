@@ -1,32 +1,287 @@
-.photo-container {
-    position: relative;
-    aspect-ratio: 1;
-    background: #f8f9fa;
-    overflow: hidden;
+.reparacion-photo-gallery {
+    padding: 1rem;
 
-    .photo-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+    .gallery-header {
+        .btn-toolbar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
     }
 
-    .photo-frame {
-        width: 100%;
-        height: 100%;
-        border: none;
+    .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
     }
 
-    .photo-placeholder {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        color: #adb5bd;
-        gap: 0.5rem;
+    .photo-item {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+        cursor: pointer;
 
-        small {
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        &.selected {
+            box-shadow: 0 0 0 3px #037AFC;
+            
+            .select-overlay {
+                opacity: 1;
+            }
+        }
+    }
+
+    .photo-container {
+        position: relative;
+        aspect-ratio: 1;
+        background: #f8f9fa;
+
+        .photo-thumb {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #adb5bd;
+            flex-direction: column;
+            gap: 0.5rem;
+
+            i {
+                opacity: 0.5;
+            }
+        }
+
+        .select-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+
+            .select-checkbox {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 4px;
+                padding: 0.5rem;
+
+                i {
+                    font-size: 2rem;
+                    color: white;
+                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+                }
+            }
+        }
+
+        &:hover .select-overlay {
+            opacity: 1;
+        }
+    }
+
+    .photo-info {
+        padding: 0.75rem;
+        border-top: 1px solid #e9ecef;
+        background: white;
+
+        .photo-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .btn {
+            width: 100%;
             text-align: center;
         }
+    }
+
+    // Modal de vista previa
+    .photo-preview {
+        .preview-container {
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 70vh;
+            display: block;
+            margin: 0 auto;
+            object-fit: contain;
+        }
+
+        .preview-placeholder {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: #adb5bd;
+        }
+
+        .preview-info {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 1rem;
+
+            h5 {
+                margin: 0;
+                font-size: 1rem;
+                font-weight: 500;
+                color: #344767;
+            }
+        }
+    }
+
+    // Estados de carga y mensajes
+    .loading-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+
+        .fa-spinner {
+            margin-bottom: 1rem;
+        }
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin: 1rem 0;
+    }
+
+    // Responsive
+    @media (max-width: 768px) {
+        .photo-grid {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .gallery-header {
+            .btn-toolbar {
+                justify-content: center;
+            }
+        }
+
+        .photo-info {
+            padding: 0.5rem;
+
+            .photo-name {
+                font-size: 0.75rem;
+            }
+
+            .btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+            }
+        }
+    }
+
+    // Animaciones
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .photo-item {
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    // Utility classes
+    .btn {
+        &.btn-light {
+            background-color: #f8f9fa;
+            border-color: #e9ecef;
+
+            &:hover {
+                background-color: #e9ecef;
+                border-color: #dee2e6;
+            }
+        }
+    }
+
+    .fa {
+        vertical-align: middle;
+        line-height: 1;
+    }
+}
+
+// Dialog customization
+.modal-dialog {
+    .modal-content {
+        border-radius: 8px;
+        border: none;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+
+        .modal-header {
+            border-bottom: 1px solid #e9ecef;
+            padding: 1rem;
+
+            .modal-title {
+                font-size: 1.25rem;
+                font-weight: 500;
+            }
+        }
+
+        .modal-body {
+            padding: 1rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #e9ecef;
+            padding: 1rem;
+        }
+    }
+}
+
+// Loading spinner enhancement
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
     }
 }
