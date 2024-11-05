@@ -197,7 +197,10 @@ class GalleryWidget extends Component {
         }
 
         try {
+            // Convertir los IDs seleccionados a una lista
             const selectedIds = Array.from(this.state.selectedPhotos.keys());
+
+            // Realizar la llamada al backend para obtener el ZIP con las fotos seleccionadas
             const result = await this.orm.call(
                 'reparaciones.foto',
                 'get_photos_zip',
@@ -205,7 +208,7 @@ class GalleryWidget extends Component {
             );
 
             if (result && result.content) {
-                // Crear blob y forzar descarga
+                // Crear blob y forzar la descarga del archivo ZIP
                 const blob = new Blob(
                     [Uint8Array.from(atob(result.content), c => c.charCodeAt(0))],
                     { type: result.mimetype }
@@ -218,8 +221,8 @@ class GalleryWidget extends Component {
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
-                
-                // Limpiar selección
+
+                // Limpiar la selección y mostrar una notificación de éxito
                 this.toggleSelectMode();
                 this.notification.add("Fotos descargadas exitosamente", {
                     type: 'success',

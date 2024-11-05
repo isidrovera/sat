@@ -715,7 +715,9 @@ class ReparacionFoto(models.Model):
 
 
     def get_photos_zip(self, foto_ids=None):
-        """Crear ZIP con las fotos seleccionadas"""
+        """Crear un archivo ZIP en memoria con las fotos seleccionadas desde pCloud"""
+        
+        # Validar si se proporcionaron IDs de fotos
         if not foto_ids:
             _logger.warning("[ZIP] No se proporcionaron foto_ids.")
             return False
@@ -723,6 +725,7 @@ class ReparacionFoto(models.Model):
         _logger.info(f"[ZIP] foto_ids recibido: {foto_ids}")
         
         try:
+            # Obtener los registros de fotos correspondientes
             fotos = self.browse(foto_ids)
             if not fotos:
                 _logger.warning("[ZIP] No se encontraron fotos con los IDs proporcionados.")
@@ -733,12 +736,13 @@ class ReparacionFoto(models.Model):
             if not pcloud_config:
                 raise ValidationError("No se encontró configuración de pCloud")
 
-            # Crear ZIP en memoria
+            # Crear un buffer en memoria para el archivo ZIP
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                # Iterar sobre cada foto para descargar y agregar al ZIP
                 for foto in fotos:
                     try:
-                        # Obtener contenido de la foto desde pCloud
+                        # Construir la URL para obtener el enlace de descarga desde pCloud
                         url = f"{pcloud_config.hostname}/getfilelink"
                         params = {
                             'access_token': pcloud_config.access_token,
@@ -746,13 +750,16 @@ class ReparacionFoto(models.Model):
                             'forcedownload': 1
                         }
                         
+                        # Realizar la solicitud a pCloud
                         response = requests.get(url, params=params)
                         result = response.json()
                         
+                        # Verificar si la respuesta es exitosa
                         if response.status_code == 200 and result.get('result') == 0:
                             download_url = f"https://{result['hosts'][0]}{result['path']}"
                             file_response = requests.get(download_url)
                             
+                            # Descargar y agregar el archivo al ZIP
                             if file_response.status_code == 200:
                                 filename = foto.nombre_foto or f'foto_{foto.id}.png'
                                 zip_file.writestr(filename, file_response.content)
@@ -763,7 +770,7 @@ class ReparacionFoto(models.Model):
                         _logger.error(f"[ZIP] Error al procesar foto {foto.id}: {str(e)}")
                         continue
 
-            # Devolver el ZIP como contenido base64
+            # Preparar el contenido del ZIP para retornar en base64
             zip_buffer.seek(0)
             content = base64.b64encode(zip_buffer.getvalue()).decode('utf-8')
             
