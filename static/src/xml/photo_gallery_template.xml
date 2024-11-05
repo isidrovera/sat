@@ -11,12 +11,12 @@
                                    class="d-none" 
                                    accept="image/*"
                                    multiple="true"
-                                   t-on-change="uploadPhoto"/>
+                                   t-on-change="(ev) => this.uploadPhoto(ev)"/>
                         </label>
                     </t>
                     <t t-if="hasPhotos">
                         <button class="btn btn-secondary" 
-                                t-on-click="toggleSelectMode">
+                                t-on-click="(ev) => this.toggleSelectMode(ev)">
                             <i class="fa fa-check-square-o me-2"/>
                             <t t-if="state.selectMode">Cancelar Selección</t>
                             <t t-else="">Seleccionar</t>
@@ -32,41 +32,30 @@
                 </div>
             </t>
 
-            <t t-elif="state.error">
-                <div class="alert alert-danger">
-                    <i class="fa fa-exclamation-triangle me-2"/>
-                    <span t-esc="state.error"/>
-                </div>
-            </t>
-
             <t t-elif="hasPhotos">
                 <div class="photo-grid">
                     <t t-foreach="state.photos" t-as="photo" t-key="photo.id">
                         <div class="photo-item" 
-                             t-on-click="() => onPhotoClick(photo)"
-                             t-att-class="{'selected': state.selectedPhotos.has(photo.id)}">
+                             t-att-class="{'selected': state.selectedPhotos.has(photo.id)}"
+                             t-on-click="() => this.onPhotoClick(photo)">
                             <div class="photo-container">
                                 <img t-att-src="photo.imageUrl" 
                                      t-att-alt="photo.nombre_foto"
                                      class="photo-image"/>
+                                <t t-if="state.selectMode">
+                                    <div class="select-overlay">
+                                        <i t-if="state.selectedPhotos.has(photo.id)" 
+                                           class="fa fa-check-circle fa-2x"/>
+                                    </div>
+                                </t>
                             </div>
                             <div class="photo-info">
-                                <div class="photo-name" t-esc="photo.nombre_foto || 'Sin nombre'"/>
-                                <button class="btn btn-sm btn-light mt-2" 
-                                        t-on-click.stop="(ev) => downloadPhoto(photo, ev)">
+                                <span class="photo-name" t-esc="photo.nombre_foto || 'Sin nombre'"/>
+                                <button class="btn btn-sm btn-light" 
+                                        t-on-click="(ev) => this.downloadPhoto(photo, ev)">
                                     <i class="fa fa-download"/> Descargar
                                 </button>
                             </div>
-                            <t t-if="state.selectMode">
-                                <div class="select-overlay">
-                                    <div class="checkbox">
-                                        <i t-if="state.selectedPhotos.has(photo.id)" 
-                                           class="fa fa-check-square fa-2x"/>
-                                        <i t-else="" 
-                                           class="fa fa-square-o fa-2x"/>
-                                    </div>
-                                </div>
-                            </t>
                         </div>
                     </t>
                 </div>
@@ -81,7 +70,7 @@
             <Dialog t-if="state.isModalOpen"
                     title="'Vista Previa'"
                     size="'lg'"
-                    t-on-close="closePhotoModal">
+                    t-on-close="() => this.closePhotoModal()">
                 <t t-if="state.selectedPhoto">
                     <div class="photo-preview">
                         <img t-att-src="state.selectedPhoto.imageUrl"
@@ -90,7 +79,7 @@
                         <div class="preview-info mt-3">
                             <h5 t-esc="state.selectedPhoto.nombre_foto"/>
                             <button class="btn btn-primary"
-                                    t-on-click="(ev) => downloadPhoto(state.selectedPhoto, ev)">
+                                    t-on-click="(ev) => this.downloadPhoto(state.selectedPhoto, ev)">
                                 <i class="fa fa-download"/> Descargar
                             </button>
                         </div>
