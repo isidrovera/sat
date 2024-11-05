@@ -4,7 +4,7 @@
 
 .reparacion-photo-gallery .photo-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1rem;
     width: 100%;
     padding: 1rem 0;
@@ -106,44 +106,6 @@
     justify-content: center;
 }
 
-.reparacion-photo-gallery .actions-bar {
-    position: sticky;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 1rem;
-    background: white;
-    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-    z-index: 100;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-/* Mobile specific styles */
-@media (hover: none) {
-    .reparacion-photo-gallery .photo-info {
-        padding: 0.75rem;
-    }
-
-    .reparacion-photo-gallery .photo-name {
-        font-size: 1rem;
-    }
-
-    .reparacion-photo-gallery .photo-info .btn {
-        padding: 0.75rem 1rem;
-    }
-
-    .reparacion-photo-gallery .select-overlay {
-        width: 2.5rem;
-        height: 2.5rem;
-    }
-
-    .reparacion-photo-gallery .actions-bar .btn {
-        padding: 0.75rem 1rem;
-    }
-}
-
 /* Loading state */
 .reparacion-photo-gallery .loading-state {
     display: flex;
@@ -154,33 +116,9 @@
     color: #6c757d;
 }
 
-/* Error state */
-.reparacion-photo-gallery .error-state {
-    padding: 1rem;
-    color: #dc3545;
-    text-align: center;
-}
-
 /* Empty state */
 .reparacion-photo-gallery .empty-state {
     padding: 2rem;
     text-align: center;
     color: #6c757d;
-}
-
-/* Modal styles */
-.photo-preview-modal {
-    max-width: 90vw;
-    max-height: 90vh;
-}
-
-.photo-preview-modal img {
-    max-width: 100%;
-    max-height: calc(90vh - 120px);
-    object-fit: contain;
-}
-
-.photo-preview-modal .modal-footer {
-    border-top: 1px solid #dee2e6;
-    padding: 1rem;
 }
