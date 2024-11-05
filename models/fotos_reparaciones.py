@@ -709,20 +709,15 @@ class ReparacionFoto(models.Model):
             return False
 
 
-
-
-
-
-
     def get_photos_zip(self, foto_ids=None):
         """Crear un archivo ZIP en memoria con las fotos seleccionadas desde pCloud"""
-
+        
         # Log inicial de verificación de IDs recibidos
         if not foto_ids:
             _logger.warning("[ZIP] No se proporcionaron foto_ids o el valor es None.")
             return False
 
-        _logger.info(f"[ZIP] foto_ids recibidos: {foto_ids}")
+        _logger.info(f"[ZIP] foto_ids recibidos: {foto_ids} (Tipo: {type(foto_ids)})")
 
         try:
             # Obtener los registros de fotos
@@ -730,6 +725,8 @@ class ReparacionFoto(models.Model):
             if not fotos:
                 _logger.warning("[ZIP] No se encontraron fotos con los IDs proporcionados.")
                 return False
+
+            _logger.info(f"[ZIP] Número de fotos a procesar: {len(fotos)}")
 
             # Obtener configuración de pCloud
             pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
@@ -753,7 +750,7 @@ class ReparacionFoto(models.Model):
                             'fileid': foto.file_id,
                             'forcedownload': 1
                         }
-                        _logger.info(f"[ZIP] Solicitando link de descarga para foto ID: {foto.id}")
+                        _logger.info(f"[ZIP] Solicitando link de descarga para foto ID: {foto.id} con params: {params}")
                         
                         response = requests.get(url, params=params)
                         result = response.json()
