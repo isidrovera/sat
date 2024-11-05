@@ -49,16 +49,24 @@
                         <div class="photo-item" 
                              t-att-class="{'selected': state.selectedPhotos.has(photo.id)}"
                              t-on-click="() => onPhotoClick(photo)">
-                            <div class="photo-container">
-                                <t t-if="photo.url_foto">
-                                    <img t-att-src="photo.url_foto" 
+                             <div class="photo-container">
+                                <t t-if="photo.imageUrl">
+                                    <img t-att-src="photo.imageUrl" 
                                          t-att-alt="photo.nombre_foto"
                                          class="photo-image"
-                                         onerror="this.src='/web/static/img/placeholder.png';"/>
+                                         onerror="this.src='/web/static/img/placeholder.png';"
+                                         onload="console.log('Imagen cargada:', this.src)"/>
+                                </t>
+                                <t t-elif="photo.file_id">
+                                    <iframe t-att-src="'https://my.pcloud.com/publink/show?code=' + photo.file_id"
+                                            class="photo-frame"
+                                            frameborder="0"
+                                            t-att-title="photo.nombre_foto"/>
                                 </t>
                                 <t t-else="">
                                     <div class="photo-placeholder">
                                         <i class="fa fa-image fa-3x"/>
+                                        <small>No disponible</small>
                                     </div>
                                 </t>
                             </div>

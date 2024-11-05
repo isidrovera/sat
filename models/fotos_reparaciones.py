@@ -142,38 +142,45 @@ class ReparacionFoto(models.Model):
     @api.model
     def get_photos_preview(self, reparacion_id):
         """Obtiene todas las fotos con sus previsualizaciones"""
-        _logger.info(f"Obteniendo fotos para reparación ID: {reparacion_id}")
+        _logger.info(f"[GET_PHOTOS_PREVIEW] Iniciando para reparación ID: {reparacion_id}")
         
         photos = []
         domain = [('reparacion_id', '=', reparacion_id)]
         fotos = self.search(domain)
         
-        _logger.info(f"Fotos encontradas: {len(fotos)}")
+        _logger.info(f"[GET_PHOTOS_PREVIEW] Fotos encontradas: {len(fotos)}")
         for foto in fotos:
-            _logger.info(f"Procesando foto ID: {foto.id}")
-            _logger.info(f"Datos de foto: nombre={foto.nombre_foto}, url={foto.url_foto}, file_id={foto.file_id}")
+            _logger.info(f"[GET_PHOTOS_PREVIEW] Procesando foto ID: {foto.id}")
+            _logger.info(f"[GET_PHOTOS_PREVIEW] Datos foto: nombre={foto.nombre_foto}, url={foto.url_foto}, file_id={foto.file_id}")
             
             try:
-                # Intentar obtener URL directamente del campo url_foto
-                url = foto.url_foto
-                if not url:
-                    # Si no hay URL, intentar obtenerla de pCloud
-                    url = foto.get_download_url()
+                pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+                if not pcloud_config:
+                    _logger.error("[GET_PHOTOS_PREVIEW] No se encontró configuración de pCloud")
+                    continue
+
+                _logger.info(f"[GET_PHOTOS_PREVIEW] Configuración pCloud encontrada: {pcloud_config.hostname}")
                 
-                if url:
-                    _logger.info(f"URL obtenida para foto {foto.id}: {url}")
+                # Construir URL para la foto usando el file_id
+                if foto.file_id:
+                    # URL de visualización pública de pCloud
+                    url = f"https://my.pcloud.com/publink/show?code={foto.file_id}"
+                    _logger.info(f"[GET_PHOTOS_PREVIEW] URL construida: {url}")
+                    
                     photos.append({
                         'id': foto.id,
                         'nombre_foto': foto.nombre_foto,
                         'url_foto': url,
+                        'file_id': foto.file_id
                     })
+                    _logger.info(f"[GET_PHOTOS_PREVIEW] Foto {foto.id} agregada con éxito")
                 else:
-                    _logger.warning(f"No se pudo obtener URL para foto {foto.id}")
+                    _logger.warning(f"[GET_PHOTOS_PREVIEW] Foto {foto.id} no tiene file_id")
             except Exception as e:
-                _logger.exception(f"Error procesando foto {foto.id}: {str(e)}")
+                _logger.exception(f"[GET_PHOTOS_PREVIEW] Error procesando foto {foto.id}: {str(e)}")
                 continue
 
-        _logger.info(f"Total de fotos procesadas con éxito: {len(photos)}")
+        _logger.info(f"[GET_PHOTOS_PREVIEW] Total de fotos procesadas: {len(photos)}")
         return photos
 
     @api.model
@@ -213,41 +220,40 @@ class ReparacionFoto(models.Model):
     def get_download_url(self):
         """Obtiene la URL de descarga desde pCloud"""
         self.ensure_one()
-        _logger.info(f"Obteniendo URL de descarga para foto ID: {self.id}")
-        _logger.info(f"URL actual: {self.url_foto}")
-        _logger.info(f"File ID: {self.file_id}")
+        _logger.info(f"[GET_DOWNLOAD_URL] Iniciando para foto ID: {self.id}")
 
-        if self.url_foto:
-            _logger.info("Usando URL existente")
-            return self.url_foto
+        if not self.file_id:
+            _logger.error("[GET_DOWNLOAD_URL] No hay file_id disponible")
+            return False
 
         pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
         if not pcloud_config or not pcloud_config.access_token:
-            _logger.error("No se encontró configuración de pCloud")
+            _logger.error("[GET_DOWNLOAD_URL] No se encontró configuración de pCloud")
             return False
 
         try:
-            url = f"{pcloud_config.hostname}/getfilelink"
+            _logger.info(f"[GET_DOWNLOAD_URL] Obteniendo enlace para file_id: {self.file_id}")
+            url = f"{pcloud_config.hostname}/getpublinkdownload"
             params = {
                 'access_token': pcloud_config.access_token,
-                'fileid': self.file_id or self.url_foto,
-                'forcedownload': 1
+                'code': self.file_id
             }
             
-            _logger.info(f"Realizando petición a pCloud con parámetros: {params}")
+            _logger.info(f"[GET_DOWNLOAD_URL] Realizando petición a: {url}")
+            _logger.info(f"[GET_DOWNLOAD_URL] Parámetros: {params}")
+            
             response = requests.get(url, params=params)
-            _logger.info(f"Respuesta de pCloud: {response.text}")
+            _logger.info(f"[GET_DOWNLOAD_URL] Respuesta: {response.text}")
+            
             result = response.json()
-            
-            if response.status_code == 200 and result.get('result') == 0:
+            if response.status_code == 200 and result.get('hosts'):
                 download_url = f"https://{result['hosts'][0]}{result['path']}"
-                _logger.info(f"URL de descarga generada: {download_url}")
+                _logger.info(f"[GET_DOWNLOAD_URL] URL generada: {download_url}")
                 return download_url
-            else:
-                _logger.error(f"Error en respuesta de pCloud: {result}")
             
+            _logger.error(f"[GET_DOWNLOAD_URL] Error en respuesta: {result}")
             return False
 
         except Exception as e:
-            _logger.exception(f"Error al obtener URL de descarga: {str(e)}")
+            _logger.exception(f"[GET_DOWNLOAD_URL] Error al generar URL: {str(e)}")
             return False

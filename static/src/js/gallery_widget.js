@@ -30,7 +30,6 @@ class GalleryWidget extends Component {
             this.state.isLoading = true;
             this.state.error = null;
             
-            // Usar el método get_photos_preview del modelo
             const photos = await this.orm.call(
                 'reparaciones.foto',
                 'get_photos_preview',
@@ -38,7 +37,17 @@ class GalleryWidget extends Component {
             );
             
             console.log("Fotos obtenidas:", photos);
-            this.state.photos = photos || [];
+            
+            // Mapear las fotos para asegurar que la URL sea correcta
+            this.state.photos = photos.map(photo => ({
+                ...photo,
+                imageUrl: photo.url_foto,
+                downloadUrl: photo.file_id ? 
+                    `https://my.pcloud.com/publink/show?code=${photo.file_id}` : 
+                    photo.url_foto
+            }));
+            
+            console.log("Fotos procesadas:", this.state.photos);
         } catch (error) {
             console.error('Error al cargar fotos:', error);
             this.state.error = "Error al cargar las fotos";
@@ -156,26 +165,32 @@ class GalleryWidget extends Component {
 
     async downloadPhoto(photo, ev) {
         ev?.stopPropagation();
-        if (photo?.url_foto) {
+        console.log("Descargando foto:", photo);
+        
+        if (photo?.file_id) {
             try {
-                const url = await this.orm.call(
+                // Primero intentamos obtener una URL de descarga directa
+                const downloadUrl = await this.orm.call(
                     'reparaciones.foto',
                     'get_download_url',
                     [[photo.id]]
                 );
-                if (url) {
-                    window.open(url, '_blank');
+                
+                if (downloadUrl) {
+                    window.open(downloadUrl, '_blank');
                 } else {
-                    this.notification.add("No se pudo obtener la URL de descarga", {
-                        type: 'warning',
-                    });
+                    // Si no hay URL de descarga directa, abrimos la vista en pCloud
+                    window.open(`https://my.pcloud.com/publink/show?code=${photo.file_id}`, '_blank');
                 }
             } catch (error) {
                 console.error('Error al obtener URL de descarga:', error);
-                this.notification.add("Error al descargar la foto", {
-                    type: 'danger',
-                });
+                // Si falla, intentamos al menos abrir la vista en pCloud
+                window.open(`https://my.pcloud.com/publink/show?code=${photo.file_id}`, '_blank');
             }
+        } else {
+            this.notification.add("No se puede descargar la foto", {
+                type: 'warning',
+            });
         }
     }
 
