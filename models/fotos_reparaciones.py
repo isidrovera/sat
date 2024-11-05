@@ -601,30 +601,63 @@ class ReparacionFoto(models.Model):
             _logger.exception(f"[DOWNLOAD] Error al obtener contenido: {str(e)}")
             raise ValidationError(f"Error al descargar la foto: {str(e)}")
     def get_photos_zip(self, foto_ids):
-        """Crea un ZIP con las fotos seleccionadas"""
+        """Crear ZIP con las fotos seleccionadas"""
         _logger.info(f"[ZIP] Creando ZIP para fotos: {foto_ids}")
         
-        try:
-            buffer = io.BytesIO()
-            with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                for foto in self.browse(foto_ids):
-                    content = foto.get_download_content()
-                    if content:
-                        zip_file.writestr(
-                            content['filename'],
-                            base64.b64decode(content['content'])
-                        )
+        if not foto_ids:
+            _logger.warning("[ZIP] No se proporcionaron IDs de fotos")
+            return False
 
+        try:
+            fotos = self.browse(foto_ids)
+            if not fotos:
+                _logger.warning("[ZIP] No se encontraron fotos")
+                return False
+
+            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+            if not pcloud_config:
+                raise ValidationError("No se encontró configuración de pCloud")
+
+            # Crear ZIP en memoria
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for foto in fotos:
+                    try:
+                        # Obtener contenido de la foto
+                        url = f"{pcloud_config.hostname}/getfilelink"
+                        params = {
+                            'access_token': pcloud_config.access_token,
+                            'fileid': foto.file_id
+                        }
+                        
+                        response = requests.get(url, params=params)
+                        result = response.json()
+                        
+                        if response.status_code == 200 and result.get('result') == 0:
+                            download_url = f"https://{result['hosts'][0]}{result['path']}"
+                            file_response = requests.get(download_url)
+                            
+                            if file_response.status_code == 200:
+                                filename = foto.nombre_foto or f'foto_{foto.id}.jpg'
+                                zip_file.writestr(filename, file_response.content)
+                                _logger.info(f"[ZIP] Foto {foto.id} agregada al ZIP")
+                    except Exception as e:
+                        _logger.error(f"[ZIP] Error al procesar foto {foto.id}: {str(e)}")
+                        continue
+
+            zip_buffer.seek(0)
+            zip_content = base64.b64encode(zip_buffer.getvalue()).decode('utf-8')
+            
+            _logger.info("[ZIP] ZIP creado exitosamente")
             return {
-                'content': base64.b64encode(buffer.getvalue()).decode('utf-8'),
-                'filename': 'fotos_seleccionadas.zip',
+                'content': zip_content,
+                'filename': 'fotos_reparacion.zip',
                 'mimetype': 'application/zip'
             }
 
         except Exception as e:
             _logger.exception(f"[ZIP] Error al crear ZIP: {str(e)}")
-            raise ValidationError(f"Error al crear el archivo ZIP: {str(e)}")
-
+            return False
     def _get_public_link(self, file_id, pcloud_config):
         """Obtener links públicos para la foto"""
         try:
@@ -682,3 +715,56 @@ class ReparacionFoto(models.Model):
             pass
         except Exception as e:
             _logger.exception(f"[REFRESH_TOKEN] Error: {str(e)}")
+
+
+
+
+
+
+    def get_download_link(self):
+        """Obtener un nuevo link de descarga para una foto"""
+        self.ensure_one()
+        _logger.info(f"[DOWNLOAD_LINK] Obteniendo link para foto {self.id}")
+        
+        try:
+            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+            if not pcloud_config or not pcloud_config.access_token:
+                raise ValidationError("No se encontró configuración de pCloud")
+
+            # Obtener URL de pCloud
+            url = f"{pcloud_config.hostname}/getfilelink"
+            params = {
+                'access_token': pcloud_config.access_token,
+                'fileid': self.file_id
+            }
+            
+            _logger.info(f"[DOWNLOAD_LINK] Solicitando a pCloud con params: {params}")
+            response = requests.get(url, params=params)
+            result = response.json()
+            
+            if response.status_code == 200 and result.get('result') == 0:
+                download_url = f"https://{result['hosts'][0]}{result['path']}"
+                _logger.info(f"[DOWNLOAD_LINK] URL generada: {download_url}")
+                return {
+                    'download_url': download_url
+                }
+            
+            _logger.error(f"[DOWNLOAD_LINK] Error en respuesta: {result}")
+            return False
+
+        except Exception as e:
+            _logger.exception(f"[DOWNLOAD_LINK] Error: {str(e)}")
+            return False
+
+
+
+
+
+
+
+
+
+
+
+
+

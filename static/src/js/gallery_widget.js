@@ -153,7 +153,10 @@ class GalleryWidget extends Component {
     async downloadPhoto(photo, ev) {
         ev?.stopPropagation();
         try {
-            // Intentar obtener un nuevo link de descarga
+            if (!photo?.id) {
+                throw new Error("Foto no válida");
+            }
+
             const result = await this.orm.call(
                 'reparaciones.foto',
                 'get_download_link',
@@ -180,26 +183,35 @@ class GalleryWidget extends Component {
             });
             return;
         }
-
+    
         try {
             const selectedIds = Array.from(this.state.selectedPhotos.keys());
             const result = await this.orm.call(
                 'reparaciones.foto',
                 'get_photos_zip',
-                [selectedIds]
+                [selectedIds]  // Enviar array de IDs como primer argumento
             );
-
+    
             if (result && result.content) {
-                const blob = new Blob([atob(result.content)], { type: 'application/zip' });
+                // Crear y descargar el archivo ZIP
+                const blob = new Blob(
+                    [Uint8Array.from(atob(result.content), c => c.charCodeAt(0))], 
+                    { type: result.mimetype || 'application/zip' }
+                );
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = 'fotos_reparacion.zip';
+                link.download = result.filename || 'fotos_reparacion.zip';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
+                
+                // Limpiar selección
                 this.toggleSelectMode();
+                this.notification.add("Fotos descargadas exitosamente", {
+                    type: 'success',
+                });
             } else {
                 throw new Error("No se pudo crear el archivo ZIP");
             }
