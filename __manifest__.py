@@ -98,6 +98,10 @@
 
             #SCSS
             
+            #XML
+            'sat/static/src/xml/dashboard.xml',
+            'sat/static/src/xml/photo_gallery_template.xml',
+            'sat/static/src/xml/estado_ventas_bar.xml',
             
             # JS Files
             'sat/static/src/js/dashboard.js',
@@ -107,10 +111,6 @@
             
             
 
-            #XML
-            'sat/static/src/xml/dashboard.xml',
-            'sat/static/src/xml/photo_gallery_template.xml',
-            'sat/static/src/xml/estado_ventas_bar.xml',
             
             
             # External Libraries

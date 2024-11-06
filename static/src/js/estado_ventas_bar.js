@@ -4,6 +4,14 @@ import { registry } from "@web/core/registry";
 import { Component } from "@odoo/owl";
 
 class EstadoVentasBar extends Component {
+    static template = 'sat.EstadoVentasBar';
+    static props = {
+        name: { type: String, optional: true },
+        record: { type: Object, optional: true },
+        value: { type: String, optional: true },
+        update: { type: Function, optional: true },
+    };
+
     setup() {
         super.setup();
     }
@@ -26,25 +34,21 @@ class EstadoVentasBar extends Component {
     }
 
     getEstadoClass(estadoValue) {
-        return {
-            'estado-option': true,
-            'active': this.estado === estadoValue,
-            [`estado-${estadoValue}`]: true
-        };
+        const classes = ['estado-option'];
+        if (this.estado === estadoValue) {
+            classes.push('active');
+        }
+        classes.push(`estado-${estadoValue}`);
+        return classes.join(' ');
     }
 
-    async onEstadoClick(estadoValue) {
-        await this.props.update(estadoValue);
+    onEstadoClick(estadoValue) {
+        if (this.props.update) {
+            this.props.update(estadoValue);
+        }
     }
 }
 
-EstadoVentasBar.props = {
-    value: { type: String, optional: true },
-    update: { type: Function },
-    record: { type: Object },
-    name: { type: String },
-};
-
-EstadoVentasBar.template = 'sat.EstadoVentasBar';
-
 registry.category("fields").add("estado_ventas_bar", EstadoVentasBar);
+
+export default EstadoVentasBar;
