@@ -6,7 +6,7 @@ class SaleOrderInherit(models.Model):
     _inherit = 'sale.order'
 
     equipo_id = fields.Many2one('alquiler', string='Equipo')
-    serie_id = fields.Char(related='equipo_id.serie_id_r', string='Serie')
+    serie_id = fields.Char(related='equipo_id.serie', string='Serie')
     obs = fields.Html(string='Observaciones', tracking=True)
     solicitante_id = fields.Many2one('res.users', string='Solicitante')
     ticket_id = fields.Many2one('ticket.alquiler', string='Ticket referente')
