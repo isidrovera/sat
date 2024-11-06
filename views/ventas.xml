@@ -16,13 +16,9 @@
            
            
               <field name="estado_ventas_id" 
-                widget="statusbar"  
-                statusbar_visible="sin_revisar,para_revision,asignado,en_revision,finalizado,con_problemas,de_partes,entregada"
+                widget="statusbar"                  
                 options="{'clickable': '1'}" class="custom_statusbar" groups="base.group_system"/>
 
-     
-
-            
           </header>
 
           <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" invisible="activador == 'no'"> ¡Esta maquina tiene observaciones, <field name='descripcion' style="color: red;" />

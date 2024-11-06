@@ -11,7 +11,7 @@
                             class="btn btn-success" icon="fa-wrench" />
                         
                         <button string="Asignar" name="enviar_mensaje_whatsapp_reparaciones"
-                            type="object" class="oe_highlight" />
+                            type="object" class="oe_highlight" groups="base.group_system"/>
                         
                         <!--<button
                         string="QR" name="action_generate_qr_for_all" type="object"

@@ -47,34 +47,11 @@ class UnidadAlquiler(models.Model):
         string='Contometro de venta', tracking=True)
 
     control_mantenimiento = fields.Boolean(string="Mantenimiento mensual", default=True)
-
-    def action_alquilar(self):
-        self.estado_alquiler_id = 'alquilada'
-
     def action_stock(self):
         self.write({'estado_alquiler_id': 'stock', 'direccion': '', 'contacto_id': '', 'celular': '',
                    'correo_': '', 'correo_1': '', 'correo_2': '', 'cliente_id': 1, 'fecha_inicio': ''})
 
-    def action_lista(self):
-        self.estado_alquiler_id = 'lista'
-
-    def action_venta(self):
-        self.estado_alquiler_id = 'para_venta'
-
-    def action_problemas(self):
-        self.estado_alquiler_id = 'con_problemas'
-
-    def action_externo(self):
-        self.estado_alquiler_id = 'externo'
-
-    def action_vendida(self):
-        self.estado_alquiler_id = 'vendida'
-
-    marca = fields.Char(related='name.marca_id.name', readonly=True, store=True,
-                        string='Marca')
-
-    def action_partes(self):
-        self.estado_alquiler_id = 'partes'
+    marca = fields.Char(related='name.marca_id.name', readonly=True, store=True, string='Marca')
 
     serie = fields.Char(string='Serie', required=True, tracking=True)
 

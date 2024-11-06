@@ -10,17 +10,11 @@
                     <header>
                         <button string="Alquilar" name="action_alquilar" type="object" class="btn btn-primary" invisible="estado_alquiler_id == 'alquilada'"/>
                         <button string="Stock" name="action_stock" type="object" class="btn btn-primary" invisible="estado_alquiler_id == 'stock'"/>
-                        <button string="Lista" name="action_lista" type="object" icon="fa-check" class="btn btn-success" invisible="estado_alquiler_id == 'lista'" groups="base.group_system"/>
-                        <button string="Para venta" name="action_venta" type="object" icon="fa-cart-plus" class="btn btn-info" invisible="estado_alquiler_id == 'para_venta'" groups="base.group_system"/>
-                        <button string="Problemas" name="action_problemas" type="object" icon="fa-exclamation-triangle" class="btn btn-warning" invisible="estado_alquiler_id == 'con_problemas'" groups="base.group_system"/>
-                        <button string="Externo" name="action_externo" type="object" icon="fa-user" class="oe_highlight" invisible="estado_alquiler_id == 'externo'"/>
-                        <button string="Vender" name="action_vendida" type="object" class="btn btn-info" invisible="estado_alquiler_id == 'vendida'"/>
-                        <button string="Partes" name="action_partes" type="object" icon="fa-exclamation-triangle" class="btn btn-danger" invisible="estado_alquiler_id == 'partes'" groups="base.group_system"/>
                         <button string="Crear Pedido" name="create_sale_order" type="object" icon="fa-cart-plus" class="btn btn-success"/>
                         <button string="Crear Ticket" name="create_ticket" type="object" icon="fa-wrench" class="btn btn-primary"/>
                         
                         <button string="Enviar Recordatorio" type="object" class="oe_highlight" name="button_send_test_mail"/>
-                        <field name="estado_alquiler_id" widget="statusbar" readonly="1" statusbar_visible="true"/>
+                        <field name="estado_alquiler_id" widget="statusbar" options="{'clickable': '1'}"/>
 
                     </header>
                     <sheet>
