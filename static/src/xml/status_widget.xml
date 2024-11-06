@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="sat.StatusField" owl="1">
+    <t t-name="sat.StatusWidget" owl="1">
         <div class="o_statusbar_status">
             <t t-foreach="props.record.field.selection.slice().reverse()" t-as="option" t-key="option[0]">
                 <button type="button" 
-                        t-att-class="{'btn-primary': option[0] === props.value,
-                                    'btn-status': true,
-                                    'status-complete': isActiveStatus(props.value, option[0])}"
-                        t-on-click.stop="() => onStatusClick(option[0])"
+                        class="btn-status"
+                        t-att-class="{
+                            'btn-primary': option[0] === props.value,
+                            'status-complete': option[0] === props.value
+                        }"
+                        t-on-click="_onStatusClick(option[0])"
                         t-att-disabled="props.readonly">
                     <div class="status-content" 
                          t-att-style="'background-color: ' + getStatusConfig(option[0]).bgColor + ';' +
-                                    'border-color: ' + getStatusConfig(option[0]).color + ';'">
-                        <i t-att-class="'fa ' + getStatusConfig(option[0]).icon" 
-                           t-att-style="'color: ' + getStatusConfig(option[0]).color"/>
+                                    'border-color: ' + getStatusConfig(option[0]).color + ';' +
+                                    'color: ' + getStatusConfig(option[0]).color + ';'">
+                        <i t-att-class="getStatusConfig(option[0]).icon"/>
                         <span class="status-label" t-esc="option[1]"/>
-                        <div class="arrow-right" 
-                             t-att-style="'border-left-color: ' + getStatusConfig(option[0]).bgColor"/>
                     </div>
                 </button>
             </t>
