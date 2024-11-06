@@ -95,7 +95,10 @@
             
             # CSS Files
             '/sat/static/src/css/dashboard.css',
-            '/sat/static/src/css/status_widget.css',
+            #'/sat/static/src/css/status_widget.css',
+
+            #SCSS
+            '/sat/static/src/scss/status_widget.scss',
             
             # JS Files
             '/sat/static/src/js/dashboard.js',
