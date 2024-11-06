@@ -2,10 +2,9 @@
     position: relative;
     width: 100%;
     max-width: 300px;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
-.status-bar {
+.status-widget .status-bar {
     border-radius: 6px;
     padding: 8px 12px;
     cursor: pointer;
@@ -13,7 +12,7 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.current-status {
+.status-widget .current-status {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -22,7 +21,11 @@
     text-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-.status-dropdown {
+.status-widget .current-status i {
+    margin-left: 8px;
+}
+
+.status-widget .status-dropdown {
     display: none;
     position: absolute;
     top: calc(100% + 4px);
@@ -31,16 +34,16 @@
     background: white;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
     z-index: 1000;
-    overflow: hidden;
 }
 
-.status-dropdown.show {
+.status-widget .status-dropdown.show {
     display: block;
+    animation: slideDown 0.2s ease-out forwards;
 }
 
-.status-option {
+.status-widget .status-option {
     padding: 8px 12px;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -48,7 +51,7 @@
     align-items: center;
 }
 
-.status-option:hover {
+.status-widget .status-option:hover {
     background-color: #f8fafc;
 }
 
@@ -59,16 +62,6 @@
 
 .status-widget.readonly .current-status i {
     display: none;
-}
-
-/* Animación para el dropdown */
-.status-dropdown {
-    transform-origin: top;
-    transition: all 0.2s ease-out;
-}
-
-.status-dropdown.show {
-    animation: slideDown 0.2s ease-out forwards;
 }
 
 @keyframes slideDown {
