@@ -5,23 +5,55 @@ import { Field } from "@web/views/fields/field";
 const { Component } = owl;
 
 export class StatusField extends Component {
-    static template = 'FieldStatusWidget';
+    static template = 'sat.StatusField';
     
     setup() {
-        this.status_colors = {
-            'sin_revisar': '#808080',
-            'para_revision': '#3498db',
-            'asignado': '#f39c12',
-            'en_revision': '#f1c40f',
-            'finalizado': '#2ecc71',
-            'con_problemas': '#e74c3c',
-            'de_partes': '#9b59b6',
-            'entregada': '#1abc9c'
+        this.status_config = {
+            'sin_revisar': {
+                color: '#E0E0E0',
+                icon: 'fa-clock-o',
+                bgColor: '#F5F5F5'
+            },
+            'para_revision': {
+                color: '#3498db',
+                icon: 'fa-search',
+                bgColor: '#EBF5FB'
+            },
+            'asignado': {
+                color: '#f39c12',
+                icon: 'fa-user',
+                bgColor: '#FEF5E7'
+            },
+            'en_revision': {
+                color: '#f1c40f',
+                icon: 'fa-cogs',
+                bgColor: '#FEF9E7'
+            },
+            'finalizado': {
+                color: '#2ecc71',
+                icon: 'fa-check-circle',
+                bgColor: '#E8F8F5'
+            },
+            'con_problemas': {
+                color: '#e74c3c',
+                icon: 'fa-exclamation-triangle',
+                bgColor: '#FDEDEC'
+            },
+            'de_partes': {
+                color: '#9b59b6',
+                icon: 'fa-puzzle-piece',
+                bgColor: '#F4ECF7'
+            },
+            'entregada': {
+                color: '#1abc9c',
+                icon: 'fa-handshake-o',
+                bgColor: '#E8F6F3'
+            }
         };
     }
 
-    getStatusColor(value) {
-        return this.status_colors[value] || '#808080';
+    getStatusConfig(value) {
+        return this.status_config[value] || this.status_config.sin_revisar;
     }
 
     getStatusLabel(value) {
@@ -30,35 +62,21 @@ export class StatusField extends Component {
         return option ? option[1] : '';
     }
 
+    isActiveStatus(currentValue, optionValue) {
+        const selection = this.props.record.field.selection;
+        const currentIndex = selection.findIndex(opt => opt[0] === currentValue);
+        const optionIndex = selection.findIndex(opt => opt[0] === optionValue);
+        return optionIndex <= currentIndex;
+    }
+
     async onStatusClick(newValue) {
         if (!this.props.readonly) {
             await this.props.update(newValue);
         }
     }
-
-    toggleDropdown(ev) {
-        if (!this.props.readonly) {
-            const dropdown = ev.target.closest('.status-widget').querySelector('.status-dropdown');
-            if (dropdown) {
-                dropdown.classList.toggle('show');
-                
-                // Cerrar al hacer clic fuera
-                const closeDropdown = (e) => {
-                    if (!e.target.closest('.status-widget')) {
-                        dropdown.classList.remove('show');
-                        document.removeEventListener('click', closeDropdown);
-                    }
-                };
-                
-                document.addEventListener('click', closeDropdown);
-            }
-        }
-    }
 }
 
-export const statusWidget = {
+registry.category("fields").add("status_widget", {
     component: StatusField,
     supportedTypes: ["selection"],
-};
-
-registry.category("fields").add("status_widget", statusWidget);
+});
