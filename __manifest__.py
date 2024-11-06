@@ -89,28 +89,26 @@
     
     'assets': {
         'web.assets_backend': [
-            # Dependencias base
-            'web._assets_helpers',
-            'web._assets_backend_helpers',
+            
             
             # CSS Files
             '/sat/static/src/css/dashboard.css',
-            #'/sat/static/src/css/status_widget.css',
+            
 
             #SCSS
-            #'/sat/static/src/scss/status_widget.scss',
+            
             
             # JS Files
             '/sat/static/src/js/dashboard.js',
             '/sat/static/src/js/estilo_dashboard.js',
             '/sat/static/src/js/gallery_widget.js',
-            #'/sat/static/src/js/status_widget.js',
+            
             
 
             #XML
             '/sat/static/src/xml/dashboard.xml',
             '/sat/static/src/xml/photo_gallery_template.xml',
-            #'/sat/static/src/xml/status_widget.xml',
+            
             
             # External Libraries
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
