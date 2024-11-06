@@ -93,6 +93,7 @@
             
             # CSS Files
             '/sat/static/src/css/dashboard.css',
+            '/sat/static/src/css/estado_ventas.css',
             
 
             #SCSS

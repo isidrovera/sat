@@ -1,0 +1,32 @@
+.o_field_widget.estado_ventas .o_statusbar_status.sin_revisar {
+    background-color: #f5f5f5; /* Gris claro */
+    color: #000000;
+}
+.o_field_widget.estado_ventas .o_statusbar_status.para_revision {
+    background-color: #ffeb3b; /* Amarillo */
+    color: #000000;
+}
+.o_field_widget.estado_ventas .o_statusbar_status.asignado {
+    background-color: #03a9f4; /* Azul */
+    color: #ffffff;
+}
+.o_field_widget.estado_ventas .o_statusbar_status.en_revision {
+    background-color: #2196f3; /* Azul más oscuro */
+    color: #ffffff;
+}
+.o_field_widget.estado_ventas .o_statusbar_status.finalizado {
+    background-color: #4caf50; /* Verde */
+    color: #ffffff;
+}
+.o_field_widget.estado_ventas .o_statusbar_status.con_problemas {
+    background-color: #f44336; /* Rojo */
+    color: #ffffff;
+}
+.o_field_widget.estado_ventas .o_statusbar_status.de_partes {
+    background-color: #9c27b0; /* Púrpura */
+    color: #ffffff;
+}
+.o_field_widget.estado_ventas .o_statusbar_status.entregada {
+    background-color: #8bc34a; /* Verde claro */
+    color: #ffffff;
+}
