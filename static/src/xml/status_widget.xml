@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<templates xml:space="preserve">
+<templates>
     <t t-name="sat.StatusWidget" owl="1">
         <div class="o_statusbar_status">
             <t t-foreach="props.record.field.selection.slice().reverse()" t-as="option" t-key="option[0]">

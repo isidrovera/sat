@@ -59,12 +59,6 @@ class StatusWidget extends Field {
         };
     }
 
-    get options() {
-        return {
-            ...this.props.record.field.selection,
-        };
-    }
-
     getStatusConfig(value) {
         return this.status_config[value] || this.status_config.sin_revisar;
     }
