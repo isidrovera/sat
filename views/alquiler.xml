@@ -8,7 +8,7 @@
             <field name="arch" type="xml">
                 <form>
                     <header>
-                        <button string="Stock" name="action_stock" type="object" class="btn btn-primary" invisible="estado_alquiler_id == 'stock'"/>
+                        <button string="Stock" name="action_stock" type="object" class="btn btn-primary" invisible="estado_alquiler_id == 'sin_revisar'"/>
                         <button string="Crear Pedido" name="create_sale_order" type="object" icon="fa-cart-plus" class="btn btn-success"/>
                         <button string="Crear Ticket" name="create_ticket" type="object" icon="fa-wrench" class="btn btn-primary"/>
                         
