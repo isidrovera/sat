@@ -7,7 +7,7 @@
                  t-on-click.stop="(ev) => toggleDropdown(ev)">
                 <div class="current-status">
                     <span t-esc="getStatusLabel(props.value)"/>
-                    <i t-if="!props.readonly" class="fa fa-chevron-down ml-2"/>
+                    <i t-if="!props.readonly" class="fa fa-chevron-down"/>
                 </div>
                 <div class="status-dropdown">
                     <t t-foreach="props.record.field.selection" t-as="option" t-key="option[0]">
