@@ -8,24 +8,44 @@
     'author': "Isidro vera polo",
     'website': "https://copiercompanysac.com",
     'category': 'Services',
-    'depends': ['base','mail','contacts','sale_management',
-    'portal','web', 'stock', 'crm','purchase','project','hr_holidays','calendar'
-    ,'im_livechat','survey',
-    'hr_attendance','hr','website','bus'],
+    
+    'depends': [
+        'base',
+        'mail',
+        'contacts',
+        'sale_management',
+        'portal',
+        'web',
+        'stock',
+        'crm',
+        'purchase',
+        'project',
+        'hr_holidays',
+        'calendar',
+        'im_livechat',
+        'survey',
+        'hr_attendance',
+        'hr',
+        'website',
+        'bus'
+    ],
+    
     'data': [
-        'views/sat_dashboard_menu.xml',
-        'views/ventas.xml',
-        'views/templates.xml',
+        'security/acceso.xml',
+        'security/ir.model.access.csv',
+        
+        # Datos
         'data/ir_secuense.xml',
         'data/ir_secuense_ticket.xml',
-        'views/modelos.xml',
-        'views/repuestos_alquiler.xml',
-        'views/marcas.xml',
-        'views/informes.xml',
-        'views/fallas.xml',
         'data/ir.secuense_info.xml',
         'data/ir_secuense_ev.xml',
         'data/print.xml',
+        'data/cron_data.xml',
+        'data/cron_evaluador_diario.xml',
+        'data/ir.secuence_incidencia.xml',
+        'data/plantillas_correo.xml',
+        
+        # Reportes
         'report/reparacion_enlace.xml',
         'report/report_reparaciones_ventas.xml',
         'report/ticket_enlace.xml',
@@ -35,27 +55,31 @@
         'report/report_qr_codes_reparaciones.xml',
         'report/report_qr_enlace.xml',
         'report/qr_alquiler.xml',
-        'data/cron_data.xml',
-        'data/cron_evaluador_diario.xml',
+        
+        # Vistas
+        'views/sat_dashboard_menu.xml',
+        'views/ventas.xml',
+        'views/templates.xml',
+        'views/modelos.xml',
+        'views/repuestos_alquiler.xml',
+        'views/marcas.xml',
+        'views/informes.xml',
+        'views/fallas.xml',
         'views/reporte_cotizacion.xml',
-        'views/reparaciones.xml',        
+        'views/reparaciones.xml',
         'views/opciones_cliente.xml',
-        'security/acceso.xml',
-        'security/ir.model.access.csv',
         'views/alquiler.xml',
-        'views/opciones_product.xml',        
+        'views/opciones_product.xml',
         'views/sale_order_.xml',
         'views/linea_pedido.xml',
         'views/mail_maquinas.xml',
         'views/evaluacion.xml',
         'views/crear_ticket_portal.xml',
         'views/incidencias.xml',
-        'views/soporte.alquiler.xml',               
-        'data/ir.secuence_incidencia.xml',
-        'views/template_formulario_ticket.xml',               
-        'data/plantillas_correo.xml',
+        'views/soporte.alquiler.xml',
+        'views/template_formulario_ticket.xml',
         'views/pagina_con_opciones.xml',
-        'views/reportar_incidencia_form.xml',        
+        'views/reportar_incidencia_form.xml',
         'views/pagina_confirmacion.xml',
         'views/solicitar_toner_form_template.xml',
         'views/pagina_confirmacion_toner.xml',
@@ -67,47 +91,43 @@
         'views/importacionexcel.xml',
         'views/reparacion_autenticacion_wizard_view.xml',
         'views/fotos_reparaciones.xml',
-        
-        
     ],
+    
+    'assets': {
+        'web.assets_backend': [
+            # Helpers de Odoo
+            ('include', 'web._assets_helpers'),
+            ('include', 'web._assets_backend_helpers'),
+            
+            # CSS
+            '/sat/static/src/css/dashboard.css',
+            '/sat/static/src/css/status_widget.css',
+            
+            # JavaScript
+            ('script', 'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js'),
+            '/sat/static/src/js/dashboard.js',
+            '/sat/static/src/js/estilo_dashboard.js',
+            '/sat/static/src/js/gallery_widget.js',
+            '/sat/static/src/js/status_widget.js',
+        ],
+        
+        'web.assets_frontend': [
+            '/sat/static/src/js/searchFilter.js',
+        ],
+        
+        'web.assets_qweb': [
+            '/sat/static/src/xml/dashboard.xml',
+            '/sat/static/src/xml/photo_gallery_template.xml',
+            '/sat/static/src/xml/status_widget.xml',
+        ],
+    },
+    
     'demo': [
         'demo/demo_data.xml',
     ],
-    'assets': {
-    'web.assets_backend': [
-        'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
-        
-        'sat/static/src/js/dashboard.js',
-        'sat/static/src/xml/dashboard.xml',
-        'sat/static/src/css/dashboard.css',
-        'sat/static/src/js/estilo_dashboard.js',        
-        'sat/static/src/js/gallery_widget.js',
-        #'sat/static/scr/css/photo_gallery.css',
-        'sat/static/src/xml/photo_gallery_template.xml',
-        'sat/static/src/css/status_widget.css',
-        'sat/static/src/js/status_widget',        
-        'sat/static/src/xml/status_widget.xml',
-        
-             
-    ],
-    'web.assets_frontend': [
-            'sat/static/src/js/searchFilter.js',
-            
-        ],
-    'web.assets_qweb': [
-
-               
-    ],
-    },
-    'qweb': [
-        'static/src/xml/*.xml',
-    ],
-    'js': [
-        'static/src/js/*.js',
-    ],
-   
-
+    
     'installable': True,
     'application': True,
     'auto_install': False,
+    'license': 'LGPL-3',
 }
