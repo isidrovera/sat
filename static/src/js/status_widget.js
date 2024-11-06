@@ -5,7 +5,7 @@ import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { Field } from "@web/views/fields/field";
 
 export class StatusWidget extends Field {
-    static template = "StatusWidgetTemplate";
+    static template = "sat.StatusWidget";
     static props = {
         ...standardFieldProps,
     };
