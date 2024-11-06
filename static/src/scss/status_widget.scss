@@ -1,20 +1,30 @@
-.o_statusbar_status {
+.o_status_widget, .o_status_widget_kanban {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px;
-    
-    .btn-status {
+
+    .status-button {
         border: none;
         background: none;
         padding: 0;
         cursor: pointer;
-        
+        transition: all 0.2s ease;
+
         &:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
-        
+
+        &:not(:disabled):hover {
+            transform: translateY(-1px);
+        }
+
+        &.selected .status-content {
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
         .status-content {
             display: flex;
             align-items: center;
@@ -23,23 +33,29 @@
             border-radius: 4px;
             border: 1px solid;
             transition: all 0.3s ease;
-            
+
             i {
                 font-size: 14px;
             }
-            
+
             .status-label {
                 font-size: 13px;
-                font-weight: 500;
             }
         }
+    }
+}
+
+.o_status_widget_kanban {
+    padding: 4px 8px;
+    
+    .status-label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
         
-        &:not(:disabled):hover .status-content {
-            filter: brightness(0.95);
-        }
-        
-        &.btn-primary .status-content {
-            font-weight: 600;
+        i {
+            font-size: 14px;
         }
     }
 }

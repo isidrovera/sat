@@ -1,11 +1,19 @@
-/** @odoo-module */
+/** @odoo-module **/
 
-import { SelectionField } from "@web/views/fields/selection/selection_field";
-import { patch } from "@web/core/utils/patch";
+import { registry } from "@web/core/registry";
+import { standardFieldProps } from "@web/views/fields/standard_field_props";
+import { Field } from "@web/views/fields/field";
 
-patch(SelectionField.prototype, {
+class StatusWidget extends Field {
+    static template = "sat.StatusWidget";
+    static props = {
+        ...standardFieldProps,
+    };
+    static supportedTypes = ["selection"];
+
     setup() {
         super.setup();
+        console.log('StatusWidget: Iniciando setup', this.props);
         
         this.status_config = {
             'sin_revisar': {
@@ -57,22 +65,31 @@ patch(SelectionField.prototype, {
                 label: 'Entregada'
             }
         };
-    },
+    }
 
     getStatusConfig(value) {
         return this.status_config[value] || this.status_config['sin_revisar'];
-    },
+    }
 
-    async _onSelectChange(value) {
-        if (this.props.readonly) {
-            return;
-        }
-        
-        const config = this.getStatusConfig(value);
-        try {
+    getSelectionValues() {
+        if (!this.props.record || !this.props.name) return [];
+        const field = this.props.record.fields[this.props.name];
+        return field?.selection || [];
+    }
+
+    async onStatusClick(value) {
+        if (!this.props.readonly) {
             await this.props.update(value);
-        } catch (error) {
-            console.error('Error al actualizar estado:', error);
         }
     }
-});
+}
+
+// Widget para vista normal
+registry.category("fields").add("status_widget", StatusWidget);
+
+// Widget para vista kanban
+class StatusKanbanWidget extends StatusWidget {}
+StatusKanbanWidget.template = "sat.StatusKanbanWidget";
+registry.category("fields").add("kanban_label_selection", StatusKanbanWidget);
+
+export default StatusWidget;
