@@ -19,7 +19,7 @@ class UnidadAlquiler(models.Model):
 
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Many2one('modelo.maquina', string='Modelo de maquina',
+    name = fields.Many2one('modelo.maquina', string='Modelo',
                            required=True
                            )
     
@@ -47,9 +47,7 @@ class UnidadAlquiler(models.Model):
         string='Contometro de venta', tracking=True)
 
     control_mantenimiento = fields.Boolean(string="Mantenimiento mensual", default=True)
-    def action_stock(self):
-        self.write({'estado_alquiler_id': 'sin_revisar', 'direccion': '', 'contacto_id': '', 'celular': '',
-                   'correo_': '', 'cliente_id': 1, 'fecha_inicio': ''})
+    
 
     marca = fields.Char(related='name.marca_id.name', readonly=True, store=True, string='Marca')
 
