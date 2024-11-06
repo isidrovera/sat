@@ -84,8 +84,9 @@
         'sat/static/src/js/gallery_widget.js',
         #'sat/static/scr/css/photo_gallery.css',
         'sat/static/src/xml/photo_gallery_template.xml',
-        'sat/static/src/js/status_widget.js',
         'sat/static/src/css/status_widget.css',
+        'sat/static/src/js/status_widget.        
+        'sat/static/src/xml/status_widget.xml',
         
              
     ],
@@ -94,7 +95,7 @@
             
         ],
     'web.assets_qweb': [
-        'sat/static/src/xml/status_widget.xml',
+
                
     ],
     },
