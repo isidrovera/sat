@@ -3,7 +3,7 @@
 import { registry } from "@web/core/registry";
 import { Component } from "@odoo/owl";
 
-export class EstadoVentasBar extends Component {
+class EstadoVentasBar extends Component {
     setup() {
         super.setup();
     }
@@ -38,20 +38,13 @@ export class EstadoVentasBar extends Component {
     }
 }
 
-EstadoVentasBar.template = xml`
-    <div class="estado-ventas-bar">
-        <div class="estado-options">
-            <t t-foreach="estados" t-as="estado" t-key="estado.value">
-                <div t-att-class="getEstadoClass(estado.value)"
-                     t-on-click="() => onEstadoClick(estado.value)">
-                    <span t-esc="estado.label"/>
-                </div>
-            </t>
-        </div>
-    </div>
-`;
+EstadoVentasBar.props = {
+    value: { type: String, optional: true },
+    update: { type: Function },
+    record: { type: Object },
+    name: { type: String },
+};
 
-EstadoVentasBar.supportedTypes = ['selection'];
+EstadoVentasBar.template = 'sat.EstadoVentasBar';
 
-// Registrar el campo personalizado
 registry.category("fields").add("estado_ventas_bar", EstadoVentasBar);

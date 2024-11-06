@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="sat.EstadoVentasBar" owl="1">
+        <div class="estado-ventas-bar">
+            <div class="estado-options">
+                <t t-foreach="estados" t-as="estado" t-key="estado.value">
+                    <div t-att-class="getEstadoClass(estado.value)"
+                         t-on-click="() => onEstadoClick(estado.value)">
+                        <span t-esc="estado.label"/>
+                    </div>
+                </t>
+            </div>
+        </div>
+    </t>
+</templates>
