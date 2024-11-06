@@ -136,11 +136,11 @@
                     <group>
                         <!--Este son filtros rapidos-->
                         <separator/>
-                        <filter name="estado_alquiler_id" string="Stock" domain="[('estado_alquiler_id', '=', 'stock')]" />
+                        <filter name="estado_alquiler_id" string="Sin revisar" domain="[('estado_alquiler_id', '=', 'sin_revisar')]" />
                         <separator/>
                         <filter name="estado_alquiler_id" string="Lista" domain="[('estado_alquiler_id', '=', 'lista')]" />
                         <separator/>
-                        <filter name="estado_alquiler_id" string="Para venta" domain="[('estado_alquiler_id', '=', 'para_venta')]" />
+                        <filter name="estado_alquiler_id" string="Revisada" domain="[('estado_alquiler_id', '=', 'revisada')]" />
                         <separator/>
                         <filter name="estado_alquiler_id" string="Alquilada" domain="[('estado_alquiler_id', '=', 'alquilada')]" />
                         <separator/>
