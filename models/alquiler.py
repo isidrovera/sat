@@ -73,7 +73,7 @@ class UnidadAlquiler(models.Model):
     ubicacion_id = fields.Selection([('primer_piso', 'Primer piso'), ('tercer_piso', 'Tercer piso'), ('segundo_local', 'Segundo local'), ('covida', 'Covida')],
                                     default='primer_piso', tracking=True,
                                     )
-    estado_alquiler_id = fields.Selection([('stock', 'Stock'), ('lista', 'Lista'), ('para_venta', 'Para Venta'), ('alquilada', 'Alquilada'), ('con_problemas', 'Con Problemas'), ('partes', 'De Partes'), ('externo', 'Externo'), ('vendida', 'Vendida')],
+    estado_alquiler_id = fields.Selection([('sin_revisar', 'Sin revisar'), ('revisada', 'Revisada'), ('lista', 'Lista'), ('alquilada', 'Alquilada'), ('con_problemas', 'Con Problemas'), ('partes', 'De Partes'), ('externo', 'Externo'), ('vendida', 'Vendida')],
                                           string='Estado de Maquina',
                                           default='stock', tracking=True)
 
