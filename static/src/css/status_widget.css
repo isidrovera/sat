@@ -1,76 +1,119 @@
-.status-widget {
-    position: relative;
-    width: 100%;
-    max-width: 300px;
+.o_statusbar_status {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 8px;
+    overflow-x: auto;
+    background: white;
+    border-bottom: 1px solid #dee2e6;
 }
 
-.status-widget .status-bar {
-    border-radius: 6px;
-    padding: 8px 12px;
+.btn-status {
+    padding: 0;
+    border: none;
+    background: none;
+    position: relative;
     cursor: pointer;
+    min-width: 160px;
+}
+
+.btn-status:hover .status-content {
+    filter: brightness(0.95);
+}
+
+.btn-status:disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
+.status-content {
+    display: flex;
+    align-items: center;
+    padding: 8px 25px 8px 15px;
+    border: 2px solid;
+    border-radius: 4px;
+    position: relative;
     transition: all 0.3s ease;
+    gap: 8px;
+    height: 40px;
+}
+
+.status-label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.btn-status i {
+    font-size: 1.1rem;
+}
+
+.arrow-right {
+    position: absolute;
+    right: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 20px solid transparent;
+    border-bottom: 20px solid transparent;
+    border-left: 15px solid;
+    z-index: 1;
+}
+
+.btn-status:last-child .arrow-right {
+    display: none;
+}
+
+/* Estado activo y completado */
+.status-complete .status-content {
+    font-weight: 600;
+}
+
+.btn-primary .status-content {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.status-widget .current-status {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    color: white;
-    font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+/* Animación al cambiar estado */
+.btn-status .status-content {
+    transform-origin: left;
 }
 
-.status-widget .current-status i {
-    margin-left: 8px;
+.btn-status:not(:disabled):active .status-content {
+    transform: scale(0.98);
 }
 
-.status-widget .status-dropdown {
-    display: none;
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-    z-index: 1000;
-}
-
-.status-widget .status-dropdown.show {
-    display: block;
-    animation: slideDown 0.2s ease-out forwards;
-}
-
-.status-widget .status-option {
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    display: flex;
-    align-items: center;
-}
-
-.status-widget .status-option:hover {
-    background-color: #f8fafc;
-}
-
-.status-widget.readonly .status-bar {
-    cursor: default;
-    opacity: 0.9;
-}
-
-.status-widget.readonly .current-status i {
-    display: none;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
+/* Responsive */
+@media (max-width: 768px) {
+    .o_statusbar_status {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 12px;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    
+    .btn-status {
+        min-width: 140px;
     }
+    
+    .status-content {
+        padding: 6px 20px 6px 12px;
+    }
+}
+
+/* Scrollbar personalizada */
+.o_statusbar_status::-webkit-scrollbar {
+    height: 4px;
+}
+
+.o_statusbar_status::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.o_statusbar_status::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 2px;
+}
+
+.o_statusbar_status::-webkit-scrollbar-thumb:hover {
+    background: #666;
 }
