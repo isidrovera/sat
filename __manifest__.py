@@ -93,7 +93,7 @@
             
             # CSS Files
             'sat/static/src/css/dashboard.css',
-            'sat/static/src/css/estado_ventas_bar.css',
+            
             
 
             #SCSS
@@ -101,13 +101,13 @@
             #XML
             'sat/static/src/xml/dashboard.xml',
             'sat/static/src/xml/photo_gallery_template.xml',
-            'sat/static/src/xml/estado_ventas_bar.xml',
+            
             
             # JS Files
             'sat/static/src/js/dashboard.js',
             'sat/static/src/js/estilo_dashboard.js',
             'sat/static/src/js/gallery_widget.js',
-            'sat/static/src/js/estado_ventas_bar.js',
+            
             
             
 
