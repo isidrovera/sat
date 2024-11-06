@@ -60,7 +60,7 @@ class StatusWidget extends Field {
     }
 
     getStatusConfig(value) {
-        return this.status_config[value] || this.status_config.sin_revisar;
+        return this.status_config[value] || this.status_config['sin_revisar'];
     }
 
     async _onStatusClick(value) {

@@ -2,23 +2,29 @@
 <templates>
     <t t-name="sat.StatusWidget" owl="1">
         <div class="o_statusbar_status">
-            <t t-foreach="props.record.field.selection.slice().reverse()" t-as="option" t-key="option[0]">
-                <button type="button" 
-                        class="btn-status"
-                        t-att-class="{
-                            'btn-primary': option[0] === props.value,
-                            'status-complete': option[0] === props.value
-                        }"
-                        t-on-click="_onStatusClick(option[0])"
-                        t-att-disabled="props.readonly">
-                    <div class="status-content" 
-                         t-att-style="'background-color: ' + getStatusConfig(option[0]).bgColor + ';' +
-                                    'border-color: ' + getStatusConfig(option[0]).color + ';' +
-                                    'color: ' + getStatusConfig(option[0]).color + ';'">
-                        <i t-att-class="getStatusConfig(option[0]).icon"/>
-                        <span class="status-label" t-esc="option[1]"/>
-                    </div>
-                </button>
+            <!-- Verifica que props.record, props.record.field y props.record.field.selection estén definidos -->
+            <t t-if="props.record and props.record.field and props.record.field.selection">
+                <t t-foreach="props.record.field.selection.slice().reverse()" t-as="option" t-key="option[0]">
+                    <button type="button" 
+                            class="btn-status"
+                            t-att-class="{
+                                'btn-primary': option[0] === props.value,
+                                'status-complete': option[0] === props.value
+                            }"
+                            t-on-click="_onStatusClick(option[0])"
+                            t-att-disabled="props.readonly">
+                        <div class="status-content" 
+                             t-att-style="'background-color: ' + getStatusConfig(option[0]).bgColor + ';' +
+                                        'border-color: ' + getStatusConfig(option[0]).color + ';' +
+                                        'color: ' + getStatusConfig(option[0]).color + ';'">
+                            <i t-att-class="getStatusConfig(option[0]).icon"/>
+                            <span class="status-label" t-esc="option[1]"/>
+                        </div>
+                    </button>
+                </t>
+            </t>
+            <t t-else="">
+                <div>No options available</div>
             </t>
         </div>
     </t>
