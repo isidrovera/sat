@@ -15,7 +15,7 @@
             </xpath>
             <xpath expr="//field[@name='payment_term_id']" position="after">
                 <field name="estado_entrega" string="Estado de entrega"/>
-                <field name="tipo_pedido" string="Tipo de Cotización"/>
+                <field name="tipo_pedido" string="Tipo de pedido técnico"/>
             </xpath>
             <xpath expr="//button[@name='action_preview_sale_order']" position="after">
                 <button type="object" name="get_repuestos_pedidos" class="oe_stat_button" icon="fa-cogs">
@@ -38,7 +38,7 @@
                 <field name="estado_entrega" string="Estado de entrega" widget="badge" decoration-warning="estado_entrega == 'sin_entregar'" decoration-success="estado_entrega == 'entregado'"/>
             </xpath>
             <xpath expr="//field[@name='partner_id']" position="after">
-                <field name="equipo_id" string="Equipo" />
+                <field name="serie_id" string="Equipo" />
             </xpath>
         </field>
     </record>    
