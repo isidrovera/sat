@@ -3,25 +3,11 @@
 import { registry } from "@web/core/registry";
 import { Component } from "@odoo/owl";
 
-class EstadoVentasBar extends Component {
+export class EstadoVentasBar extends Component {
     static template = 'sat.EstadoVentasBar';
-    static props = {
-        name: { type: String, optional: true },
-        record: { type: Object, optional: true },
-        value: { type: String, optional: true },
-        update: { type: Function, optional: true },
-    };
-
+    
     setup() {
-        super.setup();
-    }
-
-    get estado() {
-        return this.props.value || 'sin_revisar';
-    }
-
-    get estados() {
-        return [
+        this.estados = [
             { value: 'sin_revisar', label: 'Sin revisar' },
             { value: 'para_revision', label: 'Para revision' },
             { value: 'asignado', label: 'Asignado' },
@@ -35,20 +21,24 @@ class EstadoVentasBar extends Component {
 
     getEstadoClass(estadoValue) {
         const classes = ['estado-option'];
-        if (this.estado === estadoValue) {
+        if (this.props.record.data.estado_ventas_id === estadoValue) {
             classes.push('active');
         }
         classes.push(`estado-${estadoValue}`);
         return classes.join(' ');
     }
 
-    onEstadoClick(estadoValue) {
-        if (this.props.update) {
-            this.props.update(estadoValue);
+    async onEstadoClick(estadoValue) {
+        try {
+            await this.props.record.update({
+                estado_ventas_id: estadoValue
+            });
+        } catch (error) {
+            console.error('Error al actualizar el estado:', error);
         }
     }
 }
 
-registry.category("fields").add("estado_ventas_bar", EstadoVentasBar);
+EstadoVentasBar.supportedTypes = ["selection"];
 
-export default EstadoVentasBar;
+registry.category("fields").add("estado_ventas_bar", EstadoVentasBar);
