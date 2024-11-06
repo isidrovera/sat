@@ -103,6 +103,12 @@
             '/sat/static/src/js/gallery_widget.js',
             '/sat/static/src/js/status_widget.js',
             
+
+            #XML
+            '/sat/static/src/xml/dashboard.xml',
+            '/sat/static/src/xml/photo_gallery_template.xml',
+            '/sat/static/src/xml/status_widget.xml',
+            
             # External Libraries
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
         ],
@@ -112,9 +118,7 @@
         ],
         
         'web.assets_qweb': [
-            '/sat/static/src/xml/dashboard.xml',
-            '/sat/static/src/xml/photo_gallery_template.xml',
-            '/sat/static/src/xml/status_widget.xml',
+            
         ],
     },
     
