@@ -1,32 +1,14 @@
+/* estado_color.css */
 .estado-sin_revisar {
-    background-color: #f5f5f5 !important; /* Gris claro */
-    color: #000000 !important;
+    background-color: #grey !important;
 }
+
 .estado-para_revision {
-    background-color: #ffeb3b !important; /* Amarillo */
-    color: #000000 !important;
+    background-color: #yellow !important;
 }
+
 .estado-asignado {
-    background-color: #03a9f4 !important; /* Azul */
-    color: #ffffff !important;
+    background-color: #blue !important;
 }
-.estado-en_revision {
-    background-color: #2196f3 !important; /* Azul oscuro */
-    color: #ffffff !important;
-}
-.estado-finalizado {
-    background-color: #4caf50 !important; /* Verde */
-    color: #ffffff !important;
-}
-.estado-con_problemas {
-    background-color: #f44336 !important; /* Rojo */
-    color: #ffffff !important;
-}
-.estado-de_partes {
-    background-color: #9c27b0 !important; /* Púrpura */
-    color: #ffffff !important;
-}
-.estado-entregada {
-    background-color: #8bc34a !important; /* Verde claro */
-    color: #ffffff !important;
-}
+
+/* ... resto de tus estados ... */
