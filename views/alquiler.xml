@@ -54,12 +54,12 @@
                         </div>
                         <group>
                             <group>
-                                <field name="direccion" required="estado_alquiler_id == 'lista'" />
-                                <field name="contacto_id" required="estado_alquiler_id == 'lista'" />
+                                <field name="direccion" required="estado_alquiler_id == 'alquilada'" />
+                                <field name="contacto_id" required="estado_alquiler_id == 'alquilada'" />
                                 <field name="celular" widget="phone"
-                                    required="estado_alquiler_id == 'lista'" />
+                                    required="estado_alquiler_id == 'alquilada'"/>
                                 <field name="correo_" widget="email"
-                                    required="estado_alquiler_id == 'lista'" />
+                                    required="estado_alquiler_id == 'alquilada'" />
 
                                 <!--<field
                                 name="image_qr" widget="image" options="{'size': [128, 128]}"/>-->
@@ -91,7 +91,7 @@
                                 <group>
                                     <field name="control_mantenimiento" widget="boolean_button" />
                                     <field name="fecha_inicio"
-                                        required="control_mantenimiento == True and estado_alquiler_id == 'lista'" />
+                                        required="control_mantenimiento == True and estado_alquiler_id == 'alquilada'" />
                                     <field name="fecha_recurrente" />
                                 </group>
                             </page>

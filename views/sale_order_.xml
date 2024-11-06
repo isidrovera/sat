@@ -8,6 +8,7 @@
             <xpath expr="//field[@name='partner_id']" position="after">
                 <!--<field name="contometro"/>-->
                 <field name="equipo_id" string="Equipo"/>
+                <field name="serie_id" string="Serie"/>
                 <field name="obs" string="Observaciones"/>
                 <field name="solicitante_id" string="Solicitante"/>
                 <field name="ticket_id" string="Ticket"/>
