@@ -4,7 +4,12 @@ import { registry } from "@web/core/registry";
 import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { Field } from "@web/views/fields/field";
 
-class StatusWidget extends Field {
+export class StatusWidget extends Field {
+    static template = "StatusWidgetTemplate";
+    static props = {
+        ...standardFieldProps,
+    };
+
     setup() {
         super.setup();
         this.status_colors = {
@@ -19,30 +24,27 @@ class StatusWidget extends Field {
         };
     }
 
-    get statusColor() {
-        return this.status_colors[this.props.value] || '#808080';
+    getStatusColor(value) {
+        return this.status_colors[value] || '#808080';
     }
 
     async onChange(newValue) {
         await this.props.update(newValue);
     }
 
-    toggleDropdown() {
+    onClickStatus() {
         if (!this.props.readonly) {
             const dropdown = this.el.querySelector('.status-dropdown');
-            dropdown.classList.toggle('show');
+            if (dropdown) {
+                dropdown.classList.toggle('show');
+            }
         }
     }
 }
 
-StatusWidget.template = 'StatusWidgetTemplate';
-StatusWidget.props = {
-    ...standardFieldProps,
-    record: { type: Object },
+export const statusWidget = {
+    component: StatusWidget,
+    supportedTypes: ["selection"],
 };
 
-StatusWidget.supportedTypes = ['selection'];
-
-registry.category("fields").add("status_widget", StatusWidget);
-
-export default StatusWidget;
+registry.category("fields").add("status_widget", statusWidget);
