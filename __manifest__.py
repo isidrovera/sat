@@ -94,31 +94,39 @@
     ],
     
     'assets': {
+        # Backend assets
         'web.assets_backend': [
             # Helpers de Odoo
-            ('include', 'web._assets_helpers'),
-            ('include', 'web._assets_backend_helpers'),
+            'web/static/lib/bootstrap/scss/_functions.scss',
+            'web/static/lib/bootstrap/scss/_variables.scss',
             
             # CSS
-            '/sat/static/src/css/dashboard.css',
-            '/sat/static/src/css/status_widget.css',
+            ('link', '/sat/static/src/css/dashboard.css', {'type': 'text/css'}),
+            ('link', '/sat/static/src/css/status_widget.css', {'type': 'text/css'}),
             
             # JavaScript
-            ('script', 'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js'),
-            '/sat/static/src/js/dashboard.js',
-            '/sat/static/src/js/estilo_dashboard.js',
-            '/sat/static/src/js/gallery_widget.js',
-            '/sat/static/src/js/status_widget.js',
+            ('script', 'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js', {'type': 'text/javascript'}),
+            ('script', '/sat/static/src/js/dashboard.js', {'type': 'text/javascript'}),
+            ('script', '/sat/static/src/js/estilo_dashboard.js', {'type': 'text/javascript'}),
+            ('script', '/sat/static/src/js/gallery_widget.js', {'type': 'text/javascript'}),
+            ('script', '/sat/static/src/js/status_widget.js', {'type': 'text/javascript'}),
         ],
         
+        # Frontend assets
         'web.assets_frontend': [
-            '/sat/static/src/js/searchFilter.js',
+            ('script', '/sat/static/src/js/searchFilter.js', {'type': 'text/javascript'}),
         ],
         
+        # QWeb templates
         'web.assets_qweb': [
             '/sat/static/src/xml/dashboard.xml',
             '/sat/static/src/xml/photo_gallery_template.xml',
             '/sat/static/src/xml/status_widget.xml',
+        ],
+        
+        # Print assets
+        'web.assets_web_print': [
+            ('link', '/sat/static/src/css/print.css', {'media': 'print'}),
         ],
     },
     
