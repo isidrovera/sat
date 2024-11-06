@@ -92,24 +92,24 @@
             
             
             # CSS Files
-            '/sat/static/src/css/dashboard.css',
-            '/sat/static/src/css/estado_ventas.css',
+            'sat/static/src/css/dashboard.css',
+            'sat/static/src/css/estado_ventas_bar.css',
             
 
             #SCSS
             
             
             # JS Files
-            '/sat/static/src/js/dashboard.js',
-            '/sat/static/src/js/estilo_dashboard.js',
-            '/sat/static/src/js/gallery_widget.js',
-            '/sat/static/src/js/estado_color.js',
+            'sat/static/src/js/dashboard.js',
+            'sat/static/src/js/estilo_dashboard.js',
+            'sat/static/src/js/gallery_widget.js',
+            'sat/static/src/js/estado_ventas_bar.js',
             
             
 
             #XML
-            '/sat/static/src/xml/dashboard.xml',
-            '/sat/static/src/xml/photo_gallery_template.xml',
+            'sat/static/src/xml/dashboard.xml',
+            'sat/static/src/xml/photo_gallery_template.xml',
             
             
             # External Libraries
@@ -117,7 +117,7 @@
         ],
         
         'web.assets_frontend': [
-            '/sat/static/src/js/searchFilter.js',
+            'sat/static/src/js/searchFilter.js',
         ],
         
         'web.assets_qweb': [
