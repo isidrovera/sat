@@ -1,31 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="sat.StatusWidget" owl="1">
-        <div class="o_statusbar_status">
-            <t t-if="selectionItems.length">
-                <t t-foreach="selectionItems" t-as="option" t-key="option[0]">
-                    <button type="button"
-                            class="btn-status"
-                            t-att-class="{
-                                'btn-primary': option[0] === props.value,
-                                'status-complete': option[0] === props.value
-                            }"
-                            t-on-click="() => this.updateStatus(option[0])"
-                            t-att-disabled="props.readonly">
-                        <div class="status-content"
-                             t-att-style="'background-color: ' + getStatusConfig(option[0]).bgColor + ';' +
-                                        'border-color: ' + getStatusConfig(option[0]).color + ';' +
-                                        'color: ' + getStatusConfig(option[0]).color + ';'">
-                            <i t-att-class="getStatusConfig(option[0]).icon"/>
-                            <span class="status-label" t-esc="option[1]"/>
-                        </div>
-                    </button>
-                </t>
-            </t>
-            <t t-else="">
-                <div class="alert alert-warning">
-                    No hay opciones disponibles
-                </div>
+    <t t-name="StatusWidget" owl="1">
+        <div class="status-widget-container">
+            <t t-foreach="Object.entries(status_config)" t-as="[value, config]" t-key="value">
+                <button 
+                    type="button"
+                    class="status-button"
+                    t-att-class="{ selected: props.value === value }"
+                    t-on-click="() => this._onSelectChange(value)"
+                    t-att-disabled="props.readonly"
+                    t-att-style="'background-color: ' + config.bgColor + ';' +
+                               'border-color: ' + config.color + ';' +
+                               'color: ' + config.color + ';'">
+                    <i t-att-class="config.icon"/>
+                    <span t-esc="config.label"/>
+                </button>
             </t>
         </div>
     </t>

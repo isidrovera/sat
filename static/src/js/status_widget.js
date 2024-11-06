@@ -1,27 +1,12 @@
-/** @odoo-module **/
+/** @odoo-module */
 
-import { registry } from "@web/core/registry";
-import { standardFieldProps } from "@web/views/fields/standard_field_props";
-import { Field } from "@web/views/fields/field";
+import { SelectionField } from "@web/views/fields/selection/selection_field";
+import { patch } from "@web/core/utils/patch";
 
-class StatusWidget extends Field {
-    static props = {
-        ...standardFieldProps,
-    };
-
-    static template = 'sat.StatusWidget';
-
+patch(SelectionField.prototype, {
     setup() {
         super.setup();
         
-        // Log para debugging
-        console.log('StatusWidget Props:', {
-            name: this.props.name,
-            value: this.props.value,
-            readonly: this.props.readonly,
-            record: this.props.record
-        });
-
         this.status_config = {
             'sin_revisar': {
                 color: '#E0E0E0',
@@ -72,33 +57,22 @@ class StatusWidget extends Field {
                 label: 'Entregada'
             }
         };
-    }
-
-    get fieldName() {
-        return this.props.name || 'estado';
-    }
-
-    get selectionItems() {
-        if (!this.props.record || !this.fieldName) return [];
-        const field = this.props.record.fields[this.fieldName];
-        return field?.selection || [];
-    }
+    },
 
     getStatusConfig(value) {
         return this.status_config[value] || this.status_config['sin_revisar'];
-    }
+    },
 
-    async updateStatus(value) {
-        if (!this.props.readonly) {
-            try {
-                await this.props.update(value);
-            } catch (error) {
-                console.error('Error al actualizar estado:', error);
-            }
+    async _onSelectChange(value) {
+        if (this.props.readonly) {
+            return;
+        }
+        
+        const config = this.getStatusConfig(value);
+        try {
+            await this.props.update(value);
+        } catch (error) {
+            console.error('Error al actualizar estado:', error);
         }
     }
-}
-
-registry.category("fields").add("status_widget", StatusWidget);
-
-export default StatusWidget;
+});
