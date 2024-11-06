@@ -75,7 +75,7 @@ class UnidadAlquiler(models.Model):
                                     )
     estado_alquiler_id = fields.Selection([('sin_revisar', 'Sin revisar'), ('revisada', 'Revisada'), ('lista', 'Lista'), ('alquilada', 'Alquilada'), ('con_problemas', 'Con Problemas'), ('partes', 'De Partes'), ('externo', 'Externo'), ('vendida', 'Vendida')],
                                           string='Estado de Maquina',
-                                          default='stock', tracking=True)
+                                          default='sin_revisar', tracking=True)
 
     cliente_id = fields.Many2one(
         'res.partner', string='Cliente', required=True, tracking=True)
