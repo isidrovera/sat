@@ -1,17 +1,13 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { Field } from "@web/views/fields/field";
+const { Component } = owl;
 
-export class StatusWidget extends Field {
-    static template = "sat.StatusWidget";
-    static props = {
-        ...standardFieldProps,
-    };
-
+export class StatusField extends Component {
+    static template = 'FieldStatusWidget';
+    
     setup() {
-        super.setup();
         this.status_colors = {
             'sin_revisar': '#808080',
             'para_revision': '#3498db',
@@ -28,22 +24,40 @@ export class StatusWidget extends Field {
         return this.status_colors[value] || '#808080';
     }
 
-    async onChange(newValue) {
-        await this.props.update(newValue);
+    getStatusLabel(value) {
+        const selection = this.props.record.field.selection;
+        const option = selection.find(opt => opt[0] === value);
+        return option ? option[1] : '';
     }
 
-    onClickStatus() {
+    async onStatusClick(newValue) {
         if (!this.props.readonly) {
-            const dropdown = this.el.querySelector('.status-dropdown');
+            await this.props.update(newValue);
+        }
+    }
+
+    toggleDropdown(ev) {
+        if (!this.props.readonly) {
+            const dropdown = ev.target.closest('.status-widget').querySelector('.status-dropdown');
             if (dropdown) {
                 dropdown.classList.toggle('show');
+                
+                // Cerrar al hacer clic fuera
+                const closeDropdown = (e) => {
+                    if (!e.target.closest('.status-widget')) {
+                        dropdown.classList.remove('show');
+                        document.removeEventListener('click', closeDropdown);
+                    }
+                };
+                
+                document.addEventListener('click', closeDropdown);
             }
         }
     }
 }
 
 export const statusWidget = {
-    component: StatusWidget,
+    component: StatusField,
     supportedTypes: ["selection"],
 };
 
