@@ -1,23 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="sat.StatusWidget" owl="1">
+    <t t-name="FieldStatusWidget" owl="1">
         <div class="status-widget" t-att-class="{ 'readonly': props.readonly }">
             <div class="status-bar" 
                  t-att-style="'background-color: ' + getStatusColor(props.value)" 
-                 t-on-click="onClickStatus">
+                 t-on-click.stop="(ev) => toggleDropdown(ev)">
                 <div class="current-status">
-                    <t t-foreach="props.record.field.selection" t-as="option" t-key="option[0]">
-                        <t t-if="option[0] === props.value">
-                            <span t-esc="option[1]"/>
-                        </t>
-                    </t>
+                    <span t-esc="getStatusLabel(props.value)"/>
                     <i t-if="!props.readonly" class="fa fa-chevron-down ml-2"/>
                 </div>
-                <div class="status-dropdown" t-if="!props.readonly">
+                <div class="status-dropdown">
                     <t t-foreach="props.record.field.selection" t-as="option" t-key="option[0]">
                         <div class="status-option" 
                              t-att-data-value="option[0]" 
-                             t-on-click.stop="() => this.onChange(option[0])"
+                             t-on-click.stop="() => onStatusClick(option[0])"
                              t-att-style="'border-left: 4px solid ' + getStatusColor(option[0])">
                             <span t-esc="option[1]"/>
                         </div>
