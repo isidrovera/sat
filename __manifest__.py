@@ -85,7 +85,7 @@
         #'sat/static/scr/css/photo_gallery.css',
         'sat/static/src/xml/photo_gallery_template.xml',
         'sat/static/src/css/status_widget.css',
-        'sat/static/src/js/status_widget.        
+        'sat/static/src/js/status_widget',        
         'sat/static/src/xml/status_widget.xml',
         
              
