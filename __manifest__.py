@@ -33,8 +33,6 @@
     'data': [
         'security/acceso.xml',
         'security/ir.model.access.csv',
-        
-        # Datos
         'data/ir_secuense.xml',
         'data/ir_secuense_ticket.xml',
         'data/ir.secuense_info.xml',
@@ -44,8 +42,6 @@
         'data/cron_evaluador_diario.xml',
         'data/ir.secuence_incidencia.xml',
         'data/plantillas_correo.xml',
-        
-        # Reportes
         'report/reparacion_enlace.xml',
         'report/report_reparaciones_ventas.xml',
         'report/ticket_enlace.xml',
@@ -55,8 +51,6 @@
         'report/report_qr_codes_reparaciones.xml',
         'report/report_qr_enlace.xml',
         'report/qr_alquiler.xml',
-        
-        # Vistas
         'views/sat_dashboard_menu.xml',
         'views/ventas.xml',
         'views/templates.xml',
@@ -94,39 +88,33 @@
     ],
     
     'assets': {
-        # Backend assets
         'web.assets_backend': [
-            # Helpers de Odoo
-            'web/static/lib/bootstrap/scss/_functions.scss',
-            'web/static/lib/bootstrap/scss/_variables.scss',
+            # Dependencias base
+            'web._assets_helpers',
+            'web._assets_backend_helpers',
             
-            # CSS
-            ('link', '/sat/static/src/css/dashboard.css', {'type': 'text/css'}),
-            ('link', '/sat/static/src/css/status_widget.css', {'type': 'text/css'}),
+            # CSS Files
+            '/sat/static/src/css/dashboard.css',
+            '/sat/static/src/css/status_widget.css',
             
-            # JavaScript
-            ('script', 'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js', {'type': 'text/javascript'}),
-            ('script', '/sat/static/src/js/dashboard.js', {'type': 'text/javascript'}),
-            ('script', '/sat/static/src/js/estilo_dashboard.js', {'type': 'text/javascript'}),
-            ('script', '/sat/static/src/js/gallery_widget.js', {'type': 'text/javascript'}),
-            ('script', '/sat/static/src/js/status_widget.js', {'type': 'text/javascript'}),
+            # JS Files
+            '/sat/static/src/js/dashboard.js',
+            '/sat/static/src/js/estilo_dashboard.js',
+            '/sat/static/src/js/gallery_widget.js',
+            '/sat/static/src/js/status_widget.js',
+            
+            # External Libraries
+            'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
         ],
         
-        # Frontend assets
         'web.assets_frontend': [
-            ('script', '/sat/static/src/js/searchFilter.js', {'type': 'text/javascript'}),
+            '/sat/static/src/js/searchFilter.js',
         ],
         
-        # QWeb templates
         'web.assets_qweb': [
             '/sat/static/src/xml/dashboard.xml',
             '/sat/static/src/xml/photo_gallery_template.xml',
             '/sat/static/src/xml/status_widget.xml',
-        ],
-        
-        # Print assets
-        'web.assets_web_print': [
-            ('link', '/sat/static/src/css/print.css', {'media': 'print'}),
         ],
     },
     
