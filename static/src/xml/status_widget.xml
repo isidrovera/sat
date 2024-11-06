@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="sat.StatusWidget" owl="1">
-        <div class="o_statusbar_status">
-            <t t-if="options.length">
-                <t t-foreach="options" t-as="option" t-key="option[0]">
+        <div class="o_statusbar_status" t-att-class="{'o_field_empty': !props.value}">
+            <t t-if="selectionOptions.length > 0">
+                <t t-foreach="selectionOptions" t-as="option" t-key="option[0]">
                     <button type="button"
                             class="btn-status"
                             t-att-class="{
-                                'btn-primary': option[0] === getValue(),
-                                'status-complete': option[0] === getValue()
+                                'btn-primary': option[0] === props.value,
+                                'status-complete': option[0] === props.value
                             }"
-                            t-on-click="() => this._onStatusClick(option[0])"
+                            t-on-click="() => this.onStatusClick(option[0])"
                             t-att-disabled="props.readonly">
                         <div class="status-content"
                              t-att-style="'background-color: ' + getStatusConfig(option[0]).bgColor + ';' +
@@ -24,7 +24,7 @@
             </t>
             <t t-else="">
                 <div class="alert alert-warning">
-                    No hay opciones disponibles
+                    No hay opciones de selección disponibles
                 </div>
             </t>
         </div>

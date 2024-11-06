@@ -5,21 +5,31 @@ import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { Field } from "@web/views/fields/field";
 
 class StatusWidget extends Field {
-    static props = {
-        ...standardFieldProps,
-    };
-
+    static componentName = "StatusWidget";  // Añadido nombre del componente
+    
     static template = "sat.StatusWidget";
     
-    static supportedTypes = ["selection"];
+    static props = {
+        ...standardFieldProps,
+        readonly: { type: Boolean, optional: true },
+    };
+
+    static defaultProps = {  // Añadido defaultProps
+        readonly: false,
+    };
 
     setup() {
         console.log('StatusWidget: Iniciando setup');
         super.setup();
         
-        // Log las props completas para debugging
-        console.log('StatusWidget: Props completas:', JSON.stringify(this.props, null, 2));
-        
+        // Debug props
+        console.log('StatusWidget Props:', {
+            name: this.props.name,
+            record: this.props.record,
+            value: this.props.value,
+            readonly: this.props.readonly
+        });
+
         this.status_config = {
             'sin_revisar': {
                 color: '#E0E0E0',
@@ -72,41 +82,49 @@ class StatusWidget extends Field {
         };
     }
 
-    get options() {
-        console.log('StatusWidget: Obteniendo opciones');
-        if (!this.props.record || !this.props.name) {
-            console.warn('StatusWidget: Record o name no disponible');
+    get fieldInfo() {
+        console.log('StatusWidget: Obteniendo fieldInfo');
+        if (!this.props.record) {
+            console.warn('StatusWidget: No hay record disponible');
+            return null;
+        }
+        return this.props.record.fields[this.props.name] || null;
+    }
+
+    get selectionOptions() {
+        console.log('StatusWidget: Obteniendo opciones de selección');
+        const field = this.fieldInfo;
+        if (!field || !field.selection) {
+            console.warn('StatusWidget: No hay opciones de selección disponibles');
             return [];
         }
-        const field = this.props.record.fields[this.props.name];
-        console.log('StatusWidget: Field obtenido:', field);
-        return field?.selection || [];
+        return field.selection;
     }
 
     getStatusConfig(value) {
         console.log('StatusWidget: getStatusConfig llamado con valor:', value);
+        if (!value) {
+            console.warn('StatusWidget: Valor undefined, usando sin_revisar');
+            return this.status_config['sin_revisar'];
+        }
         return this.status_config[value] || this.status_config['sin_revisar'];
     }
 
-    getValue() {
-        console.log('StatusWidget: Obteniendo valor actual');
-        return this.props.value || 'sin_revisar';
-    }
-
-    async _onStatusClick(value) {
+    async onStatusClick(value) {
         console.log('StatusWidget: Click en estado:', value);
         if (!this.props.readonly) {
             try {
                 await this.props.update(value);
-                console.log('StatusWidget: Estado actualizado exitosamente a:', value);
+                console.log('StatusWidget: Actualización exitosa');
             } catch (error) {
-                console.error('StatusWidget: Error al actualizar estado:', error);
+                console.error('StatusWidget: Error al actualizar:', error);
             }
         }
     }
 }
 
-// Registrar el widget
+// Registrar los widgets para diferentes vistas
 registry.category("fields").add("status_widget", StatusWidget);
+registry.category("fields").add("kanban_label_selection", StatusWidget);  // Añadido para vista kanban
 
 export default StatusWidget;
