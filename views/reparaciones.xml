@@ -17,8 +17,8 @@
                         string="QR" name="action_generate_qr_for_all" type="object"
                         class="oe_highlight"/>-->
                         
-                        <field name="estado_id" widget="statusbar" readonly="False"
-                            statusbar_visible="true" />
+                        <field name="estado_id" widget="statusbar"
+                             />
                     </header>
                     <sheet>
                         <div class="oe_title">
