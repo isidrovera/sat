@@ -1,41 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="sat.StatusWidget" owl="1">
-        <div class="o_statusbar_status" t-log="'StatusWidget: Renderizando template'">
-            <t t-if="props.field" t-log="'StatusWidget: Field existe'">
-                <t t-if="props.field.selection" t-log="'StatusWidget: Selection existe'">
-                    <t t-set="currentValue" t-value="props.value"/>
-                    <t t-log="'StatusWidget: Valor actual: ' + currentValue"/>
-                    
-                    <t t-foreach="props.field.selection.slice().reverse()" t-as="option" t-key="option[0]">
-                        <t t-log="'StatusWidget: Renderizando opción: ' + option[1]"/>
-                        <button type="button"
-                                class="btn-status"
-                                t-att-class="{
-                                    'btn-primary': option[0] === currentValue,
-                                    'status-complete': option[0] === currentValue
-                                }"
-                                t-on-click="() => this._onStatusClick(option[0])"
-                                t-att-disabled="props.readonly">
-                            <div class="status-content"
-                                 t-att-style="'background-color: ' + getStatusConfig(option[0]).bgColor + ';' +
-                                            'border-color: ' + getStatusConfig(option[0]).color + ';' +
-                                            'color: ' + getStatusConfig(option[0]).color + ';'">
-                                <i t-att-class="getStatusConfig(option[0]).icon"/>
-                                <span class="status-label" t-esc="option[1]"/>
-                            </div>
-                        </button>
-                    </t>
-                </t>
-                <t t-else="" t-log="'StatusWidget: No hay opciones de selección'">
-                    <div class="alert alert-warning">
-                        No hay opciones de selección disponibles para este campo
-                    </div>
+        <div class="o_statusbar_status">
+            <t t-if="options.length">
+                <t t-foreach="options" t-as="option" t-key="option[0]">
+                    <button type="button"
+                            class="btn-status"
+                            t-att-class="{
+                                'btn-primary': option[0] === getValue(),
+                                'status-complete': option[0] === getValue()
+                            }"
+                            t-on-click="() => this._onStatusClick(option[0])"
+                            t-att-disabled="props.readonly">
+                        <div class="status-content"
+                             t-att-style="'background-color: ' + getStatusConfig(option[0]).bgColor + ';' +
+                                        'border-color: ' + getStatusConfig(option[0]).color + ';' +
+                                        'color: ' + getStatusConfig(option[0]).color + ';'">
+                            <i t-att-class="getStatusConfig(option[0]).icon"/>
+                            <span class="status-label" t-esc="option[1]"/>
+                        </div>
+                    </button>
                 </t>
             </t>
-            <t t-else="" t-log="'StatusWidget: Field no existe'">
-                <div class="alert alert-danger">
-                    La configuración del campo está faltante
+            <t t-else="">
+                <div class="alert alert-warning">
+                    No hay opciones disponibles
                 </div>
             </t>
         </div>
