@@ -14,22 +14,11 @@
             <button name="action_crear_reparaciones" string="Crear Reparaciones" type="object" class="btn-primary" />
             <field name="disponibilidad_id" widget="statusbar"  statusbar_visible="true" />
            
-            <field name="estado_ventas_id" 
-              widget="colored_statusbar" 
-              options="{
-                  'clickable': '1',
-                  'colors': {
-                      'sin_revisar': 'grey',
-                      'para_revision': 'orange',
-                      'asignado': 'blue',
-                      'en_revision': '#007bff',
-                      'finalizado': 'green',
-                      'con_problemas': 'red',
-                      'de_partes': '#6c757d',
-                      'entregada': '#28a745'
-                  }
-              }" 
-              groups="base.group_system"/>
+           
+              <field name="estado_ventas_id" 
+                widget="statusbar"  
+                statusbar_visible="sin_revisar,para_revision,asignado,en_revision,finalizado,con_problemas,de_partes,entregada"
+                options="{'clickable': '1'}" class="custom_statusbar" groups="base.group_system"/>
 
      
 
