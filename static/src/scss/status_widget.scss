@@ -1,72 +1,45 @@
-/* Estilos para el StatusWidget */
 .o_statusbar_status {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px;
-}
-
-.btn-status {
-    border: none;
-    background: none;
-    padding: 0;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-}
-
-.btn-status:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.btn-status:not(:disabled):hover {
-    transform: translateY(-1px);
-}
-
-.status-content {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px solid;
-    transition: all 0.3s ease;
-}
-
-.btn-status:not(:disabled):hover .status-content {
-    filter: brightness(0.95);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.status-content i {
-    font-size: 14px;
-}
-
-.status-label {
-    font-size: 13px;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.btn-primary .status-content {
-    font-weight: 600;
-}
-
-/* Estilos para los mensajes de alerta */
-.alert {
-    padding: 8px 12px;
-    border-radius: 4px;
-    margin: 4px 0;
-}
-
-.alert-warning {
-    background-color: #fff3cd;
-    border: 1px solid #ffeeba;
-    color: #856404;
-}
-
-.alert-danger {
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
+    
+    .btn-status {
+        border: none;
+        background: none;
+        padding: 0;
+        cursor: pointer;
+        
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .status-content {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid;
+            transition: all 0.3s ease;
+            
+            i {
+                font-size: 14px;
+            }
+            
+            .status-label {
+                font-size: 13px;
+                font-weight: 500;
+            }
+        }
+        
+        &:not(:disabled):hover .status-content {
+            filter: brightness(0.95);
+        }
+        
+        &.btn-primary .status-content {
+            font-weight: 600;
+        }
+    }
 }

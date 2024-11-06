@@ -1,31 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="sat.StatusWidget" owl="1">
-        <div class="o_statusbar_status" t-att-class="{'o_field_empty': !props.value}">
-            <t t-if="selectionOptions.length > 0">
-                <t t-foreach="selectionOptions" t-as="option" t-key="option[0]">
-                    <button type="button"
-                            class="btn-status"
-                            t-att-class="{
-                                'btn-primary': option[0] === props.value,
-                                'status-complete': option[0] === props.value
-                            }"
-                            t-on-click="() => this.onStatusClick(option[0])"
-                            t-att-disabled="props.readonly">
-                        <div class="status-content"
-                             t-att-style="'background-color: ' + getStatusConfig(option[0]).bgColor + ';' +
-                                        'border-color: ' + getStatusConfig(option[0]).color + ';' +
-                                        'color: ' + getStatusConfig(option[0]).color + ';'">
-                            <i t-att-class="getStatusConfig(option[0]).icon"/>
-                            <span class="status-label" t-esc="option[1]"/>
-                        </div>
-                    </button>
-                </t>
-            </t>
-            <t t-else="">
-                <div class="alert alert-warning">
-                    No hay opciones de selección disponibles
-                </div>
+        <div class="o_statusbar_status">
+            <t t-foreach="props.record.fields[props.name].selection || []" t-as="option" t-key="option[0]">
+                <button type="button"
+                        class="btn-status"
+                        t-att-class="{
+                            'btn-primary': option[0] === props.value,
+                            'status-complete': option[0] === props.value
+                        }"
+                        t-on-click="() => this.updateStatus(option[0])"
+                        t-att-disabled="props.readonly">
+                    <div class="status-content"
+                         t-att-style="'background-color: ' + getStatusConfig(option[0]).bgColor + ';' +
+                                    'border-color: ' + getStatusConfig(option[0]).color + ';' +
+                                    'color: ' + getStatusConfig(option[0]).color + ';'">
+                        <i t-att-class="getStatusConfig(option[0]).icon"/>
+                        <span class="status-label" t-esc="option[1]"/>
+                    </div>
+                </button>
             </t>
         </div>
     </t>
