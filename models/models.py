@@ -537,8 +537,13 @@ class SatSat(models.Model):
 
     @api.depends('disponibilidad_id')
     def _compute_maquinas(self):
+        total = self.search_count([])
+        disponibles = self.search_count([('disponibilidad_id', '=', 'disponible')])
+        separadas = self.search_count([('disponibilidad_id', '=', 'separada')])
+        no_disponibles = self.search_count([('disponibilidad_id', '=', 'no_disponible')])
+        
         for record in self:
-            record.total_maquinas = self.search_count([])
-            record.maquinas_disponibles = self.search_count([('disponibilidad_id', '=', 'disponible')])
-            record.maquinas_separadas = self.search_count([('disponibilidad_id', '=', 'separada')])
-            record.maquinas_no_disponibles = self.search_count([('disponibilidad_id', '=', 'no_disponible')])
+            record.total_maquinas = total or 0
+            record.maquinas_disponibles = disponibles or 0
+            record.maquinas_separadas = separadas or 0
+            record.maquinas_no_disponibles = no_disponibles or 0
