@@ -48,8 +48,8 @@ class UnidadAlquiler(models.Model):
 
     control_mantenimiento = fields.Boolean(string="Mantenimiento mensual", default=True)
     def action_stock(self):
-        self.write({'estado_alquiler_id': 'stock', 'direccion': '', 'contacto_id': '', 'celular': '',
-                   'correo_': '', 'correo_1': '', 'correo_2': '', 'cliente_id': 1, 'fecha_inicio': ''})
+        self.write({'estado_alquiler_id': 'sin_revisar', 'direccion': '', 'contacto_id': '', 'celular': '',
+                   'correo_': '', 'cliente_id': 1, 'fecha_inicio': ''})
 
     marca = fields.Char(related='name.marca_id.name', readonly=True, store=True, string='Marca')
 
