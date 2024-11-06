@@ -358,23 +358,23 @@ class ticket_alquiler(models.Model):
             template5 = self.env.ref('sat.mail_template_retorno')
             template5.send_mail(self.id, force_send=True)
 
-        # Condición 1: Cambiar estado a 'revisada' si es 'preparar para alquiler' y está en 'sin revisar'
-        if self.tipo_servicio_id == 'alquiler' and self.estado_alquiler_id == 'sin_revisar':
-            self.write({'estado_alquiler_id': 'revisada'})
+        # Condición 1: Cambiar estado en `alquiler` a 'revisada' si es 'preparar para alquiler' y está en 'sin revisar'
+        if self.tipo_servicio_id == 'alquiler' and self.product_alquiler.estado_alquiler_id == 'sin_revisar':
+            self.product_alquiler.write({'estado_alquiler_id': 'revisada'})
 
-        # Condición 2: Cambiar estado a 'lista' si es 'cambio de repuestos' y el ticket anterior era 'preparar para alquiler'
-        elif self.tipo_servicio_id == 'cambio_repuestos' and self.estado_alquiler_id == 'revisada':
+        # Condición 2: Cambiar estado en `alquiler` a 'lista' si es 'cambio de repuestos' y el ticket anterior era 'preparar para alquiler'
+        elif self.tipo_servicio_id == 'cambio_repuestos' and self.product_alquiler.estado_alquiler_id == 'revisada':
             ticket_anterior = self.search([
                 ('product_alquiler', '=', self.product_alquiler.id),
                 ('tipo_servicio_id', '=', 'alquiler')
             ], order="create_date desc", limit=1)
             
             if ticket_anterior:
-                self.product_alquiler.estado_alquiler_id = 'lista'
+                self.product_alquiler.write({'estado_alquiler_id': 'lista'})
 
-        # Condición 3: Si es 'retiro de máquina', actualizar los campos directamente
+        # Condición 3: Si es 'retiro de máquina', actualizar los campos en `alquiler`
         elif self.tipo_servicio_id == 'retiro':
-            self.write({
+            self.product_alquiler.write({
                 'estado_alquiler_id': 'sin_revisar',
                 'direccion': '',
                 'contacto_id': '',
@@ -396,7 +396,6 @@ class ticket_alquiler(models.Model):
             'view_id': False,  # Puedes especificar una vista de lista si es necesario
             'target': 'main',
         }
-
 
 
         
