@@ -2,10 +2,11 @@
 <templates xml:space="preserve">
     <t t-name="StatusWidgetTemplate">
         <div class="status-widget" t-att-class="{ 'readonly': props.readonly }">
-            <div class="status-bar" t-att-style="'background-color: ' + statusColor" 
-                 t-on-click="() => this.toggleDropdown()">
+            <div class="status-bar" 
+                 t-att-style="'background-color: ' + getStatusColor(props.value)" 
+                 t-on-click="onClickStatus">
                 <div class="current-status">
-                    <t t-foreach="props.record.field.selection" t-as="option">
+                    <t t-foreach="props.record.field.selection" t-as="option" t-key="option[0]">
                         <t t-if="option[0] === props.value">
                             <span t-esc="option[1]"/>
                         </t>
@@ -13,11 +14,11 @@
                     <i t-if="!props.readonly" class="fa fa-chevron-down ml-2"/>
                 </div>
                 <div class="status-dropdown" t-if="!props.readonly">
-                    <t t-foreach="props.record.field.selection" t-as="option">
+                    <t t-foreach="props.record.field.selection" t-as="option" t-key="option[0]">
                         <div class="status-option" 
                              t-att-data-value="option[0]" 
                              t-on-click.stop="() => this.onChange(option[0])"
-                             t-att-style="'border-left: 4px solid ' + status_colors[option[0]]">
+                             t-att-style="'border-left: 4px solid ' + getStatusColor(option[0])">
                             <span t-esc="option[1]"/>
                         </div>
                     </t>
