@@ -116,7 +116,7 @@
                     <field name="contacto_id" optional="hide"/>
                     <field name="celular" widget="phone" optional="hide"/>
                     <field name="fecha_recurrente" string="Mantenimiento" widget="remaining_days"/>
-                    <field name="estado_alquiler_id" string="Estado" widget="badge" decoration-muted="estado_alquiler_id == 'stock'" decoration-info="estado_alquiler_id == 'alquilada'" decoration-success="estado_alquiler_id == 'lista' " decoration-danger="estado_alquiler_id not in ('stock','alquilada','lista','vendida')" decoration-warning="estado_alquiler_id == 'vendida' "/>
+                    <field name="estado_alquiler_id" string="Estado" widget="badge" decoration-muted="estado_alquiler_id == 'sin_revisar'" decoration-info="estado_alquiler_id == 'alquilada'" decoration-success="estado_alquiler_id == 'lista' " decoration-danger="estado_alquiler_id not in ('stock','alquilada','lista','vendida')" decoration-warning="estado_alquiler_id == 'vendida' "/>
                     <field name="qr_image" widget="binary"/>
                     <button string=" " type="object" name="generate_qr_code" icon="fa-qrcode"/>
                     <button class="oe_stat_button" type="object" name="get_ticket" icon="fa-wrench">
