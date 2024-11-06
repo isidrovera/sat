@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="StatusWidgetTemplate">
+    <t t-name="sat.StatusWidget" owl="1">
         <div class="status-widget" t-att-class="{ 'readonly': props.readonly }">
             <div class="status-bar" 
                  t-att-style="'background-color: ' + getStatusColor(props.value)" 
