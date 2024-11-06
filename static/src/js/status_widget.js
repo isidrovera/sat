@@ -13,6 +13,15 @@ class StatusWidget extends Field {
 
     setup() {
         super.setup();
+        
+        // Log para debugging
+        console.log('StatusWidget Props:', {
+            name: this.props.name,
+            value: this.props.value,
+            readonly: this.props.readonly,
+            record: this.props.record
+        });
+
         this.status_config = {
             'sin_revisar': {
                 color: '#E0E0E0',
@@ -65,13 +74,27 @@ class StatusWidget extends Field {
         };
     }
 
+    get fieldName() {
+        return this.props.name || 'estado';
+    }
+
+    get selectionItems() {
+        if (!this.props.record || !this.fieldName) return [];
+        const field = this.props.record.fields[this.fieldName];
+        return field?.selection || [];
+    }
+
     getStatusConfig(value) {
         return this.status_config[value] || this.status_config['sin_revisar'];
     }
 
     async updateStatus(value) {
         if (!this.props.readonly) {
-            await this.props.update(value);
+            try {
+                await this.props.update(value);
+            } catch (error) {
+                console.error('Error al actualizar estado:', error);
+            }
         }
     }
 }

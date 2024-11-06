@@ -206,7 +206,7 @@ class SatSat(models.Model):
 
     estado_ventas_id = fields.Selection([('sin_revisar', 'Sin revisar'),('para_revision', 'Para revision'),('asignado','Asignado'),('en_revision', 'En revisión'), ('finalizado', 'Finalizado'), ('con_problemas', 'Con problemas'), ('de_partes', 'De partes'), ('entregada', 'Entregada')],
                                         string='Estado de revisión',
-                                        default='sin_revisar', tracking=True, readonly=False, widget='status_widget'
+                                        default='sin_revisar', tracking=True
                                         )
     #_sql_constraints = [("unique_serie_id", "unique (serie_id)",
                         # "El numero de serie que intenta agregar ya existe")]
