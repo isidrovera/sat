@@ -539,12 +539,12 @@ class SatDashboard extends Component {
                             }
                         },
                         grid: {
-                            top: '15%',
-                            bottom: '15%',    // Aumentado para dar espacio al visualMap
-                            left: '3%',       // Reducido para usar más espacio horizontal
-                            right: '5%',      // Reducido para usar más espacio horizontal
+                            top: dimensions.containerHeight * 0.50,
+                            bottom: dimensions.containerHeight * 0.50,
+                            left: '-100%',          // Reducido para dar más espacio a las barras
+                            right: '5%',
                             containLabel: true,
-                            height: '70%'     // Controla la altura del área del gráfico
+                            height: dimensions.gridHeight
                         },
                         xAxis: {
                             type: 'value',
