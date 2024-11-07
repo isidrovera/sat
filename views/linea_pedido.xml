@@ -1,14 +1,14 @@
 <odoo>
     <record id="Opciones_pedido_tree_view_inherit" model="ir.ui.view">
         <field name="name">Opciones Pedido Tree View Inherited</field>
-        <field name="model">sale.order</field> <!-- Cambiado a sale.order ya que es el modelo principal -->
-        <field name="inherit_id" ref="sale.view_order_form"/> <!-- La vista principal de formulario de pedido -->
+        <field name="model">sale.order.line</field>
+        <field name="inherit_id" ref="sale.view_order_line_tree"/> <!-- Heredamos la vista de líneas de pedido de venta -->
         <field name="arch" type="xml">
-            <xpath expr="//form/sheet/notebook/page[@name='order_lines']/field[@name='order_line']/tree/field[@name='name']" position="after">
-                <field name="contometroa" string="Contometro Anterior" optional="show"/>
-                <field name="contometro" string="Contometro" optional="show"/>
-                <field name="estado_entrega" string="Estado de Entrega" invisible="1" optional="show"/>
-                <field name="total_copias_id" string="Total de Copias" optional="show"/>
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="contometroa" string="Contometro Anterior"/>
+                <field name="contometro" string="Contometro"/>
+                <field name="estado_entrega" string="Estado de Entrega" invisible="1"/>
+                <field name="total_copias_id" string="Total de Copias"/>
             </xpath>
         </field>
     </record>
