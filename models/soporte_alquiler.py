@@ -41,7 +41,7 @@ class ticket_alquiler(models.Model):
             raise UserError(_("Error: No se pudo generar un número de ticket."))
         
         # Crear el registro
-        record = super(TicketAlquiler, self).create(vals)
+        record = super(ticket_alquiler, self).create(vals)
         
         # Calcular la URL del registro
         record._compute_url()
