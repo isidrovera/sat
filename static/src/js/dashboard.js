@@ -542,7 +542,7 @@ class SatDashboard extends Component {
                             top: dimensions.containerHeight * 0.12,
                             bottom: dimensions.containerHeight * 0.15,
                             left: '0%',          // Reducido para dar más espacio a las barras
-                            right: '50%',
+                            right: '5%',
                             containLabel: true,
                             height: dimensions.gridHeight
                         },
