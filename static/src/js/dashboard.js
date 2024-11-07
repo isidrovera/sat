@@ -570,7 +570,7 @@ class SatDashboard extends Component {
                             text: ['High Score', 'Low Score'],
                             dimension: 0,
                             inRange: {
-                                color: ['#FFE7BA', '#FFB366']
+                                color: ['#66a8ff', '#6687ff']
                             },
                             itemWidth: 15,
                             itemHeight: 200
