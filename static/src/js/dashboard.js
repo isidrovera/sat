@@ -496,34 +496,27 @@ class SatDashboard extends Component {
                     const parentHeight = parentElement ? parentElement.offsetHeight : 250;
                     const parentWidth = parentElement ? parentElement.offsetWidth : 400;
                     
-                    // Calcular dimensiones basadas en el contenedor padre
                     return {
-                        containerHeight: Math.max(200, Math.min(250, parentHeight * 0.8)), // Entre 200px y 250px
-                        gridHeight: Math.max(140, Math.min(180, parentHeight * 0.6)),      // Entre 140px y 180px
-                        fontSize: parentWidth < 500 ? 10 : 11,                             // Fuente responsive
-                        labelWidth: parentWidth < 500 ? 80 : 90                           // Ancho de etiquetas responsive
+                        containerHeight: Math.max(200, Math.min(250, parentHeight * 0.8)),
+                        containerWidth: parentWidth,
+                        gridHeight: Math.max(140, Math.min(180, parentHeight * 0.6)),
+                        fontSize: parentWidth < 500 ? 10 : 11,
+                        labelWidth: parentWidth < 500 ? 80 : 90
                     };
                 };
 
                 const renderTicketsTecnicoChart = (filteredData = null, titleText = 'Tickets por Técnico') => {
-                    // Obtener datos
                     const dataToUse = filteredData || this.dashboardData.tecnicos_totales_tickets || {};
                     const ticketsTecnicoLabels = Object.keys(dataToUse);
                     const ticketsTecnicoData = Object.values(dataToUse);
 
-                    console.log('Datos para el gráfico:', {
-                        labels: ticketsTecnicoLabels,
-                        data: ticketsTecnicoData
-                    });
-
-                    // Calcular dimensiones dinámicas
                     const dimensions = calculateDimensions();
 
-                    // Validar datos de colores en visualMap
-                    const minDataValue = ticketsTecnicoData.length ? Math.min(...ticketsTecnicoData) : 0;
-                    const maxDataValue = ticketsTecnicoData.length ? Math.max(...ticketsTecnicoData) : 1;
+                    // Calcular el valor máximo para el eje X
+                    const maxValue = Math.max(...ticketsTecnicoData, 1);
+                    // Agregar un 20% al máximo para espacio extra
+                    const xAxisMax = Math.ceil(maxValue * 1.2);
 
-                    // Crear y configurar el gráfico con dimensiones dinámicas
                     const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement, null, {
                         renderer: 'canvas',
                         useDirtyRect: false
@@ -547,14 +540,17 @@ class SatDashboard extends Component {
                         },
                         grid: {
                             top: dimensions.containerHeight * 0.12,
-                            bottom: dimensions.containerHeight * 0.12,
-                            left: '15%',
+                            bottom: dimensions.containerHeight * 0.15,
+                            left: '10%',          // Reducido para dar más espacio a las barras
                             right: '5%',
                             containLabel: true,
                             height: dimensions.gridHeight
                         },
                         xAxis: {
                             type: 'value',
+                            min: 0,
+                            max: xAxisMax,        // Establecer máximo calculado
+                            interval: Math.ceil(xAxisMax / 5), // Dividir en 5 intervalos
                             boundaryGap: [0, 0.01],
                             splitLine: {
                                 show: true,
@@ -563,7 +559,8 @@ class SatDashboard extends Component {
                                 }
                             },
                             axisLabel: {
-                                fontSize: dimensions.fontSize
+                                fontSize: dimensions.fontSize,
+                                formatter: '{value}'
                             }
                         },
                         yAxis: {
@@ -581,21 +578,6 @@ class SatDashboard extends Component {
                                 }
                             }
                         },
-                        visualMap: {
-                            orient: 'horizontal',
-                            left: 'center',
-                            bottom: 0,
-                            min: minDataValue,
-                            max: maxDataValue,
-                            text: ['Bajo', 'Alto'],
-                            dimension: 0,
-                            inRange: {
-                                color: ['#E1F5FE', '#0288D1']
-                            },
-                            itemWidth: dimensions.fontSize,
-                            itemHeight: dimensions.gridHeight * 0.6,
-                            calculable: true
-                        },
                         series: [{
                             name: 'Tickets',
                             type: 'bar',
@@ -609,71 +591,24 @@ class SatDashboard extends Component {
                                 distance: 5
                             },
                             barWidth: '35%',
-                            barMaxWidth: 45
+                            barMaxWidth: 60,
+                            itemStyle: {
+                                color: '#0288D1'  // Color fijo en lugar de visualMap
+                            }
                         }]
                     };
 
                     ticketsTecnicoChart.setOption(option, true);
 
-                    // Función de redimensionamiento dinámica
                     const handleResize = () => {
                         const newDimensions = calculateDimensions();
                         ticketsTecnicoElement.style.height = `${newDimensions.containerHeight}px`;
-                        
                         ticketsTecnicoChart.resize();
-                        
-                        // Actualizar opciones con nuevas dimensiones
-                        const newOption = {
-                            ...option,
-                            title: {
-                                ...option.title,
-                                textStyle: {
-                                    fontSize: newDimensions.fontSize + 4,
-                                    fontWeight: 'bold'
-                                }
-                            },
-                            grid: {
-                                ...option.grid,
-                                top: newDimensions.containerHeight * 0.12,
-                                bottom: newDimensions.containerHeight * 0.12,
-                                height: newDimensions.gridHeight
-                            },
-                            xAxis: {
-                                ...option.xAxis,
-                                axisLabel: {
-                                    fontSize: newDimensions.fontSize
-                                }
-                            },
-                            yAxis: {
-                                ...option.yAxis,
-                                axisLabel: {
-                                    ...option.yAxis.axisLabel,
-                                    fontSize: newDimensions.fontSize,
-                                    width: newDimensions.labelWidth
-                                }
-                            },
-                            visualMap: {
-                                ...option.visualMap,
-                                itemWidth: newDimensions.fontSize,
-                                itemHeight: newDimensions.gridHeight * 0.6
-                            },
-                            series: [{
-                                ...option.series[0],
-                                label: {
-                                    ...option.series[0].label,
-                                    fontSize: newDimensions.fontSize
-                                }
-                            }]
-                        };
-                        
-                        ticketsTecnicoChart.setOption(newOption);
                     };
 
-                    // Limpiar listener anterior y agregar el nuevo
                     window.removeEventListener('resize', handleResize);
                     window.addEventListener('resize', handleResize);
                     
-                    // Aplicar dimensiones iniciales
                     handleResize();
                     
                     return ticketsTecnicoChart;
@@ -683,18 +618,11 @@ class SatDashboard extends Component {
                     const startDateInput = document.getElementById("startDate");
                     const endDateInput = document.getElementById("endDate");
 
-                    console.log("Aplicando filtro de fecha...");
-                    console.log("Fecha de inicio:", startDateInput.value);
-                    console.log("Fecha de fin:", endDateInput.value);
-
-                    // Si no hay fechas seleccionadas, mostrar todos los datos
                     if (!startDateInput.value && !endDateInput.value) {
-                        console.log("Mostrando todos los datos sin filtros");
                         renderTicketsTecnicoChart(null, 'Tickets por Técnico');
                         return;
                     }
 
-                    // Validar que ambas fechas estén presentes
                     if (!startDateInput.value || !endDateInput.value) {
                         alert("Por favor, selecciona ambas fechas para aplicar el filtro");
                         return;
@@ -703,15 +631,11 @@ class SatDashboard extends Component {
                     const startDate = new Date(startDateInput.value + 'T00:00:00');
                     const endDate = new Date(endDateInput.value + 'T23:59:59');
 
-                    // Validar el rango de fechas
                     if (startDate > endDate) {
                         alert("La fecha de inicio no puede ser posterior a la fecha final");
                         return;
                     }
 
-                    console.log(`Aplicando filtro - Desde: ${startDate.toLocaleDateString()} hasta: ${endDate.toLocaleDateString()}`);
-
-                    // Filtrar datos según las fechas seleccionadas
                     const filteredData = {};
                     
                     if (this.dashboardData.tickets_por_fecha) {
@@ -725,15 +649,11 @@ class SatDashboard extends Component {
                             }
                         });
 
-                        // Si no hay datos en el rango seleccionado
                         if (Object.keys(filteredData).length === 0) {
                             alert("No se encontraron tickets en el rango de fechas seleccionado");
                             return;
                         }
 
-                        console.log("Datos filtrados:", filteredData);
-
-                        // Actualizar el gráfico con los datos filtrados
                         const titleText = `Tickets por Técnico (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
                         renderTicketsTecnicoChart(filteredData, titleText);
                     }
@@ -749,7 +669,6 @@ class SatDashboard extends Component {
                 // Renderizar el gráfico inicial
                 const chart = renderTicketsTecnicoChart();
                 
-                // Asegurar que el gráfico se renderice correctamente después de que el DOM esté listo
                 setTimeout(() => {
                     chart.resize();
                 }, 300);
