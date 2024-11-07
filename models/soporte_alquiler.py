@@ -23,6 +23,14 @@ class ticket_alquiler(models.Model):
         required=True,
         readonly=True)
     
+    url = fields.Char('URL', compute='_compute_url', store=True)
+
+    @api.depends('id')
+    def _compute_url(self):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        for record in self:
+            record.url = f"{base_url}/web#id={record.id}&model=ticket.alquiler&view_type=form"
+
     @api.model
     def create(self, vals):
         # Generar el número del ticket utilizando la secuencia definida
@@ -32,7 +40,13 @@ class ticket_alquiler(models.Model):
         if vals.get('name', 'New') == 'New':
             raise UserError(_("Error: No se pudo generar un número de ticket."))
         
-        return super(ticket_alquiler, self).create(vals)
+        # Crear el registro
+        record = super(TicketAlquiler, self).create(vals)
+        
+        # Calcular la URL del registro
+        record._compute_url()
+        
+        return record
 
     
 
