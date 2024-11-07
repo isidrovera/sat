@@ -354,25 +354,12 @@ class ticket_alquiler(models.Model):
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
-    
-    finish_latitude = fields.Float(string="Latitud de finalización", digits=(10, 7))
-    finish_longitude = fields.Float(string="Longitud de finalización", digits=(10, 7))
-    finish_datetime = fields.Datetime(string="Hora de finalización")
 
     def action_finalizar(self):
         # Deshabilitar las reglas de acceso temporalmente para evitar el error
-        self = self.sudo()
+        self = self.sudo()  # Utilizamos sudo() para evitar restricciones
 
-        # Obtener coordenadas del contexto
-        ctx = self.env.context
-        if ctx.get('finish_latitude') and ctx.get('finish_longitude'):
-            self.write({
-                'finish_latitude': ctx.get('finish_latitude'),
-                'finish_longitude': ctx.get('finish_longitude'),
-                'finish_datetime': ctx.get('finish_datetime', fields.Datetime.now())
-            })
-
-        # Continuar con la lógica existente
+        # Realizar todas las acciones necesarias antes de cambiar el estado
         if self.line_ids:
             self.create_sale_order()
 
@@ -385,11 +372,11 @@ class ticket_alquiler(models.Model):
             template5 = self.env.ref('sat.mail_template_retorno')
             template5.send_mail(self.id, force_send=True)
 
-        # Condición 1: Cambiar estado en alquiler a 'revisada' si es 'preparar para alquiler' y está en 'sin revisar'
+        # Condición 1: Cambiar estado en `alquiler` a 'revisada' si es 'preparar para alquiler' y está en 'sin revisar'
         if self.tipo_servicio_id == 'alquiler' and self.product_alquiler.estado_alquiler_id == 'sin_revisar':
             self.product_alquiler.write({'estado_alquiler_id': 'revisada'})
 
-        # Condición 2: Cambiar estado en alquiler a 'lista' si es 'cambio de repuestos' y el ticket anterior era 'preparar para alquiler'
+        # Condición 2: Cambiar estado en `alquiler` a 'lista' si es 'cambio de repuestos' y el ticket anterior era 'preparar para alquiler'
         elif self.tipo_servicio_id == 'cambio_repuestos' and self.product_alquiler.estado_alquiler_id == 'revisada':
             ticket_anterior = self.search([
                 ('product_alquiler', '=', self.product_alquiler.id),
@@ -399,7 +386,7 @@ class ticket_alquiler(models.Model):
             if ticket_anterior:
                 self.product_alquiler.write({'estado_alquiler_id': 'lista'})
 
-        # Condición 3: Si es 'retiro de máquina', actualizar los campos en alquiler
+        # Condición 3: Si es 'retiro de máquina', actualizar los campos en `alquiler`
         elif self.tipo_servicio_id == 'retiro':
             self.product_alquiler.write({
                 'estado_alquiler_id': 'sin_revisar',
@@ -420,9 +407,12 @@ class ticket_alquiler(models.Model):
             'name': 'Tickets',
             'view_mode': 'list,form',
             'res_model': 'ticket.alquiler',
-            'view_id': False,
+            'view_id': False,  # Puedes especificar una vista de lista si es necesario
             'target': 'main',
         }
+
+
+        
 
     def create_ticket_wizard(self):
         return {

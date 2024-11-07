@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<templates xml:space="preserve">
-    <t t-name="sat.GeolocationButton">
-        <button class="btn btn-primary" t-on-click="getLocation">
-            <i class="fa fa-map-marker me-2"/>
-            Obtener Ubicación
-        </button>
-    </t>
-</templates>
