@@ -60,9 +60,9 @@ class GeolocationService {
     }
 }
 
-patch(ButtonBox.prototype, 'ticket_geolocation', {
+patch(ButtonBox, {
     setup() {
-        this._super();
+        super.setup();
         this.notification = this.env.services.notification;
         this.geolocationService = new GeolocationService();
     },
@@ -109,6 +109,6 @@ patch(ButtonBox.prototype, 'ticket_geolocation', {
                 });
             }
         }
-        return this._super.apply(this, arguments);
+        return super._onButtonClick(...arguments);
     },
 });
