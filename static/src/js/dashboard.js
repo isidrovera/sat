@@ -295,143 +295,88 @@ class SatDashboard extends Component {
             }
 
            // Gráfico de estado
-            const renderEstadoChart = function() {
-                console.log('Iniciando renderizado del gráfico de estado...');
-                
-                const estadoElement = this._getChartElement("estadoChart");
-                if (!estadoElement) {
-                    console.error('No se encontró el elemento para el gráfico de estado');
-                    return;
-                }
 
-                try {
-                    console.log('Inicializando gráfico de estado...');
-                    const estadoChart = echarts.init(estadoElement);
-                    
-                    console.log('Preparando datos para el gráfico...', {
-                        sin_revisar: this.dashboardData.maquinas_sin_revisar,
-                        en_revision: this.dashboardData.maquinas_en_revision,
-                        finalizadas: this.dashboardData.maquinas_finalizadas,
-                        problemas: this.dashboardData.maquinas_problemas
-                    });
+            const estadoElement = this._getChartElement("estadoChart");
+            if (estadoElement) {
+                console.log('Renderizando gráfico de estado...');
+                const estadoChart = echarts.init(estadoElement);
 
-                    const option = {
-                        title: { 
-                            text: 'Estado de Máquinas',
-                            left: 'center',
-                            top: '0%',
-                            textStyle: {
-                                fontSize: 14,
-                                fontWeight: 'bold',
+                estadoChart.setOption({
+                    title: { 
+                        text: 'Estado de Máquinas',
+                        left: 'center',
+                        top: '0%', // Mueve el título más arriba
+                        textStyle: {
+                            fontSize: 14,
+                            fontWeight: 'bold',
+                        }
+                    },
+                    tooltip: { 
+                        trigger: 'item',
+                        formatter: '{b}: {c} ({d}%)'
+                    },
+                    legend: {
+                        show: false // Oculta la leyenda
+                    },
+                    series: [{
+                        name: 'Estado',
+                        type: 'pie',
+                        radius: ['40%', '70%'], // Gráfico de dona
+                        center: ['50%', '55%'], // Centra el gráfico en el eje vertical
+                        avoidLabelOverlap: true,
+                        data: [
+                            { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
+                            { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
+                            { value: this.dashboardData.maquinas_finalizadas, name: 'Finalizadas', itemStyle: { color: '#FFCA28' } },
+                            { value: this.dashboardData.maquinas_problemas, name: 'Problemas', itemStyle: { color: '#EF5350' } }
+                        ],
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
                             }
                         },
-                        tooltip: { 
-                            trigger: 'item',
-                            formatter: '{b}: {c} ({d}%)'
+                        label: {
+                            show: true,
+                            position: 'outside',
+                            formatter: '{b}: {c} ({d}%)',
+                            fontSize: 12,
+                            color: '#333',
+                            backgroundColor: '#fff',
+                            padding: [4, 8],
+                            borderRadius: 4,
+                            alignTo: 'edge',
+                            edgeDistance: '10%',
+                            distanceToLabelLine: 5
                         },
-                        legend: {
-                            show: false
+                        labelLine: {
+                            show: true,
+                            length: 30,
+                            length2: 20,
+                            smooth: true,
+                            lineStyle: {
+                                width: 1,
+                                type: 'solid'
+                            },
+                            maxSurfaceAngle: 80
                         },
-                        series: [{
-                            name: 'Estado',
-                            type: 'pie',
-                            radius: ['40%', '70%'],
-                            center: ['50%', '55%'],
-                            avoidLabelOverlap: true,
-                            stillShowZeroSum: false,
-                            data: [
-                                { 
-                                    value: this.dashboardData.maquinas_sin_revisar, 
-                                    name: 'Sin Revisar', 
-                                    itemStyle: { color: '#42A5F5' }
-                                },
-                                { 
-                                    value: this.dashboardData.maquinas_en_revision, 
-                                    name: 'En Revisión', 
-                                    itemStyle: { color: '#66BB6A' }
-                                },
-                                { 
-                                    value: this.dashboardData.maquinas_finalizadas, 
-                                    name: 'Finalizadas', 
-                                    itemStyle: { color: '#FFCA28' }
-                                },
-                                { 
-                                    value: this.dashboardData.maquinas_problemas, 
-                                    name: 'Problemas', 
-                                    itemStyle: { color: '#EF5350' }
-                                }
-                            ],
-                            emphasis: {
-                                itemStyle: {
-                                    shadowBlur: 10,
-                                    shadowOffsetX: 0,
-                                    shadowColor: 'rgba(0, 0, 0, 0.5)'
-                                }
-                            },
-                            label: {
-                                show: true,
-                                position: 'outside',
-                                formatter: '{b}: {c} ({d}%)',
-                                fontSize: 12,
-                                color: '#333',
-                                overflow: 'break',
-                                alignTo: 'edge',
-                                edgeDistance: '10%',
-                                lineHeight: 15,
-                                rich: {
-                                    b: {
-                                        fontSize: 12,
-                                        lineHeight: 15,
-                                        fontWeight: 'bold'
-                                    }
-                                },
-                                backgroundColor: '#fff',
-                                padding: [4, 8],
-                                distanceToLabelLine: 5
-                            },
-                            labelLine: {
-                                show: true,
-                                length: 25,
-                                length2: 20,
-                                smooth: true,
-                                lineStyle: {
-                                    width: 1,
-                                    type: 'solid'
-                                },
-                                maxSurfaceAngle: 80
-                            },
-                            labelLayout: {
-                                hideOverlap: true,
-                                moveOverlap: 'shiftY'
-                            }
-                        }],
-                        animationDuration: 1000,
-                        animationEasing: 'cubicInOut'
-                    };
+                        labelLayout: {
+                            hideOverlap: true,
+                            moveOverlap: 'shiftY'
+                        }
+                    }],
+                    animationDuration: 1000,
+                    animationEasing: 'cubicInOut'
+                });
 
-                    console.log('Aplicando configuración al gráfico...');
-                    estadoChart.setOption(option);
+                console.log('Gráfico de estado renderizado exitosamente');
 
-                    // Hacer el gráfico responsive
-                    console.log('Configurando evento resize...');
-                    const handleResize = () => {
-                        console.log('Redimensionando gráfico...');
-                        estadoChart.resize();
-                    };
-                    window.addEventListener('resize', handleResize);
-
-                    // Limpiar el event listener cuando el componente se desmonte
-                    return () => {
-                        console.log('Limpiando event listeners...');
-                        window.removeEventListener('resize', handleResize);
-                        estadoChart.dispose();
-                    };
-
-                    console.log('Gráfico de estado renderizado exitosamente');
-                } catch (error) {
-                    console.error('Error al renderizar el gráfico de estado:', error);
-                }
-            };
+                // Hacer el gráfico responsive
+                window.addEventListener('resize', function() {
+                    estadoChart.resize();
+                });
+            }
 
 
             // Gráfico de técnicos            
