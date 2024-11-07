@@ -624,7 +624,7 @@ class SatDashboard extends Component {
                         return;
                     }
                 
-                    // Formatear fechas correctamente
+                    // Formatear fechas
                     const formatDate = (dateString) => {
                         const date = new Date(dateString);
                         return date.toISOString().split('T')[0];
@@ -637,6 +637,13 @@ class SatDashboard extends Component {
                     console.log("Fecha fin:", endDate);
                 
                     const filteredData = {};
+                    let hayDatos = false;
+                    
+                    // Primero, inicializar todos los técnicos con 0
+                    const todosLosTecnicos = Object.keys(this.dashboardData.tecnicos_totales_tickets || {});
+                    todosLosTecnicos.forEach(tecnico => {
+                        filteredData[tecnico] = 0;
+                    });
                     
                     if (this.dashboardData.tickets_por_fecha) {
                         Object.entries(this.dashboardData.tickets_por_fecha).forEach(([fecha, tickets]) => {
@@ -644,17 +651,13 @@ class SatDashboard extends Component {
                                 tickets.forEach(ticket => {
                                     if (ticket && ticket.tecnico) {
                                         filteredData[ticket.tecnico] = (filteredData[ticket.tecnico] || 0) + 1;
+                                        hayDatos = true;
                                     }
                                 });
                             }
                         });
                 
-                        if (Object.keys(filteredData).length === 0) {
-                            const titleText = `Tickets por Técnico (${startDate} - ${endDate})`;
-                            renderTicketsTecnicoChart({}, titleText);
-                            return;
-                        }
-                
+                        // Usar el objeto con todos los técnicos en 0 si no hay datos
                         const titleText = `Tickets por Técnico (${startDate} - ${endDate})`;
                         renderTicketsTecnicoChart(filteredData, titleText);
                     }
