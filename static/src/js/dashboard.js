@@ -624,25 +624,23 @@ class SatDashboard extends Component {
                         return;
                     }
                 
-                    // Formatear las fechas correctamente
-                    const [startYear, startMonth, startDay] = startDateInput.value.split('-');
-                    const [endYear, endMonth, endDay] = endDateInput.value.split('-');
+                    // Formatear fechas correctamente
+                    const formatDate = (dateString) => {
+                        const date = new Date(dateString);
+                        return date.toISOString().split('T')[0];
+                    };
                 
-                    const startDate = new Date(startYear, startMonth - 1, startDay);
-                    const endDate = new Date(endYear, endMonth - 1, endDay);
-                    endDate.setHours(23, 59, 59);
+                    const startDate = formatDate(startDateInput.value);
+                    const endDate = formatDate(endDateInput.value);
                 
-                    console.log(`Fecha inicio: ${startDate.toISOString()}`);
-                    console.log(`Fecha fin: ${endDate.toISOString()}`);
+                    console.log("Fecha inicio:", startDate);
+                    console.log("Fecha fin:", endDate);
                 
                     const filteredData = {};
                     
                     if (this.dashboardData.tickets_por_fecha) {
                         Object.entries(this.dashboardData.tickets_por_fecha).forEach(([fecha, tickets]) => {
-                            const [ticketYear, ticketMonth, ticketDay] = fecha.split('-');
-                            const ticketDate = new Date(ticketYear, ticketMonth - 1, ticketDay);
-                            
-                            if (ticketDate >= startDate && ticketDate <= endDate) {
+                            if (fecha >= startDate && fecha <= endDate) {
                                 tickets.forEach(ticket => {
                                     if (ticket && ticket.tecnico) {
                                         filteredData[ticket.tecnico] = (filteredData[ticket.tecnico] || 0) + 1;
@@ -652,12 +650,12 @@ class SatDashboard extends Component {
                         });
                 
                         if (Object.keys(filteredData).length === 0) {
-                            const titleText = `Tickets por Técnico (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
-                            renderTicketsTecnicoChart({}, titleText); // Renderizar gráfico vacío
+                            const titleText = `Tickets por Técnico (${startDate} - ${endDate})`;
+                            renderTicketsTecnicoChart({}, titleText);
                             return;
                         }
                 
-                        const titleText = `Tickets por Técnico (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
+                        const titleText = `Tickets por Técnico (${startDate} - ${endDate})`;
                         renderTicketsTecnicoChart(filteredData, titleText);
                     }
                 };
