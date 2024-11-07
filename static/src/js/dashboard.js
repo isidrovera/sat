@@ -619,62 +619,44 @@ class SatDashboard extends Component {
                     const startDateInput = document.getElementById("startDate");
                     const endDateInput = document.getElementById("endDate");
                 
-                    console.log("Aplicando filtro de fecha...");
-                    console.log("Fecha de inicio:", startDateInput.value);
-                    console.log("Fecha de fin:", endDateInput.value);
-                
-                    // Si no hay fechas seleccionadas, mostrar todos los datos
-                    if (!startDateInput.value && !endDateInput.value) {
-                        console.log("Mostrando todos los datos sin filtros");
-                        renderTicketsTecnicoChart(null, 'Tickets por Técnico');
-                        return;
-                    }
-                
-                    // Validar que ambas fechas estén presentes
                     if (!startDateInput.value || !endDateInput.value) {
                         alert("Por favor, selecciona ambas fechas para aplicar el filtro");
                         return;
                     }
                 
-                    // Convertir las fechas correctamente
-                    const startDate = new Date(startDateInput.value);
-                    startDate.setUTCHours(0, 0, 0, 0);
-                    const endDate = new Date(endDateInput.value);
-                    endDate.setUTCHours(23, 59, 59, 999);
+                    // Formatear las fechas correctamente
+                    const [startYear, startMonth, startDay] = startDateInput.value.split('-');
+                    const [endYear, endMonth, endDay] = endDateInput.value.split('-');
                 
-                    console.log(`Aplicando filtro - Desde: ${startDate.toISOString()} hasta: ${endDate.toISOString()}`);
+                    const startDate = new Date(startYear, startMonth - 1, startDay);
+                    const endDate = new Date(endYear, endMonth - 1, endDay);
+                    endDate.setHours(23, 59, 59);
                 
-                    // Filtrar datos según las fechas seleccionadas
+                    console.log(`Fecha inicio: ${startDate.toISOString()}`);
+                    console.log(`Fecha fin: ${endDate.toISOString()}`);
+                
                     const filteredData = {};
-                    let dataFound = false;
                     
                     if (this.dashboardData.tickets_por_fecha) {
                         Object.entries(this.dashboardData.tickets_por_fecha).forEach(([fecha, tickets]) => {
-                            const ticketDate = new Date(fecha);
-                            ticketDate.setUTCHours(0, 0, 0, 0); // Normalizar la fecha del ticket
+                            const [ticketYear, ticketMonth, ticketDay] = fecha.split('-');
+                            const ticketDate = new Date(ticketYear, ticketMonth - 1, ticketDay);
                             
                             if (ticketDate >= startDate && ticketDate <= endDate) {
-                                if (Array.isArray(tickets)) {
-                                    tickets.forEach(ticket => {
-                                        if (ticket && ticket.tecnico) {
-                                            dataFound = true;
-                                            filteredData[ticket.tecnico] = (filteredData[ticket.tecnico] || 0) + 1;
-                                        }
-                                    });
-                                }
+                                tickets.forEach(ticket => {
+                                    if (ticket && ticket.tecnico) {
+                                        filteredData[ticket.tecnico] = (filteredData[ticket.tecnico] || 0) + 1;
+                                    }
+                                });
                             }
                         });
                 
-                        if (!dataFound) {
-                            console.log("No se encontraron datos para el período seleccionado");
-                            const emptyData = {};
-                            // Renderizar el gráfico con datos vacíos
+                        if (Object.keys(filteredData).length === 0) {
                             const titleText = `Tickets por Técnico (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
-                            renderTicketsTecnicoChart(emptyData, titleText);
+                            renderTicketsTecnicoChart({}, titleText); // Renderizar gráfico vacío
                             return;
                         }
                 
-                        console.log("Datos filtrados:", filteredData);
                         const titleText = `Tickets por Técnico (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
                         renderTicketsTecnicoChart(filteredData, titleText);
                     }
