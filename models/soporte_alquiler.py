@@ -354,10 +354,26 @@ class ticket_alquiler(models.Model):
             'type': 'ir.actions.act_window',
             'target': 'current',
         }
+    
+    finish_latitude = fields.Float(string="Latitud de finalización", digits=(10, 7))
+    finish_longitude = fields.Float(string="Longitud de finalización", digits=(10, 7))
+    finish_datetime = fields.Datetime(string="Hora de finalización")
 
     def action_finalizar(self):
         # Deshabilitar las reglas de acceso temporalmente para evitar el error
         self = self.sudo()  # Utilizamos sudo() para evitar restricciones
+
+        # Obtener las coordenadas del contexto
+        finish_latitude = self.env.context.get('finish_latitude')
+        finish_longitude = self.env.context.get('finish_longitude')
+        
+        # Registrar coordenadas y hora si están disponibles
+        if finish_latitude and finish_longitude:
+            self.write({
+                'finish_latitude': finish_latitude,
+                'finish_longitude': finish_longitude,
+                'finish_datetime': fields.Datetime.now()
+            })
 
         # Realizar todas las acciones necesarias antes de cambiar el estado
         if self.line_ids:
@@ -410,8 +426,6 @@ class ticket_alquiler(models.Model):
             'view_id': False,  # Puedes especificar una vista de lista si es necesario
             'target': 'main',
         }
-
-
         
 
     def create_ticket_wizard(self):
@@ -692,6 +706,8 @@ class ticket_alquiler(models.Model):
 
             # Enviar mensaje de WhatsApp con los detalles del cliente
             self.send_whatsapp_message(self.reporter_phone, message)
+
+
 
             
 class ReportTicketAlquiler(models.AbstractModel):
