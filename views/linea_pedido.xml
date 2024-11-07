@@ -1,10 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="Opciones_pedido_tree_view_inherit" model="ir.ui.view">
         <field name="name">Opciones Pedido Tree View Inherited</field>
         <field name="model">sale.order.line</field>
         <field name="inherit_id" ref="sale.view_order_line_tree"/> <!-- Heredamos la vista de líneas de pedido de venta -->
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='product_template_id']" position="after">
+            <xpath expr="//field[@name='name']" position="after">
                 <field name="contometroa" string="Contometro Anterior"/>
                 <field name="contometro" string="Contometro"/>
                 <field name="estado_entrega" string="Estado de Entrega" invisible="1"/>
