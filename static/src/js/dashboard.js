@@ -624,41 +624,55 @@ class SatDashboard extends Component {
                         return;
                     }
                 
-                    // Formatear fechas
-                    const formatDate = (dateString) => {
-                        const date = new Date(dateString);
-                        return date.toISOString().split('T')[0];
-                    };
+                    // Debug de la estructura de datos
+                    console.log("Estructura de tickets_por_fecha:", this.dashboardData.tickets_por_fecha);
                 
-                    const startDate = formatDate(startDateInput.value);
-                    const endDate = formatDate(endDateInput.value);
+                    // Formatear fechas correctamente usando Date
+                    const startDate = new Date(startDateInput.value);
+                    const endDate = new Date(endDateInput.value);
+                    
+                    // Resetear las horas para comparación correcta
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate.setHours(23, 59, 59, 999);
                 
-                    console.log("Fecha inicio:", startDate);
-                    console.log("Fecha fin:", endDate);
+                    console.log("Fecha inicio (procesada):", startDate);
+                    console.log("Fecha fin (procesada):", endDate);
                 
                     const filteredData = {};
                     let hayDatos = false;
-                    
-                    // Primero, inicializar todos los técnicos con 0
-                    const todosLosTecnicos = Object.keys(this.dashboardData.tecnicos_totales_tickets || {});
-                    todosLosTecnicos.forEach(tecnico => {
+                
+                    // Inicializar todos los técnicos con 0
+                    Object.keys(this.dashboardData.tecnicos_totales_tickets || {}).forEach(tecnico => {
                         filteredData[tecnico] = 0;
                     });
+                
+                    // Debug antes del filtrado
+                    console.log("Técnicos inicializados:", filteredData);
                     
                     if (this.dashboardData.tickets_por_fecha) {
                         Object.entries(this.dashboardData.tickets_por_fecha).forEach(([fecha, tickets]) => {
-                            if (fecha >= startDate && fecha <= endDate) {
+                            const ticketDate = new Date(fecha);
+                            ticketDate.setHours(0, 0, 0, 0);
+                            
+                            console.log("Comparando fecha:", {
+                                fecha: ticketDate,
+                                esMayorIgualInicio: ticketDate >= startDate,
+                                esMenorIgualFin: ticketDate <= endDate
+                            });
+                
+                            if (ticketDate >= startDate && ticketDate <= endDate) {
                                 tickets.forEach(ticket => {
                                     if (ticket && ticket.tecnico) {
                                         filteredData[ticket.tecnico] = (filteredData[ticket.tecnico] || 0) + 1;
                                         hayDatos = true;
+                                        console.log(`Ticket encontrado para ${ticket.tecnico} en fecha ${fecha}`);
                                     }
                                 });
                             }
                         });
                 
-                        // Usar el objeto con todos los técnicos en 0 si no hay datos
-                        const titleText = `Tickets por Técnico (${startDate} - ${endDate})`;
+                        console.log("Datos filtrados finales:", filteredData);
+                        const titleText = `Tickets por Técnico (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
                         renderTicketsTecnicoChart(filteredData, titleText);
                     }
                 };
