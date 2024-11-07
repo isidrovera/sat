@@ -25,7 +25,6 @@ class ticket_alquiler(models.Model):
     
     url = fields.Char('URL', compute='_compute_url', store=True)
 
-    @api.depends('id')
     def _compute_url(self):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         for record in self:
@@ -47,6 +46,7 @@ class ticket_alquiler(models.Model):
         record._compute_url()
         
         return record
+
 
     
 
