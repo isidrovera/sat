@@ -487,7 +487,7 @@ class SatDashboard extends Component {
                 console.log('Renderizando gráfico de tickets por técnico...');
                 
                 // Establecer dimensiones fijas del contenedor
-                ticketsTecnicoElement.style.height = '250px';
+                ticketsTecnicoElement.style.height = '100px';
                 ticketsTecnicoElement.style.width = '100%';
                 ticketsTecnicoElement.style.position = 'relative';
                 ticketsTecnicoElement.style.overflow = 'hidden';
@@ -510,7 +510,7 @@ class SatDashboard extends Component {
                     const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement, null, {
                         renderer: 'canvas',
                         useDirtyRect: false,
-                        height: 250  // Reducido de 300px a 250px
+                        height: 100  // Reducido de 300px a 250px
                     });
                     const option = {
                         title: {
