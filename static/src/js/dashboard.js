@@ -296,20 +296,21 @@ class SatDashboard extends Component {
 
            // Gráfico de estado
 
-            // Gráfico de estado
             const estadoElement = this._getChartElement("estadoChart");
             if (estadoElement) {
                 console.log('Renderizando gráfico de estado...');
                 const estadoChart = echarts.init(estadoElement);
 
-                estadoChart.setOption({
+                const option = {
+                    backgroundColor: '#fff',  // Mantenemos fondo blanco para tu interfaz
                     title: { 
                         text: 'Estado de Máquinas',
                         left: 'center',
-                        top: '0%',
+                        top: 20,
                         textStyle: {
                             fontSize: 14,
                             fontWeight: 'normal',
+                            color: '#333'
                         }
                     },
                     tooltip: { 
@@ -322,9 +323,8 @@ class SatDashboard extends Component {
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: ['50%', '70%'],
+                        radius: ['45%', '65%'],
                         center: ['50%', '50%'],
-                        avoidLabelOverlap: true,
                         data: [
                             { 
                                 value: this.dashboardData.maquinas_sin_revisar, 
@@ -346,42 +346,55 @@ class SatDashboard extends Component {
                                 name: 'Problemas', 
                                 itemStyle: { color: '#FF6384' }
                             }
-                        ],
+                        ].sort(function(a, b) {
+                            return b.value - a.value;  // Ordenamos de mayor a menor
+                        }),
                         label: {
                             show: true,
                             position: 'outside',
-                            formatter: function(params) {
-                                return params.name;
-                            },
-                            fontSize: 12,
+                            formatter: '{b}',
                             color: '#666',
+                            fontSize: 12,
                             distance: 5
                         },
                         labelLine: {
                             show: true,
+                            smooth: 0.2,
                             length: 10,
-                            length2: 10,
-                            smooth: false,
+                            length2: 20,
                             lineStyle: {
-                                width: 1,
-                                type: 'solid'
+                                color: '#666',
+                                width: 1
                             }
+                        },
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowColor: 'rgba(0, 0, 0, 0.2)',
+                            shadowOffsetX: 0,
+                            shadowOffsetY: 0,
+                            borderRadius: 2,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        animationType: 'scale',
+                        animationEasing: 'elasticOut',
+                        animationDelay: function(idx) {
+                            return Math.random() * 200;
                         },
                         emphasis: {
+                            scale: true,
+                            scaleSize: 10,
                             itemStyle: {
-                                shadowBlur: 10,
-                                shadowOffsetX: 0,
+                                shadowBlur: 20,
                                 shadowColor: 'rgba(0, 0, 0, 0.5)'
                             }
-                        },
-                        animation: true,
-                        animationDuration: 1000,
-                        animationEasing: 'cubicInOut'
+                        }
                     }]
-                });
+                };
 
+                estadoChart.setOption(option);
                 console.log('Gráfico de estado renderizado exitosamente');
-                
+
                 // Hacer el gráfico responsive
                 window.addEventListener('resize', function() {
                     estadoChart.resize();
