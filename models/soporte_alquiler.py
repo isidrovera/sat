@@ -75,7 +75,7 @@ class ticket_alquiler(models.Model):
     )
     codigo_id = fields.Many2one('sale.order', string="Código")
 
-    product_alquiler = fields.Many2one('alquiler', string='Maquina a reparar', tracking=True)
+    product_alquiler = fields.Many2one('alquiler', string='Modelo', tracking=True)
     
     tipo_id = fields.Selection([('color', 'Color'),('monocromatica','Monocromatica')], 
      string='Tipo de maquina', related='product_alquiler.tipo_maquina_id')
@@ -612,7 +612,8 @@ class ticket_alquiler(models.Model):
             self.description if self.description else 'NA',
             self.agenda_local if self.agenda_local else 'NA',
             selection_labels.get('tipo_servicio_id', 'NA'),
-            selection_labels.get('asistencia_id', 'NA')             
+            selection_labels.get('asistencia_id', 'NA'),
+            selection_labels.get('url')             
             
         )
 
