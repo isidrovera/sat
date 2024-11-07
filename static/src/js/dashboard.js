@@ -541,7 +541,7 @@ class SatDashboard extends Component {
                         grid: {
                             top: dimensions.containerHeight * 0.12,
                             bottom: dimensions.containerHeight * 0.15,
-                            left: '100%',          // Reducido para dar más espacio a las barras
+                            left: '0%',          // Reducido para dar más espacio a las barras
                             right: '50%',
                             containLabel: true,
                             height: dimensions.gridHeight
