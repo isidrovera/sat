@@ -480,22 +480,27 @@ class SatDashboard extends Component {
             }
 
             
-            // Gráfico de tickets por técnico            
+           // Gráfico de tickets por técnico            
             const ticketsTecnicoElement = this._getChartElement("ticketsTecnicoChart");
 
             if (ticketsTecnicoElement) {
                 console.log('Renderizando gráfico de tickets por técnico...');
                 
-                // Asegurar dimensiones mínimas del contenedor
-                ticketsTecnicoElement.style.minHeight = '400px';
+                // Establecer dimensiones fijas del contenedor
+                ticketsTecnicoElement.style.height = '300px';
                 ticketsTecnicoElement.style.width = '100%';
                 ticketsTecnicoElement.style.position = 'relative';
+                ticketsTecnicoElement.style.overflow = 'hidden';
 
                 const renderTicketsTecnicoChart = (filteredData = null, titleText = 'Tickets por Técnico') => {
                     // Obtener datos
                     const dataToUse = filteredData || this.dashboardData.tecnicos_totales_tickets || {};
                     const ticketsTecnicoLabels = Object.keys(dataToUse);
                     const ticketsTecnicoData = Object.values(dataToUse);
+
+                    console.log('Datos después de aplicar el filtro:', filteredData);
+                    console.log('Etiquetas de técnicos:', ticketsTecnicoLabels);
+                    console.log('Datos de tickets:', ticketsTecnicoData);
 
                     // Validar datos de colores en visualMap
                     const minDataValue = ticketsTecnicoData.length ? Math.min(...ticketsTecnicoData) : 0;
@@ -504,14 +509,15 @@ class SatDashboard extends Component {
                     // Crear y configurar el gráfico
                     const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement, null, {
                         renderer: 'canvas',
-                        useDirtyRect: false
+                        useDirtyRect: false,
+                        height: 300
                     });
 
                     const option = {
                         title: {
                             text: titleText,
                             left: 'center',
-                            top: '20px',
+                            top: '10px',
                             textStyle: {
                                 fontSize: 16,
                                 fontWeight: 'bold'
@@ -524,12 +530,12 @@ class SatDashboard extends Component {
                             }
                         },
                         grid: {
-                            top: 60,        // Espacio fijo arriba
-                            bottom: 60,     // Espacio fijo abajo
-                            left: '15%',    // Espacio para etiquetas
-                            right: '5%',    // Espacio derecho
+                            top: 40,
+                            bottom: 40,
+                            left: '15%',
+                            right: '5%',
                             containLabel: true,
-                            height: 'auto'  // Altura automática
+                            height: 200
                         },
                         xAxis: {
                             type: 'value',
@@ -541,8 +547,7 @@ class SatDashboard extends Component {
                                 }
                             },
                             axisLabel: {
-                                fontSize: 12,
-                                margin: 12
+                                fontSize: 11
                             }
                         },
                         yAxis: {
@@ -550,13 +555,12 @@ class SatDashboard extends Component {
                             data: ticketsTecnicoLabels,
                             axisLabel: {
                                 interval: 0,
-                                fontSize: 12,
-                                margin: 16,
-                                width: 120,
+                                fontSize: 11,
+                                margin: 8,
+                                width: 100,
                                 overflow: 'truncate',
-                                align: 'right',
                                 formatter: (value) => {
-                                    const maxLength = 20;
+                                    const maxLength = 15;
                                     return value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
                                 }
                             }
@@ -564,7 +568,7 @@ class SatDashboard extends Component {
                         visualMap: {
                             orient: 'horizontal',
                             left: 'center',
-                            bottom: 10,
+                            bottom: 0,
                             min: minDataValue,
                             max: maxDataValue,
                             text: ['Bajo', 'Alto'],
@@ -573,7 +577,7 @@ class SatDashboard extends Component {
                                 color: ['#E1F5FE', '#0288D1']
                             },
                             itemWidth: 15,
-                            itemHeight: 140,
+                            itemHeight: 120,
                             calculable: true
                         },
                         series: [{
@@ -584,12 +588,12 @@ class SatDashboard extends Component {
                                 show: true,
                                 position: 'right',
                                 formatter: '{c}',
-                                fontSize: 12,
+                                fontSize: 11,
                                 fontWeight: 'bold',
                                 distance: 5
                             },
                             barWidth: '40%',
-                            barMaxWidth: 60,
+                            barMaxWidth: 50,
                             emphasis: {
                                 itemStyle: {
                                     shadowBlur: 10,
@@ -600,25 +604,25 @@ class SatDashboard extends Component {
                         }]
                     };
 
-                    // Aplicar opciones y manejar eventos
                     ticketsTecnicoChart.setOption(option, true);
 
-                    // Función de redimensionamiento mejorada
+                    // Función de redimensionamiento
                     const handleResize = () => {
                         const parentElement = ticketsTecnicoElement.parentElement;
                         if (parentElement) {
-                            const width = parentElement.offsetWidth;
-                            const height = Math.max(400, parentElement.offsetHeight);
-                            ticketsTecnicoChart.resize({ width, height });
+                            ticketsTecnicoChart.resize({
+                                width: parentElement.offsetWidth,
+                                height: 300
+                            });
                         }
                     };
 
-                    // Limpiar listener anterior si existe
+                    // Limpiar listener anterior y agregar el nuevo
                     window.removeEventListener('resize', handleResize);
                     window.addEventListener('resize', handleResize);
                     
                     // Forzar un resize inicial
-                    setTimeout(handleResize, 100);
+                    handleResize();
                     
                     return ticketsTecnicoChart;
                 };
@@ -627,11 +631,18 @@ class SatDashboard extends Component {
                     const startDateInput = document.getElementById("startDate");
                     const endDateInput = document.getElementById("endDate");
 
+                    console.log("Aplicando filtro de fecha...");
+                    console.log("Fecha de inicio:", startDateInput.value);
+                    console.log("Fecha de fin:", endDateInput.value);
+
+                    // Si no hay fechas seleccionadas, mostrar todos los datos
                     if (!startDateInput.value && !endDateInput.value) {
+                        console.log("Mostrando todos los datos sin filtros");
                         renderTicketsTecnicoChart(null, 'Tickets por Técnico');
                         return;
                     }
 
+                    // Validar que ambas fechas estén presentes
                     if (!startDateInput.value || !endDateInput.value) {
                         alert("Por favor, selecciona ambas fechas para aplicar el filtro");
                         return;
@@ -640,10 +651,13 @@ class SatDashboard extends Component {
                     const startDate = new Date(startDateInput.value + 'T00:00:00');
                     const endDate = new Date(endDateInput.value + 'T23:59:59');
 
+                    // Validar el rango de fechas
                     if (startDate > endDate) {
                         alert("La fecha de inicio no puede ser posterior a la fecha final");
                         return;
                     }
+
+                    console.log(`Aplicando filtro - Desde: ${startDate.toLocaleDateString()} hasta: ${endDate.toLocaleDateString()}`);
 
                     // Filtrar datos según las fechas seleccionadas
                     const filteredData = {};
@@ -659,11 +673,15 @@ class SatDashboard extends Component {
                             }
                         });
 
+                        // Si no hay datos en el rango seleccionado
                         if (Object.keys(filteredData).length === 0) {
                             alert("No se encontraron tickets en el rango de fechas seleccionado");
                             return;
                         }
 
+                        console.log("Datos filtrados:", filteredData);
+
+                        // Actualizar el gráfico con los datos filtrados
                         const titleText = `Tickets por Técnico (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
                         renderTicketsTecnicoChart(filteredData, titleText);
                     }
@@ -672,7 +690,7 @@ class SatDashboard extends Component {
                 // Configurar el event listener para el botón de filtro
                 const filterButton = document.getElementById("applyFilter");
                 if (filterButton) {
-                    filterButton.removeEventListener("click", applyDateFilter);
+                    filterButton.removeEventListener("click", applyDateFilter); // Evitar duplicación de eventos
                     filterButton.addEventListener("click", applyDateFilter);
                 }
 
