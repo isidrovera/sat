@@ -487,7 +487,7 @@ class SatDashboard extends Component {
                 console.log('Renderizando gráfico de tickets por técnico...');
                 
                 // Establecer dimensiones fijas del contenedor
-                ticketsTecnicoElement.style.height = '300px';
+                ticketsTecnicoElement.style.height = '250px';
                 ticketsTecnicoElement.style.width = '100%';
                 ticketsTecnicoElement.style.position = 'relative';
                 ticketsTecnicoElement.style.overflow = 'hidden';
@@ -510,16 +510,15 @@ class SatDashboard extends Component {
                     const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement, null, {
                         renderer: 'canvas',
                         useDirtyRect: false,
-                        height: 300
+                        height: 250  // Reducido de 300px a 250px
                     });
-
                     const option = {
                         title: {
                             text: titleText,
                             left: 'center',
-                            top: '10px',
+                            top: '5px',    // Reducido de 10px a 5px
                             textStyle: {
-                                fontSize: 16,
+                                fontSize: 14,  // Reducido de 16px a 14px
                                 fontWeight: 'bold'
                             }
                         },
@@ -530,12 +529,12 @@ class SatDashboard extends Component {
                             }
                         },
                         grid: {
-                            top: 40,
-                            bottom: 40,
+                            top: 30,       // Reducido de 40px a 30px
+                            bottom: 30,    // Reducido de 40px a 30px
                             left: '15%',
                             right: '5%',
                             containLabel: true,
-                            height: 200
+                            height: 160    // Reducido de 200px a 160px
                         },
                         xAxis: {
                             type: 'value',
@@ -547,7 +546,7 @@ class SatDashboard extends Component {
                                 }
                             },
                             axisLabel: {
-                                fontSize: 11
+                                fontSize: 10  // Reducido de 11px a 10px
                             }
                         },
                         yAxis: {
@@ -555,12 +554,12 @@ class SatDashboard extends Component {
                             data: ticketsTecnicoLabels,
                             axisLabel: {
                                 interval: 0,
-                                fontSize: 11,
-                                margin: 8,
-                                width: 100,
+                                fontSize: 10,  // Reducido de 11px a 10px
+                                margin: 6,     // Reducido de 8px a 6px
+                                width: 90,     // Reducido de 100px a 90px
                                 overflow: 'truncate',
                                 formatter: (value) => {
-                                    const maxLength = 15;
+                                    const maxLength = 12;  // Reducido de 15 a 12 caracteres
                                     return value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
                                 }
                             }
@@ -576,8 +575,8 @@ class SatDashboard extends Component {
                             inRange: {
                                 color: ['#E1F5FE', '#0288D1']
                             },
-                            itemWidth: 15,
-                            itemHeight: 120,
+                            itemWidth: 12,     // Reducido de 15px a 12px
+                            itemHeight: 100,   // Reducido de 120px a 100px
                             calculable: true
                         },
                         series: [{
@@ -588,12 +587,12 @@ class SatDashboard extends Component {
                                 show: true,
                                 position: 'right',
                                 formatter: '{c}',
-                                fontSize: 11,
+                                fontSize: 10,   // Reducido de 11px a 10px
                                 fontWeight: 'bold',
                                 distance: 5
                             },
-                            barWidth: '40%',
-                            barMaxWidth: 50,
+                            barWidth: '35%',    // Reducido de 40% a 35%
+                            barMaxWidth: 45,
                             emphasis: {
                                 itemStyle: {
                                     shadowBlur: 10,
