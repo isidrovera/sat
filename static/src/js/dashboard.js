@@ -479,18 +479,31 @@ class SatDashboard extends Component {
                 console.log('Gráfico de técnicos renderizado exitosamente');
             }
 
-            
-           // Gráfico de tickets por técnico            
+                      
+            // Gráfico de tickets por técnico            
             const ticketsTecnicoElement = this._getChartElement("ticketsTecnicoChart");
 
             if (ticketsTecnicoElement) {
                 console.log('Renderizando gráfico de tickets por técnico...');
                 
-                // Establecer dimensiones fijas del contenedor
-                ticketsTecnicoElement.style.height = '100px';
+                // Hacer que el contenedor sea responsive
                 ticketsTecnicoElement.style.width = '100%';
                 ticketsTecnicoElement.style.position = 'relative';
                 ticketsTecnicoElement.style.overflow = 'hidden';
+
+                const calculateDimensions = () => {
+                    const parentElement = ticketsTecnicoElement.parentElement;
+                    const parentHeight = parentElement ? parentElement.offsetHeight : 250;
+                    const parentWidth = parentElement ? parentElement.offsetWidth : 400;
+                    
+                    // Calcular dimensiones basadas en el contenedor padre
+                    return {
+                        containerHeight: Math.max(200, Math.min(250, parentHeight * 0.8)), // Entre 200px y 250px
+                        gridHeight: Math.max(140, Math.min(180, parentHeight * 0.6)),      // Entre 140px y 180px
+                        fontSize: parentWidth < 500 ? 10 : 11,                             // Fuente responsive
+                        labelWidth: parentWidth < 500 ? 80 : 90                           // Ancho de etiquetas responsive
+                    };
+                };
 
                 const renderTicketsTecnicoChart = (filteredData = null, titleText = 'Tickets por Técnico') => {
                     // Obtener datos
@@ -498,27 +511,31 @@ class SatDashboard extends Component {
                     const ticketsTecnicoLabels = Object.keys(dataToUse);
                     const ticketsTecnicoData = Object.values(dataToUse);
 
-                    console.log('Datos después de aplicar el filtro:', filteredData);
-                    console.log('Etiquetas de técnicos:', ticketsTecnicoLabels);
-                    console.log('Datos de tickets:', ticketsTecnicoData);
+                    console.log('Datos para el gráfico:', {
+                        labels: ticketsTecnicoLabels,
+                        data: ticketsTecnicoData
+                    });
+
+                    // Calcular dimensiones dinámicas
+                    const dimensions = calculateDimensions();
 
                     // Validar datos de colores en visualMap
                     const minDataValue = ticketsTecnicoData.length ? Math.min(...ticketsTecnicoData) : 0;
                     const maxDataValue = ticketsTecnicoData.length ? Math.max(...ticketsTecnicoData) : 1;
 
-                    // Crear y configurar el gráfico
+                    // Crear y configurar el gráfico con dimensiones dinámicas
                     const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement, null, {
                         renderer: 'canvas',
-                        useDirtyRect: false,
-                        height: 100  // Reducido de 300px a 250px
+                        useDirtyRect: false
                     });
+
                     const option = {
                         title: {
                             text: titleText,
                             left: 'center',
-                            top: '5px',    // Reducido de 10px a 5px
+                            top: '5px',
                             textStyle: {
-                                fontSize: 14,  // Reducido de 16px a 14px
+                                fontSize: dimensions.fontSize + 4,
                                 fontWeight: 'bold'
                             }
                         },
@@ -529,12 +546,12 @@ class SatDashboard extends Component {
                             }
                         },
                         grid: {
-                            top: 30,       // Reducido de 40px a 30px
-                            bottom: 30,    // Reducido de 40px a 30px
+                            top: dimensions.containerHeight * 0.12,
+                            bottom: dimensions.containerHeight * 0.12,
                             left: '15%',
                             right: '5%',
                             containLabel: true,
-                            height: 160    // Reducido de 200px a 160px
+                            height: dimensions.gridHeight
                         },
                         xAxis: {
                             type: 'value',
@@ -546,7 +563,7 @@ class SatDashboard extends Component {
                                 }
                             },
                             axisLabel: {
-                                fontSize: 10  // Reducido de 11px a 10px
+                                fontSize: dimensions.fontSize
                             }
                         },
                         yAxis: {
@@ -554,12 +571,12 @@ class SatDashboard extends Component {
                             data: ticketsTecnicoLabels,
                             axisLabel: {
                                 interval: 0,
-                                fontSize: 10,  // Reducido de 11px a 10px
-                                margin: 6,     // Reducido de 8px a 6px
-                                width: 90,     // Reducido de 100px a 90px
+                                fontSize: dimensions.fontSize,
+                                margin: 6,
+                                width: dimensions.labelWidth,
                                 overflow: 'truncate',
                                 formatter: (value) => {
-                                    const maxLength = 12;  // Reducido de 15 a 12 caracteres
+                                    const maxLength = Math.floor(dimensions.labelWidth / (dimensions.fontSize * 0.6));
                                     return value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
                                 }
                             }
@@ -575,8 +592,8 @@ class SatDashboard extends Component {
                             inRange: {
                                 color: ['#E1F5FE', '#0288D1']
                             },
-                            itemWidth: 12,     // Reducido de 15px a 12px
-                            itemHeight: 100,   // Reducido de 120px a 100px
+                            itemWidth: dimensions.fontSize,
+                            itemHeight: dimensions.gridHeight * 0.6,
                             calculable: true
                         },
                         series: [{
@@ -587,40 +604,76 @@ class SatDashboard extends Component {
                                 show: true,
                                 position: 'right',
                                 formatter: '{c}',
-                                fontSize: 10,   // Reducido de 11px a 10px
+                                fontSize: dimensions.fontSize,
                                 fontWeight: 'bold',
                                 distance: 5
                             },
-                            barWidth: '35%',    // Reducido de 40% a 35%
-                            barMaxWidth: 45,
-                            emphasis: {
-                                itemStyle: {
-                                    shadowBlur: 10,
-                                    shadowOffsetX: 0,
-                                    shadowColor: 'rgba(0, 0, 0, 0.5)'
-                                }
-                            }
+                            barWidth: '35%',
+                            barMaxWidth: 45
                         }]
                     };
 
                     ticketsTecnicoChart.setOption(option, true);
 
-                    // Función de redimensionamiento
+                    // Función de redimensionamiento dinámica
                     const handleResize = () => {
-                        const parentElement = ticketsTecnicoElement.parentElement;
-                        if (parentElement) {
-                            ticketsTecnicoChart.resize({
-                                width: parentElement.offsetWidth,
-                                height: 300
-                            });
-                        }
+                        const newDimensions = calculateDimensions();
+                        ticketsTecnicoElement.style.height = `${newDimensions.containerHeight}px`;
+                        
+                        ticketsTecnicoChart.resize();
+                        
+                        // Actualizar opciones con nuevas dimensiones
+                        const newOption = {
+                            ...option,
+                            title: {
+                                ...option.title,
+                                textStyle: {
+                                    fontSize: newDimensions.fontSize + 4,
+                                    fontWeight: 'bold'
+                                }
+                            },
+                            grid: {
+                                ...option.grid,
+                                top: newDimensions.containerHeight * 0.12,
+                                bottom: newDimensions.containerHeight * 0.12,
+                                height: newDimensions.gridHeight
+                            },
+                            xAxis: {
+                                ...option.xAxis,
+                                axisLabel: {
+                                    fontSize: newDimensions.fontSize
+                                }
+                            },
+                            yAxis: {
+                                ...option.yAxis,
+                                axisLabel: {
+                                    ...option.yAxis.axisLabel,
+                                    fontSize: newDimensions.fontSize,
+                                    width: newDimensions.labelWidth
+                                }
+                            },
+                            visualMap: {
+                                ...option.visualMap,
+                                itemWidth: newDimensions.fontSize,
+                                itemHeight: newDimensions.gridHeight * 0.6
+                            },
+                            series: [{
+                                ...option.series[0],
+                                label: {
+                                    ...option.series[0].label,
+                                    fontSize: newDimensions.fontSize
+                                }
+                            }]
+                        };
+                        
+                        ticketsTecnicoChart.setOption(newOption);
                     };
 
                     // Limpiar listener anterior y agregar el nuevo
                     window.removeEventListener('resize', handleResize);
                     window.addEventListener('resize', handleResize);
                     
-                    // Forzar un resize inicial
+                    // Aplicar dimensiones iniciales
                     handleResize();
                     
                     return ticketsTecnicoChart;
@@ -689,17 +742,18 @@ class SatDashboard extends Component {
                 // Configurar el event listener para el botón de filtro
                 const filterButton = document.getElementById("applyFilter");
                 if (filterButton) {
-                    filterButton.removeEventListener("click", applyDateFilter); // Evitar duplicación de eventos
+                    filterButton.removeEventListener("click", applyDateFilter);
                     filterButton.addEventListener("click", applyDateFilter);
                 }
 
                 // Renderizar el gráfico inicial
                 const chart = renderTicketsTecnicoChart();
                 
-                // Forzar un reflow después de la carga inicial
+                // Asegurar que el gráfico se renderice correctamente después de que el DOM esté listo
                 setTimeout(() => {
                     chart.resize();
                 }, 300);
+
             } else {
                 console.error('No se encontró el elemento del gráfico en el DOM');
             }
