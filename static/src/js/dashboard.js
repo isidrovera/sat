@@ -365,121 +365,227 @@ class SatDashboard extends Component {
 
 
 
-            // Gráfico de técnicos
+            // Gráfico de técnicos            
             const tecnicosElement = this._getChartElement("tecnicosChart");
+
             if (tecnicosElement) {
                 console.log('Renderizando gráfico de técnicos...');
-                const tecnicosChart = echarts.init(tecnicosElement);
                 
-                const tecnicosLabels = Object.keys(this.dashboardData.tecnicos_totales);
-                const tecnicosData = Object.values(this.dashboardData.tecnicos_totales);
+                tecnicosElement.style.width = '100%';
+                tecnicosElement.style.position = 'relative';
+                tecnicosElement.style.overflow = 'hidden';
 
-                tecnicosChart.setOption({
-                    title: {
-                        text: 'Reparaciones por Técnico',
-                        left: 'center',
-                        top: '2%',
-                        textStyle: {
-                            fontSize: 16,
-                            fontWeight: 'bold'
-                        }
-                    },
-                    tooltip: {
-                        trigger: 'axis',
-                        axisPointer: {
-                            type: 'shadow'
-                        }
-                    },
-                    grid: {
-                        top: '15%',
-                        bottom: '15%',    // Aumentado para dar espacio al visualMap
-                        left: '3%',       // Reducido para usar más espacio horizontal
-                        right: '5%',      // Reducido para usar más espacio horizontal
-                        containLabel: true,
-                        height: '70%'     // Controla la altura del área del gráfico
-                    },
-                    xAxis: {
-                        type: 'value',
-                        splitLine: {
-                            show: true,
-                            lineStyle: {
-                                type: 'dashed'
+                const renderTecnicosChart = (filteredData = null, titleText = 'Reparaciones por Técnico') => {
+                    // Obtener datos
+                    const dataToUse = filteredData || this.dashboardData.tecnicos_totales || {};
+                    const tecnicosLabels = Object.keys(dataToUse);
+                    const tecnicosData = Object.values(dataToUse);
+
+                    console.log('Datos después de aplicar el filtro:', filteredData);
+                    console.log('Etiquetas de técnicos:', tecnicosLabels);
+                    console.log('Datos de reparaciones:', tecnicosData);
+
+                    // Validar datos de colores en visualMap
+                    const minDataValue = tecnicosData.length ? Math.min(...tecnicosData) : 0;
+                    const maxDataValue = tecnicosData.length ? Math.max(...tecnicosData) : 1;
+
+                    // Crear y configurar el gráfico
+                    const tecnicosChart = echarts.init(tecnicosElement);
+
+                    const option = {
+                        title: {
+                            text: titleText,
+                            left: 'center',
+                            top: '2%',
+                            textStyle: {
+                                fontSize: 16,
+                                fontWeight: 'bold'
                             }
                         },
-                        axisLabel: {
-                            fontSize: 12
-                        }
-                    },
-                    yAxis: {
-                        type: 'category',
-                        data: tecnicosLabels,
-                        axisLabel: {
-                            interval: 0,
-                            width: 150,      // Aumentado para nombres más largos
-                            overflow: 'break',
-                            fontSize: 12,
-                            formatter: function(value) {
-                                // Manejar nombres largos en múltiples líneas si es necesario
-                                const maxLength = 30;
-                                if (value.length > maxLength) {
-                                    return value.substring(0, maxLength) + '...';
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'shadow'
+                            }
+                        },
+                        grid: {
+                            top: '15%',
+                            bottom: '15%',    
+                            left: '3%',      
+                            right: '5%',      
+                            containLabel: true,
+                            height: '70%'     
+                        },
+                        xAxis: {
+                            type: 'value',
+                            splitLine: {
+                                show: true,
+                                lineStyle: {
+                                    type: 'dashed'
                                 }
-                                return value;
+                            },
+                            axisLabel: {
+                                fontSize: 12
                             }
-                        }
-                    },
-                    visualMap: {
-                        orient: 'horizontal',
-                        left: 'center',
-                        bottom: '2%',
-                        min: Math.min(...tecnicosData),
-                        max: Math.max(...tecnicosData),
-                        text: ['High Score', 'Low Score'],
-                        dimension: 0,
-                        inRange: {
-                            color: ['#FFE7BA', '#FFB366']  // Tonos amarillos como en tu imagen
                         },
-                        itemWidth: 15,
-                        itemHeight: 200
-                    },
-                    series: [{
-                        name: 'Reparaciones',
-                        type: 'bar',
-                        data: tecnicosData,
-                        label: {
-                            show: true,
-                            position: 'right',
-                            formatter: '{c}',
-                            fontSize: 12,
-                            fontWeight: 'bold',
-                            distance: 5
+                        yAxis: {
+                            type: 'category',
+                            data: tecnicosLabels,
+                            axisLabel: {
+                                interval: 0,
+                                width: 150,
+                                overflow: 'break',
+                                fontSize: 12,
+                                formatter: function(value) {
+                                    const maxLength = 30;
+                                    if (value.length > maxLength) {
+                                        return value.substring(0, maxLength) + '...';
+                                    }
+                                    return value;
+                                }
+                            }
                         },
-                        barWidth: '40%',    // Ajustado para mejor proporción
-                        barMaxWidth: 60     // Máximo ancho de las barras
-                    }]
-                });
-                
-                // Asegurar que el gráfico ocupe todo el espacio disponible
-                const parentElement = tecnicosElement.parentElement;
-                if (parentElement) {
-                    tecnicosChart.resize({
-                        width: parentElement.offsetWidth,
-                        height: parentElement.offsetHeight
+                        visualMap: {
+                            orient: 'horizontal',
+                            left: 'center',
+                            bottom: '2%',
+                            min: minDataValue,
+                            max: maxDataValue,
+                            text: ['High Score', 'Low Score'],
+                            dimension: 0,
+                            inRange: {
+                                color: ['#FFE7BA', '#FFB366']
+                            },
+                            itemWidth: 15,
+                            itemHeight: 200
+                        },
+                        series: [{
+                            name: 'Reparaciones',
+                            type: 'bar',
+                            data: tecnicosData,
+                            label: {
+                                show: true,
+                                position: 'right',
+                                formatter: '{c}',
+                                fontSize: 12,
+                                fontWeight: 'bold',
+                                distance: 5
+                            },
+                            barWidth: '40%',
+                            barMaxWidth: 60
+                        }]
                     });
-                }
-                
-                // Manejar el redimensionamiento de la ventana
-                window.addEventListener('resize', () => {
-                    tecnicosChart.resize({
-                        width: parentElement?.offsetWidth,
-                        height: parentElement?.offsetHeight
-                    });
-                });
-                
-                console.log('Gráfico de técnicos renderizado exitosamente');
-            }
 
-                      
+                    tecnicosChart.setOption(option, true);
+
+                    // Manejar el redimensionamiento
+                    const handleResize = () => {
+                        const parentElement = tecnicosElement.parentElement;
+                        if (parentElement) {
+                            tecnicosChart.resize({
+                                width: parentElement.offsetWidth,
+                                height: parentElement.offsetHeight
+                            });
+                        }
+                    };
+
+                    // Limpiar listener anterior y agregar el nuevo
+                    window.removeEventListener('resize', handleResize);
+                    window.addEventListener('resize', handleResize);
+                    
+                    // Forzar un resize inicial
+                    handleResize();
+                    
+                    return tecnicosChart;
+                };
+
+                const applyDateFilter = () => {
+                    const startDateInput = document.getElementById("startDateTecnicos");
+                    const endDateInput = document.getElementById("endDateTecnicos");
+                
+                    console.log("Aplicando filtro de fecha...");
+                    console.log("Fecha de inicio:", startDateInput.value);
+                    console.log("Fecha de fin:", endDateInput.value);
+                
+                    // Si no hay fechas seleccionadas, mostrar mensaje
+                    if (!startDateInput.value || !endDateInput.value) {
+                        alert("Por favor, selecciona ambas fechas para aplicar el filtro");
+                        return;
+                    }
+                
+                    // Formatear fechas para comparación consistente
+                    const formatDate = (dateString) => {
+                        const date = new Date(dateString);
+                        return date.toISOString().split('T')[0];
+                    };
+                
+                    const startDate = formatDate(startDateInput.value);
+                    const endDate = formatDate(endDateInput.value);
+                
+                    console.log("Fecha inicio (formateada):", startDate);
+                    console.log("Fecha fin (formateada):", endDate);
+                
+                    const filteredData = {};
+                    let hayDatos = false;
+                
+                    // Inicializar todos los técnicos con 0
+                    if (this.dashboardData.tecnicos_totales) {
+                        Object.keys(this.dashboardData.tecnicos_totales).forEach(tecnico => {
+                            filteredData[tecnico] = 0;
+                        });
+                    }
+                
+                    // Verificar si tenemos datos de reparaciones por fecha
+                    if (!this.dashboardData.reparaciones_por_fecha) {
+                        console.warn("No hay datos de reparaciones_por_fecha disponibles");
+                        const titleText = `Reparaciones por Técnico (${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})`;
+                        renderTecnicosChart(filteredData, titleText);
+                        return;
+                    }
+                
+                    // Filtrar los datos según el rango de fechas
+                    Object.entries(this.dashboardData.reparaciones_por_fecha).forEach(([fecha, reparaciones]) => {
+                        if (fecha >= startDate && fecha <= endDate) {
+                            reparaciones.forEach(reparacion => {
+                                if (reparacion.tecnico_nombre) {
+                                    filteredData[reparacion.tecnico_nombre] = (filteredData[reparacion.tecnico_nombre] || 0) + 1;
+                                    hayDatos = true;
+                                }
+                            });
+                        }
+                    });
+                
+                    console.log("Datos después del filtrado:", filteredData);
+                
+                    // Si no hay datos en el rango seleccionado, mostrar mensaje
+                    if (!hayDatos) {
+                        console.log("No se encontraron reparaciones en el rango de fechas seleccionado");
+                    }
+                
+                    // Actualizar el gráfico con los datos filtrados
+                    const titleText = `Reparaciones por Técnico (${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})`;
+                    renderTecnicosChart(filteredData, titleText);
+                };
+                
+                // Configurar el event listener para el botón de filtro
+                const filterButton = document.getElementById("applyFilterTecnicos");
+                if (filterButton) {
+                    filterButton.removeEventListener("click", applyDateFilter);
+                    filterButton.addEventListener("click", applyDateFilter);
+                }
+
+                // Renderizar el gráfico inicial
+                const chart = renderTecnicosChart();
+                
+                // Forzar un reflow después de la carga inicial
+                setTimeout(() => {
+                    chart.resize();
+                }, 300);
+
+            } else {
+                console.error('No se encontró el elemento del gráfico en el DOM');
+            }
+                                
             // Gráfico de tickets por técnico            
             const ticketsTecnicoElement = this._getChartElement("ticketsTecnicoChart");
 

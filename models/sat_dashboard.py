@@ -143,7 +143,28 @@ class SatDashboard(models.Model):
         except Exception as e:
             _logger.error("Error al procesar tickets por fecha: %s", str(e))
             tickets_por_fecha = {}
-
+        # Reparaciones por fecha
+        try:
+            reparaciones_por_fecha = {}
+            reparaciones = self.env['reparaciones.reparaciones'].search([('create_date', '!=', False), ('responsable_id', '!=', False)])
+            
+            for reparacion in reparaciones:
+                if reparacion.create_date:
+                    fecha_str = fields.Date.to_string(reparacion.create_date)  # Convertir a formato YYYY-MM-DD
+                    if fecha_str not in reparaciones_por_fecha:
+                        reparaciones_por_fecha[fecha_str] = []
+                    
+                    if reparacion.responsable_id:
+                        reparaciones_por_fecha[fecha_str].append({
+                            'tecnico': reparacion.responsable_id.id,
+                            'tecnico_nombre': reparacion.responsable_id.name,
+                        })
+            
+            _logger.info("Reparaciones por fecha procesadas: %s", reparaciones_por_fecha)
+            
+        except Exception as e:
+            _logger.error("Error al procesar reparaciones por fecha: %s", str(e))
+            reparaciones_por_fecha = {}
 
 
         # Crear el diccionario de retorno
@@ -162,6 +183,7 @@ class SatDashboard(models.Model):
             'reparaciones_hoy': reparaciones_hoy,
             'reparaciones_mes': reparaciones_mes,
             'reparaciones_ano': reparaciones_ano,
+            'reparaciones_por_fecha': reparaciones_por_fecha,
             'tecnicos_totales': tecnicos_totales,
             'total_tickets': total_tickets,
             'tickets_dia': tickets_dia,

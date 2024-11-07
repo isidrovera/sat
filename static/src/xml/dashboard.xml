@@ -215,17 +215,31 @@
                     <div class="col-lg-6 col-md-12">
                         <div class="chart-wrapper">
                             <div class="chart-header">
-                                <h4></h4>
+                                <h4>Reparaciones por Técnico</h4>
                                 <button class="expand-button">
                                     <i class="fa fa-expand"></i>
                                 </button>
                             </div>
+
+                            <!-- Filtros de Fecha en una sola fila -->
+                            <div class="filter-section mb-3 d-flex align-items-center">
+                                <label for="startDateTecnicos" class="mr-2">Fecha de Inicio:</label>
+                                <input type="date" id="startDateTecnicos" class="form-control mr-2"
+                                    style="width: auto;" />
+
+                                <label for="endDateTecnicos" class="mr-2">Fecha de Fin:</label>
+                                <input type="date" id="endDateTecnicos" class="form-control mr-2"
+                                    style="width: auto;" />
+
+                                <button id="applyFilterTecnicos" class="btn btn-primary">Aplicar
+                                    Filtros</button>
+                            </div>
+
                             <div class="chart-container">
                                 <canvas id="tecnicosChart"></canvas>
                             </div>
                         </div>
                     </div>
-
                     <!-- Contenedor principal para el gráfico de Tickets por Técnico -->
                     <div class="col-lg-6 col-md-12">
                         <div class="chart-wrapper">
