@@ -619,70 +619,78 @@ class SatDashboard extends Component {
                     const startDateInput = document.getElementById("startDate");
                     const endDateInput = document.getElementById("endDate");
                 
+                    console.log("Aplicando filtro de fecha...");
+                    console.log("Fecha de inicio:", startDateInput.value);
+                    console.log("Fecha de fin:", endDateInput.value);
+                
+                    // Si no hay fechas seleccionadas, mostrar mensaje
                     if (!startDateInput.value || !endDateInput.value) {
                         alert("Por favor, selecciona ambas fechas para aplicar el filtro");
                         return;
                     }
                 
-                    // Debug de la estructura de datos
-                    console.log("Estructura de tickets_por_fecha:", this.dashboardData.tickets_por_fecha);
+                    // Formatear fechas para comparación consistente
+                    const formatDate = (dateString) => {
+                        const date = new Date(dateString);
+                        return date.toISOString().split('T')[0];
+                    };
                 
-                    // Formatear fechas correctamente usando Date
-                    const startDate = new Date(startDateInput.value);
-                    const endDate = new Date(endDateInput.value);
-                    
-                    // Resetear las horas para comparación correcta
-                    startDate.setHours(0, 0, 0, 0);
-                    endDate.setHours(23, 59, 59, 999);
+                    const startDate = formatDate(startDateInput.value);
+                    const endDate = formatDate(endDateInput.value);
                 
-                    console.log("Fecha inicio (procesada):", startDate);
-                    console.log("Fecha fin (procesada):", endDate);
+                    console.log("Fecha inicio (formateada):", startDate);
+                    console.log("Fecha fin (formateada):", endDate);
                 
                     const filteredData = {};
                     let hayDatos = false;
                 
                     // Inicializar todos los técnicos con 0
-                    Object.keys(this.dashboardData.tecnicos_totales_tickets || {}).forEach(tecnico => {
-                        filteredData[tecnico] = 0;
+                    if (this.dashboardData.tecnicos_totales_tickets) {
+                        Object.keys(this.dashboardData.tecnicos_totales_tickets).forEach(tecnico => {
+                            filteredData[tecnico] = 0;
+                        });
+                    }
+                
+                    // Verificar si tenemos datos de tickets por fecha
+                    if (!this.dashboardData.tickets_por_fecha) {
+                        console.warn("No hay datos de tickets_por_fecha disponibles");
+                        const titleText = `Tickets por Técnico (${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})`;
+                        renderTicketsTecnicoChart(filteredData, titleText);
+                        return;
+                    }
+                
+                    // Filtrar los datos según el rango de fechas
+                    Object.entries(this.dashboardData.tickets_por_fecha).forEach(([fecha, tickets]) => {
+                        if (fecha >= startDate && fecha <= endDate) {
+                            tickets.forEach(ticket => {
+                                if (ticket.tecnico_nombre) {
+                                    filteredData[ticket.tecnico_nombre] = (filteredData[ticket.tecnico_nombre] || 0) + 1;
+                                    hayDatos = true;
+                                }
+                            });
+                        }
                     });
                 
-                    // Debug antes del filtrado
-                    console.log("Técnicos inicializados:", filteredData);
-                    
-                    if (this.dashboardData.tickets_por_fecha) {
-                        Object.entries(this.dashboardData.tickets_por_fecha).forEach(([fecha, tickets]) => {
-                            const ticketDate = new Date(fecha);
-                            ticketDate.setHours(0, 0, 0, 0);
-                            
-                            console.log("Comparando fecha:", {
-                                fecha: ticketDate,
-                                esMayorIgualInicio: ticketDate >= startDate,
-                                esMenorIgualFin: ticketDate <= endDate
-                            });
+                    console.log("Datos después del filtrado:", filteredData);
                 
-                            if (ticketDate >= startDate && ticketDate <= endDate) {
-                                tickets.forEach(ticket => {
-                                    if (ticket && ticket.tecnico) {
-                                        filteredData[ticket.tecnico] = (filteredData[ticket.tecnico] || 0) + 1;
-                                        hayDatos = true;
-                                        console.log(`Ticket encontrado para ${ticket.tecnico} en fecha ${fecha}`);
-                                    }
-                                });
-                            }
-                        });
-                
-                        console.log("Datos filtrados finales:", filteredData);
-                        const titleText = `Tickets por Técnico (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
-                        renderTicketsTecnicoChart(filteredData, titleText);
+                    // Si no hay datos en el rango seleccionado, mostrar mensaje
+                    if (!hayDatos) {
+                        console.log("No se encontraron tickets en el rango de fechas seleccionado");
                     }
+                
+                    // Actualizar el gráfico con los datos filtrados
+                    const titleText = `Tickets por Técnico (${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})`;
+                    renderTicketsTecnicoChart(filteredData, titleText);
                 };
-
+                
                 // Configurar el event listener para el botón de filtro
                 const filterButton = document.getElementById("applyFilter");
                 if (filterButton) {
                     filterButton.removeEventListener("click", applyDateFilter);
                     filterButton.addEventListener("click", applyDateFilter);
                 }
+
+              
 
                 // Renderizar el gráfico inicial
                 const chart = renderTicketsTecnicoChart();

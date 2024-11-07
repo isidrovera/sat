@@ -121,6 +121,27 @@ class SatDashboard(models.Model):
             tickets_por_año[año] = tickets_count_año
         _logger.info("Tickets por año: %s", tickets_por_año)
 
+        # Tickets por fecha
+        tickets_por_fecha = {}
+        ticket_groups = self.env['ticket.alquiler'].read_group(
+            [],
+            ['responsable', 'agenda:day'],
+            ['agenda:day', 'responsable'],
+            lazy=False
+        )
+
+        for group in ticket_groups:
+            fecha = group['agenda:day']
+            if fecha:
+                if fecha not in tickets_por_fecha:
+                    tickets_por_fecha[fecha] = []
+                if group['responsable']:
+                    tickets_por_fecha[fecha].append({
+                        'tecnico': group['responsable'][0],
+                        'tecnico_nombre': group['responsable'][1],
+                    })
+
+
         # Crear el diccionario de retorno
         data = {
             'total_maquinas': total_maquinas,
@@ -142,6 +163,7 @@ class SatDashboard(models.Model):
             'tickets_dia': tickets_dia,
             'tickets_mes': tickets_mes,
             'tickets_ano': tickets_ano,
+            'tickets_por_fecha': tickets_por_fecha,
             'tecnicos_totales_tickets': tecnicos_totales_tickets,
             'clientes_totales_tickets': clientes_totales_tickets,
             'maquinas_totales_tickets': maquinas_totales_tickets,
