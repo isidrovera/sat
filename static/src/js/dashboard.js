@@ -636,46 +636,45 @@ class SatDashboard extends Component {
                         return;
                     }
                 
+                    // Convertir las fechas correctamente
                     const startDate = new Date(startDateInput.value);
-                    startDate.setHours(0, 0, 0, 0);
+                    startDate.setUTCHours(0, 0, 0, 0);
                     const endDate = new Date(endDateInput.value);
-                    endDate.setHours(23, 59, 59, 999);
+                    endDate.setUTCHours(23, 59, 59, 999);
                 
                     console.log(`Aplicando filtro - Desde: ${startDate.toISOString()} hasta: ${endDate.toISOString()}`);
                 
                     // Filtrar datos según las fechas seleccionadas
                     const filteredData = {};
-                    let hayDatos = false;
+                    let dataFound = false;
                     
                     if (this.dashboardData.tickets_por_fecha) {
                         Object.entries(this.dashboardData.tickets_por_fecha).forEach(([fecha, tickets]) => {
                             const ticketDate = new Date(fecha);
+                            ticketDate.setUTCHours(0, 0, 0, 0); // Normalizar la fecha del ticket
+                            
                             if (ticketDate >= startDate && ticketDate <= endDate) {
-                                tickets.forEach(ticket => {
-                                    if (ticket && ticket.tecnico) {
-                                        filteredData[ticket.tecnico] = (filteredData[ticket.tecnico] || 0) + 1;
-                                        hayDatos = true;
-                                    }
-                                });
+                                if (Array.isArray(tickets)) {
+                                    tickets.forEach(ticket => {
+                                        if (ticket && ticket.tecnico) {
+                                            dataFound = true;
+                                            filteredData[ticket.tecnico] = (filteredData[ticket.tecnico] || 0) + 1;
+                                        }
+                                    });
+                                }
                             }
                         });
                 
-                        // Si no hay datos en el rango seleccionado
-                        if (!hayDatos) {
-                            alert("No se encontraron tickets en el rango de fechas seleccionado");
-                            // Renderizar gráfico vacío o con datos en 0
+                        if (!dataFound) {
+                            console.log("No se encontraron datos para el período seleccionado");
                             const emptyData = {};
-                            Object.keys(this.dashboardData.tecnicos_totales_tickets || {}).forEach(tecnico => {
-                                emptyData[tecnico] = 0;
-                            });
+                            // Renderizar el gráfico con datos vacíos
                             const titleText = `Tickets por Técnico (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
                             renderTicketsTecnicoChart(emptyData, titleText);
                             return;
                         }
                 
                         console.log("Datos filtrados:", filteredData);
-                
-                        // Actualizar el gráfico con los datos filtrados
                         const titleText = `Tickets por Técnico (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
                         renderTicketsTecnicoChart(filteredData, titleText);
                     }
