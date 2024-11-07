@@ -296,6 +296,7 @@ class SatDashboard extends Component {
 
            // Gráfico de estado
 
+            // Gráfico de estado
             const estadoElement = this._getChartElement("estadoChart");
             if (estadoElement) {
                 console.log('Renderizando gráfico de estado...');
@@ -305,10 +306,10 @@ class SatDashboard extends Component {
                     title: { 
                         text: 'Estado de Máquinas',
                         left: 'center',
-                        top: '0%', // Mueve el título más arriba
+                        top: '0%',
                         textStyle: {
                             fontSize: 14,
-                            fontWeight: 'bold',
+                            fontWeight: 'normal',
                         }
                     },
                     tooltip: { 
@@ -316,20 +317,56 @@ class SatDashboard extends Component {
                         formatter: '{b}: {c} ({d}%)'
                     },
                     legend: {
-                        show: false // Oculta la leyenda
+                        show: false
                     },
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: ['40%', '70%'], // Gráfico de dona
-                        center: ['50%', '55%'], // Centra el gráfico en el eje vertical
+                        radius: ['50%', '70%'],
+                        center: ['50%', '50%'],
                         avoidLabelOverlap: true,
                         data: [
-                            { value: this.dashboardData.maquinas_sin_revisar, name: 'Sin Revisar', itemStyle: { color: '#42A5F5' } },
-                            { value: this.dashboardData.maquinas_en_revision, name: 'En Revisión', itemStyle: { color: '#66BB6A' } },
-                            { value: this.dashboardData.maquinas_finalizadas, name: 'Finalizadas', itemStyle: { color: '#FFCA28' } },
-                            { value: this.dashboardData.maquinas_problemas, name: 'Problemas', itemStyle: { color: '#EF5350' } }
+                            { 
+                                value: this.dashboardData.maquinas_sin_revisar, 
+                                name: 'Sin Revisar', 
+                                itemStyle: { color: '#36A2EB' }
+                            },
+                            { 
+                                value: this.dashboardData.maquinas_en_revision, 
+                                name: 'En Revisión', 
+                                itemStyle: { color: '#4BC0C0' }
+                            },
+                            { 
+                                value: this.dashboardData.maquinas_finalizadas, 
+                                name: 'Finalizadas', 
+                                itemStyle: { color: '#FF9F40' }
+                            },
+                            { 
+                                value: this.dashboardData.maquinas_problemas, 
+                                name: 'Problemas', 
+                                itemStyle: { color: '#FF6384' }
+                            }
                         ],
+                        label: {
+                            show: true,
+                            position: 'outside',
+                            formatter: function(params) {
+                                return params.name;
+                            },
+                            fontSize: 12,
+                            color: '#666',
+                            distance: 5
+                        },
+                        labelLine: {
+                            show: true,
+                            length: 10,
+                            length2: 10,
+                            smooth: false,
+                            lineStyle: {
+                                width: 1,
+                                type: 'solid'
+                            }
+                        },
                         emphasis: {
                             itemStyle: {
                                 shadowBlur: 10,
@@ -337,41 +374,14 @@ class SatDashboard extends Component {
                                 shadowColor: 'rgba(0, 0, 0, 0.5)'
                             }
                         },
-                        label: {
-                            show: true,
-                            position: 'outside',
-                            formatter: '{b}: {c} ({d}%)',
-                            fontSize: 12,
-                            color: '#333',
-                            backgroundColor: '#fff',
-                            padding: [4, 8],
-                            borderRadius: 4,
-                            alignTo: 'edge',
-                            edgeDistance: '10%',
-                            distanceToLabelLine: 5
-                        },
-                        labelLine: {
-                            show: true,
-                            length: 30,
-                            length2: 20,
-                            smooth: true,
-                            lineStyle: {
-                                width: 1,
-                                type: 'solid'
-                            },
-                            maxSurfaceAngle: 80
-                        },
-                        labelLayout: {
-                            hideOverlap: true,
-                            moveOverlap: 'shiftY'
-                        }
-                    }],
-                    animationDuration: 1000,
-                    animationEasing: 'cubicInOut'
+                        animation: true,
+                        animationDuration: 1000,
+                        animationEasing: 'cubicInOut'
+                    }]
                 });
 
                 console.log('Gráfico de estado renderizado exitosamente');
-
+                
                 // Hacer el gráfico responsive
                 window.addEventListener('resize', function() {
                     estadoChart.resize();
