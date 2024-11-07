@@ -371,6 +371,7 @@ class SatDashboard extends Component {
             if (tecnicosElement) {
                 console.log('Renderizando gráfico de técnicos...');
                 
+                // Hacer que el contenedor sea responsive
                 tecnicosElement.style.width = '100%';
                 tecnicosElement.style.position = 'relative';
                 tecnicosElement.style.overflow = 'hidden';
@@ -392,7 +393,7 @@ class SatDashboard extends Component {
                     // Crear y configurar el gráfico
                     const tecnicosChart = echarts.init(tecnicosElement);
 
-                    const option = {
+                    tecnicosChart.setOption({
                         title: {
                             text: titleText,
                             left: 'center',
@@ -476,8 +477,6 @@ class SatDashboard extends Component {
                         }]
                     });
 
-                    tecnicosChart.setOption(option, true);
-
                     // Manejar el redimensionamiento
                     const handleResize = () => {
                         const parentElement = tecnicosElement.parentElement;
@@ -507,13 +506,11 @@ class SatDashboard extends Component {
                     console.log("Fecha de inicio:", startDateInput.value);
                     console.log("Fecha de fin:", endDateInput.value);
                 
-                    // Si no hay fechas seleccionadas, mostrar mensaje
                     if (!startDateInput.value || !endDateInput.value) {
                         alert("Por favor, selecciona ambas fechas para aplicar el filtro");
                         return;
                     }
                 
-                    // Formatear fechas para comparación consistente
                     const formatDate = (dateString) => {
                         const date = new Date(dateString);
                         return date.toISOString().split('T')[0];
@@ -557,12 +554,10 @@ class SatDashboard extends Component {
                 
                     console.log("Datos después del filtrado:", filteredData);
                 
-                    // Si no hay datos en el rango seleccionado, mostrar mensaje
                     if (!hayDatos) {
                         console.log("No se encontraron reparaciones en el rango de fechas seleccionado");
                     }
                 
-                    // Actualizar el gráfico con los datos filtrados
                     const titleText = `Reparaciones por Técnico (${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})`;
                     renderTecnicosChart(filteredData, titleText);
                 };
@@ -585,7 +580,7 @@ class SatDashboard extends Component {
             } else {
                 console.error('No se encontró el elemento del gráfico en el DOM');
             }
-                                
+                                            
             // Gráfico de tickets por técnico            
             const ticketsTecnicoElement = this._getChartElement("ticketsTecnicoChart");
 
