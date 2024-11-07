@@ -121,25 +121,29 @@ class SatDashboard(models.Model):
             tickets_por_año[año] = tickets_count_año
         _logger.info("Tickets por año: %s", tickets_por_año)
 
-        # Tickets por fecha
-        tickets_por_fecha = {}
-        ticket_groups = self.env['ticket.alquiler'].read_group(
-            [],
-            ['responsable', 'agenda:day'],
-            ['agenda:day', 'responsable'],
-            lazy=False
-        )
+        try:
+            # Obtener todos los tickets con sus fechas y técnicos
+            tickets_por_fecha = {}
+            tickets = self.env['ticket.alquiler'].search([('agenda', '!=', False), ('responsable', '!=', False)])
+            
+            for ticket in tickets:
+                if ticket.agenda:
+                    fecha_str = fields.Date.to_string(ticket.agenda)  # Convertir a formato YYYY-MM-DD
+                    if fecha_str not in tickets_por_fecha:
+                        tickets_por_fecha[fecha_str] = []
+                    
+                    if ticket.responsable:
+                        tickets_por_fecha[fecha_str].append({
+                            'tecnico': ticket.responsable.id,
+                            'tecnico_nombre': ticket.responsable.name,
+                        })
+            
+            _logger.info("Tickets por fecha procesados: %s", tickets_por_fecha)
+            
+        except Exception as e:
+            _logger.error("Error al procesar tickets por fecha: %s", str(e))
+            tickets_por_fecha = {}
 
-        for group in ticket_groups:
-            fecha = group['agenda:day']
-            if fecha:
-                if fecha not in tickets_por_fecha:
-                    tickets_por_fecha[fecha] = []
-                if group['responsable']:
-                    tickets_por_fecha[fecha].append({
-                        'tecnico': group['responsable'][0],
-                        'tecnico_nombre': group['responsable'][1],
-                    })
 
 
         # Crear el diccionario de retorno
