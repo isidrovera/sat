@@ -40,7 +40,7 @@
                                 <field name="tipo_revision" widget="badge" />
                                 <field name="ubicacion_id" widget="badge" />
                                 <field name="responsable_id" widget="many2one_avatar"
-                                    options="{'no_create': True}" />
+                                    options="{'no_create': True}"  readonly="estado_id == 'en_revision'"/>
                                 <field name="responsable_mobile_clean" />
                             </group>
                             <group string="Datos del equipo">
@@ -55,7 +55,7 @@
                                 <field name="marca" />
                                 <field name="maquina_id"
                                     domain="[('estado_ventas_id', '=', 'sin_revisar')]"
-                                    options="{'no_create': True}" />
+                                    options="{'no_create': True}" readonly="estado_id == 'en_revision'" />
                                 <field name="serie_id" />
                                 <field name="contometrok_id" />
                                 <field name="contometro_inicial" invisible="True"/>
