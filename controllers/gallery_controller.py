@@ -9,6 +9,15 @@ _logger = logging.getLogger(__name__)
 
 class GalleryController(http.Controller):
     
+    def _prepare_photo_data(self, foto):
+        """Prepara los datos de la foto para la vista"""
+        return {
+            'id': foto.id,
+            'nombre': foto.nombre_foto,
+            'image_url': f'/gallery/image/{foto.id}',
+            'download_url': f'/gallery/download/{foto.id}'
+        }
+    
     @http.route('/gallery/<int:reparacion_id>', type='http', auth='public', website=True)
     def gallery_page(self, reparacion_id, **kwargs):
         reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
@@ -19,14 +28,12 @@ class GalleryController(http.Controller):
             ('reparacion_id', '=', reparacion_id)
         ])
         
-        # Preparar URLs para las imágenes
-        for foto in fotos:
-            foto.image_url = f'/gallery/image/{foto.id}'
-            foto.download_url = f'/gallery/download/{foto.id}'
+        # Preparar los datos de las fotos
+        fotos_data = [self._prepare_photo_data(foto) for foto in fotos]
         
         values = {
             'reparacion': reparacion,
-            'fotos': fotos,
+            'fotos': fotos_data,
         }
         return request.render('sat.gallery_page_template', values)
 
@@ -41,7 +48,7 @@ class GalleryController(http.Controller):
             return request.make_response(
                 binary_content,
                 headers=[
-                    ('Content-Type', 'image/jpeg'),  # Ajusta según el tipo de imagen
+                    ('Content-Type', 'image/jpeg'),
                     ('Content-Length', len(binary_content))
                 ]
             )
