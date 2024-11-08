@@ -8,32 +8,42 @@ _logger = logging.getLogger(__name__)
 
 class GalleryController(http.Controller):
 
-    @http.route('/gallery/<int:reparacion_id>', type='http', auth='public', website=True)
+    @http.route('/gallery/<int:reparacion_id>', type='http', auth='public')
     def gallery_page(self, reparacion_id, **kwargs):
-        reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
-        if not reparacion.exists():
+        try:
+            reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                return request.not_found()
+            
+            fotos = request.env['reparaciones.foto'].sudo().search([
+                ('reparacion_id', '=', reparacion_id)
+            ])
+            
+            # Obtener configuración de pCloud
+            pcloud_config = request.env['pcloud.configuracion'].sudo().search([], limit=1)
+            
+            # Preparar datos de fotos con miniaturas
+            fotos_data = []
+            for foto in fotos:
+                if foto.file_id:
+                    thumb_url = foto._get_thumb_url(foto.file_id, pcloud_config)  # Pasa `pcloud_config`
+                    fotos_data.append({
+                        'id': foto.id,
+                        'nombre': foto.nombre_foto,
+                        'preview_url': foto.url_foto,  # URL original para previsualización
+                        'thumb_url': thumb_url or foto.url_foto,  # Miniatura o URL original como fallback
+                        'public_link': foto.public_link,  # Link público
+                    })
+            
+            return request.render('sat.gallery_page_template', {
+                'reparacion': reparacion,
+                'fotos': fotos_data,
+            })
+            
+        except Exception as e:
+            _logger.error("Error al cargar la galería: %s", str(e))
             return request.not_found()
-        
-        fotos = request.env['reparaciones.foto'].sudo().search([('reparacion_id', '=', reparacion_id)])
 
-        # Preparar datos para la galería
-        fotos_data = []
-        for foto in fotos:
-            if foto.file_id:
-                # Obtener URLs de miniatura y descarga
-                thumb_url = foto._get_thumb_url(foto.file_id)
-                download_url = foto._get_file_url(foto.file_id)
-                fotos_data.append({
-                    'id': foto.id,
-                    'nombre': foto.nombre_foto,
-                    'thumb_url': thumb_url,
-                    'download_url': download_url,
-                })
-        
-        return request.render('sat.gallery_page_template', {
-            'reparacion': reparacion,
-            'fotos': fotos_data,
-        })
 
     @http.route('/gallery/upload_photo', type='http', auth='user', methods=['POST'], csrf=False)
     def upload_photo(self, reparacion_id, **kwargs):
