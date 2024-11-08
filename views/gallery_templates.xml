@@ -4,6 +4,7 @@
         <t t-call="website.layout">
             <div class="container">
                 <h1>Galería de Fotos - Reparación <t t-esc="reparacion.name"/></h1>
+                <a t-att-href="'/gallery/api/download_all/' + str(reparacion.id)" class="btn btn-primary my-3">Descargar todas las fotos</a>
                 <div class="row">
                     <t t-foreach="fotos" t-as="foto">
                         <div class="col-md-3">
@@ -23,6 +24,8 @@
                 </div>
             </div>
         </t>
+    </template>
+    
     </template>
     
     
