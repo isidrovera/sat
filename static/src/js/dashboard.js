@@ -304,7 +304,7 @@ class SatDashboard extends Component {
                     backgroundColor: '#fff',
                     tooltip: { 
                         trigger: 'item',
-                        formatter: '{b}: {c} ({d}%)'
+                        formatter: '{b}: {c}'
                     },
                     legend: {
                         show: false
@@ -312,8 +312,9 @@ class SatDashboard extends Component {
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: ['45%', '65%'],
-                        center: ['50%', '50%'],
+                        radius: ['40%', '60%'],  // Reducido para dar más espacio a las etiquetas
+                        center: ['50%', '50%'],  // Centrado en la pantalla
+                        avoidLabelOverlap: true,
                         data: [
                             { 
                                 value: this.dashboardData.maquinas_sin_revisar, 
@@ -327,53 +328,56 @@ class SatDashboard extends Component {
                             },
                             { 
                                 value: this.dashboardData.maquinas_finalizadas, 
-                                name: 'Finalizadas', 
+                                name: 'Finalizadas: ', 
                                 itemStyle: { color: '#FF9F40' }
                             },
                             { 
                                 value: this.dashboardData.maquinas_problemas, 
-                                name: 'Problemas', 
+                                name: 'Problemas: ', 
                                 itemStyle: { color: '#FF6384' }
                             }
                         ],
                         label: {
                             show: true,
                             position: 'outside',
+                            alignTo: 'none',
+                            edgeDistance: '10%',
                             formatter: function(params) {
-                                // Muestra tanto el nombre como el valor
                                 return `${params.name}: ${params.value}`;
                             },
                             color: '#666',
                             fontSize: 12,
+                            backgroundColor: 'transparent',
                             distance: 5,
-                            align: 'center',
-                            verticalAlign: 'middle'
+                            overflow: 'none'
                         },
                         labelLine: {
                             show: true,
-                            length: 15,
-                            length2: 20,
+                            length: 20,
+                            length2: 30,  // Líneas más largas para evitar solapamiento
+                            maxSurfaceAngle: 80,
                             lineStyle: {
-                                color: '#666',
-                                width: 1
+                                width: 1,
+                                type: 'solid',
+                                color: '#666'
                             }
                         },
                         itemStyle: {
-                            borderRadius: 2,
                             borderColor: '#fff',
-                            borderWidth: 2,
-                            shadowBlur: 5,
-                            shadowColor: 'rgba(0, 0, 0, 0.2)'
-                        },
-                        animationType: 'scale',
-                        animationEasing: 'elasticOut',
-                        animationDelay: function(idx) {
-                            return Math.random() * 200;
+                            borderWidth: 2
                         },
                         emphasis: {
-                            scale: true,
-                            scaleSize: 5
-                        }
+                            label: {
+                                show: true,
+                                fontSize: 12,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        zlevel: 0,
+                        silent: false,
+                        animation: true,
+                        animationDuration: 1000,
+                        animationEasing: 'cubicOut'
                     }]
                 };
 
