@@ -1,43 +1,30 @@
 // sat/static/src/js/gallery.js
 document.addEventListener('DOMContentLoaded', function() {
     const gallery = {
-        init: function() {
+        init() {
+            this.fileInput = document.getElementById('fileUpload');
+            this.progressBar = document.querySelector('.upload-progress');
             this.bindEvents();
         },
 
-        bindEvents: function() {
-            document.getElementById('fileUpload')?.addEventListener('change', this.handleFileUpload.bind(this));
-            document.querySelectorAll('.delete-photo').forEach(button => {
-                button.addEventListener('click', this.handleDelete.bind(this));
+        bindEvents() {
+            this.fileInput?.addEventListener('change', (e) => this.handleFileUpload(e));
+            document.querySelectorAll('.delete-photo').forEach(btn => {
+                btn.addEventListener('click', (e) => this.handleDelete(e));
             });
         },
 
-        handleFileUpload: function(event) {
+        handleFileUpload(event) {
             const files = event.target.files;
-            if (files.length > 0) {
-                this.uploadFiles(files);
-            }
-        },
+            if (!files.length) return;
 
-        handleDelete: function(event) {
-            event.preventDefault();
-            const photoId = event.target.closest('.delete-photo').dataset.photoId;
-            if (confirm('¿Está seguro de eliminar esta foto?')) {
-                this.deletePhoto(photoId);
-            }
-        },
-
-        uploadFiles: function(files) {
             const formData = new FormData();
-            const progressBar = document.getElementById('uploadProgress');
-            const progressBarInner = progressBar.querySelector('.progress-bar');
-            const reparacionId = document.querySelector('.gallery-container').dataset.reparacionId;
-
             Array.from(files).forEach(file => {
                 formData.append('files[]', file);
             });
 
-            progressBar.classList.remove('d-none');
+            this.progressBar.style.display = 'block';
+            const reparacionId = window.location.pathname.split('/').pop();
 
             fetch(`/gallery/upload/${reparacionId}`, {
                 method: 'POST',
@@ -46,47 +33,72 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    window.location.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: 'Fotos subidas correctamente'
+                    }).then(() => {
+                        window.location.reload();
+                    });
                 } else {
-                    this.showError(data.error || 'Error al subir las fotos');
+                    throw new Error(data.error || 'Error al subir las fotos');
                 }
             })
             .catch(error => {
-                this.showError('Error al subir las fotos: ' + error.message);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message
+                });
             })
             .finally(() => {
-                progressBar.classList.add('d-none');
-                progressBarInner.style.width = '0%';
+                this.progressBar.style.display = 'none';
+                this.fileInput.value = '';
             });
         },
 
-        deletePhoto: function(photoId) {
+        handleDelete(event) {
+            const photoId = event.currentTarget.dataset.photoId;
+            
+            Swal.fire({
+                title: '¿Está seguro?',
+                text: 'Esta acción no se puede deshacer',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.deletePhoto(photoId);
+                }
+            });
+        },
+
+        deletePhoto(photoId) {
             fetch(`/gallery/delete/${photoId}`, {
                 method: 'POST'
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    const photoElement = document.querySelector(`[data-photo-id="${photoId}"]`);
-                    photoElement?.remove();
-                    this.showSuccess('Foto eliminada correctamente');
+                    const photoCard = document.querySelector(`[data-photo-id="${photoId}"]`);
+                    photoCard?.remove();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: 'Foto eliminada correctamente'
+                    });
                 } else {
-                    this.showError(data.error || 'Error al eliminar la foto');
+                    throw new Error(data.error || 'Error al eliminar la foto');
                 }
             })
             .catch(error => {
-                this.showError('Error al eliminar la foto: ' + error.message);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message
+                });
             });
-        },
-
-        showError: function(message) {
-            // Implementa tu propio sistema de notificaciones o usa alert
-            alert(message);
-        },
-
-        showSuccess: function(message) {
-            // Implementa tu propio sistema de notificaciones o usa alert
-            alert(message);
         }
     };
 
