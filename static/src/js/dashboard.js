@@ -294,112 +294,109 @@ class SatDashboard extends Component {
                 console.log('Gráfico de disponibilidad renderizado exitosamente');
             }
 
-           // Gráfico de estado
-
-            const estadoElement = this._getChartElement("estadoChart");
-            if (estadoElement) {
-                console.log('Renderizando gráfico de estado...');
-                const estadoChart = echarts.init(estadoElement);
-
-                const option = {
-                    backgroundColor: '#fff',  // Mantenemos fondo blanco para tu interfaz
-                    title: { 
-                        text: 'Estado de Máquinas',
-                        left: 'center',
-                        top: 20,
-                        textStyle: {
-                            fontSize: 14,
-                            fontWeight: 'normal',
-                            color: '#333'
+           // Gráfico de // Gráfico de estado
+        const estadoElement = this._getChartElement("estadoChart");
+        if (estadoElement) {
+            console.log('Renderizando gráfico de estado...');
+            const estadoChart = echarts.init(estadoElement);
+        
+            const option = {
+                backgroundColor: '#fff',
+                title: { 
+                    text: 'Estado de Máquinas',
+                    left: 'center',
+                    top: '5%',  // Movido más arriba
+                    textStyle: {
+                        fontSize: 16,
+                        fontWeight: 'normal',
+                        color: '#333'
+                    },
+                    padding: [0, 0, 20, 0]  // Añade espacio debajo del título
+                },
+                tooltip: { 
+                    trigger: 'item',
+                    formatter: '{b}: {c} ({d}%)'
+                },
+                legend: {
+                    show: false
+                },
+                series: [{
+                    name: 'Estado',
+                    type: 'pie',
+                    radius: ['45%', '65%'],
+                    center: ['50%', '55%'],  // Ajustado para dar espacio al título
+                    data: [
+                        { 
+                            value: this.dashboardData.maquinas_sin_revisar, 
+                            name: 'Sin Revisar', 
+                            itemStyle: { color: '#36A2EB' }
+                        },
+                        { 
+                            value: this.dashboardData.maquinas_en_revision, 
+                            name: 'En Revisión', 
+                            itemStyle: { color: '#4BC0C0' }
+                        },
+                        { 
+                            value: this.dashboardData.maquinas_finalizadas, 
+                            name: 'Finalizadas', 
+                            itemStyle: { color: '#FF9F40' }
+                        },
+                        { 
+                            value: this.dashboardData.maquinas_problemas, 
+                            name: 'Problemas', 
+                            itemStyle: { color: '#FF6384' }
                         }
+                    ],
+                    label: {
+                        show: true,
+                        position: 'outside',
+                        formatter: '{b}',
+                        color: '#666',
+                        fontSize: 12,
+                        distance: 5,
+                        align: 'center',
+                        verticalAlign: 'middle'
                     },
-                    tooltip: { 
-                        trigger: 'item',
-                        formatter: '{b}: {c} ({d}%)'
-                    },
-                    legend: {
-                        show: false
-                    },
-                    series: [{
-                        name: 'Estado',
-                        type: 'pie',
-                        radius: ['45%', '65%'],
-                        center: ['50%', '50%'],
-                        data: [
-                            { 
-                                value: this.dashboardData.maquinas_sin_revisar, 
-                                name: 'Sin Revisar', 
-                                itemStyle: { color: '#36A2EB' }
-                            },
-                            { 
-                                value: this.dashboardData.maquinas_en_revision, 
-                                name: 'En Revisión', 
-                                itemStyle: { color: '#4BC0C0' }
-                            },
-                            { 
-                                value: this.dashboardData.maquinas_finalizadas, 
-                                name: 'Finalizadas', 
-                                itemStyle: { color: '#FF9F40' }
-                            },
-                            { 
-                                value: this.dashboardData.maquinas_problemas, 
-                                name: 'Problemas', 
-                                itemStyle: { color: '#FF6384' }
-                            }
-                        ].sort(function(a, b) {
-                            return b.value - a.value;  // Ordenamos de mayor a menor
-                        }),
-                        label: {
-                            show: true,
-                            position: 'outside',
-                            formatter: '{b}',
+                    labelLine: {
+                        show: true,
+                        length: 15,
+                        length2: 20,
+                        lineStyle: {
                             color: '#666',
-                            fontSize: 12,
-                            distance: 5
-                        },
-                        labelLine: {
-                            show: true,
-                            smooth: 0.2,
-                            length: 10,
-                            length2: 20,
-                            lineStyle: {
-                                color: '#666',
-                                width: 1
-                            }
-                        },
-                        itemStyle: {
-                            shadowBlur: 10,
-                            shadowColor: 'rgba(0, 0, 0, 0.2)',
-                            shadowOffsetX: 0,
-                            shadowOffsetY: 0,
-                            borderRadius: 2,
-                            borderColor: '#fff',
-                            borderWidth: 2
-                        },
-                        animationType: 'scale',
-                        animationEasing: 'elasticOut',
-                        animationDelay: function(idx) {
-                            return Math.random() * 200;
-                        },
-                        emphasis: {
-                            scale: true,
-                            scaleSize: 10,
-                            itemStyle: {
-                                shadowBlur: 20,
-                                shadowColor: 'rgba(0, 0, 0, 0.5)'
-                            }
+                            width: 1
                         }
-                    }]
-                };
-
-                estadoChart.setOption(option);
-                console.log('Gráfico de estado renderizado exitosamente');
-
-                // Hacer el gráfico responsive
-                window.addEventListener('resize', function() {
-                    estadoChart.resize();
-                });
-            }
+                    },
+                    itemStyle: {
+                        borderRadius: 2,
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        shadowBlur: 5,
+                        shadowColor: 'rgba(0, 0, 0, 0.2)'
+                    },
+                    animationType: 'scale',
+                    animationEasing: 'elasticOut',
+                    animationDelay: function(idx) {
+                        return Math.random() * 200;
+                    },
+                    emphasis: {
+                        scale: true,
+                        scaleSize: 5
+                    }
+                }],
+                grid: {
+                    top: '15%'  // Dar más espacio en la parte superior
+                }
+            };
+        
+            estadoChart.setOption(option);
+            console.log('Gráfico de estado renderizado exitosamente');
+        
+            // Hacer el gráfico responsive
+            window.addEventListener('resize', function() {
+                estadoChart.resize();
+            });
+        }
+        
 
 
             // Gráfico de técnicos            
