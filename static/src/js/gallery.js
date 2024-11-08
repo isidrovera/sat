@@ -3,98 +3,76 @@ document.addEventListener('DOMContentLoaded', function() {
     const gallery = {
         init() {
             console.log('Iniciando galería...');
+            // Obtener elementos del DOM
             this.fileInput = document.getElementById('fileUpload');
+            this.progressBar = document.querySelector('.upload-progress');
+            this.photoGrid = document.querySelector('#photoGrid');
             this.syncButton = document.getElementById('syncButton');
-            this.photoGrid = document.getElementById('photoGrid');
+            
+            // Obtener ID de reparación de la URL
             this.reparacionId = window.location.pathname.split('/').pop();
             console.log('ID de reparación:', this.reparacionId);
+
+            if (!this.fileInput) {
+                console.error('No se encontró el input de archivo');
+                return;
+            }
+            
+            // Vincular eventos
             this.bindEvents();
         },
 
         bindEvents() {
             console.log('Vinculando eventos...');
+            // Evento de subida de archivos
             if (this.fileInput) {
                 this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
                 console.log('Evento de subida de archivos vinculado');
             }
 
+            // Evento de sincronización
             if (this.syncButton) {
                 this.syncButton.addEventListener('click', () => this.handleSync());
                 console.log('Evento de sincronización vinculado');
             }
-            
-            document.querySelectorAll('.delete-photo').forEach(btn => {
+
+            // Eventos de eliminación
+            const deleteButtons = document.querySelectorAll('.delete-photo');
+            deleteButtons.forEach(btn => {
                 btn.addEventListener('click', (e) => this.handleDelete(e));
             });
-            console.log('Eventos de eliminación vinculados');
-        },
-
-        handleSync() {
-            console.log('Iniciando sincronización...');
-            this.showLoading('Sincronizando con pCloud...');
-            
-            fetch(`/gallery/sync/${this.reparacionId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({})
-            })
-            .then(response => {
-                console.log('Respuesta recibida:', response);
-                return response.json();
-            })
-            .then(data => {
-                console.log('Datos de sincronización:', data);
-                if (data.success) {
-                    this.showSuccess('Sincronización completada', data.message);
-                    console.log('Recargando página...');
-                    window.location.reload();
-                } else {
-                    throw new Error(data.error || 'Error al sincronizar');
-                }
-            })
-            .catch(error => {
-                console.error('Error en sincronización:', error);
-                this.showError('Error', error.message);
-            })
-            .finally(() => {
-                console.log('Finalizando sincronización');
-                this.hideLoading();
-            });
+            console.log('Eventos de eliminación vinculados:', deleteButtons.length);
         },
 
         handleFileUpload(event) {
             console.log('Iniciando subida de archivos...');
             const files = event.target.files;
-            if (!files.length) {
+            if (!files || !files.length) {
                 console.log('No se seleccionaron archivos');
                 return;
             }
-        
-            // Validar archivos antes de subir
-            const validFiles = Array.from(files).filter(file => {
-                if (!file.type.startsWith('image/')) {
-                    this.showError('Archivo no válido', `${file.name} no es una imagen válida`);
-                    return false;
+
+            // Crear FormData
+            const formData = new FormData();
+            Array.from(files).forEach(file => {
+                if (this.validateFile(file)) {
+                    formData.append('files[]', file);
+                    console.log('Archivo agregado:', file.name);
+                } else {
+                    console.warn('Archivo no válido:', file.name);
                 }
-                return true;
             });
-        
-            if (!validFiles.length) {
-                console.log('No hay archivos válidos para subir');
-                this.fileInput.value = '';
+
+            // Si no hay archivos válidos, salir
+            if (!formData.has('files[]')) {
+                this.showError('No hay archivos válidos', 'Por favor seleccione imágenes válidas');
                 return;
             }
-        
-            const formData = new FormData();
-            validFiles.forEach(file => {
-                formData.append('files[]', file);
-                console.log('Archivo agregado:', file.name);
-            });
-        
+
+            // Mostrar progreso
             this.showLoading('Subiendo fotos...');
-        
+
+            // Realizar la subida
             fetch(`/gallery/upload/${this.reparacionId}`, {
                 method: 'POST',
                 body: formData
@@ -106,11 +84,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 console.log('Datos de respuesta:', data);
                 if (data.success) {
-                    this.showSuccess('Éxito', data.message || 'Fotos subidas correctamente');
-                    // Esperar un poco antes de recargar
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
+                    this.showSuccess('Éxito', 'Fotos subidas correctamente');
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
                     throw new Error(data.error || 'Error al subir las fotos');
                 }
@@ -120,16 +95,64 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.showError('Error', error.message);
             })
             .finally(() => {
-                console.log('Finalizando subida');
+                if (this.fileInput) this.fileInput.value = '';
                 this.hideLoading();
-                this.fileInput.value = '';
+            });
+        },
+
+        validateFile(file) {
+            // Validar tipo de archivo
+            if (!file.type.startsWith('image/')) {
+                this.showError('Archivo no válido', `${file.name} no es una imagen`);
+                return false;
+            }
+
+            // Validar tamaño (10MB máximo)
+            const maxSize = 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                this.showError('Archivo muy grande', `${file.name} excede el tamaño máximo de 10MB`);
+                return false;
+            }
+
+            return true;
+        },
+
+        handleSync() {
+            console.log('Iniciando sincronización...');
+            this.showLoading('Sincronizando con pCloud...');
+
+            fetch(`/gallery/sync/${this.reparacionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccess('Sincronización completada', data.message || 'Fotos sincronizadas');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    throw new Error(data.error || 'Error al sincronizar');
+                }
+            })
+            .catch(error => {
+                console.error('Error en sincronización:', error);
+                this.showError('Error', error.message);
+            })
+            .finally(() => {
+                this.hideLoading();
             });
         },
 
         handleDelete(event) {
             const photoId = event.currentTarget.dataset.photoId;
-            console.log('Iniciando eliminación de foto:', photoId);
-            
+            if (!photoId) {
+                console.error('No se encontró ID de foto');
+                return;
+            }
+
             Swal.fire({
                 title: '¿Está seguro?',
                 text: 'Esta acción no se puede deshacer',
@@ -141,34 +164,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    console.log('Confirmada eliminación de foto:', photoId);
                     this.deletePhoto(photoId);
-                } else {
-                    console.log('Cancelada eliminación de foto:', photoId);
                 }
             });
         },
 
         deletePhoto(photoId) {
-            console.log('Ejecutando eliminación de foto:', photoId);
             this.showLoading('Eliminando foto...');
 
             fetch(`/gallery/delete/${photoId}`, {
                 method: 'POST'
             })
-            .then(response => {
-                console.log('Respuesta de eliminación:', response);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Datos de eliminación:', data);
                 if (data.success) {
                     const element = document.querySelector(`[data-photo-id="${photoId}"]`);
                     if (element) {
                         element.remove();
-                        console.log('Elemento eliminado del DOM');
+                        this.showSuccess('Éxito', 'Foto eliminada correctamente');
                     }
-                    this.showSuccess('Éxito', 'Foto eliminada correctamente');
                 } else {
                     throw new Error(data.error || 'Error al eliminar la foto');
                 }
@@ -178,13 +192,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.showError('Error', error.message);
             })
             .finally(() => {
-                console.log('Finalizando eliminación');
                 this.hideLoading();
             });
         },
 
         showLoading(message = 'Cargando...') {
-            console.log('Mostrando loading:', message);
             Swal.fire({
                 title: message,
                 allowOutsideClick: false,
@@ -195,12 +207,10 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         hideLoading() {
-            console.log('Ocultando loading');
             Swal.close();
         },
 
         showError(title, message) {
-            console.error('Mostrando error:', title, message);
             Swal.fire({
                 icon: 'error',
                 title: title,
@@ -210,7 +220,6 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         showSuccess(title, message) {
-            console.log('Mostrando éxito:', title, message);
             Swal.fire({
                 icon: 'success',
                 title: title,
