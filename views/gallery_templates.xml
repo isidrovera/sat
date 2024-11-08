@@ -13,13 +13,35 @@
                         <link href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/css/lightbox.min.css" rel="stylesheet"/>
                         
                         <style>
-                            /* ... (estilos anteriores) ... */
+                            .gallery-container {
+                                max-width: 1200px;
+                                margin: 0 auto;
+                                padding: 20px;
+                            }
+                            
+                            .gallery-grid {
+                                display: grid;
+                                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                                gap: 20px;
+                                padding: 20px 0;
+                            }
+                            
+                            .photo-card {
+                                background: white;
+                                border-radius: 8px;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                overflow: hidden;
+                                transition: transform 0.3s ease;
+                            }
+                            
+                            .photo-card:hover {
+                                transform: translateY(-5px);
+                                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                            }
                             
                             .photo-container {
                                 position: relative;
-                                padding-top: 75%;
-                                background: #f8f9fa;
-                                overflow: hidden;
+                                padding-top: 100%;  /* Aspecto cuadrado */
                             }
                             
                             .photo-container img {
@@ -28,43 +50,71 @@
                                 left: 0;
                                 width: 100%;
                                 height: 100%;
-                                object-fit: contain;
+                                object-fit: cover;
                             }
                             
-                            .photo-link {
-                                display: block;
+                            .photo-info {
+                                padding: 12px;
+                            }
+                            
+                            .photo-name {
+                                font-size: 14px;
+                                margin-bottom: 8px;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                            }
+                            
+                            .btn-download {
+                                display: inline-flex;
+                                align-items: center;
+                                justify-content: center;
                                 width: 100%;
-                                height: 100%;
+                                padding: 8px;
+                                background: #6c757d;
+                                color: white;
+                                border: none;
+                                border-radius: 4px;
                                 text-decoration: none;
+                                transition: background-color 0.2s;
                             }
                             
-                            /* Corregir problema con Lightbox */
-                            #lightbox img {
-                                object-fit: contain;
+                            .btn-download:hover {
+                                background: #5a6268;
+                                color: white;
+                            }
+                            
+                            .btn-download i {
+                                margin-right: 8px;
+                            }
+                            
+                            .header-action {
+                                margin-top: 20px;
+                                margin-bottom: 20px;
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
                             }
                         </style>
                     </head>
                     <body>
                         <div class="gallery-container">
-                            <div class="gallery-header">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                    <h1 class="h3 mb-0">Galería de Fotos - Reparación #<t t-esc="reparacion.id"/></h1>
-                                    <t t-if="fotos">
-                                        <a t-att-href="'/gallery/download_all/%s' % reparacion.id" 
-                                           class="btn-custom btn-primary-custom">
-                                            <i class="fas fa-download"/>
-                                            <span>Descargar Todas</span>
-                                        </a>
-                                    </t>
-                                </div>
+                            <div class="header-action">
+                                <h2>Galería de Fotos - Reparación #<t t-esc="reparacion.id"/></h2>
+                                <t t-if="fotos">
+                                    <a t-att-href="'/gallery/download_all/%s' % reparacion.id" 
+                                       class="btn-download">
+                                        <i class="fas fa-download"/>
+                                        Descargar Todas
+                                    </a>
+                                </t>
                             </div>
 
                             <t t-if="fotos">
                                 <div class="gallery-grid">
                                     <t t-foreach="fotos" t-as="foto">
                                         <div class="photo-card">
-                                            <a class="photo-link" 
-                                               t-att-href="foto['preview_url']"
+                                            <a t-att-href="foto['preview_url']" 
                                                t-att-data-lightbox="'gallery'"
                                                t-att-data-title="foto['nombre']">
                                                 <div class="photo-container">
@@ -75,11 +125,10 @@
                                             </a>
                                             <div class="photo-info">
                                                 <div class="photo-name" t-esc="foto['nombre']"/>
-                                                <a t-att-href="foto['download_url']"
-                                                   class="btn-custom btn-secondary-custom w-100"
-                                                   download="">
+                                                <a t-att-href="'/gallery/download/%s' % foto['id']"
+                                                   class="btn-download">
                                                     <i class="fas fa-download"/>
-                                                    <span>Descargar</span>
+                                                    Descargar
                                                 </a>
                                             </div>
                                         </div>
@@ -87,24 +136,15 @@
                                 </div>
                             </t>
                             <t t-else="">
-                                <div class="text-center p-5 bg-white rounded-3">
+                                <div class="text-center p-5">
                                     <h3>No hay fotos disponibles</h3>
                                 </div>
                             </t>
                         </div>
 
-                        <!-- Scripts -->
                         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"/>
                         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"/>
                         <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/js/lightbox.min.js"/>
-                        <script>
-                            lightbox.option({
-                                'resizeDuration': 200,
-                                'wrapAround': true,
-                                'albumLabel': "Imagen %1 de %2",
-                                'fitImagesInViewport': true
-                            });
-                        </script>
                     </body>
                 </html>
             </t>
