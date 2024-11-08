@@ -120,29 +120,28 @@
                                 <div class="gallery-grid">
                                     <t t-foreach="fotos" t-as="foto">
                                         <div class="photo-card">
-                                            <!-- Usar iframe como alternativa para cargar la miniatura -->
-                                            <a t-att-href="foto['download_url']"
+                                            <a t-att-href="foto.get('preview_url', '')"
                                                 t-att-data-lightbox="'gallery'"
-                                                t-att-data-title="foto['nombre']">
+                                                t-att-data-title="foto.get('nombre', 'Sin título')">
                                                 <div class="photo-container">
-                                                    <!-- Cambiar thumb_url por download_url si thumb_url no carga -->
-                                                    <t t-if="foto['thumb_url']">
+                                                    <!-- Validar thumb_url antes de mostrar -->
+                                                    <t t-if="foto.get('thumb_url')">
                                                         <img t-att-src="foto['thumb_url']"
-                                                             t-att-alt="foto['nombre']"
+                                                             t-att-alt="foto.get('nombre', 'Sin título')"
                                                              loading="lazy" />
                                                     </t>
                                                     <t t-else="">
-                                                        <iframe t-att-src="foto['download_url']"
+                                                        <iframe t-att-src="foto.get('preview_url', '')"
                                                                 frameborder="0"
                                                                 loading="lazy"
-                                                                t-att-alt="foto['nombre']"></iframe>
+                                                                t-att-alt="foto.get('nombre', 'Sin título')"></iframe>
                                                     </t>
-                                                    <!-- Fallback: muestra thumb_url para depuración -->
-                                                    <p t-esc="foto['thumb_url']" />
+                                                    <!-- Mostrar URL de depuración -->
+                                                    <p t-esc="foto.get('thumb_url', 'URL de miniatura no disponible')" />
                                                 </div>
                                             </a>
                                             <div class="photo-info">
-                                                <div class="photo-name" t-esc="foto['nombre']" />
+                                                <div class="photo-name" t-esc="foto.get('nombre', 'Sin título')" />
                                                 <a t-att-href="'/gallery/download/%s' % foto['id']"
                                                     class="btn-download"
                                                     download="">
