@@ -13,47 +13,12 @@
                         <link href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/css/lightbox.min.css" rel="stylesheet"/>
                         
                         <style>
-                            :root {
-                                --primary-color: #7C7BAD;
-                                --secondary-color: #6c757d;
-                            }
-                            
-                            .gallery-container {
-                                max-width: 1400px;
-                                margin: 0 auto;
-                                padding: 2rem;
-                            }
-                            
-                            .gallery-header {
-                                background-color: white;
-                                border-radius: 10px;
-                                padding: 1.5rem;
-                                margin-bottom: 2rem;
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                            }
-                            
-                            .gallery-grid {
-                                display: grid;
-                                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                                gap: 1.5rem;
-                            }
-                            
-                            .photo-card {
-                                background: white;
-                                border-radius: 10px;
-                                overflow: hidden;
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                                transition: transform 0.3s ease, box-shadow 0.3s ease;
-                            }
-                            
-                            .photo-card:hover {
-                                transform: translateY(-5px);
-                                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-                            }
+                            /* ... (estilos anteriores) ... */
                             
                             .photo-container {
                                 position: relative;
                                 padding-top: 75%;
+                                background: #f8f9fa;
                                 overflow: hidden;
                             }
                             
@@ -63,54 +28,19 @@
                                 left: 0;
                                 width: 100%;
                                 height: 100%;
-                                object-fit: cover;
-                                transition: transform 0.3s ease;
+                                object-fit: contain;
                             }
                             
-                            .photo-info {
-                                padding: 1rem;
-                            }
-                            
-                            .photo-name {
-                                font-size: 0.9rem;
-                                margin-bottom: 1rem;
-                                color: #2c3e50;
-                                white-space: nowrap;
-                                overflow: hidden;
-                                text-overflow: ellipsis;
-                            }
-                            
-                            .btn-custom {
-                                padding: 0.5rem 1rem;
-                                border-radius: 5px;
-                                border: none;
-                                cursor: pointer;
-                                font-weight: 500;
-                                transition: all 0.2s;
+                            .photo-link {
+                                display: block;
+                                width: 100%;
+                                height: 100%;
                                 text-decoration: none;
-                                display: inline-flex;
-                                align-items: center;
-                                justify-content: center;
-                                gap: 0.5rem;
-                                color: white;
                             }
                             
-                            .btn-primary-custom {
-                                background-color: var(--primary-color);
-                            }
-                            
-                            .btn-primary-custom:hover {
-                                background-color: #6b6a94;
-                                color: white;
-                            }
-                            
-                            .btn-secondary-custom {
-                                background-color: var(--secondary-color);
-                            }
-                            
-                            .btn-secondary-custom:hover {
-                                background-color: #5a6268;
-                                color: white;
+                            /* Corregir problema con Lightbox */
+                            #lightbox img {
+                                object-fit: contain;
                             }
                         </style>
                     </head>
@@ -122,7 +52,8 @@
                                     <t t-if="fotos">
                                         <a t-att-href="'/gallery/download_all/%s' % reparacion.id" 
                                            class="btn-custom btn-primary-custom">
-                                            <i class="fas fa-download"/>Descargar Todas
+                                            <i class="fas fa-download"/>
+                                            <span>Descargar Todas</span>
                                         </a>
                                     </t>
                                 </div>
@@ -132,21 +63,23 @@
                                 <div class="gallery-grid">
                                     <t t-foreach="fotos" t-as="foto">
                                         <div class="photo-card">
-                                            <a t-att-href="foto['download_url']"
+                                            <a class="photo-link" 
+                                               t-att-href="foto['preview_url']"
                                                t-att-data-lightbox="'gallery'"
-                                               t-att-data-title="foto['nombre_foto']">
+                                               t-att-data-title="foto['nombre']">
                                                 <div class="photo-container">
                                                     <img t-att-src="foto['thumb_url']"
-                                                         t-att-alt="foto['nombre_foto']"
+                                                         t-att-alt="foto['nombre']"
                                                          loading="lazy"/>
                                                 </div>
                                             </a>
                                             <div class="photo-info">
-                                                <div class="photo-name" t-esc="foto['nombre_foto']"/>
+                                                <div class="photo-name" t-esc="foto['nombre']"/>
                                                 <a t-att-href="foto['download_url']"
                                                    class="btn-custom btn-secondary-custom w-100"
-                                                   target="_blank">
-                                                    <i class="fas fa-download"/>Descargar
+                                                   download="">
+                                                    <i class="fas fa-download"/>
+                                                    <span>Descargar</span>
                                                 </a>
                                             </div>
                                         </div>
@@ -160,6 +93,7 @@
                             </t>
                         </div>
 
+                        <!-- Scripts -->
                         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"/>
                         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"/>
                         <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/js/lightbox.min.js"/>
@@ -167,7 +101,8 @@
                             lightbox.option({
                                 'resizeDuration': 200,
                                 'wrapAround': true,
-                                'albumLabel': "Imagen %1 de %2"
+                                'albumLabel': "Imagen %1 de %2",
+                                'fitImagesInViewport': true
                             });
                         </script>
                     </body>

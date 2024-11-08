@@ -18,12 +18,31 @@ class GalleryController(http.Controller):
                     </div>
                 """
             
-            # Obtener las fotos con sus URLs de preview
-            fotos = request.env['reparaciones.foto'].sudo().get_photos_preview(reparacion_id)
+            # Obtener las fotos
+            fotos = request.env['reparaciones.foto'].sudo().search([
+                ('reparacion_id', '=', reparacion_id)
+            ])
+            
+            # Preparar datos de fotos
+            fotos_data = []
+            pcloud_config = request.env['pcloud.configuracion'].sudo().search([], limit=1)
+            
+            for foto in fotos:
+                # Obtener links de pCloud directamente usando los métodos del modelo
+                download_url = foto._get_file_url(foto.file_id, pcloud_config)
+                thumb_url = foto._get_thumb_url(foto.file_id, pcloud_config) or download_url
+                
+                fotos_data.append({
+                    'id': foto.id,
+                    'nombre': foto.nombre_foto,
+                    'preview_url': download_url,  # URL para lightbox
+                    'download_url': f'/gallery/download/{foto.id}',  # URL para descarga
+                    'thumb_url': thumb_url  # URL para miniatura
+                })
             
             return request.render('sat.gallery_page_template', {
                 'reparacion': reparacion,
-                'fotos': fotos,
+                'fotos': fotos_data,
             })
             
         except Exception as e:
@@ -33,6 +52,30 @@ class GalleryController(http.Controller):
                     <h1>Error al cargar la galería</h1>
                 </div>
             """
+
+    @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
+    def download_photo(self, foto_id, **kwargs):
+        try:
+            foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
+            if not foto.exists():
+                return request.not_found()
+            
+            # Obtener contenido para descarga
+            result = foto.get_download_content()
+            if not result:
+                return request.not_found()
+            
+            # Devolver el archivo forzando la descarga
+            return request.make_response(
+                base64.b64decode(result['content']),
+                headers=[
+                    ('Content-Type', result['mimetype']),
+                    ('Content-Disposition', f'attachment; filename="{result["filename"]}"'),
+                ]
+            )
+        except Exception as e:
+            _logger.error("Error al descargar foto: %s", str(e))
+            return request.not_found()
 
     @http.route('/gallery/download_all/<int:reparacion_id>', type='http', auth='public')
     def download_all_photos(self, reparacion_id):
@@ -44,15 +87,16 @@ class GalleryController(http.Controller):
             if not fotos:
                 return request.not_found()
             
+            # Usar el método existente para crear ZIP
             result = fotos.get_photos_zip(fotos.ids)
             if not result:
                 return request.not_found()
-
+            
             return request.make_response(
                 base64.b64decode(result['content']),
                 headers=[
                     ('Content-Type', 'application/zip'),
-                    ('Content-Disposition', f'attachment; filename="{result["filename"]}"')
+                    ('Content-Disposition', f'attachment; filename="{result["filename"]}"'),
                 ]
             )
         except Exception as e:
