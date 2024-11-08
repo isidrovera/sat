@@ -54,17 +54,13 @@
                         border-radius: 8px;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                         overflow: hidden;
-                        transition: all 0.3s ease;
-                    }
-
-                    .photo-card:hover {
-                        transform: translateY(-5px);
-                        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
                     }
 
                     .photo-container {
                         position: relative;
+                        width: 100%;
                         padding-top: 75%; /* Aspect ratio 4:3 */
+                        overflow: hidden;
                         background: #f8f9fa;
                     }
 
@@ -90,17 +86,14 @@
                     }
 
                     .btn {
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
+                        display: inline-block;
                         padding: 8px 16px;
                         border-radius: 4px;
-                        font-size: 14px;
-                        font-weight: 500;
                         text-decoration: none;
+                        font-weight: 500;
                         cursor: pointer;
                         border: none;
-                        transition: background-color 0.2s;
+                        transition: all 0.2s;
                         color: white;
                     }
 
@@ -114,8 +107,8 @@
 
                     .btn-secondary {
                         background-color: #6c757d;
-                        font-size: 13px;
                         padding: 6px 12px;
+                        font-size: 13px;
                     }
 
                     .btn-secondary:hover {
@@ -154,8 +147,7 @@
                             <t t-foreach="fotos" t-as="foto">
                                 <div class="photo-card">
                                     <div class="photo-container">
-                                        <!-- Usamos directamente /gallery/download para mostrar la imagen -->
-                                        <img t-att-src="'/gallery/download/%s' % foto.id"
+                                        <img t-att-src="'/gallery/image/%s' % foto.id"
                                              t-att-alt="foto.nombre_foto"
                                              class="photo-image"
                                              loading="lazy"/>
@@ -163,8 +155,7 @@
                                     <div class="photo-info">
                                         <div class="photo-name" t-esc="foto.nombre_foto"/>
                                         <a t-att-href="'/gallery/download/%s' % foto.id"
-                                           class="btn btn-secondary"
-                                           download="">
+                                           class="btn btn-secondary">
                                             <i class="fas fa-download"></i>Descargar
                                         </a>
                                     </div>
@@ -173,7 +164,7 @@
                         </div>
                     </t>
                     <t t-else="">
-                        <div class="empty-state">
+                        <div class="text-center p-4">
                             <h3>No hay fotos disponibles</h3>
                         </div>
                     </t>
