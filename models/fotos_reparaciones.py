@@ -142,51 +142,26 @@ class ReparacionFoto(models.Model):
 
         return super().create(vals_list)
     
-    def _upload_to_pcloud(self, archivo_binario, nombre_archivo, folder_id, pcloud_config):
-        """Método para subir archivo a pCloud y crear link público"""
-        _logger.info("[UPLOAD] Iniciando subida de archivo: %s", nombre_archivo)
-        try:
-            # Subir archivo
-            url = f"{pcloud_config.hostname}/uploadfile"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'folderid': folder_id,
-                'nopartial': 1,
-                'renameifexists': 1
-            }
-            files = {
-                'file': (nombre_archivo, archivo_binario, 'application/octet-stream')
-            }
+    def upload_to_pcloud(self):
+        pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
+        if not pcloud_config or not pcloud_config.access_token:
+            raise ValidationError("No se encontró configuración de pCloud")
 
-            _logger.info("[UPLOAD] Enviando solicitud a pCloud: %s", url)
-            response = requests.post(url, params=params, files=files)
-            result = response.json()
-            _logger.info("[UPLOAD] Respuesta de pCloud: %s", result)
+        folder_id = self._obtener_folder_id(self.reparacion_id, pcloud_config)
+        archivo_binario = base64.b64decode(self.foto_binario)
+        
+        result = self._upload_to_pcloud(archivo_binario, self.nombre_foto, folder_id, pcloud_config)
+        if result and result.get('file_id'):
+            self.write({
+                'file_id': result['file_id'],
+                'url_foto': result['url'],
+                'public_link': result.get('public_link'),
+                'state': 'done'
+            })
+        else:
+            self.state = 'error'
+            raise ValidationError("Error al subir la foto a pCloud")
 
-            if response.status_code != 200 or 'metadata' not in result:
-                _logger.error("[UPLOAD] Error en respuesta de pCloud: %s", result)
-                return False
-
-            file_id = str(result['metadata'][0]['fileid'])
-            _logger.info("[UPLOAD] File ID obtenido: %s", file_id)
-
-            # Crear link público
-            public_url = self._create_public_link(file_id, pcloud_config)
-            _logger.info("[UPLOAD] Link público creado: %s", public_url)
-
-            # Obtener URL de descarga
-            download_url = self._get_file_url(file_id, pcloud_config)
-            _logger.info("[UPLOAD] URL de descarga: %s", download_url)
-
-            return {
-                'file_id': file_id,
-                'url': download_url,
-                'public_link': public_url
-            }
-
-        except Exception as e:
-            _logger.exception("[UPLOAD] Error durante la subida: %s", str(e))
-            return False
 
     def _get_pcloud_url(self, endpoint, file_id, pcloud_config, extra_params=None):
         """Método base para obtener URLs de pCloud"""

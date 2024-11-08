@@ -12,6 +12,8 @@
                         
                         <button string="Asignar" name="enviar_mensaje_whatsapp_reparaciones"
                             type="object" class="oe_highlight" groups="base.group_system"/>
+                        <button name="action_open_gallery" type="object" string="Adjuntar Fotos" class="btn-primary"/>
+
                         
                         <!--<button
                         string="QR" name="action_generate_qr_for_all" type="object"

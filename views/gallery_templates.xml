@@ -1,175 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <data>
-        <template id="gallery_page_template" name="Gallery Page">
-            <t t-name="sat.gallery_page_template">
-                <html>
-                    <head>
-                        <title>Galería de Fotos - Reparación</title>
-                        <meta charset="utf-8" />
-                        <meta name="viewport" content="width=device-width, initial-scale=1" />
-                        <link
-                            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-                            rel="stylesheet" />
-                        <link
-                            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-                            rel="stylesheet" />
-                        <link
-                            href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/css/lightbox.min.css"
-                            rel="stylesheet" />
-
-                        <style>
-                            .gallery-container {
-                            max-width: 1200px;
-                            margin: 0 auto;
-                            padding: 20px;
-                            }
-
-                            .gallery-grid {
-                            display: grid;
-                            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                            gap: 20px;
-                            padding: 20px 0;
-                            }
-
-                            .photo-card {
-                            background: white;
-                            border-radius: 8px;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                            overflow: hidden;
-                            transition: transform 0.3s ease;
-                            }
-
-                            .photo-card:hover {
-                            transform: translateY(-5px);
-                            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-                            }
-
-                            .photo-container {
-                            position: relative;
-                            padding-top: 100%; /* Aspecto cuadrado */
-                            }
-
-                            .photo-container img, .photo-container iframe {
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            width: 100%;
-                            height: 100%;
-                            object-fit: cover;
-                            }
-
-                            .photo-info {
-                            padding: 12px;
-                            }
-
-                            .photo-name {
-                            font-size: 14px;
-                            margin-bottom: 8px;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                            white-space: nowrap;
-                            }
-
-                            .btn-download {
-                            display: inline-flex;
-                            align-items: center;
-                            justify-content: center;
-                            width: 100%;
-                            padding: 8px;
-                            background: #6c757d;
-                            color: white;
-                            border: none;
-                            border-radius: 4px;
-                            text-decoration: none;
-                            transition: background-color 0.2s;
-                            }
-
-                            .btn-download:hover {
-                            background: #5a6268;
-                            color: white;
-                            }
-
-                            .btn-download i {
-                            margin-right: 8px;
-                            }
-
-                            .header-action {
-                            margin-top: 20px;
-                            margin-bottom: 20px;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="gallery-container">
-                            <div class="header-action">
-                                <h2>Galería de Fotos - Reparación #<t t-esc="reparacion.id" /></h2>
-                                <t t-if="fotos">
-                                    <a t-att-href="'/gallery/download_all/%s' % reparacion.id"
-                                        class="btn-download">
-                                        <i class="fas fa-download" />
-                                        <span>Descargar Todas</span>
-                                    </a>
-                                </t>
+    <template id="gallery_page_template" name="Gallery Page">
+        <t t-name="sat.gallery_page_template">
+            <html>
+                <head>
+                    <title>Galería de Fotos - Reparación</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>Galería de Fotos - Reparación #<t t-esc="reparacion.id"/></h2>
+                        <form action="/gallery/upload_photo" method="post" enctype="multipart/form-data" class="mb-3">
+                            <input type="hidden" name="reparacion_id" t-att-value="reparacion.id"/>
+                            <div class="input-group">
+                                <input type="file" name="file" class="form-control" required/>
+                                <button class="btn btn-primary" type="submit">Subir Foto</button>
                             </div>
-
-                            <t t-if="fotos">
-                                <div class="gallery-grid">
-                                    <t t-foreach="fotos" t-as="foto">
-                                        <div class="photo-card">
-                                            <a t-att-href="foto.get('preview_url', '')"
-                                                t-att-data-lightbox="'gallery'"
-                                                t-att-data-title="foto.get('nombre', 'Sin título')">
-                                                <div class="photo-container">
-                                                    <!-- Validar thumb_url antes de mostrar -->
-                                                    <t t-if="foto.get('thumb_url')">
-                                                        <img t-att-src="foto['download_url']"
-                                                             t-att-alt="foto.get('nombre', 'Sin título')"
-                                                             loading="lazy" />
-                                                    </t>
-                                                    
-                                                    <t t-if="foto.get('thumb_url')">
-                                                        <img t-att-src="foto['download_url']"
-                                                             t-att-alt="foto.get('nombre', 'Sin título')"
-                                                             loading="lazy" />
-                                                    </t>
-                                                    
-                                                    <!-- Mostrar URL de depuración -->
-                                                    <p t-esc="foto.get('thumb_url', 'URL de miniatura no disponible')" />
-                                                </div>
-                                            </a>
-                                            <div class="photo-info">
-                                                <div class="photo-name" t-esc="foto.get('nombre', 'Sin título')" />
-                                                <a t-att-href="'/gallery/download/%s' % foto['id']"
-                                                    class="btn-download"
-                                                    download="">
-                                                    <i class="fas fa-download" />
-                                                    <span>Descargar</span>
-                                                </a>
-                                            </div>
+                        </form>
+                        
+                        <div class="row">
+                            <t t-foreach="fotos" t-as="foto">
+                                <div class="col-md-3">
+                                    <div class="card mb-4">
+                                        <img t-att-src="foto['thumb_url']" class="card-img-top" alt="Foto"/>
+                                        <div class="card-body">
+                                            <h5 class="card-title" t-esc="foto['nombre']"/>
+                                            <a t-att-href="foto['download_url']" class="btn btn-secondary">Descargar</a>
                                         </div>
-                                    </t>
-                                </div>
-                            </t>
-                            <t t-else="">
-                                <div class="text-center p-5">
-                                    <h3>No hay fotos disponibles</h3>
+                                    </div>
                                 </div>
                             </t>
                         </div>
-
-                        <script
-                            src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-                        <script
-                            src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-                        <script
-                            src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/js/lightbox.min.js"></script>
-                    </body>
-                </html>
-            </t>
-        </template>
-    </data>
+                    </div>
+                </body>
+            </html>
+        </t>
+    </template>
 </odoo>

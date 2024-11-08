@@ -170,7 +170,14 @@ class Reparaciones(models.Model):
         except requests.exceptions.RequestException as e:
             _logger.error(f"Error de conexión con pCloud: {str(e)}")
             raise ValidationError(_("Error de conexión con pCloud: %s") % str(e))
-
+    def action_open_gallery(self):
+        """Abre la galería de fotos asociada a esta reparación."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/gallery/{self.id}',
+            'target': 'new',  # Abrir en una nueva pestaña
+        }
 
     
     maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True )
