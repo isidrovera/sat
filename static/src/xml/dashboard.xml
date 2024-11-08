@@ -179,18 +179,18 @@
                     </div>
                 </div>
 
-                <!-- Gráfico 1: Máquinas por Disponibilidad -->
-                <div class="col-lg-6 col-md-12">
+                 <!-- Gráfico 1: Máquinas por Disponibilidad -->
+                 <div class="col-lg-6 col-md-12">
                     <div class="chart-wrapper">
                         <div class="chart-header">
                             <h4>Máquinas por Disponibilidad</h4>
                             <button class="expand-button">
-                                <i class="fa fa-expand"></i>
+                                <i class="fa fa-expand"/>
                             </button>
                         </div>
                         <div class="chart-container" 
                             style="display: flex; justify-content: center; align-items: center; height: 300px;">
-                            <canvas id="disponibilidadChart"></canvas>
+                            <canvas id="disponibilidadChart"/>
                         </div>
                     </div>
                 </div>
