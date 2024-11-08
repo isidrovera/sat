@@ -295,6 +295,7 @@ class SatDashboard extends Component {
             }
 
            // Gráfico de estado
+            
             const estadoElement = this._getChartElement("estadoChart");
             if (estadoElement) {
                 console.log('Renderizando gráfico de estado...');
@@ -306,19 +307,19 @@ class SatDashboard extends Component {
                         trigger: 'item',
                         formatter: '{b}: {c}'
                     },
-                    legend: {
-                        show: false
-                    },
                     series: [{
                         name: 'Estado',
                         type: 'pie',
-                        radius: ['40%', '60%'],  // Reducido para dar más espacio a las etiquetas
-                        center: ['50%', '50%'],  // Centrado en la pantalla
+                        radius: ['40%', '60%'],
+                        center: ['50%', '50%'],
                         avoidLabelOverlap: true,
+                        labelLayout: {
+                            hideOverlap: false
+                        },
                         data: [
                             { 
                                 value: this.dashboardData.maquinas_sin_revisar, 
-                                name: 'Sin Revisar', 
+                                name: 'Sin Revis', 
                                 itemStyle: { color: '#36A2EB' }
                             },
                             { 
@@ -328,34 +329,39 @@ class SatDashboard extends Component {
                             },
                             { 
                                 value: this.dashboardData.maquinas_finalizadas, 
-                                name: 'Finalizadas: ', 
+                                name: 'Finalizadas', 
                                 itemStyle: { color: '#FF9F40' }
                             },
                             { 
                                 value: this.dashboardData.maquinas_problemas, 
-                                name: 'Problemas: ', 
+                                name: 'Problemas', 
                                 itemStyle: { color: '#FF6384' }
                             }
                         ],
                         label: {
                             show: true,
-                            position: 'outside',
-                            alignTo: 'none',
-                            edgeDistance: '10%',
+                            position: 'outer',
+                            alignTo: 'labelLine',
+                            margin: 20,
                             formatter: function(params) {
-                                return `${params.name}: ${params.value}`;
+                                return params.name + ': ' + params.value;
                             },
                             color: '#666',
                             fontSize: 12,
-                            backgroundColor: 'transparent',
-                            distance: 5,
-                            overflow: 'none'
+                            lineHeight: 20,
+                            rich: {
+                                value: {
+                                    fontSize: 12,
+                                    color: '#666'
+                                }
+                            }
                         },
                         labelLine: {
                             show: true,
-                            length: 20,
-                            length2: 30,  // Líneas más largas para evitar solapamiento
-                            maxSurfaceAngle: 80,
+                            length: 15,
+                            length2: 10,
+                            smooth: false,
+                            minTurnAngle: 90,
                             lineStyle: {
                                 width: 1,
                                 type: 'solid',
@@ -364,20 +370,13 @@ class SatDashboard extends Component {
                         },
                         itemStyle: {
                             borderColor: '#fff',
-                            borderWidth: 2
+                            borderWidth: 2,
+                            borderRadius: 0
                         },
                         emphasis: {
-                            label: {
-                                show: true,
-                                fontSize: 12,
-                                fontWeight: 'bold'
-                            }
+                            disabled: true
                         },
-                        zlevel: 0,
-                        silent: false,
-                        animation: true,
-                        animationDuration: 1000,
-                        animationEasing: 'cubicOut'
+                        animation: false
                     }]
                 };
 
