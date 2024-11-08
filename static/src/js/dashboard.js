@@ -295,13 +295,24 @@ class SatDashboard extends Component {
             }
 
            // Gráfico de estado
-            
+ 
             const estadoElement = this._getChartElement("estadoChart");
             if (estadoElement) {
                 console.log('Renderizando gráfico de estado...');
-                const estadoChart = echarts.init(estadoElement);
+                const estadoChart = echarts.init(estadoElement, null, {
+                    renderer: 'canvas',
+                    width: 'auto',
+                    height: '100%'
+                });
 
                 const option = {
+                    grid: {
+                        containLabel: true,
+                        top: '5%',
+                        bottom: '5%',
+                        left: '5%',
+                        right: '5%'
+                    },
                     backgroundColor: '#fff',
                     tooltip: { 
                         trigger: 'item',
@@ -314,12 +325,13 @@ class SatDashboard extends Component {
                         center: ['50%', '50%'],
                         avoidLabelOverlap: true,
                         labelLayout: {
-                            hideOverlap: false
+                            hideOverlap: false,
+                            draggable: true
                         },
                         data: [
                             { 
                                 value: this.dashboardData.maquinas_sin_revisar, 
-                                name: 'Sin Revis', 
+                                name: 'Sin Revisar', 
                                 itemStyle: { color: '#36A2EB' }
                             },
                             { 
@@ -349,12 +361,7 @@ class SatDashboard extends Component {
                             color: '#666',
                             fontSize: 12,
                             lineHeight: 20,
-                            rich: {
-                                value: {
-                                    fontSize: 12,
-                                    color: '#666'
-                                }
-                            }
+                            padding: [0, 0, 0, 0]
                         },
                         labelLine: {
                             show: true,
@@ -383,10 +390,22 @@ class SatDashboard extends Component {
                 estadoChart.setOption(option);
                 console.log('Gráfico de estado renderizado exitosamente');
 
-                // Hacer el gráfico responsive
+                // Hacer el gráfico responsive y mantenerlo centrado
                 window.addEventListener('resize', function() {
-                    estadoChart.resize();
+                    estadoChart.resize({
+                        width: 'auto',
+                        height: '100%'
+                    });
                 });
+
+                // Asegurar que el gráfico se renderice correctamente después de que el contenedor esté visible
+                const resizeObserver = new ResizeObserver(entries => {
+                    for (let entry of entries) {
+                        estadoChart.resize();
+                    }
+                });
+
+                resizeObserver.observe(estadoElement);
             }
 
 

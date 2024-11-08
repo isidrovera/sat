@@ -200,12 +200,13 @@
                     <div class="col-lg-6 col-md-12">
                         <div class="chart-wrapper">
                             <div class="chart-header">
-                                <h4></h4>
+                                <h4>Estado de Máquinas</h4>
                                 <button class="expand-button">
                                     <i class="fa fa-expand"></i>
                                 </button>
                             </div>
-                            <div class="chart-container">
+                            <div class="chart-container"
+                                style="display: flex; justify-content: center; align-items: center; height: 300px;">
                                 <canvas id="estadoChart"></canvas>
                             </div>
                         </div>
