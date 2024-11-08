@@ -179,7 +179,7 @@
                     </div>
                 </div>
 
-                <!-- Fila para Gráficos -->
+                <!-- Gráfico 1: Máquinas por Disponibilidad -->
                 <div class="col-lg-6 col-md-12">
                     <div class="chart-wrapper">
                         <div class="chart-header">
