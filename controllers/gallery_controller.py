@@ -1,9 +1,6 @@
-# controllers/gallery_controller.py
 from odoo import http
 from odoo.http import request
 import base64
-import zipfile
-import io
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -20,10 +17,9 @@ class GalleryController(http.Controller):
                         <h1>Reparación no encontrada</h1>
                     </div>
                 """
-                
-            fotos = request.env['reparaciones.foto'].sudo().search([
-                ('reparacion_id', '=', reparacion_id)
-            ])
+            
+            # Obtener las fotos con sus URLs de preview
+            fotos = request.env['reparaciones.foto'].sudo().get_photos_preview(reparacion_id)
             
             return request.render('sat.gallery_page_template', {
                 'reparacion': reparacion,
@@ -37,7 +33,7 @@ class GalleryController(http.Controller):
                     <h1>Error al cargar la galería</h1>
                 </div>
             """
-    
+
     @http.route('/gallery/download_all/<int:reparacion_id>', type='http', auth='public')
     def download_all_photos(self, reparacion_id):
         try:
@@ -48,27 +44,17 @@ class GalleryController(http.Controller):
             if not fotos:
                 return request.not_found()
             
-            # Crear ZIP en memoria
-            memory_zip = io.BytesIO()
-            
-            with zipfile.ZipFile(memory_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
-                for foto in fotos:
-                    if foto.foto_binario:
-                        zf.writestr(
-                            foto.nombre_foto,
-                            base64.b64decode(foto.foto_binario)
-                        )
-            
-            memory_zip.seek(0)
-            
+            result = fotos.get_photos_zip(fotos.ids)
+            if not result:
+                return request.not_found()
+
             return request.make_response(
-                memory_zip.read(),
+                base64.b64decode(result['content']),
                 headers=[
                     ('Content-Type', 'application/zip'),
-                    ('Content-Disposition', 'attachment; filename=fotos.zip'),
+                    ('Content-Disposition', f'attachment; filename="{result["filename"]}"')
                 ]
             )
-            
         except Exception as e:
             _logger.error("Error al descargar todas las fotos: %s", str(e))
             return request.not_found()
