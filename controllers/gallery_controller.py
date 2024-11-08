@@ -3,6 +3,8 @@ from odoo.http import request
 import base64
 import logging
 import requests
+import io
+import zipfile
 
 _logger = logging.getLogger(__name__)
 
@@ -15,8 +17,8 @@ class GalleryController(http.Controller):
             params = {
                 'access_token': pcloud_config.access_token,
                 'fileid': file_id,
-                'size': '256x256',  # Tamaño de miniatura
-                'crop': 1,  # Para mantener el aspecto cuadrado
+                'size': '256x256',
+                'crop': 1,
             }
             
             response = requests.get(url, params=params)
@@ -26,7 +28,7 @@ class GalleryController(http.Controller):
                 return f"https://{result['hosts'][0]}{result['path']}"
             return None
         except Exception as e:
-            _logger.error("Error al obtener thumbnail: %s", str(e))
+            _logger.error(f"Error al obtener thumbnail: {str(e)}")
             return None
     
     @http.route('/gallery/<int:reparacion_id>', type='http', auth='public')
@@ -65,25 +67,49 @@ class GalleryController(http.Controller):
             _logger.error("Error al cargar la galería: %s", str(e))
             return request.not_found()
 
-    @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
-    def download_photo(self, foto_id):
+    @http.route('/gallery/download_all/<int:reparacion_id>', type='http', auth='public')
+    def download_all_photos(self, reparacion_id):
         try:
-            foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
-            if not foto.exists() or not foto.url_foto:
-                return request.not_found()
+            fotos = request.env['reparaciones.foto'].sudo().search([
+                ('reparacion_id', '=', reparacion_id)
+            ])
             
-            # Descargar el archivo desde pCloud
-            response = requests.get(foto.url_foto)
-            if response.status_code != 200:
+            if not fotos:
                 return request.not_found()
+
+            # Crear archivo ZIP en memoria
+            memory_zip = io.BytesIO()
             
+            with zipfile.ZipFile(memory_zip, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for foto in fotos:
+                    try:
+                        # Descargar cada foto desde pCloud
+                        if foto.url_foto:  # Si tenemos URL directa
+                            response = requests.get(foto.url_foto)
+                            if response.status_code == 200:
+                                # Agregar al ZIP con el nombre original
+                                zip_file.writestr(foto.nombre_foto, response.content)
+                    except Exception as e:
+                        _logger.error(f"Error al procesar foto {foto.id}: {str(e)}")
+                        continue
+
+            # Preparar el ZIP para descarga
+            memory_zip.seek(0)
+            
+            # Generar nombre de archivo con fecha
+            zip_filename = f"fotos_reparacion_{reparacion_id}.zip"
+            
+            # Devolver el archivo ZIP
             return request.make_response(
-                response.content,
+                memory_zip.getvalue(),
                 headers=[
-                    ('Content-Type', 'application/octet-stream'),
-                    ('Content-Disposition', f'attachment; filename="{foto.nombre_foto}"'),
+                    ('Content-Type', 'application/zip'),
+                    ('Content-Disposition', f'attachment; filename="{zip_filename}"'),
                 ]
             )
+            
         except Exception as e:
-            _logger.error("Error al descargar foto: %s", str(e))
+            _logger.error(f"Error al crear ZIP: {str(e)}")
             return request.not_found()
+
+    

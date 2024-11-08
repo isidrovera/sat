@@ -105,7 +105,7 @@
                                     <a t-att-href="'/gallery/download_all/%s' % reparacion.id" 
                                        class="btn-download">
                                         <i class="fas fa-download"/>
-                                        Descargar Todas
+                                        <span>Descargar Todas</span>
                                     </a>
                                 </t>
                             </div>
