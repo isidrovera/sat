@@ -9,7 +9,7 @@ class GalleryController(http.Controller):
     
     @http.route('/gallery/<int:reparacion_id>', type='http', auth='public', website=True)
     def gallery_page(self, reparacion_id, **kwargs):
-        reparacion = request.env['reparaciones.reparacion'].sudo().browse(reparacion_id)
+        reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
         if not reparacion.exists():
             return request.not_found()
             
