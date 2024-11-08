@@ -3,10 +3,10 @@
     <template id="gallery_page_template" name="Galería de Fotos">
         <html>
             <head>
-                <title>Galería de Fotos - Reparación</title>
-                <!-- Bootstrap desde CDN -->
+                <title>Galería de Fotos</title>
+                <!-- Bootstrap 5 -->
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
-                <!-- Font Awesome desde CDN -->
+                <!-- Font Awesome -->
                 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
                 <style>
                     .photo-grid {
@@ -34,10 +34,6 @@
                         height: 100%;
                         object-fit: cover;
                     }
-                    .upload-progress {
-                        display: none;
-                        margin: 1rem 0;
-                    }
                     .actions-bar {
                         position: absolute;
                         top: 0.5rem;
@@ -54,45 +50,42 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <h2 class="card-title mb-0">Galería de Fotos - <small t-esc="reparacion.name"/></h2>
                                 <div class="btn-group">
-                                    <label class="btn btn-primary">
-                                        <i class="fas fa-upload me-2"></i>Subir Fotos
+                                    <button id="syncButton" class="btn btn-info me-2">
+                                        <i class="fas fa-sync me-1"></i>Sincronizar
+                                    </button>
+                                    <label class="btn btn-primary me-2">
+                                        <i class="fas fa-upload me-1"></i>Subir Fotos
                                         <input type="file" id="fileUpload" multiple="multiple" class="d-none" accept="image/*"/>
                                     </label>
-                                    <a t-att-href="'/gallery/api/download_all/' + str(reparacion.id)" 
+                                    <a t-att-href="'/gallery/download_all/' + str(reparacion.id)" 
                                        class="btn btn-secondary">
-                                        <i class="fas fa-download me-2"></i>Descargar Todas
+                                        <i class="fas fa-download me-1"></i>Descargar Todas
                                     </a>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Barra de progreso -->
-                    <div class="upload-progress">
-                        <div class="progress">
-                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <!-- Grid de fotos -->
-                    <div class="photo-grid" id="photoGrid">
+                    <div id="photoGrid" class="photo-grid">
                         <t t-foreach="fotos" t-as="foto">
                             <div class="photo-card" t-att-data-photo-id="foto['id']">
                                 <div class="photo-container">
-                                    <img t-att-src="foto['thumb_url']" t-att-alt="foto['nombre_foto']"/>
+                                    <img t-att-src="foto['thumb_url']" 
+                                         t-att-alt="foto['nombre_foto']"/>
                                     <div class="actions-bar">
                                         <button class="btn btn-sm btn-danger delete-photo" 
                                                 t-att-data-photo-id="foto['id']">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                         <a t-att-href="foto['download_url']" 
-                                           class="btn btn-sm btn-primary">
+                                           class="btn btn-sm btn-primary download-photo">
                                             <i class="fas fa-download"></i>
                                         </a>
                                     </div>
                                 </div>
                                 <div class="p-2">
-                                    <small class="text-muted" t-esc="foto['nombre_foto']"></small>
+                                    <small class="text-muted text-truncate d-block" 
+                                           t-esc="foto['nombre_foto']"/>
                                 </div>
                             </div>
                         </t>
