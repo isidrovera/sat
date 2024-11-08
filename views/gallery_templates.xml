@@ -126,16 +126,17 @@
                                                 <div class="photo-container">
                                                     <!-- Validar thumb_url antes de mostrar -->
                                                     <t t-if="foto.get('thumb_url')">
-                                                        <img t-att-src="foto['thumb_url']"
+                                                        <img t-att-src="foto['download_url']"
                                                              t-att-alt="foto.get('nombre', 'Sin título')"
                                                              loading="lazy" />
                                                     </t>
-                                                    <t t-else="">
-                                                        <iframe t-att-src="foto.get('preview_url', '')"
-                                                                frameborder="0"
-                                                                loading="lazy"
-                                                                t-att-alt="foto.get('nombre', 'Sin título')"></iframe>
+                                                    
+                                                    <t t-if="foto.get('thumb_url')">
+                                                        <img t-att-src="foto['download_url']"
+                                                             t-att-alt="foto.get('nombre', 'Sin título')"
+                                                             loading="lazy" />
                                                     </t>
+                                                    
                                                     <!-- Mostrar URL de depuración -->
                                                     <p t-esc="foto.get('thumb_url', 'URL de miniatura no disponible')" />
                                                 </div>
