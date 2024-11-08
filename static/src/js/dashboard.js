@@ -627,15 +627,7 @@ class SatDashboard extends Component {
                     const ticketsTecnicoChart = echarts.init(ticketsTecnicoElement);
 
                     const option = {
-                        title: {
-                            text: titleText,
-                            left: 'center',
-                            top: '2%',
-                            textStyle: {
-                                fontSize: 16,
-                                fontWeight: 'bold'
-                            }
-                        },
+                        
                         tooltip: {
                             trigger: 'axis',
                             axisPointer: {
