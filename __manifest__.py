@@ -85,6 +85,7 @@
         'views/importacionexcel.xml',
         'views/reparacion_autenticacion_wizard_view.xml',
         'views/fotos_reparaciones.xml',
+        'views/gallery_templates.xml',
     ],
     
     'assets': {

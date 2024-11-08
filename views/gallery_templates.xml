@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="gallery_page_template" name="Photo Gallery">
+        <t t-call="website.layout">
+            <div class="container py-5">
+                <div class="row mb-4">
+                    <div class="col">
+                        <h1>Galería de Fotos - Reparación #<t t-esc="reparacion.id"/></h1>
+                    </div>
+                    <div class="col-auto">
+                        <t t-if="fotos">
+                            <a t-att-href="'/gallery/download_all/%s' % reparacion.id" 
+                               class="btn btn-primary">
+                                <i class="fa fa-download"/> Descargar Todas
+                            </a>
+                        </t>
+                    </div>
+                </div>
+
+                <div class="row g-4" t-if="fotos">
+                    <t t-foreach="fotos" t-as="foto">
+                        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                            <div class="card h-100">
+                                <img t-att-src="'/web/image/reparaciones.foto/%s/foto_binario' % foto.id"
+                                     class="card-img-top"
+                                     t-att-alt="foto.nombre_foto"
+                                     loading="lazy"/>
+                                <div class="card-body">
+                                    <h5 class="card-title" t-esc="foto.nombre_foto"/>
+                                    <a t-att-href="'/gallery/download/%s' % foto.id"
+                                       class="btn btn-secondary btn-sm">
+                                        <i class="fa fa-download"/> Descargar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+
+                <div t-else="" class="text-center py-5">
+                    <h3>No hay fotos disponibles</h3>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Añadimos estilos personalizados -->
+    <template id="assets_gallery" inherit_id="website.assets_frontend">
+        <xpath expr="." position="inside">
+            <style>
+                .card-img-top {
+                    height: 200px;
+                    object-fit: cover;
+                }
+                .card {
+                    transition: transform 0.2s;
+                }
+                .card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                }
+            </style>
+        </xpath>
+    </template>
+</odoo>
