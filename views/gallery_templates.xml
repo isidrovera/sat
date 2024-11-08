@@ -1,31 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
+    <template id="gallery_assets" name="Gallery Assets">
+        <script type="text/javascript" src="/sat/static/src/js/gallery.js"/>
+    </template>
+
     <template id="gallery_page_template" name="Galería de Fotos">
-        <t t-call="website.layout">
-            <div class="container">
-                <h1>Galería de Fotos - Reparación <t t-esc="reparacion.name"/></h1>
-                <a t-att-href="'/gallery/api/download_all/' + str(reparacion.id)" class="btn btn-primary my-3">Descargar todas las fotos</a>
-                <div class="row">
-                    <t t-foreach="fotos" t-as="foto">
-                        <div class="col-md-3">
-                            <div class="card mb-4 shadow-sm">
-                                <img t-att-src="foto['thumb_url']" class="card-img-top" alt="Foto de reparación"/>
-                                <div class="card-body">
-                                    <p class="card-text" t-esc="foto['nombre_foto']"/>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="btn-group">
-                                            <a t-att-href="foto['download_url']" class="btn btn-sm btn-outline-secondary">Descargar</a>
+        <html>
+            <head>
+                <title>Galería de Fotos</title>
+                <link href="/web/assets/web.assets_common.min.css" rel="stylesheet"/>
+                <link href="/web/assets/web.assets_frontend.min.css" rel="stylesheet"/>
+                <t t-call="sat.gallery_assets"/>
+            </head>
+            <body>
+                <div class="gallery-container" t-att-data-reparacion-id="reparacion.id">
+                    <div class="container mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h1>Galería de Fotos - Reparación <t t-esc="reparacion.name"/></h1>
+                            <div>
+                                <label class="btn btn-primary me-2">
+                                    <i class="fa fa-upload"/> Subir Fotos
+                                    <input type="file" id="fileUpload" multiple="multiple" class="d-none"/>
+                                </label>
+                                <a t-att-href="'/gallery/api/download_all/' + str(reparacion.id)" 
+                                   class="btn btn-secondary">
+                                    <i class="fa fa-download"/> Descargar Todas
+                                </a>
+                            </div>
+                        </div>
+
+                        <div id="uploadProgress" class="progress mb-3 d-none">
+                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+
+                        <div class="row g-4" id="photosGrid">
+                            <t t-foreach="fotos" t-as="foto">
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3" t-att-data-photo-id="foto['id']">
+                                    <div class="card h-100">
+                                        <div class="position-relative">
+                                            <img t-att-src="foto['thumb_url']" 
+                                                 class="card-img-top"
+                                                 style="height: 200px; object-fit: cover;"
+                                                 t-att-alt="foto['nombre_foto']"/>
+                                            <div class="position-absolute top-0 end-0 p-2">
+                                                <button class="btn btn-danger btn-sm delete-photo" 
+                                                        t-att-data-photo-id="foto['id']">
+                                                    <i class="fa fa-trash"/>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="card-title text-truncate" t-esc="foto['nombre_foto']"/>
+                                            <a t-att-href="foto['download_url']" 
+                                               class="btn btn-outline-primary btn-sm w-100">
+                                                <i class="fa fa-download"/> Descargar
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </t>
                         </div>
-                    </t>
+                    </div>
                 </div>
-            </div>
-        </t>
-    </template> 
-  
-    
-    
+
+                <script src="/web/assets/web.assets_common.min.js"></script>
+                <script src="/web/assets/web.assets_frontend.min.js"></script>
+            </body>
+        </html>
+    </template>
 </odoo>

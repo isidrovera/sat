@@ -1,88 +1,81 @@
 from odoo import http
 from odoo.http import request, Response
 import logging
-import zipfile
-import io
+import json
+import base64
 
 _logger = logging.getLogger(__name__)
 
 class GalleryController(http.Controller):
     @http.route('/gallery/<int:reparacion_id>', type='http', auth='public', website=True, cors='*')
     def gallery_page(self, reparacion_id, **kwargs):
-        """Renderiza la página de galería para una reparación específica."""
-        _logger.info("Iniciando carga de la galería para la reparación ID: %s", reparacion_id)
-
-        # Buscar la reparación y sus fotos asociadas
+        """Renderiza la página de galería con funcionalidades interactivas"""
         reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
         if not reparacion.exists():
-            _logger.error("No se encontró la reparación con ID: %s", reparacion_id)
             return request.not_found()
 
-        fotos = request.env['reparaciones.foto'].sudo().search([('reparacion_id', '=', reparacion_id)], order="sequence")
-        _logger.info("Total de fotos encontradas para la reparación ID %s: %s", reparacion_id, len(fotos))
-
-        # Procesar las fotos para generar URLs de miniaturas y descargas
-        fotos_data = []
-        for foto in fotos:
-            try:
-                _logger.info("Procesando foto ID: %s", foto.id)
-                thumb_url = foto._get_thumb_url(foto.file_id)
-                file_url = foto._get_file_url(foto.file_id)
-
-                if not thumb_url or not file_url:
-                    _logger.warning("No se generó URL de miniatura o descarga para la foto ID %s", foto.id)
-                    continue
-
-                fotos_data.append({
-                    'id': foto.id,
-                    'nombre_foto': foto.nombre_foto,
-                    'thumb_url': thumb_url,
-                    'download_url': file_url,
-                })
-                _logger.info("Foto ID %s procesada con éxito", foto.id)
-
-            except Exception as e:
-                _logger.exception("Error al procesar la foto ID %s: %s", foto.id, str(e))
-
-        _logger.info("Galería preparada con %s fotos para la reparación ID %s", len(fotos_data), reparacion_id)
-
-        # Renderizar la plantilla de galería
+        # Obtener fotos con sus datos
+        fotos = request.env['reparaciones.foto'].sudo().get_photos_preview(reparacion_id)
+        
         return request.render('sat.gallery_page_template', {
             'reparacion': reparacion,
-            'fotos': fotos_data,
+            'fotos': fotos,
         })
 
-    @http.route('/gallery/api/download_all/<int:reparacion_id>', type='http', auth='public', cors='*')
-    def download_all_photos(self, reparacion_id, **kwargs):
-        """Descarga todas las fotos de una reparación en un archivo zip."""
-        _logger.info("Solicitando descarga de todas las fotos para la reparación ID: %s", reparacion_id)
+    @http.route('/gallery/upload/<int:reparacion_id>', type='http', auth='public', methods=['POST'], csrf=False)
+    def upload_photo(self, reparacion_id, **kwargs):
+        """Maneja la subida de fotos"""
+        try:
+            files = request.httprequest.files.getlist('files[]')
+            if not files:
+                return json.dumps({'error': 'No se encontraron archivos'})
 
-        reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
-        if not reparacion.exists():
-            _logger.error("Reparación no encontrada: ID %s", reparacion_id)
+            uploaded_files = []
+            for file in files:
+                foto_data = {
+                    'reparacion_id': reparacion_id,
+                    'nombre_foto': file.filename,
+                    'foto_binario': base64.b64encode(file.read()),
+                }
+                foto = request.env['reparaciones.foto'].sudo().create(foto_data)
+                uploaded_files.append({
+                    'id': foto.id,
+                    'nombre': foto.nombre_foto,
+                    'url': foto.url_foto
+                })
+
+            return json.dumps({'success': True, 'files': uploaded_files})
+        except Exception as e:
+            _logger.exception("Error en la subida de fotos: %s", str(e))
+            return json.dumps({'error': str(e)})
+
+    @http.route('/gallery/delete/<int:foto_id>', type='http', auth='public', methods=['POST'], csrf=False)
+    def delete_photo(self, foto_id):
+        """Elimina una foto"""
+        try:
+            foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
+            if foto.exists():
+                foto.unlink()
+                return json.dumps({'success': True})
+            return json.dumps({'error': 'Foto no encontrada'})
+        except Exception as e:
+            return json.dumps({'error': str(e)})
+
+    @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
+    def download_photo(self, foto_id):
+        """Descarga una foto individual"""
+        foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
+        if not foto.exists():
             return request.not_found()
-
-        fotos = request.env['reparaciones.foto'].sudo().search([('reparacion_id', '=', reparacion_id)], order="sequence")
-        if not fotos:
-            _logger.warning("No hay fotos para la reparación ID %s", reparacion_id)
+            
+        content = foto.get_download_content()
+        if not content:
             return request.not_found()
-
-        # Crear el archivo zip en memoria
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for foto in fotos:
-                try:
-                    file_url = foto._get_file_url(foto.file_id)
-                    if file_url:
-                        # Añadir la imagen al zip
-                        response = request.env['ir.http']._url_open(file_url)
-                        zip_file.writestr(f"{foto.nombre_foto}.jpg", response.read())
-                        _logger.info("Foto ID %s añadida al zip", foto.id)
-                except Exception as e:
-                    _logger.error("Error al añadir la foto ID %s al zip: %s", foto.id, str(e))
-
-        zip_buffer.seek(0)
-        return Response(zip_buffer, headers=[
-            ('Content-Type', 'application/zip'),
-            ('Content-Disposition', f'attachment; filename="fotos_reparacion_{reparacion_id}.zip"')
-        ])
+            
+        return request.make_response(
+            base64.b64decode(content['content']),
+            headers=[
+                ('Content-Type', content['mimetype']),
+                ('Content-Disposition', f'attachment; filename="{content["filename"]}"')
+            ]
+        )

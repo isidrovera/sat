@@ -109,6 +109,7 @@
             'sat/static/src/js/dashboard.js',
             'sat/static/src/js/estilo_dashboard.js',
             'sat/static/src/js/gallery_widget.js',
+            'sat/static/src/js/gallery.js',
             
             
             
