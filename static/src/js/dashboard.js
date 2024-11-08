@@ -319,7 +319,7 @@ class SatDashboard extends Component {
                         data: [
                             { 
                                 value: this.dashboardData.maquinas_sin_revisar, 
-                                name: 'Sin Revis', 
+                                name: 'Sin Revisar', 
                                 itemStyle: { color: '#36A2EB' }
                             },
                             { 
@@ -419,15 +419,7 @@ class SatDashboard extends Component {
                     const tecnicosChart = echarts.init(tecnicosElement);
 
                     tecnicosChart.setOption({
-                        title: {
-                            text: titleText,
-                            left: 'center',
-                            top: '2%',
-                            textStyle: {
-                                fontSize: 16,
-                                fontWeight: 'bold'
-                            }
-                        },
+                        
                         tooltip: {
                             trigger: 'axis',
                             axisPointer: {
