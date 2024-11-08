@@ -223,16 +223,9 @@ class SatDashboard extends Component {
             if (disponibilidadElement) {
                 console.log('Renderizando gráfico de disponibilidad...');
                 const disponibilidadChart = echarts.init(disponibilidadElement);
-                
-                // Función para manejar el resize
-                const handleResize = () => {
-                    disponibilidadChart.resize();
-                };
-                
-                // Agregar listener para el resize
-                window.addEventListener('resize', handleResize);
 
                 disponibilidadChart.setOption({
+                    
                     tooltip: {
                         trigger: 'axis',
                         axisPointer: { type: 'shadow' }
@@ -243,7 +236,7 @@ class SatDashboard extends Component {
                         axisLabel: {
                             fontSize: 12,
                             fontWeight: 'bold',
-                            interval: 0,
+                            interval: 0, // Mostrar todas las etiquetas en el eje X
                         }
                     },
                     yAxis: {
@@ -255,20 +248,18 @@ class SatDashboard extends Component {
                     series: [{
                         name: 'Máquinas',
                         type: 'bar',
-                        barWidth: '30%', // Hace las barras más delgadas
-                        barCategoryGap: '40%', // Ajusta el espacio entre grupos de barras
                         data: [
                             {
                                 value: this.dashboardData.maquinas_disponibles,
-                                itemStyle: { color: '#4CAF50' }
+                                itemStyle: { color: '#4CAF50' } // Verde para "Disponibles"
                             },
                             {
                                 value: this.dashboardData.maquinas_separadas,
-                                itemStyle: { color: '#FF9800' }
+                                itemStyle: { color: '#FF9800' } // Naranja para "Separadas"
                             },
                             {
                                 value: this.dashboardData.maquinas_no_disponibles,
-                                itemStyle: { color: '#F44336' }
+                                itemStyle: { color: '#F44336' } // Rojo para "No Disponibles"
                             }
                         ],
                         label: {
@@ -277,7 +268,7 @@ class SatDashboard extends Component {
                             fontSize: 12,
                             fontWeight: 'bold',
                             color: '#333',
-                            formatter: '{c}',
+                            formatter: '{c}', // Muestra el valor numérico
                         },
                         emphasis: {
                             focus: 'series'
@@ -286,19 +277,16 @@ class SatDashboard extends Component {
                         animationEasing: 'cubicInOut'
                     }],
                     grid: {
-                        top: '10%',
-                        left: '10%',
-                        right: '10%',
-                        bottom: '15%',
+                        left: '3%',
+                        right: '4%',
+                        bottom: '10%', // Ajustar el margen inferior para evitar la superposición
                         containLabel: true
                     }
                 });
 
                 console.log('Gráfico de disponibilidad renderizado exitosamente');
-                
-                // Realizar el resize inicial
-                handleResize();
             }
+
            // Gráfico de estado
             
             const estadoElement = this._getChartElement("estadoChart");
