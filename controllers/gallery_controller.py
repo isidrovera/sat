@@ -64,18 +64,55 @@ class GalleryController(http.Controller):
     @http.route('/gallery/sync/<int:reparacion_id>', type='json', auth='public')
     def sync_photos(self, reparacion_id):
         """Sincroniza los enlaces de las fotos con pCloud"""
+        _logger.info("[SYNC] Iniciando sincronización para reparación ID: %s", reparacion_id)
         try:
-            fotos = request.env['reparaciones.foto'].sudo().get_photos_preview(reparacion_id)
+            # Obtener configuración de pCloud
+            pcloud_config = request.env['pcloud.configuracion'].sudo().search([], limit=1)
+            if not pcloud_config:
+                _logger.error("[SYNC] No se encontró configuración de pCloud")
+                return {'success': False, 'error': 'No se encontró configuración de pCloud'}
+
+            # Obtener todas las fotos de la reparación
+            fotos = request.env['reparaciones.foto'].sudo().search([
+                ('reparacion_id', '=', reparacion_id)
+            ])
+            _logger.info("[SYNC] Encontradas %s fotos para sincronizar", len(fotos))
+
+            # Actualizar cada foto
+            updated_fotos = []
+            for foto in fotos:
+                try:
+                    _logger.info("[SYNC] Procesando foto ID: %s", foto.id)
+                    # Obtener nuevos enlaces
+                    thumb_url = foto._get_thumb_url(foto.file_id, pcloud_config)
+                    file_url = foto._get_file_url(foto.file_id, pcloud_config)
+                    
+                    if thumb_url and file_url:
+                        _logger.info("[SYNC] Enlaces actualizados para foto ID: %s", foto.id)
+                        foto.write({
+                            'url_foto': file_url,
+                            'public_link': file_url
+                        })
+                        updated_fotos.append({
+                            'id': foto.id,
+                            'nombre_foto': foto.nombre_foto,
+                            'thumb_url': thumb_url,
+                            'download_url': file_url
+                        })
+                    else:
+                        _logger.warning("[SYNC] No se pudieron obtener enlaces para foto ID: %s", foto.id)
+                except Exception as e:
+                    _logger.error("[SYNC] Error procesando foto %s: %s", foto.id, str(e))
+
+            _logger.info("[SYNC] Sincronización completada. Actualizadas %s fotos", len(updated_fotos))
             return {
                 'success': True,
-                'fotos': fotos,
-                'message': 'Sincronización completada'
+                'fotos': updated_fotos,
+                'message': f'Se actualizaron {len(updated_fotos)} fotos correctamente'
             }
         except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            _logger.exception("[SYNC] Error en la sincronización: %s", str(e))
+            return {'success': False, 'error': str(e)}
 
     @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
     def download_photo(self, foto_id):
