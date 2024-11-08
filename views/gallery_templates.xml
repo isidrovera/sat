@@ -13,7 +13,7 @@
                         <form action="/gallery/upload_photo" method="post" enctype="multipart/form-data" class="mb-3">
                             <input type="hidden" name="reparacion_id" t-att-value="reparacion.id"/>
                             <div class="input-group">
-                                <input type="file" name="file" class="form-control" required/>
+                                <input type="file" name="file" class="form-control"/>
                                 <button class="btn btn-primary" type="submit">Subir Foto</button>
                             </div>
                         </form>
