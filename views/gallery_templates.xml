@@ -1,65 +1,211 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <template id="gallery_page_template" name="Photo Gallery">
-        <t t-call="website.layout">
-            <div class="container py-5">
-                <div class="row mb-4">
-                    <div class="col">
-                        <h1>Galería de Fotos - Reparación #<t t-esc="reparacion.id"/></h1>
-                    </div>
-                    <div class="col-auto">
+    <template id="gallery_page_template">
+        
+        <html>
+            <head>
+                <title>Galería de Fotos - Reparación</title>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
+                <style>
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                        line-height: 1.5;
+                        color: #333;
+                        background-color: #f8f9fa;
+                    }
+
+                    .container {
+                        max-width: 1200px;
+                        margin: 0 auto;
+                        padding: 0 15px;
+                    }
+
+                    .gallery-container {
+                        padding: 2rem 0;
+                    }
+
+                    .gallery-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 2rem;
+                        flex-wrap: wrap;
+                        gap: 1rem;
+                    }
+
+                    .gallery-title {
+                        font-size: 2rem;
+                        color: #2c3e50;
+                        margin: 0;
+                    }
+
+                    .gallery-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                        gap: 1.5rem;
+                        padding: 1rem 0;
+                    }
+
+                    .photo-card {
+                        background: white;
+                        border-radius: 8px;
+                        overflow: hidden;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                        transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    }
+
+                    .photo-card:hover {
+                        transform: translateY(-5px);
+                        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                    }
+
+                    .photo-img {
+                        width: 100%;
+                        height: 200px;
+                        object-fit: cover;
+                        display: block;
+                    }
+
+                    .photo-info {
+                        padding: 1rem;
+                    }
+
+                    .photo-title {
+                        margin: 0 0 0.5rem 0;
+                        font-size: 1rem;
+                        color: #2c3e50;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+
+                    .btn {
+                        display: inline-block;
+                        padding: 0.5rem 1rem;
+                        border-radius: 4px;
+                        text-decoration: none;
+                        font-weight: 500;
+                        text-align: center;
+                        cursor: pointer;
+                        border: none;
+                        transition: background-color 0.2s ease;
+                    }
+
+                    .btn-primary {
+                        background-color: #7C7BAD;
+                        color: white;
+                    }
+
+                    .btn-primary:hover {
+                        background-color: #6b6a94;
+                    }
+
+                    .btn-secondary {
+                        background-color: #6c757d;
+                        color: white;
+                    }
+
+                    .btn-secondary:hover {
+                        background-color: #5a6268;
+                    }
+
+                    .btn i {
+                        margin-right: 0.5rem;
+                    }
+
+                    .empty-state {
+                        text-align: center;
+                        padding: 3rem 1rem;
+                        color: #6c757d;
+                    }
+
+                    @media (max-width: 768px) {
+                        .gallery-header {
+                            flex-direction: column;
+                            align-items: flex-start;
+                        }
+                        
+                        .gallery-grid {
+                            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                        }
+                    }
+
+                    .loading {
+                        text-align: center;
+                        padding: 2rem;
+                    }
+
+                    .loading i {
+                        font-size: 2rem;
+                        color: #7C7BAD;
+                        animation: spin 1s linear infinite;
+                    }
+
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="gallery-container">
+                    <div class="container">
+                        <div class="gallery-header">
+                            <h1 class="gallery-title">Galería de Fotos - Reparación #<t t-esc="reparacion.id"/></h1>
+                            <t t-if="fotos">
+                                <a t-att-href="'/gallery/download_all/%s' % reparacion.id" 
+                                   class="btn btn-primary">
+                                    <i class="fas fa-download"></i>Descargar Todas
+                                </a>
+                            </t>
+                        </div>
+
                         <t t-if="fotos">
-                            <a t-att-href="'/gallery/download_all/%s' % reparacion.id" 
-                               class="btn btn-primary">
-                                <i class="fa fa-download"/> Descargar Todas
-                            </a>
+                            <div class="gallery-grid">
+                                <t t-foreach="fotos" t-as="foto">
+                                    <div class="photo-card">
+                                        <img t-att-src="'/web/image/reparaciones.foto/%s/foto_binario' % foto.id"
+                                             class="photo-img"
+                                             t-att-alt="foto.nombre_foto"
+                                             loading="lazy"/>
+                                        <div class="photo-info">
+                                            <h5 class="photo-title" t-esc="foto.nombre_foto"/>
+                                            <a t-att-href="'/gallery/download/%s' % foto.id"
+                                               class="btn btn-secondary">
+                                                <i class="fas fa-download"></i>Descargar
+                                            </a>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div class="empty-state">
+                                <h3>No hay fotos disponibles</h3>
+                            </div>
                         </t>
                     </div>
                 </div>
 
-                <div class="row g-4" t-if="fotos">
-                    <t t-foreach="fotos" t-as="foto">
-                        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                            <div class="card h-100">
-                                <img t-att-src="'/web/image/reparaciones.foto/%s/foto_binario' % foto.id"
-                                     class="card-img-top"
-                                     t-att-alt="foto.nombre_foto"
-                                     loading="lazy"/>
-                                <div class="card-body">
-                                    <h5 class="card-title" t-esc="foto.nombre_foto"/>
-                                    <a t-att-href="'/gallery/download/%s' % foto.id"
-                                       class="btn btn-secondary btn-sm">
-                                        <i class="fa fa-download"/> Descargar
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </t>
-                </div>
-
-                <div t-else="" class="text-center py-5">
-                    <h3>No hay fotos disponibles</h3>
-                </div>
-            </div>
-        </t>
-    </template>
-
-    <!-- Añadimos estilos personalizados -->
-    <template id="assets_gallery" inherit_id="website.assets_frontend">
-        <xpath expr="." position="inside">
-            <style>
-                .card-img-top {
-                    height: 200px;
-                    object-fit: cover;
-                }
-                .card {
-                    transition: transform 0.2s;
-                }
-                .card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                }
-            </style>
-        </xpath>
+                <script>
+                    // Script simple para manejar errores de carga de imágenes
+                    document.addEventListener('DOMContentLoaded', function() {
+                        document.querySelectorAll('.photo-img').forEach(function(img) {
+                            img.onerror = function() {
+                                this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5FcnJvciBkZSBpbWFnZW48L3RleHQ+PC9zdmc+';
+                            };
+                        });
+                    });
+                </script>
+            </body>
+        </html>
     </template>
 </odoo>
