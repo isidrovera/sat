@@ -305,7 +305,7 @@ class SatDashboard extends Component {
                 title: { 
                     text: 'Estado de Máquinas',
                     left: 'center',
-                    top: '-5%',  // Movido más arriba
+                    top: '50%',  // Movido más arriba
                     textStyle: {
                         fontSize: 16,
                         fontWeight: 'normal',
