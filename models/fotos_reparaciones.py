@@ -223,12 +223,33 @@ class ReparacionFoto(models.Model):
             return False
 
     def _get_thumb_url(self, file_id, pcloud_config):
-        """Obtiene la URL del thumbnail"""
+        """Obtiene la URL del thumbnail usando getthumblink"""
         _logger.info("[THUMB_URL] Solicitando thumbnail para file_id: %s", file_id)
-        return self._get_pcloud_url('getthumblink', file_id, pcloud_config, {
-            'size': '256x256',
-            'crop': 1
-        })
+        url = f"{pcloud_config.hostname}/getthumblink"
+        params = {
+            'access_token': pcloud_config.access_token,
+            'fileid': file_id,
+            'size': '256x256',  # Tamaño de la miniatura
+            'crop': 1  # Opcional: para forzar el tamaño exacto
+        }
+        
+        try:
+            response = requests.get(url, params=params)
+            result = response.json()
+            _logger.info("[THUMB_URL] Respuesta de getthumblink: %s", result)
+            
+            if response.status_code == 200 and result.get('result') == 0:
+                thumb_url = f"https://{result['hosts'][0]}{result['path']}"
+                _logger.info("[THUMB_URL] URL generada para thumbnail: %s", thumb_url)
+                return thumb_url
+
+            _logger.error("[THUMB_URL] Error al obtener thumbnail: %s", result)
+            return None
+
+        except Exception as e:
+            _logger.exception("[THUMB_URL] Error al obtener thumbnail: %s", str(e))
+            return None
+
 
     def _get_file_url(self, file_id, pcloud_config):
         """Obtiene la URL de descarga"""
@@ -275,21 +296,18 @@ class ReparacionFoto(models.Model):
             _logger.error("[GET_PHOTOS_PREVIEW] No se encontró configuración de pCloud")
             return photos
 
-        # Renovar token si es necesario
-        if not self._check_token_valid(pcloud_config):
-            self._refresh_pcloud_token(pcloud_config)
-
         for foto in fotos:
             try:
                 if foto.file_id:
-                    # Obtener URLs públicas que no requieran IP
-                    public_link = self._get_public_link(foto.file_id, pcloud_config)
-                    if public_link:
+                    thumb_url = self._get_thumb_url(foto.file_id, pcloud_config)
+                    download_url = self._get_file_url(foto.file_id, pcloud_config)
+                    
+                    if thumb_url and download_url:
                         photos.append({
                             'id': foto.id,
                             'nombre_foto': foto.nombre_foto,
-                            'thumb_url': public_link.get('thumb_url'),
-                            'download_url': public_link.get('download_url'),
+                            'thumb_url': thumb_url,
+                            'download_url': download_url,
                             'file_id': foto.file_id
                         })
                         _logger.info(f"[GET_PHOTOS_PREVIEW] Foto {foto.id} procesada con éxito")
