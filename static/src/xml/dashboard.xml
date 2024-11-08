@@ -2,14 +2,12 @@
 <templates>
     <t t-name="sat.DashboardTemplate">
         <div class="row main-section dashboard-container">
-            <div class="content-scroll"> <!-- Contenedor para el desplazamiento -->
-
+            <div class="content-scroll">
                 <!-- Cabecera -->
                 <div class="row">
                     <div class="col-12 text-center">
                         <h2>Dashboard de Máquinas y Reparaciones</h2>
-                        <p>Análisis detallado de la disponibilidad, reparaciones y tickets de
-                            soporte.</p>
+                        <p>Análisis detallado de la disponibilidad, reparaciones y tickets de soporte.</p>
                     </div>
                 </div>
 
@@ -18,10 +16,9 @@
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card" id="tile_total_maquinas">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-print"></i>
+                                <i class="fa fa-print"/>
                                 <h3>Máquinas</h3>
-                                <span id="total_maquinas">0</span> <!-- Solo actualiza el valor en
-                                este <span> -->
+                                <span id="total_maquinas">0</span>
                             </div>
                         </div>
                     </div>
@@ -29,7 +26,7 @@
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card" id="tile_maquinas_disponibles">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-check-circle"></i>
+                                <i class="fa fa-check-circle"/>
                                 <h3>Disponibles</h3>
                                 <span id="maquinas_disponibles">0</span>
                             </div>
@@ -39,7 +36,7 @@
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card" id="tile_maquinas_separadas">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-pause-circle"></i>
+                                <i class="fa fa-pause-circle"/>
                                 <h3>Separadas</h3>
                                 <span id="maquinas_separadas">0</span>
                             </div>
@@ -49,7 +46,7 @@
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card" id="tile_maquinas_no_disponibles">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-times-circle"></i>
+                                <i class="fa fa-times-circle"/>
                                 <h3>No Disponibles</h3>
                                 <span id="maquinas_no_disponibles">0</span>
                             </div>
@@ -57,13 +54,12 @@
                     </div>
                 </div>
 
-
                 <!-- Fila para Reparaciones -->
                 <div class="row dashboard-tiles reparaciones-tiles">
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card" id="tile_total_reparaciones">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-wrench"></i>
+                                <i class="fa fa-wrench"/>
                                 <h3>Reparaciones</h3>
                                 <span id="total_reparaciones">0</span>
                             </div>
@@ -73,25 +69,27 @@
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card" id="tile_reparaciones_en_revision">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-spinner"></i>
+                                <i class="fa fa-spinner"/>
                                 <h3>Revisión</h3>
                                 <span id="reparaciones_en_revision">0</span>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card" id="tile_reparaciones_finalizadas">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-check-circle"></i>
+                                <i class="fa fa-check-circle"/>
                                 <h3>Finalizadas</h3>
                                 <span id="reparaciones_finalizadas">0</span>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-exclamation-triangle"></i>
+                                <i class="fa fa-exclamation-triangle"/>
                                 <h3>Problemas</h3>
                                 <span id="reparaciones_con_problemas">0</span>
                             </div>
@@ -104,34 +102,37 @@
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-life-ring"></i>
+                                <i class="fa fa-life-ring"/>
                                 <h3>Tickets</h3>
                                 <span id="total_tickets">0</span>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-plus-square"></i>
+                                <i class="fa fa-plus-square"/>
                                 <h3>Nuevos</h3>
                                 <span id="tickets_nuevos">0</span>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-cogs"></i>
+                                <i class="fa fa-cogs"/>
                                 <h3>Proceso</h3>
                                 <span id="tickets_en_proceso">0</span>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-check-circle"></i>
+                                <i class="fa fa-check-circle"/>
                                 <h3>Finalizados</h3>
                                 <span id="tickets_finalizados">0</span>
                             </div>
@@ -144,34 +145,37 @@
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-archive"></i>
+                                <i class="fa fa-archive"/>
                                 <h3>Alquileres</h3>
                                 <span id="total_alquileres">0</span>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-box"></i>
+                                <i class="fa fa-box"/>
                                 <h3>Stock</h3>
                                 <span id="alquiler_stock">0</span>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-check-square"></i>
+                                <i class="fa fa-check-square"/>
                                 <h3>Lista</h3>
                                 <span id="alquiler_lista">0</span>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 tot_tasks">
                         <div class="oh-card">
                             <div class="oh-card-body text-center">
-                                <i class="fa fa-tag"></i>
+                                <i class="fa fa-tag"/>
                                 <h3>Para Venta</h3>
                                 <span id="alquiler_para_venta">0</span>
                             </div>
@@ -179,155 +183,135 @@
                     </div>
                 </div>
 
-                 <!-- Gráfico 1: Máquinas por Disponibilidad -->
-                 <div class="col-lg-6 col-md-12">
-                    <div class="chart-wrapper">
-                        <div class="chart-header">
-                            <h4>Máquinas por Disponibilidad</h4>
-                            <button class="expand-button">
-                                <i class="fa fa-expand"/>
-                            </button>
+                <!-- Fila para Gráficos -->
+                <div class="row dashboard-charts">
+                    <!-- Gráfico 1: Máquinas por Disponibilidad -->
+                    <div class="col-lg-6 col-md-12">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Máquinas por Disponibilidad</h4>
+                                <button class="expand-button">
+                                    <i class="fa fa-expand"/>
+                                </button>
+                            </div>
+                            <div class="chart-container" style="display: flex; justify-content: center; align-items: center; height: 300px;">
+                                <canvas id="disponibilidadChart"/>
+                            </div>
                         </div>
-                        <div class="chart-container" 
-                            style="display: flex; justify-content: center; align-items: center; height: 300px;">
-                            <canvas id="disponibilidadChart"/>
+                    </div>
+
+                    <!-- Gráfico 2: Estado de las Máquinas -->
+                    <div class="col-lg-6 col-md-12">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Estado de Máquinas</h4>
+                                <button class="expand-button">
+                                    <i class="fa fa-expand"/>
+                                </button>
+                            </div>
+                            <div class="chart-container" style="display: flex; justify-content: center; align-items: center; height: 300px;">
+                                <canvas id="estadoChart"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico 3: Reparaciones por Técnico -->
+                    <div class="col-lg-6 col-md-12">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Reparaciones por Técnico</h4>
+                                <button class="expand-button">
+                                    <i class="fa fa-expand"/>
+                                </button>
+                            </div>
+                            <div class="filter-section mb-3 d-flex align-items-center">
+                                <label for="startDateTecnicos" class="mr-2">Fecha de Inicio:</label>
+                                <input type="date" id="startDateTecnicos" class="form-control mr-2" style="width: auto;"/>
+                                <label for="endDateTecnicos" class="mr-2">Fecha de Fin:</label>
+                                <input type="date" id="endDateTecnicos" class="form-control mr-2" style="width: auto;"/>
+                                <button id="applyFilterTecnicos" class="btn btn-primary">Aplicar Filtros</button>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="tecnicosChart"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico 4: Tickets por Técnico -->
+                    <div class="col-lg-6 col-md-12">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Tickets por Técnico</h4>
+                                <button class="expand-button">
+                                    <i class="fa fa-expand"/>
+                                </button>
+                            </div>
+                            <div class="filter-section mb-3 d-flex align-items-center">
+                                <label for="startDate" class="mr-2">Fecha de Inicio:</label>
+                                <input type="date" id="startDate" class="form-control mr-2" style="width: auto;"/>
+                                <label for="endDate" class="mr-2">Fecha de Fin:</label>
+                                <input type="date" id="endDate" class="form-control mr-2" style="width: auto;"/>
+                                <button id="applyFilter" class="btn btn-primary">Aplicar Filtros</button>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="ticketsTecnicoChart"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico: Tickets por Mes -->
+                    <div class="col-lg-6 col-md-12">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Tickets por Mes</h4>
+                                <button class="expand-button">
+                                    <i class="fa fa-expand"/>
+                                </button>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="ticketsMesChart"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico: Tickets por Año -->
+                    <div class="col-lg-6 col-md-12">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Tickets por Año</h4>
+                                <button class="expand-button">
+                                    <i class="fa fa-expand"/>
+                                </button>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="ticketsAnoChart"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico: Máquinas por Asesora -->
+                    <div class="col-lg-6 col-md-12">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Máquinas por Asesora</h4>
+                                <button class="expand-button">
+                                    <i class="fa fa-expand"/>
+                                </button>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="asesoraChart"/>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Gráfico 2: Estado de las Máquinas -->
-                <div class="col-lg-6 col-md-12">
-                    <div class="chart-wrapper">
-                        <div class="chart-header">
-                            <h4>Estado de Máquinas</h4>
-                            <button class="expand-button">
-                                <i class="fa fa-expand"></i>
-                            </button>
-                        </div>
-                        <div class="chart-container"
-                            style="display: flex; justify-content: center; align-items: center; height: 300px;">
-                            <canvas id="estadoChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Gráfico 3: Reparaciones por Técnico -->
-                <div class="col-lg-6 col-md-12">
-                    <div class="chart-wrapper">
-                        <div class="chart-header">
-                            <h4>Reparaciones por Técnico</h4>
-                            <button class="expand-button">
-                                <i class="fa fa-expand"></i>
-                            </button>
-                        </div>
-
-                        <!-- Filtros de Fecha en una sola fila -->
-                        <div class="filter-section mb-3 d-flex align-items-center">
-                            <label for="startDateTecnicos" class="mr-2">Fecha de Inicio:</label>
-                            <input type="date" id="startDateTecnicos" class="form-control mr-2"
-                                style="width: auto;" />
-
-                            <label for="endDateTecnicos" class="mr-2">Fecha de Fin:</label>
-                            <input type="date" id="endDateTecnicos" class="form-control mr-2"
-                                style="width: auto;" />
-
-                            <button id="applyFilterTecnicos" class="btn btn-primary">Aplicar
-                                Filtros</button>
-                        </div>
-
-                        <div class="chart-container">
-                            <canvas id="tecnicosChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <!-- Contenedor principal para el gráfico de Tickets por Técnico -->
-                <div class="col-lg-6 col-md-12">
-                    <div class="chart-wrapper">
-                        <!-- Encabezado del gráfico con título y botón de expansión -->
-                        <div class="chart-header">
-                            <h4>Tickets por Técnico</h4>
-                            <button class="expand-button">
-                                <i class="fa fa-expand"></i>
-                            </button>
-                        </div>
-
-                        <!-- Filtros de Fecha en una sola fila -->
-                        <div class="filter-section mb-3 d-flex align-items-center">
-                            <label for="startDate" class="mr-2">Fecha de Inicio:</label>
-                            <input type="date" id="startDate" class="form-control mr-2"
-                                style="width: auto;" />
-
-                            <label for="endDate" class="mr-2">Fecha de Fin:</label>
-                            <input type="date" id="endDate" class="form-control mr-2"
-                                style="width: auto;" />
-
-                            <button id="applyFilter" class="btn btn-primary">Aplicar Filtros</button>
-                        </div>
-
-                        <!-- Contenedor del gráfico -->
-                        <div class="chart-container">
-                            <canvas id="ticketsTecnicoChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-
-                <!-- Gráfico: Tickets por Mes -->
-                <div class="col-lg-6 col-md-12">
-                    <div class="chart-wrapper">
-                        <div class="chart-header">
-                            <h4></h4>
-                            <button class="expand-button">
-                                <i class="fa fa-expand"></i>
-                            </button>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="ticketsMesChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Gráfico: Tickets por Año -->
-                <div class="col-lg-6 col-md-12">
-                    <div class="chart-wrapper">
-                        <div class="chart-header">
-                            <h4></h4>
-                            <button class="expand-button">
-                                <i class="fa fa-expand"></i>
-                            </button>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="ticketsAnoChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-
-                <!-- Gráfico 4: Máquinas por Asesora -->
-                <div class="col-lg-6 col-md-12">
-                    <div class="chart-wrapper">
-                        <div class="chart-header">
-                            <h4></h4>
-                            <button class="expand-button">
-                                <i class="fa fa-expand"></i>
-                            </button>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="asesoraChart"></canvas>
-                        </div>
+                <!-- Pie de página -->
+                <div class="row mt-4">
+                    <div class="col-12 text-center">
+                        <p class="text-muted">© Isidro Vera</p>
                     </div>
                 </div>
             </div>
-
-            <!-- Pie de página -->
-            <div class="row mt-4">
-                <div class="col-12 text-center">
-                    <p class="text-muted">© Isidro Vera</p>
-                </div>
-            </div>
-
-        </div> <!--
-            Cierra el contenedor content-scroll -->
         </div>
     </t>
 </templates>
