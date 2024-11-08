@@ -16,7 +16,7 @@
                     }
 
                     body {
-                        font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                        font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
                         line-height: 1.5;
                         color: #333;
                         background-color: #f8f9fa;
@@ -79,17 +79,20 @@
 
                     .photo-info {
                         padding: 15px;
+                        text-align: center;
                     }
 
                     .photo-name {
                         font-size: 14px;
                         margin-bottom: 10px;
                         color: #2c3e50;
+                        word-break: break-all;
                     }
 
                     .btn {
                         display: inline-flex;
                         align-items: center;
+                        justify-content: center;
                         padding: 8px 16px;
                         border-radius: 4px;
                         font-size: 14px;
@@ -98,11 +101,11 @@
                         cursor: pointer;
                         border: none;
                         transition: background-color 0.2s;
+                        color: white;
                     }
 
                     .btn-primary {
                         background-color: #7C7BAD;
-                        color: white;
                     }
 
                     .btn-primary:hover {
@@ -111,7 +114,6 @@
 
                     .btn-secondary {
                         background-color: #6c757d;
-                        color: white;
                         font-size: 13px;
                         padding: 6px 12px;
                     }
@@ -122,14 +124,6 @@
 
                     .btn i {
                         margin-right: 8px;
-                    }
-
-                    .empty-state {
-                        text-align: center;
-                        padding: 40px;
-                        background: white;
-                        border-radius: 8px;
-                        margin-top: 20px;
                     }
 
                     @media (max-width: 768px) {
@@ -160,17 +154,17 @@
                             <t t-foreach="fotos" t-as="foto">
                                 <div class="photo-card">
                                     <div class="photo-container">
-                                        <!-- Usamos data-src para cargar la imagen -->
-                                        <img t-attf-src="/web/content/reparaciones.foto/#{foto.id}/foto_binario"
+                                        <!-- Usamos directamente /gallery/download para mostrar la imagen -->
+                                        <img t-att-src="'/gallery/download/%s' % foto.id"
                                              t-att-alt="foto.nombre_foto"
                                              class="photo-image"
                                              loading="lazy"/>
                                     </div>
                                     <div class="photo-info">
                                         <div class="photo-name" t-esc="foto.nombre_foto"/>
-                                        <!-- Modificamos el enlace de descarga -->
-                                        <a t-attf-href="/web/content/reparaciones.foto/#{foto.id}/foto_binario?download=true"
-                                           class="btn btn-secondary">
+                                        <a t-att-href="'/gallery/download/%s' % foto.id"
+                                           class="btn btn-secondary"
+                                           download="">
                                             <i class="fas fa-download"></i>Descargar
                                         </a>
                                     </div>
