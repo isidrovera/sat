@@ -9,44 +9,90 @@ _logger = logging.getLogger(__name__)
 class GalleryController(http.Controller):
     @http.route('/gallery/<int:reparacion_id>', type='http', auth='public', website=True)
     def gallery_page(self, reparacion_id, **kwargs):
-        """Renderiza la página de galería"""
-        reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
-        if not reparacion.exists():
-            return request.not_found()
+        _logger.info("[GALLERY] Accediendo a galería para reparación ID: %s", reparacion_id)
+        try:
+            reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                _logger.error("[GALLERY] Reparación no encontrada: %s", reparacion_id)
+                return request.not_found()
 
-        # Obtener fotos con sus datos
-        fotos = request.env['reparaciones.foto'].sudo().get_photos_preview(reparacion_id)
-        
-        return request.render('sat.gallery_page_template', {
-            'reparacion': reparacion,
-            'fotos': fotos,
-        })
+            # Verificar y actualizar fotos
+            fotos = request.env['reparaciones.foto'].sudo().search([
+                ('reparacion_id', '=', reparacion_id)
+            ])
+            _logger.info("[GALLERY] Encontradas %s fotos", len(fotos))
+
+            fotos_data = []
+            for foto in fotos:
+                try:
+                    # Verificar enlaces
+                    if foto.verify_pcloud_links():
+                        thumb_url = foto._get_thumb_url(foto.file_id)
+                        download_url = foto._get_file_url(foto.file_id)
+                        if thumb_url and download_url:
+                            fotos_data.append({
+                                'id': foto.id,
+                                'nombre_foto': foto.nombre_foto,
+                                'thumb_url': thumb_url,
+                                'download_url': download_url
+                            })
+                            _logger.info("[GALLERY] Foto %s procesada correctamente", foto.id)
+                except Exception as e:
+                    _logger.error("[GALLERY] Error procesando foto %s: %s", foto.id, str(e))
+
+            _logger.info("[GALLERY] Renderizando galería con %s fotos", len(fotos_data))
+            return request.render('sat.gallery_page_template', {
+                'reparacion': reparacion,
+                'fotos': fotos_data,
+            })
+
+        except Exception as e:
+            _logger.exception("[GALLERY] Error general: %s", str(e))
+            return request.not_found()
 
     @http.route('/gallery/upload/<int:reparacion_id>', type='http', auth='public', methods=['POST'], csrf=False)
     def upload_photo(self, reparacion_id, **kwargs):
         """Maneja la subida de fotos"""
+        _logger.info("[UPLOAD] Iniciando subida de fotos para reparación %s", reparacion_id)
         try:
             files = request.httprequest.files.getlist('files[]')
             if not files:
+                _logger.warning("[UPLOAD] No se encontraron archivos")
                 return json.dumps({'error': 'No se encontraron archivos'})
 
             uploaded_files = []
             for file in files:
-                foto_data = {
-                    'reparacion_id': reparacion_id,
-                    'nombre_foto': file.filename,
-                    'foto_binario': base64.b64encode(file.read()),
-                }
-                foto = request.env['reparaciones.foto'].sudo().create(foto_data)
-                uploaded_files.append({
-                    'id': foto.id,
-                    'nombre': foto.nombre_foto,
-                    'url': foto.url_foto
-                })
+                try:
+                    _logger.info("[UPLOAD] Procesando archivo: %s", file.filename)
+                    foto_data = {
+                        'reparacion_id': reparacion_id,
+                        'nombre_foto': file.filename,
+                        'foto_binario': base64.b64encode(file.read()),
+                    }
+                    foto = request.env['reparaciones.foto'].sudo().create(foto_data)
+                    _logger.info("[UPLOAD] Foto creada con ID: %s", foto.id)
 
-            return json.dumps({'success': True, 'files': uploaded_files})
+                    # Verificar enlaces después de crear
+                    if foto.verify_pcloud_links():
+                        uploaded_files.append({
+                            'id': foto.id,
+                            'nombre': foto.nombre_foto,
+                            'url': foto.url_foto
+                        })
+                        _logger.info("[UPLOAD] Foto %s subida correctamente", foto.id)
+                    else:
+                        _logger.error("[UPLOAD] Error verificando enlaces para foto %s", foto.id)
+                except Exception as e:
+                    _logger.exception("[UPLOAD] Error procesando archivo %s: %s", file.filename, str(e))
+
+            return json.dumps({
+                'success': True, 
+                'files': uploaded_files,
+                'message': f'Se subieron {len(uploaded_files)} archivos correctamente'
+            })
+
         except Exception as e:
-            _logger.exception("Error en la subida de fotos: %s", str(e))
+            _logger.exception("[UPLOAD] Error general: %s", str(e))
             return json.dumps({'error': str(e)})
 
     @http.route('/gallery/delete/<int:foto_id>', type='http', auth='public', methods=['POST'], csrf=False)

@@ -71,30 +71,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('No se seleccionaron archivos');
                 return;
             }
-
-            console.log('Archivos seleccionados:', files.length);
+        
+            // Validar archivos antes de subir
+            const validFiles = Array.from(files).filter(file => {
+                if (!file.type.startsWith('image/')) {
+                    this.showError('Archivo no válido', `${file.name} no es una imagen válida`);
+                    return false;
+                }
+                return true;
+            });
+        
+            if (!validFiles.length) {
+                console.log('No hay archivos válidos para subir');
+                this.fileInput.value = '';
+                return;
+            }
+        
             const formData = new FormData();
-            Array.from(files).forEach(file => {
+            validFiles.forEach(file => {
                 formData.append('files[]', file);
                 console.log('Archivo agregado:', file.name);
             });
-
+        
             this.showLoading('Subiendo fotos...');
-
+        
             fetch(`/gallery/upload/${this.reparacionId}`, {
                 method: 'POST',
                 body: formData
             })
             .then(response => {
-                console.log('Respuesta de subida:', response);
+                console.log('Respuesta del servidor:', response);
                 return response.json();
             })
             .then(data => {
                 console.log('Datos de respuesta:', data);
                 if (data.success) {
-                    this.showSuccess('Éxito', 'Fotos subidas correctamente');
-                    console.log('Recargando página después de subida');
-                    window.location.reload();
+                    this.showSuccess('Éxito', data.message || 'Fotos subidas correctamente');
+                    // Esperar un poco antes de recargar
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
                 } else {
                     throw new Error(data.error || 'Error al subir las fotos');
                 }
