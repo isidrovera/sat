@@ -198,39 +198,56 @@ class ReparacionFoto(models.Model):
             return False
 
     def _get_thumb_url(self, file_id, pcloud_config):
-        """Obtiene la URL del thumbnail usando getthumblink"""
+        """Obtiene la URL del thumbnail usando getthumblink de pCloud."""
         _logger.info("[THUMB_URL] Solicitando thumbnail para file_id: %s", file_id)
-        url = f"{pcloud_config.hostname}/getthumblink"
-        params = {
-            'access_token': pcloud_config.access_token,
-            'fileid': file_id,
-            'size': '256x256',  # Tamaño de la miniatura
-            'crop': 1  # Opcional: para forzar el tamaño exacto
-        }
-        
         try:
+            url = f"{pcloud_config.hostname}/getthumblink"
+            params = {
+                'access_token': pcloud_config.access_token,
+                'fileid': file_id,
+                'size': '256x256',  # Tamaño de la miniatura
+                'crop': 1  # Forzar tamaño exacto
+            }
             response = requests.get(url, params=params)
             result = response.json()
-            _logger.info("[THUMB_URL] Respuesta de getthumblink: %s", result)
             
             if response.status_code == 200 and result.get('result') == 0:
                 thumb_url = f"https://{result['hosts'][0]}{result['path']}"
                 _logger.info("[THUMB_URL] URL generada para thumbnail: %s", thumb_url)
                 return thumb_url
-
-            _logger.error("[THUMB_URL] Error al obtener thumbnail: %s", result)
-            return None
+            else:
+                _logger.error("[THUMB_URL] Error en respuesta: %s", result)
+                return None
 
         except Exception as e:
-            _logger.exception("[THUMB_URL] Error al obtener thumbnail: %s", str(e))
+            _logger.exception("[THUMB_URL] Error al obtener thumbnail para file_id %s: %s", file_id, str(e))
             return None
+
 
 
     def _get_file_url(self, file_id, pcloud_config):
-        """Obtiene la URL de descarga"""
-        _logger.info("[FILE_URL] Solicitando URL para file_id: %s", file_id)
-        return self._get_pcloud_url('getfilelink', file_id, pcloud_config)
+        """Obtiene la URL de descarga del archivo en pCloud."""
+        _logger.info("[FILE_URL] Solicitando URL de archivo para file_id: %s", file_id)
+        try:
+            url = f"{pcloud_config.hostname}/getfilelink"
+            params = {
+                'access_token': pcloud_config.access_token,
+                'fileid': file_id
+            }
+            response = requests.get(url, params=params)
+            result = response.json()
+            
+            if response.status_code == 200 and result.get('result') == 0:
+                file_url = f"https://{result['hosts'][0]}{result['path']}"
+                _logger.info("[FILE_URL] URL generada para archivo: %s", file_url)
+                return file_url
+            else:
+                _logger.error("[FILE_URL] Error en respuesta: %s", result)
+                return None
 
+        except Exception as e:
+            _logger.exception("[FILE_URL] Error al obtener URL de archivo para file_id %s: %s", file_id, str(e))
+            return None
     def _create_public_link(self, file_id, pcloud_config):
         """Crear link público para compartir"""
         _logger.info("[PUBLIC_LINK] Creando link público para file_id: %s", file_id)
