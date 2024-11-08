@@ -17,9 +17,9 @@ class GalleryController(http.Controller):
                 _logger.error("[GALLERY] Reparación no encontrada: %s", reparacion_id)
                 return request.not_found()
 
-            # Usar el método existente get_photos_preview
-            _logger.info("[GALLERY] Obteniendo fotos para reparación ID: %s", reparacion_id)
-            fotos = request.env['reparaciones.foto'].sudo().get_photos_preview(reparacion_id)
+            # Obtener fotos con previsualizaciones
+            foto_model = request.env['reparaciones.foto'].sudo()
+            fotos = foto_model.get_photos_preview(reparacion_id)
             _logger.info("[GALLERY] Se encontraron %s fotos", len(fotos) if fotos else 0)
             
             # Renderizar template
@@ -30,7 +30,6 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception("[GALLERY] Error al cargar la galería: %s", str(e))
             return request.not_found()
-
     @http.route('/gallery/upload/<int:reparacion_id>', type='http', auth='public', methods=['POST'], csrf=False)
     def upload_photo(self, reparacion_id, **kwargs):
         """Maneja la subida de fotos"""

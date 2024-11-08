@@ -60,6 +60,7 @@ class ReparacionFoto(models.Model):
          'El nombre del archivo debe ser único por reparación')
     ]
 
+    
     @api.model_create_multi
     def create(self, vals_list):
         """Sobrescribe el método create para manejar la subida de fotos"""
@@ -89,49 +90,38 @@ class ReparacionFoto(models.Model):
                         _logger.error("[CREATE] No se encontró la reparación: %s", vals['reparacion_id'])
                         raise ValidationError("No se encontró la reparación relacionada")
 
-                    # Procesar archivo
                     archivo_binario = base64.b64decode(vals['foto_binario'])
                     vals['size'] = len(archivo_binario)
                     
-                    # Detectar tipo de archivo
-                    mime_type = magic.from_buffer(archivo_binario, mime=True)
-                    extension = mimetypes.guess_extension(mime_type) or '.bin'
-                    _logger.info("[CREATE] Tipo MIME detectado: %s, extensión: %s", mime_type, extension)
-
-                    # Generar nombre único
-                    nuevo_nombre = f"{vals['unique_id']}{extension}"
-                    vals['nombre_foto'] = nuevo_nombre
-                    _logger.info("[CREATE] Nombre generado para archivo: %s", nuevo_nombre)
-
                     # Configuración pCloud
                     pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
                     if not pcloud_config or not pcloud_config.access_token:
                         _logger.error("[CREATE] No se encontró configuración de pCloud válida")
                         raise ValidationError("Configuración de pCloud no encontrada")
 
-                    # Obtener carpeta
+                    # Obtener folder_id
                     folder_id = self._obtener_folder_id(reparacion, pcloud_config)
                     _logger.info("[CREATE] Carpeta pCloud obtenida: %s", folder_id)
-
+                    
                     # Subir archivo
                     result = self._upload_to_pcloud(
                         archivo_binario,
-                        nuevo_nombre,
+                        vals['nombre_foto'],
                         folder_id,
                         pcloud_config
                     )
 
-                    if result and result.get('file_id'):
-                        _logger.info("[CREATE] Archivo subido exitosamente: %s", result)
+                    if result:
                         vals.update({
                             'file_id': result['file_id'],
                             'url_foto': result['url'],
                             'public_link': result.get('public_link'),
-                            'state': 'done'
+                            'state': 'done',
+                            'size': result.get('size', vals['size']),
+                            'mimetype': result.get('content_type', 'application/octet-stream')
                         })
                         del vals['foto_binario']
                     else:
-                        _logger.error("[CREATE] Error al subir archivo a pCloud")
                         vals['state'] = 'error'
                         raise ValidationError("Error al subir la foto a pCloud")
 
@@ -789,4 +779,88 @@ class ReparacionFoto(models.Model):
 
         except Exception as e:
             _logger.exception(f"[ZIP] Error al crear ZIP: {str(e)}")
+            return False
+    def _upload_to_pcloud(self, archivo_binario, filename, folder_id, pcloud_config):
+        """Sube un archivo a pCloud"""
+        _logger.info("[UPLOAD_PCLOUD] Iniciando subida de archivo %s a folder_id %s", filename, folder_id)
+        
+        try:
+            url = f"{pcloud_config.hostname}/uploadfile"
+            
+            # Preparar los parámetros
+            params = {
+                'folderid': folder_id,
+                'nopartial': 1,  # No guardar archivos parciales
+                'renameifexists': 1,  # Renombrar si existe
+            }
+            
+            # Preparar el archivo
+            files = {
+                'file': (filename, archivo_binario, 'application/octet-stream')
+            }
+            
+            # Agregar el token de acceso
+            params['access_token'] = pcloud_config.access_token
+            
+            _logger.info("[UPLOAD_PCLOUD] Enviando solicitud a %s con params: %s", url, params)
+            
+            # Realizar la solicitud POST
+            response = requests.post(url, 
+                                params=params,
+                                files=files,
+                                timeout=30)  # 30 segundos de timeout
+            
+            _logger.info("[UPLOAD_PCLOUD] Código de respuesta: %s", response.status_code)
+            
+            if response.status_code != 200:
+                _logger.error("[UPLOAD_PCLOUD] Error en la solicitud: %s", response.text)
+                return False
+                
+            result = response.json()
+            _logger.info("[UPLOAD_PCLOUD] Respuesta: %s", result)
+            
+            if result.get('result') == 0 and result.get('metadata'):
+                metadata = result['metadata'][0]
+                file_id = metadata.get('fileid')
+                
+                if not file_id:
+                    _logger.error("[UPLOAD_PCLOUD] No se encontró file_id en la respuesta")
+                    return False
+                    
+                _logger.info("[UPLOAD_PCLOUD] Archivo subido exitosamente con ID: %s", file_id)
+                
+                # Obtener la URL pública del archivo
+                public_link = self._create_public_link(file_id, pcloud_config)
+                
+                # Obtener la URL de descarga
+                download_url = self._get_file_url(file_id, pcloud_config)
+                
+                if not download_url:
+                    _logger.error("[UPLOAD_PCLOUD] No se pudo obtener la URL de descarga")
+                    return False
+                    
+                return {
+                    'file_id': file_id,
+                    'url': download_url,
+                    'public_link': public_link,
+                    'size': metadata.get('size'),
+                    'content_type': metadata.get('contenttype'),
+                    'created': metadata.get('created'),
+                    'modified': metadata.get('modified'),
+                    'thumb': metadata.get('thumb', False)
+                }
+                
+            else:
+                error_msg = result.get('error', 'Error desconocido')
+                _logger.error("[UPLOAD_PCLOUD] Error en respuesta: %s", error_msg)
+                return False
+                
+        except requests.exceptions.Timeout:
+            _logger.error("[UPLOAD_PCLOUD] Timeout durante la subida del archivo")
+            return False
+        except requests.exceptions.RequestException as e:
+            _logger.exception("[UPLOAD_PCLOUD] Error en la solicitud: %s", str(e))
+            return False
+        except Exception as e:
+            _logger.exception("[UPLOAD_PCLOUD] Error general: %s", str(e))
             return False
