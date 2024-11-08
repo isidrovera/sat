@@ -277,59 +277,53 @@ class ReparacionFoto(models.Model):
     @api.model
     def get_photos_preview(self, reparacion_id):
         """Obtiene todas las fotos con sus previsualizaciones"""
-        _logger.info(f"[GET_PHOTOS_PREVIEW] Iniciando para reparación ID: {reparacion_id}")
+        _logger.info("[GET_PHOTOS_PREVIEW] Iniciando para reparación ID: %s", reparacion_id)
         
         photos = []
-        domain = [('reparacion_id', 'in', [reparacion_id] if isinstance(reparacion_id, int) else reparacion_id)]
-        fotos = self.search(domain, order='sequence, id')
-        
-        pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-        if not pcloud_config or not pcloud_config.access_token:
-            _logger.error("[GET_PHOTOS_PREVIEW] No se encontró configuración de pCloud")
+        try:
+            # Obtener fotos de la reparación
+            domain = [('reparacion_id', '=', reparacion_id)]
+            fotos = self.search(domain, order='sequence, id')
+            _logger.info("[GET_PHOTOS_PREVIEW] Encontradas %s fotos", len(fotos))
+            
+            # Obtener configuración de pCloud
+            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+            if not pcloud_config or not pcloud_config.access_token:
+                _logger.error("[GET_PHOTOS_PREVIEW] No se encontró configuración de pCloud")
+                return photos
+
+            for foto in fotos:
+                try:
+                    _logger.info("[GET_PHOTOS_PREVIEW] Procesando foto ID: %s", foto.id)
+                    if foto.file_id:
+                        # Asegurarse de pasar pcloud_config al obtener URLs
+                        thumb_url = foto._get_thumb_url(foto.file_id, pcloud_config)
+                        download_url = foto._get_file_url(foto.file_id, pcloud_config)
+                        
+                        _logger.info("[GET_PHOTOS_PREVIEW] URLs obtenidas - Thumb: %s, Download: %s", 
+                                    thumb_url, download_url)
+                        
+                        if thumb_url and download_url:
+                            photos.append({
+                                'id': foto.id,
+                                'nombre_foto': foto.nombre_foto,
+                                'thumb_url': thumb_url,
+                                'download_url': download_url,
+                                'file_id': foto.file_id
+                            })
+                            _logger.info("[GET_PHOTOS_PREVIEW] Foto %s agregada al resultado", foto.id)
+                    else:
+                        _logger.warning("[GET_PHOTOS_PREVIEW] Foto %s no tiene file_id", foto.id)
+                except Exception as e:
+                    _logger.exception("[GET_PHOTOS_PREVIEW] Error procesando foto %s: %s", foto.id, str(e))
+                    continue
+
+            _logger.info("[GET_PHOTOS_PREVIEW] Retornando %s fotos procesadas", len(photos))
             return photos
 
-        for foto in fotos:
-            try:
-                if foto.file_id:
-                    thumb_url = self._get_thumb_url(foto.file_id, pcloud_config)
-                    download_url = self._get_file_url(foto.file_id, pcloud_config)
-                    
-                    if thumb_url and download_url:
-                        photos.append({
-                            'id': foto.id,
-                            'nombre_foto': foto.nombre_foto,
-                            'thumb_url': thumb_url,
-                            'download_url': download_url,
-                            'file_id': foto.file_id
-                        })
-                        _logger.info(f"[GET_PHOTOS_PREVIEW] Foto {foto.id} procesada con éxito")
-            except Exception as e:
-                _logger.exception(f"[GET_PHOTOS_PREVIEW] Error procesando foto {foto.id}: {str(e)}")
-                continue
-
-        return photos
-
-    def share_photo(self):
-        """Compartir foto (incrementa contador y devuelve link público)"""
-        self.ensure_one()
-        _logger.info("[SHARE] Compartiendo foto %s", self.id)
-        
-        if self.public_link:
-            self.share_count += 1
-            _logger.info("[SHARE] Incrementado contador de compartidos para foto %s", self.id)
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Link Copiado',
-                    'message': self.public_link,
-                    'sticky': False,
-                    'type': 'success',
-                }
-            }
-        _logger.warning("[SHARE] No hay link público disponible para foto %s", self.id)
-        return False
-
+        except Exception as e:
+            _logger.exception("[GET_PHOTOS_PREVIEW] Error general: %s", str(e))
+            return photos
     def download_photo(self):
         """Descargar foto individual"""
         self.ensure_one()
