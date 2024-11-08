@@ -9,6 +9,7 @@ _logger = logging.getLogger(__name__)
 class GalleryController(http.Controller):
     @http.route('/gallery/<int:reparacion_id>', type='http', auth='public', website=True)
     def gallery_page(self, reparacion_id, **kwargs):
+        """Renderiza la página de galería"""
         _logger.info("[GALLERY] Accediendo a galería para reparación ID: %s", reparacion_id)
         try:
             reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
@@ -16,44 +17,24 @@ class GalleryController(http.Controller):
                 _logger.error("[GALLERY] Reparación no encontrada: %s", reparacion_id)
                 return request.not_found()
 
-            # Verificar y actualizar fotos
-            fotos = request.env['reparaciones.foto'].sudo().search([
-                ('reparacion_id', '=', reparacion_id)
-            ])
-            _logger.info("[GALLERY] Encontradas %s fotos", len(fotos))
-
-            fotos_data = []
-            for foto in fotos:
-                try:
-                    # Verificar enlaces
-                    if foto.verify_pcloud_links():
-                        thumb_url = foto._get_thumb_url(foto.file_id)
-                        download_url = foto._get_file_url(foto.file_id)
-                        if thumb_url and download_url:
-                            fotos_data.append({
-                                'id': foto.id,
-                                'nombre_foto': foto.nombre_foto,
-                                'thumb_url': thumb_url,
-                                'download_url': download_url
-                            })
-                            _logger.info("[GALLERY] Foto %s procesada correctamente", foto.id)
-                except Exception as e:
-                    _logger.error("[GALLERY] Error procesando foto %s: %s", foto.id, str(e))
-
-            _logger.info("[GALLERY] Renderizando galería con %s fotos", len(fotos_data))
+            # Usar el método existente get_photos_preview
+            _logger.info("[GALLERY] Obteniendo fotos para reparación ID: %s", reparacion_id)
+            fotos = request.env['reparaciones.foto'].sudo().get_photos_preview(reparacion_id)
+            _logger.info("[GALLERY] Se encontraron %s fotos", len(fotos) if fotos else 0)
+            
+            # Renderizar template
             return request.render('sat.gallery_page_template', {
                 'reparacion': reparacion,
-                'fotos': fotos_data,
+                'fotos': fotos or [],
             })
-
         except Exception as e:
-            _logger.exception("[GALLERY] Error general: %s", str(e))
+            _logger.exception("[GALLERY] Error al cargar la galería: %s", str(e))
             return request.not_found()
 
     @http.route('/gallery/upload/<int:reparacion_id>', type='http', auth='public', methods=['POST'], csrf=False)
     def upload_photo(self, reparacion_id, **kwargs):
         """Maneja la subida de fotos"""
-        _logger.info("[UPLOAD] Iniciando subida de fotos para reparación %s", reparacion_id)
+        _logger.info("[UPLOAD] Iniciando subida para reparación %s", reparacion_id)
         try:
             files = request.httprequest.files.getlist('files[]')
             if not files:
@@ -70,31 +51,20 @@ class GalleryController(http.Controller):
                         'foto_binario': base64.b64encode(file.read()),
                     }
                     foto = request.env['reparaciones.foto'].sudo().create(foto_data)
-                    _logger.info("[UPLOAD] Foto creada con ID: %s", foto.id)
-
-                    # Verificar enlaces después de crear
-                    if foto.verify_pcloud_links():
+                    if foto:
                         uploaded_files.append({
                             'id': foto.id,
                             'nombre': foto.nombre_foto,
                             'url': foto.url_foto
                         })
-                        _logger.info("[UPLOAD] Foto %s subida correctamente", foto.id)
-                    else:
-                        _logger.error("[UPLOAD] Error verificando enlaces para foto %s", foto.id)
+                        _logger.info("[UPLOAD] Foto subida correctamente: %s", foto.id)
                 except Exception as e:
-                    _logger.exception("[UPLOAD] Error procesando archivo %s: %s", file.filename, str(e))
+                    _logger.error("[UPLOAD] Error al procesar archivo %s: %s", file.filename, str(e))
 
-            return json.dumps({
-                'success': True, 
-                'files': uploaded_files,
-                'message': f'Se subieron {len(uploaded_files)} archivos correctamente'
-            })
-
+            return json.dumps({'success': True, 'files': uploaded_files})
         except Exception as e:
             _logger.exception("[UPLOAD] Error general: %s", str(e))
             return json.dumps({'error': str(e)})
-
     @http.route('/gallery/delete/<int:foto_id>', type='http', auth='public', methods=['POST'], csrf=False)
     def delete_photo(self, foto_id):
         """Elimina una foto"""
@@ -112,32 +82,24 @@ class GalleryController(http.Controller):
         """Sincroniza los enlaces de las fotos con pCloud"""
         _logger.info("[SYNC] Iniciando sincronización para reparación ID: %s", reparacion_id)
         try:
-            # Obtener configuración de pCloud
-            pcloud_config = request.env['pcloud.configuracion'].sudo().search([], limit=1)
-            if not pcloud_config:
-                _logger.error("[SYNC] No se encontró configuración de pCloud")
-                return {'success': False, 'error': 'No se encontró configuración de pCloud'}
-
-            # Obtener todas las fotos de la reparación
+            # Obtener fotos
             fotos = request.env['reparaciones.foto'].sudo().search([
                 ('reparacion_id', '=', reparacion_id)
             ])
-            _logger.info("[SYNC] Encontradas %s fotos para sincronizar", len(fotos))
-
-            # Actualizar cada foto
+            
+            # Obtener configuración de pCloud
+            pcloud_config = request.env['pcloud.configuracion'].sudo().search([], limit=1)
+            
             updated_fotos = []
             for foto in fotos:
                 try:
-                    _logger.info("[SYNC] Procesando foto ID: %s", foto.id)
-                    # Obtener nuevos enlaces
+                    # Usar los métodos existentes
                     thumb_url = foto._get_thumb_url(foto.file_id, pcloud_config)
                     file_url = foto._get_file_url(foto.file_id, pcloud_config)
                     
                     if thumb_url and file_url:
-                        _logger.info("[SYNC] Enlaces actualizados para foto ID: %s", foto.id)
                         foto.write({
-                            'url_foto': file_url,
-                            'public_link': file_url
+                            'url_foto': file_url
                         })
                         updated_fotos.append({
                             'id': foto.id,
@@ -145,19 +107,18 @@ class GalleryController(http.Controller):
                             'thumb_url': thumb_url,
                             'download_url': file_url
                         })
-                    else:
-                        _logger.warning("[SYNC] No se pudieron obtener enlaces para foto ID: %s", foto.id)
                 except Exception as e:
                     _logger.error("[SYNC] Error procesando foto %s: %s", foto.id, str(e))
 
-            _logger.info("[SYNC] Sincronización completada. Actualizadas %s fotos", len(updated_fotos))
+            _logger.info("[SYNC] Actualización completada: %s fotos", len(updated_fotos))
             return {
                 'success': True,
                 'fotos': updated_fotos,
-                'message': f'Se actualizaron {len(updated_fotos)} fotos correctamente'
+                'message': f'Se actualizaron {len(updated_fotos)} fotos'
             }
+
         except Exception as e:
-            _logger.exception("[SYNC] Error en la sincronización: %s", str(e))
+            _logger.exception("[SYNC] Error en sincronización: %s", str(e))
             return {'success': False, 'error': str(e)}
 
     @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
