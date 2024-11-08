@@ -190,144 +190,146 @@
                                     <i class="fa fa-expand"></i>
                                 </button>
                             </div>
-                            <div class="chart-container">
+                            <div class="chart-container" style="height: 400px; width: 100%;"> <!--
+                                Agregado height y width fijos -->
                                 <canvas id="disponibilidadChart"></canvas>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Gráfico 2: Estado de las Máquinas -->
-                    <div class="col-lg-6 col-md-12">
-                        <div class="chart-wrapper">
-                            <div class="chart-header">
-                                <h4>Estado de Máquinas</h4>
-                                <button class="expand-button">
-                                    <i class="fa fa-expand"></i>
-                                </button>
-                            </div>
-                            <div class="chart-container"
-                                style="display: flex; justify-content: center; align-items: center; height: 300px;">
-                                <canvas id="estadoChart"></canvas>
-                            </div>
+                <!-- Gráfico 2: Estado de las Máquinas -->
+                <div class="col-lg-6 col-md-12">
+                    <div class="chart-wrapper">
+                        <div class="chart-header">
+                            <h4>Estado de Máquinas</h4>
+                            <button class="expand-button">
+                                <i class="fa fa-expand"></i>
+                            </button>
                         </div>
-                    </div>
-
-                    <!-- Gráfico 3: Reparaciones por Técnico -->
-                    <div class="col-lg-6 col-md-12">
-                        <div class="chart-wrapper">
-                            <div class="chart-header">
-                                <h4>Reparaciones por Técnico</h4>
-                                <button class="expand-button">
-                                    <i class="fa fa-expand"></i>
-                                </button>
-                            </div>
-
-                            <!-- Filtros de Fecha en una sola fila -->
-                            <div class="filter-section mb-3 d-flex align-items-center">
-                                <label for="startDateTecnicos" class="mr-2">Fecha de Inicio:</label>
-                                <input type="date" id="startDateTecnicos" class="form-control mr-2"
-                                    style="width: auto;" />
-
-                                <label for="endDateTecnicos" class="mr-2">Fecha de Fin:</label>
-                                <input type="date" id="endDateTecnicos" class="form-control mr-2"
-                                    style="width: auto;" />
-
-                                <button id="applyFilterTecnicos" class="btn btn-primary">Aplicar
-                                    Filtros</button>
-                            </div>
-
-                            <div class="chart-container">
-                                <canvas id="tecnicosChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Contenedor principal para el gráfico de Tickets por Técnico -->
-                    <div class="col-lg-6 col-md-12">
-                        <div class="chart-wrapper">
-                            <!-- Encabezado del gráfico con título y botón de expansión -->
-                            <div class="chart-header">
-                                <h4>Tickets por Técnico</h4>
-                                <button class="expand-button">
-                                    <i class="fa fa-expand"></i>
-                                </button>
-                            </div>
-
-                            <!-- Filtros de Fecha en una sola fila -->
-                            <div class="filter-section mb-3 d-flex align-items-center">
-                                <label for="startDate" class="mr-2">Fecha de Inicio:</label>
-                                <input type="date" id="startDate" class="form-control mr-2"
-                                    style="width: auto;" />
-
-                                <label for="endDate" class="mr-2">Fecha de Fin:</label>
-                                <input type="date" id="endDate" class="form-control mr-2"
-                                    style="width: auto;" />
-
-                                <button id="applyFilter" class="btn btn-primary">Aplicar Filtros</button>
-                            </div>
-
-                            <!-- Contenedor del gráfico -->
-                            <div class="chart-container">
-                                <canvas id="ticketsTecnicoChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-
-                    <!-- Gráfico: Tickets por Mes -->
-                    <div class="col-lg-6 col-md-12">
-                        <div class="chart-wrapper">
-                            <div class="chart-header">
-                                <h4></h4>
-                                <button class="expand-button">
-                                    <i class="fa fa-expand"></i>
-                                </button>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="ticketsMesChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Gráfico: Tickets por Año -->
-                    <div class="col-lg-6 col-md-12">
-                        <div class="chart-wrapper">
-                            <div class="chart-header">
-                                <h4></h4>
-                                <button class="expand-button">
-                                    <i class="fa fa-expand"></i>
-                                </button>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="ticketsAnoChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-
-                    <!-- Gráfico 4: Máquinas por Asesora -->
-                    <div class="col-lg-6 col-md-12">
-                        <div class="chart-wrapper">
-                            <div class="chart-header">
-                                <h4></h4>
-                                <button class="expand-button">
-                                    <i class="fa fa-expand"></i>
-                                </button>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="asesoraChart"></canvas>
-                            </div>
+                        <div class="chart-container"
+                            style="display: flex; justify-content: center; align-items: center; height: 300px;">
+                            <canvas id="estadoChart"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <!-- Pie de página -->
-                <div class="row mt-4">
-                    <div class="col-12 text-center">
-                        <p class="text-muted">© Isidro Vera</p>
+                <!-- Gráfico 3: Reparaciones por Técnico -->
+                <div class="col-lg-6 col-md-12">
+                    <div class="chart-wrapper">
+                        <div class="chart-header">
+                            <h4>Reparaciones por Técnico</h4>
+                            <button class="expand-button">
+                                <i class="fa fa-expand"></i>
+                            </button>
+                        </div>
+
+                        <!-- Filtros de Fecha en una sola fila -->
+                        <div class="filter-section mb-3 d-flex align-items-center">
+                            <label for="startDateTecnicos" class="mr-2">Fecha de Inicio:</label>
+                            <input type="date" id="startDateTecnicos" class="form-control mr-2"
+                                style="width: auto;" />
+
+                            <label for="endDateTecnicos" class="mr-2">Fecha de Fin:</label>
+                            <input type="date" id="endDateTecnicos" class="form-control mr-2"
+                                style="width: auto;" />
+
+                            <button id="applyFilterTecnicos" class="btn btn-primary">Aplicar
+                                Filtros</button>
+                        </div>
+
+                        <div class="chart-container">
+                            <canvas id="tecnicosChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <!-- Contenedor principal para el gráfico de Tickets por Técnico -->
+                <div class="col-lg-6 col-md-12">
+                    <div class="chart-wrapper">
+                        <!-- Encabezado del gráfico con título y botón de expansión -->
+                        <div class="chart-header">
+                            <h4>Tickets por Técnico</h4>
+                            <button class="expand-button">
+                                <i class="fa fa-expand"></i>
+                            </button>
+                        </div>
+
+                        <!-- Filtros de Fecha en una sola fila -->
+                        <div class="filter-section mb-3 d-flex align-items-center">
+                            <label for="startDate" class="mr-2">Fecha de Inicio:</label>
+                            <input type="date" id="startDate" class="form-control mr-2"
+                                style="width: auto;" />
+
+                            <label for="endDate" class="mr-2">Fecha de Fin:</label>
+                            <input type="date" id="endDate" class="form-control mr-2"
+                                style="width: auto;" />
+
+                            <button id="applyFilter" class="btn btn-primary">Aplicar Filtros</button>
+                        </div>
+
+                        <!-- Contenedor del gráfico -->
+                        <div class="chart-container">
+                            <canvas id="ticketsTecnicoChart"></canvas>
+                        </div>
                     </div>
                 </div>
 
-            </div> <!--
+
+                <!-- Gráfico: Tickets por Mes -->
+                <div class="col-lg-6 col-md-12">
+                    <div class="chart-wrapper">
+                        <div class="chart-header">
+                            <h4></h4>
+                            <button class="expand-button">
+                                <i class="fa fa-expand"></i>
+                            </button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="ticketsMesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico: Tickets por Año -->
+                <div class="col-lg-6 col-md-12">
+                    <div class="chart-wrapper">
+                        <div class="chart-header">
+                            <h4></h4>
+                            <button class="expand-button">
+                                <i class="fa fa-expand"></i>
+                            </button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="ticketsAnoChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Gráfico 4: Máquinas por Asesora -->
+                <div class="col-lg-6 col-md-12">
+                    <div class="chart-wrapper">
+                        <div class="chart-header">
+                            <h4></h4>
+                            <button class="expand-button">
+                                <i class="fa fa-expand"></i>
+                            </button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="asesoraChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pie de página -->
+            <div class="row mt-4">
+                <div class="col-12 text-center">
+                    <p class="text-muted">© Isidro Vera</p>
+                </div>
+            </div>
+
+        </div> <!--
             Cierra el contenedor content-scroll -->
         </div>
     </t>
