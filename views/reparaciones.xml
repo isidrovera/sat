@@ -215,7 +215,7 @@
             <field name="prioridad" />
             <field name="tipo_revision" />
             <field name="responsable_id" />
-            <field name="asesora_id" />
+            <field name="maquina_id.asesora_id" />
             
             <progressbar field="estado_id"
                 colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger", "en_revision": "info"}' />
