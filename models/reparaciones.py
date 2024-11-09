@@ -381,6 +381,7 @@ class Reparaciones(models.Model):
     cliente_id = fields.Many2one('res.partner', string='Cliente', related='maquina_id.cliente_id', readonly=True,
         store=True, tracking=True
     )
+    asesora_id  = fields.Char('maquina_id.asesora_id.name',string='Asesora')
 
     falla_proveedor = fields.Html(string="Descripción")
     
