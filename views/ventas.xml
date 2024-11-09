@@ -2,170 +2,115 @@
 <odoo>
   <data>
     <record id="maquinas_form_view" model="ir.ui.view">
-    <field name="name">Sat.form</field>
-    <field name="model">sat.sat</field>
-    <field name="arch" type="xml">
-        <form string="Gestión de Equipos">
-            <header>
-                <div class="d-flex justify-content-between align-items-center w-100">
-                    <div class="d-flex gap-2">
-                        <button name="send_records_by_email" type="object" 
-                            class="btn btn-primary">
-                            <i class="fa fa-paper-plane"/> Enviar Reporte
-                        </button>
+      <field name="name">Sat.form</field>
+      <field name="model">sat.sat</field>
+      <field name="arch" type="xml">
+        <form string="ModelTitle">
+          <header>
 
-                        <button name="create_reparacion" type="object" 
-                            class="btn btn-success"
-                            groups="base.group_system">
-                            <i class="fa fa-wrench"/> Nueva Reparación
-                        </button>
+            <button string=" " name="send_records_by_email" type="object" class="oe_highlight" icon="fa-paper-plane" help="Envia por correo lista de maquinas con problemas y de partes" />
 
-                        <button name="action_crear_reparaciones" 
-                            string="Crear Reparaciones" 
-                            type="object" 
-                            class="btn btn-info">
-                            <i class="fa fa-tools"/> Crear Reparaciones
-                        </button>
-                    </div>
-                    
-                    <div class="d-flex gap-2">
-                        <field name="disponibilidad_id" widget="statusbar" statusbar_visible="true"/>
-                        <field name="estado_ventas_id" widget="statusbar" options="{'clickable': '1'}" 
-                               groups="base.group_system"/>
-                    </div>
-                </div>
-            </header>
+            <button string=" " name="create_reparacion" type="object" class="btn btn-success" icon="fa-wrench" help="Permite crear ordenes de reparaciones" groups="base.group_system" />
+            <button name="action_crear_reparaciones" string="Crear Reparaciones" type="object" class="btn-primary" />
+            <field name="disponibilidad_id" widget="statusbar" statusbar_visible="true" />
 
-            <!-- Alertas -->
-            <div class="alert alert-danger d-flex align-items-center" role="alert" 
-                 invisible="activador == 'no'">
-                <i class="fa fa-exclamation-triangle me-2"/>
-                <div>
-                    ¡Esta máquina tiene observaciones: 
-                    <field name='descripcion' class="text-danger"/>
-                    Si está separando o vendiendo revise antes, consulte con el área correspondiente!
-                </div>
+
+            <field name="estado_ventas_id" widget="statusbar" options="{'clickable': '1'}" class="custom_statusbar" groups="base.group_system"/>
+
+          </header>
+
+          <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" invisible="activador == 'no'"> ¡Esta maquina tiene observaciones, <field name='descripcion' style="color: red;" />
+, si está separando o vendiendo revise antes,
+            consulte con el área correspondiente! </div>
+
+          <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" invisible="ubicacion_id == 'primer_piso' or ubicacion_id == 'tercer_piso'"> ¡Esta
+            maquina está en el almacén, <field name="ubicacion_id" style="background: yellow;" />
+!
+            Si está separando o vendiendo, avisar con anticipación para que pueda ser traída. </div>
+
+          <sheet>
+            <div class="oe_button_box" name="button_box">
+              <button name="view_reparaciones_ids" type="object" class="oe_stat_button" icon="fa-wrench">
+                <field name="reparaciones_count" string="Reparaciones" widget="statinfo" />
+              </button>
             </div>
 
-            <div class="alert alert-warning d-flex align-items-center" role="alert" 
-                 invisible="ubicacion_id == 'primer_piso' or ubicacion_id == 'tercer_piso'">
-                <i class="fa fa-exclamation-circle me-2"/>
-                <div>
-                    Esta máquina está en el almacén 
-                    <field name="ubicacion_id" class="badge bg-warning text-dark"/>
-                    Si está separando o vendiendo, avisar con anticipación.
-                </div>
+            <div class="oe_title">
+              <label for="cliente_id" />
+              <h1>
+                <field name="cliente_id" domain="[('tipo_cliente', '=', 'distribuidor')]" placeholder="Datos del Cliente" widget="many2one_avatar" style="width:100%" options="{'no_create': True}" />
+              </h1>
             </div>
 
-            <sheet>
-                <div class="oe_button_box" name="button_box">
-                    <button name="view_reparaciones_ids" type="object" 
-                            class="oe_stat_button" icon="fa-wrench">
-                        <field name="reparaciones_count" widget="statinfo" string="Reparaciones"/>
-                    </button>
-                </div>
+            <group>
+              <group string="Datos del Equipo">
+                <field name="tipo_maquina" />
+                <field name="marca" />
+                <field name="name" search="True" options="{'no_create': True}" />
+                <field name="serie_id" />
+                <field name="contometro" />
+                <field name="ubicacion_id" />
+                <field name="fecha_separacion" invisible="disponibilidad_id == 'disponible'" readonly="1" />
+              </group>
 
-                <div class="oe_title">
-                    <h1>
-                        <label for="cliente_id" string="Cliente" class="oe_edit_only"/>
-                        <field name="cliente_id" 
-                               domain="[('tipo_cliente', '=', 'distribuidor')]" 
-                               placeholder="Datos del Cliente" 
-                               widget="many2one_avatar" 
-                               options="{'no_create': True}"/>
-                    </h1>
-                </div>
+              <group string="Datos de Importación">
+                <field name="proveedor_id" domain="[('tipo_cliente', '=', 'proveedor')]" options="{'no_create': True}" />
+                <field name="importacion" />
+                <field name="invoice" />
+              </group>
+              <group string="Datos para revisión" style="color:red;">
+                <field name="tipo_revision" widget="kanban_label_selection" options="{'classes': {'draft': 'default', 'done': 'success'}}" />
+                <field name="prioridad" widget="selection" />
+              </group>
 
-                <!-- Información Principal -->
-                <div class="row mt-3">
-                    <div class="col-12 col-md-6">
-                        <group string="Datos del Equipo" class="o_group">
-                            <field name="tipo_maquina"/>
-                            <field name="marca"/>
-                            <field name="name" options="{'no_create': True}"/>
-                            <field name="serie_id"/>
-                            <field name="contometro"/>
-                            <field name="ubicacion_id"/>
-                            <field name="fecha_separacion" 
-                                   invisible="disponibilidad_id == 'disponible'" 
-                                   readonly="1"/>
-                        </group>
-                    </div>
-                    
-                    <div class="col-12 col-md-6">
-                        <group string="Datos de Importación" class="o_group">
-                            <field name="proveedor_id" 
-                                   domain="[('tipo_cliente', '=', 'proveedor')]" 
-                                   options="{'no_create': True}"/>
-                            <field name="importacion"/>
-                            <field name="invoice"/>
-                        </group>
-                    </div>
-                </div>
+              <group string="Notificar" style="color:green;">
+                <field name="trabajadores_id" widget="many2one_avatar" />
+                <field name="asesora_id" />
+                <field name="fecha_para_revision" />
+                <field name="autorizacion_cambio_digitos"/>
+              </group>
+            </group>
 
-                <div class="row mt-3">
-                    <div class="col-12 col-md-6">
-                        <group string="Datos para Revisión" class="o_group">
-                            <field name="tipo_revision" 
-                                   widget="kanban_label_selection" 
-                                   options="{'classes': {'draft': 'default', 'done': 'success'}}"/>
-                            <field name="prioridad" widget="priority"/>
-                        </group>
-                    </div>
-                    
-                    <div class="col-12 col-md-6">
-                        <group string="Notificaciones" class="o_group">
-                            <field name="trabajadores_id" widget="many2one_avatar"/>
-                            <field name="asesora_id"/>
-                            <field name="fecha_para_revision"/>
-                            <field name="autorizacion_cambio_digitos"/>
-                        </group>
-                    </div>
-                </div>
+            <notebook>
+              <page string="Observaciones del equipo">
+                <group>
+                  <group>
+                    <field name="descripcion" />
+                  </group>
+                  <group>
+                    <field name="activador" class="oe_form_field_bottom_separator" invisible="1" />
+                  </group>
+                </group>
+              </page>
 
-                <!-- Pestañas -->
-                <notebook class="mt-4">
-                    <page string="Observaciones del equipo">
-                        <group>
-                            <field name="descripcion" nolabel="1" placeholder="Ingrese las observaciones aquí..."/>
-                            <field name="activador" invisible="1"/>
-                        </group>
-                    </page>
+              <page string="Precios">
+                <group>
+                  <group>
+                    <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}" groups="base.group_system, sat.Sat_ventas_group_user" />
+                    <field name="currency_id" string="Tipo de moneda" />
+                  </group>
+                  <group>
+                    <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" groups="base.group_system" />
+                  </group>
+                </group>
+              </page>
 
-                    <page string="Precios">
-                        <group>
-                            <group>
-                                <field name="precio_venta" 
-                                       widget="monetary" 
-                                       options="{'currency_field': 'currency_id'}" 
-                                       groups="base.group_system, sat.Sat_ventas_group_user"/>
-                                <field name="currency_id"/>
-                            </group>
-                            <group>
-                                <field name="precio_compra" 
-                                       widget="monetary" 
-                                       options="{'currency_field': 'currency_id'}" 
-                                       groups="base.group_system"/>
-                            </group>
-                        </group>
-                    </page>
-
-                    <page string="Logística">
-                        <group>
-                            <group>
-                                <field name="factura_venta"/>
-                            </group>
-                            <group>
-                                <field name="fecha_entrega"/>
-                            </group>
-                        </group>
-                    </page>
-                </notebook>
-            </sheet>
-            <chatter />
+              <page string="Logistica">
+                <group>
+                  <group>
+                    <field name="factura_venta" />
+                  </group>
+                  <group>
+                    <field name="fecha_entrega" />
+                  </group>
+                </group>
+              </page>
+            </notebook>
+          </sheet>
+          <chatter />
         </form>
-    </field>
-</record>
+      </field>
+    </record>
 
     <record id="maquinas_tree_sat" model="ir.ui.view">
       <field name="name">sat.tree</field>

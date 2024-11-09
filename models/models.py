@@ -385,6 +385,7 @@ class SatSat(models.Model):
 
     def write(self, vals):
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
+        estados_problema = ['con_problemas', 'de_partes']
         
         # Verificar si los campos 'tipo_revision' o 'prioridad' están siendo modificados
         tipo_revision_modificado = 'tipo_revision' in vals
@@ -395,14 +396,13 @@ class SatSat(models.Model):
         for record in self:
             estado_actual = record.estado_ventas_id
             
+            # Primera parte: Manejo de tipo_revision y prioridad
             if estado_actual in estados_permitidos_para_cambio:
                 if tipo_revision_modificado or prioridad_modificada:
-                    # Si alguno de los campos tiene un valor, cambiar a 'para_revision'
                     if vals.get('tipo_revision') or vals.get('prioridad'):
                         vals['estado_ventas_id'] = 'para_revision'
-                        vals['fecha_para_revision'] = fields.Datetime.now()  # Registrar la fecha y hora de la modificación
+                        vals['fecha_para_revision'] = fields.Datetime.now()
 
-                        # Enviar notificación a Isidro Vera Polo
                         if isidro_partner_id:
                             user_name = self.env.user.name
                             record_name = record.name.name
@@ -414,9 +414,19 @@ class SatSat(models.Model):
                                 subtype='mail.mt_comment',
                             )
                     else:
-                        # Si ambos campos están vacíos o borrados, cambiar a 'sin_revisar'
                         vals['estado_ventas_id'] = 'sin_revisar'
-                        vals['fecha_para_revision'] = None  # Opcional: limpiar la fecha si es necesario
+                        vals['fecha_para_revision'] = None
+            
+            # Segunda parte: Manejo de la descripción cuando cambia desde estados_problema
+            if 'estado_ventas_id' in vals:
+                nuevo_estado = vals['estado_ventas_id']
+                if estado_actual in estados_problema and nuevo_estado not in estados_problema:
+                    vals['descripcion'] = False
+                    vals['activador'] = 'no'
+                    message = _(
+                        "Se limpió la descripción al cambiar el estado de '%s' a '%s'"
+                    ) % (estado_actual, nuevo_estado)
+                    record.message_post(body=message)
 
         return super(SatSat, self).write(vals)
     @api.onchange('disponibilidad_id', 'ubicacion_id')
