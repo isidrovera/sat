@@ -83,7 +83,8 @@
                                     <!-- Botón Descargar -->
                                     <a t-att-href="foto['download_url']" 
                                        class="btn btn-sm btn-primary download-photo" 
-                                       t-att-data-url="foto['download_url']">
+                                       t-att-data-url="foto['download_url']"
+                                       download>
                                         <i class="fas fa-download"></i>
                                     </a>
                                     <!-- Botón Eliminar -->
