@@ -29,7 +29,7 @@
                     <field name="public_link"/>
                     <field name="sequence"/>
                     <field name="state"/>
-                    <field name="url_foto"/>
+                    
                     <field name="reparacion_id"/>
                 </list>
             </field>
