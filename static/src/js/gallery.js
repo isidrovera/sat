@@ -82,21 +82,35 @@ document.addEventListener('DOMContentLoaded', function() {
         handleDownload(event) {
             event.preventDefault();
             const button = event.currentTarget;
-            const url = button.dataset.url;
-            console.log(`Intentando descargar la imagen desde URL: ${url}`);
-
-            const fileName = button.closest('.photo-card').querySelector('.photo-name')?.textContent.trim() || 'foto';
-            console.log(`Nombre de archivo para la descarga: ${fileName}`);
-
-            // Crear un enlace temporal para forzar la descarga
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', fileName);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            console.log('Archivo descargado:', fileName);
+            const photoId = button.dataset.photoId;
+            console.log(`Solicitando descarga para la foto con ID: ${photoId}`);
+        
+            // Hacer una solicitud para obtener un enlace de descarga actualizado desde el servidor
+            fetch(`/gallery/download/${photoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.url) {
+                        console.log(`URL de descarga obtenida para la foto ${photoId}: ${data.url}`);
+                        
+                        // Crear un enlace temporal para forzar la descarga
+                        const link = document.createElement('a');
+                        link.href = data.url;
+                        link.setAttribute('download', data.filename || 'foto');
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        console.log('Archivo descargado:', data.filename || 'foto');
+                    } else {
+                        console.error(`No se pudo obtener la URL de descarga para la foto ${photoId}`);
+                        this.showError('Error', 'No se pudo descargar la foto. Inténtalo de nuevo.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al descargar la foto:', error);
+                    this.showError('Error', 'No se pudo descargar la foto. Inténtalo de nuevo.');
+                });
         },
+        
 
         handleShareGallery() {
             const currentUrl = window.location.href;

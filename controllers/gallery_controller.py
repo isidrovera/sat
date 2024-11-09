@@ -178,28 +178,26 @@ class GalleryController(http.Controller):
             return {'success': False, 'error': str(e)}
 
 
-    @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
+    @http.route('/gallery/download/<int:foto_id>', type='json', auth='public')
     def download_photo(self, foto_id):
-        """Descarga una foto individual actuando como proxy"""
+        """Devuelve un enlace de descarga válido en formato JSON para la foto solicitada"""
         foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
         if not foto.exists():
             _logger.error(f"[DOWNLOAD_PHOTO] Foto con ID {foto_id} no encontrada")
-            return request.not_found()
-        
+            return {'error': 'Foto no encontrada'}
+
         # Obtener el contenido de la foto (el archivo descargado de pCloud)
         content_info = foto.get_download_content()
         if not content_info:
             _logger.error(f"[DOWNLOAD_PHOTO] No se pudo obtener contenido para la foto con ID {foto_id}")
-            return request.not_found()
+            return {'error': 'No se pudo obtener el contenido para la descarga'}
 
-        # Enviar el archivo al cliente directamente como una descarga forzada
-        return request.make_response(
-            base64.b64decode(content_info['content']),
-            headers=[
-                ('Content-Type', content_info['mimetype']),
-                ('Content-Disposition', f'attachment; filename="{content_info["filename"]}"')
-            ]
-        )
+        # Devolver la URL en formato JSON para que el cliente (JavaScript) maneje la descarga
+        return {
+            'url': f"/web/content/{content_info['attachment_id']}?download=true",
+            'filename': content_info['filename']
+        }
+
 
     @http.route('/gallery/download_all/<int:reparacion_id>', type='http', auth='public')
     def download_all(self, reparacion_id):
