@@ -562,37 +562,48 @@ class ReparacionFoto(models.Model):
             return False
 
     def get_download_content(self):
-        """Obtiene el contenido de la foto para descargar"""
+        """Obtiene el contenido de la foto para descargar desde pCloud."""
         self.ensure_one()
-        _logger.info(f"[DOWNLOAD] Obteniendo contenido para foto {self.id}")
+        _logger.info(f"[DOWNLOAD_CONTENT] Iniciando descarga para foto ID: {self.id} con file_id: {self.file_id}")
 
         try:
+            # Verificar que file_id exista
             if not self.file_id:
-                raise ValidationError("No se encontró el archivo")
+                _logger.error(f"[DOWNLOAD_CONTENT] No se encontró file_id para la foto ID: {self.id}")
+                raise ValidationError("No se encontró el archivo en pCloud")
 
+            # Obtener configuración de pCloud
             pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-            if not pcloud_config:
+            if not pcloud_config or not pcloud_config.access_token:
+                _logger.error(f"[DOWNLOAD_CONTENT] Configuración de pCloud no encontrada o inválida")
                 raise ValidationError("No se encontró configuración de pCloud")
 
-            # Obtener contenido del archivo
-            url = self._get_file_url(self.file_id, pcloud_config)
-            if not url:
-                raise ValidationError("No se pudo obtener la URL de descarga")
+            # Obtener URL de descarga
+            download_url = self._get_file_url(self.file_id, pcloud_config)
+            if not download_url:
+                _logger.error(f"[DOWNLOAD_CONTENT] No se pudo generar URL de descarga para file_id: {self.file_id}")
+                raise ValidationError("No se pudo obtener la URL de descarga desde pCloud")
 
-            response = requests.get(url)
+            # Descargar el archivo de pCloud con un timeout
+            response = requests.get(download_url, stream=True, timeout=10)
             if response.status_code != 200:
-                raise ValidationError("No se pudo descargar el archivo")
+                _logger.error(f"[DOWNLOAD_CONTENT] Error al descargar archivo desde pCloud. Status: {response.status_code}")
+                raise ValidationError("No se pudo descargar el archivo desde pCloud")
 
+            # Codificar contenido en base64 y retornar con tipo MIME adecuado
             return {
                 'content': base64.b64encode(response.content).decode('utf-8'),
                 'filename': self.nombre_foto,
-                'mimetype': response.headers.get('content-type', 'application/octet-stream')
+                'mimetype': response.headers.get('Content-Type', 'application/octet-stream')
             }
 
+        except requests.exceptions.RequestException as e:
+            _logger.exception(f"[DOWNLOAD_CONTENT] Error de red al obtener contenido de pCloud para foto ID {self.id}: {str(e)}")
+            raise ValidationError("Error de conexión al descargar la foto. Por favor, inténtelo nuevamente.")
         except Exception as e:
-            _logger.exception(f"[DOWNLOAD] Error al obtener contenido: {str(e)}")
+            _logger.exception(f"[DOWNLOAD_CONTENT] Error al obtener contenido de la foto ID {self.id}: {str(e)}")
             raise ValidationError(f"Error al descargar la foto: {str(e)}")
-    
+
     def _get_public_link(self, file_id, pcloud_config):
         """Obtener links públicos para la foto"""
         try:
