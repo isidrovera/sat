@@ -118,14 +118,18 @@
     <field name="type">list</field>
     <field name="arch" type="xml">
         <list default_order="id desc">
-            <!-- Información Principal -->
-            <field name="name" class="h6 fw-bold text-primary"/>
-            <field name="serie_id"/>
-            
             <!-- Información del Cliente -->
             <field name="cliente_nombre" string="Cliente"/>
             <field name="tipo_maquina"/>
             <field name="marca"/>
+            <!-- Información Principal -->
+            <field name="name" class="h6 fw-bold text-primary"/>
+            <field name="serie_id"/>
+            
+            <!-- Datos Operativos -->
+            <field name="contometro" class="text-end"/>
+            <field name="ubicacion_id" class="fst-italic"/>
+            
             
             <!-- Estados y Alertas -->
             <field name="disponibilidad_id" 
@@ -150,9 +154,6 @@
                    invisible="activador == 'no'"
                    class="text-danger fs-5"/>
             
-            <!-- Datos Operativos -->
-            <field name="contometro" class="text-end"/>
-            <field name="ubicacion_id" class="fst-italic"/>
             
             <!-- Campos Opcionales -->
             <field name="create_date" string="Ingreso" widget="remaining_days" optional="hide"/>
