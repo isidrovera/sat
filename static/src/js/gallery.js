@@ -1,47 +1,103 @@
 // sat/static/src/js/gallery.js
+// gallery.js
 document.addEventListener('DOMContentLoaded', function() {
     const gallery = {
         init() {
             console.log('Iniciando galería...');
-            // Obtener elementos del DOM
+            this.initializeElements();
+            this.bindEvents();
+            this.initializeImagePreviews();
+        },
+
+        initializeElements() {
             this.fileInput = document.getElementById('fileUpload');
-            this.progressBar = document.querySelector('.upload-progress');
             this.photoGrid = document.querySelector('#photoGrid');
             this.syncButton = document.getElementById('syncButton');
-            
-            // Obtener ID de reparación de la URL
+            this.loadingOverlay = document.getElementById('loadingOverlay');
             this.reparacionId = window.location.pathname.split('/').pop();
-            console.log('ID de reparación:', this.reparacionId);
-
-            if (!this.fileInput) {
-                console.error('No se encontró el input de archivo');
-                return;
-            }
-            
-            // Vincular eventos
-            this.bindEvents();
         },
 
         bindEvents() {
-            console.log('Vinculando eventos...');
-            // Evento de subida de archivos
             if (this.fileInput) {
                 this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
                 console.log('Evento de subida de archivos vinculado');
             }
 
-            // Evento de sincronización
             if (this.syncButton) {
                 this.syncButton.addEventListener('click', () => this.handleSync());
                 console.log('Evento de sincronización vinculado');
             }
 
-            // Eventos de eliminación
-            const deleteButtons = document.querySelectorAll('.delete-photo');
-            deleteButtons.forEach(btn => {
+            document.querySelectorAll('.delete-photo').forEach(btn => {
                 btn.addEventListener('click', (e) => this.handleDelete(e));
             });
-            console.log('Eventos de eliminación vinculados:', deleteButtons.length);
+
+            // Eventos para las imágenes
+            document.querySelectorAll('.preview-image').forEach(img => {
+                this.setupImageHandling(img);
+            });
+        },
+
+        setupImageHandling(img) {
+            let loadTimeout;
+            let retryCount = 0;
+            const maxRetries = 3;
+
+            const loadImage = () => {
+                img.classList.add('loading');
+                clearTimeout(loadTimeout);
+
+                // Timeout para la carga
+                loadTimeout = setTimeout(() => {
+                    if (!img.complete && retryCount < maxRetries) {
+                        console.log(`Reintentando carga de imagen ${retryCount + 1}/${maxRetries}`);
+                        retryCount++;
+                        img.src = img.src + `?retry=${Date.now()}`;
+                        loadImage(); // Recursivo para siguiente intento
+                    } else if (retryCount >= maxRetries) {
+                        this.handleImageError(img);
+                    }
+                }, 5000);
+
+                img.onerror = () => {
+                    clearTimeout(loadTimeout);
+                    if (retryCount < maxRetries) {
+                        retryCount++;
+                        setTimeout(() => {
+                            img.src = img.src + `?retry=${Date.now()}`;
+                            loadImage();
+                        }, 1000 * retryCount);
+                    } else {
+                        this.handleImageError(img);
+                    }
+                };
+
+                img.onload = () => {
+                    clearTimeout(loadTimeout);
+                    this.handleImageSuccess(img);
+                };
+            };
+
+            loadImage();
+        },
+
+        handleImageError(img) {
+            console.error(`Error definitivo cargando imagen: ${img.src}`);
+            img.src = '/sat/static/src/img/placeholder.png';
+            img.classList.remove('loading');
+            const retryBadge = img.closest('.photo-container').querySelector('.retry-badge');
+            if (retryBadge) {
+                retryBadge.classList.add('d-none');
+            }
+        },
+
+        handleImageSuccess(img) {
+            console.log(`Imagen cargada exitosamente: ${img.src}`);
+            img.classList.remove('loading');
+            const retryBadge = img.closest('.photo-container').querySelector('.retry-badge');
+            if (retryBadge) {
+                retryBadge.classList.add('d-none');
+            }
         },
 
         handleFileUpload(event) {
@@ -52,37 +108,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Crear FormData
             const formData = new FormData();
             Array.from(files).forEach(file => {
                 if (this.validateFile(file)) {
                     formData.append('files[]', file);
                     console.log('Archivo agregado:', file.name);
-                } else {
-                    console.warn('Archivo no válido:', file.name);
                 }
             });
 
-            // Si no hay archivos válidos, salir
             if (!formData.has('files[]')) {
                 this.showError('No hay archivos válidos', 'Por favor seleccione imágenes válidas');
                 return;
             }
 
-            // Mostrar progreso
             this.showLoading('Subiendo fotos...');
 
-            // Realizar la subida
             fetch(`/gallery/upload/${this.reparacionId}`, {
                 method: 'POST',
                 body: formData
             })
-            .then(response => {
-                console.log('Respuesta del servidor:', response);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Datos de respuesta:', data);
                 if (data.success) {
                     this.showSuccess('Éxito', 'Fotos subidas correctamente');
                     setTimeout(() => window.location.reload(), 1500);
@@ -95,20 +141,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.showError('Error', error.message);
             })
             .finally(() => {
-                if (this.fileInput) this.fileInput.value = '';
+                this.fileInput.value = '';
                 this.hideLoading();
             });
         },
 
         validateFile(file) {
-            // Validar tipo de archivo
             if (!file.type.startsWith('image/')) {
                 this.showError('Archivo no válido', `${file.name} no es una imagen`);
                 return false;
             }
 
-            // Validar tamaño (10MB máximo)
-            const maxSize = 10 * 1024 * 1024;
+            const maxSize = 10 * 1024 * 1024; // 10MB
             if (file.size > maxSize) {
                 this.showError('Archivo muy grande', `${file.name} excede el tamaño máximo de 10MB`);
                 return false;
@@ -226,6 +270,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: message,
                 confirmButtonText: 'Aceptar'
             });
+        },
+
+        initializeImagePreviews() {
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            if (!img.classList.contains('loaded')) {
+                                this.setupImageHandling(img);
+                                img.classList.add('loaded');
+                            }
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.preview-image:not(.loaded)').forEach(img => {
+                    imageObserver.observe(img);
+                });
+            } else {
+                document.querySelectorAll('.preview-image:not(.loaded)').forEach(img => {
+                    this.setupImageHandling(img);
+                    img.classList.add('loaded');
+                });
+            }
         }
     };
 
