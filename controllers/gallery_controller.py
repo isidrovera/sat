@@ -3,6 +3,8 @@ from odoo.http import request, Response
 import logging
 import json
 import base64
+import requests
+import os
 
 _logger = logging.getLogger(__name__)
 
@@ -20,6 +22,12 @@ class GalleryController(http.Controller):
             # Obtener fotos con previsualizaciones
             foto_model = request.env['reparaciones.foto'].sudo()
             fotos = foto_model.get_photos_preview(reparacion_id)
+            
+            # Modificar las URLs para usar el nuevo endpoint de preview
+            if fotos:
+                for foto in fotos:
+                    foto['thumb_url'] = f'/gallery/preview/{foto["id"]}'
+                    
             _logger.info("[GALLERY] Se encontraron %s fotos", len(fotos) if fotos else 0)
             
             # Renderizar template
@@ -30,6 +38,59 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception("[GALLERY] Error al cargar la galería: %s", str(e))
             return request.not_found()
+
+    @http.route('/gallery/preview/<int:foto_id>', type='http', auth='public')
+    def get_preview(self, foto_id):
+        """Nuevo endpoint para servir previsualizaciones optimizadas"""
+        try:
+            foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
+            if not foto.exists():
+                return self._serve_placeholder()
+
+            pcloud_config = request.env['pcloud.configuracion'].sudo().search([], limit=1)
+            if not pcloud_config:
+                return self._serve_placeholder()
+
+            thumb_url = foto._get_thumb_url(foto.file_id, pcloud_config)
+            if not thumb_url:
+                return self._serve_placeholder()
+
+            try:
+                response = requests.get(thumb_url, timeout=5)
+                if response.status_code == 200:
+                    headers = [
+                        ('Content-Type', response.headers.get('content-type', 'image/jpeg')),
+                        ('Cache-Control', 'public, max-age=7200'),
+                        ('Access-Control-Allow-Origin', '*'),
+                        ('X-Content-Type-Options', 'nosniff'),
+                    ]
+                    return Response(response.content, headers=headers)
+            except:
+                pass
+
+            return self._serve_placeholder()
+        except Exception as e:
+            _logger.exception("[PREVIEW] Error: %s", str(e))
+            return self._serve_placeholder()
+
+    def _serve_placeholder(self):
+        """Sirve una imagen placeholder"""
+        try:
+            module_path = os.path.dirname(os.path.dirname(__file__))
+            placeholder_path = os.path.join(module_path, 'static', 'src', 'img', 'placeholder.png')
+            if os.path.exists(placeholder_path):
+                with open(placeholder_path, 'rb') as f:
+                    return Response(
+                        f.read(),
+                        headers=[
+                            ('Content-Type', 'image/png'),
+                            ('Cache-Control', 'public, max-age=7200'),
+                        ]
+                    )
+        except Exception as e:
+            _logger.error("[PLACEHOLDER] Error: %s", str(e))
+        return Response(status=404)
+
     @http.route('/gallery/upload/<int:reparacion_id>', type='http', auth='public', methods=['POST'], csrf=False)
     def upload_photo(self, reparacion_id, **kwargs):
         """Maneja la subida de fotos"""
@@ -64,6 +125,7 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception("[UPLOAD] Error general: %s", str(e))
             return json.dumps({'error': str(e)})
+
     @http.route('/gallery/delete/<int:foto_id>', type='http', auth='public', methods=['POST'], csrf=False)
     def delete_photo(self, foto_id):
         """Elimina una foto"""
@@ -103,7 +165,7 @@ class GalleryController(http.Controller):
                         updated_fotos.append({
                             'id': foto.id,
                             'nombre_foto': foto.nombre_foto,
-                            'thumb_url': thumb_url,
+                            'thumb_url': f'/gallery/preview/{foto.id}',  # Usar nuevo endpoint
                             'download_url': file_url
                         })
                 except Exception as e:
