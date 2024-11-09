@@ -120,8 +120,9 @@ document.addEventListener('DOMContentLoaded', function() {
         handleShareGallery() {
             const currentUrl = window.location.href;
             console.log(`Intentando compartir la URL de la galería: ${currentUrl}`);
-
-            if (navigator.clipboard) {
+        
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                // Intentar con Clipboard API
                 navigator.clipboard.writeText(currentUrl).then(() => {
                     console.log('URL copiada al portapapeles exitosamente');
                     Swal.fire({
@@ -133,13 +134,45 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }).catch(err => {
                     console.error('Error al copiar URL al portapapeles:', err);
-                    this.showError('Error', 'No se pudo copiar el enlace al portapapeles');
+                    this.showFallbackCopy(currentUrl); // Usar alternativa en caso de error
                 });
             } else {
                 console.warn('API Clipboard no está disponible en este navegador');
-                this.showError('No compatible', 'Tu navegador no permite copiar enlaces directamente');
+                this.showFallbackCopy(currentUrl); // Usar alternativa si Clipboard API no está disponible
             }
         },
+        
+        showFallbackCopy(url) {
+            // Alternativa usando un campo de entrada temporal
+            const tempInput = document.createElement('input');
+            tempInput.value = url;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            tempInput.setSelectionRange(0, 99999); // Para compatibilidad móvil
+        
+            try {
+                document.execCommand('copy');
+                console.log('URL copiada usando método alternativo');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'URL Copiada',
+                    text: 'El enlace ha sido copiado al portapapeles',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } catch (err) {
+                console.error('Error al copiar usando método alternativo:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudo copiar el enlace al portapapeles'
+                });
+            }
+        
+            // Limpiar el campo temporal
+            document.body.removeChild(tempInput);
+        },
+        
 
         handleMassiveUpload(event) {
             console.log('Subida masiva de archivos iniciada.');
