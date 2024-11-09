@@ -22,12 +22,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (this.fileInput) {
                 this.fileInput.setAttribute('multiple', 'multiple');
                 this.fileInput.setAttribute('accept', 'image/*');
-                
+
                 // Mejorar soporte móvil para múltiples fotos
                 if (this.isMobile()) {
                     this.fileInput.addEventListener('click', function() {
                         this.setAttribute('multiple', 'multiple');
                     });
+                    this.fileInput.addEventListener('change', (e) => this.handleMassiveUpload(e));
                 }
             }
         },
@@ -37,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         bindEvents() {
-            if (this.fileInput) {
+            if (this.fileInput && !this.isMobile()) {
                 this.fileInput.addEventListener('change', (e) => this.handleMassiveUpload(e));
                 console.log('Evento de subida masiva vinculado');
             }
@@ -65,85 +66,58 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         },
 
-        setupImageHandling(img) {
-            let loadTimeout;
-            let retryCount = 0;
-            const maxRetries = 3;
-
-            const loadImage = () => {
-                img.classList.add('loading');
-                clearTimeout(loadTimeout);
-
-                loadTimeout = setTimeout(() => {
-                    if (!img.complete && retryCount < maxRetries) {
-                        console.log(`Reintentando carga de imagen ${retryCount + 1}/${maxRetries}`);
-                        retryCount++;
-                        img.src = img.src + `?retry=${Date.now()}`;
-                        loadImage();
-                    } else if (retryCount >= maxRetries) {
-                        this.handleImageError(img);
-                    }
-                }, 5000);
-
-                img.onerror = () => {
-                    clearTimeout(loadTimeout);
-                    if (retryCount < maxRetries) {
-                        retryCount++;
-                        setTimeout(() => {
-                            img.src = img.src + `?retry=${Date.now()}`;
-                            loadImage();
-                        }, 1000 * retryCount);
-                    } else {
-                        this.handleImageError(img);
-                    }
-                };
-
-                img.onload = () => {
-                    clearTimeout(loadTimeout);
-                    this.handleImageSuccess(img);
-                };
-            };
-
-            loadImage();
-        },
-
-        handleImageError(img) {
-            console.error(`Error definitivo cargando imagen: ${img.src}`);
-            img.src = '/sat/static/src/img/placeholder.png';
-            img.classList.remove('loading');
-            const retryBadge = img.closest('.photo-container').querySelector('.retry-badge');
-            if (retryBadge) {
-                retryBadge.classList.add('d-none');
-            }
-        },
-
-        handleImageSuccess(img) {
-            console.log(`Imagen cargada exitosamente: ${img.src}`);
-            img.classList.remove('loading');
-            const retryBadge = img.closest('.photo-container').querySelector('.retry-badge');
-            if (retryBadge) {
-                retryBadge.classList.add('d-none');
-            }
-        },
-
         handleDownload(event) {
             event.preventDefault();
             const button = event.currentTarget;
             const url = button.dataset.url;
-            const fileName = button.closest('.photo-card').querySelector('.photo-name').textContent || 'foto';
+            console.log(`Intentando descargar la imagen desde: ${url}`);
+
+            const fileName = button.closest('.photo-card').querySelector('.photo-name')?.textContent.trim() || 'foto';
 
             fetch(url)
-                .then(response => response.blob())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error al descargar la imagen: ${response.statusText}`);
+                    }
+                    console.log('Respuesta de descarga recibida');
+                    return response.blob();
+                })
                 .then(blob => {
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
                     link.download = fileName;
+                    console.log(`Iniciando descarga de archivo: ${fileName}`);
                     link.click();
                     URL.revokeObjectURL(link.href);
                 })
                 .catch(error => {
                     console.error('Error en descarga:', error);
+                    this.showError('Error', 'No se pudo descargar la foto');
                 });
+        },
+
+        handleShareGallery() {
+            const currentUrl = window.location.href;
+            console.log(`Intentando compartir la URL: ${currentUrl}`);
+
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                    console.log('URL copiada al portapapeles');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'URL Copiada',
+                        text: 'El enlace ha sido copiado al portapapeles',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }).catch(err => {
+                    console.error('Error al copiar URL:', err);
+                    this.showError('Error', 'No se pudo copiar el enlace al portapapeles');
+                });
+            } else {
+                console.warn('La API Clipboard no está disponible en este navegador');
+                this.showError('No compatible', 'Tu navegador no permite copiar enlaces directamente');
+            }
         },
 
         handleMassiveUpload(event) {
@@ -199,6 +173,21 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         },
 
+        validateFile(file) {
+            if (!file.type.startsWith('image/')) {
+                console.warn(`Archivo no válido: ${file.name} (no es una imagen)`);
+                return false;
+            }
+
+            const maxSize = 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                console.warn(`Archivo muy grande: ${file.name}`);
+                return false;
+            }
+
+            return true;
+        },
+
         showUploadProgress(totalFiles) {
             Swal.fire({
                 title: 'Subiendo Fotos',
@@ -222,36 +211,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 progressBar.style.width = `${progress}%`;
                 progressBar.setAttribute('aria-valuenow', progress);
                 statusText.textContent = `Subiendo: ${uploadedCount} de ${totalFiles} fotos`;
-            }
-        },
-
-        validateFile(file) {
-            if (!file.type.startsWith('image/')) {
-                console.warn(`Archivo no válido: ${file.name} (no es una imagen)`);
-                return false;
-            }
-
-            const maxSize = 10 * 1024 * 1024; // 10MB
-            if (file.size > maxSize) {
-                console.warn(`Archivo muy grande: ${file.name}`);
-                return false;
-            }
-
-            return true;
-        },
-
-        handleShareGallery() {
-            const currentUrl = window.location.href;
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(currentUrl).then(() => {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'URL Copiada',
-                        text: 'El enlace ha sido copiado al portapapeles',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                }).catch(err => console.error('Error al copiar URL:', err));
             }
         },
 
@@ -392,6 +351,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Inicializar galería
     gallery.init();
 });
