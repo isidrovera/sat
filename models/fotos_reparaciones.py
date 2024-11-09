@@ -266,14 +266,12 @@ class ReparacionFoto(models.Model):
 
     @api.model
     def get_photos_preview(self, reparacion_id):
-        """Obtiene todas las fotos con sus previsualizaciones"""
+        """Obtiene todas las fotos con sus previsualizaciones y valida si los enlaces son válidos."""
         _logger.info("[GET_PHOTOS_PREVIEW] Iniciando para reparación ID: %s", reparacion_id)
-        
         photos = []
         try:
             # Obtener fotos de la reparación
-            domain = [('reparacion_id', '=', reparacion_id)]
-            fotos = self.search(domain, order='sequence, id')
+            fotos = self.search([('reparacion_id', '=', reparacion_id)], order='sequence, id')
             _logger.info("[GET_PHOTOS_PREVIEW] Encontradas %s fotos", len(fotos))
             
             # Obtener configuración de pCloud
@@ -286,12 +284,9 @@ class ReparacionFoto(models.Model):
                 try:
                     _logger.info("[GET_PHOTOS_PREVIEW] Procesando foto ID: %s", foto.id)
                     if foto.file_id:
-                        # Asegurarse de pasar pcloud_config al obtener URLs
+                        # Generar enlaces actualizados
                         thumb_url = foto._get_thumb_url(foto.file_id, pcloud_config)
                         download_url = foto._get_file_url(foto.file_id, pcloud_config)
-                        
-                        _logger.info("[GET_PHOTOS_PREVIEW] URLs obtenidas - Thumb: %s, Download: %s", 
-                                    thumb_url, download_url)
                         
                         if thumb_url and download_url:
                             photos.append({
@@ -302,6 +297,8 @@ class ReparacionFoto(models.Model):
                                 'file_id': foto.file_id
                             })
                             _logger.info("[GET_PHOTOS_PREVIEW] Foto %s agregada al resultado", foto.id)
+                        else:
+                            _logger.warning("[GET_PHOTOS_PREVIEW] No se generaron enlaces para la foto ID: %s", foto.id)
                     else:
                         _logger.warning("[GET_PHOTOS_PREVIEW] Foto %s no tiene file_id", foto.id)
                 except Exception as e:
@@ -314,6 +311,7 @@ class ReparacionFoto(models.Model):
         except Exception as e:
             _logger.exception("[GET_PHOTOS_PREVIEW] Error general: %s", str(e))
             return photos
+
     def download_photo(self):
         """Descargar foto individual"""
         self.ensure_one()

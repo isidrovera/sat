@@ -180,21 +180,24 @@ class GalleryController(http.Controller):
 
     @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
     def download_photo(self, foto_id):
-        """Descarga una foto individual"""
+        """Descargar una foto individual actuando como proxy para evitar problemas de IP o caducidad"""
         foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
         if not foto.exists():
-            return request.not_found()
-            
-        content = foto.get_download_content()
-        if not content:
+            _logger.error(f"[DOWNLOAD_PHOTO] Foto con ID {foto_id} no encontrada")
             return request.not_found()
         
-        # Agregar encabezado Content-Disposition para forzar la descarga
+        # Obtener contenido de la foto a través del método de proxy
+        content_info = foto.get_download_content()
+        if not content_info:
+            _logger.error(f"[DOWNLOAD_PHOTO] No se pudo obtener contenido para la foto con ID {foto_id}")
+            return request.not_found()
+
+        # Forzar descarga con el encabezado Content-Disposition
         return request.make_response(
-            base64.b64decode(content['content']),
+            base64.b64decode(content_info['content']),
             headers=[
-                ('Content-Type', content['mimetype']),
-                ('Content-Disposition', f'attachment; filename="{content["filename"]}"')
+                ('Content-Type', content_info['mimetype']),
+                ('Content-Disposition', f'attachment; filename="{content_info["filename"]}"')
             ]
         )
 
