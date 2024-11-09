@@ -73,6 +73,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.addEventListener('click', (e) => this.handleDelete(e));
                 console.log('Evento de eliminación vinculado para foto:', btn);
             });
+
+            document.querySelectorAll('.preview-image').forEach(img => {
+                this.setupImageHandling(img);
+            });
         },
 
         handleDownload(event) {
@@ -84,26 +88,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const fileName = button.closest('.photo-card').querySelector('.photo-name')?.textContent.trim() || 'foto';
             console.log(`Nombre de archivo para la descarga: ${fileName}`);
 
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Error al descargar la imagen: ${response.statusText}`);
-                    }
-                    console.log('Respuesta de descarga recibida correctamente.');
-                    return response.blob();
-                })
-                .then(blob => {
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = fileName;
-                    console.log(`Iniciando descarga de archivo: ${fileName}`);
-                    link.click();
-                    URL.revokeObjectURL(link.href);
-                })
-                .catch(error => {
-                    console.error('Error en descarga:', error);
-                    this.showError('Error', 'No se pudo descargar la foto');
-                });
+            // Crear un enlace temporal para forzar la descarga
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            console.log('Archivo descargado:', fileName);
         },
 
         handleShareGallery() {

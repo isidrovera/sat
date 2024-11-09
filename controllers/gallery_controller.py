@@ -143,30 +143,25 @@ class GalleryController(http.Controller):
         """Sincroniza los enlaces de las fotos con pCloud"""
         _logger.info("[SYNC] Iniciando sincronización para reparación ID: %s", reparacion_id)
         try:
-            # Obtener fotos
             fotos = request.env['reparaciones.foto'].sudo().search([
                 ('reparacion_id', '=', reparacion_id)
             ])
             
-            # Obtener configuración de pCloud
             pcloud_config = request.env['pcloud.configuracion'].sudo().search([], limit=1)
             
             updated_fotos = []
             for foto in fotos:
                 try:
-                    # Usar los métodos existentes
                     thumb_url = foto._get_thumb_url(foto.file_id, pcloud_config)
-                    file_url = foto._get_file_url(foto.file_id, pcloud_config)
+                    file_url = f"/gallery/download/{foto.id}"  # Actualizar URL de descarga para forzar descarga
                     
-                    if thumb_url and file_url:
-                        foto.write({
-                            'url_foto': file_url
-                        })
+                    if thumb_url:
+                        foto.write({'url_foto': file_url})  # Almacenar la URL de descarga
                         updated_fotos.append({
                             'id': foto.id,
                             'nombre_foto': foto.nombre_foto,
-                            'thumb_url': f'/gallery/preview/{foto.id}',  # Usar nuevo endpoint
-                            'download_url': file_url
+                            'thumb_url': f'/gallery/preview/{foto.id}',  # Usar nuevo endpoint de vista previa
+                            'download_url': file_url  # Asegurar URL de descarga correcta
                         })
                 except Exception as e:
                     _logger.error("[SYNC] Error procesando foto %s: %s", foto.id, str(e))
@@ -181,6 +176,7 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception("[SYNC] Error en sincronización: %s", str(e))
             return {'success': False, 'error': str(e)}
+
 
     @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
     def download_photo(self, foto_id):
