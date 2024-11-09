@@ -53,7 +53,7 @@
                                 <h2 class="card-title mb-0">Galería de Fotos - <small
                                         t-esc="reparacion.name" /></h2>
                                 <h2 class="card-title mb-0">Galería de Fotos - <small
-                                            t-esc="reparacion.maquin_id.name.name" /></h2>
+                                            t-esc="reparacion.maquina_id.name.name" /></h2>
                                 <div class="btn-group">
                                     <!-- Botón Compartir -->
                                     <button id="shareGalleryBtn" class="btn btn-secondary me-2" data-action="share">
