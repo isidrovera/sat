@@ -118,36 +118,37 @@ document.addEventListener('DOMContentLoaded', function() {
         
 
         handleShareGallery() {
-            try {
-                const currentUrl = this.getCurrentPageUrl();
-                console.log(`Compartir botón presionado. URL a compartir: ${currentUrl}`);
+            console.log('handleShareGallery fue llamado');  // Verifica que la función se está ejecutando
         
-                // Primero intentamos usar la Web Share API si está disponible
-                if (navigator.share) {
-                    navigator.share({
-                        title: 'Compartir Galería',
-                        url: currentUrl
-                    })
-                    .then(() => {
-                        console.log('Contenido compartido exitosamente usando Web Share API');
-                        this.showSuccess('¡Compartido!', 'Contenido compartido exitosamente');
-                    })
-                    .catch(error => {
-                        console.log('Web Share API falló, intentando método alternativo', error);
-                        // Si falla Web Share API, continuamos con Clipboard API
-                        this.tryClipboardAPI(currentUrl);
-                    });
-                    return;
-                }
+            const currentUrl = window.location.href;
+            console.log(`URL actual para compartir: ${currentUrl}`);  // Verifica si obtiene la URL
         
-                // Si Web Share API no está disponible, intentamos Clipboard API
-                this.tryClipboardAPI(currentUrl);
-        
-            } catch (error) {
-                console.error('Error en handleShareGallery:', error);
-                this.showError('Error', 'No se pudo compartir el contenido');
+            if (!currentUrl) {
+                console.error('No se pudo obtener la URL actual');
+                return;
             }
-        },
+        
+            // Intento de copiar URL al portapapeles
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                console.log('Intentando copiar al portapapeles usando Clipboard API');
+                navigator.clipboard.writeText(currentUrl)
+                    .then(() => {
+                        console.log('URL copiada al portapapeles exitosamente');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'URL Copiada',
+                            text: 'El enlace ha sido copiado al portapapeles',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    })
+                    .catch(err => {
+                        console.error('Error al intentar copiar con Clipboard API:', err);
+                    });
+            } else {
+                console.warn('Clipboard API no disponible. Usando método alternativo.');
+            }
+        } ,
         
         tryClipboardAPI(currentUrl) {
             if (navigator.clipboard && window.isSecureContext) {
