@@ -55,7 +55,8 @@
                                 <div class="btn-group">
                                     <!-- Botón Compartir -->
                                     <button id="shareGalleryBtn" class="btn btn-secondary me-2">
-                                        <i class="fas fa-share-alt" onclick="console.log('Compartir botón presionado');"></i> Compartir </button>
+                                        <i class="fas fa-share-alt"></i> Compartir
+                                    </button>
                                     <!-- Botón Sincronizar -->
                                     <button id="syncButton" class="btn btn-info me-2">
                                         <i class="fas fa-sync me-1"></i> Sincronizar </button>

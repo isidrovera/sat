@@ -118,25 +118,46 @@ document.addEventListener('DOMContentLoaded', function() {
         
 
         handleShareGallery() {
-            const currentUrl = window.location.href;
-            console.log(`Compartir botón presionado. Intentando copiar la URL: ${currentUrl}`);
+            try {
+                const currentUrl = this.getCurrentPageUrl();
+                console.log(`Compartir botón presionado. URL a compartir: ${currentUrl}`);
         
-            // Verificamos si Clipboard API está disponible
-            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-                console.log('Usando Clipboard API para copiar la URL');
+                // Primero intentamos usar la Web Share API si está disponible
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Compartir Galería',
+                        url: currentUrl
+                    })
+                    .then(() => {
+                        console.log('Contenido compartido exitosamente usando Web Share API');
+                        this.showSuccess('¡Compartido!', 'Contenido compartido exitosamente');
+                    })
+                    .catch(error => {
+                        console.log('Web Share API falló, intentando método alternativo', error);
+                        // Si falla Web Share API, continuamos con Clipboard API
+                        this.tryClipboardAPI(currentUrl);
+                    });
+                    return;
+                }
+        
+                // Si Web Share API no está disponible, intentamos Clipboard API
+                this.tryClipboardAPI(currentUrl);
+        
+            } catch (error) {
+                console.error('Error en handleShareGallery:', error);
+                this.showError('Error', 'No se pudo compartir el contenido');
+            }
+        },
+        
+        tryClipboardAPI(currentUrl) {
+            if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(currentUrl)
                     .then(() => {
-                        console.log('URL copiada al portapapeles exitosamente');
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'URL Copiada',
-                            text: 'El enlace ha sido copiado al portapapeles',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
+                        console.log('URL copiada exitosamente usando Clipboard API');
+                        this.showSuccess('URL Copiada', 'El enlace ha sido copiado al portapapeles');
                     })
-                    .catch(err => {
-                        console.error('Error al copiar con Clipboard API:', err);
+                    .catch(error => {
+                        console.error('Error al copiar con Clipboard API:', error);
                         this.fallbackCopyText(currentUrl);
                     });
             } else {
@@ -145,32 +166,56 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
         
+        getCurrentPageUrl() {
+            // Obtener la URL canónica si existe, si no, usar la URL actual
+            const canonicalElement = document.querySelector("link[rel='canonical']");
+            if (canonicalElement) {
+                return canonicalElement.href;
+            }
+            
+            // Si no hay URL canónica, usar la URL actual limpia
+            const url = new URL(window.location.href);
+            // Eliminar parámetros UTM y otros parámetros de tracking si existen
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach(param => 
+                url.searchParams.delete(param)
+            );
+            return url.toString();
+        },
+        
         fallbackCopyText(text) {
             const tempInput = document.createElement('textarea');
+            tempInput.style.position = 'fixed';
+            tempInput.style.opacity = '0';
             tempInput.value = text;
             document.body.appendChild(tempInput);
-            tempInput.select();
         
             try {
-                document.execCommand('copy');
-                console.log('Texto copiado al portapapeles usando método alternativo');
-                Swal.fire({
-                    icon: 'success',
-                    title: 'URL Copiada',
-                    text: 'El enlace ha sido copiado al portapapeles',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
+                // Para dispositivos móviles
+                tempInput.contentEditable = true;
+                tempInput.readOnly = false;
+                
+                // Seleccionar y copiar
+                const range = document.createRange();
+                range.selectNodeContents(tempInput);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                tempInput.setSelectionRange(0, text.length); // Para dispositivos móviles
+                
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    console.log('Texto copiado exitosamente usando método fallback');
+                    this.showSuccess('URL Copiada', 'El enlace ha sido copiado al portapapeles');
+                } else {
+                    throw new Error('No se pudo copiar el texto');
+                }
             } catch (err) {
-                console.error('Error al copiar usando método alternativo:', err);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No se pudo copiar el enlace'
-                });
+                console.error('Error en fallbackCopyText:', err);
+                this.showError('Error', 'No se pudo copiar la URL');
+            } finally {
+                document.body.removeChild(tempInput);
             }
-            document.body.removeChild(tempInput);
-        },      
+        },   
         
         
 
