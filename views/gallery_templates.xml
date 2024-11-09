@@ -27,7 +27,7 @@
                                     <label class="btn btn-primary me-2">
                                         <i class="fas fa-upload me-1"></i>Subir Fotos
                                         <input type="file" id="fileUpload" multiple="multiple" 
-                                               class="d-none" accept="image/*" capture="environment"/>
+                                               class="d-none" accept="image/*"/>
                                     </label>
                                     <a t-att-href="'/gallery/download_all/' + str(reparacion.id)" 
                                        class="btn btn-secondary">
@@ -47,23 +47,25 @@
                                          t-att-data-full-url="foto['download_url']"
                                          t-att-alt="foto['nombre_foto']"
                                          class="preview-image loading"
-                                         loading="lazy"/>
+                                         loading="lazy"
+                                         crossorigin="anonymous"/>
+                                    <div class="actions-bar">
+                                        <button class="btn btn-sm btn-danger delete-photo" 
+                                                t-att-data-photo-id="foto['id']">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-primary download-photo"
+                                                t-att-data-url="foto['download_url']">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
                                     <div class="retry-badge d-none">
                                         Reintentando carga...
                                     </div>
                                 </div>
-                                <div class="photo-footer">
-                                    <div class="photo-name" t-esc="foto['nombre_foto']"/>
-                                    <div class="photo-actions">
-                                        <button class="btn btn-sm btn-outline-primary download-photo" 
-                                                t-att-data-url="foto['download_url']">
-                                            <i class="fas fa-download"></i> Descargar
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger delete-photo" 
-                                                t-att-data-photo-id="foto['id']">
-                                            <i class="fas fa-trash"></i> Eliminar
-                                        </button>
-                                    </div>
+                                <div class="p-2">
+                                    <small class="text-muted text-truncate d-block photo-name" 
+                                           t-esc="foto['nombre_foto']"/>
                                 </div>
                             </div>
                         </t>

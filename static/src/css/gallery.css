@@ -38,19 +38,18 @@
     opacity: 0;
 }
 
-.photo-footer {
-    padding: 0.5rem;
-    background: #fff;
-    border-top: 1px solid #dee2e6;
+.actions-bar {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
     display: flex;
-    flex-direction: column;
     gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
-.photo-actions {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.5rem;
+.photo-card:hover .actions-bar {
+    opacity: 1;
 }
 
 .loading-overlay {
@@ -92,9 +91,7 @@
 }
 
 .photo-name {
-    color: #6c757d;
     font-size: 0.875rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
 }
