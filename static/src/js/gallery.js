@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.fileInput = document.getElementById('fileUpload');
             this.photoGrid = document.querySelector('#photoGrid');
             this.syncButton = document.getElementById('syncButton');
-            this.shareGalleryBtn = document.getElementById('shareGalleryBtn'); // Asegurarnos que coincida con el ID en el HTML
+            this.shareGalleryBtn = document.getElementById('shareGalleryBtn');
             this.loadingOverlay = document.getElementById('loadingOverlay');
             this.reparacionId = window.location.pathname.split('/').pop();
             this.setupFileInput();
@@ -52,17 +52,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Evento de compartir vinculado');
             }
 
-            // Eventos para descargas
             document.querySelectorAll('.download-photo').forEach(btn => {
                 btn.addEventListener('click', (e) => this.handleDownload(e));
             });
 
-            // Eventos para eliminación
             document.querySelectorAll('.delete-photo').forEach(btn => {
                 btn.addEventListener('click', (e) => this.handleDelete(e));
             });
 
-            // Eventos para imágenes
             document.querySelectorAll('.preview-image').forEach(img => {
                 this.setupImageHandling(img);
             });
@@ -133,24 +130,19 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             const button = event.currentTarget;
             const url = button.dataset.url;
-            const fileName = button.closest('.photo-card').querySelector('.photo-name').textContent;
-
-            this.showLoading('Descargando foto...');
+            const fileName = button.closest('.photo-card').querySelector('.photo-name').textContent || 'foto';
 
             fetch(url)
                 .then(response => response.blob())
                 .then(blob => {
                     const link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
+                    link.href = URL.createObjectURL(blob);
                     link.download = fileName;
                     link.click();
-                    window.URL.revokeObjectURL(link.href);
-                    this.hideLoading();
+                    URL.revokeObjectURL(link.href);
                 })
                 .catch(error => {
                     console.error('Error en descarga:', error);
-                    this.showError('Error', 'No se pudo descargar la foto');
-                    this.hideLoading();
                 });
         },
 
@@ -250,52 +242,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         handleShareGallery() {
             const currentUrl = window.location.href;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: 'Galería de Fotos',
-                    text: 'Accede a la galería de fotos completa:',
-                    url: currentUrl
-                }).catch(() => {
-                    this.showShareDialog(currentUrl);
-                });
-            } else {
-                this.showShareDialog(currentUrl);
-            }
-        },
-
-        showShareDialog(url) {
-            Swal.fire({
-                title: 'Compartir Galería',
-                html: `
-                    <div class="input-group mb-3">
-                        <input type="text" class="form-control" value="${url}" readonly id="shareUrl">
-                        <button class="btn btn-outline-primary" type="button" id="copyButton">
-                            <i class="fas fa-copy"></i> Copiar
-                        </button>
-                    </div>
-                    <p class="text-muted">Comparte este enlace para que otros puedan ver la galería</p>
-                `,
-                showCancelButton: true,
-                cancelButtonText: 'Cerrar',
-                showConfirmButton: false,
-                didRender: () => {
-                    const copyButton = document.getElementById('copyButton');
-                    const shareUrl = document.getElementById('shareUrl');
-                    
-                    copyButton.addEventListener('click', () => {
-                        shareUrl.select();
-                        document.execCommand('copy');
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'URL Copiada',
-                            text: 'El enlace ha sido copiado al portapapeles',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'URL Copiada',
+                        text: 'El enlace ha sido copiado al portapapeles',
+                        timer: 1500,
+                        showConfirmButton: false
                     });
-                }
-            });
+                }).catch(err => console.error('Error al copiar URL:', err));
+            }
         },
 
         handleSync() {
