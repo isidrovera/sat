@@ -9,26 +9,19 @@
                 <form string="">
                     <header>
                         <field name="estado" widget="statusbar" />
-                        <button string="Cerrar" name="action_finalizar" type="object"
-                            class="btn btn-info" icon="fa-wrench" invisible="estado !='proceso'" />
-                        <button class="oe_highlight" name="enviar_mensaje_whatsapp" type="object"
-                            icon="fa-paper-plane" string="Asignar" invisible="estado != 'nuevo'" />
-                        
-                        <button string="Proceso" name="action_proceso" type="object"
-                            class="oe_highlight" />
-                        <button string="Nuevo" name="action_nuevo" type="object"
-                            class="oe_highlight" />
+                        <button string="Cerrar" name="action_finalizar" type="object" class="btn btn-info" icon="fa-wrench" invisible="estado !='proceso'" />
+                        <button class="oe_highlight" name="enviar_mensaje_whatsapp" type="object" icon="fa-paper-plane" string="Asignar" invisible="estado != 'nuevo'" />
+
+                        <button string="Proceso" name="action_proceso" type="object" class="oe_highlight" />
+                        <button string="Nuevo" name="action_nuevo" type="object" class="oe_highlight" />
                     </header>
                     <sheet>
                         <div name="button_box">
-                            <button class="oe_stat_button" type="object" name="get_pedidos"
-                                icon="fa-cart-plus">
+                            <button class="oe_stat_button" type="object" name="get_pedidos" icon="fa-cart-plus">
                                 <field string="Pedido" name="pedidos_count" widget="statinfo" />
                             </button>
-                            <button class="oe_stat_button" type="object" name="get_repuestos_ticket"
-                                icon="fa-cogs" style="background-color: #FF0000;">
-                                <field string="Repuestos" name="repuestos_count_ticket"
-                                    widget="statinfo" />
+                            <button class="oe_stat_button" type="object" name="get_repuestos_ticket" icon="fa-cogs" style="background-color: #FF0000;">
+                                <field string="Repuestos" name="repuestos_count_ticket" widget="statinfo" />
                             </button>
                         </div>
                         <div class="oe_title">
@@ -40,24 +33,19 @@
                         <group>
                             <group>
                                 <field name="marca_id_r" />
-                                <field name="product_alquiler" 
-                                readonly="1"
-                                 />
+                                <field name="product_alquiler" readonly="1" />
                                 <field name="serie_id_r" />
                                 <!--<field name="modelo_id_r" />-->
                                 <field name="contometrok_id" required="estado =='proceso'" />
-                                <field name="contometroc_id"
-                                    required="estado == 'proceso' and tipo_id =='color'" />
+                                <field name="contometroc_id" required="estado == 'proceso' and tipo_id =='color'" />
                                 <field name="contometros_id" required="estado =='proceso'" />
-                                <field name="total_copias_id" invisible="1" />                                
+                                <field name="total_copias_id" invisible="1" />
                                 <field name="tipo_id" invisible="1" />
                                 <field name="url" invisible="1" />
-                                
+
                             </group>
                             <group>
-                                <field name="partner_id" widget="many2one_avatar" 
-                                readonly="1"
-                                 />
+                                <field name="partner_id" widget="many2one_avatar" readonly="1" />
                                 <field name="direccion_id_r" readonly="estado == 'proceso' or estado == 'finalizado'"/>
                                 <field name="contacto_id_r" readonly="estado == 'proceso' or estado == 'finalizado'"/>
                                 <field name="tipo_servicio_id" readonly="estado == 'proceso' or estado == 'finalizado'" />
@@ -65,8 +53,7 @@
                                 <field name="asistencia_id" readonly="estado == 'proceso' or estado == 'finalizado'"/>
                                 <field name="agenda" required="estado =='nuevo'" readonly="estado == 'proceso' or estado == 'finalizado'" />
                                 <field name="agenda_local" readonly="1" />
-                                <field name="responsable" widget="many2one_avatar"
-                                    required="estado == 'nuevo'" readonly="estado == 'proceso' or estado == 'finalizado'" />
+                                <field name="responsable" widget="many2one_avatar" required="estado == 'nuevo'" readonly="estado == 'proceso' or estado == 'finalizado'" />
                             </group>
                         </group>
                         <notebook>
@@ -90,8 +77,7 @@
                             <page string="Accesorios">
                                 <group>
                                     <group>
-                                        <field name="tray_id"
-                                            placeholder="Detalla la cantidad de caseteras." readonly="estado == 'finalizado'"/>
+                                        <field name="tray_id" placeholder="Detalla la cantidad de caseteras." readonly="estado == 'finalizado'"/>
                                         <field name="adf_simple_id" readonly="estado == 'finalizado'"/>
                                         <field name="adf_dual_id" readonly="estado == 'finalizado'" />
                                         <field name="finalizador_interno_id" readonly="estado == 'finalizado'"/>
@@ -117,19 +103,15 @@
                                         <field name="calidad_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
                                         <field name="copia_id" required="estado == 'proceso'" readonly="estado == 'finalizado'" />
                                         <field name="impresion_id" required="estado == 'proceso'" readonly="estado == 'finalizado'" />
-                                        <field name="impresion_usb_id"
-                                            required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
+                                        <field name="impresion_usb_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
                                         <field name="scaner_smb_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
                                         <field name="scaner_usb_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
                                         <field name="scaner_ftp_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
                                         <field name="scaner_mail_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
                                         <field name="toner_black_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="toner_magenta_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="toner_cyan_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="toner_yellow_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="toner_magenta_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="toner_cyan_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="toner_yellow_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
                                         <field name="bypass_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
                                         <field name="tray1_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
                                     </group>
@@ -144,12 +126,9 @@
                                         <field name="transfer_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
                                         <field name="optico_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
                                         <field name="black_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="magenta_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="cyan_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="yellow_id"
-                                            required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="magenta_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="cyan_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="yellow_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
                                     </group>
                                 </group>
                             </page>
@@ -159,7 +138,7 @@
                                         <field name="product_id"/>
                                         <field name="product_uom_qty"/>
                                         <field name="price_unit" optional="hide"/>
-                                        <field name="price_subtotal" readonly="True" optional="hide"/>                                        
+                                        <field name="price_subtotal" readonly="True" optional="hide"/>
                                     </list>
                                 </field>
                             </page>
@@ -184,121 +163,119 @@
                     <field name="agenda" widget="remaining_days" />
                     <field name="asistencia_id" widget="badge" optional="hide" />
                     <field name="responsable" widget="many2one_avatar" optional="hide" />
-                    <button string=" " name="action_nuevo" type="object" class="oe_highlight"
-                        icon="fa-exchange" />
-                    <field name="estado" widget="badge" decoration-success="estado == 'finalizado' "
-                        decoration-warning="estado == 'proceso' " />
+                    <button string=" " name="action_nuevo" type="object" class="oe_highlight" icon="fa-exchange" />
+                    <field name="estado" widget="badge" decoration-success="estado == 'finalizado' " decoration-warning="estado == 'proceso' " />
 
                 </list>
             </field>
         </record>
         <record id="model_name_view_kanban" model="ir.ui.view">
-    <field name="name">ticket.view.kanban</field>
-    <field name="model">ticket.alquiler</field>
-    <field name="arch" type="xml">
-        <kanban class="o_kanban_dashboard" default_group_by="estado" sample="1">
-            <field name="name" />
-            <field name="partner_id" />
-            <field name="product_alquiler" />
-            <field name="agenda" />
-            <field name="tipo_servicio_id" />
-            <field name="estado" />
-            <field name="description" />
-            <field name="informe_id" />
-            <field name="responsable" />
-            
-            <progressbar field="estado"
-                colors='{"finalizado": "success", "nuevo": "danger", "proceso": "info"}' />
-            
-            <templates>
-                <t t-name="card">
-                    <div class="oe_kanban_global_click position-relative shadow-sm rounded">
-                        <!-- Header con número de ticket y badge de estado -->
-                        <div class="d-flex justify-content-between align-items-center p-2">
-                            <div class="d-flex align-items-center">
-                                <i class="fa fa-hashtag text-muted me-1"/>
-                                <field name="name" class="h6 mb-0"/>
-                            </div>
-                            <field name="estado" widget="badge"
-                                decoration-danger="estado == 'nuevo'"
-                                decoration-warning="estado == 'proceso'"
-                                decoration-success="estado == 'finalizado'"/>
-                        </div>
+            <field name="name">ticket.view.kanban</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_dashboard" default_group_by="estado" sample="1">
+                    <field name="name" />
+                    <field name="partner_id" />
+                    <field name="product_alquiler" />
+                    <field name="agenda" />
+                    <field name="tipo_servicio_id" />
+                    <field name="estado" />
+                    <field name="description" />
+                    <field name="informe_id" />
+                    <field name="responsable" />
 
-                        <!-- Contenido principal -->
-                        <div class="p-3">
-                            <!-- Cliente -->
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fa fa-building text-info me-2" style="width: 20px;"/>
-                                <span class="text-muted me-2">Cliente:</span>
-                                <field name="partner_id" class="fw-bold"/>
-                            </div>
+                    <progressbar field="estado" colors='{"finalizado": "success", "nuevo": "danger", "proceso": "info"}' />
 
-                            <!-- Equipo -->
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fa fa-print text-success me-2" style="width: 20px;"/>
-                                <span class="text-muted me-2">Equipo:</span>
-                                <field name="product_alquiler"/>
-                            </div>
-
-                            <!-- Servicio -->
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fa fa-tools text-primary me-2" style="width: 20px;"/>
-                                <span class="text-muted me-2">Servicio:</span>
-                                <field name="tipo_servicio_id" widget="badge"/>
-                            </div>
-
-                            <!-- Descripción -->
-                            <div class="d-flex align-items-start mb-2" t-if="record.description.raw_value">
-                                <i class="fa fa-comment text-danger me-2" style="width: 20px;"/>
-                                <div>
-                                    <span class="text-muted">Descripción:</span>
-                                    <div class="text-danger"><field name="description"/></div>
+                    <templates>
+                        <t t-name="card">
+                            <div class="oe_kanban_global_click position-relative shadow-sm rounded">
+                                <!-- Header con número de ticket y badge de estado -->
+                                <div class="d-flex justify-content-between align-items-center p-2">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-hashtag text-muted me-1"/>
+                                        <field name="name" class="h6 mb-0"/>
+                                    </div>
+                                    <field name="estado" widget="badge" decoration-danger="estado == 'nuevo'" decoration-warning="estado == 'proceso'" decoration-success="estado == 'finalizado'"/>
                                 </div>
-                            </div>
 
-                            <!-- Informe -->
-                            <div class="d-flex align-items-start mb-2" t-if="record.informe_id.raw_value">
-                                <i class="fa fa-file-alt text-success me-2" style="width: 20px;"/>
-                                <div>
-                                    <span class="text-muted">Informe:</span>
-                                    <div class="text-success"><field name="informe_id"/></div>
+                                <!-- Contenido principal -->
+                                <div class="p-3">
+                                    <!-- Cliente -->
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fa fa-building text-info me-2" style="width: 20px;"/>
+                                        <span class="text-muted me-2">Cliente:</span>
+                                        <field name="partner_id" class="fw-bold"/>
+                                    </div>
+
+                                    <!-- Equipo -->
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fa fa-print text-success me-2" style="width: 20px;"/>
+                                        <span class="text-muted me-2">Equipo:</span>
+                                        <field name="product_alquiler"/>
+                                    </div>
+
+                                    <!-- Servicio -->
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fa fa-tools text-primary me-2" style="width: 20px;"/>
+                                        <span class="text-muted me-2">Servicio:</span>
+                                        <field name="tipo_servicio_id" widget="badge"/>
+                                    </div>
+
+                                    <!-- Descripción -->
+                                    <div class="d-flex align-items-start mb-2" t-if="record.description.raw_value">
+                                        <i class="fa fa-comment text-danger me-2" style="width: 20px;"/>
+                                        <div>
+                                            <span class="text-muted">Descripción:</span>
+                                            <div class="text-danger">
+                                                <field name="description"/>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Informe -->
+                                    <div class="d-flex align-items-start mb-2" t-if="record.informe_id.raw_value">
+                                        <i class="fa fa-file-alt text-success me-2" style="width: 20px;"/>
+                                        <div>
+                                            <span class="text-muted">Informe:</span>
+                                            <div class="text-success">
+                                                <field name="informe_id"/>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Fecha -->
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fa fa-calendar text-warning me-2" style="width: 20px;"/>
+                                        <span class="text-muted me-2">Fecha:</span>
+                                        <field name="agenda"/>
+                                    </div>
+
+                                    <!-- Separador -->
+                                    <div class="border-top my-2"></div>
+
+                                    <!-- Responsable y Estrellas -->
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fa fa-user text-secondary me-2" style="width: 20px;"/>
+                                            <span class="text-muted me-2"></span>
+                                            <field name="responsable" widget="many2one_avatar"/>
+                                        </div>
+                                        <div>
+                                            <field name="priority" widget="priority"/>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <!-- Fecha -->
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fa fa-calendar text-warning me-2" style="width: 20px;"/>
-                                <span class="text-muted me-2">Fecha:</span>
-                                <field name="agenda"/>
-                            </div>
-
-                            <!-- Separador -->
-                            <div class="border-top my-2"></div>
-
-                            <!-- Responsable y Estrellas -->
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center">
-                                    <i class="fa fa-user text-secondary me-2" style="width: 20px;"/>
-                                    <span class="text-muted me-2">Asignado a:</span>
-                                    <field name="responsable" widget="many2one_avatar"/>
-                                </div>
-                                <div>
-                                    <field name="priority" widget="priority"/>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Indicador lateral de estado -->
-                        <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
+                                <!-- Indicador lateral de estado -->
+                                <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
                             #{record.estado.raw_value == 'finalizado' ? 'bg-success' : 
                             record.estado.raw_value == 'proceso' ? 'bg-warning' : 'bg-danger'}"/>
-                    </div>
-                </t>
-            </templates>
-        </kanban>
-    </field>
-</record>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
         <record id="ticket_graph" model="ir.ui.view">
             <field name="name">ticket.graph</field>
             <field name="model">ticket.alquiler</field>
@@ -331,8 +308,7 @@
                 <calendar date_start="" color="partner_id" event_limit="5">
                     <field name="partner_id" filters="1" />
                     <field name="partner_id" />
-                    <!--<field
-                    name="maintenance_type"/>-->
+                    <!--<field name="maintenance_type"/>-->
                 </calendar>
             </field>
         </record>
@@ -354,8 +330,7 @@
             <field name="view_mode">list,form,kanban,search,graph,calendar,pivot</field>
             <field name="view_id" ref="sat.model_name_view_kanban" />
         </record>
-        <menuitem name="Tickets" id="sat.tickets" parent="sat_menu_root"
-            action="sat.action_soporte_window" sequence="50" />
+        <menuitem name="Tickets" id="sat.tickets" parent="sat_menu_root" action="sat.action_soporte_window" sequence="50" />
 
     </data>
 

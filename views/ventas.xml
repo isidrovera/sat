@@ -7,17 +7,15 @@
       <field name="arch" type="xml">
         <form string="ModelTitle">
           <header>
-            
+
             <button string=" " name="send_records_by_email" type="object" class="oe_highlight" icon="fa-paper-plane" help="Envia por correo lista de maquinas con problemas y de partes" />
-            
+
             <button string=" " name="create_reparacion" type="object" class="btn btn-success" icon="fa-wrench" help="Permite crear ordenes de reparaciones" groups="base.group_system" />
             <button name="action_crear_reparaciones" string="Crear Reparaciones" type="object" class="btn-primary" />
-            <field name="disponibilidad_id" widget="statusbar"  statusbar_visible="true" />
-           
-           
-              <field name="estado_ventas_id" 
-                widget="statusbar"                  
-                options="{'clickable': '1'}" class="custom_statusbar" groups="base.group_system"/>
+            <field name="disponibilidad_id" widget="statusbar" statusbar_visible="true" />
+
+
+            <field name="estado_ventas_id" widget="statusbar" options="{'clickable': '1'}" class="custom_statusbar" groups="base.group_system"/>
 
           </header>
 
@@ -115,42 +113,42 @@
     </record>
 
     <record id="maquinas_tree_sat" model="ir.ui.view">
-    <field name="name">sat.tree</field>
-    <field name="model">sat.sat</field>
-    <field name="type">list</field>
-    <field name="arch" type="xml">
+      <field name="name">sat.tree</field>
+      <field name="model">sat.sat</field>
+      <field name="type">list</field>
+      <field name="arch" type="xml">
         <list default_order="id desc">
-            
 
-            <!-- Lista de registros -->
-            <field name="create_date" string="Ingreso" widget="remaining_days" width="80%" optional="hide" />
-            <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" invisible="disponibilidad_id != 'separada'" optional="hide" />
-            <field name="fecha_para_revision" string="Fecha para revisión" optional="hide" />
-            <field name="importacion" optional="hide" />
-            <field name="proveedor_id" optional="hide" />
-            <field name="cliente_nombre" string="Cliente" />
-            <field name="tipo_maquina" />
-            <field name="marca" />
-            <field name="activador" optional="hide" />
-            <field name="icono_rojo" widget="html" string=" " invisible="activador == 'no'" />
-            <field name="name" />
-            <field name="serie_id" />
-            <field name="descripcion" optional="hide" />
-            <field name="contometro" />
-            <field name="currency_id" string="Tipo de moneda" optional="hide" />
-            <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide" groups="base.group_system" />
-            <field name="ubicacion_id" />
-            <field name="disponibilidad_id" widget="badge" decoration-success="disponibilidad_id == 'disponible'" decoration-warning="disponibilidad_id == 'separada'" decoration-danger="disponibilidad_id == 'no_disponible'" />
-            <field name="estado_ventas_id" widget="badge" decoration-muted="estado_ventas_id == 'sin_revisar'" decoration-info="estado_ventas_id == 'en_revision'" decoration-success="estado_ventas_id == 'finalizado'" decoration-danger="estado_ventas_id not in ('sin_revisar', 'en_revision', 'finalizado', 'entregada')" decoration-warning="estado_ventas_id == 'entregada'" />
-            <field name="asesora_id" optional="hide" />
-            <button name="action_primer" type="object" class="oe_stat_button" icon="fa-building-o" groups="base.group_system" help="Primer piso" />
-            <button name="action_tercero" type="object" class="oe_stat_button" icon="fa-building" groups="base.group_system" help="Tercer piso" />
-            <button name="action_segundo" type="object" class="oe_stat_button" icon="fa-truck" groups="base.group_system" help="Segundo local" />
-            <field name="activity_ids" widget="list_activity" optional="hide" />
-            <button name="view_reparaciones_ids" type="object" icon="fa-wrench" invisible="estado_ventas_id != 'finalizado'" />
+
+          <!-- Lista de registros -->
+          <field name="create_date" string="Ingreso" widget="remaining_days" width="80%" optional="hide" />
+          <field name="fecha_separacion" string="Separada" widget="remaining_days" width="80%" invisible="disponibilidad_id != 'separada'" optional="hide" />
+          <field name="fecha_para_revision" string="Fecha para revisión" optional="hide" />
+          <field name="importacion" optional="hide" />
+          <field name="proveedor_id" optional="hide" />
+          <field name="cliente_nombre" string="Cliente" />
+          <field name="tipo_maquina" />
+          <field name="marca" />
+          <field name="activador" optional="hide" />
+          <field name="icono_rojo" widget="html" string=" " invisible="activador == 'no'" />
+          <field name="name" />
+          <field name="serie_id" />
+          <field name="descripcion" optional="hide" />
+          <field name="contometro" />
+          <field name="currency_id" string="Tipo de moneda" optional="hide" />
+          <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide" groups="base.group_system" />
+          <field name="ubicacion_id" />
+          <field name="disponibilidad_id" widget="badge" decoration-success="disponibilidad_id == 'disponible'" decoration-warning="disponibilidad_id == 'separada'" decoration-danger="disponibilidad_id == 'no_disponible'" />
+          <field name="estado_ventas_id" widget="badge" decoration-muted="estado_ventas_id == 'sin_revisar'" decoration-info="estado_ventas_id == 'en_revision'" decoration-success="estado_ventas_id == 'finalizado'" decoration-danger="estado_ventas_id not in ('sin_revisar', 'en_revision', 'finalizado', 'entregada')" decoration-warning="estado_ventas_id == 'entregada'" />
+          <field name="asesora_id" optional="hide" />
+          <button name="action_primer" type="object" class="oe_stat_button" icon="fa-building-o" groups="base.group_system" help="Primer piso" />
+          <button name="action_tercero" type="object" class="oe_stat_button" icon="fa-building" groups="base.group_system" help="Tercer piso" />
+          <button name="action_segundo" type="object" class="oe_stat_button" icon="fa-truck" groups="base.group_system" help="Segundo local" />
+          <field name="activity_ids" widget="list_activity" optional="hide" />
+          <button name="view_reparaciones_ids" type="object" icon="fa-wrench" invisible="estado_ventas_id != 'finalizado'" />
         </list>
-    </field>
-</record>
+      </field>
+    </record>
 
 
 
@@ -189,46 +187,45 @@
 
     <!-- Kanban -->
     <record id="maquinas_kanban_view" model="ir.ui.view">
-    <field name="name">maquinas.kanban</field>
-    <field name="model">sat.sat</field>
-    <field name="arch" type="xml">
+      <field name="name">maquinas.kanban</field>
+      <field name="model">sat.sat</field>
+      <field name="arch" type="xml">
         <kanban default_group_by="estado_ventas_id" class="o_kanban_dashboard" sample="1">
-            <field name="id"/>
-            <field name="name"/>
-            <field name="cliente_id"/>
-            <field name="tipo_maquina"/>
-            <field name="marca"/>
-            <field name="serie_id"/>
-            <field name="contometro"/>
-            <field name="disponibilidad_id"/>
-            <field name="estado_ventas_id"/>
-            <field name="tipo_id"/>
-            <field name="precio_venta"/>
-            <field name="precio_compra"/>
-            <field name="asesora_id"/>
-            <field name="ubicacion_id"/>
-            <field name="importacion"/>
-            <field name="descripcion"/>
-            <field name="factura_venta"/>
-            <field name="fecha_entrega"/>
-            <field name="activador"/>
-            
-            <progressbar field="estado_ventas_id" 
-                colors='{"finalizado": "success", 
+          <field name="id"/>
+          <field name="name"/>
+          <field name="cliente_id"/>
+          <field name="tipo_maquina"/>
+          <field name="marca"/>
+          <field name="serie_id"/>
+          <field name="contometro"/>
+          <field name="disponibilidad_id"/>
+          <field name="estado_ventas_id"/>
+          <field name="tipo_id"/>
+          <field name="precio_venta"/>
+          <field name="precio_compra"/>
+          <field name="asesora_id"/>
+          <field name="ubicacion_id"/>
+          <field name="importacion"/>
+          <field name="descripcion"/>
+          <field name="factura_venta"/>
+          <field name="fecha_entrega"/>
+          <field name="activador"/>
+
+          <progressbar field="estado_ventas_id" colors='{"finalizado": "success", 
                         "con_problemas": "warning", 
                         "de_partes": "danger",
                         "en_revision": "info",
                         "sin_revisar": "secondary",
                         "entregada": "primary"}'/>
-            
-            <templates>
-                <t t-name="card">
-                    <div class="oe_kanban_global_click position-relative shadow-sm rounded">
-                        <!-- Header con estado y disponibilidad -->
-                        <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
-                            <div class="d-flex align-items-center">
-                                <!-- Icono dinámico según estado -->
-                                <i t-attf-class="fa me-2 #{
+
+          <templates>
+            <t t-name="card">
+              <div class="oe_kanban_global_click position-relative shadow-sm rounded">
+                <!-- Header con estado y disponibilidad -->
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
+                  <div class="d-flex align-items-center">
+                    <!-- Icono dinámico según estado -->
+                    <i t-attf-class="fa me-2 #{
                                     record.estado_ventas_id.raw_value == 'sin_revisar' ? 'fa-clock text-secondary' :
                                     record.estado_ventas_id.raw_value == 'para_revision' ? 'fa-search text-info' :
                                     record.estado_ventas_id.raw_value == 'asignado' ? 'fa-user-check text-primary' :
@@ -238,127 +235,118 @@
                                     record.estado_ventas_id.raw_value == 'de_partes' ? 'fa-cog text-danger' :
                                     record.estado_ventas_id.raw_value == 'entregada' ? 'fa-truck text-success' :
                                     'fa-question text-secondary'}" title="Estado"/>
-                                <field name="estado_ventas_id" widget="badge"
-                                    decoration-success="estado_ventas_id == 'finalizado' or estado_ventas_id == 'entregada'"
-                                    decoration-warning="estado_ventas_id == 'con_problemas'"
-                                    decoration-danger="estado_ventas_id == 'de_partes'"
-                                    decoration-info="estado_ventas_id == 'en_revision' or estado_ventas_id == 'para_revision'"
-                                    decoration-primary="estado_ventas_id == 'asignado'"
-                                    decoration-secondary="estado_ventas_id == 'sin_revisar'"/>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <!-- Icono dinámico según disponibilidad -->
-                                <i t-attf-class="fa me-2 #{
+                    <field name="estado_ventas_id" widget="badge" decoration-success="estado_ventas_id == 'finalizado' or estado_ventas_id == 'entregada'" decoration-warning="estado_ventas_id == 'con_problemas'" decoration-danger="estado_ventas_id == 'de_partes'" decoration-info="estado_ventas_id == 'en_revision' or estado_ventas_id == 'para_revision'" decoration-primary="estado_ventas_id == 'asignado'" decoration-secondary="estado_ventas_id == 'sin_revisar'"/>
+                  </div>
+                  <div class="d-flex align-items-center">
+                    <!-- Icono dinámico según disponibilidad -->
+                    <i t-attf-class="fa me-2 #{
                                     record.disponibilidad_id.raw_value == 'disponible' ? 'fa-check-circle text-success' :
                                     record.disponibilidad_id.raw_value == 'separada' ? 'fa-bookmark text-warning' :
                                     record.disponibilidad_id.raw_value == 'no_disponible' ? 'fa-times-circle text-danger' :
                                     'fa-question text-secondary'}" title="Disponibilidad"/>
-                                <field name="disponibilidad_id" widget="badge"
-                                    decoration-success="disponibilidad_id == 'disponible'"
-                                    decoration-warning="disponibilidad_id == 'separada'"
-                                    decoration-danger="disponibilidad_id == 'no_disponible'"/>
-                            </div>
-                        </div>
+                    <field name="disponibilidad_id" widget="badge" decoration-success="disponibilidad_id == 'disponible'" decoration-warning="disponibilidad_id == 'separada'" decoration-danger="disponibilidad_id == 'no_disponible'"/>
+                  </div>
+                </div>
 
-                        <div class="p-3">
-                            <!-- Información del Cliente y Asesora -->
-                            <div class="mb-3">
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fa fa-building text-primary me-2" title="Cliente"/>
-                                    <span class="text-muted me-1">Cliente:</span>
-                                    <field name="cliente_id" class="fw-bold"/>
-                                </div>
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fa fa-female text-pink me-2" title="Asesora"/>
-                                    <span class="text-muted me-1">Asesora:</span>
-                                    <field name="asesora_id"/>
-                                </div>
-                            </div>
+                <div class="p-3">
+                  <!-- Información del Cliente y Asesora -->
+                  <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="fa fa-building text-primary me-2" title="Cliente"/>
+                      <span class="text-muted me-1">Cliente:</span>
+                      <field name="cliente_id" class="fw-bold"/>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="fa fa-female text-pink me-2" title="Asesora"/>
+                      <span class="text-muted me-1">Asesora:</span>
+                      <field name="asesora_id"/>
+                    </div>
+                  </div>
 
-                            <!-- Información de la Máquina -->
-                            <div class="mb-3">
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fa fa-print text-success me-2" title="Tipo"/>
-                                    <span class="text-muted me-1">Tipo:</span>
-                                    <field name="tipo_maquina"/>
-                                    <span class="badge bg-info ms-2">
-                                        <field name="tipo_id"/>
-                                    </span>
-                                </div>
-                                
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fa fa-trademark text-info me-2" title="Marca"/>
-                                    <span class="text-muted me-1">Marca/Modelo:</span>
-                                    <field name="marca"/> - <field name="name"/>
-                                </div>
+                  <!-- Información de la Máquina -->
+                  <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="fa fa-print text-success me-2" title="Tipo"/>
+                      <span class="text-muted me-1">Tipo:</span>
+                      <field name="tipo_maquina"/>
+                      <span class="badge bg-info ms-2">
+                        <field name="tipo_id"/>
+                      </span>
+                    </div>
 
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fa fa-barcode text-secondary me-2" title="Serie"/>
-                                    <span class="text-muted me-1">Serie:</span>
-                                    <field name="serie_id"/>
-                                </div>
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="fa fa-trademark text-info me-2" title="Marca"/>
+                      <span class="text-muted me-1">Marca/Modelo:</span>
+                      <field name="marca"/>
+ -                      <field name="name"/>
+                    </div>
 
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fa fa-calculator text-dark me-2" title="Contómetro"/>
-                                    <span class="text-muted me-1">Contómetro:</span>
-                                    <field name="contometro"/>
-                                </div>
-                            </div>
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="fa fa-barcode text-secondary me-2" title="Serie"/>
+                      <span class="text-muted me-1">Serie:</span>
+                      <field name="serie_id"/>
+                    </div>
 
-                            <!-- Precios -->
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa fa-tag text-success me-2" title="Precio Venta"/>
-                                        <span class="text-muted me-1">Venta:</span>
-                                        <field name="precio_venta"/>
-                                    </div>
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa fa-shopping-cart text-danger me-2" title="Precio Compra"/>
-                                        <span class="text-muted me-1">Compra:</span>
-                                        <field name="precio_compra"/>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="fa fa-calculator text-dark me-2" title="Contómetro"/>
+                      <span class="text-muted me-1">Contómetro:</span>
+                      <field name="contometro"/>
+                    </div>
+                  </div>
 
-                            <!-- Ubicación e Importación -->
-                            <div class="mb-3">
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fa fa-map-marker-alt text-danger me-2" title="Ubicación"/>
-                                    <span class="text-muted me-1">Ubicación:</span>
-                                    <field name="ubicacion_id"/>
-                                </div>
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fa fa-plane text-info me-2" title="Importación"/>
-                                    <span class="text-muted me-1">Import.:</span>
-                                    <field name="importacion"/>
-                                </div>
-                            </div>
+                  <!-- Precios -->
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                      <div class="d-flex align-items-center">
+                        <i class="fa fa-tag text-success me-2" title="Precio Venta"/>
+                        <span class="text-muted me-1">Venta:</span>
+                        <field name="precio_venta"/>
+                      </div>
+                      <div class="d-flex align-items-center">
+                        <i class="fa fa-shopping-cart text-danger me-2" title="Precio Compra"/>
+                        <span class="text-muted me-1">Compra:</span>
+                        <field name="precio_compra"/>
+                      </div>
+                    </div>
+                  </div>
 
-                            <!-- Facturación -->
-                            <div class="pt-2 border-top" t-if="record.factura_venta.raw_value">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa fa-file-invoice text-primary me-2" title="Factura"/>
-                                        <span class="text-muted me-1">Factura:</span>
-                                        <field name="factura_venta"/>
-                                    </div>
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa fa-calendar text-success me-2" title="Fecha Entrega"/>
-                                        <field name="fecha_entrega"/>
-                                    </div>
-                                </div>
-                            </div>
+                  <!-- Ubicación e Importación -->
+                  <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="fa fa-map-marker-alt text-danger me-2" title="Ubicación"/>
+                      <span class="text-muted me-1">Ubicación:</span>
+                      <field name="ubicacion_id"/>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="fa fa-plane text-info me-2" title="Importación"/>
+                      <span class="text-muted me-1">Import.:</span>
+                      <field name="importacion"/>
+                    </div>
+                  </div>
 
-                            <!-- Alerta -->
-                            <div t-if="record.activador.raw_value == 'si'" 
-                                class="position-absolute top-0 end-0 p-2">
-                                <i class="fa fa-exclamation-circle fa-lg text-danger"/>
-                            </div>
-                        </div>
+                  <!-- Facturación -->
+                  <div class="pt-2 border-top" t-if="record.factura_venta.raw_value">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div class="d-flex align-items-center">
+                        <i class="fa fa-file-invoice text-primary me-2" title="Factura"/>
+                        <span class="text-muted me-1">Factura:</span>
+                        <field name="factura_venta"/>
+                      </div>
+                      <div class="d-flex align-items-center">
+                        <i class="fa fa-calendar text-success me-2" title="Fecha Entrega"/>
+                        <field name="fecha_entrega"/>
+                      </div>
+                    </div>
+                  </div>
 
-                        <!-- Indicador lateral de estado -->
-                        <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
+                  <!-- Alerta -->
+                  <div t-if="record.activador.raw_value == 'si'" class="position-absolute top-0 end-0 p-2">
+                    <i class="fa fa-exclamation-circle fa-lg text-danger"/>
+                  </div>
+                </div>
+
+                <!-- Indicador lateral de estado -->
+                <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
                             #{record.estado_ventas_id.raw_value == 'finalizado' ? 'bg-success' : 
                             record.estado_ventas_id.raw_value == 'con_problemas' ? 'bg-warning' :
                             record.estado_ventas_id.raw_value == 'de_partes' ? 'bg-danger' :
@@ -366,12 +354,12 @@
                             record.estado_ventas_id.raw_value == 'entregada' ? 'bg-success' :
                             record.estado_ventas_id.raw_value == 'asignado' ? 'bg-primary' :
                             record.estado_ventas_id.raw_value == 'para_revision' ? 'bg-info' : 'bg-secondary'}"/>
-                    </div>
-                </t>
-            </templates>
+              </div>
+            </t>
+          </templates>
         </kanban>
-    </field>
-</record>
+      </field>
+    </record>
     <!-- actions opening views on models -->
     <record model="ir.actions.act_window" id="sat.action_reparaciones_window">
       <field name="name">Reparaciones</field>
