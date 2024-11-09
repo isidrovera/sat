@@ -1,5 +1,4 @@
 // sat/static/src/js/gallery.js
-// gallery.js
 document.addEventListener('DOMContentLoaded', function() {
     const gallery = {
         init() {
@@ -13,14 +12,24 @@ document.addEventListener('DOMContentLoaded', function() {
             this.fileInput = document.getElementById('fileUpload');
             this.photoGrid = document.querySelector('#photoGrid');
             this.syncButton = document.getElementById('syncButton');
+            this.shareButton = document.getElementById('shareButton');
             this.loadingOverlay = document.getElementById('loadingOverlay');
             this.reparacionId = window.location.pathname.split('/').pop();
+            this.initializeFileInput();
+        },
+
+        initializeFileInput() {
+            if (this.fileInput) {
+                this.fileInput.setAttribute('multiple', 'multiple');
+                this.fileInput.setAttribute('capture', 'environment');
+                this.fileInput.setAttribute('accept', 'image/*');
+            }
         },
 
         bindEvents() {
             if (this.fileInput) {
-                this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
-                console.log('Evento de subida de archivos vinculado');
+                this.fileInput.addEventListener('change', (e) => this.handleMassiveUpload(e));
+                console.log('Evento de subida masiva vinculado');
             }
 
             if (this.syncButton) {
@@ -28,11 +37,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Evento de sincronización vinculado');
             }
 
+            if (this.shareButton) {
+                this.shareButton.addEventListener('click', () => this.handleShareGallery());
+                console.log('Evento de compartir vinculado');
+            }
+
             document.querySelectorAll('.delete-photo').forEach(btn => {
                 btn.addEventListener('click', (e) => this.handleDelete(e));
             });
 
-            // Eventos para las imágenes
             document.querySelectorAll('.preview-image').forEach(img => {
                 this.setupImageHandling(img);
             });
@@ -47,13 +60,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.classList.add('loading');
                 clearTimeout(loadTimeout);
 
-                // Timeout para la carga
                 loadTimeout = setTimeout(() => {
                     if (!img.complete && retryCount < maxRetries) {
                         console.log(`Reintentando carga de imagen ${retryCount + 1}/${maxRetries}`);
                         retryCount++;
                         img.src = img.src + `?retry=${Date.now()}`;
-                        loadImage(); // Recursivo para siguiente intento
+                        loadImage();
                     } else if (retryCount >= maxRetries) {
                         this.handleImageError(img);
                     }
@@ -100,28 +112,39 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
 
-        handleFileUpload(event) {
-            console.log('Iniciando subida de archivos...');
-            const files = event.target.files;
-            if (!files || !files.length) {
-                console.log('No se seleccionaron archivos');
-                return;
-            }
+        handleMassiveUpload(event) {
+            const files = Array.from(event.target.files);
+            if (!files.length) return;
 
-            const formData = new FormData();
-            Array.from(files).forEach(file => {
-                if (this.validateFile(file)) {
-                    formData.append('files[]', file);
-                    console.log('Archivo agregado:', file.name);
-                }
-            });
-
-            if (!formData.has('files[]')) {
+            const validFiles = files.filter(file => this.validateFile(file));
+            if (!validFiles.length) {
                 this.showError('No hay archivos válidos', 'Por favor seleccione imágenes válidas');
                 return;
             }
 
-            this.showLoading('Subiendo fotos...');
+            // Mostrar progreso de carga
+            this.showUploadProgress(validFiles.length);
+
+            // Dividir archivos en lotes para mejor manejo
+            const batchSize = 5;
+            const batches = [];
+            for (let i = 0; i < validFiles.length; i += batchSize) {
+                batches.push(validFiles.slice(i, i + batchSize));
+            }
+
+            this.processBatches(batches, 0, validFiles.length);
+        },
+
+        processBatches(batches, uploadedCount, totalFiles) {
+            if (batches.length === 0) {
+                this.showSuccess('Subida Completada', `Se subieron ${uploadedCount} fotos correctamente`);
+                setTimeout(() => window.location.reload(), 1500);
+                return;
+            }
+
+            const currentBatch = batches.shift();
+            const formData = new FormData();
+            currentBatch.forEach(file => formData.append('files[]', file));
 
             fetch(`/gallery/upload/${this.reparacionId}`, {
                 method: 'POST',
@@ -130,35 +153,109 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    this.showSuccess('Éxito', 'Fotos subidas correctamente');
-                    setTimeout(() => window.location.reload(), 1500);
+                    const newUploadedCount = uploadedCount + currentBatch.length;
+                    const progress = (newUploadedCount / totalFiles) * 100;
+                    this.updateUploadProgress(progress, newUploadedCount, totalFiles);
+                    this.processBatches(batches, newUploadedCount, totalFiles);
                 } else {
-                    throw new Error(data.error || 'Error al subir las fotos');
+                    throw new Error(data.error || 'Error en la subida');
                 }
             })
             .catch(error => {
                 console.error('Error en subida:', error);
                 this.showError('Error', error.message);
-            })
-            .finally(() => {
-                this.fileInput.value = '';
-                this.hideLoading();
             });
+        },
+
+        showUploadProgress(totalFiles) {
+            Swal.fire({
+                title: 'Subiendo Fotos',
+                html: `
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%" 
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div id="uploadStatus">Iniciando subida de ${totalFiles} fotos...</div>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+        },
+
+        updateUploadProgress(progress, uploadedCount, totalFiles) {
+            const progressBar = document.querySelector('.progress-bar');
+            const statusText = document.getElementById('uploadStatus');
+            
+            if (progressBar && statusText) {
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+                statusText.textContent = `Subiendo: ${uploadedCount} de ${totalFiles} fotos`;
+            }
         },
 
         validateFile(file) {
             if (!file.type.startsWith('image/')) {
-                this.showError('Archivo no válido', `${file.name} no es una imagen`);
+                console.warn(`Archivo no válido: ${file.name} (no es una imagen)`);
                 return false;
             }
 
             const maxSize = 10 * 1024 * 1024; // 10MB
             if (file.size > maxSize) {
-                this.showError('Archivo muy grande', `${file.name} excede el tamaño máximo de 10MB`);
+                console.warn(`Archivo muy grande: ${file.name}`);
                 return false;
             }
 
             return true;
+        },
+
+        handleShareGallery() {
+            const currentUrl = window.location.href;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Galería de Fotos',
+                    text: 'Accede a la galería de fotos completa:',
+                    url: currentUrl
+                }).catch(() => {
+                    this.showShareDialog(currentUrl);
+                });
+            } else {
+                this.showShareDialog(currentUrl);
+            }
+        },
+
+        showShareDialog(url) {
+            Swal.fire({
+                title: 'Compartir Galería',
+                html: `
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" value="${url}" readonly id="shareUrl">
+                        <button class="btn btn-outline-primary" type="button" id="copyButton">
+                            <i class="fas fa-copy"></i> Copiar
+                        </button>
+                    </div>
+                    <p class="text-muted">Comparte este enlace para que otros puedan ver la galería</p>
+                `,
+                showCancelButton: true,
+                cancelButtonText: 'Cerrar',
+                showConfirmButton: false,
+                didRender: () => {
+                    const copyButton = document.getElementById('copyButton');
+                    const shareUrl = document.getElementById('shareUrl');
+                    
+                    copyButton.addEventListener('click', () => {
+                        shareUrl.select();
+                        document.execCommand('copy');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'URL Copiada',
+                            text: 'El enlace ha sido copiado al portapapeles',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    });
+                }
+            });
         },
 
         handleSync() {

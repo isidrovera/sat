@@ -95,6 +95,7 @@
             # CSS Files
             'sat/static/src/css/dashboard.css',
             'sat/static/src/css/style.css',
+            'sat/static/src/css/gallery.css',
             
             
 
