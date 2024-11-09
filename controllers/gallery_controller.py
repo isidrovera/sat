@@ -180,19 +180,19 @@ class GalleryController(http.Controller):
 
     @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
     def download_photo(self, foto_id):
-        """Descarga una foto individual actuando como proxy, obteniendo un enlace actualizado"""
+        """Descarga una foto individual actuando como proxy"""
         foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
         if not foto.exists():
             _logger.error(f"[DOWNLOAD_PHOTO] Foto con ID {foto_id} no encontrada")
             return request.not_found()
         
-        # Obtener el contenido de la foto a través del método de proxy en el modelo
+        # Obtener el contenido de la foto (el archivo descargado de pCloud)
         content_info = foto.get_download_content()
         if not content_info:
             _logger.error(f"[DOWNLOAD_PHOTO] No se pudo obtener contenido para la foto con ID {foto_id}")
             return request.not_found()
 
-        # Enviar la respuesta al usuario para forzar la descarga
+        # Enviar el archivo al cliente directamente como una descarga forzada
         return request.make_response(
             base64.b64decode(content_info['content']),
             headers=[
