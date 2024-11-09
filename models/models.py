@@ -307,15 +307,19 @@ class SatSat(models.Model):
 
         try:
             self.enviar_mensaje_whatsapp(self.asesora_mobile_clean, mensaje)
+            # Corrección en message_post para usar subtype_xmlid en lugar de subtype
             self.message_post(
                 body=f"Se envió notificación WhatsApp a la asesora {self.cliente_id.asesora_id.name}",
-                subtype='mail.mt_note'
+                message_type='notification',
+                subtype_xmlid='mail.mt_note'
             )
             return True
         except Exception as e:
+            # Corrección en message_post para el mensaje de error
             self.message_post(
                 body=f"Error al enviar WhatsApp a la asesora: {str(e)}",
-                subtype='mail.mt_note'
+                message_type='notification',
+                subtype_xmlid='mail.mt_note'
             )
             return False
 
