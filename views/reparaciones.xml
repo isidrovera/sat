@@ -218,49 +218,75 @@
             <templates>
                 <t t-name="card">
                     <div class="oe_kanban_global_click position-relative">
-                        <!-- Header con información principal -->
+                        <!-- Header con cliente y prioridad -->
                         <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light">
                             <div class="d-flex align-items-center">
-                                <i class="fa fa-tools me-2" />
-                                <strong><field name="cliente_id" /></strong>
+                                <i class="fa fa-building me-2 text-primary" title="Cliente"/>
+                                <div>
+                                    <strong class="text-primary"><field name="cliente_id" /></strong>
+                                </div>
                             </div>
-                            <field name="prioridad" widget="priority" />
+                            <div class="d-flex align-items-center">
+                                <span class="text-muted me-2">Prioridad:</span>
+                                <field name="prioridad" widget="priority" />
+                            </div>
                         </div>
 
                         <!-- Contenido principal -->
                         <div class="p-3">
-                            <!-- Información de la máquina -->
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fa fa-cog me-2" />
+                            <!-- Información de la fotocopiadora -->
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fa fa-print me-2 text-secondary" title="Modelo"/>
                                 <div>
-                                    <div><field name="maquina_id" /></div>
-                                    <small class="text-muted">Serie: <field name="serie_id" /></small>
+                                    <span class="text-muted me-1">Modelo:</span>
+                                    <strong><field name="maquina_id" /></strong>
+                                    <div class="mt-1">
+                                        <i class="fa fa-barcode me-2 text-secondary" title="Serie"/>
+                                        <span class="text-muted me-1">Serie:</span>
+                                        <field name="serie_id" />
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Ubicación -->
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fa fa-map-marker-alt me-2" />
-                                <field name="ubicacion_id" />
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fa fa-map-marker-alt me-2 text-danger" title="Ubicación"/>
+                                <div>
+                                    <span class="text-muted me-1">Ubicación:</span>
+                                    <field name="ubicacion_id" />
+                                </div>
                             </div>
 
                             <!-- Importación -->
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fa fa-ship me-2" />
-                                <field name="importacion" />
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fa fa-shipping-fast me-2 text-success" title="Importación"/>
+                                <div>
+                                    <span class="text-muted me-1">Importación:</span>
+                                    <field name="importacion" />
+                                </div>
                             </div>
 
-                            <!-- Footer con badges -->
+                            <!-- Footer con badges de estado y tipo -->
                             <div class="mt-3 pt-2 border-top">
-                                <field name="tipo_revision" widget="badge" class="me-2" />
-                                <field name="estado_id" widget="badge"
-                                    decoration-success="estado_id == 'finalizado'"
-                                    decoration-warning="estado_id == 'en_revision'"
-                                    decoration-danger="estado_id == 'con_problemas'" />
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fa fa-tasks me-2 text-info" title="Tipo de Revisión"/>
+                                        <span class="text-muted me-1">Tipo:</span>
+                                        <field name="tipo_revision" widget="badge" class="me-2" />
+                                    </div>
+                                    <div>
+                                        <i class="fa fa-flag me-2 text-warning" title="Estado"/>
+                                        <span class="text-muted me-1">Estado:</span>
+                                        <field name="estado_id" widget="badge"
+                                            decoration-success="estado_id == 'finalizado'"
+                                            decoration-warning="estado_id == 'en_revision'"
+                                            decoration-danger="estado_id == 'con_problemas'" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Indicador de estado -->
+                        <!-- Indicador de estado lateral -->
                         <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
                             #{record.estado_id.raw_value == 'finalizado' ? 'bg-success' : 
                             record.estado_id.raw_value == 'con_problemas' ? 'bg-danger' :
