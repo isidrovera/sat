@@ -216,7 +216,7 @@
                 colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger", "en_revision": "info"}' />
             
             <templates>
-                <t t-name="kanban-card">
+                <t t-name="card">
                     <div class="oe_kanban_global_click position-relative">
                         <!-- Header con información principal -->
                         <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light">
