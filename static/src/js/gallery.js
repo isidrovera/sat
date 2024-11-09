@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.fileInput = document.getElementById('fileUpload');
             this.photoGrid = document.querySelector('#photoGrid');
             this.syncButton = document.getElementById('syncButton');
-            this.shareGalleryBtn = document.getElementById('shareGalleryBtn');
+            this.shareGalleryBtn = document.getElementById('shareGalleryBtn'); // Asegurarnos que coincida con el ID en el HTML
             this.loadingOverlay = document.getElementById('loadingOverlay');
             this.reparacionId = window.location.pathname.split('/').pop();
             this.setupFileInput();

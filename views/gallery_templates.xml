@@ -27,7 +27,7 @@
                                     <label class="btn btn-primary me-2">
                                         <i class="fas fa-upload me-1"></i>Subir Fotos
                                         <input type="file" id="fileUpload" multiple="multiple" 
-                                               class="d-none" accept="image/*"/>
+                                               class="d-none" accept="image/*" capture="environment"/>
                                     </label>
                                     <a t-att-href="'/gallery/download_all/' + str(reparacion.id)" 
                                        class="btn btn-secondary">
@@ -55,11 +55,11 @@
                                 <div class="photo-footer">
                                     <div class="photo-name" t-esc="foto['nombre_foto']"/>
                                     <div class="photo-actions">
-                                        <button class="btn btn-sm btn-outline-primary download-photo" 
-                                                t-att-data-photo-id="foto['id']"
-                                                t-att-data-url="foto['download_url']">
+                                        <a t-att-href="foto['download_url']" 
+                                           class="btn btn-sm btn-outline-primary"
+                                           download>
                                             <i class="fas fa-download"></i> Descargar
-                                        </button>
+                                        </a>
                                         <button class="btn btn-sm btn-outline-danger delete-photo" 
                                                 t-att-data-photo-id="foto['id']">
                                             <i class="fas fa-trash"></i> Eliminar
