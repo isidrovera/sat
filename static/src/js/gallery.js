@@ -15,6 +15,14 @@ document.addEventListener('DOMContentLoaded', function() {
             this.shareGalleryBtn = document.getElementById('shareGalleryBtn');
             this.loadingOverlay = document.getElementById('loadingOverlay');
             this.reparacionId = window.location.pathname.split('/').pop();
+            console.log('Elementos inicializados:', {
+                fileInput: this.fileInput,
+                photoGrid: this.photoGrid,
+                syncButton: this.syncButton,
+                shareGalleryBtn: this.shareGalleryBtn,
+                loadingOverlay: this.loadingOverlay,
+                reparacionId: this.reparacionId,
+            });
             this.setupFileInput();
         },
 
@@ -22,19 +30,22 @@ document.addEventListener('DOMContentLoaded', function() {
             if (this.fileInput) {
                 this.fileInput.setAttribute('multiple', 'multiple');
                 this.fileInput.setAttribute('accept', 'image/*');
+                console.log('Configurando input para múltiples fotos en dispositivos móviles.');
 
-                // Mejorar soporte móvil para múltiples fotos
                 if (this.isMobile()) {
                     this.fileInput.addEventListener('click', function() {
                         this.setAttribute('multiple', 'multiple');
                     });
                     this.fileInput.addEventListener('change', (e) => this.handleMassiveUpload(e));
+                    console.log('Configuración de subida múltiple activada para dispositivos móviles');
                 }
             }
         },
 
         isMobile() {
-            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            console.log('Detección de dispositivo móvil:', isMobileDevice);
+            return isMobileDevice;
         },
 
         bindEvents() {
@@ -55,14 +66,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.querySelectorAll('.download-photo').forEach(btn => {
                 btn.addEventListener('click', (e) => this.handleDownload(e));
+                console.log('Evento de descarga vinculado para foto:', btn);
             });
 
             document.querySelectorAll('.delete-photo').forEach(btn => {
                 btn.addEventListener('click', (e) => this.handleDelete(e));
-            });
-
-            document.querySelectorAll('.preview-image').forEach(img => {
-                this.setupImageHandling(img);
+                console.log('Evento de eliminación vinculado para foto:', btn);
             });
         },
 
@@ -70,16 +79,17 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             const button = event.currentTarget;
             const url = button.dataset.url;
-            console.log(`Intentando descargar la imagen desde: ${url}`);
+            console.log(`Intentando descargar la imagen desde URL: ${url}`);
 
             const fileName = button.closest('.photo-card').querySelector('.photo-name')?.textContent.trim() || 'foto';
+            console.log(`Nombre de archivo para la descarga: ${fileName}`);
 
             fetch(url)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`Error al descargar la imagen: ${response.statusText}`);
                     }
-                    console.log('Respuesta de descarga recibida');
+                    console.log('Respuesta de descarga recibida correctamente.');
                     return response.blob();
                 })
                 .then(blob => {
@@ -98,11 +108,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         handleShareGallery() {
             const currentUrl = window.location.href;
-            console.log(`Intentando compartir la URL: ${currentUrl}`);
+            console.log(`Intentando compartir la URL de la galería: ${currentUrl}`);
 
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(currentUrl).then(() => {
-                    console.log('URL copiada al portapapeles');
+                    console.log('URL copiada al portapapeles exitosamente');
                     Swal.fire({
                         icon: 'success',
                         title: 'URL Copiada',
@@ -111,20 +121,25 @@ document.addEventListener('DOMContentLoaded', function() {
                         showConfirmButton: false
                     });
                 }).catch(err => {
-                    console.error('Error al copiar URL:', err);
+                    console.error('Error al copiar URL al portapapeles:', err);
                     this.showError('Error', 'No se pudo copiar el enlace al portapapeles');
                 });
             } else {
-                console.warn('La API Clipboard no está disponible en este navegador');
+                console.warn('API Clipboard no está disponible en este navegador');
                 this.showError('No compatible', 'Tu navegador no permite copiar enlaces directamente');
             }
         },
 
         handleMassiveUpload(event) {
+            console.log('Subida masiva de archivos iniciada.');
             const files = Array.from(event.target.files);
-            if (!files.length) return;
+            if (!files.length) {
+                console.log('No se seleccionaron archivos para subir.');
+                return;
+            }
 
             const validFiles = files.filter(file => this.validateFile(file));
+            console.log(`Archivos válidos para subir: ${validFiles.length}`);
             if (!validFiles.length) {
                 this.showError('No hay archivos válidos', 'Por favor seleccione imágenes válidas');
                 return;
@@ -137,11 +152,13 @@ document.addEventListener('DOMContentLoaded', function() {
             for (let i = 0; i < validFiles.length; i += batchSize) {
                 batches.push(validFiles.slice(i, i + batchSize));
             }
+            console.log(`Lotes de archivos para subir: ${batches.length}`);
 
             this.processBatches(batches, 0, validFiles.length);
         },
 
         processBatches(batches, uploadedCount, totalFiles) {
+            console.log(`Iniciando proceso de lotes de subida. Total archivos: ${totalFiles}`);
             if (batches.length === 0) {
                 this.showSuccess('Subida Completada', `Se subieron ${uploadedCount} fotos correctamente`);
                 setTimeout(() => window.location.reload(), 1500);
@@ -161,6 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     const newUploadedCount = uploadedCount + currentBatch.length;
                     const progress = (newUploadedCount / totalFiles) * 100;
+                    console.log(`Subida en progreso: ${newUploadedCount}/${totalFiles} (${progress}%)`);
                     this.updateUploadProgress(progress, newUploadedCount, totalFiles);
                     this.processBatches(batches, newUploadedCount, totalFiles);
                 } else {
@@ -174,14 +192,15 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         validateFile(file) {
+            console.log(`Validando archivo: ${file.name}`);
             if (!file.type.startsWith('image/')) {
-                console.warn(`Archivo no válido: ${file.name} (no es una imagen)`);
+                console.warn(`Archivo no válido (no es una imagen): ${file.name}`);
                 return false;
             }
 
             const maxSize = 10 * 1024 * 1024;
             if (file.size > maxSize) {
-                console.warn(`Archivo muy grande: ${file.name}`);
+                console.warn(`Archivo demasiado grande: ${file.name}`);
                 return false;
             }
 
@@ -189,6 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         showUploadProgress(totalFiles) {
+            console.log(`Mostrando progreso de subida para ${totalFiles} archivos.`);
             Swal.fire({
                 title: 'Subiendo Fotos',
                 html: `
@@ -204,6 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         updateUploadProgress(progress, uploadedCount, totalFiles) {
+            console.log(`Actualizando progreso de subida: ${uploadedCount}/${totalFiles} (${progress}%)`);
             const progressBar = document.querySelector('.progress-bar');
             const statusText = document.getElementById('uploadStatus');
             
@@ -215,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         handleSync() {
-            console.log('Iniciando sincronización...');
+            console.log('Iniciando sincronización con pCloud...');
             this.showLoading('Sincronizando con pCloud...');
 
             fetch(`/gallery/sync/${this.reparacionId}`, {
@@ -228,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    console.log('Sincronización completada:', data.message || 'Fotos sincronizadas');
                     this.showSuccess('Sincronización completada', data.message || 'Fotos sincronizadas');
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
@@ -245,6 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         handleDelete(event) {
             const photoId = event.currentTarget.dataset.photoId;
+            console.log(`Intentando eliminar la foto con ID: ${photoId}`);
             if (!photoId) {
                 console.error('No se encontró ID de foto');
                 return;
@@ -261,12 +284,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    console.log(`Confirmación de eliminación recibida para la foto ID: ${photoId}`);
                     this.deletePhoto(photoId);
                 }
             });
         },
 
         deletePhoto(photoId) {
+            console.log(`Eliminando foto con ID: ${photoId}`);
             this.showLoading('Eliminando foto...');
 
             fetch(`/gallery/delete/${photoId}`, {
@@ -278,6 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const element = document.querySelector(`[data-photo-id="${photoId}"]`);
                     if (element) {
                         element.remove();
+                        console.log('Foto eliminada correctamente:', photoId);
                         this.showSuccess('Éxito', 'Foto eliminada correctamente');
                     }
                 } else {
@@ -294,6 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         showLoading(message = 'Cargando...') {
+            console.log(`Mostrando carga: ${message}`);
             Swal.fire({
                 title: message,
                 allowOutsideClick: false,
@@ -304,10 +331,12 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         hideLoading() {
+            console.log('Ocultando indicador de carga.');
             Swal.close();
         },
 
         showError(title, message) {
+            console.log(`Mostrando error: ${title} - ${message}`);
             Swal.fire({
                 icon: 'error',
                 title: title,
@@ -317,6 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         showSuccess(title, message) {
+            console.log(`Mostrando mensaje de éxito: ${title} - ${message}`);
             Swal.fire({
                 icon: 'success',
                 title: title,
@@ -326,6 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         initializeImagePreviews() {
+            console.log('Inicializando vistas previas de imágenes.');
             if ('IntersectionObserver' in window) {
                 const imageObserver = new IntersectionObserver((entries, observer) => {
                     entries.forEach(entry => {
@@ -351,5 +382,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    // Inicializar galería
     gallery.init();
 });
