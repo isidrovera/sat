@@ -55,11 +55,10 @@
                                 <div class="photo-footer">
                                     <div class="photo-name" t-esc="foto['nombre_foto']"/>
                                     <div class="photo-actions">
-                                        <a t-att-href="foto['download_url']" 
-                                           class="btn btn-sm btn-outline-primary"
-                                           t-att-download="foto['nombre_foto']">
+                                        <button class="btn btn-sm btn-outline-primary download-photo" 
+                                                t-att-data-url="foto['download_url']">
                                             <i class="fas fa-download"></i> Descargar
-                                        </a>
+                                        </button>
                                         <button class="btn btn-sm btn-outline-danger delete-photo" 
                                                 t-att-data-photo-id="foto['id']">
                                             <i class="fas fa-trash"></i> Eliminar
