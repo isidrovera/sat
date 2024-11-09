@@ -12,18 +12,28 @@ document.addEventListener('DOMContentLoaded', function() {
             this.fileInput = document.getElementById('fileUpload');
             this.photoGrid = document.querySelector('#photoGrid');
             this.syncButton = document.getElementById('syncButton');
-            this.shareButton = document.getElementById('shareButton');
+            this.shareGalleryBtn = document.getElementById('shareGalleryBtn');
             this.loadingOverlay = document.getElementById('loadingOverlay');
             this.reparacionId = window.location.pathname.split('/').pop();
-            this.initializeFileInput();
+            this.setupFileInput();
         },
 
-        initializeFileInput() {
+        setupFileInput() {
             if (this.fileInput) {
                 this.fileInput.setAttribute('multiple', 'multiple');
-                this.fileInput.setAttribute('capture', 'environment');
                 this.fileInput.setAttribute('accept', 'image/*');
+                
+                // Mejorar soporte móvil para múltiples fotos
+                if (this.isMobile()) {
+                    this.fileInput.addEventListener('click', function() {
+                        this.setAttribute('multiple', 'multiple');
+                    });
+                }
             }
+        },
+
+        isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         },
 
         bindEvents() {
@@ -37,15 +47,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Evento de sincronización vinculado');
             }
 
-            if (this.shareButton) {
-                this.shareButton.addEventListener('click', () => this.handleShareGallery());
+            if (this.shareGalleryBtn) {
+                this.shareGalleryBtn.addEventListener('click', () => this.handleShareGallery());
                 console.log('Evento de compartir vinculado');
             }
 
+            // Eventos para descargas
+            document.querySelectorAll('.download-photo').forEach(btn => {
+                btn.addEventListener('click', (e) => this.handleDownload(e));
+            });
+
+            // Eventos para eliminación
             document.querySelectorAll('.delete-photo').forEach(btn => {
                 btn.addEventListener('click', (e) => this.handleDelete(e));
             });
 
+            // Eventos para imágenes
             document.querySelectorAll('.preview-image').forEach(img => {
                 this.setupImageHandling(img);
             });
@@ -112,6 +129,31 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
 
+        handleDownload(event) {
+            event.preventDefault();
+            const button = event.currentTarget;
+            const url = button.dataset.url;
+            const fileName = button.closest('.photo-card').querySelector('.photo-name').textContent;
+
+            this.showLoading('Descargando foto...');
+
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = fileName;
+                    link.click();
+                    window.URL.revokeObjectURL(link.href);
+                    this.hideLoading();
+                })
+                .catch(error => {
+                    console.error('Error en descarga:', error);
+                    this.showError('Error', 'No se pudo descargar la foto');
+                    this.hideLoading();
+                });
+        },
+
         handleMassiveUpload(event) {
             const files = Array.from(event.target.files);
             if (!files.length) return;
@@ -122,10 +164,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Mostrar progreso de carga
             this.showUploadProgress(validFiles.length);
 
-            // Dividir archivos en lotes para mejor manejo
             const batchSize = 5;
             const batches = [];
             for (let i = 0; i < validFiles.length; i += batchSize) {
