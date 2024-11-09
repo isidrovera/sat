@@ -268,7 +268,56 @@ class SatSat(models.Model):
     
     tipo_maquina = fields.Char(related='name.tipo_maquina_id.name', readonly=True, string='Tipo de maquina', tracking=True)
 
-    
+    asesora_mobile_clean = fields.Char(
+    string='Número de celular asesora (limpio)',
+    compute='_compute_asesora_mobile_clean',
+    store=True
+)
+
+    @api.depends('cliente_id.asesora_id.mobile')
+    def _compute_asesora_mobile_clean(self):
+        for record in self:
+            if record.cliente_id.asesora_id.mobile:
+                phone = record.cliente_id.asesora_id.mobile.replace('+', '')
+                phone = ''.join(phone.split())
+                if not phone.startswith('51'):
+                    phone = '51' + phone
+                record.asesora_mobile_clean = phone
+            else:
+                record.asesora_mobile_clean = ''
+
+    def enviar_mensaje_problema_asesora(self):
+        """Envía mensaje WhatsApp a la asesora cuando hay problemas con la máquina"""
+        if not self.asesora_mobile_clean or not self.cliente_id:
+            return False
+
+        url = self.generate_record_url(self)
+        estado_actual = dict(self._fields['estado_ventas_id'].selection).get(self.estado_ventas_id)
+        
+        mensaje = f"""*¡Atención! Máquina con problemas*
+    *Cliente:* {self.cliente_id.name}
+    *Marca:* {self.marca}
+    *Modelo:* {self.name.name}
+    *Serie:* {self.serie_id}
+    *Estado:* {estado_actual}
+    *Descripción:* {self.descripcion or 'Sin descripción'}
+
+    Para ver más detalles, ingrese al siguiente enlace:
+    {url}"""
+
+        try:
+            self.enviar_mensaje_whatsapp(self.asesora_mobile_clean, mensaje)
+            self.message_post(
+                body=f"Se envió notificación WhatsApp a la asesora {self.cliente_id.asesora_id.name}",
+                subtype='mail.mt_note'
+            )
+            return True
+        except Exception as e:
+            self.message_post(
+                body=f"Error al enviar WhatsApp a la asesora: {str(e)}",
+                subtype='mail.mt_note'
+            )
+            return False
 
     
     @api.depends('cliente_id', 'estado_ventas_id')
@@ -387,7 +436,6 @@ class SatSat(models.Model):
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         estados_problema = ['con_problemas', 'de_partes']
         
-        # Verificar si los campos 'tipo_revision' o 'prioridad' están siendo modificados
         tipo_revision_modificado = 'tipo_revision' in vals
         prioridad_modificada = 'prioridad' in vals
         
@@ -417,10 +465,16 @@ class SatSat(models.Model):
                         vals['estado_ventas_id'] = 'sin_revisar'
                         vals['fecha_para_revision'] = None
             
-            # Segunda parte: Manejo de la descripción cuando cambia desde estados_problema
+            # Segunda parte: Manejo de la descripción y notificación WhatsApp
             if 'estado_ventas_id' in vals:
                 nuevo_estado = vals['estado_ventas_id']
-                if estado_actual in estados_problema and nuevo_estado not in estados_problema:
+                # Si cambia a estado de problema y tiene cliente/asesora
+                if nuevo_estado in estados_problema:
+                    result = super(SatSat, self).write(vals)
+                    record.enviar_mensaje_problema_asesora()
+                    return result
+                # Si sale de estado de problema
+                elif estado_actual in estados_problema and nuevo_estado not in estados_problema:
                     vals['descripcion'] = False
                     vals['activador'] = 'no'
                     message = _(
