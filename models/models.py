@@ -47,14 +47,19 @@ class SatSat(models.Model):
 
     def view_reparaciones_ids(self):
         self.ensure_one()
+        # Buscar un registro de reparaciones que cumpla con el dominio
+        reparacion = self.env["reparaciones.reparaciones"].search([("maquina_id", "=", self.id)], limit=1)
+        
         return {
             "type": "ir.actions.act_window",
             "name": "Reparaciones",
-            "view_mode": "list,form",
+            "view_mode": "form",
             "res_model": "reparaciones.reparaciones",
+            "res_id": reparacion.id if reparacion else False,  # ID del registro a mostrar en el formulario
             "domain": [("maquina_id", "=", self.id)],
-            "context": "{'create': True, Kanban}",
+            "context": {'create': True},
         }
+
     autorizacion_cambio_digitos = fields.Boolean(string="Autorización de Modificación", default=False)
     
 
