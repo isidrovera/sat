@@ -57,7 +57,7 @@
                                     <div class="photo-actions">
                                         <a t-att-href="foto['download_url']" 
                                            class="btn btn-sm btn-outline-primary"
-                                           download>
+                                           t-att-download="foto['nombre_foto']">
                                             <i class="fas fa-download"></i> Descargar
                                         </a>
                                         <button class="btn btn-sm btn-outline-danger delete-photo" 
