@@ -119,10 +119,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         handleShareGallery() {
             const currentUrl = window.location.href;
-            console.log(`Compartir botón presionado. Intentando copiar la URL de la galería: ${currentUrl}`);
+            console.log(`Compartir botón presionado. Intentando copiar la URL: ${currentUrl}`);
         
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                console.log('Intentando copiar usando Clipboard API...');
+            // Verificamos si Clipboard API está disponible
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                console.log('Usando Clipboard API para copiar la URL');
                 navigator.clipboard.writeText(currentUrl)
                     .then(() => {
                         console.log('URL copiada al portapapeles exitosamente');
@@ -135,58 +136,41 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     })
                     .catch(err => {
-                        console.error('Error al copiar URL al portapapeles con Clipboard API:', err);
-                        this.showFallbackCopy(currentUrl); // Usar alternativa en caso de error
+                        console.error('Error al copiar con Clipboard API:', err);
+                        this.fallbackCopyText(currentUrl);
                     });
             } else {
-                console.warn('Clipboard API no está disponible en este navegador. Usando método alternativo.');
-                this.showFallbackCopy(currentUrl); // Usar alternativa si Clipboard API no está disponible
+                console.warn('Clipboard API no disponible, usando método alternativo.');
+                this.fallbackCopyText(currentUrl);
             }
         },
         
-        showFallbackCopy(url) {
-            console.log('Usando método alternativo para copiar la URL.');
-        
-            // Crear un campo de entrada temporal
-            const tempInput = document.createElement('input');
-            tempInput.value = url;
+        fallbackCopyText(text) {
+            const tempInput = document.createElement('textarea');
+            tempInput.value = text;
             document.body.appendChild(tempInput);
             tempInput.select();
-            tempInput.setSelectionRange(0, 99999); // Para compatibilidad móvil
         
             try {
-                const success = document.execCommand('copy');
-                if (success) {
-                    console.log('URL copiada usando método alternativo.');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'URL Copiada',
-                        text: 'El enlace ha sido copiado al portapapeles',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                } else {
-                    console.warn('No se pudo copiar usando método alternativo.');
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'No se Copió',
-                        text: 'Intenta copiar manualmente',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                }
+                document.execCommand('copy');
+                console.log('Texto copiado al portapapeles usando método alternativo');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'URL Copiada',
+                    text: 'El enlace ha sido copiado al portapapeles',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             } catch (err) {
                 console.error('Error al copiar usando método alternativo:', err);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'No se pudo copiar el enlace al portapapeles'
+                    text: 'No se pudo copiar el enlace'
                 });
             }
-        
-            // Limpiar el campo temporal
             document.body.removeChild(tempInput);
-        },
+        },      
         
         
 
