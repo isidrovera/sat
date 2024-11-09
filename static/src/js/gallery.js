@@ -119,31 +119,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
         handleShareGallery() {
             const currentUrl = window.location.href;
-            console.log(`Intentando compartir la URL de la galería: ${currentUrl}`);
+            console.log(`Compartir botón presionado. Intentando copiar la URL de la galería: ${currentUrl}`);
         
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                // Intentar con Clipboard API
-                navigator.clipboard.writeText(currentUrl).then(() => {
-                    console.log('URL copiada al portapapeles exitosamente');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'URL Copiada',
-                        text: 'El enlace ha sido copiado al portapapeles',
-                        timer: 1500,
-                        showConfirmButton: false
+                console.log('Intentando copiar usando Clipboard API...');
+                navigator.clipboard.writeText(currentUrl)
+                    .then(() => {
+                        console.log('URL copiada al portapapeles exitosamente');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'URL Copiada',
+                            text: 'El enlace ha sido copiado al portapapeles',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    })
+                    .catch(err => {
+                        console.error('Error al copiar URL al portapapeles con Clipboard API:', err);
+                        this.showFallbackCopy(currentUrl); // Usar alternativa en caso de error
                     });
-                }).catch(err => {
-                    console.error('Error al copiar URL al portapapeles:', err);
-                    this.showFallbackCopy(currentUrl); // Usar alternativa en caso de error
-                });
             } else {
-                console.warn('API Clipboard no está disponible en este navegador');
+                console.warn('Clipboard API no está disponible en este navegador. Usando método alternativo.');
                 this.showFallbackCopy(currentUrl); // Usar alternativa si Clipboard API no está disponible
             }
         },
         
         showFallbackCopy(url) {
-            // Alternativa usando un campo de entrada temporal
+            console.log('Usando método alternativo para copiar la URL.');
+        
+            // Crear un campo de entrada temporal
             const tempInput = document.createElement('input');
             tempInput.value = url;
             document.body.appendChild(tempInput);
@@ -151,15 +155,26 @@ document.addEventListener('DOMContentLoaded', function() {
             tempInput.setSelectionRange(0, 99999); // Para compatibilidad móvil
         
             try {
-                document.execCommand('copy');
-                console.log('URL copiada usando método alternativo');
-                Swal.fire({
-                    icon: 'success',
-                    title: 'URL Copiada',
-                    text: 'El enlace ha sido copiado al portapapeles',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
+                const success = document.execCommand('copy');
+                if (success) {
+                    console.log('URL copiada usando método alternativo.');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'URL Copiada',
+                        text: 'El enlace ha sido copiado al portapapeles',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    console.warn('No se pudo copiar usando método alternativo.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No se Copió',
+                        text: 'Intenta copiar manualmente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
             } catch (err) {
                 console.error('Error al copiar usando método alternativo:', err);
                 Swal.fire({
@@ -172,6 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Limpiar el campo temporal
             document.body.removeChild(tempInput);
         },
+        
         
 
         handleMassiveUpload(event) {
