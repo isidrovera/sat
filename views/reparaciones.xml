@@ -7,20 +7,15 @@
             <field name="arch" type="xml">
                 <form string="ModelTitle">
                     <header>
-                        <button string="Finalizar" name="action_finalizar_reparacion" type="object"
-                            class="btn btn-success" icon="fa-wrench" />
-                        
-                        <button string="Asignar" name="enviar_mensaje_whatsapp_reparaciones"
-                            type="object" class="oe_highlight" groups="base.group_system"/>
+                        <button string="Finalizar" name="action_finalizar_reparacion" type="object" class="btn btn-success" icon="fa-wrench" />
+
+                        <button string="Asignar" name="enviar_mensaje_whatsapp_reparaciones" type="object" class="oe_highlight" groups="base.group_system"/>
                         <button name="action_open_gallery" type="object" string="Adjuntar Fotos" class="btn-primary"/>
 
-                        
-                        <!--<button
-                        string="QR" name="action_generate_qr_for_all" type="object"
-                        class="oe_highlight"/>-->
-                        
-                        <field name="estado_id" widget="statusbar"
-                            statusbar_visible="true" />
+
+                        <!--<button string="QR" name="action_generate_qr_for_all" type="object" class="oe_highlight"/>-->
+
+                        <field name="estado_id" widget="statusbar" statusbar_visible="true" />
                     </header>
                     <sheet>
                         <div class="oe_title">
@@ -32,8 +27,7 @@
                         <div class="oe_title">
                             <label for="cliente_id" />
                             <h1>
-                                <field name="cliente_id" placeholder="Cliente"
-                                    widget="many2one_avatar" />
+                                <field name="cliente_id" placeholder="Cliente" widget="many2one_avatar" />
                             </h1>
                         </div>
                         <group>
@@ -41,13 +35,11 @@
                                 <field name="prioridad" widget="badge" />
                                 <field name="tipo_revision" widget="badge" />
                                 <field name="ubicacion_id" widget="badge" />
-                                <field name="responsable_id" widget="many2one_avatar"
-                                    options="{'no_create': True}"  readonly="estado_id == 'en_revision'"/>
+                                <field name="responsable_id" widget="many2one_avatar" options="{'no_create': True}" readonly="estado_id == 'en_revision'"/>
                                 <field name="responsable_mobile_clean" />
                             </group>
                             <group string="Datos del equipo">
-                                <!--<field
-                                name="qr_image" widget='image' class="oe_avatar" options="{'size':
+                                <!--<field name="qr_image" widget='image' class="oe_avatar" options="{'size':
                                 [90, 90]}"/>
                                 <field name="qr_code_ventas" widget='image' class="oe_avatar" options="{'size': [90, 90]}"/>-->
                                 <field name="importacion" />
@@ -55,9 +47,7 @@
                                 <field name="tipo_id" invisible="1" />
                                 <field name="tipo_machine" />
                                 <field name="marca" />
-                                <field name="maquina_id"
-                                    domain="[('estado_ventas_id', '=', 'sin_revisar')]"
-                                    options="{'no_create': True}" readonly="estado_id == 'en_revision'" />
+                                <field name="maquina_id" domain="[('estado_ventas_id', '=', 'sin_revisar')]" options="{'no_create': True}" readonly="estado_id == 'en_revision'" />
                                 <field name="serie_id" />
                                 <field name="contometrok_id" />
                                 <field name="contometro_inicial" invisible="True"/>
@@ -74,8 +64,7 @@
                                         <field name="informe" required="estado_id == 'en_revision'" />
                                     </group>
                                     <group>
-                                        <field name="calidad_id"
-                                            required="estado_id == 'en_revision'" />
+                                        <field name="calidad_id" required="estado_id == 'en_revision'" />
                                         <field name="tapas_id" required="estado_id == 'en_revision'" />
                                         <field name="panel_id" required="estado_id == 'en_revision'" />
                                     </group>
@@ -84,29 +73,19 @@
                             <page string="Accesorios">
                                 <group>
                                     <group>
-                                        <field name="tray_id"
-                                            placeholder="Detalla la cantidad de caseteras."
-                                            required="estado_id == 2" />
-                                        <field name="adf_simple_id"
-                                            arequired="estado_id == 'en_revision'" />
-                                        <field name="adf_dual_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="finalizador_interno_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="finalizador_externo_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="mueble_id"
-                                            required="estado_id == 'en_revision'" />
+                                        <field name="tray_id" placeholder="Detalla la cantidad de caseteras." required="estado_id == 2" />
+                                        <field name="adf_simple_id" arequired="estado_id == 'en_revision'" />
+                                        <field name="adf_dual_id" required="estado_id == 'en_revision'" />
+                                        <field name="finalizador_interno_id" required="estado_id == 'en_revision'" />
+                                        <field name="finalizador_externo_id" required="estado_id == 'en_revision'" />
+                                        <field name="mueble_id" required="estado_id == 'en_revision'" />
                                         <field name="lct_id" required="estado_id == 'en_revision'" />
                                     </group>
                                     <group>
                                         <field name="wi_fi_id" required="estado_id == 'en_revision'" />
-                                        <field name="cable_poder_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="panel_normal_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="panel_smart_id"
-                                            required="estado_id == 'en_revision'" />
+                                        <field name="cable_poder_id" required="estado_id == 'en_revision'" />
+                                        <field name="panel_normal_id" required="estado_id == 'en_revision'" />
+                                        <field name="panel_smart_id" required="estado_id == 'en_revision'" />
                                         <field name="ot_id" required="estado_id == 'en_revision'" />
                                         <field name="hdd_id" required="estado_id == 'en_revision'" />
                                     </group>
@@ -116,71 +95,39 @@
                                 <group>
                                     <group>
                                         <field name="copia_id" required="estado_id == 'en_revision'" />
-                                        <field name="impresion_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="impresion_usb_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="scaner_smb_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="scaner_usb_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="scaner_ftp_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="scaner_mail_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="bypass_id"
-                                            required="estado_id == 'en_revision'" />
+                                        <field name="impresion_id" required="estado_id == 'en_revision'" />
+                                        <field name="impresion_usb_id" required="estado_id == 'en_revision'" />
+                                        <field name="scaner_smb_id" required="estado_id == 'en_revision'" />
+                                        <field name="scaner_usb_id" required="estado_id == 'en_revision'" />
+                                        <field name="scaner_ftp_id" required="estado_id == 'en_revision'" />
+                                        <field name="scaner_mail_id" required="estado_id == 'en_revision'" />
+                                        <field name="bypass_id" required="estado_id == 'en_revision'" />
                                         <field name="tray1_id" required="estado_id == 'en_revision'" />
                                         <field name="tray2_id" required="estado_id == 'en_revision'" />
                                         <field name="tray3_id" required="estado_id == 'en_revision'" />
                                         <field name="tray4_id" required="estado_id == 'en_revision'" />
                                         <field name="adf_id" required="estado_id == 'en_revision'" />
-                                        <field name="finalizador_id"
-                                            required="estado_id == 'en_revision'" />
+                                        <field name="finalizador_id" required="estado_id == 'en_revision'" />
                                         <field name="tacho_id" required="estado_id == 'en_revision'" />
                                     </group>
                                     <group>
-                                        <field name="fusora_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="rodillo_id"
-                                            required="estado_id == 'en_revision'" />
+                                        <field name="fusora_id" required="estado_id == 'en_revision'" />
+                                        <field name="rodillo_id" required="estado_id == 'en_revision'" />
                                         <field name="calor_id" required="estado_id == 'en_revision'" />
-                                        <field name="transfer_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="optico_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="toner_black_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="toner_magenta_id"
-                                            required="estado_id == 'en_revision' and tipo_id == 'color'"
-                                            invisible="tipo_id != 'color'" />
-                                        <field name="toner_cyan_id"
-                                            required="estado_id == 'en_revision' and tipo_id == 'color'"
-                                            invisible="tipo_id != 'color'" />
-                                        <field name="toner_yellow_id"
-                                            required="estado_id == 'en_revision' and tipo_id == 'color'"
-                                            invisible="tipo_id != 'color'" />
+                                        <field name="transfer_id" required="estado_id == 'en_revision'" />
+                                        <field name="optico_id" required="estado_id == 'en_revision'" />
+                                        <field name="toner_black_id" required="estado_id == 'en_revision'" />
+                                        <field name="toner_magenta_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="toner_cyan_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="toner_yellow_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
                                         <field name="black_id" required="estado_id == 'en_revision'" />
-                                        <field name="magenta_id"
-                                            required="estado_id == 'en_revision' and tipo_id == 'color'"
-                                            invisible="tipo_id != 'color'" />
-                                        <field name="cyan_id"
-                                            required="estado_id == 'en_revision' and tipo_id == 'color'"
-                                            invisible="tipo_id != 'color'" />
-                                        <field name="yellow_id"
-                                            required="estado_id == 'en_revision' and tipo_id == 'color'"
-                                            invisible="tipo_id != 'color'" />
-                                        <field name="developerk_id"
-                                            required="estado_id == 'en_revision'" />
-                                        <field name="developerm_id"
-                                            required="estado_id == 'en_revision' and tipo_id == 'color'"
-                                            invisible="tipo_id != 'color'" />
-                                        <field name="developerc_id"
-                                            required="estado_id == 'en_revision' and tipo_id == 'color'"
-                                            invisible="tipo_id != 'color'" />
-                                        <field name="developery_id"
-                                            required="estado_id == 'en_revision' and tipo_id == 'color'"
-                                            invisible="tipo_id != 'color'" />
+                                        <field name="magenta_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="cyan_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="yellow_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="developerk_id" required="estado_id == 'en_revision'" />
+                                        <field name="developerm_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="developerc_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="developery_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
                                     </group>
                                 </group>
                             </page>
@@ -206,7 +153,7 @@
                             </page>
                             <page string="Galería de Fotos" name="fotos">
                                 <field name="fotos_ids" widget="gallery_widget"/>
-                            </page>                          
+                            </page>
 
                         </notebook>
                     </sheet>
@@ -229,15 +176,10 @@
                     <field name="tipo_revision" widget="badge" />
                     <field name="ubicacion_id" widget="badge" />
                     <field name="responsable_id" widget="many2one_avatar" />
-                    <field name="estado_id" widget="badge"
-                        decoration-muted="estado_id == 'en_revision'"
-                        decoration-info="estado_id == 'en_revision'"
-                        decoration-success="estado_id == 'finalizado'"
-                        decoration-danger="estado_id not in ('sin_revisar','en_revision','finalizado','entregada')"
-                        decoration-warning="estado_id == 'entregada'" />
+                    <field name="estado_id" widget="badge" decoration-muted="estado_id == 'en_revision'" decoration-info="estado_id == 'en_revision'" decoration-success="estado_id == 'finalizado'" decoration-danger="estado_id not in ('sin_revisar','en_revision','finalizado','entregada')" decoration-warning="estado_id == 'entregada'" />
                 </list>
                 <!-- Aplicar el dominio solo para el grupo técnico -->
-                
+
             </field>
 
 
@@ -257,8 +199,7 @@
             <field name="name">reparaciones.kanban</field>
             <field name="model">reparaciones.reparaciones</field>
             <field name="arch" type="xml">
-                <kanban class="o_kanban_dashboard" default_group_by="estado_id"
-                    decoration-success="estado_id == 'finalizado'">
+                <kanban class="o_kanban_dashboard" default_group_by="estado_id" decoration-success="estado_id == 'finalizado'" sample="1">
                     <field name="name" />
                     <field name="cliente_id" />
                     <field name="maquina_id" />
@@ -266,33 +207,63 @@
                     <field name="prioridad" />
                     <field name="tipo_revision" />
                     <field name="estado_id" />
-                    <progressbar field="estado_id"
-                        colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger","en_revision": "info"}' />
+                    <field name="serie_id" />
+                    <field name="importacion" />
+
+                    <progressbar field="estado_id" colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger", "en_revision": "info"}' />
+
                     <templates>
-                        <t t-name="kanban-box">
-                            <div class="oe_kanban_global_click">
-                                <div class="o_kanban_details">
-                                    <h3 class="o_kanban_record_title">
-                                        <field name="cliente_id" />
-                                    </h3>
-                                    <div class="o_kanban_record_subtitle">
-                                        <field name="maquina_id" />
+                        <t t-name="kanban-card">
+                            <div class="oe_kanban_global_click position-relative">
+                                <!-- Header con información principal -->
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light">
+                                    <div class="d-flex align-items-center">
+                                        <span class="fa fa-tools me-2" />
+                                        <strong class="text-primary">
+                                            <field name="cliente_id" />
+                                        </strong>
                                     </div>
-                                    <div class="o_kanban_record_subtitle">
+                                    <field name="prioridad" widget="priority" />
+                                </div>
+
+                                <!-- Contenido principal -->
+                                <div class="p-3">
+                                    <!-- Información de la máquina -->
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="fa fa-cog me-2" />
+                                        <div>
+                                            <div class="fw-bold">
+                                                <field name="maquina_id" />
+                                            </div>
+                                            <div class="text-muted small">Serie: <field name="serie_id" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Ubicación -->
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="fa fa-map-marker-alt me-2" />
                                         <field name="ubicacion_id" />
                                     </div>
-                                    <div class="o_kanban_record_subtitle">
-                                        <field name="prioridad" widget='badge' />
+
+                                    <!-- Importación -->
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="fa fa-ship me-2" />
+                                        <field name="importacion" />
                                     </div>
-                                    <div class="o_kanban_record_subtitle">
-                                        <field name="tipo_revision" widget='badge' />
-                                    </div>
-                                    <div class="o_kanban_record_subtitle">
-                                        <field name="estado_id" widget='badge'
-                                            decoration-success="estado_id == 'finalizado'"
-                                            decoration-warning="estado_id == 'en_revision'" />
+
+                                    <!-- Footer con badges -->
+                                    <div class="mt-3 pt-2 border-top">
+                                        <field name="tipo_revision" widget="badge" decoration-info="true" class="me-2" />
+                                        <field name="estado_id" widget="badge" decoration-success="estado_id == 'finalizado'" decoration-warning="estado_id == 'en_revision'" decoration-danger="estado_id == 'con_problemas'" />
                                     </div>
                                 </div>
+
+                                <!-- Indicador visual de estado -->
+                                <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
+                            #{record.estado_id.raw_value == 'finalizado' ? 'bg-success' : 
+                            record.estado_id.raw_value == 'con_problemas' ? 'bg-danger' :
+                            record.estado_id.raw_value == 'en_revision' ? 'bg-info' : 'bg-warning'}" />
                             </div>
                         </t>
                     </templates>
