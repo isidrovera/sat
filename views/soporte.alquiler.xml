@@ -316,11 +316,11 @@
                             record.estado.raw_value == 'proceso' ? 'bg-warning' : 
                             record.estado.raw_value == 'nuevo' ? 'bg-danger' : 'bg-secondary'}"/>
 
-                        <!-- Contador de días (si existe) -->
+                        <!-- Contador de días (si existe) 
                         <div t-if="record.days_count.raw_value" 
                              class="position-absolute top-0 end-0 m-2 badge rounded-pill bg-info">
                             <i class="fa fa-clock-o me-1"/> <field name="days_count"/> días
-                        </div>
+                        </div>-->
                     </div>
                 </t>
             </templates>
