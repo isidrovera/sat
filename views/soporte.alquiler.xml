@@ -213,13 +213,18 @@
             <templates>
                 <t t-name="card">
                     <div class="oe_kanban_global_click position-relative shadow-sm rounded">
-                        <!-- Header con cliente y estado -->
+                        <!-- Header con número de ticket y estado -->
                         <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
                             <div class="d-flex align-items-center">
-                                <i class="fa fa-user-tie text-primary me-2" title="Cliente"/>
-                                <strong><field name="partner_id"/></strong>
+                                <i class="fa fa-ticket-alt text-primary me-2" title="Ticket"/>
+                                <strong><field name="name"/></strong>
                             </div>
                             <div class="d-flex align-items-center gap-2">
+                                <!-- Estado con icono dinámico -->
+                                <i t-attf-class="fa me-1 #{
+                                    record.estado.raw_value == 'finalizado' ? 'fa-check-circle text-success' :
+                                    record.estado.raw_value == 'proceso' ? 'fa-spinner text-warning' :
+                                    'fa-clock text-danger'}" title="Estado"/>
                                 <field name="estado" widget="badge"
                                     decoration-success="estado == 'finalizado'"
                                     decoration-warning="estado == 'proceso'"
@@ -229,19 +234,37 @@
 
                         <!-- Contenido principal -->
                         <div class="p-3">
+                            <!-- Cliente -->
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fa fa-building text-info me-2" title="Cliente"/>
+                                <div>
+                                    <span class="text-muted me-2">Cliente:</span>
+                                    <field name="partner_id"/>
+                                </div>
+                            </div>
+
                             <!-- Producto Alquiler -->
                             <div class="d-flex align-items-center mb-3">
-                                <i class="fa fa-box text-success me-2" title="Producto"/>
+                                <i class="fa fa-print text-success me-2" title="Equipo"/>
                                 <div>
-                                    <span class="text-muted">Producto:</span>
-                                    <div class="fw-bold"><field name="product_alquiler"/></div>
+                                    <span class="text-muted me-2">Equipo:</span>
+                                    <field name="product_alquiler"/>
+                                </div>
+                            </div>
+
+                            <!-- Tipo de Servicio -->
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fa fa-tools text-warning me-2" title="Tipo de Servicio"/>
+                                <div>
+                                    <span class="text-muted me-2">Servicio:</span>
+                                    <field name="tipo_servicio_id" widget="badge"/>
                                 </div>
                             </div>
 
                             <!-- Descripción -->
                             <div class="mb-3" t-if="record.description.raw_value">
                                 <div class="d-flex align-items-start">
-                                    <i class="fa fa-info-circle text-danger me-2 mt-1" title="Descripción"/>
+                                    <i class="fa fa-comment-dots text-danger me-2 mt-1" title="Descripción"/>
                                     <div>
                                         <span class="text-muted">Descripción:</span>
                                         <div class="text-danger"><field name="description"/></div>
@@ -251,8 +274,8 @@
 
                             <!-- Informe -->
                             <div class="mb-3" t-if="record.informe_id.raw_value">
-                                <div class="d-flex align-items-center">
-                                    <i class="fa fa-file-alt text-success me-2" title="Informe"/>
+                                <div class="d-flex align-items-start">
+                                    <i class="fa fa-clipboard-check text-success me-2" title="Informe"/>
                                     <div>
                                         <span class="text-muted">Informe:</span>
                                         <div class="text-success"><field name="informe_id"/></div>
@@ -262,23 +285,26 @@
 
                             <!-- Agenda -->
                             <div class="d-flex align-items-center mb-3">
-                                <i class="fa fa-calendar-alt text-info me-2" title="Agenda"/>
+                                <i class="fa fa-calendar-check text-purple me-2" title="Agenda"/>
                                 <div>
-                                    <span class="text-muted">Agenda:</span>
-                                    <div><field name="agenda"/></div>
+                                    <span class="text-muted me-2">Fecha:</span>
+                                    <field name="agenda"/>
                                 </div>
                             </div>
 
-                            <!-- Footer con tipo de servicio y responsable -->
-                            <div class="pt-3 mt-3 border-top">
+                            <!-- Footer con responsable -->
+                            <div class="pt-2 border-top">
                                 <div class="d-flex justify-content-between align-items-center">
+                                    <!-- Responsable -->
                                     <div class="d-flex align-items-center">
-                                        <i class="fa fa-tasks text-primary me-2" title="Tipo de Servicio"/>
-                                        <field name="tipo_servicio_id" widget="badge"/>
-                                    </div>
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa fa-user-cog text-secondary me-2" title="Responsable"/>
+                                        <i class="fa fa-user-shield text-primary me-2" title="Responsable"/>
+                                        <span class="text-muted me-2">Asignado a:</span>
                                         <field name="responsable" widget="many2one_avatar"/>
+                                    </div>
+                                    <!-- Prioridad (si existe) -->
+                                    <div t-if="record.priority.raw_value" class="d-flex align-items-center">
+                                        <i class="fa fa-flag text-danger me-2" title="Prioridad"/>
+                                        <field name="priority" widget="priority"/>
                                     </div>
                                 </div>
                             </div>
@@ -289,6 +315,12 @@
                             #{record.estado.raw_value == 'finalizado' ? 'bg-success' : 
                             record.estado.raw_value == 'proceso' ? 'bg-warning' : 
                             record.estado.raw_value == 'nuevo' ? 'bg-danger' : 'bg-secondary'}"/>
+
+                        <!-- Contador de días (si existe) -->
+                        <div t-if="record.days_count.raw_value" 
+                             class="position-absolute top-0 end-0 m-2 badge rounded-pill bg-info">
+                            <i class="fa fa-clock-o me-1"/> <field name="days_count"/> días
+                        </div>
                     </div>
                 </t>
             </templates>

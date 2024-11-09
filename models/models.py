@@ -53,7 +53,7 @@ class SatSat(models.Model):
             "view_mode": "list,form",
             "res_model": "reparaciones.reparaciones",
             "domain": [("maquina_id", "=", self.id)],
-            "context": "{'create': True}",
+            "context": "{'create': True, Kanban}",
         }
     autorizacion_cambio_digitos = fields.Boolean(string="Autorización de Modificación", default=False)
     
