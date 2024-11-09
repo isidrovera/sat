@@ -4,9 +4,7 @@
         <html>
             <head>
                 <title>Galería de Fotos</title>
-                <!-- Bootstrap 5 -->
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
-                <!-- Font Awesome -->
                 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
                 <style>
                     .photo-grid {
@@ -16,20 +14,20 @@
                         padding: 1rem;
                     }
                     .photo-card {
-                        border: 1px solid #ddd;
+                        position: relative;
+                        border: 2px solid transparent;
                         border-radius: 8px;
                         overflow: hidden;
                         background: white;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                        height: 100%;
-                        display: flex;
-                        flex-direction: column;
+                    }
+                    .photo-card.selected {
+                        border-color: #0d6efd;
                     }
                     .photo-container {
                         position: relative;
                         padding-top: 75%;
                         background: #f8f9fa;
-                        overflow: hidden;
                     }
                     .photo-container img {
                         position: absolute;
@@ -38,123 +36,128 @@
                         width: 100%;
                         height: 100%;
                         object-fit: cover;
-                        transition: opacity 0.3s ease;
                     }
-                    .photo-container img.loading {
-                        opacity: 0;
+                    .photo-footer {
+                        padding: 0.5rem;
+                        background: #fff;
+                        border-top: 1px solid #dee2e6;
                     }
-                    .actions-bar {
-                        position: absolute;
-                        top: 0.5rem;
-                        right: 0.5rem;
+                    .photo-actions {
                         display: flex;
-                        gap: 0.5rem;
-                        opacity: 0;
-                        transition: opacity 0.2s ease;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding-top: 0.5rem;
                     }
-                    .photo-card:hover .actions-bar {
-                        opacity: 1;
+                    .select-overlay {
+                        position: absolute;
+                        top: 10px;
+                        left: 10px;
+                        z-index: 10;
                     }
-                    .loading-overlay {
+                    .select-checkbox {
+                        width: 20px;
+                        height: 20px;
+                        cursor: pointer;
+                    }
+                    .toolbar {
                         position: fixed;
-                        top: 0;
+                        bottom: 0;
                         left: 0;
                         right: 0;
-                        bottom: 0;
-                        background: rgba(0,0,0,0.5);
-                        display: none;
-                        justify-content: center;
-                        align-items: center;
-                        z-index: 9999;
+                        background: rgba(255,255,255,0.95);
+                        padding: 1rem;
+                        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+                        transform: translateY(100%);
+                        transition: transform 0.3s ease;
+                        z-index: 1000;
                     }
-                    .loading-spinner {
-                        width: 50px;
-                        height: 50px;
-                        border: 5px solid #f3f3f3;
-                        border-top: 5px solid #3498db;
-                        border-radius: 50%;
-                        animation: spin 1s linear infinite;
-                    }
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                    .retry-badge {
-                        position: absolute;
-                        bottom: 0.5rem;
-                        left: 0.5rem;
-                        background: rgba(0,0,0,0.7);
-                        color: white;
-                        padding: 0.25rem 0.5rem;
-                        border-radius: 0.25rem;
-                        font-size: 0.75rem;
+                    .toolbar.visible {
+                        transform: translateY(0);
                     }
                 </style>
             </head>
             <body class="bg-light">
                 <div class="container py-4">
-                    <!-- Header Card -->
+                    <!-- Header con botones principales -->
                     <div class="card mb-4">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                <h2 class="card-title mb-3 mb-sm-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h2 class="card-title mb-0">
                                     Galería de Fotos - <small t-esc="reparacion.name"/>
                                 </h2>
                                 <div class="btn-group">
-                                    <button id="syncButton" class="btn btn-info me-2">
+                                    <button id="selectAllBtn" class="btn btn-outline-primary">
+                                        <i class="fas fa-check-square me-1"></i>Seleccionar
+                                    </button>
+                                    <button id="syncButton" class="btn btn-outline-info">
                                         <i class="fas fa-sync me-1"></i>Sincronizar
                                     </button>
-                                    <label class="btn btn-primary me-2">
-                                        <i class="fas fa-upload me-1"></i>Subir Fotos
-                                        <input type="file" id="fileUpload" multiple="multiple" 
-                                               class="d-none" accept="image/*"/>
-                                    </label>
-                                    <a t-att-href="'/gallery/download_all/' + str(reparacion.id)" 
-                                       class="btn btn-secondary">
-                                        <i class="fas fa-download me-1"></i>Descargar Todas
-                                    </a>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Photo Grid -->
+                    <!-- Grid de fotos -->
                     <div id="photoGrid" class="photo-grid">
                         <t t-foreach="fotos" t-as="foto">
                             <div class="photo-card" t-att-data-photo-id="foto['id']">
+                                <!-- Checkbox para selección -->
+                                <div class="select-overlay">
+                                    <input type="checkbox" class="select-checkbox form-check-input"
+                                           t-att-data-photo-id="foto['id']"/>
+                                </div>
+                                
+                                <!-- Contenedor de la imagen -->
                                 <div class="photo-container">
                                     <img t-att-src="foto['thumb_url']"
                                          t-att-data-full-url="foto['download_url']"
                                          t-att-alt="foto['nombre_foto']"
-                                         class="preview-image loading"
-                                         loading="lazy"
-                                         crossorigin="anonymous"/>
-                                    <div class="actions-bar">
-                                        <button class="btn btn-sm btn-danger delete-photo" 
+                                         class="preview-image"
+                                         loading="lazy"/>
+                                </div>
+                                
+                                <!-- Footer con nombre y acciones -->
+                                <div class="photo-footer">
+                                    <small class="text-muted text-truncate d-block" 
+                                           t-esc="foto['nombre_foto']"/>
+                                    <div class="photo-actions">
+                                        <button class="btn btn-sm btn-outline-success share-photo"
+                                                t-att-data-photo-id="foto['id']">
+                                            <i class="fas fa-share-alt"></i>
+                                        </button>
+                                        <a t-att-href="foto['download_url']" 
+                                           class="btn btn-sm btn-outline-primary download-photo">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-danger delete-photo"
                                                 t-att-data-photo-id="foto['id']">
                                             <i class="fas fa-trash"></i>
                                         </button>
-                                        <a t-att-href="foto['download_url']" 
-                                           class="btn btn-sm btn-primary download-photo">
-                                            <i class="fas fa-download"></i>
-                                        </a>
                                     </div>
-                                    <div class="retry-badge d-none">
-                                        Reintentando carga...
-                                    </div>
-                                </div>
-                                <div class="p-2">
-                                    <small class="text-muted text-truncate d-block" 
-                                           t-esc="foto['nombre_foto']"/>
                                 </div>
                             </div>
                         </t>
                     </div>
-                </div>
 
-                <!-- Loading Overlay -->
-                <div id="loadingOverlay" class="loading-overlay">
-                    <div class="loading-spinner"></div>
+                    <!-- Barra de herramientas para acciones múltiples -->
+                    <div class="toolbar" id="selectionToolbar">
+                        <div class="container">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="selection-count">0 elementos seleccionados</span>
+                                <div class="btn-group">
+                                    <button class="btn btn-success bulk-share">
+                                        <i class="fas fa-share-alt me-1"></i>Compartir
+                                    </button>
+                                    <button class="btn btn-primary bulk-download">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </button>
+                                    <button class="btn btn-danger bulk-delete">
+                                        <i class="fas fa-trash me-1"></i>Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Scripts -->
