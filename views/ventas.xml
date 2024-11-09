@@ -10,30 +10,28 @@
                 <div class="d-flex justify-content-between align-items-center w-100">
                     <div class="d-flex gap-2">
                         <button name="send_records_by_email" type="object" 
-                            class="btn btn-primary"
-                            icon="fa-paper-plane">
-                            <i class="fa fa-paper-plane me-2"/>Enviar Reporte
+                            class="btn btn-primary">
+                            <i class="fa fa-paper-plane"/> Enviar Reporte
                         </button>
 
                         <button name="create_reparacion" type="object" 
                             class="btn btn-success"
-                            icon="fa-wrench" 
                             groups="base.group_system">
-                            <i class="fa fa-wrench me-2"/>Nueva Reparación
+                            <i class="fa fa-wrench"/> Nueva Reparación
                         </button>
 
                         <button name="action_crear_reparaciones" 
                             string="Crear Reparaciones" 
                             type="object" 
                             class="btn btn-info">
-                            <i class="fa fa-tools me-2"/>Crear Reparaciones
+                            <i class="fa fa-tools"/> Crear Reparaciones
                         </button>
                     </div>
                     
                     <div class="d-flex gap-2">
-                        <field name="disponibilidad_id" widget="statusbar" statusbar_visible="true" class="ms-3"/>
+                        <field name="disponibilidad_id" widget="statusbar" statusbar_visible="true"/>
                         <field name="estado_ventas_id" widget="statusbar" options="{'clickable': '1'}" 
-                               class="ms-3 custom_statusbar" groups="base.group_system"/>
+                               groups="base.group_system"/>
                     </div>
                 </div>
             </header>
@@ -53,181 +51,114 @@
                  invisible="ubicacion_id == 'primer_piso' or ubicacion_id == 'tercer_piso'">
                 <i class="fa fa-exclamation-circle me-2"/>
                 <div>
-                    ¡Esta máquina está en el almacén 
+                    Esta máquina está en el almacén 
                     <field name="ubicacion_id" class="badge bg-warning text-dark"/>
-                    Si está separando o vendiendo, avisar con anticipación para que pueda ser traída.
+                    Si está separando o vendiendo, avisar con anticipación.
                 </div>
             </div>
 
             <sheet>
-                <!-- Botones Estadísticos -->
                 <div class="oe_button_box" name="button_box">
                     <button name="view_reparaciones_ids" type="object" 
                             class="oe_stat_button" icon="fa-wrench">
-                        <div class="o_stat_info">
-                            <field name="reparaciones_count" class="o_stat_value"/>
-                            <span class="o_stat_text">Reparaciones</span>
-                        </div>
+                        <field name="reparaciones_count" widget="statinfo" string="Reparaciones"/>
                     </button>
                 </div>
 
-                <!-- Título y Cliente -->
                 <div class="oe_title">
-                    <div class="d-flex align-items-center mb-3">
-                        <i class="fa fa-building text-primary me-2"/>
-                        <h1 class="mb-0">
-                            <field name="cliente_id" 
-                                   domain="[('tipo_cliente', '=', 'distribuidor')]" 
-                                   placeholder="Datos del Cliente" 
-                                   widget="many2one_avatar" 
+                    <h1>
+                        <label for="cliente_id" string="Cliente" class="oe_edit_only"/>
+                        <field name="cliente_id" 
+                               domain="[('tipo_cliente', '=', 'distribuidor')]" 
+                               placeholder="Datos del Cliente" 
+                               widget="many2one_avatar" 
+                               options="{'no_create': True}"/>
+                    </h1>
+                </div>
+
+                <!-- Información Principal -->
+                <div class="row mt-3">
+                    <div class="col-12 col-md-6">
+                        <group string="Datos del Equipo" class="o_group">
+                            <field name="tipo_maquina"/>
+                            <field name="marca"/>
+                            <field name="name" options="{'no_create': True}"/>
+                            <field name="serie_id"/>
+                            <field name="contometro"/>
+                            <field name="ubicacion_id"/>
+                            <field name="fecha_separacion" 
+                                   invisible="disponibilidad_id == 'disponible'" 
+                                   readonly="1"/>
+                        </group>
+                    </div>
+                    
+                    <div class="col-12 col-md-6">
+                        <group string="Datos de Importación" class="o_group">
+                            <field name="proveedor_id" 
+                                   domain="[('tipo_cliente', '=', 'proveedor')]" 
                                    options="{'no_create': True}"/>
-                        </h1>
+                            <field name="importacion"/>
+                            <field name="invoice"/>
+                        </group>
                     </div>
                 </div>
 
-                <div class="row">
-                    <!-- Datos del Equipo -->
+                <div class="row mt-3">
                     <div class="col-12 col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <i class="fa fa-print me-2"/>Datos del Equipo
-                            </div>
-                            <div class="card-body">
-                                <group>
-                                    <field name="tipo_maquina" icon="fa-tag"/>
-                                    <field name="marca" icon="fa-trademark"/>
-                                    <field name="name" options="{'no_create': True}" icon="fa-cube"/>
-                                    <field name="serie_id" icon="fa-barcode"/>
-                                    <field name="contometro" icon="fa-tachometer-alt"/>
-                                    <field name="ubicacion_id" icon="fa-map-marker-alt"/>
-                                    <field name="fecha_separacion" 
-                                           invisible="disponibilidad_id == 'disponible'" 
-                                           readonly="1" 
-                                           icon="fa-calendar"/>
-                                </group>
-                            </div>
-                        </div>
+                        <group string="Datos para Revisión" class="o_group">
+                            <field name="tipo_revision" 
+                                   widget="kanban_label_selection" 
+                                   options="{'classes': {'draft': 'default', 'done': 'success'}}"/>
+                            <field name="prioridad" widget="priority"/>
+                        </group>
                     </div>
-
-                    <!-- Datos de Importación -->
+                    
                     <div class="col-12 col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-success text-white">
-                                <i class="fa fa-ship me-2"/>Datos de Importación
-                            </div>
-                            <div class="card-body">
-                                <group>
-                                    <field name="proveedor_id" 
-                                           domain="[('tipo_cliente', '=', 'proveedor')]" 
-                                           options="{'no_create': True}" 
-                                           icon="fa-user-tie"/>
-                                    <field name="importacion" icon="fa-boxes"/>
-                                    <field name="invoice" icon="fa-file-invoice"/>
-                                </group>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Datos para revisión -->
-                    <div class="col-12 col-md-6 mt-3">
-                        <div class="card">
-                            <div class="card-header bg-danger text-white">
-                                <i class="fa fa-clipboard-check me-2"/>Datos para Revisión
-                            </div>
-                            <div class="card-body">
-                                <group>
-                                    <field name="tipo_revision" 
-                                           widget="kanban_label_selection" 
-                                           options="{'classes': {'draft': 'default', 'done': 'success'}}" 
-                                           icon="fa-tasks"/>
-                                    <field name="prioridad" widget="priority" icon="fa-flag"/>
-                                </group>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Notificaciones -->
-                    <div class="col-12 col-md-6 mt-3">
-                        <div class="card">
-                            <div class="card-header bg-info text-white">
-                                <i class="fa fa-bell me-2"/>Notificaciones
-                            </div>
-                            <div class="card-body">
-                                <group>
-                                    <field name="trabajadores_id" widget="many2one_avatar" icon="fa-user-cog"/>
-                                    <field name="asesora_id" icon="fa-user"/>
-                                    <field name="fecha_para_revision" icon="fa-calendar-alt"/>
-                                    <field name="autorizacion_cambio_digitos" icon="fa-lock"/>
-                                </group>
-                            </div>
-                        </div>
+                        <group string="Notificaciones" class="o_group">
+                            <field name="trabajadores_id" widget="many2one_avatar"/>
+                            <field name="asesora_id"/>
+                            <field name="fecha_para_revision"/>
+                            <field name="autorizacion_cambio_digitos"/>
+                        </group>
                     </div>
                 </div>
 
                 <!-- Pestañas -->
                 <notebook class="mt-4">
-                    <page string="Observaciones del equipo" icon="fa-sticky-note">
-                        <div class="card">
-                            <div class="card-body">
-                                <field name="descripcion" placeholder="Ingrese las observaciones aquí..."
-                                       class="form-control"/>
-                                <field name="activador" invisible="1"/>
-                            </div>
-                        </div>
+                    <page string="Observaciones del equipo">
+                        <group>
+                            <field name="descripcion" nolabel="1" placeholder="Ingrese las observaciones aquí..."/>
+                            <field name="activador" invisible="1"/>
+                        </group>
                     </page>
 
-                    <page string="Precios" icon="fa-dollar-sign">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Precio de Venta</label>
-                                            <field name="precio_venta" 
-                                                   widget="monetary" 
-                                                   options="{'currency_field': 'currency_id'}" 
-                                                   groups="base.group_system, sat.Sat_ventas_group_user"
-                                                   class="form-control"/>
-                                        </div>
-                                        <div class="form-group mt-3">
-                                            <label>Moneda</label>
-                                            <field name="currency_id" class="form-control"/>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Precio de Compra</label>
-                                            <field name="precio_compra" 
-                                                   widget="monetary" 
-                                                   options="{'currency_field': 'currency_id'}" 
-                                                   groups="base.group_system"
-                                                   class="form-control"/>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <page string="Precios">
+                        <group>
+                            <group>
+                                <field name="precio_venta" 
+                                       widget="monetary" 
+                                       options="{'currency_field': 'currency_id'}" 
+                                       groups="base.group_system, sat.Sat_ventas_group_user"/>
+                                <field name="currency_id"/>
+                            </group>
+                            <group>
+                                <field name="precio_compra" 
+                                       widget="monetary" 
+                                       options="{'currency_field': 'currency_id'}" 
+                                       groups="base.group_system"/>
+                            </group>
+                        </group>
                     </page>
 
-                    <page string="Logística" icon="fa-truck">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Factura de Venta</label>
-                                            <field name="factura_venta" class="form-control"/>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Fecha de Entrega</label>
-                                            <field name="fecha_entrega" class="form-control"/>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <page string="Logística">
+                        <group>
+                            <group>
+                                <field name="factura_venta"/>
+                            </group>
+                            <group>
+                                <field name="fecha_entrega"/>
+                            </group>
+                        </group>
                     </page>
                 </notebook>
             </sheet>
