@@ -49,35 +49,40 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         bindEvents() {
+            console.log('Iniciando bindEvents...');
+            
             if (this.fileInput && !this.isMobile()) {
                 this.fileInput.addEventListener('change', (e) => this.handleMassiveUpload(e));
                 console.log('Evento de subida masiva vinculado');
+            } else {
+                console.log('No se pudo vincular el evento de subida masiva');
             }
-
+        
             if (this.syncButton) {
                 this.syncButton.addEventListener('click', () => this.handleSync());
                 console.log('Evento de sincronización vinculado');
+            } else {
+                console.log('No se encontró syncButton');
             }
-
+        
             if (this.shareGalleryBtn) {
                 this.shareGalleryBtn.addEventListener('click', () => this.handleShareGallery());
                 console.log('Evento de compartir vinculado');
+            } else {
+                console.log('No se encontró shareGalleryBtn');
             }
-
+            
             document.querySelectorAll('.download-photo').forEach(btn => {
                 btn.addEventListener('click', (e) => this.handleDownload(e));
                 console.log('Evento de descarga vinculado para foto:', btn);
             });
-
+        
             document.querySelectorAll('.delete-photo').forEach(btn => {
                 btn.addEventListener('click', (e) => this.handleDelete(e));
                 console.log('Evento de eliminación vinculado para foto:', btn);
             });
-
-            document.querySelectorAll('.preview-image').forEach(img => {
-                this.setupImageHandling(img);
-            });
         },
+        
 
         handleDownload(event) {
             event.preventDefault();
