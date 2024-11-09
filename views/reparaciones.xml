@@ -196,89 +196,80 @@
             </field>
         </record>
         <record id="reparaciones_kanban_view" model="ir.ui.view">
-            <field name="name">reparaciones.kanban</field>
-            <field name="model">reparaciones.reparaciones</field>
-            <field name="arch" type="xml">
-                <kanban class="o_kanban_dashboard" default_group_by="estado_id" decoration-success="estado_id == 'finalizado'" sample="1">
-                    <field name="name" />
-                    <field name="cliente_id" />
-                    <field name="maquina_id" />
-                    <field name="ubicacion_id" />
-                    <field name="prioridad" />
-                    <field name="tipo_revision" />
-                    <field name="estado_id" />
-                    <field name="serie_id" />
-                    <field name="importacion" />
+    <field name="name">reparaciones.kanban</field>
+    <field name="model">reparaciones.reparaciones</field>
+    <field name="arch" type="xml">
+        <kanban class="o_kanban_dashboard" default_group_by="estado_id"
+            decoration-success="estado_id == 'finalizado'"
+            sample="1">
+            <field name="name" />
+            <field name="cliente_id" />
+            <field name="maquina_id" />
+            <field name="ubicacion_id" />
+            <field name="prioridad" />
+            <field name="tipo_revision" />
+            <field name="estado_id" />
+            <field name="serie_id" />
+            <field name="importacion" />
+            
+            <progressbar field="estado_id"
+                colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger", "en_revision": "info"}' />
+            
+            <templates>
+                <t t-name="kanban-card">
+                    <div class="oe_kanban_global_click position-relative">
+                        <!-- Header con información principal -->
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light">
+                            <div class="d-flex align-items-center">
+                                <i class="fa fa-tools me-2" />
+                                <strong><field name="cliente_id" /></strong>
+                            </div>
+                            <field name="prioridad" widget="priority" />
+                        </div>
 
-                    <progressbar field="estado_id" colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger", "en_revision": "info"}' />
-
-                    <templates>
-                        <t t-name="kanban-card">
-                            <div class="oe_kanban_global_click position-relative">
-                                <!-- Header con información principal -->
-                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light">
-                                    <div class="d-flex align-items-center">
-                                        <span class="fa fa-tools me-2" />
-                                        <strong class="text-primary">
-                                            <field name="cliente_id" />
-                                        </strong>
-                                    </div>
-                                    <field name="prioridad" widget="priority" />
+                        <!-- Contenido principal -->
+                        <div class="p-3">
+                            <!-- Información de la máquina -->
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-cog me-2" />
+                                <div>
+                                    <div><field name="maquina_id" /></div>
+                                    <small class="text-muted">Serie: <field name="serie_id" /></small>
                                 </div>
+                            </div>
 
-                                <!-- Contenido principal -->
-                                <div class="p-3">
-                                    <!-- Información de la máquina -->
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="fa fa-cog me-2" />
-                                        <div>
-                                            <div class="fw-bold">
-                                                <field name="maquina_id" />
-                                            </div>
-                                            <div class="text-muted small">Serie: <field name="serie_id" />
-                                            </div>
-                                        </div>
-                                    </div>
+                            <!-- Ubicación -->
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-map-marker-alt me-2" />
+                                <field name="ubicacion_id" />
+                            </div>
 
-                                    <!-- Ubicación -->
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="fa fa-map-marker-alt me-2" />
-                                        <field name="ubicacion_id" />
-                                    </div>
+                            <!-- Importación -->
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-ship me-2" />
+                                <field name="importacion" />
+                            </div>
 
-                                    <!-- Importación -->
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="fa fa-ship me-2" />
-                                        <field name="importacion" />
-                                    </div>
+                            <!-- Footer con badges -->
+                            <div class="mt-3 pt-2 border-top">
+                                <field name="tipo_revision" widget="badge" class="me-2" />
+                                <field name="estado_id" widget="badge"
+                                    decoration-success="estado_id == 'finalizado'"
+                                    decoration-warning="estado_id == 'en_revision'"
+                                    decoration-danger="estado_id == 'con_problemas'" />
+                            </div>
+                        </div>
 
-                                    <!-- Footer con badges -->
-                                    <div class="mt-3 pt-2 border-top">
-                                        <field name="tipo_revision" widget="badge" decoration-info="true" class="me-2" />
-                                        <field name="estado_id" widget="badge" decoration-success="estado_id == 'finalizado'" decoration-warning="estado_id == 'en_revision'" decoration-danger="estado_id == 'con_problemas'" />
-                                    </div>
-                                </div>
-
-                                <!-- Indicador visual de estado -->
-                                <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
+                        <!-- Indicador de estado -->
+                        <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
                             #{record.estado_id.raw_value == 'finalizado' ? 'bg-success' : 
                             record.estado_id.raw_value == 'con_problemas' ? 'bg-danger' :
                             record.estado_id.raw_value == 'en_revision' ? 'bg-info' : 'bg-warning'}" />
-                            </div>
-                        </t>
-                    </templates>
-                </kanban>
-            </field>
-        </record>
-        <record id="reparaciones_view_graph" model="ir.ui.view">
-            <field name="name">reparaciones.graph</field>
-            <field name="model">reparaciones.reparaciones</field>
-            <field name="arch" type="xml">
-                <graph string="Reparaciones" sample="1">
-                    <field name="responsable_id" />
-                    <field name="estado_id" />
-                </graph>
-            </field>
-        </record>
+                    </div>
+                </t>
+            </templates>
+        </kanban>
+    </field>
+</record>
     </data>
 </odoo>
