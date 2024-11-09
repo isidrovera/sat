@@ -188,7 +188,8 @@ class GalleryController(http.Controller):
         content = foto.get_download_content()
         if not content:
             return request.not_found()
-            
+        
+        # Agregar encabezado Content-Disposition para forzar la descarga
         return request.make_response(
             base64.b64decode(content['content']),
             headers=[
