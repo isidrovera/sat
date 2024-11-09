@@ -227,16 +227,36 @@
                         <!-- Header con estado y disponibilidad -->
                         <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
                             <div class="d-flex align-items-center">
-                                <i class="fa fa-clipboard-check text-primary me-2" title="Estado"/>
+                                <!-- Icono dinámico según estado -->
+                                <i t-attf-class="fa me-2 #{
+                                    record.estado_ventas_id.raw_value == 'sin_revisar' ? 'fa-clock text-secondary' :
+                                    record.estado_ventas_id.raw_value == 'para_revision' ? 'fa-search text-info' :
+                                    record.estado_ventas_id.raw_value == 'asignado' ? 'fa-user-check text-primary' :
+                                    record.estado_ventas_id.raw_value == 'en_revision' ? 'fa-tools text-info' :
+                                    record.estado_ventas_id.raw_value == 'finalizado' ? 'fa-check-circle text-success' :
+                                    record.estado_ventas_id.raw_value == 'con_problemas' ? 'fa-exclamation-triangle text-warning' :
+                                    record.estado_ventas_id.raw_value == 'de_partes' ? 'fa-cog text-danger' :
+                                    record.estado_ventas_id.raw_value == 'entregada' ? 'fa-truck text-success' :
+                                    'fa-question text-secondary'}" title="Estado"/>
                                 <field name="estado_ventas_id" widget="badge"
-                                    decoration-success="estado_ventas_id == 'finalizado'"
+                                    decoration-success="estado_ventas_id == 'finalizado' or estado_ventas_id == 'entregada'"
                                     decoration-warning="estado_ventas_id == 'con_problemas'"
                                     decoration-danger="estado_ventas_id == 'de_partes'"
-                                    decoration-info="estado_ventas_id == 'en_revision'"/>
+                                    decoration-info="estado_ventas_id == 'en_revision' or estado_ventas_id == 'para_revision'"
+                                    decoration-primary="estado_ventas_id == 'asignado'"
+                                    decoration-secondary="estado_ventas_id == 'sin_revisar'"/>
                             </div>
                             <div class="d-flex align-items-center">
-                                <i class="fa fa-check-circle text-success me-1" title="Disponibilidad"/>
-                                <field name="disponibilidad_id" widget="badge"/>
+                                <!-- Icono dinámico según disponibilidad -->
+                                <i t-attf-class="fa me-2 #{
+                                    record.disponibilidad_id.raw_value == 'disponible' ? 'fa-check-circle text-success' :
+                                    record.disponibilidad_id.raw_value == 'separada' ? 'fa-bookmark text-warning' :
+                                    record.disponibilidad_id.raw_value == 'no_disponible' ? 'fa-times-circle text-danger' :
+                                    'fa-question text-secondary'}" title="Disponibilidad"/>
+                                <field name="disponibilidad_id" widget="badge"
+                                    decoration-success="disponibilidad_id == 'disponible'"
+                                    decoration-warning="disponibilidad_id == 'separada'"
+                                    decoration-danger="disponibilidad_id == 'no_disponible'"/>
                             </div>
                         </div>
 
@@ -268,10 +288,8 @@
                                 
                                 <div class="d-flex align-items-center mb-2">
                                     <i class="fa fa-trademark text-info me-2" title="Marca"/>
-                                    <span class="text-muted me-1">Marca:</span>
-                                    <field name="marca"/>
-                                    -
-                                    <field name="name"/>
+                                    <span class="text-muted me-1">Marca/Modelo:</span>
+                                    <field name="marca"/> - <field name="name"/>
                                 </div>
 
                                 <div class="d-flex align-items-center mb-2">
@@ -287,16 +305,16 @@
                                 </div>
                             </div>
 
-                            <!-- Información de Precios -->
+                            <!-- Precios -->
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between">
                                     <div class="d-flex align-items-center">
-                                        <i class="fa fa-money-bill text-success me-2" title="Precio Venta"/>
+                                        <i class="fa fa-tag text-success me-2" title="Precio Venta"/>
                                         <span class="text-muted me-1">Venta:</span>
                                         <field name="precio_venta"/>
                                     </div>
                                     <div class="d-flex align-items-center">
-                                        <i class="fa fa-money-bill-wave text-danger me-2" title="Precio Compra"/>
+                                        <i class="fa fa-shopping-cart text-danger me-2" title="Precio Compra"/>
                                         <span class="text-muted me-1">Compra:</span>
                                         <field name="precio_compra"/>
                                     </div>
@@ -317,7 +335,7 @@
                                 </div>
                             </div>
 
-                            <!-- Información de Facturación -->
+                            <!-- Facturación -->
                             <div class="pt-2 border-top" t-if="record.factura_venta.raw_value">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div class="d-flex align-items-center">
@@ -332,7 +350,7 @@
                                 </div>
                             </div>
 
-                            <!-- Indicador de Alerta -->
+                            <!-- Alerta -->
                             <div t-if="record.activador.raw_value == 'si'" 
                                 class="position-absolute top-0 end-0 p-2">
                                 <i class="fa fa-exclamation-circle fa-lg text-danger"/>
@@ -342,10 +360,12 @@
                         <!-- Indicador lateral de estado -->
                         <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
                             #{record.estado_ventas_id.raw_value == 'finalizado' ? 'bg-success' : 
-                            record.estado_ventas_id.raw_value == 'con_problemas' ? 'bg-danger' :
+                            record.estado_ventas_id.raw_value == 'con_problemas' ? 'bg-warning' :
+                            record.estado_ventas_id.raw_value == 'de_partes' ? 'bg-danger' :
                             record.estado_ventas_id.raw_value == 'en_revision' ? 'bg-info' : 
-                            record.estado_ventas_id.raw_value == 'de_partes' ? 'bg-warning' : 
-                            record.estado_ventas_id.raw_value == 'entregada' ? 'bg-primary' : 'bg-secondary'}"/>
+                            record.estado_ventas_id.raw_value == 'entregada' ? 'bg-success' :
+                            record.estado_ventas_id.raw_value == 'asignado' ? 'bg-primary' :
+                            record.estado_ventas_id.raw_value == 'para_revision' ? 'bg-info' : 'bg-secondary'}"/>
                     </div>
                 </t>
             </templates>
