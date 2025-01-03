@@ -619,15 +619,22 @@ Modificado por: {user_name}"""
     @api.onchange('disponibilidad_id', 'ubicacion_id')
     def _onchange_disponibilidad_ubicacion(self):
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
+            # Solo enviamos el mensaje, no cambiamos la ubicación
             self.enviar_mensaje_transportistas()
             return self._notify_vendedora()
 
     def enviar_mensaje_transportistas(self):
         transportista_numeros = ['51924894872']
-        mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {self.name.name}\nSerie: {self.serie_id}\nUbicación actual: {self.ubicacion_id}."
-        url = self.crear_url_cambio_ubicacion(self)
+        mensaje = f"""Estimado transportista,
 
-        mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace: 📍 {url}"
+Por favor, traer la siguiente máquina:
+
+Modelo: {self.name.name}
+Serie: {self.serie_id}
+Ubicación actual: {self.ubicacion_id}
+
+Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
+haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}"""
 
         _logger.debug(f"Enviando mensaje a transportistas: {mensaje}")
 
@@ -681,10 +688,16 @@ Modificado por: {user_name}"""
             if registros_a_traer:
                 transportista_numeros = ['51924894872']
                 for registro in registros_a_traer:
-                    mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {registro.name.name}\nSerie: {registro.serie_id}\nUbicación actual: {registro.ubicacion_id}."
-                    url = self.crear_url_cambio_ubicacion(registro)
+                    mensaje = f"""Estimado transportista,
 
-                    mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace: 📍 {url}"
+Por favor, traer la siguiente máquina:
+
+Modelo: {registro.name.name}
+Serie: {registro.serie_id}
+Ubicación actual: {registro.ubicacion_id}
+
+Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
+haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro)}"""
 
                     _logger.debug(f"Enviando mensaje para la máquina {registro.name.name} con serie {registro.serie_id}")
 
@@ -692,7 +705,6 @@ Modificado por: {user_name}"""
                         self.enviar_mensaje_whatsapp(numero, mensaje)
                     
                     _logger.info(f"Mensaje enviado para la máquina {registro.name.name} con serie {registro.serie_id}")
-
     def action_crear_reparaciones(self):
         """ Crea una reparación para cada registro seleccionado en el modelo 'sat.sat'. """
         
