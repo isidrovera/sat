@@ -1,0 +1,19 @@
+<odoo>
+  <data>
+    <template id="dashboard_ticket_alquiler" inherit_id="web.dashboard">
+      <xpath expr="//div[@class='o_dashboard']" position="inside">
+        <div class="o_row">
+          <div class="o_col">
+            <div class="o_kpi">
+              <div class="o_kpi_value">
+                <span class="o_kpi_value_number">0</span>
+              </div>
+              <div class="o_kpi_title">Total de tickets de alquiler</div>
+            </div>
+          </div>
+        </div>
+      </xpath>
+    </template>
+  </data>
+</odoo>
+

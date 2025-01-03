@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="action_print_pdf" model="ir.actions.report">
+            <field name="name">Maquinas</field>
+            <field name="model">sat.sat</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">maquinas.informe</field>
+            <field name="print_report_name">Maquinas</field>
+            <field name="report_file">maquinas.pdf</field>
+        </record>
+    </data>
+</odoo>

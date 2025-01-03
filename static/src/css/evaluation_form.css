@@ -1,0 +1,217 @@
+/* Evaluation Form Styles for Odoo 18 */
+.o_evaluation_form {
+    --o-evaluation-primary: #3b82f6;
+    --o-evaluation-secondary: #4f46e5;
+    --o-evaluation-success: #059669;
+    --o-evaluation-warning: #d97706;
+    --o-evaluation-danger: #dc2626;
+}
+
+.o_evaluation_form .evaluation-header {
+    background: linear-gradient(135deg, var(--o-evaluation-primary), var(--o-evaluation-secondary));
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.o_evaluation_form .evaluation-header::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.1),
+        rgba(255, 255, 255, 0.1) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+}
+
+.o_evaluation_form .evaluation-card {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    background-color: #fff;
+    border-radius: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.o_evaluation_form .rating-group {
+    display: grid;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+@media (min-width: 768px) {
+    .o_evaluation_form .rating-group {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+.o_evaluation_form .rating-option {
+    position: relative;
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.o_evaluation_form .rating-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.o_evaluation_form .rating-content {
+    padding: 1rem;
+    text-align: center;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.o_evaluation_form .rating-option:hover .rating-content {
+    border-color: var(--o-evaluation-primary);
+    transform: translateY(-2px);
+}
+
+.o_evaluation_form .rating-option input[type="radio"]:checked + .rating-content {
+    border-color: var(--o-evaluation-primary);
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+.o_evaluation_form .rating-emoji {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.o_evaluation_form .info-card {
+    background-color: #f8fafc;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.o_evaluation_form .info-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background-color: rgba(59, 130, 246, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--o-evaluation-primary);
+}
+
+.o_evaluation_form .custom-textarea {
+    border: 2px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    width: 100%;
+    min-height: 120px;
+    transition: all 0.3s ease;
+}
+
+.o_evaluation_form .custom-textarea:focus {
+    border-color: var(--o-evaluation-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.o_evaluation_form .submit-button {
+    background: linear-gradient(135deg, var(--o-evaluation-primary), var(--o-evaluation-secondary));
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 0.75rem;
+    border: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.o_evaluation_form .submit-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Protocol verification styles */
+.o_evaluation_form .protocol-option {
+    background-color: #f8fafc;
+    border-radius: 0.75rem;
+    padding: 1rem;
+}
+
+.o_evaluation_form .yes-no-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.o_evaluation_form .yes-no-option {
+    background-color: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.o_evaluation_form .yes-no-option:hover {
+    border-color: var(--o-evaluation-primary);
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+.o_evaluation_form .section-title {
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.o_evaluation_form .section-icon {
+    color: var(--o-evaluation-primary);
+}
+// Estilos para la validación del formulario
+.was-validated .form-check-input:invalid ~ .form-check-label {
+    color: #dc3545;
+}
+
+.was-validated .form-check-input:invalid {
+    border-color: #dc3545;
+}
+
+.invalid-feedback {
+    display: none;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+.was-validated :invalid ~ .invalid-feedback {
+    display: block;
+}
+
+.rating-group .invalid-feedback {
+    margin-left: 1rem;
+}
+
+// Estilos adicionales para mejorar la presentación
+.rating-group {
+    .form-check-inline {
+        margin-bottom: 0.5rem;
+    }
+}
+
+.form-label {
+    margin-bottom: 0.75rem;
+}

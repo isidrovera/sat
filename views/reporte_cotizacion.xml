@@ -1,0 +1,28 @@
+<odoo>
+    <data>
+        <template id="report_saleorder_document_inherit" inherit_id="sale.report_saleorder_document">
+            <xpath expr="//div[@class='row mb-4' and @id='informations']" position="after">
+                <div class="border rounded" style="background-color: #f8f9fa; margin-bottom: 1rem;">
+                    <div class="row p-2">
+                        <div class="col-4 border-end">
+                            <strong>Equipo:</strong>
+                            <span t-field="doc.equipo_id"/>
+                        </div>
+                        <div class="col-4 border-end">
+                            <strong>Serie:</strong>
+                            <span t-field="doc.serie_id"/>
+                        </div>
+                        <div class="col-4">
+                            <strong>Observaciones:</strong>
+                            <span t-field="doc.obs"/>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+            <xpath expr="//td[@name='td_name']" position="inside">
+                <span style="color: darkblue;">Total de copias:</span>
+                <span t-field="line.total_copias_id"/>
+            </xpath>
+        </template>
+    </data>
+</odoo>

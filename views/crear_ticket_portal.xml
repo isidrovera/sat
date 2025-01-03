@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <template id="ticket_creation_success_template">
+        <t t-call="website.layout">
+            <div class="container">
+                <h2>Ticket Creado con Éxito</h2>
+                <p>Gracias por escanear el código QR. Hemos creado un ticket en nuestro sistema con la información proporcionada.</p>
+            </div>
+        </t>
+    </template>
+</odoo>

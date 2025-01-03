@@ -1,0 +1,123 @@
+/* Archivo: static/src/css/photo-gallery.css */
+
+.reparacion-photo-gallery {
+    padding: 1rem;
+}
+
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    width: 100%;
+    padding: 1rem 0;
+}
+
+@media (min-width: 576px) {
+    .photo-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 768px) {
+    .photo-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    .photo-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 1200px) {
+    .photo-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+.photo-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    aspect-ratio: 1;
+    cursor: pointer;
+}
+
+.photo-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.photo-item.selected {
+    outline: 3px solid #037AFC;
+    outline-offset: -3px;
+}
+
+.photo-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background: #f8f9fa;
+}
+
+.photo-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.photo-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+}
+
+.photo-name {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.photo-info .btn {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.select-overlay {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+.empty-state {
+    padding: 2rem;
+    text-align: center;
+    color: #6c757d;
+}

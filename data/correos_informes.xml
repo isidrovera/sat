@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <data >
+        
+        <record id="email_template_informes" model="mail.template">
+            <field name="name">📋 Informe de Estado - Máquinas Fotocopiadoras</field>
+            <field name="model_id" ref="model_informes"/>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">lincoln@corapsac.com</field>
+            <field name="subject">📋 Informe de Estado: {{object.name}} </field>
+            <field name="report_template_ids" eval="[(4, ref('sat.action_report_informes_ventas'))]"/>            
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html"><![CDATA[
+
+          
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #3498db; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">📋 Informe de Estado N° <t t-out="object.name"/></div>
+            </div>
+            
+            <!-- Contenido -->
+            <div style="padding: 20px; background-color: #ffffff;">
+                <div style="font-size: 16px; margin-bottom: 20px;">Lincoln,</div>
+                <div style="font-size: 16px; margin-bottom: 20px;">
+                    Mediante el presente documento, les entregamos el informe del estado de las máquinas fotocopiadoras.
+                    Durante el mantenimiento realizado, se detectaron fallas y se identificaron los elementos que deben ser 
+                    reemplazados para asegurar su correcto funcionamiento.
+                </div>
+    
+                <!-- Detalles del Documento -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 18px; font-weight: bold; color: #3498db; margin-bottom: 10px;">Detalles del Documento</div>
+                    <div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #dddddd;">
+                        <div style="margin-bottom: 5px;"><strong>N° Informe:</strong> <span><t t-out="object.name"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Proveedor:</strong> <span><t t-out="object.proveedor_id.name"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Importación:</strong> <span><t t-out="object.importacion"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Invoice:</strong> <span><t t-out="object.invoice"/></span></div>
+                    </div>
+                </div>
+    
+                <!-- Notas -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 18px; font-weight: bold; color: #3498db; margin-bottom: 10px;">Notas Importantes</div>
+                    <div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #dddddd;">
+                        <div style="margin-bottom: 10px;">
+                            <span style="background-color: #f1c40f; color: #ffffff; padding: 5px 10px; display: inline-block;">
+                                ⚠️ REQUIERE ATENCIÓN
+                            </span>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            El detalle completo de cada equipo y sus fallas se encuentra en el reporte adjunto a este correo.
+                            Por favor revisar cada caso y proporcionar las soluciones correspondientes según las garantías vigentes.
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Pie de página -->
+                <div style="text-align: center; margin-top: 30px; color: #777777; font-size: 12px;">
+                    <div style="border-top: 1px solid #eeeeee; padding-top: 20px;">
+                        Este es un mensaje automático. Por favor revisar el informe adjunto para los detalles completos.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+            ]]></field>
+        </record>
+    </data>
+</odoo>
+       

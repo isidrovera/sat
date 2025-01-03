@@ -1,0 +1,234 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <data>      
+    
+        <record id="email_maquinas_id" model="mail.template">
+            <field name="name">Plantilla maquinas con problemas</field>
+            <field name="model_id" ref="model_sat_sat" />
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">lincoln@corapsac.com</field>
+            <field name="email_cc">campuero@corapsac.com.pe, ventas2@corapsac.com.pe,
+                norma@corapsac.com, ventas@corapsac.com</field>
+            <field name="subject">⚠️ Reporte de Máquinas con Problemas</field>
+            <field name="auto_delete" eval="True" />
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #ed8936; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">⚠️ Reporte de Inventario</div>
+            </div>
+            
+            <!-- Contenido Principal -->
+            <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+                <!-- Saludo -->
+                <div style="margin-bottom: 20px;">
+                    Estimado equipo de ventas,
+                </div>
+                
+                <!-- Aviso Principal -->
+                <div style="background-color: #fff5f5; padding: 15px; margin: 15px 0; border-left: 4px solid #ed8936;">
+                    <div style="margin: 0;">
+                        Les informamos sobre el estado actual de máquinas con problemas en nuestro inventario.
+                    </div>
+                </div>
+    
+                <!-- Puntos Importantes -->
+                <div style="margin: 20px 0;">
+                    <div style="font-weight: bold;">Importante:</div>
+                    <div style="margin: 10px 0 0 20px;">
+                        • Revisar la información antes de ofrecer equipos<br>
+                        • El inventario puede cambiar día a día<br>
+                        • Consultar siempre el informe técnico más reciente
+                    </div>
+                </div>
+    
+                <!-- Aviso de Adjunto -->
+                <div style="background-color: #ebf8ff; padding: 15px; margin: 15px 0;">
+                    <div style="margin: 0;">
+                        📎 Se adjunta archivo Excel con el detalle completo de máquinas y partes afectadas.
+                    </div>
+                </div>
+    
+                <!-- Firma -->
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <div style="margin: 0;">
+                        Saludos cordiales,<br>
+                        <strong>Equipo Técnico</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>
+        <record id="email_template_maquinas_problema" model="mail.template">
+            <field name="name">⚠️ Notificación: Máquina con Problemas</field>
+            <field name="model_id" ref="model_sat_sat" />
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">lincoln@corapsac.com</field>
+            <field name="email_cc">{{object.cliente_id.asesora_id.email}}; campuero@corapsac.com.pe</field>
+            <field name="subject">⚠️ Problema detectado en máquina: {{object.name.name}}</field>
+            <field name="auto_delete" eval="True" />
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #ff6f61; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">⚠️ Problema detectado en máquina</div>
+            </div>
+            
+            <!-- Contenido -->
+            <div style="padding: 20px; background-color: #ffffff;">
+                <div style="font-size: 16px; margin-bottom: 20px;">Lincoln,</div>
+                <div style="font-size: 16px; margin-bottom: 20px;">Se ha detectado un problema en la máquina registrada. A continuación, los detalles:</div>
+    
+                <!-- Detalles de Importación -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 18px; font-weight: bold; color: #ff6f61; margin-bottom: 10px;">Detalles de Importación</div>
+                    <div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #dddddd;">
+                        <div style="margin-bottom: 5px;"><strong>Proveedor:</strong> <span><t t-out="object.proveedor_id.name"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Importación:</strong> <span><t t-out="object.importacion"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Invoice:</strong> <span><t t-out="object.invoice"/></span></div>
+                    </div>
+                </div>
+    
+                <!-- Detalles de la Máquina -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 18px; font-weight: bold; color: #ff6f61; margin-bottom: 10px;">Detalles de la Máquina</div>
+                    <div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #dddddd;">
+                        <div style="margin-bottom: 5px;"><strong>Marca:</strong> <span><t t-out="object.marca"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Modelo:</strong> <span><t t-out="object.name.name"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Serie:</strong> <span><t t-out="object.serie_id"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Contometro:</strong> <span><t t-out="object.contometro"/></span></div>
+                    </div>
+                </div>
+    
+                <!-- Descripción del Problema -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 18px; font-weight: bold; color: #ff6f61; margin-bottom: 10px;">Descripción del Problema</div>
+                    <div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #dddddd;">
+                        <div style="margin-bottom: 5px;"><t t-out="object.descripcion"/></div>
+                    </div>
+                </div>
+    
+                <!-- Botón de Acción -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <a t-att-href="object.generate_record_url(object)" style="background-color: #ff6f61; color: #ffffff; padding: 12px 25px; text-decoration: none; display: inline-block;">
+                        Ver más detalles
+                    </a>
+                </div>
+    
+                <!-- Pie de página -->
+                <div style="text-align: center; margin-top: 30px; color: #777777; font-size: 12px;">
+                    <div style="border-top: 1px solid #eeeeee; padding-top: 20px;">
+                        Este es un mensaje automático generado por el sistema de soporte técnico.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>
+        <record id="email_template_maquinas_disponible" model="mail.template">
+            <field name="name">✅ Notificación: Máquina Disponible</field>
+            <field name="model_id" ref="model_sat_sat" />
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">lincoln@corapsac.com</field>
+            <field name="email_cc">{{object.cliente_id.asesora_id.email}}; campuero@corapsac.com.pe</field>
+            <field name="subject">✅ Máquina disponible: {{object.name.name}}</field>
+            <field name="auto_delete" eval="True" />
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #4CAF50; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">✅ Máquina Disponible</div>
+            </div>
+            
+            <!-- Contenido -->
+            <div style="padding: 20px; background-color: #ffffff;">
+                <div style="font-size: 16px; margin-bottom: 20px;">Lincoln,</div>
+                <div style="font-size: 16px; margin-bottom: 20px;">Para informar que la siguiente máquina ahora está disponible:</div>
+    
+                <!-- Detalles de la Máquina -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 18px; font-weight: bold; color: #4CAF50; margin-bottom: 10px;">Detalles de la Máquina</div>
+                    <div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #dddddd;">
+                        <div style="margin-bottom: 5px;"><strong>Marca:</strong> <span><t t-out="object.marca"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Modelo:</strong> <span><t t-out="object.name.name"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Serie:</strong> <span><t t-out="object.serie_id"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Contometro:</strong> <span><t t-out="object.contometro"/></span></div>
+                    </div>
+                </div>
+    
+                <!-- Detalles de Importación -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 18px; font-weight: bold; color: #4CAF50; margin-bottom: 10px;">Detalles de Importación</div>
+                    <div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #dddddd;">
+                        <div style="margin-bottom: 5px;"><strong>Proveedor:</strong> <span><t t-out="object.proveedor_id.name"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Importación:</strong> <span><t t-out="object.importacion"/></span></div>
+                        <div style="margin-bottom: 5px;"><strong>Invoice:</strong> <span><t t-out="object.invoice"/></span></div>
+                    </div>
+                </div>
+    
+                <!-- Estado Actual -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 18px; font-weight: bold; color: #4CAF50; margin-bottom: 10px;">Estado Actual</div>
+                    <div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #dddddd;">
+                        <div style="margin-bottom: 10px;">
+                            <span style="background-color: #4CAF50; color: #ffffff; padding: 5px 10px; display: inline-block;">
+                                ✅ DISPONIBLE
+                            </span>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            La máquina ha sido revisada y está lista para su venta.
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Botón de Acción -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <a t-att-href="object.generate_record_url(object)" style="background-color: #4CAF50; color: #ffffff; padding: 12px 25px; text-decoration: none; display: inline-block;">
+                        Ver más detalles
+                    </a>
+                </div>
+    
+                <!-- Pie de página -->
+                <div style="text-align: center; margin-top: 30px; color: #777777; font-size: 12px;">
+                    <div style="border-top: 1px solid #eeeeee; padding-top: 20px;">
+                        Este es un mensaje automático generado por el sistema de soporte técnico.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>   
+    </data>
+</odoo>
+   

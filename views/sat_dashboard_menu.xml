@@ -1,0 +1,12 @@
+<odoo>
+    <!-- Acción del cliente para el dashboard -->
+    <record id="sat_dashboard_action" model="ir.actions.client">
+        <field name="name">Dashboard</field>
+        <field name="tag">sat_dashboard_tag</field>
+    </record>
+
+    <!-- Menú principal con icono -->
+    <menuitem name="Sistema de taller" id="sat_menu_root" web_icon="sat,static/description/icon.png" sequence="1"/>    
+    <!-- Elemento de menú para acceder al dashboard -->
+    <menuitem id="sat_dashboard_menu" name="Dashboard" parent="sat_menu_root" action="sat_dashboard_action" sequence="1"/>
+</odoo>

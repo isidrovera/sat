@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="repuestos_form_view" model="ir.ui.view">
+            <field name="name">repuestos.form</field>
+            <field name="model">repuestos.alquiler</field>
+            <field name="arch" type="xml">
+                <form string="ModelTitle">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" placeholder="Descripcion el repuesto"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="create_date"/>
+                                <field name="cliente_id"/>
+                                <field name="modelo_id"/>
+                                <field name="serie_id"/>
+                                <field name="name"/>
+                                <field name="cantidad"/>
+                                <field name="contometro_actual"/>
+                                <field name="contometro_ultimo"/>
+                            </group>
+                            <group>
+                                <field name="referencia_reparacion_id"/>
+                                <field name="duracion_repuesto"/>
+                                <field name="solicitante_id"/>
+                                <field name="rendimiento"/>
+                                <field name="currency_id" string="Tipo de moneda"/>
+                                <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="model_repuestos_view_kanban" model="ir.ui.view">
+            <field name="name">repuestos.view.kanban</field>
+            <field name="model">repuestos.alquiler</field>
+            <field name="arch" type="xml">
+                <kanban >
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_global_click">
+                                <div class="o_kanban_title">
+                                    <h3><field name="cliente_id"/></h3>
+                                    <p><field name="modelo_id"/></p>                                    
+                                    <p><strong><font color="blue">Producto:</font></strong><field name="name"/></p>
+                                    <p><strong><font color="blue">Contometro Actual:</font></strong><field name="contometro_actual"/></p>
+                                    <p><strong><font color="blue">Ultimo Contometro:</font></strong><field name="contometro_ultimo"/></p>
+                                    <p><strong><font color="blue">Fecha de Cambio:</font></strong><field name="create_date"/></p>
+                                    
+                                </div>                                
+                            </div>                          
+                        </t>
+                    </templates>
+                   
+                </kanban>
+            </field>
+        </record>
+
+        <record id="repuestos_tree_view" model="ir.ui.view">
+            <field name="name">repuestos.tree</field>
+            <field name="model">repuestos.alquiler</field>
+            <field name="arch" type="xml">
+                <list string="Repuestos" default_order="id desc">
+                    <field name="create_date" string="Creado" widget="remaining_days" width="80%" optional="hide"/>
+                    <field name="cliente_id"/>
+                    <field name="modelo_id"/>
+                    <field name="serie_id"/>
+                    <field name="name"/>
+                    <field name="cantidad"/>
+                    <field name="contometro_actual"/>
+                    <field name="contometro_ultimo"/>
+                    <field name="referencia_reparacion_id" optional="hide"/>
+                    <field name="duracion_repuesto" optional="hide"/>
+                    <field name="solicitante_id"/>
+                    <field name="rendimiento"/>
+                    <field name="currency_id" string="Tipo de moneda" 
+                    invisible="1"
+                    />
+                    <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="repuestos_search_view" model="ir.ui.view">
+            <field name="name">repuestos.search</field>
+            <field name="model">repuestos.alquiler</field>
+            <field name="arch" type="xml">
+                <search string="Repuestos">
+                    <group>
+                        <field name="serie_id"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+    </data>
+</odoo>

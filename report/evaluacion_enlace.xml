@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_evaluacion_personal" model="ir.actions.report">
+        <field name="name">Evaluación de Personal</field>
+        <field name="model">evaluacion.personal</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sat.report_evaluacion_personal</field>
+        <field name="report_file">sat.report_evaluacion_personal</field>
+        <field name="print_report_name">'Evaluación - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="sat.model_evaluacion_personal"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>

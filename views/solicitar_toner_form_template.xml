@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="solicitar_toner_form_template" name="Solicitar Toner Form">
+        <t t-call="website.layout">
+            <div class="container mt-5 mb-5">
+                <h1 class="text-center">Solicitar Toner</h1>
+                <form action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
+                    <input type="hidden" name="cliente" t-att-value="values['cliente']"/>
+                    <input type="hidden" name="serie" t-att-value="values['serie']"/>
+                    <input type="hidden" name="id_registro" t-att-value="values['id_registro']"/>
+                    <input type="hidden" name="tipo_maquina_id" t-att-value="values['tipo_maquina_id']"/>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nombre">Nombre</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" t-att-value="values.get('nombre', '')" required="1"/>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="celular">Celular</label>
+                            <input type="tel" class="form-control" id="celular" name="celular" t-att-value="values.get('celular', '')" required="1"/>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="contometro_black">Contometro Black</label>
+                            <input type="number" class="form-control" id="contometro_black" name="contometro_black" min="1" required="1" oninvalid="this.setCustomValidity('El contometro no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
+                        </div>
+
+                        <t t-if="values['tipo_maquina_id'] == 'color'">
+                            <div class="col-md-6 mb-3">
+                                <label for="contometro_color">Contometro Color</label>
+                                <input type="number" class="form-control" id="contometro_color" name="contometro_color" min="1" required="1" oninvalid="this.setCustomValidity('El contometro no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
+                            </div>
+                        </t>
+                    </div>
+
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Tipo de Toner</th>
+                                <th>Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div style="display:inline-block; width:20px; height:20px; background-color:black; border-radius:10px;"></div>
+                                    Toner Black
+                                </td>
+                                <td>
+                                    <input type="number" name="toner_black" class="form-control" min="1" required="1" oninvalid="this.setCustomValidity('La cantidad de toner no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
+                                </td>
+                            </tr>
+
+                            <t t-if="values['tipo_maquina_id'] == 'color'">
+                                <tr>
+                                    <td>
+                                        <div style="display:inline-block; width:20px; height:20px; background-color:cyan; border-radius:10px;"></div>
+                                        Toner Cyan
+                                    </td>
+                                    <td>
+                                        <input type="number" name="toner_cyan" class="form-control" min="1" oninvalid="this.setCustomValidity('La cantidad de toner no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="display:inline-block; width:20px; height:20px; background-color:yellow; border-radius:10px;"></div>
+                                        Toner Yellow
+                                    </td>
+                                    <td>
+                                        <input type="number" name="toner_yellow" class="form-control" min="1" oninvalid="this.setCustomValidity('La cantidad de toner no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="display:inline-block; width:20px; height:20px; background-color:magenta; border-radius:10px;"></div>
+                                        Toner Magenta
+                                    </td>
+                                    <td>
+                                        <input type="number" name="toner_magenta" class="form-control" min="1" oninvalid="this.setCustomValidity('La cantidad de toner no puede ser 0 o menor.')" oninput="setCustomValidity('')"/>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <div class="text-center mt-4">
+                        <button type="button" class="btn btn-secondary mr-2" onclick="goBack()">Volver</button>
+                        <button class="btn btn-primary" type="submit">Enviar Solicitud</button>
+                    </div>
+                </form>
+            </div>
+            <script>
+                function goBack() {
+                    if (document.referrer) {
+                        window.location.href = document.referrer;
+                    } else {
+                        window.history.back();
+                    }
+                }
+            </script>
+        </t>
+    </template>
+</odoo>

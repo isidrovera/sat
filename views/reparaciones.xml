@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="reparaciones_form_view" model="ir.ui.view">
+            <field name="name">reparaciones.reparaciones.form</field>
+            <field name="model">reparaciones.reparaciones</field>
+            <field name="arch" type="xml">
+                <form string="ModelTitle">
+                    <header>
+                        <field name="estado_id" invisible="1"/>
+                        
+                        <button string="Finalizar reparación" 
+                                name="action_finalizar_reparacion" 
+                                type="object"
+                                class="btn-success"
+                                help="Finalizar el proceso de reparación"
+                                icon="fa-check-circle"
+                                decoration-info="estado_id == 'en_revision'"
+                                invisible="estado_id != 'en_revision'"/>
+
+                        <button string="Asignar equipo" 
+                            name="enviar_mensaje_whatsapp_reparaciones" 
+                            type="object"
+                            class="btn-primary"
+                            help="Asignar equipo al técnico"
+                            icon="fa-user-plus"
+                            groups="base.group_system"
+                            decoration-info="estado_id in ('para_revision', 'sin_revisar')"
+                            invisible="estado_id not in ('para_revision', 'sin_revisar')"/>
+                        <button string="Imprimir QR" 
+                                name="imprimir_reporte_qr" 
+                                type="object"
+                                class="btn-info"
+                                help="Generar e imprimir código QR"
+                                icon="fa-qrcode"
+                                decoration-info="estado_id == 'en_revision'"
+                                invisible="estado_id != 'en_revision'"/>
+
+                        <button name="action_open_gallery" 
+                            type="object" 
+                            string="Ver fotos"
+                            class="btn-secondary"
+                            help="Ver galería de fotos"
+                            icon="fa-camera"
+                            decoration-info="estado_id in ('en_revision', 'para_revision', 'finalizado', 'entregada')"
+                            invisible="estado_id not in ('en_revision', 'para_revision', 'finalizado', 'entregada')"/>
+                        <field name="estado_id" widget="statusbar" statusbar_visible="true" />
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" />
+                            <h1>
+                                <field name="name" placeholder="Title" />
+                            </h1>
+                        </div>
+                        <div class="oe_title">
+                            <label for="cliente_id" />
+                            <h1>
+                                <field name="cliente_id" placeholder="Cliente" widget="many2one_avatar" />
+                            </h1>
+                        </div>
+                        <group>
+                            <group string="Datos para la revisión">
+                                <field name="prioridad" widget="badge" />
+                                <field name="tipo_revision" widget="badge" />
+                                <field name="ubicacion_id" widget="badge" />
+                                <field name="responsable_id" widget="many2one_avatar" options="{'no_create': True}" readonly="estado_id == 'en_revision'"/>
+                                <field name="responsable_mobile_clean" />
+                            </group>
+                            <group string="Datos del equipo">
+                                <!--<field name="qr_image" widget='image' class="oe_avatar" options="{'size':
+                                [90, 90]}"/>
+                                <field name="qr_code_ventas" widget='image' class="oe_avatar" options="{'size': [90, 90]}"/>-->
+                                <field name="importacion" />
+                                <field name="nombre_proveedor" />
+                                <field name="tipo_id" invisible="1" />
+                                <field name="tipo_machine" />
+                                <field name="marca" />
+                                <field name="maquina_id" domain="[('estado_ventas_id', '=', 'sin_revisar')]" options="{'no_create': True}" readonly="estado_id == 'en_revision'" />
+                                <field name="serie_id" />
+                                <field name="contometrok_id" />
+                                <field name="contometro_inicial" invisible="True"/>
+                                <field name="nombre_maquina" invisible='True' />
+                                <field name="nombre_proveedor" invisible='True' />
+                                <field name="autorizacion_cambio_digitos" invisible="True"/>
+                                <field name="autenticacion_correcta" invisible="True"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Informe Técnico">
+                                <group>
+                                    <group>
+                                        <field name="informe" required="estado_id == 'en_revision'" />
+                                    </group>
+                                    <group>
+                                        <field name="calidad_id" required="estado_id == 'en_revision'" />
+                                        <field name="tapas_id" required="estado_id == 'en_revision'" />
+                                        <field name="panel_id" required="estado_id == 'en_revision'" />
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Accesorios">
+                                <group>
+                                    <group>
+                                        <field name="tray_id" placeholder="Detalla la cantidad de caseteras." required="estado_id == 2" />
+                                        <field name="adf_simple_id" arequired="estado_id == 'en_revision'" />
+                                        <field name="adf_dual_id" required="estado_id == 'en_revision'" />
+                                        <field name="finalizador_interno_id" required="estado_id == 'en_revision'" />
+                                        <field name="finalizador_externo_id" required="estado_id == 'en_revision'" />
+                                        <field name="mueble_id" required="estado_id == 'en_revision'" />
+                                        <field name="lct_id" required="estado_id == 'en_revision'" />
+                                    </group>
+                                    <group>
+                                        <field name="wi_fi_id" required="estado_id == 'en_revision'" />
+                                        <field name="cable_poder_id" required="estado_id == 'en_revision'" />
+                                        <field name="panel_normal_id" required="estado_id == 'en_revision'" />
+                                        <field name="panel_smart_id" required="estado_id == 'en_revision'" />
+                                        <field name="ot_id" required="estado_id == 'en_revision'" />
+                                        <field name="hdd_id" required="estado_id == 'en_revision'" />
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Check List">
+                                <group>
+                                    <group>
+                                        <field name="copia_id" required="estado_id == 'en_revision'" />
+                                        <field name="impresion_id" required="estado_id == 'en_revision'" />
+                                        <field name="impresion_usb_id" required="estado_id == 'en_revision'" />
+                                        <field name="scaner_smb_id" required="estado_id == 'en_revision'" />
+                                        <field name="scaner_usb_id" required="estado_id == 'en_revision'" />
+                                        <field name="scaner_ftp_id" required="estado_id == 'en_revision'" />
+                                        <field name="scaner_mail_id" required="estado_id == 'en_revision'" />
+                                        <field name="bypass_id" required="estado_id == 'en_revision'" />
+                                        <field name="tray1_id" required="estado_id == 'en_revision'" />
+                                        <field name="tray2_id" required="estado_id == 'en_revision'" />
+                                        <field name="tray3_id" required="estado_id == 'en_revision'" />
+                                        <field name="tray4_id" required="estado_id == 'en_revision'" />
+                                        <field name="adf_id" required="estado_id == 'en_revision'" />
+                                        <field name="finalizador_id" required="estado_id == 'en_revision'" />
+                                        <field name="tacho_id" required="estado_id == 'en_revision'" />
+                                    </group>
+                                    <group>
+                                        <field name="fusora_id" required="estado_id == 'en_revision'" />
+                                        <field name="rodillo_id" required="estado_id == 'en_revision'" />
+                                        <field name="calor_id" required="estado_id == 'en_revision'" />
+                                        <field name="transfer_id" required="estado_id == 'en_revision'" />
+                                        <field name="optico_id" required="estado_id == 'en_revision'" />
+                                        <field name="toner_black_id" required="estado_id == 'en_revision'" />
+                                        <field name="toner_magenta_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="toner_cyan_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="toner_yellow_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="black_id" required="estado_id == 'en_revision'" />
+                                        <field name="magenta_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="cyan_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="yellow_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="developerk_id" required="estado_id == 'en_revision'" />
+                                        <field name="developerm_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="developerc_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="developery_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Detalle de falla proveedor">
+                                <group>
+                                    <group>
+                                        <field name="falla_proveedor" />
+                                    </group>
+                                    <group>
+                                        <field name="foto_problema"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Detalle falla ventas">
+                                <group>
+                                    <group>
+                                        <field name="falla_ventas" />
+                                    </group>
+                                    <group>
+
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Galería de Fotos" name="fotos" groups="base.group_system" >
+                                <field name="fotos_ids" widget="gallery_widget"/>
+                            </page>
+
+                        </notebook>
+                    </sheet>
+                    <chatter />
+                </form>
+            </field>
+        </record>
+        <record id="reparaciones_tree_view" model="ir.ui.view">
+            <field name="name">reparaciones.reparaciones.tree</field>
+            <field name="model">reparaciones.reparaciones</field>
+            <field name="arch" type="xml">
+                <list string="Reparaciones" default_order="id desc">
+                    <field name="create_date" string="Agendado" widget="remaining_days" width="80%" />
+                    <field name="name" />
+                    <field name="cliente_id" widget="many2one_avatar" />
+                    <field name="marca" />
+                    <field name="maquina_id" />
+                    <field name="serie_id" />
+                    <field name="prioridad" widget="badge" />
+                    <field name="tipo_revision" widget="badge" />
+                    <field name="ubicacion_id" widget="badge" />
+                    <field name="responsable_id" widget="many2one_avatar" />
+                    <field name="estado_id" widget="badge" decoration-muted="estado_id == 'en_revision'" decoration-info="estado_id == 'en_revision'" decoration-success="estado_id == 'finalizado'" decoration-danger="estado_id not in ('sin_revisar','en_revision','finalizado','entregada')" decoration-warning="estado_id == 'entregada'" />
+                </list>
+                <!-- Aplicar el dominio solo para el grupo técnico -->
+
+            </field>
+
+
+        </record>
+        <record id="reparaciones_search_view" model="ir.ui.view">
+            <field name="name">reparaciones.reparaciones.search</field>
+            <field name="model">reparaciones.reparaciones</field>
+            <field name="arch" type="xml">
+                <search string="ModelTitle">
+                    <group>
+                        <field name="serie_id" />
+                    </group>
+                </search>
+            </field>
+        </record>
+        <record id="reparaciones_kanban_view" model="ir.ui.view">
+    <field name="name">reparaciones.kanban</field>
+    <field name="model">reparaciones.reparaciones</field>
+    <field name="arch" type="xml">
+        <kanban class="o_kanban_dashboard" default_group_by="estado_id"
+            decoration-success="estado_id == 'finalizado'"
+            sample="1">
+            <field name="name" />
+            <field name="cliente_id" />
+            <field name="marca" />
+            <field name="maquina_id" />
+            <field name="serie_id" />
+            <field name="contometrok_id" />
+            <field name="falla_ventas" />
+            <field name="importacion" />
+            <field name="estado_id" />
+            <field name="ubicacion_id" />
+            <field name="prioridad" />
+            <field name="tipo_revision" />
+            <field name="responsable_id" />
+            <field name="asesora_id" />
+            
+            <progressbar field="estado_id"
+                colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger", "en_revision": "info"}' />
+            
+            <templates>
+                <t t-name="card">
+                    <div class="oe_kanban_global_click position-relative shadow-sm rounded">
+                        <!-- Header con número de reparación -->
+                        <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
+                            <div class="d-flex align-items-center">
+                                <i class="fa fa-file-invoice text-primary me-2" title="Número de Reparación"/>
+                                <field name="name" class="fw-bold"/>
+                            </div>
+                        </div>
+
+                        <!-- Contenido principal -->
+                        <div class="p-3">
+                            <!-- Cliente y Asesora -->
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-building text-info me-2" title="Cliente"/>
+                                <span class="text-muted me-1">Cliente:</span>
+                                <field name="cliente_id" class="fw-bold"/>
+                            </div>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-female text-pink me-2" title="Asesora"/>
+                                <span class="text-muted me-1">Asesora:</span>
+                                <field name="asesora_id"/>
+                            </div>
+
+                            <!-- Marca -->
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-copyright text-success me-2" title="Marca"/>
+                                <span class="text-muted me-1">Marca:</span>
+                                <field name="marca"/>
+                            </div>
+
+                            <!-- Modelo -->
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-print text-primary me-2" title="Modelo"/>
+                                <span class="text-muted me-1">Modelo:</span>
+                                <field name="maquina_id"/>
+                            </div>
+
+                            <!-- Serie -->
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-qrcode text-secondary me-2" title="Serie"/>
+                                <span class="text-muted me-1">Serie:</span>
+                                <field name="serie_id"/>
+                            </div>
+
+                            <!-- Contómetro -->
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-calculator text-purple me-2" title="Contómetro"/>
+                                <span class="text-muted me-1">Contómetro:</span>
+                                <field name="contometrok_id"/>
+                            </div>
+
+                            <!-- Observaciones -->
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-question-circle text-danger me-2" title="Observaciones"/>
+                                <span class="text-muted me-1">Obs:</span>
+                                <field name="falla_ventas" class="text-truncate"/>
+                            </div>
+
+                            <!-- Importación -->
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-plane text-success me-2" title="Importación"/>
+                                <span class="text-muted me-1">Import.:</span>
+                                <field name="importacion"/>
+                            </div>
+
+                            <!-- Estado y Tipo de revisión -->
+                            <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-2">
+                                <div class="d-flex align-items-center">
+                                    <i class="fa fa-check-circle text-warning me-1" title="Estado"/>
+                                    <field name="estado_id" widget="badge"
+                                        decoration-success="estado_id == 'finalizado'"
+                                        decoration-warning="estado_id == 'en_revision'"
+                                        decoration-danger="estado_id == 'con_problemas'"/>
+                                </div>
+                                <div>
+                                    <i class="fa fa-wrench text-info me-1" title="Tipo"/>
+                                    <field name="tipo_revision" widget="badge"/>
+                                </div>
+                            </div>
+
+                            <!-- Ubicación y Prioridad -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center">
+                                    <i class="fa fa-location-arrow text-danger me-1" title="Ubicación"/>
+                                    <field name="ubicacion_id"/>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="fa fa-exclamation-circle text-warning me-1" title="Prioridad"/>
+                                    <field name="prioridad" widget="priority"/>
+                                </div>
+                            </div>
+
+                            <!-- Footer con técnico -->
+                            <div class="pt-2 border-top">
+                                <div class="d-flex align-items-center">
+                                    <i class="fa fa-male text-primary me-1" title="Técnico"/>
+                                    <span class="text-muted me-1">Técnico:</span>
+                                    <field name="responsable_id"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Indicador lateral de estado -->
+                        <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
+                            #{record.estado_id.raw_value == 'finalizado' ? 'bg-success' : 
+                            record.estado_id.raw_value == 'con_problemas' ? 'bg-danger' :
+                            record.estado_id.raw_value == 'en_revision' ? 'bg-info' : 
+                            record.estado_id.raw_value == 'de_partes' ? 'bg-warning' : 'bg-secondary'}"/>
+                    </div>
+                </t>
+            </templates>
+        </kanban>
+    </field>
+</record>
+    </data>
+</odoo>

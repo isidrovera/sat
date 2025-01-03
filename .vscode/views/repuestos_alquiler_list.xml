@@ -1,0 +1,59 @@
+<odoo>
+    <template id="repuestos_alquiler_list" name="Lista de Repuestos">
+        <t t-call="website.layout">
+            <div class="container mt-5 mb-5">
+                <h2>Repuestos para el Equipo</h2>
+                <h2>Modelo: <t t-esc="alquiler.name.name"/></h2>
+                <h2>Serie: <t t-esc="alquiler.serie"/></h2>
+                <input type="text" id="searchRepuestos" placeholder="Buscar por descripción..." class="form-control mb-3"/>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Pedido #</th>
+                            <th>Descripción</th>
+                            <th>Cantidad</th>
+                            <th>Contometro Anterior</th>
+                            <th>Contometro último cambio</th>
+                            <th>Rendimiento</th>
+                            <th>Solicitante</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="repuestos" t-as="repuesto">
+                            <tr>
+                                <td><t t-esc="repuesto.create_date.strftime('%d/%m/%Y')"/></td>
+                                <td><t t-esc="repuesto.referencia_reparacion_id"/></td>
+                                <td><t t-esc="repuesto.name"/></td>
+                                <td><t t-esc="repuesto.cantidad"/></td>
+                                <td><t t-esc="repuesto.contometro_ultimo"/></td>
+                                <td><t t-esc="repuesto.contometro_actual"/></td>
+                                <td><t t-esc="repuesto.duracion_repuesto"/></td>
+                                <td><t t-esc="repuesto.solicitante_id"/></td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const searchInput = document.getElementById('searchRepuestos');
+                    const tableBody = document.querySelector('table tbody');
+                    function filterTable(event) {
+                        const searchTerm = event.target.value.toLowerCase();
+                        const rows = tableBody.getElementsByTagName('tr');
+                        Array.from(rows).forEach((row) => {
+                            const description = row.cells[2].textContent.toLowerCase();
+                            if(description.includes(searchTerm)) {
+                                row.style.display = '';
+                            } else {
+                                row.style.display = 'none';
+                            }
+                        });
+                    }
+                    searchInput.addEventListener('keyup', filterTable);
+                });
+            </script>
+        </t>
+    </template>
+</odoo>

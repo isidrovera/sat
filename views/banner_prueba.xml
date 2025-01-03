@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    
+<template id="onboarding_text_template" name="Onboarding Text">
+    <div class="onboarding-panel" style="padding: 20px; background-color: #f4f6f9; border: 1px solid #ddd; margin-bottom: 10px;">
+        <h3 style="color: #333;">Bienvenido a Mi Modelo</h3>
+        <p style="color: #555;">
+            Este es un texto de ejemplo para el panel de onboarding en Odoo 18.
+            Aquí puedes guiar a los usuarios sobre cómo usar este módulo o proporcionar información relevante.
+        </p>
+    </div>
+</template>
+
+</odoo>

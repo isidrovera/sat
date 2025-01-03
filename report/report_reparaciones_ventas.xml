@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_reparaciones_ventas">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="reparaciones">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <style>
+                            /* Estilos modernos */
+                            .repair-header {
+                                background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+                                color: white;
+                                padding: 25px;
+                                border-radius: 15px;
+                                margin-bottom: 30px;
+                                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                            }
+                            .header-title {
+                                font-size: 28px;
+                                font-weight: bold;
+                                margin-bottom: 10px;
+                                color: #2c3e50; /* Color oscuro para mejor contraste */
+                            }
+                            
+                            .section-title {
+                                background: #2c3e50;
+                                color: white;
+                                padding: 12px 20px;
+                                margin: 25px 0 15px;
+                                border-radius: 8px;
+                                font-size: 18px;
+                                font-weight: bold;
+                                display: flex;
+                                align-items: center;
+                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                            }
+                            .section-title i {
+                                margin-right: 10px;
+                            }
+                            .info-card {
+                                background: white;
+                                border-radius: 10px;
+                                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                                margin-bottom: 20px;
+                                overflow: hidden;
+                            }
+                            .info-table {
+                                width: 100%;
+                                border-collapse: separate;
+                                border-spacing: 0;
+                                margin-bottom: 0;
+                            }
+                            .info-table th {
+                                background: #f8f9fa;
+                                color: #2c3e50;
+                                padding: 12px 15px;
+                                font-weight: bold;
+                                border: 1px solid #e9ecef;
+                            }
+                            .info-table td {
+                                padding: 12px 15px;
+                                border: 1px solid #e9ecef;
+                            }
+                            .info-table i {
+                                margin-right: 8px;
+                                color: #3498db;
+                            }
+                            /* Colores para consumibles con gradientes */
+                            /* Estilos simplificados para PDF */
+                            .color-cyan {
+                                background-color: #0bbee6; /* Cyan claro */
+                                border-left: 4px solid #0bbee6;
+                            }
+
+                            .color-magenta {
+                                background-color: #ff00d0; /* Magenta claro */
+                                border-left: 4px solid #ff00d0;
+                            }
+
+                            .color-yellow {
+                                background-color: #ffff00; /* Amarillo claro */
+                                border-left: 4px solid #ffff00;
+                            }
+
+                            .color-black {
+                                background-color: #777878; /* Gris muy claro */
+                                border-left: 4px solid #777878;
+                                color: #FFFFFF;
+                            }
+                            .informe-tecnico {
+                                padding: 20px;
+                                background: #f8f9fa;
+                                border-radius: 8px;
+                                border-left: 4px solid #3498db;
+                            }
+                            .status-badge {
+                                padding: 6px 12px;
+                                border-radius: 20px;
+                                font-size: 12px;
+                                font-weight: bold;
+                                display: inline-block;
+                            }
+                            .status-ok {
+                                background: #2ecc71;
+                                color: white;
+                            }
+                            .status-warning {
+                                background: #f1c40f;
+                                color: black;
+                            }
+                            .status-error {
+                                background: #e74c3c;
+                                color: white;
+                            }
+                        </style>
+
+                        <!-- Encabezado -->
+                        <div class="repair-header">
+                            <div class="header-title">
+                                <i class="fa fa-tools"></i> 
+                                Orden de Reparación: <t t-esc="reparaciones.name"/>
+                            </div>
+                        </div>
+                        
+
+                        <!-- Información Básica -->
+                        <div class="info-card">
+                            <table class="info-table">
+                                <tr>
+                                    <th><i class="fa fa-print"/>Tipo de equipo</th>
+                                    <td><t t-esc="reparaciones.tipo_machine"/></td>
+                                    <th><i class="fa fa-tag"/>Marca</th>
+                                    <td><t t-esc="reparaciones.marca"/></td>
+                                    <th><i class="fa fa-desktop"/>Máquina</th>
+                                    <td><t t-esc="reparaciones.maquina_id.name.name"/></td>
+                                </tr>
+                                <tr>
+                                    <th><i class="fa fa-tachometer-alt"/>Contómetro</th>
+                                    <td><t t-esc="reparaciones.contometrok_id"/></td>
+                                    <th><i class="fa fa-check-circle"/>Calidad</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA')"/></td>
+                                    <th><i class="fa fa-layer-group"/>Tapas</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tapas_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th><i class="fa fa-tablet"/>Panel</th>
+                                    <td colspan="5"><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_id', 'NA')"/></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Informe Técnico -->
+                        <div class="section-title">
+                            <i class="fa fa-clipboard-list"/>
+                            INFORME TÉCNICO
+                        </div>
+                        <div class="info-card">
+                            <div class="informe-tecnico">
+                                <p><t t-esc="reparaciones.informe"/></p>
+                            </div>
+                        </div>
+
+                        <!-- ACCESORIOS -->
+                        <div class="section-title">
+                            <i class="fa fa-puzzle-piece"/>
+                            ACCESORIOS
+                        </div>
+                        <div class="info-card">
+                            <table class="info-table">
+                                <tr>
+                                    <th><i class="fa fa-archive"/>Caseteras</th>
+                                    <td><t t-esc="reparaciones.tray_id"/></td>
+                                    <th><i class="fa fa-scanner"/>ADF simple</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('adf_simple_id', 'NA')"/></td>
+                                    <th><i class="fa fa-scanner"/>ADF dual scan</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('adf_dual_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th><i class="fa fa-inbox"/>Finalizador interno</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('finalizador_interno_id', 'NA')"/></td>
+                                    <th><i class="fa fa-inbox"/>Finalizador externo</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('finalizador_externo_id', 'NA')"/></td>
+                                    <th><i class="fa fa-cube"/>Mueble</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('mueble_id', 'NA')"/></td>
+                                </tr>
+                                
+                                <tr>
+                                    <th><i class="fa fa-box"/>LCT</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('lct_id', 'NA')"/></td>
+                                    <th><i class="fa fa-wifi"/>Wi-Fi</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('wi_fi_id', 'NA')"/></td>
+                                    <th><i class="fa fa-plug"/>Cable de poder</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('cable_poder_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th><i class="fa fa-tablet"/>Panel normal</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_normal_id', 'NA')"/></td>
+                                    <th><i class="fa fa-tablet"/>Panel smart</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_smart_id', 'NA')"/></td>
+                                    <th><i class="fa fa-inbox"/>Bandeja OT</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('ot_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th><i class="fa fa-hdd"/>Disco duro</th>
+                                    <td colspan="5"><t t-esc="selection_labels.get(reparaciones.id, {}).get('hdd_id', 'NA')"/></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- CHECK LIST -->
+                        <div class="section-title">
+                            <i class="fa fa-tasks"/>
+                            CHECK LIST
+                        </div>
+                        <div class="info-card">
+                            <!-- Funciones Básicas -->
+                            <table class="info-table">
+                                <thead>
+                                    <tr>
+                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
+                                            <i class="fa fa-cogs"/> FUNCIONES BÁSICAS
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tr>
+                                    <th><i class="fa fa-copy"/>Copia</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('copia_id', 'NA')"/></td>
+                                    <th><i class="fa fa-print"/>Impresión</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('impresion_id', 'NA')"/></td>
+                                    <th><i class="fa fa-usb"/>Impresión USB</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('impresion_usb_id', 'NA')"/></td>
+                                </tr>
+                                
+                                <!-- Funciones de Escaneo -->
+                                <thead>
+                                    <tr>
+                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
+                                            <i class="fa fa-scanner"/> FUNCIONES DE ESCANEO
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tr>
+                                    <th><i class="fa fa-network-wired"/>Scaner SMB</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('scaner_smb_id', 'NA')"/></td>
+                                    <th><i class="fa fa-usb"/>Scaner USB</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('scaner_usb_id', 'NA')"/></td>
+                                    <th><i class="fa fa-server"/>Scaner FTP</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('scaner_ftp_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th><i class="fa fa-envelope"/>Scaner Mail</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('scaner_mail_id', 'NA')"/></td>
+                                    <th><i class="fa fa-random"/>Bypass</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('bypass_id', 'NA')"/></td>
+                                    <th><i class="fa fa-layer-group"/>Tray 1</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tray1_id', 'NA')"/></td>
+                                </tr>
+
+                                <!-- Bandejas -->
+                                <tr>
+                                    <th><i class="fa fa-layer-group"/>Tray 2</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tray2_id', 'NA')"/></td>
+                                    <th><i class="fa fa-layer-group"/>Tray 3</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tray3_id', 'NA')"/></td>
+                                    <th><i class="fa fa-layer-group"/>Tray 4</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tray4_id', 'NA')"/></td>
+                                </tr>
+
+                                <!-- Componentes -->
+                                <thead>
+                                    <tr>
+                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
+                                            <i class="fa fa-cog"/> COMPONENTES
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tr>
+                                    <th><i class="fa fa-scanner"/>ADF</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('adf_id', 'NA')"/></td>
+                                    <th><i class="fa fa-sort"/>Finalizador</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('finalizador_id', 'NA')"/></td>
+                                    <th><i class="fa fa-trash"/>Tacho residual</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tacho_id', 'NA')"/></td>
+                                </tr>
+
+                                <!-- Consumibles y Partes -->
+                                <thead>
+                                    <tr>
+                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
+                                            <i class="fa fa-print"/> CONSUMIBLES Y PARTES
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tr>
+                                    <th><i class="fa fa-circle"/>Faja fusora</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('fusora_id', 'NA')"/></td>
+                                    <th><i class="fa fa-circle"/>Rodillo de presión</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('rodillo_id', 'NA')"/></td>
+                                    <th><i class="fa fa-circle"/>Rodillo de calor</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('calor_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th><i class="fa fa-retweet"/>Faja de transferencia</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('transfer_id', 'NA')"/></td>
+                                    <th><i class="fa fa-eye"/>Óptico</th>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('optico_id', 'NA')"/></td>
+                                    <th><i class="fa fa-tint"/>Unidad Imagen black</th>
+                                    <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('black_id', 'NA')"/></td>
+                                </tr>
+
+                                <!-- Unidades de Imagen Color -->
+                                <tr>
+                                    <th><i class="fa fa-tint"/>Unidad Imagen magenta</th>
+                                    <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('magenta_id', 'NA')"/></td>
+                                    <th><i class="fa fa-tint"/>Unidad Imagen cyan</th>
+                                    <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('cyan_id', 'NA')"/></td>
+                                    <th><i class="fa fa-tint"/>Unidad Imagen yellow</th>
+                                    <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('yellow_id', 'NA')"/></td>
+                                </tr>
+
+                                <!-- Developers -->
+                                <tr>
+                                    <th><i class="fa fa-flask"/>Developer black</th>
+                                    <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerk_id', 'NA')"/></td>
+                                    <th><i class="fa fa-flask"/>Developer magenta</th>
+                                    <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerm_id', 'NA')"/></td>
+                                    <th><i class="fa fa-flask"/>Developer cyan</th>
+                                    <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerc_id', 'NA')"/></td>
+                                </tr>
+
+                                <!-- Toners -->
+                                <tr>
+                                    <th><i class="fa fa-flask"/>Developer yellow</th>
+                                    <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developery_id', 'NA')"/></td>
+                                    <th><i class="fa fa-tint"/>Toner black</th>
+                                    <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_black_id', 'NA')"/></td>
+                                    <th><i class="fa fa-tint"/>Toner magenta</th>
+                                    <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_magenta_id', 'NA')"/></td>
+                                </tr>
+                                <tr>
+                                    <th><i class="fa fa-tint"/>Toner cyan</th>
+                                    <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_cyan_id', 'NA')"/></td>
+                                    <th><i class="fa fa-tint"/>Toner yellow</th>
+                                    <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_yellow_id', 'NA')"/></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Firmas -->
+                        <div class="row mt-5">
+                            <div class="col-6">
+                                <div style="border-top: 2px solid #2c3e50; padding-top: 15px; text-align: center;">
+                                    <i class="fa fa-user-tie fa-2x mb-2" style="color: #2c3e50;"/><br/>
+                                    Firma del Técnico
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div style="border-top: 2px solid #2c3e50; padding-top: 15px; text-align: center;">
+                                    <i class="fa fa-user fa-2x mb-2" style="color: #2c3e50;"/><br/>
+                                    Firma del Cliente
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

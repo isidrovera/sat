@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <template id="customer_records_page" name="Lista de maquinas">
+        <t t-call="website.layout">
+            <div class="container">
+                <h2><t t-esc="cliente"/></h2>
+
+                <!-- Campo de búsqueda -->
+                <div class="form-group mb-3">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Buscar por modelo, serie o área" onkeyup="filterTable()"/>
+                </div>
+
+                <!-- Tabla visible en pantallas medianas o más grandes -->
+                <div class="table-responsive d-none d-md-block">
+                    <table class="table table-striped" id="recordsTable">
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th>Serie</th>
+                                <th>Área</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="registros" t-as="registro">
+                                <tr>
+                                    <td><t t-esc="registro.name.name"/></td>
+                                    <td><t t-esc="registro.serie"/></td>
+                                    <td><t t-esc="registro.ubicacion_instalacion"/></td>
+                                    <td>
+                                        <a t-att-href="'/ticket/reportar_incidencia?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-primary">
+                                            <i class="fa fa-exclamation-circle"></i> Reportar Incidencia
+                                        </a>
+                                        <a t-att-href="'/toner/solicitar_toner?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-secondary">
+                                            <i class="fa fa-print"></i> Solicitar Tóner
+                                        </a>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Vista tipo Kanban para pantallas pequeñas -->
+                <div class="kanban-view d-block d-md-none"> 
+                    <t t-foreach="registros" t-as="registro">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title"><strong>Modelo:</strong> <t t-esc="registro.name.name"/></h5>
+                                <p class="card-text">
+                                    <strong>Serie:</strong> <t t-esc="registro.serie"/><br/>
+                                    <strong>Área:</strong> <t t-esc="registro.ubicacion_instalacion"/>
+                                </p>
+                                <div class="btn-group d-flex" role="group">
+                                    <a t-att-href="'/ticket/reportar_incidencia?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-primary w-100">
+                                        <i class="fa fa-exclamation-circle"></i> Reportar
+                                    </a>
+                                    <a t-att-href="'/toner/solicitar_toner?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-secondary w-100">
+                                        <i class="fa fa-print"></i> Tóner
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+
+            <!-- Importar el archivo JS -->
+            <script type="text/javascript" src="/sat/static/src/js/searchFilter.js"></script>
+
+        </t>
+    </template>
+</odoo>

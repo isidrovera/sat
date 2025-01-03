@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="Alquiler_form_view" model="ir.ui.view">
+            <field name="name">Alquiler.form</field>
+            <field name="model">alquiler</field>
+            <field name="arch" type="xml">
+                <form>
+                    <header>
+                        <button string="Alquilar" name="action_alquilar" type="object" class="btn btn-primary" invisible="estado_alquiler_id == 'alquilada'"/>
+                        <button string="Stock" name="action_stock" type="object" class="btn btn-primary" invisible="estado_alquiler_id == 'stock'"/>
+                        <button string="Lista" name="action_lista" type="object" icon="fa-check" class="btn btn-success" invisible="estado_alquiler_id == 'lista'" groups="base.group_system"/>
+                        <button string="Para venta" name="action_venta" type="object" icon="fa-cart-plus" class="btn btn-info" invisible="estado_alquiler_id == 'para_venta'" groups="base.group_system"/>
+                        <button string="Problemas" name="action_problemas" type="object" icon="fa-exclamation-triangle" class="btn btn-warning" invisible="estado_alquiler_id == 'con_problemas'" groups="base.group_system"/>
+                        <button string="Externo" name="action_externo" type="object" icon="fa-user" class="oe_highlight" invisible="estado_alquiler_id == 'externo'"/>
+                        <button string="Vender" name="action_vendida" type="object" class="btn btn-info" invisible="estado_alquiler_id == 'vendida'"/>
+                        <button string="Partes" name="action_partes" type="object" icon="fa-exclamation-triangle" class="btn btn-danger" invisible="estado_alquiler_id == 'partes'" groups="base.group_system"/>
+                        <button string="Crear Pedido" name="create_sale_order" type="object" icon="fa-cart-plus" class="btn btn-success"/>
+                        <button string="Crear Ticket" name="create_ticket" type="object" icon="fa-wrench" class="btn btn-primary"/>
+                        
+                        <button string="Enviar Recordatorio" type="object" class="oe_highlight" name="button_send_test_mail"/>
+                        <field name="estado_alquiler_id" widget="statusbar" readonly="1" statusbar_visible="true"/>
+
+                    </header>
+                    <sheet>
+                        <div name="button_box">
+                            <button class="oe_stat_button" type="object" name="get_ticket" icon="fa-wrench">
+                                <field string="Tickets" name="ticket_count" widget="statinfo"/>
+                            </button>
+                            <button class="oe_stat_button" type="object" name="get_pedidos" icon="fa-shopping-cart">
+                                <field string="Pedidos" name="pedidos_count" widget="statinfo"/>
+                            </button>
+                            <button class="oe_stat_button" type="object" name="get_repuestos" icon="fa-cogs">
+                                <field string="Repuestos" name="repuestos_count" widget="statinfo"/>
+                            </button>
+                        </div>
+
+                        <!--<div name="button_box">
+                            <button class="oe_stat_button" type="object" name="get_pedidos" icon="fa-shopping-cart">
+                                <field string="Pedidos" name="pedidos_count" widget="statinfo"/>
+                            </button>
+                        </div> -->
+                        <separator/>
+                        <separator/>
+                        <separator/>
+                        <div class="oe_title">
+                            <label for="cliente_id"/>
+                            <h1>
+                                <field name="cliente_id" placeholder="Datos del Cliente" widget="many2one_avatar" options="{'no_create': True}"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="direccion" required="estado_alquiler_id == 'lista'"/>
+                                <field name="contacto_id" required="estado_alquiler_id == 'lista'"/>
+                                <field name="celular" widget="phone" required="estado_alquiler_id == 'lista'"/>
+                                <field name="correo_" widget="email" required="estado_alquiler_id == 'lista'"/>
+                                
+                                <!--<field name="image_qr" widget="image" options="{'size': [128, 128]}"/>-->
+
+                            </group>
+                            <group>
+                                <field name="tipo_maquina_id" invisible="1" />
+                                <field name="tipo_maquina" invisible="1" />
+                                <field name="marca"/>
+                                <field name="name" options="{'no_create': True}"/>
+                                <field name="serie"/>
+                                <field name="ubicacion_id" invisible="estado_alquiler_id == 'alquilada'"/>
+                                <field name="observaciones"/>
+                                <field name="ubicacion_instalacion"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Datos de compra">
+                                <group>
+                                    <field name="factura_compra"/>
+                                    <field name="fecha_compra"/>
+                                    <field name="currency_id" string="Tipo de moneda"/>
+                                    <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                </group>
+                            </page>
+                            <page string="Datos para mantenimiento">
+                                <group >
+                                    <field name="control_mantenimiento"  widget="boolean_button"/>
+                                    <field name="fecha_inicio" required="control_mantenimiento == True and estado_alquiler_id == 'lista'"/>
+                                    <field name="fecha_recurrente"/>
+                                </group>
+                            </page>
+                            <page string="Datos de cliente externo">
+                                <group >
+                                    <group>
+                                        <field name="factura_venta"/>
+                                        <field name="fecha_venta"/>
+                                        <field name="currency_id" string="Tipo de moneda"/>
+                                        <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                    </group>
+                                    <group>
+                                        <field name="garantia"/>
+                                        <field name="contometro_venta"/>
+                                    </group>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="Alquiler_tree_view" model="ir.ui.view">
+            <field name="name">Alquiler.tree</field>
+            <field name="model">alquiler</field>
+            <field name="arch" type="xml">
+                <list string="ModelTitle">
+                    <field name="cliente_id" class="oe_avatar"/>
+                    <field name="tipo_maquina_id" optional="hide"/>
+                    <field name="tipo_maquina" optional="hide"/>
+                    <field name="marca" optional="hide"/>
+                    <field name="name" string="Modelo"/>
+                    <field name="serie"/>
+                    <field name="direccion" optional="hide"/>
+                    <field name="contacto_id" optional="hide"/>
+                    <field name="celular" widget="phone" optional="hide"/>
+                    <field name="fecha_recurrente" string="Mantenimiento" widget="remaining_days"/>
+                    <field name="estado_alquiler_id" string="Estado" widget="badge" decoration-muted="estado_alquiler_id == 'stock'" decoration-info="estado_alquiler_id == 'alquilada'" decoration-success="estado_alquiler_id == 'lista' " decoration-danger="estado_alquiler_id not in ('stock','alquilada','lista','vendida')" decoration-warning="estado_alquiler_id == 'vendida' "/>
+                    <field name="qr_image" widget="binary"/>
+                    <button string=" " type="object" name="generate_qr_code" icon="fa-qrcode"/>
+                    <button class="oe_stat_button" type="object" name="get_ticket" icon="fa-wrench">
+                    </button>
+                    <button class="oe_stat_button" type="object" name="get_pedidos" icon="fa-shopping-cart">
+                    </button>
+                    <button class="oe_stat_button" type="object" name="get_repuestos" icon="fa-cogs">
+                    </button>
+                </list>
+            </field>
+        </record>
+        <record id="alquiler_andes_search_view" model="ir.ui.view">
+            <field name="name">alquiler_andes.search</field>
+            <field name="model">alquiler</field>
+            <field name="arch" type="xml">
+                <search string="alquiler" position="inside">
+                    <group>
+                        <!--Este son filtros rapidos-->
+                        <separator/>
+                        <filter name="estado_alquiler_id" string="Stock" domain="[('estado_alquiler_id', '=', 'stock')]" />
+                        <separator/>
+                        <filter name="estado_alquiler_id" string="Lista" domain="[('estado_alquiler_id', '=', 'lista')]" />
+                        <separator/>
+                        <filter name="estado_alquiler_id" string="Para venta" domain="[('estado_alquiler_id', '=', 'para_venta')]" />
+                        <separator/>
+                        <filter name="estado_alquiler_id" string="Alquilada" domain="[('estado_alquiler_id', '=', 'alquilada')]" />
+                        <separator/>
+                        <filter name="estado_alquiler_id" string="Con problemas" domain="[('estado_alquiler_id', '=', 'con_problemas')]" />
+                        <separator/>
+                        <filter name="estado_alquiler_id" string="De partes" domain="[('estado_alquiler_id', '=', 'partes')]" />
+                        <separator/>
+                        <filter name="estado_alquiler_id" string="Externo" domain="[('estado_alquiler_id', '=', 'externo')]" />
+                        <separator/>
+                        <filter name="estado_alquiler_id" string="Vendida" domain="[('estado_alquiler_id', '=', 'vendida')]" />
+                        <separator/>
+
+
+                        <!--Este es agrupar rapido-->
+                        <filter name="estado_alquiler_id" string="Estado" context="{'group_by': 'estado_alquiler_id'}" />
+                    </group>
+                    <field name="serie"/>
+                    <field name="cliente_id"/>
+                    <field name="marca"/>
+                    <field name="name"/>
+                    <searchpanel >
+                        <field name="estado_alquiler_id" string="Estado" icon="fa-spinner" enable_counters="1"/>
+                        <field name="cliente_id" string="Cliente" icon="fa-users" enable_counters="1"/>
+                    </searchpanel>
+                </search>
+
+
+            </field>
+        </record>
+        <record id="alquiler_view_calendar" model="ir.ui.view">
+            <field name="name">alquiler.calendar</field>
+            <field name="model">alquiler</field>
+            <field name="arch" type="xml">
+                <calendar date_start="fecha_recurrente" color="cliente_id" event_limit="5">
+                    <field name="cliente_id"/>                    
+                    <field name="direccion"/>
+                </calendar>
+            </field>
+        </record>       
+        <record id="alquiler_view_graph" model="ir.ui.view">
+            <field name="name">alquiler.graph</field>
+            <field name="model">alquiler</field>
+            <field name="arch" type="xml">
+                <graph string="Alquiler" sample="1">
+                    <field name="cliente_id"/>
+                    <field name="pedidos_count"/>
+                </graph>
+            </field>
+        </record>
+
+    </data>
+</odoo>

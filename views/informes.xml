@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="informes_form_view" model="ir.ui.view">
+            <field name="name">Infomes.form</field>
+            <field name="model">informes</field>
+            <field name="arch" type="xml">
+                <form string="ModelTitle">
+                    <button name="send_email" string="Send Email" type="object" class="oe_highlight"/>
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" placeholder="Informe N°"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <field name="importacion" />
+                            <field name="invoice" />
+                            <field name="proveedor_id" />
+                            <field name="informe" />                            
+                            <field name="detalle_ids" >
+                                <list string="Your Field Name">
+                                    <field name="name"/>
+                                    <field name="importacion"/>
+                                    <field name="proveedor_short"/>
+                                    <field name="modelo_id"/>
+                                    <field name="serie"/>
+                                    <field name="descripcion_procesada"/>
+                                    <field name="foto" 
+                                    widget="image"
+                                    />
+                                </list>
+                            </field>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="informes_tree_view" model="ir.ui.view">
+            <field name="name">Informes.tree</field>
+            <field name="model">informes</field>
+            <field name="arch" type="xml">
+                <list string="ModelTitle">
+                    <field name="name"/>
+                    <field name="importacion" />
+                    <field name="invoice" />
+                    <field name="proveedor_id" />
+                </list>
+            </field>
+        </record>
+
+        <record id="informes_search_view" model="ir.ui.view">
+            <field name="name">Informe.search</field>
+            <field name="model">informes</field>
+            <field name="arch" type="xml">
+                <search string="ModelTitle">
+                    <group expand="1" string="Group By">
+                        <field name="name"/>
+                        <field name="importacion" />
+                        <field name="invoice" />
+                        <field name="proveedor_id" />
+                    </group>
+                </search>
+            </field>
+        </record>
+    </data>
+</odoo>

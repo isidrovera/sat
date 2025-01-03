@@ -1,0 +1,395 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+  <data>
+    <record id="email_template_ticket_cliente" model="mail.template">
+      <field name="name">Envio de Ticket al Cliente</field>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">{{object.product_alquiler.correo_}}</field>
+      <field name="email_cc">jamilet.roggero@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+      <field name="subject">Nuevo Ticket # {{object.name}} </field>
+      <field name="body_html">
+        <![CDATA[
+          <p>Estimado/a <b><t t-out="object.partner_id.name"></b></p>
+          <p>Reciba un cordial saludo. Le informamos que hemos programado una visita técnica para atender su requerimiento. A continuación, le detallamos la información correspondiente:</p>
+          <ul>
+            <li>Ticket #: <b><t t-out="object.name"></b></li>
+            <li>Fecha de Visita: <t t-out="object.agenda_local"></li>
+            <li>Prioridad: </li>
+            <li>Tipo de servicio: <t t-out="object.tipo_servicio_id"></li>
+            <li>Dirección: <t t-out="object.direccion_id_r"></li>
+            <li>Técnico Asignado: <t t-out="object.responsable.name"></li>
+            <li>DNI: <t t-out="object.responsable.vat"></li>          
+            <body>
+              <h1>ESPECIFICACIONES DEL EQUIPO</h1>
+              <p>Marca: <t t-out="object.marca_id_r"></p>
+              <p>Modelo: <t t-out="object.product_alquiler.name.name"></p>
+              <p>Serie: <t t-out="object.serie_id_r"></p>
+              <h2>PROBLEMA REPORTADO</h2>
+              <p><t t-out="object.description"></p>
+              
+            </body>            
+          </ul>
+          <p>Por favor, notifíquenos sobre su stock de toner para garantizarles el total abastecimiento. Además, le solicitamos reportar cualquier inconveniente adicional que presente al técnico en su visita para solventar la totalidad de sus dudas.</p>
+          <p>Para finalizar, solicitamos su apoyo en:</p>
+          <ol>
+            <li>Dar autorización para el ingreso de nuestro personal a sus oficinas o el espacio donde se encuentre nuestro equipo.</li>
+            <li>Disponibilidad de espacio y tiempo para que nuestro personal pueda desarrollar su labor.</li>
+          </ol>
+          <p>Por favor, haga clic en el siguiente enlace para acceder al Ticket:</p>                 
+          <p>Gracias por su atención.</p>         
+
+        ]]>
+      </field>
+      
+      <field name="model_id" ref="model_ticket_alquiler"/>
+      <field name="auto_delete" eval="True"/>
+    </record>
+    <record id="email_template_ticket_cliente_finalizacion" model="mail.template">
+      <field name="name">Finalización de Ticket al Cliente</field>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">{{object.product_alquiler.correo_}}</field>
+      <field name="email_cc">jamilet.roggero@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+      <field name="subject">Finalización de Ticket #{{object.name}}</field>
+      <field name="model_id" ref="model_ticket_alquiler"/>
+      <field name="auto_delete" eval="True"/>
+      <field name="lang"></field>
+      <field name="body_html">
+        <![CDATA[
+            <p>Estimado/a,</p>
+            <p><t t-out="object.partner_id.name"></p>
+            <br/>
+            <p>Reciba un cordial saludo. Queremos informarle que hemos completado satisfactoriamente nuestra visita técnica programada, agradeciendo siempre su disponibilidad de tiempo y espacio para nuestro equipo técnico. A continuación, le detallamos el trabajo realizado durante la visita y le proporcionamos el informe técnico correspondiente. Si tiene alguna duda, consulta o necesita una explicación más detallada, por favor no dude en contactarnos.</p>
+            <br/>
+            <p>Detalles del Ticket:</p>
+            
+            <ul>
+            <li>Ticket #: <b><t t-out="object.name"></b></li>
+            <li>Fecha de Visita: <t t-out="object.agenda_local"></li>
+            <li>Prioridad: </li>
+            <li>Tipo de servicio: <t t-out="object.tipo_servicio_id"></li>
+            <li>Dirección: <t t-out="object.direccion_id_r"></li>
+            <li>Técnico Asignado: <t t-out="object.responsable.name"></li>
+            <li>DNI: <t t-out="object.responsable.vat"></li>          
+            <body>
+              <h1>ESPECIFICACIONES DEL EQUIPO</h1>
+              <p>Marca: <t t-out="object.marca_id_r"></p>
+              <p>Modelo: <t t-out="object.product_alquiler.name.name"></p>
+              <p>Serie: <t t-out="object.serie_id_r"></p>
+              <p>Contómetro K:<t t-out="object.contometrok_id"></p>
+              <p>Contómetro color:<t t-out="object.contometroc_id"></p>
+              <p>Contómetro scanner:<t t-out="object.contometros_id"></p>                            
+            </body>            
+          </ul>
+            
+            
+            
+            <h2>PROBLEMA REPORTADO:</h2>
+            <p><t t-out="object.description"></p>
+            
+            <h2>INFORME TÉCNICO:</h2>
+            <p><t t-out="object.informe_id"></p>           
+            <p>Adjuntamos también el informe técnico en formato PDF.</p>
+            
+            <p>Agradecemos su confianza en nuestros servicios y productos. Si necesita más asistencia o tiene cualquier requerimiento adicional, no dude en comunicarse con nosotros.</p>
+        ]]>
+      </field>
+      
+
+    </record>
+
+    <record id="email_template_ticket_tecnico" model="mail.template">
+      <field name="name">Ticket de Servicio Técnico</field>
+      <field name="subject">Nuevo Ticket/ {{object.name}} </field>      
+      <field name="model_id" ref="model_ticket_alquiler"/>
+      <field name="auto_delete" eval="False"/>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">{{object.responsable.email}}</field>
+      <field name="body_html"><![CDATA[
+                <p>Estimado(a) <span style="color: #1E90FF;"><t t-out="object.responsable.name"></span>,</p>
+                <p>Se le ha asignado un Ticket de Servicio con la siguiente información:</p>
+                <ul>
+                    <li><strong>Ticket #:</strong><b> <t t-out="object.name"></b></li>
+                    <li><strong>Fecha de Visita:</strong> <t t-out="object.agenda_local"></li>                    
+                    <li><strong>Tipo de Servicio:</strong> <t t-out="object.tipo_servicio_id"></li>
+                    <li><strong>Asistencia Directa:</strong> <t t-out="object.asistencia_id"></li>
+                    <li><strong>Cliente:</strong> <t t-out="object.partner_id.name"></li>
+                    <li><strong>Dirección:</strong> <t t-out="object.direccion_id_r"></li>
+                    <li><strong>Contacto:</strong> <t t-out="object.contacto_id_r"></li>
+                    <li><strong>Celular:</strong> <t t-out="object.product_alquiler.celular"></li>
+                </ul>
+                <p><strong>Especificaciones del Equipo</strong></p>
+                <ul>
+                    <li><strong>Marca:</strong> <t t-out="object.marca_id_r"></li>
+                    <li><strong>Modelo:</strong> <t t-out="object.product_alquiler.name.name"></li>
+                    <li><strong>Serie:</strong> <t t-out="object.serie_id_r"></li>
+                </ul>
+                <p><strong>Problema Reportado</strong></p>
+                <p><font color="red"><t t-out="object.description"></font></p>
+                <p>Saludos cordiales,</p>
+                <p>El equipo de Soporte Técnico</p>
+            ]]>
+      </field>
+    </record>
+
+
+    <record id="mail_template_asistencia_directa" model="mail.template">
+      <field name="name">Asistencia Directa</field>
+      <field name="subject">Asistencia Directa</field>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">t.escalante@corapsac.com.pe</field>
+      <field name="email_cc">jamilet.roggero@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+      <field name="body_html"><![CDATA[
+            <p>Estimada Señora Teresa,</p>
+            <p>Le escribo para informarle que el trabajador designado acudió directamente al cliente sin ninguna tardanza o necesidad de aplicar descuentos. Adjunto encontrará el ticket correspondiente a la visita:</p>
+            <ul>
+              <li><strong>Ticket:</strong><t t-out="object.name"></li>
+              <li><strong>Fecha:</strong><t t-out="object.agenda_local"></li>
+              <li><strong>Cliente:</strong><t t-out="object.partner_id.name"></li>
+              <li><strong>Trabajador:</strong><t t-out="object.responsable.name"></li>
+            </ul>
+            <p>Si necesita cualquier otra información o tiene alguna pregunta adicional, no dude en hacerme saber. Estoy a su disposición para ayudarle.</p>
+            <p></p>
+            <p></p>
+            <p></p>
+            <p></p>
+            <p>Cordialmente,</p>
+            
+            ]]>      </field>
+      
+      <field name="model_id" ref="model_ticket_alquiler"/>
+      <field name="auto_delete" eval="True"/>
+    </record>
+
+
+    <record id="mail_template_retorno" model="mail.template">
+      <field name="name">Marcación salida</field>
+      <field name="subject">Marcacion salida</field>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">t.escalante@corapsac.com.pe</field>
+      <field name="email_cc">jamilet.roggero@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+      <field name="body_html"><![CDATA[
+            <p>Estimada Señora Teresa,</p>
+            <p>Le escribo para informarle que el trabajador designado no pudo regresar a marcar su salida,no aplicar descuentos. Adjunto encontrará el ticket correspondiente a la visita:</p>
+            <ul>
+              <li><strong>Ticket:</strong><t t-out="object.name"></li>
+              <li><strong>Fecha:</strong><t t-out="object.agenda_local"></li>
+              <li><strong>Cliente:</strong><t t-out="object.partner_id.name"></li>
+              <li><strong>Trabajador:</strong><t t-out="object.responsable.name"></li>
+            </ul>
+            <p>Si necesita cualquier otra información o tiene alguna pregunta adicional, no dude en hacerme saber. Estoy a su disposición para ayudarle.</p>
+            <p></p>
+            <p></p>
+            <p></p>
+            <p></p>
+            <p>Cordialmente,</p>
+            
+            ]]>      </field>
+      
+      <field name="model_id" ref="model_ticket_alquiler"/>
+      <field name="auto_delete" eval="True"/>
+    </record>
+
+
+
+    <!--Aqui empiezan las plantillas de correo electroni area de reparaciones-->
+
+
+    <record id="email_template_reparaciones" model="mail.template">
+      <field name="name">Correo de asignación de orden de reparación</field>
+      <field name="subject">Asignación de orden de reparación</field>
+      <field name="model_id" ref="model_reparaciones_reparaciones"/>      
+      <field name="auto_delete" eval="True"/>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">{{object.responsable_id.email}}</field>
+      <field name="body_html">
+        <![CDATA[
+                    Estimado/a <strong><t t-out="object.name">,</strong><br/>
+
+
+                    Es un placer informarte que te ha sido asignada una orden de reparación con los siguientes detalles:<br/><br/>
+
+                  <ul>
+                      <li>Reparación #: <strong><t t-out="object.name"></strong><br/></li>
+                      <li>Cliente: <strong><t t-out="object.cliente_id.name"></strong><br/></li>
+                      <li>Tipo de equipo: <strong><t t-out="object.tipo_machine"></strong><br/></li>
+                      <li>Marca: <strong><t t-out="object.marca"></strong><br/></li>
+                      <li>Modelo: <strong><t t-out="object.maquina_id.name.name"></strong><br/></li>
+                      <li>Serie: <strong><t t-out="object.serie_id"></strong><br/></li>
+                      <li>Estado: <strong><t t-out="object.obtener_estado_legible()"></strong><br/></li>
+                      <li>Tipo de revisión: <strong><t t-out="object.obtener_tipo_revision_legible()"></strong><br/></li>
+                      <li>Prioridad: <strong><t t-out="object.obtener_prioridad_legible()"></strong><br/></li>
+                      <li>Ubicación: <strong><t t-out="object.obtener_ubicacion_legible()"></strong><br/></li>
+                      <li>Asesora de ventas: <strong><t t-out="object.maquina_id.asesora_id"></strong><br/><br/></li>
+                  </ul>
+
+                    Confiamos en tu experiencia y habilidades técnicas para llevar a cabo esta reparación de manera eficiente y profesional. Te solicitamos que revises detenidamente la información proporcionada y tomes todas las medidas necesarias para realizar la reparación de manera satisfactoria.<br/><br/>
+                    Recuerda que la calidad del servicio que brindas es fundamental para mantener la satisfacción de nuestros clientes. Si tienes alguna pregunta o necesitas más detalles, no dudes en contactarme o comunicarte con el departamento de soporte técnico.<br/><br/>
+                    Agradecemos tu dedicación y compromiso en el cumplimiento de tus responsabilidades. Estamos seguros de que llevarás a cabo esta orden de reparación con el más alto nivel de profesionalismo.<br/><br/>
+                    Quedo a tu disposición para cualquier consulta o requerimiento adicional.
+
+                    Saludos cordiales,<br/><br/>
+
+                    
+                ]]>
+      </field>
+    </record>
+
+    <record id="email_template_finalizacion_reparacion" model="mail.template">
+      <field name="name">Correo de finalización de reparación</field>
+      <field name="subject">Finalización de reparación</field>
+      <field name="model_id" ref="model_reparaciones_reparaciones"/>      
+      <field name="auto_delete" eval="True"/>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">{{object.cliente_id.asesora_id.email}}</field>
+      <field name="body_html">
+        <![CDATA[
+                    Estimada <strong><t t-out="object.maquina_id.asesora_id"></strong>,<br/>
+
+                    Nos complace informarte que la máquina asignada para revisión ha sido finalizada. Puedes revisar los detalles en el archivo adjunto.
+
+                    Detalles de la reparación:<br/>
+                    <ul>                      
+                      <li>Reparación: <strong><t t-out="object.name"></strong>
+                      <br/></li>
+                      <li>Cliente: <strong><t t-out="object.cliente_id.name"></strong>
+                      <br/></li>
+                      <li>Modelo: <strong><t t-out="object.maquina_id.name.name"></strong>
+                      <br/></li>
+                      <li>Serie: <strong><t t-out="object.serie_id"></strong>
+                      <br/></li>
+                      <li>Técnico responsable: <strong><t t-out="object.responsable_id.name"></strong>
+                      <br/><br/></li>
+                    </ul>
+
+                    Agradecemos tu paciencia durante el proceso de reparación y confiamos en que el trabajo realizado cumplirá con tus expectativas. Si tienes alguna pregunta o necesitas más información, no dudes en comunicarte con nosotros.
+
+                    Esperamos que la máquina funcione correctamente y esté lista para ser entregada al cliente. Si necesitas asistencia adicional, estamos aquí para brindarte el apoyo necesario.
+
+                    Apreciamos tu colaboración y confianza en nuestros servicios. Esperamos seguir brindándote el mejor soporte en el futuro.<br/>
+
+                    Atentamente,                    
+                ]]>
+      </field>
+    </record>
+
+    <record id="email_template_reparacion_creada" model="mail.template">
+      <field name="name">Notificación de Máquina Asignada para Revisión</field>
+      <field name="model_id" ref="model_reparaciones_reparaciones"/>
+      <field name="subject">Su máquina ha sido asignada para revisión</field>
+      <field name="email_to">{{object.cliente_id.asesora_id.email}}</field>
+      <field name="body_html"><![CDATA[
+                <p>Estimada, <t t-out="object.maquina_id.asesora_id">,</p>
+                <p>Nos complace informarle que la máquina asignada ha sido registrada para revisión en nuestro sistema.</p>
+                <p>Una vez finalizada la revisión, se le enviará un detalle completo de los resultados.</p>
+                <ul>
+                  <li>Reparación #: <strong><t t-out="object.name"></strong><br/></li>
+                  <li>Cliente: <strong><t t-out="object.cliente_id.name"></strong><br/></li>
+                  <li>Tipo de equipo: <strong><t t-out="object.tipo_machine"></strong><br/></li>
+                  <li>Marca: <strong><t t-out="object.marca"></strong><br/></li>
+                  <li>Modelo: <strong><t t-out="object.maquina_id.name.name"></strong><br/></li>
+                  <li>Serie: <strong><t t-out="object.serie_id"></strong><br/></li>
+                  <li>Estado: <strong><t t-out="object.obtener_estado_legible()"></strong><br/></li>
+                  <li>Tipo de revisión: <strong><t t-out="object.obtener_tipo_revision_legible()"></strong><br/></li>
+                  <li>Prioridad: <strong><t t-out="object.obtener_prioridad_legible()"></strong><br/></li>
+                  <li>Ubicación: <strong><t t-out="object.obtener_ubicacion_legible()"></strong><br/></li>
+                </ul>
+                <p>Gracias por su paciencia y comprensión.</p>
+                <p>Saludos cordiales,</p>
+                <p>Isidro vera polo</p>
+            ]]>
+      </field>
+    </record>
+
+
+
+    <record id="email_template_informes" model="mail.template">
+      <field name="name">Enviar informe al proveedor</field>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">lincoln@corapsac.com</field>
+      <field name="email_cc">campuero@corapsac.com.pe</field>
+      <field name="subject">Informe de la importación: {{object.importacion}}</field>
+      <field name="model_id" ref="model_informes"/>
+
+      <field name="auto_delete" eval="True"/>
+      <field name="body_html"><![CDATA[
+                <p>Hola,</p>
+                <p>Adjunto encontrarás el informe de la importación <strong><t t-out="object.importacion"></strong>.</p>
+                <p>Para cualquier información adicional, no dudes en contactarnos.</p>
+                <p>Saludos,</p>
+                <p>Isidro vera polo</p>
+            ]]>      </field>
+
+
+    </record>
+    <record id="mail_template_maintenance_notification" model="mail.template">
+      <field name="name">Notificación de Mantenimiento Preventivo</field>
+      <field name="model_id" ref="model_alquiler"/>
+      <field name="subject">Mantenimiento Preventivo Programado para su Fotocopiadora</field>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">{{object.correo_}}</field>
+      <field name="email_cc">{{object.correo_1}}, {{object.correo_2}}</field>
+      <field name="body_html">
+        <![CDATA[
+                <p>Estimado(a) ${object.partner_id.name},</p>
+                <p>Le informamos que tiene programado un mantenimiento preventivo para su fotocopiadora el día <strong>${object.fecha_recurrente}</strong>.</p>
+                <p>Detalles de la fotocopiadora:</p>
+                <p><strong>Modelo:</strong> ${object.fotocopiadora_modelo}<br/>
+                   <strong>Número de Serie:</strong> ${object.fotocopiadora_serie}</p>
+                <p>Por favor, confirme si la fecha propuesta es adecuada o informe si hay algún problema o cambio que debamos considerar.</p>
+                <p>Quedamos a su disposición para cualquier consulta.</p>
+                <p>Atentamente,</p>
+                <p>${object.company_id.name}</p>
+                ]]>
+      </field>
+    </record>
+
+    <record id="email_maquinas_id" model="mail.template">
+      <field name="name">Plantilla maquinas con problemas</field>
+      <field name="model_id" ref="model_sat_sat"/>
+      <field name="email_from">soporte@andescopiers.com.pe</field>
+      <field name="email_to">lincoln@corapsac.com</field>
+      <field name="email_cc">campuero@corapsac.com.pe, ventas2@corapsac.com.pe, norma@corapsac.com, ventas@corapsac.com</field>
+      <field name="subject">Maquinas con problemas</field>
+      <field name="auto_delete" eval="True"/>
+      <field name="body_html"><![CDATA[
+                
+                <p>Estimado equipo de ventas,</p>
+
+                <p>Les escribo para informarles sobre las máquinas de partes y con problemas actualmente en nuestro inventario.</p>                               
+
+                <p>Por favor, revisen esta información detallada antes de ofrecer o vender cualquier máquina o parte. Es importante tener en cuenta que el estado del inventario puede cambiar y es posible que algunas partes se hayan retirado de las máquinas en el transcurso de los días posteriores a este correo.</p>
+
+                <p>Les instamos a que consulten siempre el informe técnico más actualizado antes de realizar cualquier transacción con los clientes. Esto nos ayudará a brindar un servicio eficiente y evitar posibles inconvenientes.</p>
+                <p>A continuación, se detallan las máquinas con problemas y las partes afectadas:</p> 
+                <p>Adjunto a este correo encontrarán un archivo en formato Excel con los detalles completos de las máquinas y partes afectadas.</p>
+
+                <p>Gracias por su atención y pronta acción.</p>
+                
+            ]]>      </field>
+    </record>
+    <record id="email_template_pedido_toner" model="mail.template">
+      <field name="name">Solicitud de Tóner</field>
+      <field name="model_id" ref="model_sat_sat"/>
+      <field name="email_from">${(user.email or '')|safe}</field>
+      <field name="subject">Solicitud de Tóner - ${object.modelo_maquina}</field>
+      <field name="auto_delete" eval="True"/>
+      <field name="body_html"><![CDATA[
+                <p>Hola,</p>
+                <p>Se ha recibido una nueva solicitud de tóner con los siguientes detalles:</p>
+                <ul>
+                    <li>Nombre del Cliente: ${object.nombre}</li>
+                    <li>Celular: ${object.celular}</li>
+                    <li>Modelo de Máquina: ${object.modelo_maquina}</li>
+                    <li>Serie: ${object.serie}</li>
+                    <li>Tóner Black: ${object.toner_black}</li>
+                    <li>Tóner Cyan: ${object.toner_cyan}</li>
+                    <li>Tóner Yellow: ${object.toner_yellow}</li>
+                    <li>Tóner Magenta: ${object.toner_magenta}</li>
+                    <li>Cantidad: ${object.cantidad}</li>
+                </ul>
+                <p>Por favor, proceda con la preparación y envío del tóner.</p>
+                <p>Gracias,</p>
+            ]]>      </field>
+    </record>
+  </data>
+</odoo>

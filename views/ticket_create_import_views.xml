@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Form View -->
+    <record id="view_universal_excel_import_form" model="ir.ui.view">
+        <field name="name">universal.excel.import.form</field>
+        <field name="model">universal.excel.import</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="create_records" 
+                            string="Importar Registros" 
+                            type="object" 
+                            invisible="state != 'draft'"
+                            class="btn-primary"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Nueva importación..."/></h1>
+                    </div>
+                    <group>
+                        <group string="Configuración de Destino">
+                            <field name="model_id" options="{'no_create': True, 'no_edit': True}"/>
+                            <field name="identifier_field_id" 
+                                   options="{'no_create': True, 'no_edit': True}"
+                                   domain="[('model_id', '=', model_id), ('store', '=', True), ('readonly', '=', False)]"/>
+                        </group>
+                        <group string="Configuración de Relación">
+                            <field name="comparison_model_id" 
+                                   options="{'no_create': True, 'no_edit': True}"/>
+                            <field name="comparison_field_id" 
+                                   options="{'no_create': True, 'no_edit': True}"
+                                   domain="[('model_id', '=', comparison_model_id), ('store', '=', True)]"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Archivo">
+                            <field name="excel_file" widget="binary" filename="file_name"/>
+                            <field name="file_name" invisible="1"/>
+                        </group>
+                        <group string="Estadísticas" invisible="state == 'draft'">
+                            <field name="total_records"/>
+                            <field name="processed_records"/>
+                            <field name="failed_records"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Instrucciones" name="instructions">
+                            <div class="alert alert-info" role="alert">
+                                <div class="text-muted">
+                                    <h3>Instrucciones de Uso:</h3>
+                                    <ol>
+                                        <li><strong>Configuración de Destino:</strong>
+                                            <ul>
+                                                <li>Seleccione el modelo donde se importarán los registros</li>
+                                                <li>Elija el campo en el modelo destino que coincide con su columna Excel</li>
+                                            </ul>
+                                        </li>
+                                        <li><strong>Configuración de Relación (Opcional):</strong>
+                                            <ul>
+                                                <li>Seleccione el modelo con el que desea comparar (ej: alquiler)</li>
+                                                <li>Elija el campo que se usará para la comparación (ej: serie)</li>
+                                            </ul>
+                                        </li>
+                                        <li><strong>Formato del Excel:</strong>
+                                            <ul>
+                                                <li>Los nombres de las columnas deben coincidir con los nombres técnicos de los campos</li>
+                                                <li>Para campos relacionales (many2one), use el nombre o ID del registro</li>
+                                                <li>Para campos de selección, use los valores técnicos o etiquetas exactas</li>
+                                                <li>Fechas en formato YYYY-MM-DD</li>
+                                                <li>Campos booleanos: verdadero/falso, si/no, 1/0, true/false</li>
+                                            </ul>
+                                        </li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </page>
+                        <page string="Log de Importación" name="import_log" invisible="state == 'draft'">
+                            <field name="message_ids"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                
+            </form>
+        </field>
+    </record>
+
+    <!-- List View -->
+    <record id="view_universal_excel_import_list" model="ir.ui.view">
+        <field name="name">universal.excel.import.list</field>
+        <field name="model">universal.excel.import</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="model_id"/>
+                <field name="comparison_model_id"/>
+                <field name="total_records"/>
+                <field name="processed_records"/>
+                <field name="failed_records"/>
+                <field name="create_date"/>
+                <field name="state" 
+                       decoration-info="state == 'draft'"
+                       decoration-success="state == 'done'"
+                       decoration-danger="state == 'error'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_universal_excel_import_search" model="ir.ui.view">
+        <field name="name">universal.excel.import.search</field>
+        <field name="model">universal.excel.import</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="model_id"/>
+                <field name="comparison_model_id"/>
+                <field name="create_date"/>
+                <field name="state"/>
+                <separator/>
+                <filter string="Borradores" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Completados" name="done" domain="[('state', '=', 'done')]"/>
+                <filter string="Con Errores" name="error" domain="[('state', '=', 'error')]"/>
+                <separator/>
+                <filter string="Mis Importaciones" name="my_imports" 
+                        domain="[('create_uid', '=', uid)]"/>
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Modelo Destino" name="group_by_model" 
+                            context="{'group_by': 'model_id'}"/>
+                    <filter string="Modelo Comparación" name="group_by_comparison_model" 
+                            context="{'group_by': 'comparison_model_id'}"/>
+                    <filter string="Estado" name="group_by_state" 
+                            context="{'group_by': 'state'}"/>
+                    <filter string="Fecha de Creación" name="group_by_create_date" 
+                            context="{'group_by': 'create_date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_universal_excel_import" model="ir.actions.act_window">
+        <field name="name">Importador Universal Excel</field>
+        <field name="res_model">universal.excel.import</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_universal_excel_import_search"/>
+        <field name="context">{'search_default_my_imports': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crear nueva importación de registros
+            </p>
+            <p>
+                Importe registros desde Excel para cualquier modelo del sistema.
+                Configure las relaciones entre modelos para mantener la integridad de los datos.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem 
+        id="menu_universal_excel_import"
+        name="Importador Universal"
+        action="action_universal_excel_import"
+        parent="sat.ajustes"
+        sequence="100"/>
+</odoo>

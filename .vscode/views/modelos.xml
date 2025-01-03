@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="modelos_maquina_form_view" model="ir.ui.view">
+            <field name="name">Modelo.modelos_maquina.form</field>
+            <field name="model">modelo.maquina</field>
+            <field name="arch" type="xml">
+                <form string="ModelTitle">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" placeholder="Modelo de maquina"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="tipo_id"/>
+                                <field name="tipo_maquina_id"/>
+                                <field name="marca_id" />
+                            </group>
+                            <group>
+                                <field name="currency_id" string="Tipo de moneda"/>
+                                <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="modelos_maquina_tree_view" model="ir.ui.view">
+            <field name="name">Modelos_maquina.tree</field>
+            <field name="model">modelo.maquina</field>
+            <field name="arch" type="xml">
+                <list string="ModelTitle" 
+                editable="bottom"
+                >
+                    <field name="tipo_id"/>
+                    <field name="tipo_maquina_id"/>
+                    <field name="marca_id"/>
+                    <field name="name"/>
+                    <field name="currency_id" string="Tipo de moneda"/>
+                    <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                </list>
+            </field>
+        </record>
+        <record id="modelos_maquina_search_view" model="ir.ui.view">
+            <field name="name">ProjectName.modelos_maquina.search</field>
+            <field name="model">modelo.maquina</field>
+            <field name="arch" type="xml">
+                <search string="ModelTitle">
+                    <group expand="1" string="Group By">
+                        <field name="name"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+    </data>
+</odoo>

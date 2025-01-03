@@ -1,0 +1,298 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <data>
+        <record id="mail_template_maintenance_notification" model="mail.template">
+            <field name="name">Notificación de Mantenimiento Preventivo</field>
+            <field name="model_id" ref="model_alquiler" />
+            <field name="subject">🔧 Mantenimiento Preventivo Programado</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.correo_}}</field>
+            <field name="email_cc"></field>
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+    <!-- Contenedor Principal -->
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color: #38a169; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🔧 Mantenimiento Preventivo</div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+            <!-- Saludo -->
+            <div style="margin-bottom: 20px;">
+                Estimado(a) <strong><t t-out="object.cliente_id.name"/></strong>,
+            </div>
+            
+            <!-- Mensaje Introductorio -->
+            <div style="margin-bottom: 20px;">
+                Como parte de nuestro compromiso con la calidad de servicio, le informamos que hemos programado el mantenimiento preventivo de sus equipos.
+            </div>
+
+            <!-- Fecha Programada -->
+            <div style="background-color: #f0fff4; padding: 15px; margin: 15px 0; text-align: center; border: 1px solid #c6f6d5;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">📅 Fecha Programada</div>
+                <div style="font-size: 16px;"><strong><t t-out="object.fecha_recurrente"/></strong></div>
+            </div>
+
+            <!-- Equipos Programados -->
+            <div style="margin: 20px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Equipos Programados</div>
+                
+                <!-- Tabla de Equipos -->
+                <table cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #e2e8f0;">
+                    <thead>
+                        <tr>
+                            <th style="background-color: #38a169; color: #ffffff; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #2f855a;">Modelo</th>
+                            <th style="background-color: #38a169; color: #ffffff; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #2f855a;">Número de Serie</th>
+                            <th style="background-color: #38a169; color: #ffffff; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #2f855a;">Ubicación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-set="equipos_cliente" t-value="env['alquiler'].search([('cliente_id', '=', object.cliente_id.id), ('fecha_recurrente', '=', object.fecha_recurrente)])"/>
+                        <t t-foreach="equipos_cliente" t-as="equipo">
+                            <tr style="background-color: #ffffff;">
+                                <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.name.name"/></td>
+                                <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.serie"/></td>
+                                <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.direccion"/></td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Beneficios del Mantenimiento -->
+            <div style="background-color: #f7fafc; padding: 15px; margin: 20px 0; border: 1px solid #e2e8f0;">
+                <div style="font-weight: bold; margin-bottom: 10px;">Beneficios del Mantenimiento Preventivo:</div>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Mayor vida útil de sus equipos</li>
+                    <li>Reducción de costos operativos</li>
+                    <li>Calidad óptima de impresión</li>
+                </ul>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a t-att-href="'/mantenimiento/confirmar/%s' % object.id" 
+                   style="display: inline-block; padding: 12px 25px; background-color: #38a169; color: #ffffff; text-decoration: none; border-radius: 5px; margin: 0 10px; font-weight: bold;">
+                    ✅ Confirmar Fecha
+                </a>
+                <a t-att-href="'/mantenimiento/reprogramar/%s' % object.id"
+                   style="display: inline-block; padding: 12px 25px; background-color: #e53e3e; color: #ffffff; text-decoration: none; border-radius: 5px; margin: 0 10px; font-weight: bold;">
+                    🔄 Solicitar Reprogramación
+                </a>
+            </div>
+
+            <!-- Mensaje Final -->
+            <div style="margin: 20px 0; padding: 15px; background-color: #fff5f7; border: 1px solid #fed7e2;">
+                <strong>Importante:</strong> Por favor confirme si la fecha propuesta es adecuada o informe si requiere algún cambio.
+            </div>
+
+            <!-- Firma -->
+            <div style="margin-top: 30px; text-align: center; padding-top: 20px; border-top: 1px solid #eee;">
+                <div style="margin: 0;">
+                    Atentamente,<br/>
+                    <strong>Isidro Vera Polo</strong><br/>
+                    <span style="color: #4a5568;">Soporte Técnico - Andes Copiers</span>
+                </div>
+            </div>
+
+            <!-- Pie de página -->
+            <div style="margin-top: 20px; text-align: center; font-size: 14px; color: #718096;">
+                <div>📞 (51) 924 894 829 | 📧 soporte@andescopiers.com.pe</div>
+                <div style="margin-top: 5px;">
+                    © 2024 Isidro vera polo. Todos los derechos reservados.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+        <!-- Plantilla de Correo: Confirmación de Mantenimiento -->
+        <record id="mail_template_maintenance_confirmation" model="mail.template">
+            <field name="name">Confirmación de Mantenimiento</field>
+            <field name="model_id" ref="model_alquiler" />
+            <field name="subject">✅ Confirmación de Mantenimiento Preventivo - {{ object.cliente_id.name }}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.correo_}}</field>
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+    <!-- Contenedor Principal -->
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color: #38a169; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">✅ Mantenimiento Confirmado</div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+            <!-- Saludo -->
+            <div style="margin-bottom: 20px;">
+                Estimado(a) <strong><t t-out="object.cliente_id.name"/></strong>,
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                Gracias por confirmar la fecha de mantenimiento preventivo para sus equipos. Le recordamos los detalles de la visita:
+            </div>
+
+            <!-- Fecha Confirmada -->
+            <div style="background-color: #f0fff4; padding: 15px; margin: 15px 0; text-align: center; border: 1px solid #c6f6d5;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">📅 Fecha Confirmada</div>
+                <div style="font-size: 16px;"><strong><t t-out="object.fecha_recurrente"/></strong></div>
+            </div>
+
+            <!-- Equipos Programados -->
+            <div style="margin: 20px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Equipos a Mantener</div>
+                
+                <table cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #e2e8f0;">
+                    <thead>
+                        <tr>
+                            <th style="background-color: #38a169; color: #ffffff; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #2f855a;">Modelo</th>
+                            <th style="background-color: #38a169; color: #ffffff; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #2f855a;">Número de Serie</th>
+                            <th style="background-color: #38a169; color: #ffffff; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #2f855a;">Ubicación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-set="equipos_cliente" t-value="env['alquiler'].search([('cliente_id', '=', object.cliente_id.id), ('fecha_recurrente', '=', object.fecha_recurrente)])"/>
+                        <t t-foreach="equipos_cliente" t-as="equipo">
+                            <tr style="background-color: #ffffff;">
+                                <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.name.name"/></td>
+                                <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.serie"/></td>
+                                <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.direccion"/></td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Recordatorio -->
+            <div style="background-color: #f7fafc; padding: 15px; margin: 20px 0; border: 1px solid #e2e8f0;">
+                <div style="font-weight: bold; margin-bottom: 10px;">Recordatorios Importantes:</div>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Por favor asegure el acceso a los equipos en la fecha programada</li>
+                    <li>Tenga disponible un contacto en sitio para cualquier consulta</li>
+                    <li>El servicio tomará aproximadamente 45-60 minutos por equipo</li>
+                </ul>
+            </div>
+
+            <!-- Firma -->
+            <div style="margin-top: 30px; text-align: center; padding-top: 20px; border-top: 1px solid #eee;">
+                <div style="margin: 0;">
+                    Atentamente,<br/>
+                    <strong>Isidro Vera Polo</strong><br/>
+                    <span style="color: #4a5568;">Soporte Técnico - Andes Copiers</span>
+                </div>
+            </div>
+
+            <!-- Pie de página -->
+            <div style="margin-top: 20px; text-align: center; font-size: 14px; color: #718096;">
+                <div>📞 (51) 924 894 829 | 📧 soporte@andescopiers.com.pe</div>
+                <div style="margin-top: 5px;">
+                    © 2024 Isidro vera polo. Todos los derechos reservados.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+
+        <!-- Plantilla de Correo: Solicitud de Reprogramación -->
+        <record id="mail_template_maintenance_reschedule" model="mail.template">
+            <field name="name">Solicitud de Reprogramación de Mantenimiento</field>
+            <field name="model_id" ref="model_alquiler" />
+            <field name="subject">🔄 Solicitud de Reprogramación - Mantenimiento Preventivo</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">soporte@andescopiers.com.pe</field>
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+    <!-- Contenedor Principal -->
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color: #e53e3e; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🔄 Solicitud de Reprogramación</div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+            <!-- Mensaje Principal -->
+            <div style="margin-bottom: 20px;">
+                Se ha recibido una solicitud de reprogramación para el siguiente mantenimiento:
+            </div>
+
+            <!-- Detalles del Cliente -->
+            <div style="background-color: #f7fafc; padding: 15px; margin: 15px 0; border: 1px solid #e2e8f0;">
+                <div style="margin-bottom: 10px;"><strong>Cliente:</strong> <t t-out="object.cliente_id.name"/></div>
+                <div style="margin-bottom: 10px;"><strong>Contacto:</strong> <t t-out="object.contacto_id"/></div>
+                <div style="margin-bottom: 10px;"><strong>Teléfono:</strong> <t t-out="object.celular"/></div>
+                <div style="margin-bottom: 10px;"><strong>Correo:</strong> <t t-out="object.correo_"/></div>
+                <div><strong>Fecha Original:</strong> <t t-out="object.fecha_recurrente"/></div>
+            </div>
+
+            <!-- Equipos Afectados -->
+            <div style="margin: 20px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Equipos Pendientes</div>
+                
+                <table cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #e2e8f0;">
+                    <thead>
+                        <tr>
+                            <th style="background-color: #e53e3e; color: #ffffff; padding: 12px; text-align: left; font-weight: bold;">Modelo</th>
+                            <th style="background-color: #e53e3e; color: #ffffff; padding: 12px; text-align: left; font-weight: bold;">Serie</th>
+                            <th style="background-color: #e53e3e; color: #ffffff; padding: 12px; text-align: left; font-weight: bold;">Ubicación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-set="equipos_cliente" t-value="env['alquiler'].search([('cliente_id', '=', object.cliente_id.id), ('fecha_recurrente', '=', object.fecha_recurrente)])"/>
+                        <t t-foreach="equipos_cliente" t-as="equipo">
+                            <tr style="background-color: #ffffff;">
+                                <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.name.name"/></td>
+                                <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.serie"/></td>
+                                <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.direccion"/></td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mensaje de Acción -->
+            <div style="margin: 20px 0; padding: 15px; background-color: #fff5f7; border: 1px solid #fed7e2;">
+                <strong>Acción Requerida:</strong> Por favor, contactar al cliente para coordinar una nueva fecha de mantenimiento.
+            </div>
+
+            <!-- Firma -->
+            <div style="margin-top: 30px; text-align: center; padding-top: 20px; border-top: 1px solid #eee;">
+                <div style="margin: 0;">
+                    Sistema Automatizado de Mantenimiento<br/>
+                    <span style="color: #4a5568;">Andes Copiers</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+    </data>
+</odoo>

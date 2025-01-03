@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="repuestos_form_view" model="ir.ui.view">
+            <field name="name">repuestos.form</field>
+            <field name="model">repuestos.alquiler</field>
+            <field name="arch" type="xml">
+                <form string="ModelTitle">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" placeholder="Descripcion el repuesto"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="create_date"/>
+                                <field name="cliente_id"/>
+                                <field name="modelo_id"/>
+                                <field name="serie_id"/>
+                                <field name="name"/>
+                                <field name="cantidad"/>
+                                <field name="contometro_actual"/>
+                                <field name="contometro_ultimo"/>
+                            </group>
+                            <group>
+                                <field name="referencia_reparacion_id"/>
+                                <field name="duracion_repuesto"/>
+                                <field name="solicitante_id"/>
+                                <field name="rendimiento"/>
+                                <field name="currency_id" string="Tipo de moneda"/>
+                                <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="model_repuestos_view_kanban" model="ir.ui.view">
+    <field name="name">repuestos.view.kanban</field>
+    <field name="model">repuestos.alquiler</field>
+    <field name="arch" type="xml">
+        <kanban default_order="create_date desc" 
+                class="o_kanban_small_column" 
+                sample="1">
+            <field name="cliente_id"/>
+            <field name="modelo_id"/>
+            <field name="serie_id"/>
+            <field name="name"/>
+            <field name="cantidad"/>
+            <field name="contometro_actual"/>
+            <field name="contometro_ultimo"/>
+            <field name="create_date"/>
+            <field name="duracion_repuesto"/>
+            <field name="rendimiento"/>
+            <field name="currency_id"/>
+            <field name="precio_compra"/>
+            
+            <templates>
+                <t t-name="kanban-box">
+                    <div class="oe_kanban_global_click position-relative rounded-3 shadow-sm overflow-hidden">
+                        <!-- Encabezado con Cliente -->
+                        <div class="bg-primary bg-gradient text-white p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <i class="fa fa-user-circle fa-2x me-2" role="img" aria-label="Cliente"/>
+                                    <div>
+                                        <h5 class="m-0"><field name="cliente_id"/></h5>
+                                        <small class="opacity-75"><field name="create_date" widget="date"/></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información del Equipo -->
+                        <div class="p-3 border-bottom">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-cog text-secondary me-2" title="Modelo"/>
+                                <strong><field name="modelo_id"/></strong>
+                                <span class="mx-2">-</span>
+                                <i class="fa fa-barcode text-secondary me-2" title="Serie"/>
+                                <field name="serie_id"/>
+                            </div>
+                        </div>
+
+                        <!-- Detalles del Repuesto -->
+                        <div class="p-3">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fa fa-tools text-primary me-2" title="Repuesto"/>
+                                <h6 class="m-0"><field name="name"/></h6>
+                            </div>
+
+                            <!-- Cantidad y Precio -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-cubes text-success me-2" title="Cantidad"/>
+                                        <span><field name="cantidad"/> unidades</span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-tag text-warning me-2" title="Precio"/>
+                                        <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contadores -->
+                            <div class="bg-light rounded p-2 mb-3">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted d-block">Contometro Actual</small>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fa fa-tachometer-alt text-info me-2"/>
+                                            <strong><field name="contometro_actual"/></strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted d-block">Último Contometro</small>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fa fa-history text-secondary me-2"/>
+                                            <strong><field name="contometro_ultimo"/></strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Métricas de Rendimiento -->
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-clock text-danger me-2" title="Duración"/>
+                                        <span><field name="duracion_repuesto"/> días</span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-chart-line text-success me-2" title="Rendimiento"/>
+                                        <span><field name="rendimiento"/>%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Indicador de Estado basado en Rendimiento -->
+                        <div t-attf-class="position-absolute top-0 end-0 p-2 rounded-circle m-2 #{record.rendimiento.raw_value >= 80 ? 'bg-success' : record.rendimiento.raw_value >= 50 ? 'bg-warning' : 'bg-danger'}"
+                             style="width: 15px; height: 15px;"/>
+                    </div>
+                </t>
+            </templates>
+        </kanban>
+    </field>
+</record>
+
+        <record id="repuestos_tree_view" model="ir.ui.view">
+            <field name="name">repuestos.tree</field>
+            <field name="model">repuestos.alquiler</field>
+            <field name="arch" type="xml">
+                <list string="Repuestos" default_order="id desc">
+                    <field name="create_date" string="Creado" widget="remaining_days" width="80%" optional="hide"/>
+                    <field name="cliente_id"/>
+                    <field name="modelo_id"/>
+                    <field name="serie_id"/>
+                    <field name="name"/>
+                    <field name="cantidad"/>
+                    <field name="contometro_actual"/>
+                    <field name="contometro_ultimo"/>
+                    <field name="referencia_reparacion_id" optional="hide"/>
+                    <field name="duracion_repuesto" optional="hide"/>
+                    <field name="solicitante_id"/>
+                    <field name="rendimiento"/>
+                    <field name="currency_id" string="Tipo de moneda" 
+                    invisible="1"
+                    />
+                    <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="repuestos_search_view" model="ir.ui.view">
+            <field name="name">repuestos.search</field>
+            <field name="model">repuestos.alquiler</field>
+            <field name="arch" type="xml">
+                <search string="Repuestos">
+                    <group>
+                        <field name="serie_id"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+    </data>
+</odoo>

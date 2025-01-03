@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="stats_panel_assets_backend" inherit_id="web.assets_backend">
+        <xpath expr="." position="inside">
+            <script type="text/javascript" src="/sat/static/src/js/stats_panel.js"/>
+            <link rel="stylesheet" type="text/css" href="/sat/static/src/css/stats_panel.css"/>
+        </xpath>
+    </template>
+
+    <template id="stats_panel_buttons" name="SAT Stats Panel Buttons">
+        <div class="o_sat_stats_panel d-flex align-items-center gap-2 mb-2">
+            <div t-foreach="stats" t-as="stat" 
+                 t-attf-class="o_stat_box cursor-pointer rounded p-2 #{stat_value['class']}">
+                <div class="d-flex align-items-center">
+                    <i t-attf-class="fa #{stat_value['icon']} me-2"/>
+                    <span class="fw-bold" t-esc="stat_value['count']"/>
+                </div>
+                <div class="small" t-esc="stat_value['label']"/>
+            </div>
+        </div>
+    </template>
+</odoo>

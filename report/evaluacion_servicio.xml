@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <template id="report_service_evaluation">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <!-- Header Section - Sin cambios -->
+                        <div class="row mb-4 bg-primary rounded-lg p-3">
+                            <div class="col-6">
+                                <h2 class="text-white mb-0">
+                                    <i class="fa fa-star mr-2"/>Evaluación de Servicio
+                                </h2>
+                                <p class="text-white-75 mb-0">Ref: <t t-esc="doc.name"/></p>
+                            </div>
+                            <div class="col-6 text-right">
+                                <div class="text-white">
+                                    <div><i class="fa fa-calendar mr-2"/>Fecha: <t t-esc="doc.evaluation_date" t-options='{"widget": "datetime"}'/></div>
+                                    <div class="mt-2">
+                                        <span t-field="doc.state" t-options='{"widget": "badge"}'/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cliente y Técnico Info - Sin cambios -->
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <div class="border rounded-lg p-3 h-100 bg-light">
+                                    <h4 class="text-primary"><i class="fa fa-user mr-2"/>Cliente</h4>
+                                    <p class="mb-1"><strong t-field="doc.partner_id.name"/></p>
+                                    <p class="mb-1" t-if="doc.partner_id.email"><i class="fa fa-envelope mr-2"/><span t-field="doc.partner_id.email"/></p>
+                                    <p class="mb-1" t-if="doc.partner_id.phone"><i class="fa fa-phone mr-2"/><span t-field="doc.partner_id.phone"/></p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="border rounded-lg p-3 h-100 bg-light">
+                                    <h4 class="text-primary"><i class="fa fa-wrench mr-2"/>Técnico</h4>
+                                    <p class="mb-1"><strong t-field="doc.technician_id.name"/></p>
+                                    <p class="mb-1" t-if="doc.technician_id.email"><i class="fa fa-envelope mr-2"/><span t-field="doc.technician_id.email"/></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tickets Relacionados - NUEVO -->
+                         <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="border rounded-lg p-3 bg-light">
+                                    <h4 class="text-primary"><i class="fa fa-ticket-alt mr-2"/>Tickets Atendidos</h4>
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Referencia</th>
+                                                <th>Equipo</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="doc.ticket_ids" t-as="ticket">
+                                                <tr>
+                                                    <td><span t-field="ticket.name"/></td>
+                                                    <td><span t-field="ticket.product_alquiler.display_name"/></td>
+                                                    <td><span t-field="ticket.estado"/></td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Puntaje General - Sin cambios -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="border rounded-lg p-3 text-center">
+                                    <h3 class="text-primary mb-3">Puntaje General del Servicio</h3>
+                                    <div class="display-4 font-weight-bold" t-att-class="{
+                                        'text-success': doc.puntaje_servicio >= 90,
+                                        'text-info': doc.puntaje_servicio >= 80 and doc.puntaje_servicio &lt; 90,
+                                        'text-warning': doc.puntaje_servicio >= 70 and doc.puntaje_servicio &lt; 80,
+                                        'text-danger': doc.puntaje_servicio &lt; 70
+                                    }">
+                                        <t t-esc="'%.1f' % doc.puntaje_servicio"/>%
+                                    </div>
+                                    <div class="mt-2">
+                                        <span t-field="doc.nivel_atencion" t-options='{"widget": "badge"}'/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Evaluación Detallada - ACTUALIZADO -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="border rounded-lg p-3">
+                                    <h4 class="text-primary mb-3"><i class="fa fa-list-alt mr-2"/>Evaluación Detallada</h4>
+                                    
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td class="border-top-0"><i class="fa fa-handshake mr-2"/>Saludo y Presentación</td>
+                                            <td class="border-top-0 text-right">
+                                                <div t-att-class="'badge badge-pill ' + (int(doc.saludo_presentacion or 0) >= 4 and 'badge-success' or int(doc.saludo_presentacion or 0) >= 3 and 'badge-info' or 'badge-danger')">
+                                                    <t t-esc="doc.saludo_presentacion"/> / 5
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><i class="fa fa-search mr-2"/>Diagnóstico del Problema</td>
+                                            <td class="text-right">
+                                                <div t-att-class="'badge badge-pill ' + (int(doc.diagnostico_problema or 0) >= 4 and 'badge-success' or int(doc.diagnostico_problema or 0) >= 3 and 'badge-info' or 'badge-danger')">
+                                                    <t t-esc="doc.diagnostico_problema"/> / 5
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><i class="fa fa-check-circle mr-2"/>Solución del Problema</td>
+                                            <td class="text-right">
+                                                <div t-att-class="'badge badge-pill ' + (int(doc.solucion_problema or 0) >= 4 and 'badge-success' or int(doc.solucion_problema or 0) >= 3 and 'badge-info' or 'badge-danger')">
+                                                    <t t-esc="doc.solucion_problema"/> / 5
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><i class="fa fa-comment mr-2"/>Explicación del Trabajo</td>
+                                            <td class="text-right">
+                                                <div t-att-class="'badge badge-pill ' + (int(doc.explicacion_trabajo or 0) >= 4 and 'badge-success' or int(doc.explicacion_trabajo or 0) >= 3 and 'badge-info' or 'badge-danger')">
+                                                    <t t-esc="doc.explicacion_trabajo"/> / 5
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><i class="fa fa-broom mr-2"/>Limpieza y Orden</td>
+                                            <td class="text-right">
+                                                <div t-att-class="'badge badge-pill ' + (int(doc.limpieza_orden or 0) >= 4 and 'badge-success' or int(doc.limpieza_orden or 0) >= 3 and 'badge-info' or 'badge-danger')">
+                                                    <t t-esc="doc.limpieza_orden"/> / 5
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><i class="fa fa-search-plus mr-2"/>Revisión Adicional</td>
+                                            <td class="text-right">
+                                                <div t-att-class="'badge badge-pill ' + (int(doc.revision_adicional or 0) >= 4 and 'badge-success' or int(doc.revision_adicional or 0) >= 3 and 'badge-info' or 'badge-danger')">
+                                                    <t t-esc="doc.revision_adicional"/> / 5
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                    <!-- Conformidad de Retiro - NUEVO -->
+                                    <div class="mt-3 p-3 bg-light rounded">
+                                        <h5 class="text-primary"><i class="fa fa-check-square mr-2"/>Conformidad de Retiro</h5>
+                                        <div t-att-class="'badge badge-pill ' + (doc.retiro_tecnico == 'con_visto' and 'badge-success' or doc.retiro_tecnico == 'sin_visto' and 'badge-warning' or 'badge-danger')">
+                                            <t t-if="doc.retiro_tecnico == 'con_visto'">Con Visto Bueno</t>
+                                            <t t-elif="doc.retiro_tecnico == 'sin_visto'">Sin Visto Bueno</t>
+                                            <t t-else="">Se Retiró Sin Avisar</t>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cumplimiento de Protocolo -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="border rounded-lg p-3">
+                                    <h4 class="text-primary mb-3"><i class="fa fa-clipboard-check mr-2"/>Cumplimiento de Protocolo</h4>
+                                    <div class="row">
+                                        <div class="col-4 text-center">
+                                            <div class="mb-2">
+                                                <i t-att-class="'fa fa-3x ' + (doc.realizo_pruebas == 'si' and 'fa-check-circle text-success' or 'fa-times-circle text-danger')"/>
+                                            </div>
+                                            <p>Realizó Pruebas</p>
+                                        </div>
+                                        <div class="col-4 text-center">
+                                            <div class="mb-2">
+                                                <i t-att-class="'fa fa-3x ' + (doc.consulto_suministros == 'si' and 'fa-check-circle text-success' or 'fa-times-circle text-danger')"/>
+                                            </div>
+                                            <p>Consultó Suministros</p>
+                                        </div>
+                                        <div class="col-4 text-center">
+                                            <div class="mb-2">
+                                                <i t-att-class="'fa fa-3x ' + (doc.consulto_problemas == 'si' and 'fa-check-circle text-success' or 'fa-times-circle text-danger')"/>
+                                            </div>
+                                            <p>Consultó Problemas</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Análisis y Recomendaciones -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="border rounded-lg p-3 mb-4">
+                                    <h4 class="text-primary"><i class="fa fa-chart-line mr-2"/>Análisis Detallado</h4>
+                                    <pre class="text-muted" style="white-space: pre-wrap;"><t t-esc="doc.analisis_detallado"/></pre>
+                                </div>
+                                <div class="border rounded-lg p-3" t-if="doc.recomendaciones_mejora">
+                                    <h4 class="text-primary"><i class="fa fa-lightbulb mr-2"/>Recomendaciones de Mejora</h4>
+                                    <pre class="text-muted" style="white-space: pre-wrap;"><t t-esc="doc.recomendaciones_mejora"/></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Comentarios - NUEVO -->
+                        <div class="row mt-4" t-if="doc.comentarios">
+                            <div class="col-12">
+                                <div class="border rounded-lg p-3">
+                                    <h4 class="text-primary"><i class="fa fa-comments mr-2"/>Comentarios</h4>
+                                    <p class="text-muted"><t t-esc="doc.comentarios"/></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

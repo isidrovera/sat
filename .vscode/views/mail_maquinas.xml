@@ -1,0 +1,41 @@
+ <odoo>
+  <data>
+    <record id="email_template_maquinas_id" model="mail.template">
+      <field name="name">Nombre de la plantilla</field>
+      <field name="email_from">${object.company_id.email}</field>
+      <field name="subject">Maquina con problemas</field>
+      <field name="lang">${object.partner_id.lang}</field>
+      <field name="model_id" ref="sat.model_sat_sat"/>
+      <field name="auto_delete" eval="True"/>
+      <field name="body_html">
+        <![CDATA[
+          <p>Hola <t t-out="object.cliente_id.name">,</p>
+          <p>A continuación se muestra una tabla con los registros de "sat.sat" que tienen "disponibilidad_id" igual a "no_disponible":</p>
+          <t t-call="sat.email_template_table"/>
+        ]]>
+      </field>
+    </record>
+    <template id="sat.email_template_table" name="Tabla de registros">
+      <t t-foreach="o.filtered(lambda r: r.disponibilidad_id == 'no_disponible')" t-as="record">
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Serie</th>
+                <th>Descripción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><t t-esc="record.name"/></td>
+                <td><t t-esc="record.serie_id"/></td>
+                <td><t t-esc="record.descripcion"/></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </t>
+    </template>
+  </data>
+</odoo>

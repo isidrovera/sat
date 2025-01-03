@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="Opciones_pedidos_form_view" model="ir.ui.view">
+        <field name="name">Opciones_pedidos.form</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <!--<field name="contometro"/>-->
+                <field name="equipo_id" string="Equipo"/>
+                <field name="serie_id" string="Serie"/>
+                <field name="obs" string="Observaciones"/>
+                <field name="solicitante_id" string="Solicitante"/>
+                <field name="ticket_id" string="Ticket"/>
+            </xpath>
+            <xpath expr="//field[@name='payment_term_id']" position="after">
+                <field name="estado_entrega" string="Estado de entrega"/>
+                <field name="tipo_pedido" string="Tipo de pedido técnico"/>
+            </xpath>
+            <xpath expr="//button[@name='action_view_purchase_orders']" position="after">
+            <button class="oe_stat_button" 
+                    icon="fa-cogs" 
+                    type="object" 
+                    name="get_repuestos_pedidos">
+                <field widget="statinfo" 
+                       name="repuestos_count_pedidos" 
+                       string="Repuestos"/>
+            </button>
+            <button class="oe_stat_button" 
+                    icon="fa-wrench" 
+                    type="object" 
+                    name="get_ticket_ticket">
+                <field widget="statinfo" 
+                       name="ticket_count_ticket" 
+                       string="Tickets"/>
+            </button>
+        </xpath>
+
+        </field>
+    </record>
+    <record id="Opciones_pedidos_tree_view" model="ir.ui.view">
+        <field name="name">Opciones_pedidos.tree</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_quotation_tree_with_onboarding"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='amount_total']" position="after">
+                <field name="tipo_pedido" string="Tipo de Cotización" widget="badge"/>
+                <field name="estado_entrega" string="Estado de entrega" widget="badge" decoration-warning="estado_entrega == 'sin_entregar'" decoration-success="estado_entrega == 'entregado'"/>
+            </xpath>
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="equipo_id" string="Modelo" />
+                <field name="serie_id" string="Serie" />
+            </xpath>
+        </field>
+    </record>    
+</odoo>

@@ -1,0 +1,43 @@
+/* static/src/css/dashboard.css */
+.o_list_buttons {
+    display: flex;
+    flex-direction: column;
+}
+
+.o_list_buttons .btn {
+    padding: 4px 12px;
+    font-size: 12px;
+    height: 28px;
+}
+
+.o_list_buttons .btn i {
+    font-size: 14px;
+}
+
+/* Estilos específicos para cada botón */
+.btn.btn-success {
+    background-color: #00A09D;
+    border-color: #00A09D;
+}
+
+.btn.btn-warning {
+    background-color: #F0AD4E;
+    border-color: #F0AD4E;
+    color: white;
+}
+
+.btn.btn-danger {
+    background-color: #DC3545;
+    border-color: #DC3545;
+}
+
+/* Efectos hover suaves */
+.o_list_buttons .btn:hover {
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+/* Ajuste de márgenes para alineación */
+.o_list_standard_buttons {
+    margin-bottom: 8px !important;
+}

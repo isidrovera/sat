@@ -1,0 +1,392 @@
+/* Archivo: static/src/css/dashboard.css */
+
+.dashboard-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    width: 100%;
+}
+
+.content-scroll {
+    overflow-y: auto;
+    flex: 1;
+    width: 100%;
+}
+
+.dashboard-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+.tot_tasks {
+    flex: 0 0 auto;
+    width: 160px;
+    min-width: 160px;
+    padding: 0;
+    margin: 0;
+}
+
+/* Responsive breakpoints */
+@media (min-width: 1400px) {
+    .tot_tasks {
+        flex: 1 1 10%;
+        max-width: 10%;
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+    .tot_tasks {
+        flex: 1 1 12%;
+        max-width: 12%;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+    .tot_tasks {
+        flex: 1 1 16%;
+        max-width: 16%;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    .tot_tasks {
+        flex: 1 1 20%;
+        max-width: 20%;
+    }
+}
+
+@media (min-width: 576px) and (max-width: 767px) {
+    .tot_tasks {
+        flex: 1 1 25%;
+        max-width: 25%;
+    }
+}
+
+@media (max-width: 576px) {
+    .tot_tasks {
+        width: 130px;
+        min-width: 130px;
+        max-width: 130px;
+    }
+}
+
+.oh-card {
+    padding: 6px;
+    box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    transition: transform 0.2s, background-color 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 90px;
+    min-height: 90px;
+    background-color: white;
+    width: 100%;
+}
+
+.oh-card:hover {
+    transform: translateY(-2px);
+    background-color: #f7f7f7;
+}
+
+.oh-card-body {
+    padding: 2px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.oh-card-body i {
+    font-size: 20px;
+    margin-bottom: 2px;
+}
+
+.oh-card-body h3 {
+    font-size: 12px;
+    margin: 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+.oh-card-body span {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Colores de los iconos */
+.fa-print { color: #666666; }
+.fa-cogs { color: #36A2EB; }
+.fa-check-circle { color: #4BC0C0; }
+.fa-pause-circle { color: #FFCE56; }
+.fa-times-circle { color: #FF6384; }
+.fa-wrench { color: #666666; }
+.fa-spinner { color: #36A2EB; }
+.fa-exclamation-triangle { color: #FF6384; }
+.fa-life-ring { color: #FFCE56; }
+.fa-plus-square { color: #4BC0C0; }
+.fa-tag { color: #FFCE56; }
+.fa-handshake { color: #4BC0C0; }
+.fa-shopping-cart { color: #36A2EB; }
+.fa-box { color: #36A2EB; }
+.fa-check-square { color: #4BC0C0; }
+.fa-exclamation-circle { color: #FF6384; }
+.fa-external-link-alt { color: #666666; }
+.fa-archive { color: #36A2EB; }
+
+/* Secciones de tiles */
+.maquinas-tiles,
+.reparaciones-tiles,
+.tickets-tiles,
+.alquiler-tiles {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Estilo para la barra de scroll horizontal */
+.maquinas-tiles::-webkit-scrollbar,
+.reparaciones-tiles::-webkit-scrollbar,
+.tickets-tiles::-webkit-scrollbar,
+.alquiler-tiles::-webkit-scrollbar {
+    height: 6px;
+}
+
+.maquinas-tiles::-webkit-scrollbar-track,
+.reparaciones-tiles::-webkit-scrollbar-track,
+.tickets-tiles::-webkit-scrollbar-track,
+.alquiler-tiles::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.maquinas-tiles::-webkit-scrollbar-thumb,
+.reparaciones-tiles::-webkit-scrollbar-thumb,
+.tickets-tiles::-webkit-scrollbar-thumb,
+.alquiler-tiles::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.maquinas-tiles::-webkit-scrollbar-thumb:hover,
+.reparaciones-tiles::-webkit-scrollbar-thumb:hover,
+.tickets-tiles::-webkit-scrollbar-thumb:hover,
+.alquiler-tiles::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+/* Sección de gráficos */
+.dashboard-charts {
+    padding: 0 6px;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.dashboard-charts > div {
+    flex: 1 1 calc(50% - 16px);
+    min-width: 300px;
+}
+
+.chart-wrapper {
+    background-color: white;
+    border-radius: 4px;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 0 4px;
+}
+
+.chart-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chart-container {
+    flex: 1;
+    min-height: 300px;
+    position: relative;
+    width: 100%;
+}
+
+/* Ajustes para los gráficos horizontales */
+.chart-container.horizontal-chart {
+    min-height: 400px;
+}
+
+/* Contenedor para filtros */
+.filter-section {
+    margin: 8px 0;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.filter-section label {
+    font-size: 12px;
+    margin-right: 4px;
+    white-space: nowrap;
+}
+
+.filter-section input[type="date"] {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 12px;
+    max-width: 130px;
+}
+
+.filter-section button {
+    padding: 4px 12px;
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.filter-section button:hover {
+    background-color: #0056b3;
+}
+
+/* Botón expandir */
+.expand-button {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.expand-button:hover {
+    color: #333;
+}
+
+/* Modal para gráfico expandido */
+.chart-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.chart-modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 1200px;
+    height: 80vh;
+}
+
+/* Responsive ajustes */
+@media (max-width: 1200px) {
+    .dashboard-charts > div {
+        flex: 1 1 calc(50% - 16px);
+    }
+}
+
+@media (max-width: 992px) {
+    .chart-container {
+        min-height: 250px;
+    }
+    
+    .chart-container.horizontal-chart {
+        min-height: 350px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-charts > div {
+        flex: 1 1 100%;
+    }
+    
+    .chart-container {
+        min-height: 200px;
+    }
+    
+    .chart-container.horizontal-chart {
+        min-height: 300px;
+    }
+    
+    .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-section input[type="date"] {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+@media (max-width: 576px) {
+    .dashboard-container {
+        padding: 4px;
+    }
+    
+    .oh-card {
+        height: 80px;
+        min-height: 80px;
+    }
+    
+    .oh-card-body i {
+        font-size: 18px;
+    }
+    
+    .oh-card-body h3 {
+        font-size: 11px;
+    }
+    
+    .oh-card-body span {
+        font-size: 13px;
+    }
+    
+    .chart-container {
+        min-height: 180px;
+    }
+    
+    .chart-container.horizontal-chart {
+        min-height: 250px;
+    }
+}

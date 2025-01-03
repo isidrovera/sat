@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="pagina_confirmacion_toner" name="Página de Confirmación de Solicitud de Tóner">
+        <t t-call="website.layout">
+            <div class="container mt16 mb16">
+                <div class="jumbotron text-center">
+                    <h1 class="display-3">¡Solicitud de Tóner Recibida!</h1>
+                    <p class="lead">Tu solicitud de tóner ha sido enviada con éxito a nuestro equipo.</p>
+                    <hr class="my-4"/>
+                    <p>Nos comprometemos a procesar tu solicitud y entregar el tóner solicitado en un máximo de 48 horas desde este momento. Agradecemos tu confianza en nuestros servicios.</p>
+                    <p>Te recordamos revisar periódicamente tu stock de tóner para evitar quedarte sin suministros. Una buena gestión de inventario asegura la continuidad en tus operaciones y reduce las interrupciones en tu trabajo.</p>
+                    <p>Si tienes alguna pregunta o necesitas asistencia adicional, no dudes en contactarnos al <strong>981 597 727  -  924 894 863</strong> o mediante nuestro formulario de contacto en la web.</p>
+                    <p class="lead">
+                        <button onclick="volverARegistros()" class="btn btn-secondary mr-2">Volver a mis equipos</button>
+                        <a class="btn btn-primary" href="/" role="button">Ir al inicio</a>
+                    </p>
+                </div>
+            </div>
+            <script type="text/javascript">
+                function volverARegistros() {
+                    var lastPage = localStorage.getItem('lastRecordsPage') || '/customer/records';
+                    
+                    fetch(lastPage, { method: 'HEAD' })
+                        .then(function(response) {
+                            if (response.ok) {
+                                window.location.href = lastPage;
+                            } else {
+                                handleError();
+                            }
+                        })
+                        .catch(function(error) {
+                            handleError();
+                        });
+                }
+
+                function handleError() {
+                    var errorMessage = "Lo sentimos, ha ocurrido un error al intentar volver a la página de registros. ";
+                    errorMessage += "Por favor, intente una de las siguientes opciones:";
+                    
+                    var options = [
+                        { text: "Ir al inicio", action: function() { window.location.href = '/'; } },
+                        { text: "Intentar de nuevo", action: function() { volverARegistros(); } },
+                        { text: "Contactar soporte", action: function() { window.location.href = '/contact'; } }
+                    ];
+                    
+                    showErrorModal(errorMessage, options);
+                }
+
+                function showErrorModal(message, options) {
+                    var modal = document.createElement('div');
+                    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+                    
+                    var content = document.createElement('div');
+                    content.style.cssText = 'background:white;padding:20px;border-radius:5px;max-width:80%;';
+                    content.innerHTML = '<p>' + message + '</p>';
+                    
+                    options.forEach(function(option) {
+                        var button = document.createElement('button');
+                        button.textContent = option.text;
+                        button.onclick = function() {
+                            document.body.removeChild(modal);
+                            option.action();
+                        };
+                        content.appendChild(button);
+                    });
+                    
+                    modal.appendChild(content);
+                    document.body.appendChild(modal);
+                }
+            </script>
+        </t>
+    </template>
+</odoo>

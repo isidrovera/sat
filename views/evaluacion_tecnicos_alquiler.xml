@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista de Formulario -->
+        <record id="view_client_service_evaluation_form" model="ir.ui.view">
+            <field name="name">client.service.evaluation.form</field>
+            <field name="model">client.service.evaluation</field>
+            <field name="arch" type="xml">
+                <form>
+                    <header>
+                        <field name="state" widget="statusbar" options="{'clickable': '1'}"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button class="oe_stat_button" icon="fa-ticket" type="object"
+                                name="action_view_tickets">
+                                <field string="Tickets" name="ticket_ids" widget="statinfo"/>
+                            </button>
+                        </div>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name" readonly="1" force_save="1"/>
+                                <field name="token" invisible="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="partner_id" readonly="context.get('from_portal', False)"/>
+                                <field name="technician_id" readonly="context.get('from_portal', False)"/>
+                                <field name="evaluation_date"/>
+                                <field name="expiration_date" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="puntaje_servicio" widget="percentpie"/>
+                                <field name="nivel_atencion"
+                                    decoration-success="nivel_atencion == 'excelente'"
+                                    decoration-warning="nivel_atencion == 'regular'"
+                                    decoration-danger="nivel_atencion == 'deficiente'"/>
+                                <field name="requiere_atencion" invisible="1"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            
+                            <page string="Evaluación" name="evaluation">
+                                <group>
+                                    <group string="Aspectos del Servicio">
+                                        <field name="saludo_presentacion" widget="radio"/>
+                                        <field name="diagnostico_problema" widget="radio"/>
+                                        <field name="solucion_problema" widget="radio"/>
+                                        <field name="explicacion_trabajo" widget="radio"/>
+                                        <field name="limpieza_orden" widget="radio"/>
+                                        <field name="revision_adicional" widget="radio"/>
+                                        <field name="retiro_tecnico" widget="radio"/>
+                                    </group>
+                                    <group string="Verificación de Protocolos">
+                                        <field name="realizo_pruebas" widget="radio"/>
+                                        <field name="consulto_suministros" widget="radio"/>
+                                        <field name="consulto_problemas" widget="radio"/>
+                                    </group>
+                                </group>
+                                <group string="Comentarios">
+                                    <field name="comentarios" nolabel="1"
+                                        placeholder="Ingrese comentarios adicionales..."/>
+                                </group>
+                            </page>
+                            <page string="Análisis" name="analysis">
+                                <group>
+                                    <field name="analisis_detallado" readonly="1" nolabel="1"/>
+                                </group>
+                            </page>
+                            <page string="Recomendaciones">
+                                <group>
+                                    <field name="recomendaciones_mejora" readonly="1" nolabel="1"/>
+                                </group>
+                            </page>
+                            <page string="Tickets Atendidos" name="tickets">
+                                <field name="ticket_ids" readonly="context.get('from_portal', False)">
+                                    <list>
+                                       
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    
+                </form>
+            </field>
+        </record>
+
+        <!-- Vista de Lista -->
+        <record id="view_client_service_evaluation_tree" model="ir.ui.view">
+            <field name="name">client.service.evaluation.tree</field>
+            <field name="model">client.service.evaluation</field>
+            <field name="arch" type="xml">
+                <list decoration-danger="requiere_atencion == True"
+                    decoration-success="nivel_atencion == 'excelente'"
+                    decoration-warning="nivel_atencion == 'regular'">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="technician_id"/>
+                    <field name="evaluation_date"/>
+                    <field name="puntaje_servicio" widget="percentage"/>
+                    <field name="nivel_atencion"/>
+                    <field name="state"/>
+                    <field name="requiere_atencion" invisible="1"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Vista Kanban -->
+<record id="view_client_service_evaluation_kanban" model="ir.ui.view">
+    <field name="name">client.service.evaluation.kanban</field>
+    <field name="model">client.service.evaluation</field>
+    <field name="arch" type="xml">
+        <kanban default_group_by="state" class="o_kanban_small_column" records_draggable="0">
+            <field name="name"/>
+            <field name="ticket_ids"/>
+            <field name="partner_id"/>
+            <field name="technician_id"/>
+            <field name="puntaje_servicio"/>
+            <field name="nivel_atencion"/>
+            <field name="requiere_atencion"/>
+            <field name="state"/>
+            <templates>
+                <t t-name="kanban-box">
+                    <div t-attf-class="oe_kanban_card oe_kanban_global_click shadow-sm rounded-3 position-relative #{record.requiere_atencion.raw_value ? 'border-danger' : 'border-0'}" 
+                         t-attf-style="background-color: #{record.state.raw_value == 'draft' ? '#f8f9fa' :
+                                                         record.state.raw_value == 'in_progress' ? '#fff3cd' :
+                                                         record.state.raw_value == 'done' ? '#d1e7dd' :
+                                                         record.state.raw_value == 'cancelled' ? '#f8d7da' : '#ffffff'}">
+                        <!-- Indicador de Atención Requerida -->
+                        <div t-if="record.requiere_atencion.raw_value" class="position-absolute top-0 end-0 mt-2 me-2">
+                            <i class="fa fa-exclamation-circle text-danger fs-4"/>
+                        </div>
+                        
+                        <div class="oe_kanban_content p-3">
+                            <!-- Encabezado con Nombre y Puntaje -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0 text-primary">
+                                    <field name="name"/>
+                                </h5>
+                                <span class="badge rounded-pill px-3 py-2"
+                                    t-attf-class="bg-#{record.nivel_atencion.raw_value == 'excelente' ? 'success' : 
+                                                    record.nivel_atencion.raw_value == 'deficiente' ? 'danger' : 'warning'}">
+                                    <i class="fa fa-star me-1"/>
+                                    <field name="puntaje_servicio" widget="percentage"/>
+                                </span>
+                            </div>
+
+                            <!-- Información del Cliente y Técnico -->
+                            <div class="mb-2">
+                                <div class="d-flex align-items-center text-muted mb-1">
+                                    <i class="fa fa-user me-2"/>
+                                    <field name="partner_id"/>
+                                </div>
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="fa fa-wrench me-2"/>
+                                    <field name="technician_id"/>
+                                </div>
+                            </div>
+
+                            <!-- Tickets Relacionados -->
+                            <div class="mt-3">
+                                <field name="ticket_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                            </div>
+
+                            <!-- Fecha de Evaluación -->
+                            <div class="mt-3 pt-2 border-top">
+                                <small class="text-muted d-flex align-items-center">
+                                    <i class="fa fa-calendar-alt me-2"/>
+                                    <field name="evaluation_date"/>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </templates>
+        </kanban>
+    </field>
+</record>
+
+        <!-- Vista de Búsqueda -->
+        <record id="view_client_service_evaluation_search" model="ir.ui.view">
+            <field name="name">client.service.evaluation.search</field>
+            <field name="model">client.service.evaluation</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="ticket_ids"/>
+                    <field name="partner_id"/>
+                    <field name="technician_id"/>
+                    <separator/>
+                    <filter string="Requiere Atención" name="requiere_atencion"
+                        domain="[('requiere_atencion', '=', True)]"/>
+                    <filter string="Excelente" name="nivel_excelente"
+                        domain="[('nivel_atencion', '=', 'excelente')]"/>
+                    <filter string="Deficiente" name="nivel_deficiente"
+                        domain="[('nivel_atencion', '=', 'deficiente')]"/>
+                    <separator/>
+                    <filter string="Expiradas" name="expired"
+                        domain="[('state', '=', 'expired')]"/>
+                    <filter string="Mis Evaluaciones" name="my_evaluations"
+                        domain="[('technician_id', '=', uid)]"/>
+                    <filter string="Evaluaciones de Hoy" name="today"
+                        domain="[('evaluation_date', '>=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <group expand="0" string="Agrupar Por">
+                        <filter string="Técnico" name="technician"
+                            context="{'group_by': 'technician_id'}"/>
+                        <filter string="Cliente" name="partner" 
+                            context="{'group_by': 'partner_id'}"/>
+                        <filter string="Nivel" name="nivel" 
+                            context="{'group_by': 'nivel_atencion'}"/>
+                        <filter string="Estado" name="state" 
+                            context="{'group_by': 'state'}"/>
+                        <filter string="Fecha" name="date"
+                            context="{'group_by': 'evaluation_date:day'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Acción de Ventana -->
+        <record id="action_client_service_evaluation" model="ir.actions.act_window">
+            <field name="name">Evaluaciones de Servicio</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">client.service.evaluation</field>
+            <field name="view_mode">kanban,list,form</field>
+            <field name="context">{'search_default_today': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    ¡Crea tu primera evaluación de servicio!
+                </p>
+                <p>
+                    Registra y monitorea las evaluaciones de servicio técnico.
+                </p>
+            </field>
+        </record>
+
+        <!-- Elementos de Menú -->
+        <menuitem id="menu_service_evaluation"
+            name="Evaluaciones de Servicio"
+            parent="sat_menu_root"
+            action="action_client_service_evaluation"
+            sequence="70"/>
+    </data>
+</odoo>

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="sat.sat_form_view" model="ir.ui.view">
+            <field name="name">maquinas.sat.sat.form</field>
+            <field name="model">sat.sat</field>
+            <field name="arch" type="xml">
+                <form string="Stock_maquinas">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="example_title"/>
+                            <h1>
+                                <field name="name" placeholder="Title"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="name"/>
+                            </group>
+                            <group>
+                                <field name="name"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="sat.sat_tree_view" model="ir.ui.view">
+            <field name="name">ProjectName.sat.sat.tree</field>
+            <field name="model">sat.sat</field>
+            <field name="arch" type="xml">
+                <list string="ModelTitle">
+                    <field name="name"/>
+                    <field name="name"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="sat.sat_calendar_view" model="ir.ui.view">
+            <field name="name">ProjectName.sat.sat.calendar</field>
+            <field name="model">sat.sat</field>
+            <field name="arch" type="xml">
+                <calendar string="ModelTitle" date_start="example_date_field" color="example_boolean_field">
+                    <field name="name"/>
+                    <field name="precio_venta" widget="monetary"/>
+                </calendar>
+            </field>
+        </record>
+
+        <record id="sat.sat_graph_view" model="ir.ui.view">
+            <field name="name">ProjectName.sat.sat.graph</field>
+            <field name="model">sat.sat</field>
+            <field name="arch" type="xml">
+                <graph string="ModelTitle">
+                    <field name="name"/>
+                    <field name="name" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="sat.sat_pivot_view" model="ir.ui.view">
+            <field name="name">ProjectName.sat.sat.pivot</field>
+            <field name="model">sat.sat</field>
+            <field name="arch" type="xml">
+                <pivot string="ModelTitle">
+                    <field name="name" type="row"/>
+                    <field name="name" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="sat.sat_search_view" model="ir.ui.view">
+            <field name="name">ProjectName.sat.sat.search</field>
+            <field name="model">sat.sat</field>
+            <field name="arch" type="xml">
+                <search string="ModelTitle">
+                    <group expand="1" string="Group By">
+                        <filter string="name" name="name" domain="[]"
+                                context="{'group_by':'name'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="sat.sat_kanban_view" model="ir.ui.view">
+            <field name="name">ProjectName.sat.sat.kanban</field>
+            <field name="model">sat.sat</field>
+            <field name="arch" type="xml">
+                <kanban>
+                    <field name="id"/>
+                    <field name="name"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_global_click o_res_partner_kanban">
+                                <div class="oe_kanban_details">
+                                    <strong class="o_kanban_record_title oe_partner_heading">
+                                        <field name="name"/>
+                                    </strong>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <record id="sat.sat_act_window" model="ir.actions.act_window">
+            <field name="name">Maquinas_</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sat.sat</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">kanban,tree,form,calendar,graph,pivot</field>
+            <field name="context">{"search_default_example_field":1}</field>
+            <field name="help" type="html">
+                <p class="oe_view_nocontent_create">
+                    There is no examples click here to add new ModelTitle.
+                </p>
+            </field>
+        </record>
+
+        <menuitem name="ModelTitle" id="sat.sat_menu" parent="your_root_menu" action="sat.sat_act_window"/>
+
+    </data>
+</odoo>

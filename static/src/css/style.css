@@ -1,0 +1,5 @@
+.custom_statusbar .o_statusbar_status > .o_arrow_button.btn-primary.disabled {
+    background-color: #2962FF !important;
+    color: white !important;
+    font-weight: bold !important;
+}

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="pagina_confirmacion" name="Página de Confirmación">
+        <t t-call="website.layout">
+            <div class="container mt16 mb16">
+                <div class="jumbotron text-center">
+                    <h1 class="display-3">¡Reporte de incidencia recibido!</h1>
+                    <p class="lead">Tu reporte de incidencia con la máquina fotocopiadora ha sido enviado con éxito a nuestro equipo de soporte técnico.</p>
+                    <hr class="my-4"/>
+                    <p>Nuestro equipo está revisando tu caso y se pondrá en contacto contigo dentro de las próximas 24 horas para asistirte. Agradecemos tu paciencia y comprensión.</p>
+                    <p>Si tu incidencia es urgente o necesitas asistencia inmediata, no dudes en llamar a nuestro servicio al cliente al <strong>+51 924894829</strong></p>
+                    <p class="lead">
+                        <button onclick="volverARegistros()" class="btn btn-secondary mr-2">Volver a mis equipos</button>
+                        <a class="btn btn-primary" href="/" role="button">Ir al inicio</a>
+                    </p>
+                </div>
+            </div>
+            <script type="text/javascript">
+                function volverARegistros() {
+                    var lastPage = localStorage.getItem('lastRecordsPage');
+                    var defaultPage = '/customer/records';
+                    
+                    if (lastPage) {
+                        // Intentar usar la última página guardada
+                        navigateToPage(lastPage);
+                    } else {
+                        // Si no hay página guardada, intentar construir la URL
+                        var urlParams = new URLSearchParams(window.location.search);
+                        var customerId = urlParams.get('customer_id');
+                        var userName = urlParams.get('user_name');
+                        var phoneNumber = urlParams.get('phone_number');
+                        var idRegistro = urlParams.get('id_registro');
+                        
+                        if (customerId) {
+                            // Caso WhatsApp
+                            var constructedUrl = defaultPage + '?customer_id=' + customerId;
+                            if (userName) constructedUrl += '&amp;user_name=' + encodeURIComponent(userName);
+                            if (phoneNumber) constructedUrl += '&amp;phone_number=' + encodeURIComponent(phoneNumber);
+                            navigateToPage(constructedUrl);
+                        } else if (idRegistro) {
+                            // Caso QR
+                            var qrUrl = '/api/escanear_qr?id_registro=' + idRegistro;
+                            navigateToPage(qrUrl);
+                        } else {
+                            // Si no hay identificadores, ir a la página por defecto
+                            navigateToPage(defaultPage);
+                        }
+                    }
+                }
+
+                function navigateToPage(url) {
+                    fetch(url, { method: 'HEAD' })
+                        .then(function(response) {
+                            if (response.ok) {
+                                window.location.href = url;
+                            } else {
+                                handleError();
+                            }
+                        })
+                        .catch(function(error) {
+                            handleError();
+                        });
+                }
+
+                function handleError() {
+                    var errorMessage = "Lo sentimos, ha ocurrido un error al intentar volver a la página de registros. Por favor, intente una de las siguientes opciones:";
+                    var options = [
+                        { text: "Ir al inicio", action: function() { window.location.href = '/'; } },
+                        { text: "Intentar de nuevo", action: function() { volverARegistros(); } },
+                        { text: "Contactar soporte", action: function() { window.location.href = '/contact'; } }
+                    ];
+                    showErrorModal(errorMessage, options);
+                }
+
+                function showErrorModal(message, options) {
+                    var modal = document.createElement('div');
+                    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+                    
+                    var content = document.createElement('div');
+                    content.style.cssText = 'background:white;padding:20px;border-radius:5px;max-width:80%;text-align:center;';
+                    content.innerHTML = '<p>' + message + '</p>';
+                    
+                    options.forEach(function(option) {
+                        var button = document.createElement('button');
+                        button.textContent = option.text;
+                        button.style.cssText = 'margin:5px;padding:10px;';
+                        button.onclick = function() {
+                            document.body.removeChild(modal);
+                            option.action();
+                        };
+                        content.appendChild(button);
+                    });
+                    
+                    modal.appendChild(content);
+                    document.body.appendChild(modal);
+                }
+            </script>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,95 @@
+# -*- coding: utf-8 -*-
+{
+    'name': "Sistema de Administración de Taller",
+    'version': '1.0',
+    'summary': "Administra las operaciones de un taller de fotocopiadoras",
+    'sequence': -100,
+    'description': """Gestiona reparaciones, mantenimientos y más.""",
+    'author': "Isidro vera polo",
+    'website': "https://copiercompanysac.com",
+    'category': 'Services',
+    'depends': ['base','mail','contacts','sale_management','portal','web', 'stock'],
+    'data': [
+        
+        'views/ventas.xml',
+        'views/templates.xml',
+        'data/ir_secuense.xml',
+        'data/ir_secuense_ticket.xml',
+        'views/modelos.xml',
+        'views/repuestos_alquiler.xml',
+        'views/marcas.xml',
+        'views/informes.xml',
+        'views/fallas.xml',
+        'data/ir.secuense_info.xml',
+        'data/ir_secuense_ev.xml',
+        'data/print.xml',
+        'report/reparacion_enlace.xml',
+        'report/report_reparaciones_ventas.xml',
+        'report/ticket_enlace.xml',
+        'report/ticket_reporte.xml',
+        'report/informes.xml',
+        'report/evaluacion.xml',
+        'report/report_qr_codes_reparaciones.xml',
+        'report/report_qr_enlace.xml',
+        'report/qr_alquiler.xml',
+        'data/cron_data.xml',
+        'data/cron_evaluador_diario.xml',
+        'views/reporte_cotizacion.xml',
+        'views/reparaciones.xml',        
+        'views/opciones_cliente.xml',
+        'security/acceso.xml',
+        'security/ir.model.access.csv',
+        'views/alquiler.xml',
+        'views/opciones_product.xml',        
+        'views/sale_order_.xml',
+        'views/linea_pedido.xml',
+        'views/mail_maquinas.xml',
+        'views/evaluacion.xml',
+        'views/crear_ticket_portal.xml',
+        'views/incidencias.xml',
+        'views/soporte.alquiler.xml',               
+        'data/ir.secuence_incidencia.xml',
+        'views/template_formulario_ticket.xml',               
+        'data/plantillas_correo.xml',
+        'views/pagina_con_opciones.xml',
+        'views/reportar_incidencia_form.xml',        
+        'views/pagina_confirmacion.xml',
+        'views/solicitar_toner_form_template.xml',
+        'views/pagina_confirmacion_toner.xml',
+        'views/repuestos_alquiler_list.xml',
+        'views/soporte_dashboard.xml',
+        'views/transportistas.xml',
+        'views/graficos.xml',
+        'views/customer_records_page.xml',
+        'views/importacionexcel.xml',
+        
+        
+    ],
+    'demo': [
+        'demo/demo_data.xml',
+    ],
+    'assets': {
+    'web.assets_backend': [
+        
+             
+    ],
+    'web.assets_frontend': [
+            'sat/static/src/js/searchFilter.js',
+            
+        ],
+    'web.assets_qweb': [
+               
+    ],
+    },
+    'qweb': [
+        'static/src/xml/*.xml',
+    ],
+    'js': [
+        'static/src/js/*.js',
+    ],
+   
+
+    'installable': True,
+    'application': True,
+    'auto_install': False,
+}

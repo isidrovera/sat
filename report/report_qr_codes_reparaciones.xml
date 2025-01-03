@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="report_qr_codes_reparaciones_template">
+        <t t-foreach="docs" t-as="doc">
+            <t t-call="web.basic_layout">
+                <div class="page">
+                    <style>
+                        .page {
+                            padding: 0;
+                            margin: 0;
+                        }
+                        .machine-info {
+                            margin-bottom: 20px;
+                        }
+                        .info-item {
+                            margin: 15px 0;
+                            padding: 10px 15px;
+                            background: #f8f9fa;
+                            border-radius: 8px;
+                            border-left: 5px solid #3498db;
+                        }
+                        .info-label {
+                            font-size: 31px; /* Incrementado en 10% */
+                            font-weight: bold;
+                            color: #2c3e50;
+                        }
+                        .info-value {
+                            font-size: 35px; /* Incrementado en 10% */
+                            color: #3498db;
+                            font-weight: bold;
+                        }
+                        .counter-section {
+                            text-align: center;
+                            margin: 25px 0;
+                            padding: 15px;
+                            background: #f8f9fa;
+                            border-radius: 8px;
+                            border: 2px solid #e74c3c;
+                        }
+                        .counter-value {
+                            font-size: 53px; /* Incrementado en 10% */
+                            color: #e74c3c;
+                            font-weight: bold;
+                        }
+                        .qr-container {
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            gap: 40px; /* Espacio entre los QR */
+                            margin-top: 20px;
+                            padding: 0 20px;
+                        }
+                        .qr-card {
+                            text-align: center;
+                            width: 250px;
+                        }
+                        .qr-ventas {
+                            border-top: 8px solid #2ecc71;
+                            padding-top: 10px;
+                        }
+                        .qr-reparacion {
+                            border-top: 8px solid #e74c3c;
+                            padding-top: 10px;
+                        }
+                        .qr-image {
+                            width: 270px;
+                            height: 270px;
+                            margin: 10px auto;
+                        }
+                        .qr-image img {
+                            width: 100%;
+                            height: 100%;
+                            object-fit: contain;
+                        }
+                        .qr-title {
+                            font-size: 31px; /* Incrementado en 10% */
+                            font-weight: bold;
+                            color: #2c3e50;
+                            margin-bottom: 10px;
+                        }
+                    </style>
+
+                    <!-- Información de la Máquina -->
+                    <div class="machine-info">
+                        <div class="info-item">
+                            <span class="info-label"></span>
+                            <span class="info-value"><t t-esc="doc.sudo().maquina_id.marca"/></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label"></span>
+                            <span class="info-value"><t t-esc="doc.sudo().maquina_id.name.name"/></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label"></span>
+                            <span class="info-value"><t t-esc="doc.sudo().serie_id"/></span>
+                        </div>
+                    </div>
+
+                    <!-- Contómetro -->
+                    <div class="counter-section">
+                        <div class="info-label">Contómetro</div>
+                        <div class="counter-value"><t t-esc="doc.sudo().contometrok_id"/></div>
+                    </div>
+
+                    <!-- QRs centrados en una fila -->
+                    <div class="qr-container">
+                        <div class="qr-card qr-ventas">
+                            <div class="qr-title">Almacén</div>
+                            <div class="qr-image">
+                                <img t-att-src="'data:image/png;base64,' + doc.sudo().qr_code_ventas.decode('utf-8')" 
+                                     alt="QR Code Ventas"/>
+                            </div>
+                        </div>
+
+                        <div class="qr-card qr-reparacion">
+                            <div class="qr-title">Reparación</div>
+                            <div class="qr-image">
+                                <img t-att-src="'data:image/png;base64,' + doc.sudo().qr_image.decode('utf-8')" 
+                                     alt="QR Code Principal"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

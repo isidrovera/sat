@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <data>      
+        <record id="email_template_pedido_toner" model="mail.template">
+            <field name="name">Solicitud de Tóner</field>
+            <field name="model_id" ref="model_sat_sat" />
+            <field name="email_from">${(user.email or '')|safe}</field>
+            <field name="subject">🖨️ Nueva Solicitud de Tóner - ${object.modelo_maquina}</field>
+            <field name="auto_delete" eval="True" />
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #667eea; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🖨️ Nueva Solicitud de Tóner</div>
+            </div>
+            
+            <!-- Contenido Principal -->
+            <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+                
+                <!-- Información del Cliente -->
+                <div style="background-color: #ebf8ff; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Información del Cliente</div>
+                    <div style="margin: 10px 0;">👤 Cliente: <strong>${object.nombre}</strong></div>
+                    <div style="margin: 10px 0;">📱 Celular: <strong>${object.celular}</strong></div>
+                    <div style="margin: 10px 0;">💻 Modelo: <strong>${object.modelo_maquina}</strong></div>
+                    <div style="margin: 10px 0;">🔢 Serie: <strong>${object.serie}</strong></div>
+                </div>
+    
+                <!-- Tóners Solicitados -->
+                <div style="margin: 20px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🎨 Tóners Solicitados</div>
+                    
+                    <!-- Tabla de Tóners -->
+                    <table cellspacing="10" cellpadding="0" style="width: 100%;">
+                        <tr>
+                            <td style="width: 25%; background-color: #f7fafc; padding: 15px; text-align: center;">
+                                <div style="margin-bottom: 5px;">⚫ Black</div>
+                                <strong>${object.toner_black}</strong>
+                            </td>
+                            <td style="width: 25%; background-color: #f7fafc; padding: 15px; text-align: center;">
+                                <div style="margin-bottom: 5px;">🔵 Cyan</div>
+                                <strong>${object.toner_cyan}</strong>
+                            </td>
+                            <td style="width: 25%; background-color: #f7fafc; padding: 15px; text-align: center;">
+                                <div style="margin-bottom: 5px;">🟡 Yellow</div>
+                                <strong>${object.toner_yellow}</strong>
+                            </td>
+                            <td style="width: 25%; background-color: #f7fafc; padding: 15px; text-align: center;">
+                                <div style="margin-bottom: 5px;">🔴 Magenta</div>
+                                <strong>${object.toner_magenta}</strong>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+    
+                <!-- Cantidad Total -->
+                <div style="margin: 20px 0;">
+                    📦 Cantidad total: <strong>${object.cantidad}</strong>
+                </div>
+    
+                <!-- Firma -->
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <div style="margin: 0;">
+                        Saludos,<br>
+                        <strong>Soporte Técnico</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,145 @@
+<odoo>
+    <template id="template_graficos_dinamicos" name="Gráficos Dinámicos">
+        <div>
+            <style>
+                form#form_grafico {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+                form#form_grafico label {
+                    margin-right: 5px;
+                }
+                form#form_grafico select, 
+                form#form_grafico input {
+                    padding: 5px;
+                    font-size: 14px;
+                    width: 200px; /* Ajusta este valor según sea necesario */
+                }
+                button {
+                    padding: 5px 10px;
+                    font-size: 14px;
+                    cursor: pointer;
+                }
+                #chart-container {
+                    margin-top: 20px;
+                    max-width: 1000px;
+                }
+            </style>
+            <form id="form_grafico">
+                <label for="modelo">Modelo:</label>
+                <select id="modelo" name="modelo" onchange="cargarCamposModelo();">
+                    <!-- Las opciones se cargarán dinámicamente -->
+                </select>
+                <label for="fecha_inicio">Fecha Inicio:</label>
+                <input id="fecha_inicio" name="fecha_inicio" type="date"/>
+                <label for="fecha_fin">Fecha Fin:</label>
+                <input id="fecha_fin" name="fecha_fin" type="date"/>
+                <label for="campos">Campo:</label>
+                <select id="campos" name="campos">
+                    <!-- Las opciones de campos se cargarán basadas en el modelo seleccionado -->
+                </select>
+                <button type="button" onclick="configurarYObtenerDatos()">Configurar y Ver Gráfico</button>
+            </form>
+            <div id="chart-container">
+                <div id="myChart" style="height: 400px;"></div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+        <script type="text/javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                cargarModelos();
+
+                async function cargarModelos() {
+                    try {
+                        const response = await fetch('/api/modelos', {
+                            method: 'GET'
+                        });
+                        const modelos = await response.json();
+                        const selectModelo = document.getElementById('modelo');
+                        modelos.forEach(modelo =&gt; {
+                            let option = new Option(modelo.name, modelo.model);
+                            selectModelo.options.add(option);
+                        });
+                    } catch (error) {
+                        console.error('Error cargando modelos:', error);
+                    }
+                }
+
+                async function cargarCamposModelo() {
+                    try {
+                        const modelo = document.getElementById('modelo').value;
+                        const response = await fetch(`/api/campos?modelo=` + modelo, {
+                            method: 'GET'
+                        });
+                        const campos = await response.json();
+                        const selectCampos = document.getElementById('campos');
+                        selectCampos.innerHTML = '';  // Limpiar opciones existentes
+                        campos.forEach(campo =&gt; {
+                            let option = new Option(campo.name, campo.field);
+                            selectCampos.options.add(option);
+                        });
+                    } catch (error) {
+                        console.error('Error cargando campos:', error);
+                    }
+                }
+
+                window.cargarCamposModelo = cargarCamposModelo;  // Hacer global para acceso desde onchange
+
+                window.configurarYObtenerDatos = async function() {
+                    try {
+                        const form = document.getElementById('form_grafico');
+                        const formData = new FormData(form);
+                        const data = {
+                            modelo: formData.get('modelo'),
+                            fecha_inicio: formData.get('fecha_inicio'),
+                            fecha_fin: formData.get('fecha_fin'),
+                            campos: [formData.get('campos')]
+                        };
+
+                        console.log('Enviando datos:', data);  // Agregar registro de depuración
+
+                        const response = await fetch('/api/grafico/datos', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(data)
+                        });
+
+                        const result = await response.json();
+
+                        console.log('Datos recibidos:', result);  // Agregar registro de depuración
+
+                        if (!result.labels || !result.datasets || result.labels.length === 0 || result.datasets[0].data.length === 0) {
+                            console.error('No se recibieron datos válidos para el gráfico.');
+                            return;
+                        }
+
+                        var chartDom = document.getElementById('myChart');
+                        var myChart = echarts.init(chartDom);
+                        var option;
+
+                        option = {
+                            xAxis: {
+                                type: 'category',
+                                data: result.labels
+                            },
+                            yAxis: {
+                                type: 'value'
+                            },
+                            series: [{
+                                data: result.datasets[0].data,
+                                type: 'bar'
+                            }]
+                        };
+
+                        myChart.setOption(option);
+
+                    } catch (error) {
+                        console.error('Error configurando y obteniendo datos:', error);
+                    }
+                };
+            });
+        </script>
+    </template>
+</odoo>

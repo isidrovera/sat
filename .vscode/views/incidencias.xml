@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_incidencia_form" model="ir.ui.view">
+            <field name="name">taller.incidencia.form</field>
+            <field name="model">taller.incidencia</field>
+            <field name="arch" type="xml">
+                <form string="Incidencia">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="name" />
+                                <field name="fecha_hora" />
+                                <field name="tipo" />
+                                <field name="cliente_id" />
+                                <field name="equipo_id" />
+                                <field name="descripcion" />
+                            </group>
+                            <group>
+                                <field name="estado" />
+                                <field name="prioridad" />
+                                <field name="empleado_id" />
+                                <field name="acciones" />
+                                <field name="fecha_resolucion" />
+                                <field name="comentarios_cliente" />
+                                <field name="costos" />
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_incidencia_tree" model="ir.ui.view">
+            <field name="name">taller.incidencia.tree</field>
+            <field name="model">taller.incidencia</field>
+            <field name="arch" type="xml">
+                <list string="Incidencia">
+                    <field name="name" />
+                    <field name="fecha_hora" />
+                    <field name="tipo" />
+                    <field name="cliente_id" />
+                    <field name="equipo_id" />
+                    <field name="descripcion" />
+                    <field name="estado" />
+                    <field name="prioridad" />
+                    <field name="empleado_id" />
+                    <field name="acciones" />
+                    <field name="fecha_resolucion" />
+                    <field name="comentarios_cliente" />
+                    <field name="costos" />
+                </list>
+            </field>
+        </record>
+
+        <record id="action_incidencias" model="ir.actions.act_window">
+            <field name="name">Incidencias</field>
+            <field name="res_model">taller.incidencia</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <menuitem id="sat.menu_incidencia" name="Incidencias" action="action_incidencias" parent="sat.ajustes"/>
+    </data>
+</odoo>

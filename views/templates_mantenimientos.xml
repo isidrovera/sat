@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Template base para las páginas de mantenimiento -->
+        <template id="maintenance_layout" name="Maintenance Layout">
+            <t t-call="web.layout">
+                <t t-set="head">
+                    <link rel="stylesheet" type="text/css" href="/web/static/lib/bootstrap/css/bootstrap.css"/>
+                    <style>
+                        .maintenance-container {
+                            max-width: 600px;
+                            margin: 50px auto;
+                            padding: 20px;
+                            background-color: #ffffff;
+                            border-radius: 8px;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        }
+                        .maintenance-header {
+                            text-align: center;
+                            margin-bottom: 30px;
+                        }
+                        .maintenance-content {
+                            padding: 20px;
+                            text-align: center;
+                        }
+                        .maintenance-message {
+                            font-size: 18px;
+                            color: #2d3748;
+                            margin-bottom: 20px;
+                            line-height: 1.6;
+                        }
+                        .maintenance-footer {
+                            margin-top: 30px;
+                            padding-top: 20px;
+                            border-top: 1px solid #edf2f7;
+                            text-align: center;
+                            font-size: 14px;
+                            color: #718096;
+                        }
+                    </style>
+                </t>
+                <div class="maintenance-container">
+                    <div class="maintenance-header">
+                        <img t-att-src="'/web/binary/company_logo'" alt="Logo"/>
+                        <h1 class="h3">Andes Copiers</h1>
+                    </div>
+                    <div class="maintenance-content">
+                        <t t-out="0"/>
+                    </div>
+                    <div class="maintenance-footer">
+                        <p>© 2024 Andes Copiers. Todos los derechos reservados.</p>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Template para confirmación exitosa -->
+        <template id="maintenance_confirmation_template" name="Maintenance Confirmation">
+            <t t-call="sat.maintenance_layout">
+                <div class="maintenance-message">
+                    <div class="text-center mb-4">
+                        <i class="fa fa-check-circle" style="font-size: 48px; color: #38a169;"></i>
+                        <h2 class="h4 mt-3">¡Confirmación Exitosa!</h2>
+                    </div>
+                    
+                    <p class="mb-4" t-out="message"/>
+
+                    <div class="alert alert-info">
+                        <p class="mb-2">Visita programada para:</p>
+                        <p class="font-weight-bold">
+                            <!-- Formatear la fecha directamente -->
+                            <t t-if="visit_date">
+                                <t t-esc="visit_date.strftime('%d de %B de %Y') if isinstance(visit_date, datetime.date) else visit_date"/>
+                            </t>
+                        </p>
+                    </div>
+
+                    <p class="mt-4">
+                        Se ha enviado un correo electrónico con los detalles de la visita.
+                    </p>
+
+                    <div class="mt-4">
+                        <a href="/" class="btn btn-success">
+                            Volver al inicio
+                        </a>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Template para solicitud de reprogramación -->
+        <template id="maintenance_reschedule_template" name="Maintenance Reschedule Request">
+            <t t-call="sat.maintenance_layout">
+                <div class="maintenance-message">
+                    <div class="text-center mb-4">
+                        <i class="fa fa-clock" style="font-size: 48px; color: #4299e1;"></i>
+                        <h2 class="h4 mt-3">Solicitud de Reprogramación Recibida</h2>
+                    </div>
+
+                    <p class="mb-4" t-out="message"/>
+
+                    <div class="alert alert-info">
+                        <p>
+                            Uno de nuestros representantes se pondrá en contacto con usted 
+                            para coordinar una nueva fecha.
+                        </p>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="/" class="btn btn-success">
+                            Volver al inicio
+                        </a>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Template para error -->
+        <template id="maintenance_error_template" name="Maintenance Error">
+            <t t-call="sat.maintenance_layout">
+                <div class="maintenance-message">
+                    <div class="text-center mb-4">
+                        <i class="fa fa-exclamation-triangle" style="font-size: 48px; color: #e53e3e;"></i>
+                        <h2 class="h4 mt-3">Ha ocurrido un error</h2>
+                    </div>
+
+                    <p class="mb-4" t-out="error_message"/>
+
+                    <div class="alert alert-warning">
+                        <p>
+                            Por favor, contacte con soporte técnico si el problema persiste.
+                        </p>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="mailto:soporte@andescopiers.com.pe" class="btn btn-success">
+                            Contactar Soporte
+                        </a>
+                    </div>
+                </div>
+            </t>
+        </template>
+    </data>
+</odoo>

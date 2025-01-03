@@ -1,0 +1,440 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <data>
+        <record id="email_template_ticket_cliente" model="mail.template">
+            <field name="name">Envio de Ticket al Cliente</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.product_alquiler.correo_}}</field>
+            <field name="email_cc">jamilet.roggero@andescopiers.com.pe,
+                comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com;
+                alquiler@andescopiers.com.pe</field>
+            <field name="subject">Nuevo Ticket # {{object.name}}</field>
+            <field name="model_id" ref="model_ticket_alquiler" />
+            <field name="auto_delete" eval="True" />
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #333333;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #2C5282; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🎫 Ticket de Servicio #<t t-out="object.name"/></div>
+            </div>
+            
+            <!-- Contenido Principal -->
+            <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+                <!-- Saludo -->
+                <div style="margin-bottom: 20px;">
+                    Estimado/a <strong><t t-out="object.partner_id.name"/></strong>,
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    Reciba un cordial saludo. Le informamos que hemos programado una visita técnica para atender su requerimiento.
+                </div>
+                
+                <!-- Detalles de la Visita -->
+                <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📅 Detalles de la Visita</div>
+                    <div style="margin: 10px 0;">🕒 Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
+                    <div style="margin: 10px 0;">⚡ Prioridad: <strong><t t-out="object.priority"/></strong></div>
+                    <div style="margin: 10px 0;">🔧 Tipo de servicio: <strong><t t-out="object.tipo_servicio_id"/></strong></div>
+                    <div style="margin: 10px 0;">📍 Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
+                    <div style="margin: 10px 0;">👨‍🔧 Técnico: <strong><t t-out="object.responsable.name"/></strong></div>
+                    <div style="margin: 10px 0;">🆔 DNI: <strong><t t-out="object.responsable.vat"/></strong></div>
+                </div>
+    
+                <!-- Especificaciones del Equipo -->
+                <div style="background-color: #ebf8ff; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Especificaciones del Equipo</div>
+                    <div style="margin: 10px 0;">Marca: <strong><t t-out="object.marca_id_r"/></strong></div>
+                    <div style="margin: 10px 0;">Modelo: <strong><t t-out="object.product_alquiler.name.name"/></strong></div>
+                    <div style="margin: 10px 0;">Serie: <strong><t t-out="object.serie_id_r"/></strong></div>
+                </div>
+    
+                <!-- Problema Reportado -->
+                <div style="background-color: #fff5f5; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">⚠️ Problema Reportado</div>
+                    <div style="margin: 10px 0;"><t t-out="object.description"/></div>
+                </div>
+    
+                <!-- Nota Importante -->
+                <div style="margin: 20px 0; padding-left: 15px; border-left: 4px solid #4299e1;">
+                    <div style="margin: 10px 0;">
+                        Por favor, notifíquenos sobre su stock de toner para garantizarles el total abastecimiento. Además, le solicitamos reportar cualquier inconveniente adicional que presente al técnico en su visita.
+                    </div>
+                </div>
+    
+                <!-- Requerimientos -->
+                <div style="margin: 20px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Requerimos su apoyo en:</div>
+                    <div style="margin-left: 20px;">
+                        1. Dar autorización para el ingreso de nuestro personal.<br>
+                        2. Disponibilidad de espacio y tiempo para nuestro trabajo.
+                    </div>
+                </div>
+    
+                <!-- Botón de Acción -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="#" style="background-color: #2C5282; color: #ffffff; padding: 12px 25px; text-decoration: none; display: inline-block;">
+                        Ver Ticket 🔍
+                    </a>
+                </div>
+    
+                <!-- Pie -->
+                <div style="text-align: center; margin-top: 30px; color: #666666;">
+                    Gracias por su atención
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>
+        <record id="email_template_ticket_cliente_finalizacion" model="mail.template">
+            <field name="name">Finalización de Ticket al Cliente</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.product_alquiler.correo_}}</field>
+            <field name="email_cc">jamilet.roggero@andescopiers.com.pe,
+                comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com;
+                alquiler@andescopiers.com.pe</field>
+            <field name="subject">✅ Finalización de Ticket #{{object.name}}</field>
+            <field name="model_id" ref="model_ticket_alquiler" />
+            <field name="auto_delete" eval="True" />
+            <field name="lang"></field>
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #48bb78; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">✅ Servicio Técnico Completado</div>
+                <div style="color: #ffffff; margin-top: 10px;">Ticket #<t t-out="object.name"/></div>
+            </div>
+            
+            <!-- Contenido Principal -->
+            <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+                <!-- Saludo -->
+                <div style="margin-bottom: 20px;">
+                    Estimado/a <strong><t t-out="object.partner_id.name"/></strong>,
+                </div>
+                
+                <!-- Mensaje de Confirmación -->
+                <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                    <div style="margin: 0;">
+                        Nos complace informarle que hemos completado exitosamente la visita técnica programada. Agradecemos su disponibilidad y colaboración durante el servicio.
+                    </div>
+                </div>
+    
+                <!-- Detalles del Servicio -->
+                <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Detalles del Servicio</div>
+                    <div style="margin: 10px 0;">📅 Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
+                    <div style="margin: 10px 0;">⚡ Prioridad: <strong><t t-out="object.priority"/></strong></div>
+                    <div style="margin: 10px 0;">🔧 Tipo: <strong><t t-out="object.tipo_servicio_id"/></strong></div>
+                    <div style="margin: 10px 0;">📍 Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
+                    <div style="margin: 10px 0;">👨‍🔧 Técnico: <strong><t t-out="object.responsable.name"/></strong></div>
+                    <div style="margin: 10px 0;">🆔 DNI: <strong><t t-out="object.responsable.vat"/></strong></div>
+                </div>
+    
+                <!-- Equipo Atendido -->
+                <div style="background-color: #e6fffa; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Equipo Atendido</div>
+                    <div style="margin: 10px 0;">Marca: <strong><t t-out="object.marca_id_r"/></strong></div>
+                    <div style="margin: 10px 0;">Modelo: <strong><t t-out="object.product_alquiler.name.name"/></strong></div>
+                    <div style="margin: 10px 0;">Serie: <strong><t t-out="object.serie_id_r"/></strong></div>
+                    
+                    <div style="font-size: 16px; font-weight: bold; margin: 15px 0 10px 0;">📊 Contadores</div>
+                    <div style="background-color: #edf2f7; padding: 8px 15px; margin: 5px 0; display: inline-block;">
+                        ⚫ Negro: <strong><t t-out="object.contometrok_id"/></strong>
+                    </div>
+                    <div style="background-color: #edf2f7; padding: 8px 15px; margin: 5px 0; display: inline-block;">
+                        🎨 Color: <strong><t t-out="object.contometroc_id"/></strong>
+                    </div>
+                    <div style="background-color: #edf2f7; padding: 8px 15px; margin: 5px 0; display: inline-block;">
+                        📄 Scanner: <strong><t t-out="object.contometros_id"/></strong>
+                    </div>
+                </div>
+    
+                <!-- Problema Reportado -->
+                <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">⚠️ Problema Reportado</div>
+                    <div style="margin: 10px 0;"><t t-out="object.description"/></div>
+                </div>
+    
+                <!-- Informe Técnico -->
+                <div style="background-color: #f0fff4; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📝 Informe Técnico</div>
+                    <div style="margin: 10px 0;"><t t-out="object.informe_id"/></div>
+                    <div style="margin: 10px 0; color: #2c5282; font-style: italic;">
+                        📎 Se adjunta el informe técnico detallado en formato PDF.
+                    </div>
+                </div>
+    
+                <!-- Sección de Contacto -->
+                <div style="text-align: center; margin-top: 30px; padding: 20px; background-color: #f7fafc;">
+                    <div style="margin-bottom: 15px;">¿Necesita ayuda adicional? Estamos para servirle.</div>
+                    <div style="margin-top: 10px;">
+                        <a href="#" style="background-color: #48bb78; color: #ffffff; padding: 12px 25px; text-decoration: none; display: inline-block;">
+                            Contactar Soporte 💬
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>
+        <record id="email_template_ticket_tecnico" model="mail.template">
+            <field name="name">Ticket de Servicio Técnico</field>
+            <field name="subject">🔧 Nuevo Ticket #{{object.name}}</field>
+            <field name="model_id" ref="model_ticket_alquiler" />
+            <field name="auto_delete" eval="False" />
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.responsable.email}}</field>
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #3182ce; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🎫 Nuevo Ticket Asignado</div>
+                <div style="color: #ffffff; margin-top: 10px;">Ticket #<t t-out="object.name"/></div>
+            </div>
+            
+            <!-- Contenido Principal -->
+            <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+                <!-- Saludo -->
+                <div style="margin-bottom: 20px;">
+                    Estimado(a) <strong><t t-out="object.responsable.name"/></strong>,
+                </div>
+                
+                <!-- Detalles del Servicio -->
+                <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0; border-left: 4px solid #3182ce;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Detalles del Servicio</div>
+                    <div style="margin: 10px 0;">📅 Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
+                    <div style="margin: 10px 0;">🔧 Tipo: <strong><t t-out="object.tipo_servicio_id"/></strong></div>
+                    <div style="margin: 10px 0;">👥 Asistencia: <strong><t t-out="object.asistencia_id"/></strong></div>
+                    <div style="margin: 10px 0;">📍 Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
+                </div>
+    
+                <!-- Información del Cliente -->
+                <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0; border-left: 4px solid #3182ce;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">👤 Información del Cliente</div>
+                    <div style="margin: 10px 0;">Cliente: <strong><t t-out="object.partner_id.name"/></strong></div>
+                    <div style="background-color: #edf2f7; padding: 8px 15px; margin: 10px 0; display: inline-block;">
+                        📞 Contacto: <strong><t t-out="object.contacto_id_r"/></strong>
+                    </div>
+                    <div style="background-color: #edf2f7; padding: 8px 15px; margin: 10px 0; display: inline-block;">
+                        📱 Celular: <strong><t t-out="object.product_alquiler.celular"/></strong>
+                    </div>
+                </div>
+    
+                <!-- Especificaciones del Equipo -->
+                <div style="background-color: #ebf8ff; padding: 20px; margin: 15px 0; border-left: 4px solid #4299e1;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Especificaciones del Equipo</div>
+                    <div style="margin: 10px 0;">Marca: <strong><t t-out="object.marca_id_r"/></strong></div>
+                    <div style="margin: 10px 0;">Modelo: <strong><t t-out="object.product_alquiler.name.name"/></strong></div>
+                    <div style="margin: 10px 0;">Serie: <strong><t t-out="object.serie_id_r"/></strong></div>
+                </div>
+    
+                <!-- Problema Reportado -->
+                <div style="background-color: #fff5f5; padding: 20px; margin: 15px 0; border-left: 4px solid #f56565;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">⚠️ Problema Reportado</div>
+                    <div style="margin: 10px 0;"><t t-out="object.description"/></div>
+                </div>
+    
+                <!-- Firma -->
+                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #718096;">
+                    <div style="margin: 0;">
+                        Saludos cordiales,<br>
+                        <strong>El equipo de Soporte Técnico</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>
+
+
+        <record id="mail_template_asistencia_directa" model="mail.template">
+            <field name="name">Asistencia Directa</field>
+            <field name="subject">✅ Reporte de Asistencia Directa - Ticket #{{object.name}}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">t.escalante@corapsac.com.pe</field>
+            <field name="email_cc">jamilet.roggero@andescopiers.com.pe, campuero@corapsac.com.pe,
+                lincoln@corapsac.com</field>
+            <field name="model_id" ref="model_ticket_alquiler" />
+            <field name="auto_delete" eval="True" />
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #38a169; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">✅ Reporte de Asistencia Directa</div>
+            </div>
+            
+            <!-- Contenido Principal -->
+            <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+                <!-- Saludo -->
+                <div style="margin-bottom: 20px;">
+                    Estimada Señora Teresa,
+                </div>
+                
+                <!-- Mensaje de Éxito -->
+                <div style="background-color: #f7fafc; padding: 15px; margin: 15px 0; border: 1px solid #e2e8f0;">
+                    <div style="margin: 0;">
+                        Le informo que el trabajador designado realizó la visita al cliente de manera puntual y eficiente, sin requerir descuentos por tardanza.
+                    </div>
+                </div>
+    
+                <!-- Detalles del Servicio -->
+                <div style="background-color: #f0fff4; padding: 20px; margin: 15px 0; border-left: 4px solid #38a169;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Detalles del Servicio</div>
+                    
+                    <div style="margin: 10px 0;">
+                        <span style="margin-right: 5px;">🎫 Ticket:</span>
+                        <strong><t t-out="object.name"/></strong>
+                    </div>
+                    
+                    <div style="margin: 10px 0;">
+                        <span style="margin-right: 5px;">📅 Fecha:</span>
+                        <strong><t t-out="object.agenda_local"/></strong>
+                    </div>
+                    
+                    <div style="margin: 10px 0;">
+                        <span style="margin-right: 5px;">👥 Cliente:</span>
+                        <strong><t t-out="object.partner_id.name"/></strong>
+                    </div>
+                    
+                    <div style="margin: 10px 0;">
+                        <span style="margin-right: 5px;">👨‍🔧 Trabajador:</span>
+                        <strong><t t-out="object.responsable.name"/></strong>
+                    </div>
+                </div>
+    
+                <!-- Mensaje Final -->
+                <div style="margin: 20px 0;">
+                    Quedo a su disposición para cualquier consulta o información adicional que requiera.
+                </div>
+    
+                <!-- Firma -->
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #718096;">
+                    <div style="margin: 0;">
+                        Cordialmente,<br>
+                        <strong>Equipo de Soporte Técnico</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>
+
+
+        <record id="mail_template_retorno" model="mail.template">
+            <field name="name">Marcación salida</field>
+            <field name="subject">⚠️ Notificación - Marcación de Salida - Ticket #{{object.name}}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">t.escalante@corapsac.com.pe</field>
+            <field name="email_cc">jamilet.roggero@andescopiers.com.pe, campuero@corapsac.com.pe,
+                lincoln@corapsac.com</field>
+            <field name="model_id" ref="model_ticket_alquiler" />
+            <field name="auto_delete" eval="True" />
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #ed8936; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">⚠️ Notificación de Marcación</div>
+            </div>
+            
+            <!-- Contenido Principal -->
+            <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+                <!-- Saludo -->
+                <div style="margin-bottom: 20px;">
+                    Estimada Señora Teresa,
+                </div>
+                
+                <!-- Notificación -->
+                <div style="background-color: #fffaf0; padding: 15px; margin: 15px 0; border-left: 4px solid #ed8936;">
+                    <div style="margin: 0;">
+                        <strong>Importante:</strong> Le informo que el trabajador designado no pudo regresar a realizar su marcación de salida. Se solicita no aplicar descuentos por esta situación.
+                    </div>
+                </div>
+    
+                <!-- Detalles del Servicio -->
+                <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Detalles del Servicio</div>
+                    
+                    <div style="padding: 8px 0; border-bottom: 1px solid #edf2f7;">
+                        <div style="margin: 0;">🎫 Ticket: <strong><t t-out="object.name"/></strong></div>
+                    </div>
+                    
+                    <div style="padding: 8px 0; border-bottom: 1px solid #edf2f7;">
+                        <div style="margin: 0;">📅 Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
+                    </div>
+                    
+                    <div style="padding: 8px 0; border-bottom: 1px solid #edf2f7;">
+                        <div style="margin: 0;">👥 Cliente: <strong><t t-out="object.partner_id.name"/></strong></div>
+                    </div>
+                    
+                    <div style="padding: 8px 0;">
+                        <div style="margin: 0;">👨‍🔧 Trabajador: <strong><t t-out="object.responsable.name"/></strong></div>
+                    </div>
+                </div>
+    
+                <!-- Mensaje Final -->
+                <div style="margin: 20px 0;">
+                    Quedo a su disposición para cualquier consulta adicional que requiera.
+                </div>
+    
+                <!-- Firma -->
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #718096;">
+                    <div style="margin: 0;">
+                        Cordialmente,<br>
+                        <strong>Equipo de Soporte Técnico</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>
+    </data>
+</odoo>

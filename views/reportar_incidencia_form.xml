@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="reportar_incidencia_form" name="Reportar Incidencia">
+        <t t-call="website.layout">
+            <style>
+                .form-group { margin-bottom: 30px; }
+            </style>
+            <div id="wrap" class="container mt-5 mb-5">
+                <h1 class="text-center">Reportar un Problema</h1>
+                <form id="ticket_form" action="/ticket/reportar_incidencia" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" id="partner_id" name="partner_id" t-att-value="partner_id"/>
+                    <input type="hidden" id="direccion" name="direccion" t-att-value="direccion"/>
+                    <input type="hidden" id="correo" name="correo" t-att-value="correo"/>
+                    <input type="hidden" id="product_id" name="product_id" t-att-value="product_id"/>
+                    
+                    <div class="form-group">
+                        <input type="text" id="reporter_name" name="reporter_name" class="form-control" 
+                               t-att-value="contacto_id" placeholder="Ingresa tu nombre" required="required"/>
+                    </div>
+                    <div class="form-group">
+                        <input type="tel" id="reporter_phone" name="reporter_phone" class="form-control" 
+                               t-att-value="celular" placeholder="Ingresa tu número de celular" required="required"/>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="description" name="description" class="form-control" required="required" 
+                                  placeholder="Describa el problema con detalle"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <input type="file" id="problem_photo" name="problem_photo" class="form-control-file" 
+                               accept="image/*" capture="environment" />
+                    </div>
+                    <div class="text-center">
+                        <button type="button" class="btn btn-secondary mr-2" onclick="goBack()">Volver</button>
+                        <button type="submit" class="btn btn-primary">Enviar Reporte</button>
+                    </div>
+                </form>
+            </div>
+            <script>
+                function goBack() {
+                    if (document.referrer) {
+                        window.location.href = document.referrer;
+                    } else {
+                        window.history.back();
+                    }
+                }
+            </script>
+        </t>
+    </template>
+</odoo>
