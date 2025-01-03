@@ -624,7 +624,7 @@ Modificado por: {user_name}"""
             return self._notify_vendedora()
 
     def enviar_mensaje_transportistas(self):
-        transportista_numeros = ['51924894872']
+        transportista_numeros = ['51924894872', '51926061582']
         mensaje = f"""Estimado transportista,
 
 Por favor, traer la siguiente máquina:
