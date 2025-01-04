@@ -416,7 +416,11 @@ class SatSat(models.Model):
         peru_tz = pytz.timezone('America/Lima')
         utc_now = pytz.utc.localize(datetime.utcnow())
         return utc_now.astimezone(peru_tz)
-
+    location_change_token = fields.Char(
+        string='Token de Cambio de Ubicación',
+        help='Token único para validar el cambio de ubicación',
+        copy=False
+    )
     def write(self, vals):
         """Bloquea cambios automáticos en el campo 'ubicacion_id'."""
         if 'ubicacion_id' in vals:
