@@ -682,10 +682,18 @@ Modificado por: {user_name}"""
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         token = base64.b64encode(os.urandom(24)).decode()
         
-        # Solo escribir el token, sin el campo target_location que no existe
+        # Logging para debug
+        _logger.info(f"Creando URL para registro {record_id} con token {token}")
+        
+        # Almacenar el token
         self.write({
             'location_change_token': token
         })
+        
+        # Verificar que el token se guardó correctamente
+        self.env.cr.commit()  # Forzar commit para asegurar que se guarde
+        record = self.browse(record_id)
+        _logger.info(f"Token guardado: {record.location_change_token}")
         
         return f"{base_url}/sat/change_location/{record_id}?token={token}"
     def _notify_vendedora(self):
