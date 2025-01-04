@@ -418,6 +418,13 @@ class SatSat(models.Model):
         return utc_now.astimezone(peru_tz)
 
     def write(self, vals):
+        """Bloquea cambios automáticos en el campo 'ubicacion_id'."""
+        if 'ubicacion_id' in vals:
+            for record in self:
+                if record.ubicacion_id in ['segundo_local', 'covida'] and vals['ubicacion_id'] == 'primer_piso':
+                    raise ValidationError(
+                        _("La ubicación no puede cambiar automáticamente a 'primer_piso'. Este cambio debe realizarse manualmente mediante el enlace proporcionado.")
+                    )
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         estados_problema = ['con_problemas', 'de_partes']
         estado_final_no_notificar = 'entregada'
@@ -506,13 +513,7 @@ Modificado por: {user_name}"""
 
         # Ejecutar la escritura final después de todas las validaciones y notificaciones
         _logger.debug(f"Finalizando write para ID {record.id} con valores: {vals}")
-                    """Bloquea cambios automáticos en el campo 'ubicacion_id'."""
-                if 'ubicacion_id' in vals:
-                    for record in self:
-                        if record.ubicacion_id in ['segundo_local', 'covida'] and vals['ubicacion_id'] == 'primer_piso':
-                            raise ValidationError(
-                                _("La ubicación no puede cambiar automáticamente a 'primer_piso'. Este cambio debe realizarse manualmente mediante el enlace proporcionado.")
-                            )
+        
         return super(SatSat, self).write(vals)
 
 
