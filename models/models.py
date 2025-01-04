@@ -638,12 +638,14 @@ Modificado por: {user_name}"""
     def enviar_mensaje_transportistas(self):
         transportista_numeros = ['51975399303']
         try:
-            url = self.crear_url_cambio_ubicacion()  # Ya no pasamos self como parámetro
+            # Asegurarnos de que tenemos el registro correcto
+            record = self.with_context(active_test=False).browse(self._origin.id)
+            url = self.crear_url_cambio_ubicacion()  
             mensaje = f"""Estimado transportista,
     Por favor, traer la siguiente máquina:
-    Modelo: {self.name.name}
-    Serie: {self.serie_id}
-    Ubicación actual: {self.ubicacion_id}
+    Modelo: {record.name.name}
+    Serie: {record.serie_id}
+    Ubicación actual: {record.ubicacion_id}
     Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
     haga clic en el siguiente enlace: 📍 {url}"""
             
@@ -654,7 +656,6 @@ Modificado por: {user_name}"""
                 
         except ValueError as e:
             _logger.error(f"Error al crear URL para el mensaje: {str(e)}")
-            # Opcional: Podrías querer manejar el error de otra manera
             raise
 
     def enviar_mensaje_whatsapp(self, phone, message):
@@ -673,23 +674,21 @@ Modificado por: {user_name}"""
 
     def crear_url_cambio_ubicacion(self):
         """Genera una URL única para el cambio de ubicación."""
-        # Verificar si es un registro nuevo
-        if not self.id or isinstance(self.id, (bool, models.NewId)):
-            _logger.error(f"Intento de crear URL para un registro no guardado: {self.id}")
-            raise ValueError("El registro debe ser guardado antes de generar una URL.")
-            
-        # Asegurar que tenemos un ID válido
+        # Usamos self._origin.id para obtener el ID real del registro existente
+        if not self._origin.id:
+            _logger.error(f"No se pudo obtener el ID del registro: {self.id}")
+            raise ValueError("No se pudo obtener el ID del registro.")
+        
         try:
-            record_id = int(self.id)
+            record_id = int(self._origin.id)
         except (ValueError, TypeError):
-            _logger.error(f"El ID del registro no es válido: {self.id}")
+            _logger.error(f"El ID del registro no es válido: {self._origin.id}")
             raise ValueError("El ID del registro debe ser un entero.")
     
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         token = base64.b64encode(os.urandom(24)).decode()  # Generar un token único
         self.write({'location_change_token': token})  # Almacenar el token en el registro
         return f"{base_url}/sat/change_location/{record_id}?token={token}"
-
     def _notify_vendedora(self):
         return {
             'warning': {
