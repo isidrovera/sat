@@ -7,8 +7,8 @@ class InspeccionController(http.Controller):
     def formulario_inspeccion(self, token):
         alquiler = request.env['alquiler'].sudo().search([('token_inspeccion', '=', token)], limit=1)
         if not alquiler:
-            return request.render('mi_modulo.inspeccion_error')
-        return request.render('mi_modulo.inspeccion_formulario', {
+            return request.render('sat.inspeccion_error')
+        return request.render('sat.inspeccion_formulario', {
             'alquiler': alquiler
         })
 
