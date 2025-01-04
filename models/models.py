@@ -681,11 +681,12 @@ Modificado por: {user_name}"""
         
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         token = base64.b64encode(os.urandom(24)).decode()
-        # Almacenar el token y la ubicación objetivo en el registro
+        
+        # Solo escribir el token, sin el campo target_location que no existe
         self.write({
-            'location_change_token': token,
-            'target_location': 'primer_piso'  # O el valor que corresponda
+            'location_change_token': token
         })
+        
         return f"{base_url}/sat/change_location/{record_id}?token={token}"
     def _notify_vendedora(self):
         return {
