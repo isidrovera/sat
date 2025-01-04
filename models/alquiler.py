@@ -509,6 +509,12 @@ class UnidadAlquiler(models.Model):
         ('apto', 'Apto'),
         ('requiere_adecuacion', 'Requiere adecuación'),
         ('no_apto', 'No apto')
+    ], string='Estado de instalación', compute='_compute_apto', store=True)
+    estado_instalacion = fields.Selection([
+        ('pendiente', 'Pendiente'),
+        ('apto', 'Apto'),
+        ('requiere_adecuacion', 'Requiere adecuación'),
+        ('no_apto', 'No apto')
     ], compute='_compute_apto', store=True)
     apto_instalacion = fields.Boolean('Apto para instalación', compute='_compute_apto')
     requiere_adecuacion = fields.Boolean('Requiere adecuación', compute='_compute_apto')

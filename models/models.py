@@ -506,6 +506,13 @@ Modificado por: {user_name}"""
 
         # Ejecutar la escritura final después de todas las validaciones y notificaciones
         _logger.debug(f"Finalizando write para ID {record.id} con valores: {vals}")
+                    """Bloquea cambios automáticos en el campo 'ubicacion_id'."""
+                if 'ubicacion_id' in vals:
+                    for record in self:
+                        if record.ubicacion_id in ['segundo_local', 'covida'] and vals['ubicacion_id'] == 'primer_piso':
+                            raise ValidationError(
+                                _("La ubicación no puede cambiar automáticamente a 'primer_piso'. Este cambio debe realizarse manualmente mediante el enlace proporcionado.")
+                            )
         return super(SatSat, self).write(vals)
 
 
@@ -656,10 +663,12 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
             _logger.error(f"Error al enviar mensaje de WhatsApp a {phone}: {e}")
 
     def crear_url_cambio_ubicacion(self, record):
+        """Genera una URL única para el cambio de ubicación, incluyendo un token."""
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        clean_id = re.sub(r'\D', '', str(record.id))  # Remover cualquier carácter no numérico
-        url = f"{base_url}/sat/change_location/{clean_id}"
-        return url
+        token = base64.b64encode(os.urandom(24)).decode()  # Generar un token único
+        record.write({'location_change_token': token})  # Almacenar el token en el registro
+        return f"{base_url}/sat/change_location/{record.id}?token={token}"
+
     def _notify_vendedora(self):
         return {
             'warning': {
@@ -674,6 +683,7 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
         self.evaluar_registros_diarios()
 
     def evaluar_registros_diarios(self):
+        """Evalúa los registros diarios y notifica al transportista si hay máquinas para mover."""
         registros_primer_piso = self.search([('ubicacion_id', '=', 'primer_piso'), ('estado_ventas_id', '=', 'sin_revisar')])
         registros_tercer_piso = self.search([('ubicacion_id', '=', 'tercer_piso'), ('estado_ventas_id', '=', 'sin_revisar')])
 
@@ -684,27 +694,29 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
             ], limit=8)
             
             _logger.debug(f"Máquinas a traer: {registros_a_traer}")
-            
+
             if registros_a_traer:
                 transportista_numeros = ['51924894872']
                 for registro in registros_a_traer:
+                    url = self.crear_url_cambio_ubicacion(registro)
                     mensaje = f"""Estimado transportista,
 
-Por favor, traer la siguiente máquina:
+    Por favor, traer la siguiente máquina:
 
-Modelo: {registro.name.name}
-Serie: {registro.serie_id}
-Ubicación actual: {registro.ubicacion_id}
+    Modelo: {registro.name.name}
+    Serie: {registro.serie_id}
+    Ubicación actual: {registro.ubicacion_id}.
 
-Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
-haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro)}"""
+    Para registrar el cambio de ubicación a primer piso, haga clic en el siguiente enlace:
+    📍 {url} (Este enlace es exclusivo para uso manual y no debe ser compartido)."""
 
                     _logger.debug(f"Enviando mensaje para la máquina {registro.name.name} con serie {registro.serie_id}")
 
                     for numero in transportista_numeros:
                         self.enviar_mensaje_whatsapp(numero, mensaje)
-                    
+
                     _logger.info(f"Mensaje enviado para la máquina {registro.name.name} con serie {registro.serie_id}")
+
     def action_crear_reparaciones(self):
         """ Crea una reparación para cada registro seleccionado en el modelo 'sat.sat'. """
         

@@ -543,10 +543,12 @@ Modificado por: {user_name}"""
             _logger.error(f"Error al enviar mensaje de WhatsApp a {phone}: {e}")
 
     def crear_url_cambio_ubicacion(self, record):
+        """Genera una URL única para el cambio de ubicación, incluyendo un token."""
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        clean_id = re.sub(r'\D', '', str(record.id))  # Remover cualquier carácter no numérico
-        url = f"{base_url}/sat/change_location/{clean_id}"
-        return url
+        token = base64.b64encode(os.urandom(24)).decode()  # Generar un token único
+        record.write({'location_change_token': token})  # Almacenar el token en el registro
+        return f"{base_url}/sat/change_location/{record.id}?token={token}"
+
     def _notify_vendedora(self):
         return {
             'warning': {
