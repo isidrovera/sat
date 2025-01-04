@@ -674,20 +674,18 @@ Modificado por: {user_name}"""
 
     def crear_url_cambio_ubicacion(self):
         """Genera una URL única para el cambio de ubicación."""
-        # Usamos self._origin.id para obtener el ID real del registro existente
-        if not self._origin.id:
-            _logger.error(f"No se pudo obtener el ID del registro: {self.id}")
-            raise ValueError("No se pudo obtener el ID del registro.")
+        record_id = self._origin.id or self.id
+        if not record_id:
+            _logger.error("No se pudo obtener el ID del registro")
+            raise ValueError("No se pudo obtener el ID del registro")
         
-        try:
-            record_id = int(self._origin.id)
-        except (ValueError, TypeError):
-            _logger.error(f"El ID del registro no es válido: {self._origin.id}")
-            raise ValueError("El ID del registro debe ser un entero.")
-    
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        token = base64.b64encode(os.urandom(24)).decode()  # Generar un token único
-        self.write({'location_change_token': token})  # Almacenar el token en el registro
+        token = base64.b64encode(os.urandom(24)).decode()
+        # Almacenar el token y la ubicación objetivo en el registro
+        self.write({
+            'location_change_token': token,
+            'target_location': 'primer_piso'  # O el valor que corresponda
+        })
         return f"{base_url}/sat/change_location/{record_id}?token={token}"
     def _notify_vendedora(self):
         return {
