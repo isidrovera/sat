@@ -9,31 +9,30 @@ _logger = logging.getLogger(__name__)
 class SatController(http.Controller):
     @http.route('/sat/change_location/<int:record_id>', type='http', auth='public', website=True)
     def change_location(self, record_id, token=None, **kwargs):
-        # Verificar que se proporcionó un token
-        if not token:
-            return request.render('sat.location_change_error', {
-                'error_message': 'No se proporcionó token de validación'
-            })
-
-        record = request.env['sat.sat'].sudo().browse(record_id)
-        
-        # Verificar que el registro existe
-        if not record.exists():
-            return request.render('sat.location_change_error', {
-                'error_message': 'Registro no encontrado'
-            })
-
-        # Verificar que el token es válido
-        if record.location_change_token != token:
-            return request.render('sat.location_change_error', {
-                'error_message': 'Token de validación inválido'
-            })
-            
-        # Verificar que la ubicación no sea ya primer piso
-        if record.ubicacion_id == 'primer_piso':
-            return request.render('sat.location_already_changed', {})
-
         try:
+            # Obtenemos el registro con sudo() para asegurar acceso
+            record = request.env['sat.sat'].with_context(active_test=False).sudo().browse(record_id)
+            
+            # Verificación más detallada de la existencia del registro
+            if not record.exists():
+                _logger.error(f"Registro no encontrado: ID {record_id}")
+                return request.render('sat.location_change_error', {
+                    'error': 'No se encontró la máquina especificada'
+                })
+    
+            # Verificación del token
+            if not token or record.location_change_token != token:
+                _logger.error(f"Token inválido para el registro {record_id}")
+                return request.render('sat.location_change_error', {
+                    'error': 'El enlace no es válido o ha expirado'
+                })
+    
+            # Verificación del estado actual
+            if record.ubicacion_id == 'primer_piso':
+                return request.render('sat.location_already_changed', {
+                    'message': 'La ubicación ya ha sido actualizada'
+                })
+    
             # Guardar la ubicación anterior
             old_location = record.ubicacion_id
             
@@ -49,10 +48,12 @@ class SatController(http.Controller):
             message = f"Ubicación cambiada de {old_location} a primer_piso el {current_time}"
             record.message_post(body=message)
             
-            return request.render('sat.location_change_success', {})
+            return request.render('sat.location_change_success', {
+                'message': 'Ubicación actualizada correctamente'
+            })
             
         except Exception as e:
-            _logger.error(f"Error al cambiar la ubicación: {str(e)}")
+            _logger.error(f"Error al procesar cambio de ubicación: {str(e)}")
             return request.render('sat.location_change_error', {
-                'error_message': 'Error al actualizar la ubicación'
+                'error': 'Error al procesar la solicitud'
             })
