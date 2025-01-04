@@ -637,21 +637,25 @@ Modificado por: {user_name}"""
 
     def enviar_mensaje_transportistas(self):
         transportista_numeros = ['51975399303']
-        mensaje = f"""Estimado transportista,
-
-Por favor, traer la siguiente máquina:
-
-Modelo: {self.name.name}
-Serie: {self.serie_id}
-Ubicación actual: {self.ubicacion_id}
-
-Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
-haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}"""
-
-        _logger.debug(f"Enviando mensaje a transportistas: {mensaje}")
-
-        for numero in transportista_numeros:
-            self.enviar_mensaje_whatsapp(numero, mensaje)
+        try:
+            url = self.crear_url_cambio_ubicacion()  # Ya no pasamos self como parámetro
+            mensaje = f"""Estimado transportista,
+    Por favor, traer la siguiente máquina:
+    Modelo: {self.name.name}
+    Serie: {self.serie_id}
+    Ubicación actual: {self.ubicacion_id}
+    Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
+    haga clic en el siguiente enlace: 📍 {url}"""
+            
+            _logger.debug(f"Enviando mensaje a transportistas: {mensaje}")
+            
+            for numero in transportista_numeros:
+                self.enviar_mensaje_whatsapp(numero, mensaje)
+                
+        except ValueError as e:
+            _logger.error(f"Error al crear URL para el mensaje: {str(e)}")
+            # Opcional: Podrías querer manejar el error de otra manera
+            raise
 
     def enviar_mensaje_whatsapp(self, phone, message):
         url = 'https://whatsapp.andessolutioncopiers.com/api/message'
@@ -667,17 +671,24 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
         except requests.exceptions.RequestException as e:
             _logger.error(f"Error al enviar mensaje de WhatsApp a {phone}: {e}")
 
-    def crear_url_cambio_ubicacion(self, record):
+    def crear_url_cambio_ubicacion(self):
         """Genera una URL única para el cambio de ubicación."""
-        if not isinstance(record.id, int):
-            _logger.error(f"El ID del registro no es un entero: {record.id}")
+        # Verificar si es un registro nuevo
+        if not self.id or isinstance(self.id, (bool, models.NewId)):
+            _logger.error(f"Intento de crear URL para un registro no guardado: {self.id}")
+            raise ValueError("El registro debe ser guardado antes de generar una URL.")
+            
+        # Asegurar que tenemos un ID válido
+        try:
+            record_id = int(self.id)
+        except (ValueError, TypeError):
+            _logger.error(f"El ID del registro no es válido: {self.id}")
             raise ValueError("El ID del registro debe ser un entero.")
-
+    
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         token = base64.b64encode(os.urandom(24)).decode()  # Generar un token único
-        record.write({'location_change_token': token})  # Almacenar el token en el registro
-        return f"{base_url}/sat/change_location/{record.id}?token={token}"
-
+        self.write({'location_change_token': token})  # Almacenar el token en el registro
+        return f"{base_url}/sat/change_location/{record_id}?token={token}"
 
     def _notify_vendedora(self):
         return {
