@@ -668,11 +668,16 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
             _logger.error(f"Error al enviar mensaje de WhatsApp a {phone}: {e}")
 
     def crear_url_cambio_ubicacion(self, record):
-        """Genera una URL única para el cambio de ubicación, incluyendo un token."""
+        """Genera una URL única para el cambio de ubicación."""
+        if not isinstance(record.id, int):
+            _logger.error(f"El ID del registro no es un entero: {record.id}")
+            raise ValueError("El ID del registro debe ser un entero.")
+
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         token = base64.b64encode(os.urandom(24)).decode()  # Generar un token único
         record.write({'location_change_token': token})  # Almacenar el token en el registro
         return f"{base_url}/sat/change_location/{record.id}?token={token}"
+
 
     def _notify_vendedora(self):
         return {
