@@ -1,81 +1,66 @@
-/** @odoo-module */
+/** @odoo-module **/
 
-import { registry } from '@web/core/registry';
-import { Component, useState } from "@odoo/owl";
+import { registry } from "@web/core/registry";
+import { Component, onWillStart, useRef, useState } from "@odoo/owl";
+import { useService } from "@web/core/utils/hooks";
 
 export class InspeccionForm extends Component {
-    setup() {
-        this.state = useState({
-            loading: false,
-            error: null,
-            formData: {
-                punto_corriente: 'no',
-                punto_red: 'no',
-                wifi: 'no',
-                piso: '',
-                espacio: '',
-                ancho_pasillo: '',
-                ascensor: false,
-                observaciones: ''
-            }
-        });
-    }
+   setup() {
+       this.notification = useService("notification");
+       this.formRef = useRef("form");
+       this.state = useState({
+           isSubmitting: false,
+       });
+       
+       onWillStart(async () => {
+           const { token } = this.props;
+           if (!token) {
+               this.notification.add(this.env._t("Token inválido"), {
+                   type: "danger",
+               }); 
+           }
+       });
+   }
 
-    onInputChange(event) {
-        const { name, value, type, checked } = event.target;
-        this.state.formData[name] = type === 'checkbox' ? checked : value;
-    }
+   async onSubmit(ev) {
+       ev.preventDefault();
+       if (this.state.isSubmitting) return;
 
-    async onSubmit(event) {
-        event.preventDefault();
-        if (this.state.loading) return;
+       const form = this.formRef.el;
+       const formData = new FormData(form);
 
-        this.state.loading = true;
-        this.state.error = null;
+       this.state.isSubmitting = true;
 
-        try {
-            const response = await fetch('/inspeccion/submit', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...this.state.formData,
-                    token: this.props.token
-                })
-            });
+       try {
+           const response = await fetch('/inspeccion/submit', {
+               method: 'POST',
+               body: formData,
+           });
 
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.error || 'Error al enviar el formulario');
-            }
+           const result = await response.json();
 
-            this.env.services.notification.add(
-                this.env._t("Inspección enviada correctamente"),
-                { type: "success" }
-            );
+           if (result.success) {
+               this.notification.add(this.env._t("Inspección enviada"), {
+                   type: "success",
+               });
+               window.location.href = '/inspeccion/gracias';
+           } else {
+               throw new Error(result.error);
+           }
 
-            // Redirigir a página de confirmación
-            setTimeout(() => {
-                window.location.href = '/inspeccion/gracias';
-            }, 1500);
-
-        } catch (error) {
-            this.state.error = error.message;
-            this.env.services.notification.add(
-                this.env._t("Error: ") + error.message,
-                { type: "danger" }
-            );
-        } finally {
-            this.state.loading = false;
-        }
-    }
+       } catch (error) {
+           this.notification.add(error.message, {
+               type: "danger",
+           });
+       } finally {
+           this.state.isSubmitting = false;
+       }
+   }
 }
 
-InspeccionForm.template = 'sat.InspeccionForm';
+InspeccionForm.template = "sat.InspeccionForm";
 InspeccionForm.props = {
-    token: String,
+   token: String,
 };
 
-registry.category("web_components").add("inspeccion-form", InspeccionForm);
+registry.category("public_components").add("InspeccionForm", InspeccionForm);
