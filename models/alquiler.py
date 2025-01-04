@@ -12,6 +12,8 @@ import re
 import qrcode
 import io
 from odoo.exceptions import ValidationError
+from urllib.parse import urlencode
+import uuid
 
 
 class UnidadAlquiler(models.Model):
@@ -492,3 +494,102 @@ class UnidadAlquiler(models.Model):
         elif response_type == 'reschedule':
             return self._send_reschedule_request()
         return False
+
+    apto_instalacion = fields.Boolean('Apto para instalación', compute='_compute_apto')
+    requiere_adecuacion = fields.Boolean('Requiere adecuación', compute='_compute_apto')
+    estado_instalacion = fields.Selection([
+        ('pendiente', 'Pendiente de inspección'),
+        ('apto', 'Apto para instalación'),
+        ('requiere_adecuacion', 'Requiere adecuación'),
+        ('no_apto', 'No apto')
+    ], string='Estado de instalación', compute='_compute_apto', store=True)
+    notas_adecuacion = fields.Text('Notas de adecuación', compute='_compute_apto', store=True)
+
+    @api.depends('resultado_inspeccion')
+    def _compute_apto(self):
+        for rec in self:
+            if not rec.resultado_inspeccion:
+                rec.apto_instalacion = False
+                rec.requiere_adecuacion = False
+                rec.estado_instalacion = 'pendiente'
+                rec.notas_adecuacion = False
+                continue
+
+            resultado = rec.resultado_inspeccion[0]
+            notas = []
+            
+            # Verificar requisitos básicos
+            espacio_ok = resultado.espacio >= 2.0 and resultado.ancho_pasillo >= 1.0
+            
+            # Verificar infraestructura
+            tiene_corriente = resultado.punto_corriente == 'si'
+            necesita_corriente = resultado.punto_corriente == 'pendiente'
+            if necesita_corriente:
+                notas.append("- Requiere instalación de punto eléctrico")
+            
+            tiene_red = resultado.punto_red == 'si'
+            necesita_red = resultado.punto_red == 'pendiente'
+            if necesita_red:
+                notas.append("- Requiere instalación de punto de red")
+            
+            if not tiene_red and not necesita_red and not resultado.wifi:
+                notas.append("- No hay conectividad disponible (red o WiFi)")
+            
+            # Determinar estado
+            if not espacio_ok:
+                rec.estado_instalacion = 'no_apto'
+                notas.append("- Espacio insuficiente para la instalación")
+            elif tiene_corriente and (tiene_red or resultado.wifi):
+                rec.estado_instalacion = 'apto'
+            elif necesita_corriente or necesita_red:
+                rec.estado_instalacion = 'requiere_adecuacion'
+            else:
+                rec.estado_instalacion = 'no_apto'
+            
+            rec.apto_instalacion = rec.estado_instalacion == 'apto'
+            rec.requiere_adecuacion = rec.estado_instalacion == 'requiere_adecuacion'
+            rec.notas_adecuacion = '\n'.join(notas) if notas else False
+
+
+class WizardEnviarInspeccion(models.TransientModel):
+    _name = 'wizard.enviar.inspeccion'
+    _description = 'Asistente para enviar inspección'
+
+    correo = fields.Char(string='Correo electrónico')
+    alquiler_id = fields.Many2one('alquiler', string='Alquiler')
+
+    def action_enviar(self):
+        self.ensure_one()
+        url = self.alquiler_id._generar_url_inspeccion()
+        template = self.env.ref('mi_modulo.mail_template_inspeccion')
+        template.with_context(url_inspeccion=url).send_mail(
+            self.alquiler_id.id,
+            email_values={'email_to': self.correo},
+            force_send=True
+        )
+        return {'type': 'ir.actions.act_window_close'}
+
+class InspeccionResultado(models.Model):
+    _name = 'inspeccion.resultado'
+    _description = 'Resultado de inspección de sitio'
+
+    alquiler_id = fields.Many2one('alquiler', required=True)
+    fecha = fields.Datetime('Fecha de inspección', default=fields.Datetime.now)
+    
+    punto_corriente = fields.Selection([
+        ('si', 'Sí'),
+        ('no', 'No'),
+        ('pendiente', 'Requiere instalación')
+    ], required=True)
+    voltaje = fields.Float('Voltaje medido (V)')
+    punto_red = fields.Selection([
+        ('si', 'Sí'),
+        ('no', 'No'),
+        ('pendiente', 'Requiere instalación')
+    ], required=True)
+    wifi = fields.Selection([('si', 'Sí'), ('no', 'No')])
+    piso = fields.Integer('Número de piso')
+    ascensor = fields.Boolean('Tiene ascensor')
+    espacio = fields.Float('Espacio disponible (m²)')
+    ancho_pasillo = fields.Float('Ancho de pasillo (m)')
+    observaciones = fields.Text('Observaciones')

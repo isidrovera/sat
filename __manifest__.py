@@ -134,6 +134,7 @@
             'sat/static/src/js/gallery_widget.js',
             'sat/static/src/js/gallery.js',
             'sat/static/src/js/list_dashboard.js',
+            'sat/static/src/js/inspeccion_form.js',
             
             
 

@@ -8,3 +8,4 @@ from . import whatsapp
 from . import gallery_controller
 from . import maintenance_controller
 from . import evaluation_controller
+from . import levantamiento

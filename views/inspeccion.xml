@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Plantilla de formulario web -->
+    <?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="sat.InspeccionForm" owl="1">
+        <div class="container py-4 max-w-3xl mx-auto">
+            <form t-on-submit="submitForm" class="space-y-6">
+                <input type="hidden" name="token" t-att-value="props.token"/>
+                
+                <div class="bg-white shadow rounded-lg p-6">
+                    <h3 class="text-lg font-medium mb-4">Infraestructura</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Punto de corriente</label>
+                            <select name="punto_corriente" class="mt-1 block w-full rounded-md border-gray-300" required="1">
+                                <option value="si">Sí</option>
+                                <option value="no">No</option>
+                                <option value="pendiente">Requiere instalación</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Punto de red</label>
+                            <select name="punto_red" class="mt-1 block w-full rounded-md border-gray-300" required="1">
+                                <option value="si">Sí</option>
+                                <option value="no">No</option>
+                                <option value="pendiente">Requiere instalación</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">WiFi disponible</label>
+                            <select name="wifi" class="mt-1 block w-full rounded-md border-gray-300">
+                                <option value="si">Sí</option>
+                                <option value="no">No</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow rounded-lg p-6">
+                    <h3 class="text-lg font-medium mb-4">Espacio y Acceso</h3>
+                    
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Piso</label>
+                            <input type="number" name="piso" class="mt-1 block w-full rounded-md border-gray-300" required="1"/>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Espacio (m²)</label>
+                            <input type="number" name="espacio" step="0.1" class="mt-1 block w-full rounded-md border-gray-300" required="1"/>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Ancho pasillo (m)</label>
+                            <input type="number" name="ancho_pasillo" step="0.1" class="mt-1 block w-full rounded-md border-gray-300" required="1"/>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" name="ascensor" class="h-4 w-4 text-primary border-gray-300 rounded"/>
+                            <label class="ml-2 block text-sm text-gray-700">Tiene ascensor</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Observaciones</label>
+                    <textarea name="observaciones" rows="3" 
+                              class="mt-1 block w-full rounded-md border-gray-300"></textarea>
+                </div>
+
+                <button type="submit" 
+                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none">
+                    Enviar Inspección
+                </button>
+            </form>
+        </div>
+    </t>
+</templates>
+
+    <!-- Template for error page -->
+    <template id="inspeccion_error">
+        <t t-call="website.layout">
+            <div class="container mt-4">
+                <div class="alert alert-danger">
+                    Link de inspección inválido o expirado.
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Email template -->
+    <record id="mail_template_inspeccion" model="mail.template">
+        <field name="name">Plantilla de Inspección de Sitio</field>
+        <field name="model_id" ref="model_alquiler"/>
+        <field name="subject">Inspección de sitio para instalación</field>
+        <field name="email_from">${object.company_id.email}</field>
+        <field name="body_html" type="html">
+            <div style="margin: 0px; padding: 0px;">
+                <p>Estimado cliente,</p>
+                <p>Para proceder con la instalación, necesitamos realizar una inspección del sitio. 
+                Por favor complete el siguiente formulario:</p>
+                <div style="margin: 16px 0px 16px 0px; text-align: center;">
+                    <a href="${ctx.get('url_inspeccion')}"
+                       style="background-color: #875A7B; padding: 8px 16px 8px 16px; text-decoration: none; color: #fff; border-radius: 5px; font-size:13px;">
+                        Completar Inspección
+                    </a>
+                </div>
+            </div>
+        </field>
+    </record>
+</odoo>
