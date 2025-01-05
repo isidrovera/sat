@@ -418,8 +418,10 @@ class SatSat(models.Model):
         return utc_now.astimezone(peru_tz)
     location_change_token = fields.Char(
         string='Token de Cambio de Ubicación',
-        help='Token único para validar el cambio de ubicación',
-        copy=False
+        copy=False,
+        readonly=False,
+        store=True,  # Asegurarse que se almacene en la BD
+        help='Token único para validar el cambio de ubicación'
     )
     def write(self, vals):
         """Bloquea cambios automáticos en el campo 'ubicacion_id'."""
@@ -674,44 +676,59 @@ Modificado por: {user_name}"""
 
     def crear_url_cambio_ubicacion(self):
         """Genera una URL única para el cambio de ubicación."""
-        _logger.info("[URL] Iniciando generación de URL")
-        
-        record_id = self._origin.id or self.id
-        _logger.info(f"[URL] ID del registro: {record_id}")
-        
-        if not record_id:
-            _logger.error("[URL] No se pudo obtener ID del registro")
-            raise ValueError("No se pudo obtener el ID del registro")
-        
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        token = base64.b64encode(os.urandom(24)).decode()
-        
-        _logger.info(f"[URL] Base URL: {base_url}")
-        _logger.info(f"[URL] Token generado: {token}")
-        
         try:
-            # Guardar el token
-            _logger.info("[URL] Intentando guardar token en la base de datos")
-            self.sudo().write({
-                'location_change_token': token
-            })
-            self.env.cr.commit()
+            _logger.info("[URL] Iniciando generación de URL")
             
-            # Verificar que se guardó correctamente
+            # Asegurar que tenemos un ID válido
+            record_id = self._origin.id or self.id
+            _logger.info(f"[URL] ID del registro: {record_id}")
+            
+            # Validar ID
+            if not record_id:
+                _logger.error("[URL] No se pudo obtener ID del registro")
+                raise ValueError("No se pudo obtener el ID del registro")
+            
+            # Obtener base_url del sistema
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            _logger.info(f"[URL] Base URL: {base_url}")
+            
+            # Generar token
+            token = base64.b64encode(os.urandom(24)).decode()
+            _logger.info(f"[URL] Token generado: {token}")
+            
+            # Intentar guardar el token usando el API de Odoo
+            vals = {'location_change_token': token}
+            _logger.info(f"[URL] Intentando guardar token con valores: {vals}")
+            
+            # Usar sudo() para asegurar permisos de escritura
             record = self.sudo().browse(record_id)
-            _logger.info(f"[URL] Token guardado en BD: {record.location_change_token}")
+            result = record.write(vals)
             
-            if not record.location_change_token:
+            _logger.info(f"[URL] Resultado de write: {result}")
+            
+            # Forzar recarga del registro para verificar
+            record.flush()
+            record.invalidate_cache()
+            record = record.browse(record_id)
+            
+            saved_token = record.location_change_token
+            _logger.info(f"[URL] Token verificado en BD: {saved_token}")
+            
+            if not saved_token or saved_token != token:
                 _logger.error("[URL] El token no se guardó correctamente")
-                raise ValueError("Error al guardar token")
-                
+                _logger.error(f"[URL] Token esperado: {token}")
+                _logger.error(f"[URL] Token guardado: {saved_token}")
+                raise ValueError("Error al guardar token en la base de datos")
+            
+            # Generar URL
             url = f"{base_url}/sat/change_location/{record_id}?token={token}"
             _logger.info(f"[URL] URL generada exitosamente: {url}")
+            
             return url
             
         except Exception as e:
-            _logger.exception(f"[URL] Error al generar URL: {str(e)}")
-            raise ValueError(f"Error al generar URL: {str(e)}")
+            _logger.exception(f"[URL] Error en crear_url_cambio_ubicacion: {str(e)}")
+            raise ValueError(f"No se pudo generar la URL de cambio de ubicación: {str(e)}")
     @api.model
     def cron_evaluador_diario(self):
         _logger.debug("Iniciando cron_evaluador_diario")
