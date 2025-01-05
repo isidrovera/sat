@@ -673,45 +673,19 @@ Modificado por: {user_name}"""
             _logger.error(f"Error al enviar mensaje de WhatsApp a {phone}: {e}")
 
     def crear_url_cambio_ubicacion(self):
-        """Genera una URL única para el cambio de ubicación."""
-        _logger.info("[URL] Iniciando generación de URL")
-        
-        record_id = self._origin.id or self.id
-        _logger.info(f"[URL] ID del registro: {record_id}")
-        
-        if not record_id:
-            _logger.error("[URL] No se pudo obtener ID del registro")
-            raise ValueError("No se pudo obtener el ID del registro")
-        
+        def crear_url_cambio_ubicacion(self, record):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        token = base64.b64encode(os.urandom(24)).decode()
-        
-        _logger.info(f"[URL] Base URL: {base_url}")
-        _logger.info(f"[URL] Token generado: {token}")
-        
-        try:
-            # Guardar el token
-            _logger.info("[URL] Intentando guardar token en la base de datos")
-            self.sudo().write({
-                'location_change_token': token
-            })
-            self.env.cr.commit()
-            
-            # Verificar que se guardó correctamente
-            record = self.sudo().browse(record_id)
-            _logger.info(f"[URL] Token guardado en BD: {record.location_change_token}")
-            
-            if not record.location_change_token:
-                _logger.error("[URL] El token no se guardó correctamente")
-                raise ValueError("Error al guardar token")
-                
-            url = f"{base_url}/sat/change_location/{record_id}?token={token}"
-            _logger.info(f"[URL] URL generada exitosamente: {url}")
-            return url
-            
-        except Exception as e:
-            _logger.exception(f"[URL] Error al generar URL: {str(e)}")
-            raise ValueError(f"Error al generar URL: {str(e)}")
+        clean_id = re.sub(r'\D', '', str(record.id))  # Remover cualquier carácter no numérico
+        url = f"{base_url}/sat/change_location/{clean_id}"
+        return url
+    def _notify_vendedora(self):
+        return {
+            'warning': {
+                'title': "Notificación",
+                'message': "Estimada vendedora, ya se está notificando a transporte que traigan el equipo.",
+                'type': 'notification'
+            }
+        }
     @api.model
     def cron_evaluador_diario(self):
         _logger.debug("Iniciando cron_evaluador_diario")
