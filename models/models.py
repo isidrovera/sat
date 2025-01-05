@@ -682,28 +682,28 @@ Modificado por: {user_name}"""
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         token = base64.b64encode(os.urandom(24)).decode()
         
-        # Logging para debug
-        _logger.info(f"Creando URL para registro {record_id} con token {token}")
+        # Debug logging
+        _logger.info(f"[DEBUG] Creando URL para registro {record_id}")
+        _logger.info(f"[DEBUG] Token generado: {token}")
         
-        # Almacenar el token
-        self.write({
-            'location_change_token': token
-        })
-        
-        # Verificar que el token se guardó correctamente
-        self.env.cr.commit()  # Forzar commit para asegurar que se guarde
-        record = self.browse(record_id)
-        _logger.info(f"Token guardado: {record.location_change_token}")
-        
-        return f"{base_url}/sat/change_location/{record_id}?token={token}"
-    def _notify_vendedora(self):
-        return {
-            'warning': {
-                'title': "Notificación",
-                'message': "Estimada vendedora, ya se está notificando a transporte que traigan el equipo.",
-                'type': 'notification'
-            }
-        }
+        try:
+            # Usar sudo() para asegurar permisos de escritura
+            self.sudo().write({
+                'location_change_token': token
+            })
+            self.env.cr.commit()  # Forzar commit
+            
+            # Verificar que el token se guardó
+            saved_record = self.sudo().browse(record_id)
+            _logger.info(f"[DEBUG] Token guardado en BD: {saved_record.location_change_token}")
+            
+            url = f"{base_url}/sat/change_location/{record_id}?token={token}"
+            _logger.info(f"[DEBUG] URL generada: {url}")
+            return url
+            
+        except Exception as e:
+            _logger.error(f"Error al guardar token: {str(e)}")
+            raise ValueError("Error al generar URL de cambio de ubicación")
     @api.model
     def cron_evaluador_diario(self):
         _logger.debug("Iniciando cron_evaluador_diario")
