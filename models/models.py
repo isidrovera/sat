@@ -696,33 +696,32 @@ Modificado por: {user_name}"""
             token = base64.b64encode(os.urandom(24)).decode()
             _logger.info(f"[URL] Token generado: {token}")
             
-            # Intentar guardar el token usando el API de Odoo
-            vals = {'location_change_token': token}
-            _logger.info(f"[URL] Intentando guardar token con valores: {vals}")
+            # Guardar el token usando el API de Odoo
+            self.env.cr.execute("""
+                UPDATE sat_sat 
+                SET location_change_token = %s 
+                WHERE id = %s
+            """, (token, record_id))
             
-            # Usar sudo() para asegurar permisos de escritura
-            record = self.sudo().browse(record_id)
-            result = record.write(vals)
+            # Verificar que se guardó
+            self.env.cr.execute("""
+                SELECT location_change_token 
+                FROM sat_sat 
+                WHERE id = %s
+            """, (record_id,))
+            saved_token = self.env.cr.fetchone()
             
-            _logger.info(f"[URL] Resultado de write: {result}")
-            
-            # Forzar recarga del registro para verificar
-            record.flush()
-            record.invalidate_cache()
-            record = record.browse(record_id)
-            
-            saved_token = record.location_change_token
-            _logger.info(f"[URL] Token verificado en BD: {saved_token}")
-            
-            if not saved_token or saved_token != token:
+            if not saved_token or saved_token[0] != token:
                 _logger.error("[URL] El token no se guardó correctamente")
                 _logger.error(f"[URL] Token esperado: {token}")
-                _logger.error(f"[URL] Token guardado: {saved_token}")
+                _logger.error(f"[URL] Token guardado: {saved_token[0] if saved_token else None}")
                 raise ValueError("Error al guardar token en la base de datos")
             
             # Generar URL
             url = f"{base_url}/sat/change_location/{record_id}?token={token}"
             _logger.info(f"[URL] URL generada exitosamente: {url}")
+            
+            self.env.cr.commit()  # Commit la transacción
             
             return url
             
