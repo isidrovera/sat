@@ -612,7 +612,7 @@ class WizardEnviarInspeccion(models.TransientModel):
     def action_enviar(self):
         self.ensure_one()
         url = self.alquiler_id._generar_url_inspeccion()
-        template = self.env.ref('mi_modulo.mail_template_inspeccion')
+        template = self.env.ref('sat.mail_template_inspeccion')
         template.with_context(url_inspeccion=url).send_mail(
             self.alquiler_id.id,
             email_values={'email_to': self.correo},
