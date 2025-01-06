@@ -294,5 +294,96 @@
 </html>
             ]]></field>
         </record>
+        <record id="mail_template_inspeccion" model="mail.template">
+            <field name="name">Formulario de Inspección</field>
+            <field name="model_id" ref="model_alquiler"/>
+            <field name="subject">📋 Formulario de Inspección - {{ object.cliente_id.name }}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.correo}}</field>
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        <!-- Encabezado -->
+        <div style="background-color: #4299e1; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">📋 Inspección de Sitio</div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+            <!-- Saludo -->
+            <div style="margin-bottom: 20px;">
+                Estimado(a) <strong><t t-out="object.cliente_id.name"/></strong>,
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                Para asegurar una instalación exitosa, necesitamos verificar las condiciones del sitio. Por favor, complete el siguiente formulario de inspección:
+            </div>
+
+            <!-- Botón del Formulario -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a t-att-href="ctx.get('url_inspeccion')"
+                   style="display: inline-block; padding: 15px 30px; background-color: #4299e1; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                    📝 Completar Formulario de Inspección
+                </a>
+            </div>
+
+            <!-- Información de la Instalación -->
+            <div style="background-color: #f7fafc; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📌 Detalles de la Instalación</div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0;"><strong>Cliente:</strong></td>
+                        <td style="padding: 8px 0;"><t t-out="object.cliente_id.name"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0;"><strong>Dirección:</strong></td>
+                        <td style="padding: 8px 0;"><t t-out="object.direccion"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0;"><strong>Equipo:</strong></td>
+                        <td style="padding: 8px 0;"><t t-out="object.name.name"/></td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Requisitos -->
+            <div style="margin: 20px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">✅ Requisitos Mínimos</div>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Espacio mínimo de 2m²</li>
+                    <li>Ancho de pasillo mínimo de 1m</li>
+                    <li>Punto eléctrico con conexión a tierra</li>
+                    <li>Voltaje estable (220V ± 10V)</li>
+                    <li>Conectividad (punto de red o WiFi)</li>
+                </ul>
+            </div>
+
+            <!-- Firma -->
+            <div style="margin-top: 30px; text-align: center; padding-top: 20px; border-top: 1px solid #eee;">
+                <div style="margin: 0;">
+                    Atentamente,<br/>
+                    <strong>Isidro Vera Polo</strong><br/>
+                    <span style="color: #4a5568;">Soporte Técnico - Andes Copiers</span>
+                </div>
+            </div>
+
+            <!-- Pie de página -->
+            <div style="margin-top: 20px; text-align: center; font-size: 14px; color: #718096;">
+                <div>📞 (51) 924 894 829 | 📧 soporte@andescopiers.com.pe</div>
+                <div style="margin-top: 5px;">
+                    © 2024 Isidro vera polo. Todos los derechos reservados.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
     </data>
 </odoo>

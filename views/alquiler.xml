@@ -16,6 +16,10 @@
 
                         <button string="Enviar Recordatorio" type="object" class="oe_highlight"
                             name="button_send_test_mail" />
+                        <button name="action_enviar_inspeccion" 
+                            string="Enviar Inspección" 
+                            type="object" 
+                            class="btn-primary"/>
                         
                         <field name="estado_alquiler_id" widget="statusbar"
                             options="{'clickable': '1'}" />
@@ -441,6 +445,29 @@
                 </graph>
             </field>
         </record>
+
+         <!-- Vista Form Wizard -->
+    <record id="wizard_enviar_inspeccion_form" model="ir.ui.view">
+        <field name="name">wizard.enviar.inspeccion.form</field>
+        <field name="model">wizard.enviar.inspeccion</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="correo"/>
+                    <field name="alquiler_id" invisible="1"/>
+                </group>
+                <footer>
+                    <button name="action_enviar" 
+                            string="Enviar" 
+                            type="object" 
+                            class="btn-primary"/>
+                    <button special="cancel" 
+                            string="Cancelar" 
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
 
     </data>
 </odoo>

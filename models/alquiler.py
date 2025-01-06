@@ -494,37 +494,33 @@ class UnidadAlquiler(models.Model):
         elif response_type == 'reschedule':
             return self._send_reschedule_request()
         return False
+
     resultado_inspeccion = fields.One2many(
         'inspeccion.resultado', 
         'alquiler_id', 
         string='Resultados de inspección'
     )
     apto_instalacion = fields.Boolean(
-        'Apto para instalación', 
-        compute='_compute_apto', 
+        'Apto para instalación',
+        compute='_compute_apto',
         store=True
     )
-    estado_instalacion = fields.Selection([
-        ('pendiente', 'Pendiente'),
-        ('apto', 'Apto'),
-        ('requiere_adecuacion', 'Requiere adecuación'),
-        ('no_apto', 'No apto')
-    ], string='Estado de instalación', compute='_compute_apto', store=True)
-    estado_instalacion = fields.Selection([
-        ('pendiente', 'Pendiente'),
-        ('apto', 'Apto'),
-        ('requiere_adecuacion', 'Requiere adecuación'),
-        ('no_apto', 'No apto')
-    ], compute='_compute_apto', store=True)
-    apto_instalacion = fields.Boolean('Apto para instalación', compute='_compute_apto')
-    requiere_adecuacion = fields.Boolean('Requiere adecuación', compute='_compute_apto')
     estado_instalacion = fields.Selection([
         ('pendiente', 'Pendiente de inspección'),
         ('apto', 'Apto para instalación'),
         ('requiere_adecuacion', 'Requiere adecuación'),
         ('no_apto', 'No apto')
     ], string='Estado de instalación', compute='_compute_apto', store=True)
-    notas_adecuacion = fields.Text('Notas de adecuación', compute='_compute_apto', store=True)
+    requiere_adecuacion = fields.Boolean(
+        'Requiere adecuación',
+        compute='_compute_apto',
+        store=True
+    )
+    notas_adecuacion = fields.Text(
+        'Notas de adecuación',
+        compute='_compute_apto',
+        store=True
+    )
 
     @api.depends('resultado_inspeccion')
     def _compute_apto(self):
@@ -539,45 +535,70 @@ class UnidadAlquiler(models.Model):
             resultado = rec.resultado_inspeccion[0]
             notas = []
             
-            # Verificar requisitos básicos
+            # Validar espacio físico
             espacio_ok = resultado.espacio >= 2.0 and resultado.ancho_pasillo >= 1.0
+            if not espacio_ok:
+                notas.append("- Espacio insuficiente: requiere mínimo 2m² y pasillo de 1m de ancho")
             
-            # Verificar infraestructura
+            # Validar instalación eléctrica
             tiene_corriente = resultado.punto_corriente == 'si'
-            necesita_corriente = resultado.punto_corriente == 'pendiente'
-            if necesita_corriente:
+            if resultado.punto_corriente == 'pendiente':
                 notas.append("- Requiere instalación de punto eléctrico")
+            elif resultado.punto_corriente == 'no':
+                notas.append("- No cuenta con punto eléctrico")
             
-            tiene_red = resultado.punto_red == 'si'
-            necesita_red = resultado.punto_red == 'pendiente'
-            if necesita_red:
+            # Validar voltaje (220V para Perú)
+            if resultado.voltaje and (resultado.voltaje < 210 or resultado.voltaje > 230):
+                notas.append(f"- Voltaje fuera de rango: {resultado.voltaje}V (debe estar entre 210V y 230V)")
+            
+            # Validar punto de tierra
+            if not resultado.punto_tierra:
+                notas.append("- No cuenta con conexión a tierra")
+            elif resultado.resistencia_tierra and resultado.resistencia_tierra > 25:
+                notas.append(f"- Resistencia de tierra muy alta: {resultado.resistencia_tierra}Ω (máximo 25Ω)")
+            
+            # Validar conectividad
+            tiene_conectividad = False
+            if resultado.punto_red == 'si':
+                tiene_conectividad = True
+            elif resultado.punto_red == 'pendiente':
                 notas.append("- Requiere instalación de punto de red")
-            
-            if not tiene_red and not necesita_red and not resultado.wifi:
+            elif resultado.wifi == 'si':
+                tiene_conectividad = True
+            else:
                 notas.append("- No hay conectividad disponible (red o WiFi)")
             
-            # Determinar estado
-            if not espacio_ok:
-                rec.estado_instalacion = 'no_apto'
-                notas.append("- Espacio insuficiente para la instalación")
-            elif tiene_corriente and (tiene_red or resultado.wifi):
+            # Validar acceso
+            if resultado.piso > 0 and not resultado.ascensor:
+                notas.append(f"- Sin ascensor para acceder al piso {resultado.piso}")
+            
+            # Determinar estado final
+            if not notas:
                 rec.estado_instalacion = 'apto'
-            elif necesita_corriente or necesita_red:
-                rec.estado_instalacion = 'requiere_adecuacion'
-            else:
+            elif any(nota.startswith('- No') for nota in notas):
                 rec.estado_instalacion = 'no_apto'
+            else:
+                rec.estado_instalacion = 'requiere_adecuacion'
             
             rec.apto_instalacion = rec.estado_instalacion == 'apto'
             rec.requiere_adecuacion = rec.estado_instalacion == 'requiere_adecuacion'
             rec.notas_adecuacion = '\n'.join(notas) if notas else False
-
-
+    def action_enviar_inspeccion(self):
+        self.ensure_one()
+        return {
+            'name': 'Enviar Inspección',
+            'type': 'ir.actions.act_window',
+            'res_model': 'wizard.enviar.inspeccion',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_alquiler_id': self.id}
+        }
 class WizardEnviarInspeccion(models.TransientModel):
     _name = 'wizard.enviar.inspeccion'
     _description = 'Asistente para enviar inspección'
 
-    correo = fields.Char(string='Correo electrónico')
-    alquiler_id = fields.Many2one('alquiler', string='Alquiler')
+    correo = fields.Char(string='Correo electrónico', required=True)
+    alquiler_id = fields.Many2one('alquiler', string='Alquiler', required=True)
 
     def action_enviar(self):
         self.ensure_one()
@@ -601,14 +622,23 @@ class InspeccionResultado(models.Model):
         ('si', 'Sí'),
         ('no', 'No'),
         ('pendiente', 'Requiere instalación')
-    ], required=True)
+    ], string='Punto eléctrico', required=True)
+    
     voltaje = fields.Float('Voltaje medido (V)')
+    punto_tierra = fields.Boolean('Tiene conexión a tierra')
+    resistencia_tierra = fields.Float('Resistencia de tierra (Ω)')
+    
     punto_red = fields.Selection([
         ('si', 'Sí'),
         ('no', 'No'),
         ('pendiente', 'Requiere instalación')
-    ], required=True)
-    wifi = fields.Selection([('si', 'Sí'), ('no', 'No')])
+    ], string='Punto de red', required=True)
+    
+    wifi = fields.Selection([
+        ('si', 'Sí'),
+        ('no', 'No')
+    ], string='Señal WiFi')
+    
     piso = fields.Integer('Número de piso')
     ascensor = fields.Boolean('Tiene ascensor')
     espacio = fields.Float('Espacio disponible (m²)')
