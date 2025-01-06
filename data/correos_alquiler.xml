@@ -299,7 +299,7 @@
             <field name="model_id" ref="model_alquiler"/>
             <field name="subject">📋 Formulario de Inspección - {{ object.cliente_id.name }}</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{object.correo}}</field>
+            <field name="email_to">{{object.correo_}}</field>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
