@@ -14,70 +14,44 @@ class SatController(http.Controller):
         _logger.info(f"[CONTROLLER] Token recibido: {token}")
         
         try:
-            # Validar token
-            if not token:
-                _logger.error("[CONTROLLER] No se proporcionó token")
-                return request.render('sat.location_change_error', {
-                    'error': 'No se proporcionó token de validación'
-                })
-    
-            # Obtener registro
-            record = request.env['sat.sat'].with_context(active_test=False).sudo().browse(record_id)
+            record = request.env['sat.sat'].with_context(force_location_change=True).sudo().browse(record_id)
             
-            # Validar existencia del registro
+            # Validar existencia y token
             if not record.exists():
                 _logger.error(f"[CONTROLLER] Registro {record_id} no encontrado")
                 return request.render('sat.location_change_error', {
                     'error': 'No se encontró la máquina especificada'
                 })
-            
+                
             _logger.info(f"[CONTROLLER] Token almacenado: {record.location_change_token}")
             
-            # Validar coincidencia de token
+            # Validar token
             if record.location_change_token != token:
-                _logger.error(f"[CONTROLLER] Token no coincide: {token} != {record.location_change_token}")
+                _logger.error("[CONTROLLER] Token inválido")
                 return request.render('sat.location_change_error', {
                     'error': 'Token inválido o expirado'
                 })
-                
-            # Verificar si ya está en primer piso
-            if record.ubicacion_id == 'primer_piso':
-                _logger.info("[CONTROLLER] La ubicación ya está en primer piso")
-                return request.render('sat.location_already_changed', {
-                    'message': 'La ubicación ya ha sido actualizada'
-                })
-                
-            try:
-                # Guardar ubicación anterior
-                old_location = record.ubicacion_id
-                _logger.info(f"[CONTROLLER] Ubicación anterior: {old_location}")
-                
-                # Actualizar ubicación
-                record.write({
-                    'ubicacion_id': 'primer_piso',
-                    'location_change_token': False  # Invalidar token después de usarlo
-                })
-                _logger.info("[CONTROLLER] Ubicación actualizada a primer_piso")
-                
-                # Registrar el cambio
-                peru_tz = pytz.timezone('America/Lima')
-                current_time = datetime.now(peru_tz).strftime('%Y-%m-%d %H:%M:%S')
-                message = f"<b>Cambio de ubicación:</b> De {old_location} a <b>primer_piso</b> el {current_time}"
-                record.message_post(body=message, subtype_id=request.env.ref('mail.mt_note').id)
-                _logger.info("[CONTROLLER] Cambio registrado en el historial")
-                
-                return request.render('sat.location_change_success', {
-                    'message': 'Ubicación actualizada correctamente'
-                })
-                
-            except Exception as e:
-                _logger.error(f"[CONTROLLER] Error al actualizar ubicación: {str(e)}")
-                return request.render('sat.location_change_error', {
-                    'error': 'Error al actualizar la ubicación'
-                })
-                
+            
+            # Actualizar ubicación usando SQL directo para evitar las restricciones del write
+            request.env.cr.execute("""
+                UPDATE sat_sat 
+                SET ubicacion_id = 'primer_piso',
+                    location_change_token = NULL
+                WHERE id = %s
+            """, (record_id,))
+            
+            # Registrar el cambio en el historial
+            peru_tz = pytz.timezone('America/Lima')
+            current_time = datetime.now(peru_tz).strftime('%Y-%m-%d %H:%M:%S')
+            message = f"<b>Cambio de ubicación:</b> De {record.ubicacion_id} a <b>primer_piso</b> el {current_time}"
+            record.message_post(body=message, subtype_id=request.env.ref('mail.mt_note').id)
+            
+            return request.render('sat.location_change_success', {
+                'message': 'Ubicación actualizada correctamente'
+            })
+            
         except Exception as e:
-            _logger.exception(f"[CONTROLLER] Error general: {str(e)}")
+            _logger.error(f"[CONTROLLER] Error: {str(e)}")
             return request.render('sat.location_change_error', {
-                'error': 'Error al procesar la solicitud'
+                'error': str(e)
             })
