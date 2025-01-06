@@ -632,10 +632,28 @@ Modificado por: {user_name}"""
 
     @api.onchange('disponibilidad_id', 'ubicacion_id')
     def _onchange_disponibilidad_ubicacion(self):
+        _logger.info(f"[ONCHANGE] Iniciando onchange para registro {self.id}")
+        _logger.info(f"[ONCHANGE] Disponibilidad: {self.disponibilidad_id}")
+        _logger.info(f"[ONCHANGE] Ubicación: {self.ubicacion_id}")
+        
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
-            # Solo enviamos el mensaje, no cambiamos la ubicación
-            self.enviar_mensaje_transportistas()
-            return self._notify_vendedora()
+            _logger.info("[ONCHANGE] Condiciones cumplidas para enviar mensaje")
+            try:
+                self.enviar_mensaje_transportistas()
+                return self.notify_vendedora()  # Cambiado a sin guion bajo
+            except Exception as e:
+                _logger.error(f"[ONCHANGE] Error: {str(e)}")
+                raise
+            
+    def notify_vendedora(self):  # Cambiado a sin guion bajo
+        """Notifica a la vendedora sobre el proceso de traslado."""
+        return {
+            'warning': {
+                'title': "Notificación",
+                'message': "Estimada vendedora, ya se está notificando a transporte que traigan el equipo.",
+                'type': 'notification'
+            }
+        }
 
     def enviar_mensaje_transportistas(self):
         transportista_numeros = ['51975399303']
