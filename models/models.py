@@ -416,14 +416,8 @@ class SatSat(models.Model):
         peru_tz = pytz.timezone('America/Lima')
         utc_now = pytz.utc.localize(datetime.utcnow())
         return utc_now.astimezone(peru_tz)
-    location_change_token = fields.Char(
-        string='Token de Cambio de Ubicación',
-        copy=False,
-        readonly=False,
-        store=True,  # Asegurarse que se almacene en la BD
-        help='Token único para validar el cambio de ubicación'
-    )
-    def write(self, vals):       
+
+    def write(self, vals):
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         estados_problema = ['con_problemas', 'de_partes']
         estado_final_no_notificar = 'entregada'
@@ -512,7 +506,6 @@ Modificado por: {user_name}"""
 
         # Ejecutar la escritura final después de todas las validaciones y notificaciones
         _logger.debug(f"Finalizando write para ID {record.id} con valores: {vals}")
-        
         return super(SatSat, self).write(vals)
 
 
@@ -626,25 +619,22 @@ Modificado por: {user_name}"""
     @api.onchange('disponibilidad_id', 'ubicacion_id')
     def _onchange_disponibilidad_ubicacion(self):
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
+            # Solo enviamos el mensaje, no cambiamos la ubicación
             self.enviar_mensaje_transportistas()
             return self._notify_vendedora()
-            
-    def notify_vendedora(self):  # Cambiado a sin guion bajo
-        """Notifica a la vendedora sobre el proceso de traslado."""
-        return {
-            'warning': {
-                'title': "Notificación",
-                'message': "Estimada vendedora, ya se está notificando a transporte que traigan el equipo.",
-                'type': 'notification'
-            }
-        }
 
     def enviar_mensaje_transportistas(self):
-        transportista_numeros = ['51975399303']
-        mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {self.name.name}\nSerie: {self.serie_id}\nUbicación actual: {self.ubicacion_id}."
-        url = self.crear_url_cambio_ubicacion(self)
+        transportista_numeros = ['51924894872']
+        mensaje = f"""Estimado transportista,
 
-        mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace: 📍 {url}"
+Por favor, traer la siguiente máquina:
+
+Modelo: {self.name.name}
+Serie: {self.serie_id}
+Ubicación actual: {self.ubicacion_id}
+
+Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
+haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}"""
 
         _logger.debug(f"Enviando mensaje a transportistas: {mensaje}")
 
@@ -670,6 +660,14 @@ Modificado por: {user_name}"""
         clean_id = re.sub(r'\D', '', str(record.id))  # Remover cualquier carácter no numérico
         url = f"{base_url}/sat/change_location/{clean_id}"
         return url
+    def _notify_vendedora(self):
+        return {
+            'warning': {
+                'title': "Notificación",
+                'message': "Estimada vendedora, ya se está notificando a transporte que traigan el equipo.",
+                'type': 'notification'
+            }
+        }
     @api.model
     def cron_evaluador_diario(self):
         _logger.debug("Iniciando cron_evaluador_diario")
@@ -690,10 +688,16 @@ Modificado por: {user_name}"""
             if registros_a_traer:
                 transportista_numeros = ['51924894872']
                 for registro in registros_a_traer:
-                    mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {registro.name.name}\nSerie: {registro.serie_id}\nUbicación actual: {registro.ubicacion_id}."
-                    url = self.crear_url_cambio_ubicacion(registro)
+                    mensaje = f"""Estimado transportista,
 
-                    mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace: 📍 {url}"
+Por favor, traer la siguiente máquina:
+
+Modelo: {registro.name.name}
+Serie: {registro.serie_id}
+Ubicación actual: {registro.ubicacion_id}
+
+Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
+haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro)}"""
 
                     _logger.debug(f"Enviando mensaje para la máquina {registro.name.name} con serie {registro.serie_id}")
 
@@ -701,7 +705,6 @@ Modificado por: {user_name}"""
                         self.enviar_mensaje_whatsapp(numero, mensaje)
                     
                     _logger.info(f"Mensaje enviado para la máquina {registro.name.name} con serie {registro.serie_id}")
-
     def action_crear_reparaciones(self):
         """ Crea una reparación para cada registro seleccionado en el modelo 'sat.sat'. """
         
@@ -727,3 +730,169 @@ Modificado por: {user_name}"""
             }
         }
 
+
+    def abrir_cambio_estado(self):
+            # Aquí puedes abrir un wizard para cambiar el estado
+            return {
+                'type': 'ir.actions.act_window',
+                'name': 'Cambiar Estado',
+                'res_model': 'sat.cambio.estado.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+            }
+
+
+
+    total_maquinas = fields.Integer(compute='_compute_maquinas')
+    maquinas_disponibles = fields.Integer(compute='_compute_maquinas')
+    maquinas_separadas = fields.Integer(compute='_compute_maquinas')
+    maquinas_no_disponibles = fields.Integer(compute='_compute_maquinas')
+
+    @api.depends('disponibilidad_id')
+    def _compute_maquinas(self):
+        total = self.search_count([])
+        disponibles = self.search_count([('disponibilidad_id', '=', 'disponible')])
+        separadas = self.search_count([('disponibilidad_id', '=', 'separada')])
+        no_disponibles = self.search_count([('disponibilidad_id', '=', 'no_disponible')])
+        
+        for record in self:
+            record.total_maquinas = total or 0
+            record.maquinas_disponibles = disponibles or 0
+            record.maquinas_separadas = separadas or 0
+            record.maquinas_no_disponibles = no_disponibles or 0
+
+
+    def action_filter_disponible(self):
+        action = {
+            'type': 'ir.actions.act_window',
+            'res_model': 'sat.sat',
+            'view_mode': 'tree,form',
+            'name': 'Máquinas Disponibles',
+            'domain': [('disponibilidad_id', '=', 'disponible')],
+            'views': [(False, 'tree'), (False, 'form')],
+            'context': {'create': True},
+        }
+        return action
+
+    def action_filter_separada(self):
+        action = {
+            'type': 'ir.actions.act_window',
+            'res_model': 'sat.sat',
+            'view_mode': 'tree,form',
+            'name': 'Máquinas Separadas',
+            'domain': [('disponibilidad_id', '=', 'separada')],
+            'views': [(False, 'tree'), (False, 'form')],
+            'context': {'create': True},
+        }
+        return action
+
+    def action_filter_no_disponible(self):
+        action = {
+            'type': 'ir.actions.act_window',
+            'res_model': 'sat.sat',
+            'view_mode': 'tree,form',
+            'name': 'Máquinas No Disponibles',
+            'domain': [('disponibilidad_id', '=', 'no_disponible')],
+            'views': [(False, 'tree'), (False, 'form')],
+            'context': {'create': True},
+        }
+        return action
+
+    @api.model
+    def get_dashboard_data(self):
+        """Obtener datos para el dashboard"""
+        # Conteos por disponibilidad
+        disponibles = self.search_count([('disponibilidad_id', '=', 'disponible')])
+        separadas = self.search_count([('disponibilidad_id', '=', 'separada')])
+        no_disponibles = self.search_count([('disponibilidad_id', '=', 'no_disponible')])
+        total = disponibles + separadas + no_disponibles
+
+        # Conteos por estado de ventas
+        estados = {
+            'sin_revisar': self.search_count([('estado_ventas_id', '=', 'sin_revisar')]),
+            'en_revision': self.search_count([('estado_ventas_id', '=', 'en_revision')]),
+            'finalizado': self.search_count([('estado_ventas_id', '=', 'finalizado')]),
+            'entregada': self.search_count([('estado_ventas_id', '=', 'entregada')])
+        }
+
+        # Conteo de alertas rojas (activador = 'si')
+        alertas_rojas = self.search_count([('activador', '=', 'si')])
+
+        # Agrupar por ubicación
+        ubicaciones = self.read_group(
+            [], 
+            ['ubicacion_id'], 
+            ['ubicacion_id']
+        )
+        por_ubicacion = {
+            loc['ubicacion_id'][0]: loc['ubicacion_id_count'] 
+            for loc in ubicaciones if loc['ubicacion_id']
+        }
+
+        return {
+            'total': total,
+            'disponibles': disponibles,
+            'separadas': separadas,
+            'noDisponibles': no_disponibles,
+            'estados': estados,
+            'por_ubicacion': por_ubicacion,
+            'alertas_rojas': alertas_rojas,
+        }
+
+    @api.model
+    def action_filter_all(self):
+        """Filtrar todas las máquinas"""
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Todas las Máquinas',
+            'res_model': 'sat.sat',
+            'view_mode': 'tree',
+            'domain': [],
+        }
+
+    @api.model
+    def action_filter_disponibles(self):
+        """Filtrar máquinas disponibles"""
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Máquinas Disponibles',
+            'res_model': 'sat.sat',
+            'view_mode': 'tree',
+            'domain': [('disponibilidad_id', '=', 'disponible')],
+        }
+
+    @api.model
+    def action_filter_separadas(self):
+        """Filtrar máquinas separadas"""
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Máquinas Separadas',
+            'res_model': 'sat.sat',
+            'view_mode': 'tree',
+            'domain': [('disponibilidad_id', '=', 'separada')],
+        }
+
+    @api.model
+    def action_filter_no_disponibles(self):
+        """Filtrar máquinas no disponibles"""
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Máquinas No Disponibles',
+            'res_model': 'sat.sat',
+            'view_mode': 'tree',
+            'domain': [('disponibilidad_id', '=', 'no_disponible')],
+        }
+
+    @api.model
+    def get_dashboard_data(self):
+        """Generar los datos dinámicos para el dashboard"""
+        total = self.search_count([])
+        disponibles = self.search_count([('disponibilidad_id', '=', 'disponible')])
+        separadas = self.search_count([('disponibilidad_id', '=', 'separada')])
+        no_disponibles = self.search_count([('disponibilidad_id', '=', 'no_disponible')])
+        return {
+            'total_maquinas': total,
+            'disponibles': disponibles,
+            'separadas': separadas,
+            'no_disponibles': no_disponibles,
+        }
