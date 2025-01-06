@@ -426,11 +426,13 @@ class SatSat(models.Model):
     def write(self, vals):
         """Bloquea cambios automáticos en el campo 'ubicacion_id'."""
         if 'ubicacion_id' in vals:
-            for record in self:
-                if record.ubicacion_id in ['segundo_local', 'covida'] and vals['ubicacion_id'] == 'primer_piso':
-                    raise ValidationError(
-                        _("La ubicación no puede cambiar automáticamente a 'primer_piso'. Este cambio debe realizarse manualmente mediante el enlace proporcionado.")
-                    )
+            # Permitir el cambio si viene del controlador o si tiene el contexto especial
+            if not self.env.context.get('force_location_change'):
+                for record in self:
+                    if record.ubicacion_id in ['segundo_local', 'covida'] and vals['ubicacion_id'] == 'primer_piso':
+                        raise ValidationError(
+                            _("La ubicación no puede cambiar automáticamente a 'primer_piso'. Este cambio debe realizarse manualmente mediante el enlace proporcionado.")
+                        )
         estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         estados_problema = ['con_problemas', 'de_partes']
         estado_final_no_notificar = 'entregada'
