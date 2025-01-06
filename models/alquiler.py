@@ -758,3 +758,15 @@ class InspeccionResultado(models.Model):
             self.cantidad_usuarios = 0
             self.requiere_reportes = False
             self.frecuencia_reportes = False
+
+
+    def action_view_alquiler(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Alquiler',
+            'res_model': 'alquiler',
+            'res_id': self.alquiler_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
