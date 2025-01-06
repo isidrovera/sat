@@ -36,3 +36,7 @@ class InspeccionController(http.Controller):
         
         resultado = request.env['inspeccion.resultado'].sudo().create(vals)
         return werkzeug.utils.redirect('/inspeccion/gracias')
+
+        @http.route(['/inspeccion/gracias'], type='http', auth='public', website=True)
+        def gracias_inspeccion(self):
+            return request.render('sat.gracias_inspeccion_template')
