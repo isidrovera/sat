@@ -116,6 +116,59 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Sección de Instalación Eléctrica -->
+<div class="section-card">
+    <div class="card-header bg-warning text-white py-3">
+        <div class="d-flex align-items-center">
+            <div class="icon-circle bg-white text-warning">
+                <i class="fa fa-bolt"></i>
+            </div>
+            <h3 class="mb-0">Instalación Eléctrica</h3>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning bg-warning bg-opacity-10 border-0">
+            <i class="fa fa-exclamation-triangle me-2"></i>
+            Para una correcta instalación, asegúrese de que el punto de corriente sea estable y suministre un voltaje de 220V.
+        </div>
+        <div class="row g-4">
+            <!-- Campo Punto de Corriente -->
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fa fa-plug me-2"></i>
+                        ¿Cuenta con un punto de corriente cercano?
+                        <i class="fa fa-question-circle info-tooltip ms-1" 
+                           title="Seleccione si el área tiene un punto de corriente disponible."></i>
+                    </label>
+                    <select name="punto_corriente" class="form-select" required="required">
+                        <option value="">Seleccionar...</option>
+                        <option value="si">Sí</option>
+                        <option value="no">No</option>
+                        <option value="pendiente">Requiere instalación</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Campo Voltaje -->
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fa fa-battery-three-quarters me-2"></i>
+                        Voltaje medido (V)
+                        <i class="fa fa-question-circle info-tooltip ms-1" 
+                           title="Indique el voltaje medido en el punto de corriente."></i>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" name="voltaje" class="form-control" required="required" step="0.1" placeholder="220" />
+                        <span class="input-group-text">V</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
                      <div class="section-card">
                         <div class="card-header bg-info text-white py-3">
                             <div class="d-flex align-items-center">
