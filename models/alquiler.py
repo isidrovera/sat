@@ -500,6 +500,15 @@ class UnidadAlquiler(models.Model):
         'alquiler_id', 
         string='Resultados de inspección'
     )
+
+    token = fields.Char('Token de inspección', readonly=True, copy=False, store=True)
+
+    def _generar_url_inspeccion(self):
+        self.ensure_one()
+        if not self.token:
+            self.token = str(uuid.uuid4())
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        return f"{base_url}/inspeccion/{self.token}"
     apto_instalacion = fields.Boolean(
         'Apto para instalación',
         compute='_compute_apto',
