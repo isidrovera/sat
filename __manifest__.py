@@ -103,6 +103,7 @@
         'views/evaluacion_tecnicos_alquiler.xml',
         'views/template_evaluacion_tecnicos.xml',
         'views/levantamiento.xml',
+        'views/inspeccion_vista.xml',
         
     ],
     

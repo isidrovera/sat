@@ -560,37 +560,73 @@ class UnidadAlquiler(models.Model):
             if resultado.voltaje and (resultado.voltaje < 210 or resultado.voltaje > 230):
                 notas.append(f"- Voltaje fuera de rango: {resultado.voltaje}V (debe estar entre 210V y 230V)")
             
-            # Validar punto de tierra
-            if not resultado.punto_tierra:
-                notas.append("- No cuenta con conexión a tierra")
-            elif resultado.resistencia_tierra and resultado.resistencia_tierra > 25:
-                notas.append(f"- Resistencia de tierra muy alta: {resultado.resistencia_tierra}Ω (máximo 25Ω)")
-            
-            # Validar conectividad
-            tiene_conectividad = False
-            if resultado.punto_red == 'si':
-                tiene_conectividad = True
-            elif resultado.punto_red == 'pendiente':
+            # Validar red
+            tiene_red = resultado.punto_red == 'si'
+            if resultado.punto_red == 'pendiente':
                 notas.append("- Requiere instalación de punto de red")
-            elif resultado.wifi == 'si':
-                tiene_conectividad = True
-            else:
-                notas.append("- No hay conectividad disponible (red o WiFi)")
-            
+            elif resultado.punto_red == 'no':
+                notas.append("- No cuenta con punto de red (indispensable para la instalación)")
+
             # Validar acceso
             if resultado.piso > 0 and not resultado.ascensor:
                 notas.append(f"- Sin ascensor para acceder al piso {resultado.piso}")
+
+            if not resultado.tiene_estacionamiento:
+                notas.append("- Se requiere coordinar acceso para camión de entrega")
+
+            # Validar control de impresión
+            if resultado.control_impresion:
+                if not resultado.tipo_control:
+                    notas.append("- Debe especificar el tipo de control de impresión")
+                if resultado.cantidad_usuarios <= 0:
+                    notas.append("- Debe especificar la cantidad de usuarios para el control de impresión")
+
+            # Validar configuración de escaneo
+            metodos_escaneo = []
+            if resultado.usar_smb:
+                metodos_escaneo.append("SMB")
+            if resultado.usar_ftp:
+                metodos_escaneo.append("FTP")
+            if resultado.usar_email:
+                metodos_escaneo.append("Email")
+                if resultado.tipo_servidor_email == 'propio' and not resultado.servidor_email_propio:
+                    notas.append("- Debe especificar el servidor SMTP propio")
+
+            if not metodos_escaneo:
+                notas.append("- Debe seleccionar al menos un método de escaneo (SMB, FTP o Email)")
+
+            # Validar entorno de PCs
+            total_pcs = (resultado.cantidad_windows + resultado.cantidad_mac + 
+                        resultado.cantidad_linux)
+            if total_pcs <= 0:
+                notas.append("- Debe especificar la cantidad de PCs que usarán el equipo")
             
+            # Requisitos técnicos según la configuración
+            requisitos_tecnicos = []
+            if resultado.usar_smb or resultado.usar_ftp:
+                requisitos_tecnicos.append("- Todas las PCs deben tener IP fija configurada")
+            
+            if resultado.control_impresion:
+                requisitos_tecnicos.append("- Se requiere servidor de impresión")
+                if resultado.requiere_reportes:
+                    requisitos_tecnicos.append(f"- Se generarán reportes {resultado.frecuencia_reportes}s")
+
             # Determinar estado final
             if not notas:
                 rec.estado_instalacion = 'apto'
-            elif any(nota.startswith('- No') for nota in notas):
+            elif any(nota.startswith('- No cuenta') for nota in notas):
                 rec.estado_instalacion = 'no_apto'
             else:
                 rec.estado_instalacion = 'requiere_adecuacion'
             
             rec.apto_instalacion = rec.estado_instalacion == 'apto'
             rec.requiere_adecuacion = rec.estado_instalacion == 'requiere_adecuacion'
+            
+            # Unir notas y requisitos
+            if requisitos_tecnicos:
+                notas.append("\nRequisitos técnicos:")
+                notas.extend(requisitos_tecnicos)
+            
             rec.notas_adecuacion = '\n'.join(notas) if notas else False
     def action_enviar_inspeccion(self):
         self.ensure_one()
@@ -627,29 +663,98 @@ class InspeccionResultado(models.Model):
     alquiler_id = fields.Many2one('alquiler', required=True)
     fecha = fields.Datetime('Fecha de inspección', default=fields.Datetime.now)
     
+    # Instalación Eléctrica
     punto_corriente = fields.Selection([
         ('si', 'Sí'),
         ('no', 'No'),
         ('pendiente', 'Requiere instalación')
     ], string='Punto eléctrico', required=True)
-    
     voltaje = fields.Float('Voltaje medido (V)')
-    punto_tierra = fields.Boolean('Tiene conexión a tierra')
-    resistencia_tierra = fields.Float('Resistencia de tierra (Ω)')
     
+    # Infraestructura de Red
     punto_red = fields.Selection([
         ('si', 'Sí'),
         ('no', 'No'),
         ('pendiente', 'Requiere instalación')
     ], string='Punto de red', required=True)
-    
     wifi = fields.Selection([
         ('si', 'Sí'),
         ('no', 'No')
     ], string='Señal WiFi')
+    area_sistemas = fields.Boolean('¿Cuenta con área de sistemas?')
+    contacto_sistemas = fields.Char('Contacto del área de sistemas')
     
+    # Control de Impresión
+    control_impresion = fields.Boolean('¿Requiere control de impresión?')
+    tipo_control = fields.Selection([
+        ('usuario', 'Por usuario'),
+        ('departamento', 'Por departamento'),
+        ('proyecto', 'Por proyecto')
+    ], string='Tipo de control')
+    cantidad_usuarios = fields.Integer('Cantidad de usuarios')
+    requiere_reportes = fields.Boolean('¿Requiere reportes de uso?')
+    frecuencia_reportes = fields.Selection([
+        ('diario', 'Diario'),
+        ('semanal', 'Semanal'),
+        ('mensual', 'Mensual')
+    ], string='Frecuencia de reportes')
+    
+    # Entorno de PCs
+    cantidad_windows = fields.Integer('Cantidad de PCs Windows')
+    cantidad_mac = fields.Integer('Cantidad de PCs Mac')
+    cantidad_linux = fields.Integer('Cantidad de PCs Linux')
+    
+    # Configuración de Escaneo
+    usar_smb = fields.Boolean('¿Usará escaneo a carpeta compartida (SMB)?')
+    usar_ftp = fields.Boolean('¿Usará escaneo a FTP?')
+    usar_email = fields.Boolean('¿Usará escaneo a email?')
+    tipo_servidor_email = fields.Selection([
+        ('propio', 'Servidor de correo propio'),
+        ('proveedor', 'Servidor del proveedor')
+    ], string='Tipo de servidor email')
+    servidor_email_propio = fields.Char('Servidor SMTP propio', help='Solo si usará su propio servidor de correo')
+    
+    # Espacio Físico y Acceso
     piso = fields.Integer('Número de piso')
     ascensor = fields.Boolean('Tiene ascensor')
     espacio = fields.Float('Espacio disponible (m²)')
     ancho_pasillo = fields.Float('Ancho de pasillo (m)')
+    tiene_estacionamiento = fields.Boolean('¿Tiene estacionamiento para camión?')
+    observaciones_estacionamiento = fields.Text('Observaciones de estacionamiento')
+    
+    # Estado y Observaciones
+    estado = fields.Selection([
+        ('pendiente', 'Pendiente de revisión'),
+        ('aprobado', 'Aprobado'),
+        ('requiere_cambios', 'Requiere cambios'),
+        ('rechazado', 'No viable')
+    ], string='Estado', default='pendiente')
     observaciones = fields.Text('Observaciones')
+    requisitos_pendientes = fields.Text('Requisitos pendientes')
+    puede_reenviar = fields.Boolean('Puede reenviar formulario', default=True)
+
+    @api.onchange('usar_email')
+    def _onchange_usar_email(self):
+        if not self.usar_email:
+            self.tipo_servidor_email = False
+            self.servidor_email_propio = False
+
+    @api.onchange('tipo_servidor_email')
+    def _onchange_tipo_servidor_email(self):
+        if self.tipo_servidor_email == 'proveedor':
+            self.servidor_email_propio = False
+
+    @api.onchange('estado')
+    def _onchange_estado(self):
+        if self.estado in ['requiere_cambios', 'rechazado']:
+            self.puede_reenviar = True
+        else:
+            self.puede_reenviar = False
+
+    @api.onchange('control_impresion')
+    def _onchange_control_impresion(self):
+        if not self.control_impresion:
+            self.tipo_control = False
+            self.cantidad_usuarios = 0
+            self.requiere_reportes = False
+            self.frecuencia_reportes = False
