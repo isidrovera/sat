@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="formulario_inspeccion_template">
+        <t t-call="website.layout">
+            <div class="container my-5">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Formulario de Inspección</h3>
+                    </div>
+                    <div class="card-body">
+                        <form action="/inspeccion/submit" method="post" class="needs-validation" novalidate="novalidate">
+                            <input type="hidden" name="token" t-att-value="alquiler.token"/>
+                            
+                            <!-- Información del Cliente -->
+                            <div class="mb-4">
+                                <h4>Información del Cliente</h4>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Cliente:</strong> <t t-esc="alquiler.cliente_id.name"/></p>
+                                        <p><strong>Dirección:</strong> <t t-esc="alquiler.direccion"/></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Equipo:</strong> <t t-esc="alquiler.name.name"/></p>
+                                        <p><strong>Serie:</strong> <t t-esc="alquiler.serie"/></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Instalación Eléctrica -->
+                            <div class="mb-4">
+                                <h4>Instalación Eléctrica</h4>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="punto_corriente">Punto Eléctrico</label>
+                                            <select name="punto_corriente" class="form-control" required="required">
+                                                <option value="">Seleccionar...</option>
+                                                <option value="si">Sí</option>
+                                                <option value="no">No</option>
+                                                <option value="pendiente">Requiere instalación</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="voltaje">Voltaje (V)</label>
+                                            <input type="number" name="voltaje" class="form-control" step="0.1"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="punto_tierra">Conexión a Tierra</label>
+                                            <select name="punto_tierra" class="form-control" required="required">
+                                                <option value="true">Sí</option>
+                                                <option value="false">No</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="resistencia_tierra">Resistencia de Tierra (Ω)</label>
+                                            <input type="number" name="resistencia_tierra" class="form-control" step="0.1"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Conectividad -->
+                            <div class="mb-4">
+                                <h4>Conectividad</h4>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="punto_red">Punto de Red</label>
+                                            <select name="punto_red" class="form-control" required="required">
+                                                <option value="">Seleccionar...</option>
+                                                <option value="si">Sí</option>
+                                                <option value="no">No</option>
+                                                <option value="pendiente">Requiere instalación</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="wifi">WiFi Disponible</label>
+                                            <select name="wifi" class="form-control" required="required">
+                                                <option value="si">Sí</option>
+                                                <option value="no">No</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Espacio Físico -->
+                            <div class="mb-4">
+                                <h4>Espacio Físico</h4>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="piso">Número de Piso</label>
+                                            <input type="number" name="piso" class="form-control" required="required"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="ascensor">Ascensor</label>
+                                            <select name="ascensor" class="form-control" required="required">
+                                                <option value="true">Sí</option>
+                                                <option value="false">No</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="espacio">Espacio Disponible (m²)</label>
+                                            <input type="number" name="espacio" class="form-control" step="0.1" required="required"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="ancho_pasillo">Ancho de Pasillo (m)</label>
+                                            <input type="number" name="ancho_pasillo" class="form-control" step="0.1" required="required"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Observaciones -->
+                            <div class="mb-4">
+                                <div class="form-group">
+                                    <label for="observaciones">Observaciones Adicionales</label>
+                                    <textarea name="observaciones" class="form-control" rows="4"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary">Enviar Inspección</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="gracias_inspeccion_template">
+        <t t-call="website.layout">
+            <div class="container my-5 text-center">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="text-success mb-4">¡Gracias por completar la inspección!</h2>
+                        <p class="mb-4">Hemos recibido la información correctamente. Nos pondremos en contacto con usted pronto.</p>
+                        <a href="/" class="btn btn-primary">Volver al Inicio</a>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>
