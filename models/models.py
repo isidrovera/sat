@@ -634,18 +634,9 @@ Modificado por: {user_name}"""
 
     @api.onchange('disponibilidad_id', 'ubicacion_id')
     def _onchange_disponibilidad_ubicacion(self):
-        _logger.info(f"[ONCHANGE] Iniciando onchange para registro {self.id}")
-        _logger.info(f"[ONCHANGE] Disponibilidad: {self.disponibilidad_id}")
-        _logger.info(f"[ONCHANGE] Ubicación: {self.ubicacion_id}")
-        
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
-            _logger.info("[ONCHANGE] Condiciones cumplidas para enviar mensaje")
-            try:
-                self.enviar_mensaje_transportistas()
-                return self.notify_vendedora()  # Cambiado a sin guion bajo
-            except Exception as e:
-                _logger.error(f"[ONCHANGE] Error: {str(e)}")
-                raise
+            self.enviar_mensaje_transportistas()
+            return self._notify_vendedora()
             
     def notify_vendedora(self):  # Cambiado a sin guion bajo
         """Notifica a la vendedora sobre el proceso de traslado."""
@@ -659,26 +650,15 @@ Modificado por: {user_name}"""
 
     def enviar_mensaje_transportistas(self):
         transportista_numeros = ['51975399303']
-        try:
-            # Asegurarnos de que tenemos el registro correcto
-            record = self.with_context(active_test=False).browse(self._origin.id)
-            url = self.crear_url_cambio_ubicacion()  
-            mensaje = f"""Estimado transportista,
-    Por favor, traer la siguiente máquina:
-    Modelo: {record.name.name}
-    Serie: {record.serie_id}
-    Ubicación actual: {record.ubicacion_id}
-    Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
-    haga clic en el siguiente enlace: 📍 {url}"""
-            
-            _logger.debug(f"Enviando mensaje a transportistas: {mensaje}")
-            
-            for numero in transportista_numeros:
-                self.enviar_mensaje_whatsapp(numero, mensaje)
-                
-        except ValueError as e:
-            _logger.error(f"Error al crear URL para el mensaje: {str(e)}")
-            raise
+        mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {self.name.name}\nSerie: {self.serie_id}\nUbicación actual: {self.ubicacion_id}."
+        url = self.crear_url_cambio_ubicacion(self)
+
+        mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace: 📍 {url}"
+
+        _logger.debug(f"Enviando mensaje a transportistas: {mensaje}")
+
+        for numero in transportista_numeros:
+            self.enviar_mensaje_whatsapp(numero, mensaje)
 
     def enviar_mensaje_whatsapp(self, phone, message):
         url = 'https://whatsapp.andessolutioncopiers.com/api/message'
@@ -694,67 +674,17 @@ Modificado por: {user_name}"""
         except requests.exceptions.RequestException as e:
             _logger.error(f"Error al enviar mensaje de WhatsApp a {phone}: {e}")
 
-    def crear_url_cambio_ubicacion(self):
-        """Genera una URL única para el cambio de ubicación."""
-        try:
-            _logger.info("[URL] Iniciando generación de URL")
-            
-            # Asegurar que tenemos un ID válido
-            record_id = self._origin.id or self.id
-            _logger.info(f"[URL] ID del registro: {record_id}")
-            
-            # Validar ID
-            if not record_id:
-                _logger.error("[URL] No se pudo obtener ID del registro")
-                raise ValueError("No se pudo obtener el ID del registro")
-            
-            # Obtener base_url del sistema
-            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-            _logger.info(f"[URL] Base URL: {base_url}")
-            
-            # Generar token
-            token = base64.b64encode(os.urandom(24)).decode()
-            _logger.info(f"[URL] Token generado: {token}")
-            
-            # Guardar el token usando el API de Odoo
-            self.env.cr.execute("""
-                UPDATE sat_sat 
-                SET location_change_token = %s 
-                WHERE id = %s
-            """, (token, record_id))
-            
-            # Verificar que se guardó
-            self.env.cr.execute("""
-                SELECT location_change_token 
-                FROM sat_sat 
-                WHERE id = %s
-            """, (record_id,))
-            saved_token = self.env.cr.fetchone()
-            
-            if not saved_token or saved_token[0] != token:
-                _logger.error("[URL] El token no se guardó correctamente")
-                _logger.error(f"[URL] Token esperado: {token}")
-                _logger.error(f"[URL] Token guardado: {saved_token[0] if saved_token else None}")
-                raise ValueError("Error al guardar token en la base de datos")
-            
-            # Generar URL
-            url = f"{base_url}/sat/change_location/{record_id}?token={token}"
-            _logger.info(f"[URL] URL generada exitosamente: {url}")
-            
-            self.env.cr.commit()  # Commit la transacción
-            
-            return url
-            
-        except Exception as e:
-            _logger.exception(f"[URL] Error en crear_url_cambio_ubicacion: {str(e)}")
-            raise ValueError(f"No se pudo generar la URL de cambio de ubicación: {str(e)}")
+    def crear_url_cambio_ubicacion(self, record):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        clean_id = re.sub(r'\D', '', str(record.id))  # Remover cualquier carácter no numérico
+        url = f"{base_url}/sat/change_location/{clean_id}"
+        return url
     @api.model
     def cron_evaluador_diario(self):
         _logger.debug("Iniciando cron_evaluador_diario")
         self.evaluar_registros_diarios()
 
     def evaluar_registros_diarios(self):
-        """Evalúa los registros diarios y notifica al transportista si hay máquinas para mover."""
         registros_primer_piso = self.search([('ubicacion_id', '=', 'primer_piso'), ('estado_ventas_id', '=', 'sin_revisar')])
         registros_tercer_piso = self.search([('ubicacion_id', '=', 'tercer_piso'), ('estado_ventas_id', '=', 'sin_revisar')])
 
@@ -765,27 +695,20 @@ Modificado por: {user_name}"""
             ], limit=8)
             
             _logger.debug(f"Máquinas a traer: {registros_a_traer}")
-
+            
             if registros_a_traer:
                 transportista_numeros = ['51924894872']
                 for registro in registros_a_traer:
+                    mensaje = f"Estimado transportista,\n\nPor favor, traer la siguiente máquina:\n\nModelo: {registro.name.name}\nSerie: {registro.serie_id}\nUbicación actual: {registro.ubicacion_id}."
                     url = self.crear_url_cambio_ubicacion(registro)
-                    mensaje = f"""Estimado transportista,
 
-    Por favor, traer la siguiente máquina:
-
-    Modelo: {registro.name.name}
-    Serie: {registro.serie_id}
-    Ubicación actual: {registro.ubicacion_id}.
-
-    Para registrar el cambio de ubicación a primer piso, haga clic en el siguiente enlace:
-    📍 {url} (Este enlace es exclusivo para uso manual y no debe ser compartido)."""
+                    mensaje += f"\n\nPara cambiar la ubicación a primer piso, haga clic en el siguiente enlace: 📍 {url}"
 
                     _logger.debug(f"Enviando mensaje para la máquina {registro.name.name} con serie {registro.serie_id}")
 
                     for numero in transportista_numeros:
                         self.enviar_mensaje_whatsapp(numero, mensaje)
-
+                    
                     _logger.info(f"Mensaje enviado para la máquina {registro.name.name} con serie {registro.serie_id}")
 
     def action_crear_reparaciones(self):

@@ -1,57 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Template base para compartir estilos -->
-        <template id="location_change_base" name="Location Change Base">
+        <template id="location_change_success" name="Location Change Success">
             <t t-call="website.layout">
-                <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-                    <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden md:max-w-2xl transform transition-all hover:shadow-xl">
-                        <div class="p-8">
-                            <div t-att-class="alert_class">
-                                <div class="flex items-center justify-center mb-4">
-                                    <i t-att-class="icon_class" style="font-size: 3rem;"></i>
-                                </div>
-                                <h2 class="text-center text-2xl font-bold mb-4" t-esc="title"/>
-                                <p class="text-center text-gray-600" t-esc="message"/>
-                            </div>
-                        </div>
+                <div class="container">
+                    <div class="alert alert-success mt-3" role="alert">
+                        Ubicación cambiada con éxito. Esta ventana se cerrará automáticamente.
                     </div>
                 </div>
                 <script type="text/javascript">
                     setTimeout(function() {
                         window.close();
-                    }, 3000);
+                    }, 3000); // 3000 milisegundos = 3 segundos
                 </script>
-            </t>
-        </template>
-
-        <!-- Template éxito -->
-        <template id="location_change_success" name="Location Change Success">
-            <t t-call="sat.location_change_base">
-                <t t-set="alert_class" t-value="'bg-green-50 border-l-4 border-green-500 p-4'"/>
-                <t t-set="icon_class" t-value="'fa fa-check-circle text-green-500'"/>
-                <t t-set="title" t-value="'¡Éxito!'"/>
-                <t t-set="message" t-value="'Ubicación cambiada correctamente. La ventana se cerrará automáticamente.'"/>
-            </t>
-        </template>
-
-        <!-- Template ya cambiada -->
-        <template id="location_already_changed" name="Location Already Changed">
-            <t t-call="sat.location_change_base">
-                <t t-set="alert_class" t-value="'bg-blue-50 border-l-4 border-blue-500 p-4'"/>
-                <t t-set="icon_class" t-value="'fa fa-info-circle text-blue-500'"/>
-                <t t-set="title" t-value="'Información'"/>
-                <t t-set="message" t-value="'Esta máquina ya fue trasladada al primer piso. La ventana se cerrará automáticamente.'"/>
-            </t>
-        </template>
-
-        <!-- Template error -->
-        <template id="location_change_error" name="Location Change Error">
-            <t t-call="sat.location_change_base">
-                <t t-set="alert_class" t-value="'bg-red-50 border-l-4 border-red-500 p-4'"/>
-                <t t-set="icon_class" t-value="'fa fa-exclamation-circle text-red-500'"/>
-                <t t-set="title" t-value="'Error'"/>
-                <t t-set="message" t-value="'No se encontró la máquina especificada. La ventana se cerrará automáticamente.'"/>
             </t>
         </template>
     </data>
