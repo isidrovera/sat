@@ -1024,6 +1024,118 @@ class Reparaciones(models.Model):
         estado_legible = dict(selection).get(self.estado_id)
         return estado_legible
 
+
+
+
+class CopierPartsRequest(models.Model):
+    _name = 'copier.parts.request'
+    _description = 'Solicitud de Partes de Fotocopiadora'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+
+    name = fields.Char('Solicitud N°', default=lambda self: _('New'), readonly=True, required=True, copy=False)
+    fecha = fields.Date('Fecha de Solicitud', default=fields.Date.context_today, required=True)
+    maquina_id = fields.Many2one('sat.sat', string='Máquina', required=True)
+    proveedor = fields.Char(related='maquina_id.proveedor_id.name', readonly=True)
+    importacion = fields.Char(related='maquina_id.importacion', readonly=True)
+    marca = fields.Char(related='maquina_id.marca', readonly=True)
+    modelo = fields.Char(related='maquina_id.name.name', readonly=True)
+    serie = fields.Char(related='maquina_id.serie_id', readonly=True)
+    contometro = fields.Integer(related='maquina_id.contometrok_id', readonly=True)
+    solicitante_id = fields.Many2one('res.users', string='Solicitante', default=lambda self: self.env.user, required=True)
+    
+    # Campos para solicitud
+    disco_duro_requerido = fields.Boolean('Requiere Disco Duro')
+    motivo_disco = fields.Selection([
+        ('sin_disco', 'Llegó sin Disco'),
+        ('malogrado', 'Disco Malogrado')
+    ], string='Motivo Solicitud Disco')
+    
+    ruedas_requeridas = fields.Boolean('Requiere Ruedas')
+    cantidad_ruedas = fields.Integer('Cantidad de Ruedas', default=4, readonly=True)
+    
+    state = fields.Selection([
+        ('draft', 'Pendiente'),
+        ('approved', 'Aprobado'),
+        ('delivered', 'Entregado')
+    ], string='Estado', default='draft', tracking=True)
+    
+    access_token = fields.Char('Token de Acceso', copy=False)
+
+    @api.model
+    def _generate_access_token(self):
+        return str(uuid.uuid4())
+    
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', _('New')) == _('New'):
+                vals['name'] = self.env['ir.sequence'].next_by_code('copier.parts.request') or _('New')
+        records = super().create(vals_list)
+        for record in records:
+            if record.disco_duro_requerido and record.motivo_disco == 'sin_disco':
+                self._registrar_falla_proveedor(record)
+            record._enviar_correo_solicitud()
+        return records
+    
+    def _registrar_falla_proveedor(self, record):
+        descripcion = 'Llegó sin disco duro' if record.motivo_disco == 'sin_disco' else 'Disco duro malogrado'
+        self.env['falla.proveedor'].create({
+            'maquina_id': record.maquina_id.id,
+            'descripcion': descripcion,
+            'fecha': fields.Date.today(),
+        })
+    
+    def _enviar_correo_solicitud(self):
+        template = self.env.ref('tu_modulo.email_template_parts_request')
+        template.send_mail(self.id, force_send=True)
+    
+    def action_approve(self):
+        self.write({'state': 'approved'})
+        self._enviar_correo_logistica()
+        self._notificar_tecnico()
+    
+    def _enviar_correo_logistica(self):
+        template = self.env.ref('tu_modulo.email_template_logistics_approval')
+        template.send_mail(self.id, force_send=True)
+    
+    def _notificar_tecnico(self):
+        self.message_post(
+            body=_("Su solicitud de partes ha sido aprobada."),
+            partner_ids=[self.solicitante_id.partner_id.id]
+        )
+    
+    def action_deliver(self):
+        self.write({'state': 'delivered'})
+
+class PartsRequestWizard(models.TransientModel):
+    _name = 'copier.parts.request.wizard'
+    _description = 'Asistente de Solicitud de Partes'
+
+    maquina_id = fields.Many2one('sat.sat', string='Máquina', required=True)
+    disco_duro_requerido = fields.Boolean('Requiere Disco Duro')
+    motivo_disco = fields.Selection([
+        ('sin_disco', 'Llegó sin Disco'),
+        ('malogrado', 'Disco Malogrado')
+    ], string='Motivo Solicitud Disco')
+    ruedas_requeridas = fields.Boolean('Requiere Ruedas')
+
+    def action_create_request(self):
+        self.ensure_one()
+        vals = {
+            'maquina_id': self.maquina_id.id,
+            'disco_duro_requerido': self.disco_duro_requerido,
+            'motivo_disco': self.motivo_disco,
+            'ruedas_requeridas': self.ruedas_requeridas,
+        }
+        request = self.env['copier.parts.request'].create(vals)
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'copier.parts.request',
+            'res_id': request.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
 class ReportReparacionView(models.AbstractModel):
     _name = 'report.sat.report_reparaciones_ventas'
 

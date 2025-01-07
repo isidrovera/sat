@@ -87,3 +87,25 @@ class InspeccionController(http.Controller):
     @http.route(['/inspeccion/gracias'], type='http', auth='public', website=True)
     def gracias_inspeccion(self):
         return request.render('sat.gracias_inspeccion_template')
+
+
+
+
+
+class CopierPartsController(http.Controller):
+    
+    @http.route('/parts/approve/<string:token>', type='http', auth='public')
+    def approve_request(self, token):
+        parts_request = request.env['copier.parts.request'].sudo().search([('access_token', '=', token)], limit=1)
+        if parts_request and parts_request.state == 'draft':
+            parts_request.action_approve()
+            return request.render('sat.approval_success_template', {})
+        return request.render('sat.invalid_request_template', {})
+
+    @http.route('/parts/deliver/<string:token>', type='http', auth='public')
+    def deliver_parts(self, token):
+        parts_request = request.env['copier.parts.request'].sudo().search([('access_token', '=', token)], limit=1)
+        if parts_request and parts_request.state == 'approved':
+            parts_request.action_deliver()
+            return request.render('sat.delivery_success_template', {})
+        return request.render('sat.invalid_request_template', {})
