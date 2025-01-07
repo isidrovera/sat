@@ -157,6 +157,9 @@
             </div>
             <h3 class="mb-0">Instalación Eléctrica</h3>
         </div>
+        <div class="invalid-feedback">
+        Por favor, ingrese un voltaje válido.
+    </div>
     </div>
     <div class="card-body">
         <div class="alert alert-warning bg-warning bg-opacity-10 border-0">
@@ -648,6 +651,23 @@
                     $('[data-bs-toggle="tooltip"]').tooltip();
                 });
             </script>
+            <script type="text/javascript">
+                document.addEventListener("DOMContentLoaded", function () {
+                    const form = document.querySelector("form.needs-validation");
+
+                    form.addEventListener("submit", function (event) {
+                        // Verifica que todos los campos requeridos estén llenos
+                        if (!form.checkValidity()) {
+                            event.preventDefault(); // Detener el envío
+                            event.stopPropagation();
+
+                            // Agregar clase de validación
+                            form.classList.add("was-validated");
+                        }
+                    });
+                });
+            </script>
+
         </t>
     </template>
 
