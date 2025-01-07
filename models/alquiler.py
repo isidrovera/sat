@@ -541,25 +541,40 @@ class UnidadAlquiler(models.Model):
                 rec.notas_adecuacion = False
                 continue
 
+            # Usar la inspección más reciente
             resultado = rec.resultado_inspeccion.sorted('fecha', reverse=True)[0]
             notas = []
-            
+
+            # Validar espacio físico
+            espacio_ok = resultado.espacio >= 2.0 and resultado.ancho_pasillo >= 1.0
+            if not espacio_ok:
+                notas.append("- Espacio insuficiente: requiere mínimo 2m² y pasillo de 1m de ancho.")
+
+            # Validar instalación eléctrica
+            if resultado.punto_corriente == 'pendiente':
+                notas.append("- Requiere instalación de punto eléctrico.")
+            elif resultado.punto_corriente == 'no':
+                notas.append("- No cuenta con punto eléctrico.")
+
+            # Validar red
+            if resultado.punto_red == 'pendiente':
+                notas.append("- Requiere instalación de punto de red.")
+            elif resultado.punto_red == 'no' and resultado.wifi == 'no':
+                notas.append("- No cuenta con punto de red ni señal WiFi disponible.")
+
             # Validar entorno de PCs
             total_pcs = resultado.cantidad_windows + resultado.cantidad_mac + resultado.cantidad_linux
             if total_pcs <= 0:
-                notas.append("- Debe haber al menos una computadora conectada (Windows, Mac o Linux)")
-            
-            # Validar otros aspectos
-            # ... (resto de las validaciones)
+                notas.append("- Debe haber al menos una computadora conectada (Windows, Mac o Linux).")
 
             # Determinar estado final
             if not notas:
                 rec.estado_instalacion = 'apto'
-            elif any("No cuenta" in nota for nota in notas):
+            elif any("No cuenta" in nota or "Requiere instalación" in nota for nota in notas):
                 rec.estado_instalacion = 'no_apto'
             else:
                 rec.estado_instalacion = 'requiere_adecuacion'
-            
+
             rec.apto_instalacion = rec.estado_instalacion == 'apto'
             rec.requiere_adecuacion = rec.estado_instalacion == 'requiere_adecuacion'
             rec.notas_adecuacion = '\n'.join(notas) if notas else False
@@ -599,6 +614,25 @@ class InspeccionResultado(models.Model):
     _name = 'inspeccion.resultado'
     _description = 'Resultado de inspección de sitio'
     _inherit = ['mail.thread', 'mail.activity.mixin'] 
+
+
+    name = fields.Char('Número', readonly=True, copy=False, default='Nuevo')
+
+    @api.model_create_multi
+        def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', 'Nuevo') == 'Nuevo':
+                vals['name'] = self.env['ir.sequence'].next_by_code('inspeccion.resultado') or 'Nuevo'
+        return super().create(vals_list)
+
+    def write(self, vals):
+        res = super(InspeccionResultado, self).write(vals)
+        self._update_estado()  # Primero actualiza el estado
+        if any(field in vals for field in ['punto_corriente', 'punto_red', 'espacio']):
+            for record in self:
+                if record.alquiler_id:
+                    record.alquiler_id._compute_apto()
+        return res
     alquiler_id = fields.Many2one('alquiler', required=True)
     fecha = fields.Datetime('Fecha de inspección', default=fields.Datetime.now)
     
@@ -716,17 +750,58 @@ class InspeccionResultado(models.Model):
             total_pcs = rec.cantidad_windows + rec.cantidad_mac + rec.cantidad_linux
             if total_pcs <= 0:
                 raise ValidationError("Debe haber al menos una computadora conectada (Windows, Mac o Linux).")
+    def _update_estado(self):
+        for record in self:
+            # Inicializa una lista para recopilar problemas
+            problemas = []
+
+            # Validar punto de corriente
+            if record.punto_corriente == 'no':
+                problemas.append("No tiene punto de corriente.")
+            elif record.punto_corriente == 'pendiente':
+                problemas.append("Requiere instalación de punto de corriente.")
+
+            # Validar red
+            if record.punto_red == 'no' and record.wifi == 'no':
+                problemas.append("No tiene conexión a red ni WiFi.")
+            elif record.punto_red == 'pendiente':
+                problemas.append("Requiere instalación de punto de red.")
+
+            # Validar espacio físico
+            if record.espacio < 2.0 or record.ancho_pasillo < 1.0:
+                problemas.append("Espacio insuficiente: mínimo 2m² y pasillo de 1m de ancho.")
+
+            # Validar PCs conectadas
+            total_pcs = record.cantidad_windows + record.cantidad_mac + record.cantidad_linux
+            if total_pcs <= 0:
+                problemas.append("No hay computadoras conectadas (Windows, Mac o Linux).")
+
+            # Determinar el estado basado en los problemas detectados
+            if not problemas:
+                record.estado = 'aprobado'
+            elif any("Requiere" in problema or "No tiene" in problema for problema in problemas):
+                record.estado = 'rechazado'
+            else:
+                record.estado = 'requiere_cambios'
+
+            # Agregar problemas detectados como requisitos pendientes
+            record.requisitos_pendientes = '\n'.join(problemas) if problemas else False
+
+    @api.onchange('punto_corriente', 'punto_red', 'wifi', 'espacio', 'ancho_pasillo', 'cantidad_windows', 'cantidad_mac', 'cantidad_linux')
+    def _onchange_estado(self):
+        self._update_estado()
+
     @api.model
     def create(self, vals):
         record = super(InspeccionResultado, self).create(vals)
         if record.alquiler_id:
-            record.alquiler_id._compute_apto()
+            record.alquiler_id._compute_apto()  # Recalcula el estado
         return record
 
     def write(self, vals):
         res = super(InspeccionResultado, self).write(vals)
-        if 'punto_corriente' in vals or 'espacio' in vals or 'punto_red' in vals:
+        if 'punto_corriente' in vals or 'punto_red' in vals or 'espacio' in vals:
             for record in self:
                 if record.alquiler_id:
-                    record.alquiler_id._compute_apto()
+                    record.alquiler_id._compute_apto()  # Recalcula el estado
         return res

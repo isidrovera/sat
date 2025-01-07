@@ -15,5 +15,12 @@
             <field name="padding">6</field>
             <field name="company_id" eval="False"/>
         </record>
+        <record id="seq_inspeccion_resultado" model="ir.sequence">
+            <field name="name">Secuencia Inspección</field>
+            <field name="code">inspeccion.resultado</field>
+            <field name="prefix">INSP/%(year)s/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
     </data>
 </odoo>
