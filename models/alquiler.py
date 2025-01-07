@@ -659,7 +659,7 @@ class WizardEnviarInspeccion(models.TransientModel):
 class InspeccionResultado(models.Model):
     _name = 'inspeccion.resultado'
     _description = 'Resultado de inspección de sitio'
-
+    _inherit = ['mail.thread', 'mail.activity.mixin'] 
     alquiler_id = fields.Many2one('alquiler', required=True)
     fecha = fields.Datetime('Fecha de inspección', default=fields.Datetime.now)
     
