@@ -149,7 +149,24 @@
                             </div>
                         </div>
                     </div>-->
-                    <!-- Sección de Instalación Eléctrica -->
+                    <!-- Título de Levantamiento de Información -->
+                    <div class="section-card">
+                        <div class="card-header bg-secondary text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white text-secondary">
+                                    <i class="fa fa-clipboard-list"></i>
+                                </div>
+                                <h3 class="mb-0">Levantamiento de Información para la Instalación</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">
+                                Por favor, complete la siguiente información para asegurar una instalación exitosa del equipo. Todos los campos marcados como obligatorios deben ser llenados antes de enviar el formulario.
+                            </p>
+                        </div>
+                    </div>
+
+                                        <!-- Sección de Instalación Eléctrica -->
                     <div class="section-card">
                         <div class="card-header bg-warning text-white py-3">
                             <div class="d-flex align-items-center">
