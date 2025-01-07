@@ -38,14 +38,14 @@ class InspeccionController(http.Controller):
             'voltaje': float(post.get('voltaje', 0)),
             'punto_red': post.get('punto_red'),
             'wifi': post.get('wifi'),
-            'area_sistemas': post.get('area_sistemas') == 'true',
+            'area_sistemas': post.get('area_sistemas') == 'on',  # Checkbox enviado como "on"
             'contacto_sistemas': post.get('contacto_sistemas'),
             
             # Control de Impresión
-            'control_impresion': post.get('control_impresion') == 'true',
+            'control_impresion': post.get('control_impresion') == 'on',
             'tipo_control': post.get('tipo_control'),
             'cantidad_usuarios': int(post.get('cantidad_usuarios', 0)),
-            'requiere_reportes': post.get('requiere_reportes') == 'true',
+            'requiere_reportes': post.get('requiere_reportes') == 'on',
             'frecuencia_reportes': post.get('frecuencia_reportes'),
             
             # Entorno de PCs
@@ -54,23 +54,24 @@ class InspeccionController(http.Controller):
             'cantidad_linux': int(post.get('cantidad_linux', 0)),
             
             # Configuración de Escaneo
-            'usar_smb': post.get('usar_smb') == 'true',
-            'usar_ftp': post.get('usar_ftp') == 'true',
-            'usar_email': post.get('usar_email') == 'true',
+            'usar_smb': post.get('usar_smb') == 'on',
+            'usar_ftp': post.get('usar_ftp') == 'on',
+            'usar_email': post.get('usar_email') == 'on',
             'tipo_servidor_email': post.get('tipo_servidor_email'),
             'servidor_email_propio': post.get('servidor_email_propio'),
             
             # Espacio Físico y Acceso
             'piso': int(post.get('piso', 0)),
-            'ascensor': post.get('ascensor') == 'true',
+            'ascensor': post.get('ascensor') == 'on',
             'espacio': float(post.get('espacio', 0)),
             'ancho_pasillo': float(post.get('ancho_pasillo', 0)),
-            'tiene_estacionamiento': post.get('tiene_estacionamiento') == 'true',
+            'tiene_estacionamiento': post.get('tiene_estacionamiento') == 'on',
             'observaciones_estacionamiento': post.get('observaciones_estacionamiento'),
             
             'observaciones': post.get('observaciones')
         }
-        
+
+                
         # Si ya existe una inspección anterior, actualizamos
         inspeccion_existente = request.env['inspeccion.resultado'].sudo().search([
             ('alquiler_id', '=', alquiler.id)
