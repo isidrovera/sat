@@ -623,11 +623,16 @@ class InspeccionResultado(models.Model):
         for vals in vals_list:
             if vals.get('name', 'Nuevo') == 'Nuevo':
                 vals['name'] = self.env['ir.sequence'].next_by_code('inspeccion.resultado') or 'Nuevo'
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        for record in records:
+            record._update_estado()
+            if record.alquiler_id:
+                record.alquiler_id._compute_apto()
+        return records
 
     def write(self, vals):
         res = super(InspeccionResultado, self).write(vals)
-        self._update_estado()  # Primero actualiza el estado
+        self._update_estado()
         if any(field in vals for field in ['punto_corriente', 'punto_red', 'espacio']):
             for record in self:
                 if record.alquiler_id:
@@ -791,17 +796,4 @@ class InspeccionResultado(models.Model):
     def _onchange_estado(self):
         self._update_estado()
 
-    @api.model
-    def create(self, vals):
-        record = super(InspeccionResultado, self).create(vals)
-        if record.alquiler_id:
-            record.alquiler_id._compute_apto()  # Recalcula el estado
-        return record
-
-    def write(self, vals):
-        res = super(InspeccionResultado, self).write(vals)
-        if 'punto_corriente' in vals or 'punto_red' in vals or 'espacio' in vals:
-            for record in self:
-                if record.alquiler_id:
-                    record.alquiler_id._compute_apto()  # Recalcula el estado
-        return res
+   
