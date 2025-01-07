@@ -312,7 +312,7 @@
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label class="form-label d-flex align-items-center">
-                                            <i class="fab fa-windows me-2"></i> PCs Windows <i
+                                            <i class="fa fa-windows"></i> PCs Windows <i
                                                 class="fa fa-question-circle info-tooltip ms-2"
                                                 title="Cantidad de computadoras con Windows que necesitarán acceso"></i>
                                         </label>
