@@ -757,40 +757,32 @@ class InspeccionResultado(models.Model):
                 raise ValidationError("Debe haber al menos una computadora conectada (Windows, Mac o Linux).")
     def _update_estado(self):
         for record in self:
-            # Inicializa una lista para recopilar problemas
             problemas = []
-
-            # Validar punto de corriente
             if record.punto_corriente == 'no':
                 problemas.append("No tiene punto de corriente.")
             elif record.punto_corriente == 'pendiente':
                 problemas.append("Requiere instalación de punto de corriente.")
 
-            # Validar red
             if record.punto_red == 'no' and record.wifi == 'no':
                 problemas.append("No tiene conexión a red ni WiFi.")
             elif record.punto_red == 'pendiente':
                 problemas.append("Requiere instalación de punto de red.")
 
-            # Validar espacio físico
             if record.espacio < 2.0 or record.ancho_pasillo < 1.0:
                 problemas.append("Espacio insuficiente: mínimo 2m² y pasillo de 1m de ancho.")
 
-            # Validar PCs conectadas
             total_pcs = record.cantidad_windows + record.cantidad_mac + record.cantidad_linux
             if total_pcs <= 0:
-                problemas.append("No hay computadoras conectadas (Windows, Mac o Linux).")
+                problemas.append("No hay computadoras conectadas.")
 
-            # Determinar el estado basado en los problemas detectados
-            if not problemas:
-                record.estado = 'aprobado'
-            elif any("Requiere" in problema or "No tiene" in problema for problema in problemas):
-                record.estado = 'rechazado'
-            else:
-                record.estado = 'requiere_cambios'
+            nuevo_estado = 'aprobado' if not problemas else 'rechazado' if any("Requiere" in p or "No tiene" in p for p in problemas) else 'requiere_cambios'
+            nuevo_requisitos = '\n'.join(problemas) if problemas else False
 
-            # Agregar problemas detectados como requisitos pendientes
-            record.requisitos_pendientes = '\n'.join(problemas) if problemas else False
+            self.env.cr.execute("""
+                UPDATE inspeccion_resultado 
+                SET estado = %s, requisitos_pendientes = %s 
+                WHERE id = %s
+            """, (nuevo_estado, nuevo_requisitos, record.id))
 
     @api.onchange('punto_corriente', 'punto_red', 'wifi', 'espacio', 'ancho_pasillo', 'cantidad_windows', 'cantidad_mac', 'cantidad_linux')
     def _onchange_estado(self):
