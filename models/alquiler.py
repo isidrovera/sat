@@ -619,7 +619,7 @@ class InspeccionResultado(models.Model):
     name = fields.Char('Número', readonly=True, copy=False, default='Nuevo')
 
     @api.model_create_multi
-        def create(self, vals_list):
+    def create(self, vals_list):
         for vals in vals_list:
             if vals.get('name', 'Nuevo') == 'Nuevo':
                 vals['name'] = self.env['ir.sequence'].next_by_code('inspeccion.resultado') or 'Nuevo'
