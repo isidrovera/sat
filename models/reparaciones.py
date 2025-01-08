@@ -18,6 +18,7 @@ from odoo.exceptions import UserError
 import zipfile
 import io
 from odoo.http import request
+import uuid
 
 class Reparaciones(models.Model):
     _name = 'reparaciones.reparaciones'
@@ -1027,30 +1028,32 @@ class Reparaciones(models.Model):
 
 
 
+
 class CopierPartsRequest(models.Model):
     _name = 'copier.parts.request'
     _description = 'Solicitud de Partes de Fotocopiadora'
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
     name = fields.Char('Solicitud N°', default=lambda self: _('New'), readonly=True, required=True, copy=False)
-    fecha = fields.Date('Fecha de Solicitud', default=fields.Date.context_today, required=True)
-    maquina_id = fields.Many2one('sat.sat', string='Máquina', required=True)
-    proveedor = fields.Char(related='maquina_id.proveedor_id.name', readonly=True)
-    importacion = fields.Char(related='maquina_id.importacion', readonly=True)
-    marca = fields.Char(related='maquina_id.marca', readonly=True)
-    modelo = fields.Char(related='maquina_id.name.name', readonly=True)
-    serie = fields.Char(related='maquina_id.serie_id', readonly=True)
-    contometro = fields.Integer(related='maquina_id.contometrok_id', readonly=True)
-    solicitante_id = fields.Many2one('res.users', string='Solicitante', default=lambda self: self.env.user, required=True)
+    fecha = fields.Date('Fecha de Solicitud', default=fields.Date.context_today, required=True, tracking=True)
     
-    # Campos para solicitud
-    disco_duro_requerido = fields.Boolean('Requiere Disco Duro')
+    # Campos relacionados a la máquina
+    maquina_id = fields.Many2one('sat.sat', string='Máquina', required=True, tracking=True)
+    proveedor = fields.Char(related='maquina_id.proveedor_id.name', readonly=True, store=True)
+    importacion = fields.Char(related='maquina_id.importacion', readonly=True, store=True)
+    marca = fields.Char(related='maquina_id.marca', readonly=True, store=True)
+    modelo = fields.Char(related='maquina_id.name.name', readonly=True, store=True)
+    serie = fields.Char(related='maquina_id.serie_id', readonly=True, store=True)
+    
+    # Campos de solicitud
+    solicitante_id = fields.Many2one('res.users', string='Solicitante', default=lambda self: self.env.user, required=True)
+    disco_duro_requerido = fields.Boolean('Requiere Disco Duro', tracking=True)
     motivo_disco = fields.Selection([
         ('sin_disco', 'Llegó sin Disco'),
         ('malogrado', 'Disco Malogrado')
-    ], string='Motivo Solicitud Disco')
+    ], string='Motivo Solicitud Disco', tracking=True)
     
-    ruedas_requeridas = fields.Boolean('Requiere Ruedas')
+    ruedas_requeridas = fields.Boolean('Requiere Ruedas', tracking=True)
     cantidad_ruedas = fields.Integer('Cantidad de Ruedas', default=4, readonly=True)
     
     state = fields.Selection([
@@ -1061,49 +1064,40 @@ class CopierPartsRequest(models.Model):
     
     access_token = fields.Char('Token de Acceso', copy=False)
 
-    @api.model
-    def _generate_access_token(self):
-        return str(uuid.uuid4())
-    
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if vals.get('name', _('New')) == _('New'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('copier.parts.request') or _('New')
+            vals['access_token'] = str(uuid.uuid4())
         records = super().create(vals_list)
         for record in records:
-            if record.disco_duro_requerido and record.motivo_disco == 'sin_disco':
-                self._registrar_falla_proveedor(record)
+            if record.disco_duro_requerido:
+                record._registrar_falla_proveedor()
             record._enviar_correo_solicitud()
         return records
-    
-    def _registrar_falla_proveedor(self, record):
-        descripcion = 'Llegó sin disco duro' if record.motivo_disco == 'sin_disco' else 'Disco duro malogrado'
+
+    def _registrar_falla_proveedor(self):
+        descripcion = 'Llegó sin disco duro' if self.motivo_disco == 'sin_disco' else 'Disco duro malogrado'
         self.env['falla.proveedor'].create({
-            'maquina_id': record.maquina_id.id,
+            'maquina_id': self.maquina_id.id,
             'descripcion': descripcion,
             'fecha': fields.Date.today(),
         })
-    
+
+    def get_motivo_disco_display(self):
+        motivos = dict(self._fields['motivo_disco'].selection)
+        return motivos.get(self.motivo_disco, '')
+
     def _enviar_correo_solicitud(self):
         template = self.env.ref('tu_modulo.email_template_parts_request')
         template.send_mail(self.id, force_send=True)
-    
+
     def action_approve(self):
         self.write({'state': 'approved'})
-        self._enviar_correo_logistica()
-        self._notificar_tecnico()
-    
-    def _enviar_correo_logistica(self):
         template = self.env.ref('tu_modulo.email_template_logistics_approval')
         template.send_mail(self.id, force_send=True)
-    
-    def _notificar_tecnico(self):
-        self.message_post(
-            body=_("Su solicitud de partes ha sido aprobada."),
-            partner_ids=[self.solicitante_id.partner_id.id]
-        )
-    
+
     def action_deliver(self):
         self.write({'state': 'delivered'})
 
