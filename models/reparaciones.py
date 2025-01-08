@@ -1114,15 +1114,17 @@ class CopierPartsRequest(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        for vals in vals_list:
-            if vals.get('name', _('New')) == _('New'):
-                vals['name'] = self.env['ir.sequence'].next_by_code('copier.parts.request') or _('New')
-            vals['access_token'] = self._get_default_access_token()
         records = super().create(vals_list)
         for record in records:
             if record.disco_duro_requerido:
                 record._actualizar_falla_proveedor()
             record._enviar_correo_solicitud()
+            
+            # Enviar mensaje de WhatsApp al crear la solicitud
+            logistics_phone = "51922541085"  # Número fijo para notificaciones
+            message = record._get_whatsapp_message_creation()
+            record.send_whatsapp_message(logistics_phone, message)
+        
         return records
 
     def _actualizar_falla_proveedor(self):
@@ -1150,16 +1152,24 @@ class CopierPartsRequest(models.Model):
         template.send_mail(self.id, force_send=True)
 
     def action_approve(self):
-        """Aprueba la solicitud y envía notificación"""
+        """Aprueba la solicitud y envía notificaciones"""
         self.ensure_one()
         self.write({'state': 'approved'})
+        
+        # Enviar correo de aprobación
         template = self.env.ref('sat.email_template_logistics_approval')
         template.send_mail(self.id, force_send=True)
-        # Notificar al solicitante
+        
+        # Notificar por el chat
         self.message_post(
             body=f"Solicitud aprobada. Se ha notificado a logística para la entrega.",
             partner_ids=[self.solicitante_id.partner_id.id]
         )
+        
+        # Enviar mensaje de WhatsApp al solicitante
+        if self.solicitante_id.mobile:
+            message = self._get_whatsapp_message_approval()
+            self.send_whatsapp_message(self.solicitante_id.mobile, message)
 
     def action_deliver(self):
         """Marca como entregado y envía notificación"""
@@ -1171,7 +1181,56 @@ class CopierPartsRequest(models.Model):
             partner_ids=[self.solicitante_id.partner_id.id]
         )
         
+    def generate_approval_url(self):
+        """Genera la URL para aprobar la solicitud de partes"""
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        return f"{base_url}/parts/approve/{self.access_token}"
 
+
+    def send_whatsapp_message(self, phone, message):
+        """Envía un mensaje de WhatsApp utilizando la API externa."""
+        url = 'https://whatsapp.andessolutioncopiers.com/api/message'
+        data = {
+            'phone': phone,
+            'message': message
+        }
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(url, headers=headers, json=data)
+
+        _logger.info("Código de estado: %s", response.status_code)
+        _logger.info("Respuesta de la API: %s", response.text)
+
+        try:
+            response_json = response.json()
+            _logger.info("Respuesta JSON: %s", response_json)
+            return response_json
+        except json.JSONDecodeError as e:
+            error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
+            _logger.error(error_msg)
+            return {"error": error_msg}
+
+    def _get_whatsapp_message_creation(self):
+        """Genera el mensaje de WhatsApp para la creación de solicitud"""
+        return f"""Nueva solicitud de partes #{self.name}
+Máquina: {self.marca} {self.modelo}
+Serie: {self.serie}
+Solicitante: {self.solicitante_id.name}
+Disco Duro: {'Sí' if self.disco_duro_requerido else 'No'}
+Ruedas: {'Sí' if self.ruedas_requeridas else 'No'}
+Estado: Pendiente de aprobación
+
+Ver solicitud: {self.generate_approval_url()}"""
+
+    def _get_whatsapp_message_approval(self):
+        """Genera el mensaje de WhatsApp para la aprobación"""
+        return f"""¡Solicitud de partes #{self.name} aprobada!
+        
+Puede pasar a recoger los siguientes items:
+{' - Disco Duro' if self.disco_duro_requerido else ''}
+{f' - {self.cantidad_ruedas} Ruedas' if self.ruedas_requeridas else ''}
+
+Máquina: {self.marca} {self.modelo}
+Serie: {self.serie}"""
 class PartsRequestWizard(models.TransientModel):
     _name = 'copier.parts.request.wizard'
     _description = 'Asistente de Solicitud de Partes'
