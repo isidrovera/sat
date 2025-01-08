@@ -76,7 +76,7 @@
                 <field name="maquina_id"/>
                 <field name="serie"/>
                 <field name="solicitante_id"/>
-                <field name="disco_duro_requerido"/>
+               
                 <field name="ruedas_requeridas"/>
                 <field name="state" widget="badge"
                        decoration-info="state == 'draft'"
