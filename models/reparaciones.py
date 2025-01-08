@@ -1128,7 +1128,7 @@ class CopierPartsRequest(models.Model):
             body=f"Las partes han sido entregadas.",
             partner_ids=[self.solicitante_id.partner_id.id]
         )
-        )
+        
 
 class PartsRequestWizard(models.TransientModel):
     _name = 'copier.parts.request.wizard'
