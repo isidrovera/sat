@@ -45,6 +45,13 @@
                             decoration-info="estado_id in ('en_revision', 'para_revision', 'finalizado', 'entregada')"
                             invisible="estado_id not in ('en_revision', 'para_revision', 'finalizado', 'entregada')"/>
                         <field name="estado_id" widget="statusbar" statusbar_visible="true" />
+                        <button 
+                            name="action_request_parts" 
+                            string="Solicitar Partes" 
+                            type="object" 
+                            class="oe_highlight"
+                            
+                        />
                     </header>
                     <sheet>
                         <div class="oe_title">

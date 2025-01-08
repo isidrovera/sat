@@ -1025,8 +1025,48 @@ class Reparaciones(models.Model):
         estado_legible = dict(selection).get(self.estado_id)
         return estado_legible
 
+    parts_request_ids = fields.One2many(
+        'copier.parts.request', 
+        'reparacion_id', 
+        string='Solicitudes de Partes'
+    )
 
+    parts_request_count = fields.Integer(
+        'Cantidad de Solicitudes', 
+        compute='_compute_parts_request_count'
+    )
 
+    def _compute_parts_request_count(self):
+        for record in self:
+            record.parts_request_count = len(record.parts_request_ids)
+
+    def action_request_parts(self):
+        """Abre el wizard de solicitud de partes"""
+        self.ensure_one()
+        return {
+            'name': 'Solicitar Partes',
+            'type': 'ir.actions.act_window',
+            'res_model': 'copier.parts.request.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_maquina_id': self.maquina_id.id,
+                'default_reparacion_id': self.id,
+            }
+        }
+
+    def action_view_parts_requests(self):
+        """Abre la vista de solicitudes de partes relacionadas"""
+        self.ensure_one()
+        return {
+            'name': 'Solicitudes de Partes',
+            'type': 'ir.actions.act_window',
+            'res_model': 'copier.parts.request',
+            'view_mode': 'list,form',
+            'domain': [('reparacion_id', '=', self.id)],
+            'context': {'default_reparacion_id': self.id, 'default_maquina_id': self.maquina_id.id}
+        }
+    
 
 
 class CopierPartsRequest(models.Model):
@@ -1135,23 +1175,57 @@ class PartsRequestWizard(models.TransientModel):
     _name = 'copier.parts.request.wizard'
     _description = 'Asistente de Solicitud de Partes'
 
-    maquina_id = fields.Many2one('sat.sat', string='Máquina', required=True)
+    # Campos relacionados a la máquina
+    reparacion_id = fields.Many2one('reparaciones.reparaciones', string='Reparación', readonly=True)
+    maquina_id = fields.Many2one('sat.sat', string='Máquina', required=True, readonly=True)
+    proveedor = fields.Char(related='maquina_id.proveedor_id.name', readonly=True)
+    importacion = fields.Char(related='maquina_id.importacion', readonly=True)
+    marca = fields.Char(related='maquina_id.marca', readonly=True)
+    modelo = fields.Char(related='maquina_id.name.name', readonly=True)
+    serie = fields.Char(related='maquina_id.serie_id', readonly=True)
+    contometro = fields.Char(related='maquina_id.contometro', readonly=True)
+    
+    # Campos de solicitud
     disco_duro_requerido = fields.Boolean('Requiere Disco Duro')
     motivo_disco = fields.Selection([
         ('sin_disco', 'Llegó sin Disco'),
         ('malogrado', 'Disco Malogrado')
     ], string='Motivo Solicitud Disco')
+    
     ruedas_requeridas = fields.Boolean('Requiere Ruedas')
+    cantidad_ruedas = fields.Integer('Cantidad de Ruedas', default=4)
+    
+    notas = fields.Text('Notas Adicionales')
+
+    @api.onchange('disco_duro_requerido')
+    def _onchange_disco_duro(self):
+        if not self.disco_duro_requerido:
+            self.motivo_disco = False
 
     def action_create_request(self):
         self.ensure_one()
         vals = {
             'maquina_id': self.maquina_id.id,
+            'reparacion_id': self.reparacion_id.id,
             'disco_duro_requerido': self.disco_duro_requerido,
             'motivo_disco': self.motivo_disco,
             'ruedas_requeridas': self.ruedas_requeridas,
+            'cantidad_ruedas': self.cantidad_ruedas if self.ruedas_requeridas else 0,
         }
         request = self.env['copier.parts.request'].create(vals)
+        
+        # Mensaje en el chatter de la reparación
+        if self.reparacion_id:
+            message = f"<b>Solicitud de Partes Creada:</b><br/>"
+            if self.disco_duro_requerido:
+                message += f"- Disco Duro: {dict(self._fields['motivo_disco'].selection).get(self.motivo_disco)}<br/>"
+            if self.ruedas_requeridas:
+                message += f"- Ruedas: {self.cantidad_ruedas}<br/>"
+            if self.notas:
+                message += f"<b>Notas:</b><br/>{self.notas}"
+            
+            self.reparacion_id.message_post(body=message)
+        
         return {
             'type': 'ir.actions.act_window',
             'res_model': 'copier.parts.request',
