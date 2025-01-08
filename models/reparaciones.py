@@ -1047,6 +1047,7 @@ class CopierPartsRequest(models.Model):
     marca = fields.Char(related='maquina_id.marca', readonly=True, store=True)
     modelo = fields.Char(related='maquina_id.name.name', readonly=True, store=True)
     serie = fields.Char(related='maquina_id.serie_id', readonly=True, store=True)
+    contometro = fields.Char(related='maquina_id.contometrok_id', readonly=True, store=True)
     
     # Campos de solicitud
     solicitante_id = fields.Many2one('res.users', string='Solicitante', default=lambda self: self.env.user, required=True, tracking=True)
