@@ -1079,29 +1079,23 @@ class CopierPartsRequest(models.Model):
         records = super().create(vals_list)
         for record in records:
             if record.disco_duro_requerido:
-                record._registrar_falla_proveedor()
+                record._actualizar_falla_proveedor()
             record._enviar_correo_solicitud()
         return records
 
-    def _registrar_falla_proveedor(self):
-        """Registra la falla y actualiza el campo falla_proveedor en reparaciones"""
-        descripcion = 'Llegó sin disco duro' if self.motivo_disco == 'sin_disco' else 'Disco duro malogrado'
-        
-        # Registrar en falla.proveedor
-        self.env['falla.proveedor'].create({
-            'maquina_id': self.maquina_id.id,
-            'descripcion': descripcion,
-            'fecha': fields.Date.today(),
-        })
-        
-        # Actualizar en reparaciones.reparaciones
-        reparacion = self.reparacion_id or self.env['reparaciones.reparaciones'].search(
-            [('maquina_id', '=', self.maquina_id.id)], limit=1)
-        
-        if reparacion:
-            reparacion.write({
-                'falla_proveedor': f'<p>{descripcion}</p>'
-            })
+    def _actualizar_falla_proveedor(self):
+        """Actualiza el campo falla_proveedor en reparaciones"""
+        if self.disco_duro_requerido:
+            descripcion = 'Llegó sin disco duro' if self.motivo_disco == 'sin_disco' else 'Disco duro malogrado'
+            
+            # Actualizar en reparaciones.reparaciones
+            reparacion = self.reparacion_id or self.env['reparaciones.reparaciones'].search(
+                [('maquina_id', '=', self.maquina_id.id)], limit=1)
+            
+            if reparacion:
+                reparacion.write({
+                    'falla_proveedor': f'<p>{descripcion}</p>'
+                })
 
     def get_motivo_disco_display(self):
         """Obtiene el texto a mostrar del motivo de solicitud de disco"""
@@ -1133,6 +1127,7 @@ class CopierPartsRequest(models.Model):
         self.message_post(
             body=f"Las partes han sido entregadas.",
             partner_ids=[self.solicitante_id.partner_id.id]
+        )
         )
 
 class PartsRequestWizard(models.TransientModel):
