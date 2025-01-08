@@ -97,15 +97,60 @@ class CopierPartsController(http.Controller):
     @http.route('/parts/approve/<string:token>', type='http', auth='public')
     def approve_request(self, token):
         parts_request = request.env['copier.parts.request'].sudo().search([('access_token', '=', token)], limit=1)
-        if parts_request and parts_request.state == 'draft':
+        
+        if not parts_request:
+            return request.render('sat.parts_request_invalid', {
+                'error_message': 'La solicitud no existe o el enlace es inválido.'
+            })
+            
+        # Verificar diferentes estados
+        if parts_request.state == 'draft':
             parts_request.action_approve()
             return request.render('sat.parts_request_approval_success', {})
-        return request.render('sat.parts_request_invalid', {})
+        elif parts_request.state == 'approved':
+            return request.render('sat.parts_request_invalid', {
+                'error_message': 'Esta solicitud ya fue aprobada previamente.'
+            })
+        elif parts_request.state == 'delivered':
+            return request.render('sat.parts_request_invalid', {
+                'error_message': 'Esta solicitud ya fue entregada y no puede modificarse.'
+            })
+        else:
+            return request.render('sat.parts_request_invalid', {
+                'error_message': 'La solicitud no puede ser procesada en su estado actual.'
+            })
 
     @http.route('/parts/deliver/<string:token>', type='http', auth='public')
     def deliver_parts(self, token):
         parts_request = request.env['copier.parts.request'].sudo().search([('access_token', '=', token)], limit=1)
-        if parts_request and parts_request.state == 'approved':
+        
+        if not parts_request:
+            return request.render('sat.parts_request_invalid', {
+                'error_message': 'La solicitud no existe o el enlace es inválido.'
+            })
+            
+        # Verificar diferentes estados
+        if parts_request.state == 'approved':
             parts_request.action_deliver()
             return request.render('sat.parts_request_delivery_success', {})
-        return request.render('sat.parts_request_invalid', {})
+        elif parts_request.state == 'draft':
+            return request.render('sat.parts_request_invalid', {
+                'error_message': 'Esta solicitud aún no ha sido aprobada.'
+            })
+        elif parts_request.state == 'delivered':
+            return request.render('sat.parts_request_invalid', {
+                'error_message': 'Esta solicitud ya fue entregada previamente.'
+            })
+        else:
+            return request.render('sat.parts_request_invalid', {
+                'error_message': 'La solicitud no puede ser procesada en su estado actual.'
+            })
+
+    def _get_state_message(self, state):
+        """Método auxiliar para obtener mensajes según el estado"""
+        state_messages = {
+            'draft': 'borrador',
+            'approved': 'aprobada',
+            'delivered': 'entregada',
+        }
+        return state_messages.get(state, 'estado desconocido')
