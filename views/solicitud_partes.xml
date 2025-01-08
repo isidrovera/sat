@@ -76,7 +76,7 @@
                 <field name="maquina_id"/>
                 <field name="serie"/>
                 <field name="solicitante_id"/>
-               
+                <field name="disco_duro_requerido"/>
                 <field name="ruedas_requeridas"/>
                 <field name="state" widget="badge"
                        decoration-info="state == 'draft'"
@@ -117,9 +117,9 @@
                                     </div>
                                 </div>
                                 <div class="o_kanban_tags_section">
-                                    <span t-if="record.disco_duro_requerido.raw_value" 
+                                    <span t-if="record.disco_duro_requerido" 
                                           class="badge text-bg-info">Disco Duro</span>
-                                    <span t-if="record.ruedas_requeridas.raw_value" 
+                                    <span t-if="record.ruedas_requeridas" 
                                           class="badge text-bg-warning">Ruedas</span>
                                 </div>
                             </div>
@@ -129,6 +129,7 @@
             </kanban>
         </field>
     </record>
+
 
     <!-- Vista Search -->
     <record id="view_copier_parts_request_search" model="ir.ui.view">
