@@ -1,134 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Estilos comunes para todas las plantillas -->
-        <template id="parts_request_assets" name="Parts Request Assets">
-            <style>
-                .modern-card {
-                background: linear-gradient(145deg, #ffffff, #f5f5f5);
-                border: none;
-                border-radius: 20px;
-                box-shadow:
-                8px 8px 15px rgba(0, 0, 0, 0.1),
-                -8px -8px 15px rgba(255, 255, 255, 0.8);
-                transform: translateY(0);
-                transition: all 0.3s ease;
-                overflow: hidden;
-                }
-
-                .modern-card:hover {
-                transform: translateY(-5px);
-                box-shadow:
-                12px 12px 20px rgba(0, 0, 0, 0.15),
-                -12px -12px 20px rgba(255, 255, 255, 0.9);
-                }
-
-                .icon-wrapper {
-                width: 90px;
-                height: 90px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin: 0 auto 1.5rem;
-                position: relative;
-                overflow: hidden;
-                }
-
-                .success-icon-bg {
-                background: linear-gradient(135deg, #28a745, #20c997);
-                }
-
-                .error-icon-bg {
-                background: linear-gradient(135deg, #dc3545, #ff6b6b);
-                }
-
-                .icon-wrapper i {
-                font-size: 2.5rem;
-                color: white;
-                text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-                }
-
-                .modern-title {
-                font-weight: 600;
-                letter-spacing: -0.5px;
-                margin-bottom: 1.2rem;
-                }
-
-                .modern-text {
-                color: #6c757d;
-                line-height: 1.6;
-                }
-
-                .countdown-text {
-                margin-top: 1.5rem;
-                padding: 0.5rem 1rem;
-                background: rgba(0, 0, 0, 0.05);
-                border-radius: 10px;
-                font-size: 0.9rem;
-                color: #6c757d;
-                }
-
-                .bullet-list {
-                list-style: none;
-                padding-left: 0;
-                }
-
-                .bullet-list li {
-                position: relative;
-                padding-left: 1.5rem;
-                margin-bottom: 0.5rem;
-                }
-
-                .bullet-list li:before {
-                content: "•";
-                position: absolute;
-                left: 0;
-                color: #dc3545;
-                }
-
-                @keyframes fadeInUp {
-                from {
-                opacity: 0;
-                transform: translateY(20px);
-                }
-                to {
-                opacity: 1;
-                transform: translateY(0);
-                }
-                }
-
-                .fade-in-up {
-                animation: fadeInUp 0.6s ease forwards;
-                }
-            </style>
-        </template>
-
         <!-- Template de Éxito para Aprobación -->
         <template id="parts_request_approval_success">
             <t t-call="website.layout">
-                <t t-call="parts_request_assets" />
                 <div class="container min-vh-100 d-flex align-items-center py-5">
                     <div class="row justify-content-center w-100">
                         <div class="col-md-6 col-lg-5 col-xl-4">
-                            <div class="modern-card fade-in-up p-4">
-                                <div class="icon-wrapper success-icon-bg">
-                                    <i class="fa fa-check" />
-                                </div>
-                                <h2 class="modern-title text-success text-center">¡Solicitud
-                                    Aprobada!</h2>
-                                <p class="modern-text text-center">La solicitud de partes ha sido
-                                    aprobada correctamente y se ha notificado a logística.</p>
-                                <div class="countdown-text text-center">
-                                    Esta ventana se cerrará automáticamente
+                            <div t-attf-class="card rounded-4 shadow-sm border-0" 
+                                 style="animation: fadeInUp 0.6s ease;">
+                                <div class="card-body p-4 text-center">
+                                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-4" 
+                                         style="width: 90px; height: 90px; background: linear-gradient(135deg, #28a745, #20c997);">
+                                        <i class="fa fa-check fa-2x text-white"/>
+                                    </div>
+                                    <h2 class="fw-bold text-success mb-3">¡Solicitud Aprobada!</h2>
+                                    <p class="text-muted mb-4">La solicitud de partes ha sido aprobada correctamente y se ha notificado a logística.</p>
+                                    <div class="py-2 px-3 bg-light rounded-3 text-muted small">
+                                        Esta ventana se cerrará automáticamente
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <style>
+                    @keyframes fadeInUp {
+                        from {
+                            opacity: 0;
+                            transform: translateY(20px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                </style>
                 <script type="text/javascript">
                     setTimeout(function() {
-                    window.close();
+                        window.close();
                     }, 10000);
                 </script>
             </t>
@@ -137,28 +47,41 @@
         <!-- Template de Éxito para Entrega -->
         <template id="parts_request_delivery_success">
             <t t-call="website.layout">
-                <t t-call="parts_request_assets" />
                 <div class="container min-vh-100 d-flex align-items-center py-5">
                     <div class="row justify-content-center w-100">
                         <div class="col-md-6 col-lg-5 col-xl-4">
-                            <div class="modern-card fade-in-up p-4">
-                                <div class="icon-wrapper success-icon-bg">
-                                    <i class="fa fa-truck" />
-                                </div>
-                                <h2 class="modern-title text-success text-center">¡Entrega
-                                    Confirmada!</h2>
-                                <p class="modern-text text-center">La entrega de las partes ha sido
-                                    confirmada exitosamente.</p>
-                                <div class="countdown-text text-center">
-                                    Esta ventana se cerrará automáticamente
+                            <div t-attf-class="card rounded-4 shadow-sm border-0" 
+                                 style="animation: fadeInUp 0.6s ease;">
+                                <div class="card-body p-4 text-center">
+                                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-4" 
+                                         style="width: 90px; height: 90px; background: linear-gradient(135deg, #28a745, #20c997);">
+                                        <i class="fa fa-truck fa-2x text-white"/>
+                                    </div>
+                                    <h2 class="fw-bold text-success mb-3">¡Entrega Confirmada!</h2>
+                                    <p class="text-muted mb-4">La entrega de las partes ha sido confirmada exitosamente.</p>
+                                    <div class="py-2 px-3 bg-light rounded-3 text-muted small">
+                                        Esta ventana se cerrará automáticamente
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <style>
+                    @keyframes fadeInUp {
+                        from {
+                            opacity: 0;
+                            transform: translateY(20px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                </style>
                 <script type="text/javascript">
                     setTimeout(function() {
-                    window.close();
+                        window.close();
                     }, 10000);
                 </script>
             </t>
@@ -167,39 +90,52 @@
         <!-- Template de Error -->
         <template id="parts_request_invalid">
             <t t-call="website.layout">
-                <t t-call="parts_request_assets" />
                 <div class="container min-vh-100 d-flex align-items-center py-5">
                     <div class="row justify-content-center w-100">
                         <div class="col-md-6 col-lg-5 col-xl-4">
-                            <div class="modern-card fade-in-up p-4">
-                                <div class="icon-wrapper error-icon-bg">
-                                    <i class="fa fa-exclamation-triangle" />
-                                </div>
-                                <h2 class="modern-title text-danger text-center">Solicitud Inválida</h2>
-                                <p class="modern-text text-center mb-4">
+                            <div t-attf-class="card rounded-4 shadow-sm border-0" 
+                                 style="animation: fadeInUp 0.6s ease;">
+                                <div class="card-body p-4 text-center">
+                                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-4" 
+                                         style="width: 90px; height: 90px; background: linear-gradient(135deg, #dc3545, #ff6b6b);">
+                                        <i class="fa fa-exclamation-triangle fa-2x text-white"/>
+                                    </div>
+                                    <h2 class="fw-bold text-danger mb-3">Solicitud Inválida</h2>
                                     <t t-if="error_message">
-                                        <t t-esc="error_message" />
+                                        <p class="text-muted mb-4"><t t-esc="error_message"/></p>
                                     </t>
-                                    <t t-else=""> La solicitud no puede ser procesada. Esto puede
-                                        deberse a que: <ul class="bullet-list modern-text mb-4">
-                                            <li>La solicitud ya ha sido procesada</li>
-                                            <li>El enlace ha expirado</li>
-                                            <li>El enlace no es válido</li>
+                                    <t t-else="">
+                                        <p class="text-muted mb-3">La solicitud no puede ser procesada. Esto puede deberse a que:</p>
+                                        <ul class="list-unstyled text-muted small mb-4">
+                                            <li class="mb-2">• La solicitud ya ha sido procesada</li>
+                                            <li class="mb-2">• El enlace ha expirado</li>
+                                            <li class="mb-2">• El enlace no es válido</li>
                                         </ul>
                                     </t>
-                                </p>
-                                <p class="modern-text text-center small">Por favor, contacte al
-                                    administrador si el problema persiste.</p>
-                                <div class="countdown-text text-center">
-                                    Esta ventana se cerrará automáticamente
+                                    <p class="text-muted small mb-4">Por favor, contacte al administrador si el problema persiste.</p>
+                                    <div class="py-2 px-3 bg-light rounded-3 text-muted small">
+                                        Esta ventana se cerrará automáticamente
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <style>
+                    @keyframes fadeInUp {
+                        from {
+                            opacity: 0;
+                            transform: translateY(20px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                </style>
                 <script type="text/javascript">
                     setTimeout(function() {
-                    window.close();
+                        window.close();
                     }, 10000);
                 </script>
             </t>
