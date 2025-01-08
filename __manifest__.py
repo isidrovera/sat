@@ -105,6 +105,7 @@
         'views/levantamiento.xml',
         'views/inspeccion_vista.xml',
         'views/solicitud_partes.xml',
+        'views/solicitud_template.xml',
         
         
     ],
