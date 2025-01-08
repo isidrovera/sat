@@ -209,6 +209,11 @@
                 <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie"/></strong></div>
                 <div style="margin: 5px 0;">Contómetro: <strong><t t-out="object.contometro"/></strong></div>
             </div>
+            <!-- Solicitante -->
+            <div style="margin: 20px 0;">
+                <div style="font-weight: bold;">👤 Solicitante:</div>
+                <div><t t-out="object.solicitante_id.name"/></div>
+            </div>
 
             <!-- Partes a Entregar -->
             <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
@@ -279,13 +284,7 @@
                     </div>
                 </t>
             </div>
-
-            <!-- Solicitante -->
-            <div style="margin: 20px 0;">
-                <div style="font-weight: bold;">👤 Solicitante:</div>
-                <div><t t-out="object.solicitante_id.name"/></div>
-            </div>
-            <!-- Detalles de la Máquina -->
+             <!-- Detalles de la Máquina -->
             <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
                 <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Información del Equipo</div>
                 <div style="margin: 5px 0;">Proveedor: <strong><t t-out="object.proveedor"/></strong></div>
@@ -295,6 +294,13 @@
                 <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie"/></strong></div>
                 <div style="margin: 5px 0;">Contómetro: <strong><t t-out="object.contometro"/></strong></div>
             </div>
+
+            <!-- Solicitante -->
+            <div style="margin: 20px 0;">
+                <div style="font-weight: bold;">👤 Solicitante:</div>
+                <div><t t-out="object.solicitante_id.name"/></div>
+            </div>
+           
 
             <!-- Botón de Confirmación -->
             <div style="text-align: center; margin: 30px 0;">

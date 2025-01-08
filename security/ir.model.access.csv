@@ -68,3 +68,5 @@ access_inspeccion_resultado_user,inspeccion.resultado.user,model_inspeccion_resu
 access_wizard_enviar_inspeccion_user,wizard.enviar.inspeccion.user,model_wizard_enviar_inspeccion,base.group_system,1,1,1,1
 access_parts_request_user,Solicitud de Partes Usuario,model_copier_parts_request,base.group_system,1,1,1,1
 access_parts_request_wizard_user,Wizard Solicitud Partes Usuario,model_copier_parts_request_wizard,base.group_system,1,1,1,1
+access_parts_request_user,Solicitud de Partes Usuario,model_copier_parts_request,base.group_user,1,1,1,1
+access_parts_request_wizard_user,Wizard Solicitud Partes Usuario,model_copier_parts_request_wizard,base.group_user,1,1,1,1
