@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Template de Éxito para Aprobación -->
+    <template id="approval_success_template">
+        <t t-call="web.layout">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-md-6 text-center mt-5">
+                        <div class="card">
+                            <div class="card-body">
+                                <i class="fa fa-check-circle fa-5x text-success mb-3"/>
+                                <h2 class="text-success">¡Solicitud Aprobada!</h2>
+                                <p class="mb-3">La solicitud ha sido aprobada correctamente y se ha notificado a logística.</p>
+                                <p>Puede cerrar esta ventana.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Template de Éxito para Entrega -->
+    <template id="delivery_success_template">
+        <t t-call="web.layout">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-md-6 text-center mt-5">
+                        <div class="card">
+                            <div class="card-body">
+                                <i class="fa fa-check-circle fa-5x text-success mb-3"/>
+                                <h2 class="text-success">¡Entrega Confirmada!</h2>
+                                <p class="mb-3">La entrega ha sido confirmada exitosamente.</p>
+                                <p>Puede cerrar esta ventana.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Template de Error/Solicitud Inválida -->
+    <template id="invalid_request_template">
+        <t t-call="web.layout">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-md-6 text-center mt-5">
+                        <div class="card">
+                            <div class="card-body">
+                                <i class="fa fa-exclamation-circle fa-5x text-danger mb-3"/>
+                                <h2 class="text-danger">Solicitud Inválida</h2>
+                                <p class="mb-3">La solicitud no puede ser procesada. Esto puede deberse a que:</p>
+                                <ul class="list-unstyled">
+                                    <li>La solicitud ya ha sido procesada</li>
+                                    <li>El enlace ha expirado</li>
+                                    <li>El enlace no es válido</li>
+                                </ul>
+                                <p>Por favor, contacte al administrador si el problema persiste.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>
