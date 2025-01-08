@@ -1066,7 +1066,7 @@ class Reparaciones(models.Model):
             'domain': [('reparacion_id', '=', self.id)],
             'context': {'default_reparacion_id': self.id, 'default_maquina_id': self.maquina_id.id}
         }
-    
+
 
 
 class CopierPartsRequest(models.Model):
@@ -1190,10 +1190,17 @@ class PartsRequestWizard(models.TransientModel):
     motivo_disco = fields.Selection([
         ('sin_disco', 'Llegó sin Disco'),
         ('malogrado', 'Disco Malogrado')
-    ], string='Motivo Solicitud Disco')
+    ], string='Motivo Solicitud Disco', states={
+        'invisible': [('disco_duro_requerido', '=', False)],
+        'required': [('disco_duro_requerido', '=', True)]
+    })
     
     ruedas_requeridas = fields.Boolean('Requiere Ruedas')
-    cantidad_ruedas = fields.Integer('Cantidad de Ruedas', default=4)
+    cantidad_ruedas = fields.Integer('Cantidad de Ruedas', default=4,
+        states={
+            'invisible': [('ruedas_requeridas', '=', False)],
+            'required': [('ruedas_requeridas', '=', True)]
+        })
     
     notas = fields.Text('Notas Adicionales')
 
@@ -1202,8 +1209,28 @@ class PartsRequestWizard(models.TransientModel):
         if not self.disco_duro_requerido:
             self.motivo_disco = False
 
+    @api.onchange('ruedas_requeridas')
+    def _onchange_ruedas(self):
+        if not self.ruedas_requeridas:
+            self.cantidad_ruedas = 0
+        else:
+            self.cantidad_ruedas = 4
+
+    @api.constrains('disco_duro_requerido', 'ruedas_requeridas', 'motivo_disco')
+    def _check_required_fields(self):
+        for record in self:
+            if not record.disco_duro_requerido and not record.ruedas_requeridas:
+                raise ValidationError('Debe seleccionar al menos una opción: Disco Duro o Ruedas')
+            if record.disco_duro_requerido and not record.motivo_disco:
+                raise ValidationError('Debe seleccionar el motivo de la solicitud del disco duro')
+
     def action_create_request(self):
         self.ensure_one()
+        
+        # Validar que al menos una opción esté seleccionada
+        if not self.disco_duro_requerido and not self.ruedas_requeridas:
+            raise ValidationError('Debe seleccionar al menos una opción: Disco Duro o Ruedas')
+            
         vals = {
             'maquina_id': self.maquina_id.id,
             'reparacion_id': self.reparacion_id.id,
@@ -1212,6 +1239,7 @@ class PartsRequestWizard(models.TransientModel):
             'ruedas_requeridas': self.ruedas_requeridas,
             'cantidad_ruedas': self.cantidad_ruedas if self.ruedas_requeridas else 0,
         }
+        
         request = self.env['copier.parts.request'].create(vals)
         
         # Mensaje en el chatter de la reparación
