@@ -104,6 +104,8 @@
         'views/template_evaluacion_tecnicos.xml',
         'views/levantamiento.xml',
         'views/inspeccion_vista.xml',
+        'views/solicitud_partes.xml',
+        
         
     ],
     
