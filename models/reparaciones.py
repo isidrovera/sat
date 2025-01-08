@@ -1041,17 +1041,18 @@ class Reparaciones(models.Model):
             record.parts_request_count = len(record.parts_request_ids)
 
     def action_request_parts(self):
-        """Abre el wizard de solicitud de partes"""
+        """Abre el formulario de solicitud de partes precargando los datos de la reparación"""
         self.ensure_one()
         return {
-            'name': 'Solicitar Partes',
             'type': 'ir.actions.act_window',
-            'res_model': 'copier.parts.request.wizard',
+            'name': 'Solicitar Partes',
+            'res_model': 'copier.parts.request',
             'view_mode': 'form',
-            'target': 'new',
+            'target': 'current',
             'context': {
                 'default_maquina_id': self.maquina_id.id,
                 'default_reparacion_id': self.id,
+                'default_solicitante_id': self.env.user.id,
             }
         }
 
