@@ -104,6 +104,7 @@
                 alquiler@andescopiers.com.pe</field>
             <field name="subject">✅ Finalización de Ticket #{{object.name}}</field>
             <field name="model_id" ref="model_ticket_alquiler" />
+            <field name="report_template_ids" eval="[(4, ref('sat.action_ticket_alquiler'))]"/>
             <field name="auto_delete" eval="True" />
             <field name="lang"></field>
             <field name="body_html"><![CDATA[

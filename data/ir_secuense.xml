@@ -22,5 +22,12 @@
             <field name="padding">5</field>
             <field name="company_id" eval="False"/>
         </record>
+        <record id="seq_copier_parts_request" model="ir.sequence">
+            <field name="name">Secuencia Solicitud de Partes</field>
+            <field name="code">copier.parts.request</field>
+            <field name="prefix">SP/%(year)s/</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>            
+        </record>
     </data>
 </odoo>

@@ -1,67 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Template de Éxito para Aprobación -->
-    <template id="approval_success_template">
+    <!-- Template de Éxito para Aprobación de Solicitud de Partes -->
+    <template id="parts_request_approval_success">
         <t t-call="web.layout">
-            <div class="container">
-                <div class="row justify-content-center">
-                    <div class="col-md-6 text-center mt-5">
-                        <div class="card">
-                            <div class="card-body">
-                                <i class="fa fa-check-circle fa-5x text-success mb-3"/>
-                                <h2 class="text-success">¡Solicitud Aprobada!</h2>
-                                <p class="mb-3">La solicitud ha sido aprobada correctamente y se ha notificado a logística.</p>
-                                <p>Puede cerrar esta ventana.</p>
+            <div class="container min-vh-100 d-flex align-items-center">
+                <div class="row justify-content-center w-100">
+                    <div class="col-md-6 col-lg-5 col-xl-4">
+                        <div class="custom-card card">
+                            <div class="card-body p-4">
+                                <div class="icon-container bg-success bg-opacity-10">
+                                    <i class="fa fa-check-circle fa-3x text-success"/>
+                                </div>
+                                <h2 class="text-success fw-bold mb-3">¡Solicitud de Partes Aprobada!</h2>
+                                <p class="text-muted mb-3">La solicitud de partes ha sido aprobada correctamente y se ha notificado a logística.</p>
+                                <div id="countdown" class="countdown"/>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <script>
+                startCountdown();
+            </script>
         </t>
     </template>
 
-    <!-- Template de Éxito para Entrega -->
-    <template id="delivery_success_template">
+    <!-- Template de Éxito para Entrega de Partes -->
+    <template id="parts_request_delivery_success">
         <t t-call="web.layout">
-            <div class="container">
-                <div class="row justify-content-center">
-                    <div class="col-md-6 text-center mt-5">
-                        <div class="card">
-                            <div class="card-body">
-                                <i class="fa fa-check-circle fa-5x text-success mb-3"/>
-                                <h2 class="text-success">¡Entrega Confirmada!</h2>
-                                <p class="mb-3">La entrega ha sido confirmada exitosamente.</p>
-                                <p>Puede cerrar esta ventana.</p>
+            <div class="container min-vh-100 d-flex align-items-center">
+                <div class="row justify-content-center w-100">
+                    <div class="col-md-6 col-lg-5 col-xl-4">
+                        <div class="custom-card card">
+                            <div class="card-body p-4">
+                                <div class="icon-container bg-success bg-opacity-10">
+                                    <i class="fa fa-check-circle fa-3x text-success"/>
+                                </div>
+                                <h2 class="text-success fw-bold mb-3">¡Entrega de Partes Confirmada!</h2>
+                                <p class="text-muted mb-3">La entrega de las partes ha sido confirmada exitosamente.</p>
+                                <div id="countdown" class="countdown"/>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <script>
+                startCountdown();
+            </script>
         </t>
     </template>
 
-    <!-- Template de Error/Solicitud Inválida -->
-    <template id="invalid_request_template">
+    <!-- Template de Error/Solicitud de Partes Inválida -->
+    <template id="parts_request_invalid">
         <t t-call="web.layout">
-            <div class="container">
-                <div class="row justify-content-center">
-                    <div class="col-md-6 text-center mt-5">
-                        <div class="card">
-                            <div class="card-body">
-                                <i class="fa fa-exclamation-circle fa-5x text-danger mb-3"/>
-                                <h2 class="text-danger">Solicitud Inválida</h2>
-                                <p class="mb-3">La solicitud no puede ser procesada. Esto puede deberse a que:</p>
-                                <ul class="list-unstyled">
-                                    <li>La solicitud ya ha sido procesada</li>
-                                    <li>El enlace ha expirado</li>
-                                    <li>El enlace no es válido</li>
+            <div class="container min-vh-100 d-flex align-items-center">
+                <div class="row justify-content-center w-100">
+                    <div class="col-md-6 col-lg-5 col-xl-4">
+                        <div class="custom-card card">
+                            <div class="card-body p-4">
+                                <div class="icon-container bg-danger bg-opacity-10">
+                                    <i class="fa fa-exclamation-circle fa-3x text-danger"/>
+                                </div>
+                                <h2 class="text-danger fw-bold mb-3">Solicitud de Partes Inválida</h2>
+                                <p class="text-muted mb-3">La solicitud no puede ser procesada. Esto puede deberse a que:</p>
+                                <ul class="list-unstyled text-muted small">
+                                    <li class="mb-2">• La solicitud ya ha sido procesada</li>
+                                    <li class="mb-2">• El enlace ha expirado</li>
+                                    <li class="mb-2">• El enlace no es válido</li>
                                 </ul>
-                                <p>Por favor, contacte al administrador si el problema persiste.</p>
+                                <p class="text-muted small">Por favor, contacte al administrador si el problema persiste.</p>
+                                <div id="countdown" class="countdown"/>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <script>
+                startCountdown();
+            </script>
         </t>
     </template>
 </odoo>

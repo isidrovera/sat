@@ -1,0 +1,48 @@
+.custom-card {
+    transform: translateY(-20px);
+    opacity: 0;
+    animation: slideDown 0.5s ease forwards;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 15px;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.custom-card:hover {
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-5px);
+}
+
+@keyframes slideDown {
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.icon-container {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+}
+
+.countdown {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+    .custom-card {
+        margin: 1rem;
+    }
+    .icon-container {
+        width: 80px;
+        height: 80px;
+    }
+}

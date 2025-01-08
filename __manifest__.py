@@ -119,6 +119,8 @@
             'sat/static/src/css/style.css',
             'sat/static/src/css/tree_dashboard.css',
             'sat/static/src/css/evaluation_form.css',
+            'sat/static/src/css/parts_request_message.css',
+            
             
             
             
@@ -139,6 +141,7 @@
             'sat/static/src/js/gallery_widget.js',
             'sat/static/src/js/gallery.js',
             'sat/static/src/js/list_dashboard.js',
+            'sat/static/src/js/parts_request_message.js',
             
             
             
