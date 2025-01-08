@@ -3,7 +3,7 @@
     <data>
         <!-- Template de Éxito para Aprobación -->
         <template id="parts_request_approval_success">
-            <t t-call="website.layout">
+            <t t-call="web.layout">  <!-- Cambiado de website.layout a web.layout -->
                 <div class="container min-vh-100 d-flex align-items-center py-5">
                     <div class="row justify-content-center w-100">
                         <div class="col-md-6 col-lg-5 col-xl-4">
@@ -46,7 +46,7 @@
 
         <!-- Template de Éxito para Entrega -->
         <template id="parts_request_delivery_success">
-            <t t-call="website.layout">
+            <t t-call="web.layout">  <!-- Cambiado de website.layout a web.layout -->
                 <div class="container min-vh-100 d-flex align-items-center py-5">
                     <div class="row justify-content-center w-100">
                         <div class="col-md-6 col-lg-5 col-xl-4">
@@ -89,7 +89,7 @@
 
         <!-- Template de Error -->
         <template id="parts_request_invalid">
-            <t t-call="website.layout">
+            <t t-call="web.layout">  <!-- Cambiado de website.layout a web.layout -->
                 <div class="container min-vh-100 d-flex align-items-center py-5">
                     <div class="row justify-content-center w-100">
                         <div class="col-md-6 col-lg-5 col-xl-4">
