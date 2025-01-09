@@ -94,9 +94,14 @@ class InspeccionController(http.Controller):
 
 class CopierPartsController(http.Controller):
     
-    @http.route('/parts/approve/<string:token>', type='http', auth='public')
+    @http.route('/parts/approve/<string:token>', type='http', auth='public', website=True)
     def approve_request(self, token):
-        parts_request = request.env['copier.parts.request'].sudo().search([('access_token', '=', token)], limit=1)
+        _logger.info("Recibida solicitud de aprobación con token: %s", token)
+        
+        parts_request = request.env['copier.parts.request'].sudo().search(
+            [('access_token', '=', token)], limit=1)
+        
+        _logger.info("Solicitud encontrada: %s", parts_request.name if parts_request else 'No encontrada')
         
         if not parts_request:
             return request.render('sat.parts_request_invalid', {

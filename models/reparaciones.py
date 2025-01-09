@@ -1114,6 +1114,9 @@ class CopierPartsRequest(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('access_token'):
+                vals['access_token'] = str(uuid.uuid4())
         records = super().create(vals_list)
         for record in records:
             if record.disco_duro_requerido:
@@ -1121,7 +1124,7 @@ class CopierPartsRequest(models.Model):
             record._enviar_correo_solicitud()
             
             # Enviar mensaje de WhatsApp al crear la solicitud
-            logistics_phone = "51922541085"  # Número fijo para notificaciones
+            logistics_phone = "51922541085"
             message = record._get_whatsapp_message_creation()
             record.send_whatsapp_message(logistics_phone, message)
         
