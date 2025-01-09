@@ -1115,9 +1115,16 @@ class CopierPartsRequest(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
+            # Generar número de secuencia
+            if vals.get('name', _('New')) == _('New'):
+                vals['name'] = self.env['ir.sequence'].next_by_code('copier.parts.request') or _('New')
+            
+            # Generar token de acceso
             if not vals.get('access_token'):
                 vals['access_token'] = str(uuid.uuid4())
+        
         records = super().create(vals_list)
+        
         for record in records:
             if record.disco_duro_requerido:
                 record._actualizar_falla_proveedor()
