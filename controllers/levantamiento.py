@@ -97,7 +97,7 @@ class InspeccionController(http.Controller):
 
 class CopierPartsController(http.Controller):
     
-    @http.route('/parts/approve/<string:token>', type='http', auth='public', website=True)
+    @http.route('/parts/approve/<string:token>', type='http', auth='user', website=True)
     def approve_request(self, token):
         _logger.info("Recibida solicitud de aprobación con token: %s", token)
         
@@ -128,7 +128,7 @@ class CopierPartsController(http.Controller):
                 'error_message': 'La solicitud no puede ser procesada en su estado actual.'
             })
 
-    @http.route('/parts/deliver/<string:token>', type='http', auth='public')
+    @http.route('/parts/deliver/<string:token>', type='http', auth='user')
     def deliver_parts(self, token):
         parts_request = request.env['copier.parts.request'].sudo().search([('access_token', '=', token)], limit=1)
         
