@@ -20,6 +20,13 @@
                             string="Enviar Inspección" 
                             type="object" 
                             class="btn-primary"/>
+                        <button 
+                            name="action_solicitar_partes" 
+                            string="Solicitar Partes" 
+                            type="object" 
+                            class="oe_highlight"
+                           
+                        />
                         
                         <field name="estado_alquiler_id" widget="statusbar"
                             options="{'clickable': '1'}" />
@@ -38,6 +45,9 @@
                             <button class="oe_stat_button" type="object" name="get_repuestos"
                                 icon="fa-cogs">
                                 <field string="Repuestos" name="repuestos_count" widget="statinfo" />
+                            </button>
+                            <button name="get_pedidos" type="object" class="oe_stat_button" icon="fa-shopping-cart">
+                                <field name="pedidos_count" widget="statinfo" string="Pedidos"/>
                             </button>
                         </div>
 
@@ -196,6 +206,18 @@
                                         <field name="contometro_venta" />
                                     </group>
                                 </group>
+                            </page>
+                            <page string="Partes Solicitadas">
+                                <field name="partes_ids">
+                                    <list>
+                                        <field name="solicitud_id"/>
+                                        <field name="parte"/>
+                                        <field name="descripcion"/>
+                                        <field name="estado"/>
+                                        <field name="fecha_reemplazo"/>
+                                        <field name="reemplazado_por"/>
+                                    </list>
+                                </field>
                             </page>
                         </notebook>
                     </sheet>

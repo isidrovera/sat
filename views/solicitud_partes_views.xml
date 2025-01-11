@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_solicitud_partes_form" model="ir.ui.view">
+        <field name="name">solicitud.partes.form</field>
+        <field name="model">solicitud.partes</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_submit" string="Enviar" type="object" class="oe_highlight" states="draft"/>
+                    <button name="action_approve" string="Aprobar" type="object" class="oe_highlight" states="submitted"/>
+                    <button name="action_complete_withdrawal" string="Completar Retiro" type="object" class="oe_highlight" states="approved"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="maquina_origen_id"/>
+                            <field name="maquina_destino_id"/>
+                            <field name="fecha_solicitud"/>
+                            <field name="solicitante_id"/>
+                        </group>
+                        <group>
+                            <field name="autorizado_por"/>
+                            <field name="fecha_autorizacion"/>
+                            <field name="retirado_por"/>
+                            <field name="fecha_retiro"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Partes Solicitadas">
+                            <field name="parte_ids">
+                                <list editable="bottom">
+                                    <field name="parte"/>
+                                    <field name="descripcion"/>
+                                    <field name="estado"/>
+                                    <field name="fecha_reemplazo"/>
+                                    <field name="reemplazado_por"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_solicitud_partes" model="ir.actions.act_window">
+        <field name="name">Solicitudes de Partes</field>
+        <field name="res_model">solicitud.partes</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_solicitud_partes"
+              name="Solicitudes de Partes"
+              action="action_solicitud_partes"
+              parent="sat.ajustes"/>
+</odoo>

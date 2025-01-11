@@ -590,7 +590,141 @@ class UnidadAlquiler(models.Model):
             'target': 'new',
             'context': {'default_alquiler_id': self.id}
         }
+     # Añadir contador de partes solicitadas
+    partes_solicitadas_count = fields.Integer(
+        string='Partes Solicitadas', 
+        compute='_compute_partes_count'
+    )
+
+    partes_ids = fields.One2many(
+        'solicitud.partes.linea',
+        'maquina_origen_id',
+        string='Partes',
+        readonly=True
+    )
+
+    @api.depends()
+    def _compute_partes_count(self):
+        for record in self:
+            # Contar solicitudes como origen
+            origen_count = self.env['solicitud.partes'].search_count([
+                ('maquina_origen_id', '=', record.id)
+            ])
+            # Contar solicitudes como destino
+            destino_count = self.env['solicitud.partes'].search_count([
+                ('maquina_destino_id', '=', record.id)
+            ])
+            record.partes_solicitadas_count = origen_count + destino_count
+
+    def action_view_partes(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Solicitudes de Partes',
+            'view_mode': 'tree,form',
+            'res_model': 'solicitud.partes',
+            'domain': [
+                '|',
+                ('maquina_origen_id', '=', self.id),
+                ('maquina_destino_id', '=', self.id)
+            ],
+            'context': {
+                'default_maquina_origen_id': self.id,
+            }
+        }
+    def action_solicitar_partes(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Solicitar Partes',
+            'view_mode': 'form',
+            'res_model': 'solicitud.partes',
+            'context': {
+                'default_maquina_origen_id': self.id,
+                'form_view_initial_mode': 'edit',
+            },
+            'target': 'current',
+        }
+
+class SolicitudPartes(models.Model):
+    _name = 'solicitud.partes'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _description = 'Solicitud de Partes'
+
+    name = fields.Char(string='Número de Solicitud', readonly=True, copy=False, default='Nuevo')
     
+    maquina_origen_id = fields.Many2one('alquiler', string='Máquina Origen', required=True, tracking=True)
+    maquina_destino_id = fields.Many2one('alquiler', string='Máquina Destino', tracking=True)
+    
+    fecha_solicitud = fields.Datetime(string='Fecha de Solicitud', default=fields.Datetime.now, tracking=True)
+    solicitante_id = fields.Many2one('res.users', string='Solicitante', 
+                                    default=lambda self: self.env.user, tracking=True)
+    
+    state = fields.Selection([
+        ('draft', 'Borrador'),
+        ('submitted', 'Enviado'),
+        ('approved', 'Aprobado'),
+        ('completed', 'Completado'),
+        ('replaced', 'Reemplazado'),
+        ('rejected', 'Rechazado')
+    ], string='Estado', default='draft', tracking=True)
+    
+    parte_ids = fields.One2many('solicitud.partes.linea', 'solicitud_id', string='Partes Solicitadas')
+    
+    autorizado_por = fields.Many2one('res.users', string='Autorizado por', tracking=True)
+    fecha_autorizacion = fields.Datetime(string='Fecha de Autorización', tracking=True)
+    
+    retirado_por = fields.Many2one('res.users', string='Retirado por', tracking=True)
+    fecha_retiro = fields.Datetime(string='Fecha de Retiro', tracking=True)
+    
+    @api.model
+    def create(self, vals):
+        if vals.get('name', 'Nuevo') == 'Nuevo':
+            vals['name'] = self.env['ir.sequence'].next_by_code('solicitud.partes') or 'Nuevo'
+        return super(SolicitudPartes, self).create(vals)
+    
+    def action_submit(self):
+        self.write({'state': 'submitted'})
+        # Enviar correo de notificación
+        template = self.env.ref('tu_modulo.email_template_solicitud_partes')
+        template.send_mail(self.id, force_send=True)
+    
+    def action_approve(self):
+        self.write({
+            'state': 'approved',
+            'autorizado_por': self.env.user.id,
+            'fecha_autorizacion': fields.Datetime.now()
+        })
+        # Actualizar estado de máquina origen
+        self.maquina_origen_id.write({'estado_alquiler_id': 'con_problemas'})
+
+    def action_complete_withdrawal(self):
+        self.write({
+            'state': 'completed',
+            'retirado_por': self.env.user.id,
+            'fecha_retiro': fields.Datetime.now()
+        })
+
+class SolicitudPartesLinea(models.Model):
+    _name = 'solicitud.partes.linea'
+    _description = 'Línea de Solicitud de Partes'
+
+    solicitud_id = fields.Many2one('solicitud.partes', string='Solicitud')
+    parte = fields.Char(string='Parte/Unidad', required=True)
+    descripcion = fields.Text(string='Descripción')
+    estado = fields.Selection([
+        ('pendiente', 'Pendiente'),
+        ('retirado', 'Retirado'),
+        ('reemplazado', 'Reemplazado')
+    ], string='Estado', default='pendiente')
+    fecha_reemplazo = fields.Datetime(string='Fecha de Reemplazo')
+    reemplazado_por = fields.Many2one('res.users', string='Reemplazado por')
+    maquina_origen_id = fields.Many2one(
+        'alquiler',
+        related='solicitud_id.maquina_origen_id',
+        store=True,
+        string='Máquina Origen'
+    )
 
 class WizardEnviarInspeccion(models.TransientModel):
     _name = 'wizard.enviar.inspeccion'

@@ -70,3 +70,6 @@ access_parts_request_user,Solicitud de Partes Usuario,model_copier_parts_request
 access_parts_request_wizard_user,Wizard Solicitud Partes Usuario,model_copier_parts_request_wizard,base.group_system,1,1,1,1
 access_parts_request_user,Solicitud de Partes Usuario,model_copier_parts_request,base.group_user,1,1,1,1
 access_parts_request_wizard_user,Wizard Solicitud Partes Usuario,model_copier_parts_request_wizard,base.group_user,1,1,1,1
+
+access_solicitud_partes_user,solicitud.partes.user,model_solicitud_partes,base.group_user,1,1,1,1
+access_solicitud_partes_linea_user,solicitud.partes.linea.user,model_solicitud_partes_linea,base.group_user,1,1,1,1
