@@ -16,6 +16,7 @@ from urllib.parse import urlencode
 import uuid
 
 
+
 class UnidadAlquiler(models.Model):
 
     _name = 'alquiler'
@@ -646,19 +647,42 @@ class UnidadAlquiler(models.Model):
             'target': 'current',
         }
 
+
 class SolicitudPartes(models.Model):
     _name = 'solicitud.partes'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _description = 'Solicitud de Partes'
+    _order = 'fecha_solicitud desc, id desc'
 
     name = fields.Char(string='Número de Solicitud', readonly=True, copy=False, default='Nuevo')
     
-    maquina_origen_id = fields.Many2one('alquiler', string='Máquina Origen', required=True, tracking=True)
-    maquina_destino_id = fields.Many2one('alquiler', string='Máquina Destino', tracking=True)
+    maquina_origen_id = fields.Many2one(
+        'alquiler', 
+        string='Máquina Origen', 
+        required=True, 
+        tracking=True,
+        domain="[('estado_alquiler_id', 'not in', ['vendida', 'partes'])]"
+    )
+    maquina_destino_id = fields.Many2one(
+        'alquiler', 
+        string='Máquina Destino', 
+        tracking=True,
+        domain="[('id', '!=', maquina_origen_id), ('estado_alquiler_id', 'not in', ['vendida'])]"
+    )
     
-    fecha_solicitud = fields.Datetime(string='Fecha de Solicitud', default=fields.Datetime.now, tracking=True)
-    solicitante_id = fields.Many2one('res.users', string='Solicitante', 
-                                    default=lambda self: self.env.user, tracking=True)
+    fecha_solicitud = fields.Datetime(
+        string='Fecha de Solicitud', 
+        default=fields.Datetime.now, 
+        tracking=True,
+        readonly=True
+    )
+    solicitante_id = fields.Many2one(
+        'res.users', 
+        string='Solicitante',
+        default=lambda self: self.env.user, 
+        tracking=True,
+        readonly=True
+    )
     
     state = fields.Selection([
         ('draft', 'Borrador'),
@@ -667,44 +691,102 @@ class SolicitudPartes(models.Model):
         ('completed', 'Completado'),
         ('replaced', 'Reemplazado'),
         ('rejected', 'Rechazado')
-    ], string='Estado', default='draft', tracking=True)
+    ], string='Estado', default='draft', tracking=True, copy=False)
     
-    parte_ids = fields.One2many('solicitud.partes.linea', 'solicitud_id', string='Partes Solicitadas')
+    parte_ids = fields.One2many(
+        'solicitud.partes.linea', 
+        'solicitud_id', 
+        string='Partes Solicitadas',
+        states={'completed': [('readonly', True)], 'replaced': [('readonly', True)]}
+    )
     
-    autorizado_por = fields.Many2one('res.users', string='Autorizado por', tracking=True)
-    fecha_autorizacion = fields.Datetime(string='Fecha de Autorización', tracking=True)
+    autorizado_por = fields.Many2one('res.users', string='Autorizado por', tracking=True, readonly=True)
+    fecha_autorizacion = fields.Datetime(string='Fecha de Autorización', tracking=True, readonly=True)
     
-    retirado_por = fields.Many2one('res.users', string='Retirado por', tracking=True)
-    fecha_retiro = fields.Datetime(string='Fecha de Retiro', tracking=True)
+    retirado_por = fields.Many2one('res.users', string='Retirado por', tracking=True, readonly=True)
+    fecha_retiro = fields.Datetime(string='Fecha de Retiro', tracking=True, readonly=True)
     
+    access_token = fields.Char('Token de Acceso', copy=False, readonly=True)
+
+    # Campos computados
+    cantidad_partes = fields.Integer(
+        string='Cantidad de Partes',
+        compute='_compute_cantidad_partes',
+        store=True
+    )
+
+    @api.depends('parte_ids')
+    def _compute_cantidad_partes(self):
+        for record in self:
+            record.cantidad_partes = len(record.parte_ids)
+
+    @api.constrains('maquina_origen_id', 'maquina_destino_id')
+    def _check_maquinas(self):
+        for record in self:
+            if record.maquina_origen_id == record.maquina_destino_id:
+                raise ValidationError(_('La máquina origen y destino no pueden ser la misma.'))
+
+    @api.constrains('parte_ids')
+    def _check_partes(self):
+        for record in self:
+            if not record.parte_ids:
+                raise ValidationError(_('Debe especificar al menos una parte para solicitar.'))
+
     @api.model
     def create(self, vals):
         if vals.get('name', 'Nuevo') == 'Nuevo':
             vals['name'] = self.env['ir.sequence'].next_by_code('solicitud.partes') or 'Nuevo'
-        return super(SolicitudPartes, self).create(vals)
+        vals['access_token'] = uuid.uuid4().hex
+        return super().create(vals)
     
     def action_submit(self):
+        self.ensure_one()
+        if not self.parte_ids:
+            raise UserError(_('Debe agregar al menos una parte antes de enviar la solicitud.'))
         self.write({'state': 'submitted'})
-        # Enviar correo de notificación
-        template = self.env.ref('tu_modulo.email_template_solicitud_partes')
+        template = self.env.ref('sat.email_template_solicitud_partes_alquiler')
         template.send_mail(self.id, force_send=True)
     
     def action_approve(self):
+        self.ensure_one()
+        if self.state != 'submitted':
+            raise UserError(_('Solo se pueden aprobar solicitudes en estado "Enviado".'))
         self.write({
             'state': 'approved',
             'autorizado_por': self.env.user.id,
             'fecha_autorizacion': fields.Datetime.now()
         })
-        # Actualizar estado de máquina origen
         self.maquina_origen_id.write({'estado_alquiler_id': 'con_problemas'})
 
     def action_complete_withdrawal(self):
+        self.ensure_one()
+        if self.state != 'approved':
+            raise UserError(_('Solo se pueden completar solicitudes aprobadas.'))
         self.write({
             'state': 'completed',
             'retirado_por': self.env.user.id,
             'fecha_retiro': fields.Datetime.now()
         })
 
+    def action_reject(self):
+        self.ensure_one()
+        if self.state not in ['submitted', 'approved']:
+            raise UserError(_('Solo se pueden rechazar solicitudes enviadas o aprobadas.'))
+        self.write({'state': 'rejected'})
+
+    @api.model
+    def approve_from_token(self, token):
+        solicitud = self.search([
+            ('access_token', '=', token),
+            ('state', '=', 'submitted')
+        ], limit=1)
+        if solicitud:
+            try:
+                solicitud.action_approve()
+                return {'success': True}
+            except Exception as e:
+                return {'error': str(e)}
+        return {'error': 'Token inválido o solicitud no encontrada'}
 class SolicitudPartesLinea(models.Model):
     _name = 'solicitud.partes.linea'
     _description = 'Línea de Solicitud de Partes'

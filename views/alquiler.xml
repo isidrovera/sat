@@ -47,7 +47,7 @@
                                 <field string="Repuestos" name="repuestos_count" widget="statinfo" />
                             </button>
                             <button name="get_pedidos" type="object" class="oe_stat_button" icon="fa-shopping-cart">
-                                <field name="pedidos_count" widget="statinfo" string="Pedidos"/>
+                                <field name="pedidos_count" widget="statinfo" string="Pedidos Partes"/>
                             </button>
                         </div>
 

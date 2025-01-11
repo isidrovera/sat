@@ -162,3 +162,25 @@ class CopierPartsController(http.Controller):
             'delivered': 'entregada',
         }
         return state_messages.get(state, 'estado desconocido')
+
+
+class AlquilerController(AlquilerController):
+    @http.route('/partes/approve/alquiler/<string:token>', type='http', auth='public', website=True)
+    def approve_parts(self, token):
+        result = request.env['solicitud.partes'].sudo().approve_from_token(token)
+        if result.get('success'):
+            return request.render('sat.partes_approved_template_alquiler', {
+                'message': 'La solicitud de partes ha sido aprobada exitosamente.'
+            })
+        return request.render('sat.partes_error_template_alquiler', {
+            'error_message': result.get('error', 'Enlace inválido o expirado')
+        })
+
+    def _get_page_view_values(self, solicitud, access_token=None, **kwargs):
+        values = super()._get_page_view_values(solicitud, access_token, **kwargs)
+        values.update({
+            'token': access_token,
+            'page_name': 'partes',
+            'solicitud': solicitud,
+        })
+        return values

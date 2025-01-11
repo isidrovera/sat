@@ -107,6 +107,7 @@
         'views/solicitud_partes.xml',
         'views/solicitud_template.xml',
         'views/solicitud_partes_views.xml',
+        'views/partes_templates_alquiler.xml',
         
         
     ],

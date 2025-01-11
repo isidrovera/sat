@@ -385,5 +385,69 @@
 </html>
             ]]></field>
         </record>
+        <record id="email_template_solicitud_partes_alquiler" model="mail.template">
+            <field name="name">Solicitud de Partes para Aprobación Alquiler</field>
+            <field name="subject">🔧 Nueva Solicitud de Partes #{{object.name}}</field>
+            <field name="model_id" ref="model_solicitud_partes"/>
+            <field name="auto_delete" eval="True"/>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">verapolo@icloud.com</field>
+            <!--<field name="email_cc">lincoln@corapsac.com</field>-->
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif;">
+    <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff;">
+        <!-- Encabezado -->
+        <div style="background-color: #4a5568; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🔧 Nueva Solicitud de Partes</div>
+            <div style="color: #ffffff; margin-top: 10px;">#<t t-out="object.name"/></div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div style="padding: 25px; background-color: #ffffff; border: 1px solid #e2e8f0;">
+            <!-- Detalles de la Máquina Origen -->
+            <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Máquina Origen</div>
+                <div style="margin: 5px 0;">Máquina: <strong><t t-out="object.maquina_origen_id.name.name"/></strong></div>
+                <div style="margin: 5px 0;">Serie: <strong><t t-out="object.maquina_origen_id.serie"/></strong></div>
+                <div style="margin: 5px 0;">Marca: <strong><t t-out="object.maquina_origen_id.marca"/></strong></div>
+                <div style="margin: 5px 0;">Tipo: <strong><t t-out="object.maquina_origen_id.tipo_maquina"/></strong></div>
+            </div>
+
+            <!-- Solicitante -->
+            <div style="margin: 20px 0;">
+                <div style="font-weight: bold;">👤 Solicitante:</div>
+                <div><t t-out="object.solicitante_id.name"/></div>
+                <div style="margin-top: 10px;">Fecha: <t t-out="object.fecha_solicitud"/></div>
+            </div>
+
+            <!-- Partes Solicitadas -->
+            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📦 Partes Solicitadas</div>
+                <t t-foreach="object.parte_ids" t-as="parte">
+                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #48bb78;">
+                        <div style="font-weight: bold;"><t t-out="parte.parte"/></div>
+                        <div>Descripción: <strong><t t-out="parte.descripcion"/></strong></div>
+                    </div>
+                </t>
+            </div>
+
+            <!-- Botón de Aprobación -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a t-attf-href="/partes/approve/alquiler/{{ object.access_token }}" 
+                   style="background-color: #48bb78; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                    APROBAR SOLICITUD
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
     </data>
 </odoo>

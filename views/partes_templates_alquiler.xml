@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="partes_approved_template_alquiler">
+        <t t-call="web.layout">
+            <div class="container">
+                <div class="alert alert-success">
+                    <h3>✅ Solicitud Aprobada</h3>
+                    <p>La solicitud de partes ha sido aprobada exitosamente.</p>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="partes_error_template_alquiler">
+        <t t-call="web.layout">
+            <div class="container">
+                <div class="alert alert-danger">
+                    <h3>❌ Error</h3>
+                    <p>No se pudo procesar la solicitud. El enlace puede ser inválido o haber expirado.</p>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>
