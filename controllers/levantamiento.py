@@ -169,7 +169,7 @@ class PartesController(http.Controller):
     def approve_parts(self, token):
         result = request.env['solicitud.partes'].sudo().approve_from_token(token)
         if result.get('success'):
-            return request.render('sat.partes_approved_template', {
+            return request.render('sat.partes_approved_template_alquiler', {
                 'message': 'La solicitud de partes ha sido aprobada exitosamente.'
             })
         return request.render('sat.partes_error_template_alquiler', {
