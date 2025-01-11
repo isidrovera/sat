@@ -46,8 +46,8 @@
                                 icon="fa-cogs">
                                 <field string="Repuestos" name="repuestos_count" widget="statinfo" />
                             </button>
-                            <button name="get_pedidos" type="object" class="oe_stat_button" icon="fa-shopping-cart">
-                                <field name="pedidos_count" widget="statinfo" string="Pedidos Partes"/>
+                            <button name="action_view_partes" type="object" class="oe_stat_button" icon="fa-shopping-cart">
+                                <field name="partes_solicitadas_count" widget="statinfo" string="Pedidos Partes"/>
                             </button>
                         </div>
 
