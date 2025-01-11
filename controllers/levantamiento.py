@@ -164,12 +164,12 @@ class CopierPartsController(http.Controller):
         return state_messages.get(state, 'estado desconocido')
 
 
-class AlquilerController(AlquilerController):
+class PartesController(http.Controller):
     @http.route('/partes/approve/alquiler/<string:token>', type='http', auth='public', website=True)
     def approve_parts(self, token):
         result = request.env['solicitud.partes'].sudo().approve_from_token(token)
         if result.get('success'):
-            return request.render('sat.partes_approved_template_alquiler', {
+            return request.render('sat.partes_approved_template', {
                 'message': 'La solicitud de partes ha sido aprobada exitosamente.'
             })
         return request.render('sat.partes_error_template_alquiler', {
