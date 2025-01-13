@@ -386,14 +386,13 @@
             ]]></field>
         </record>
         <record id="email_template_solicitud_partes_alquiler" model="mail.template">
-            <field name="name">Solicitud de Partes para Aprobación Alquiler</field>
-            <field name="subject">🔧 Nueva Solicitud de Partes #{{object.name}}</field>
-            <field name="model_id" ref="model_solicitud_partes"/>
-            <field name="auto_delete" eval="True"/>
-            <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">verapolo@icloud.com</field>
-            <!--<field name="email_cc">lincoln@corapsac.com</field>-->
-            <field name="body_html"><![CDATA[
+    <field name="name">Solicitud de Partes para Aprobación Alquiler</field>
+    <field name="subject">🔧 Nueva Solicitud de Partes #{{object.name}}</field>
+    <field name="model_id" ref="model_solicitud_partes"/>
+    <field name="auto_delete" eval="True"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">verapolo@icloud.com</field>
+    <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
 <head>
@@ -409,6 +408,18 @@
         
         <!-- Contenido Principal -->
         <div style="padding: 25px; background-color: #ffffff; border: 1px solid #e2e8f0;">
+            <!-- Mensaje de Solicitud -->
+            <div style="margin-bottom: 20px; padding: 15px; background-color: #ebf8ff; border-radius: 4px;">
+                <p style="margin: 0; font-size: 16px;">
+                    Se solicita su aprobación para el retiro de la(s) siguiente(s) parte(s) de la máquina 
+                    <strong><t t-out="object.maquina_origen_id.name.name"/> (Serie: <t t-out="object.maquina_origen_id.serie"/>)</strong>
+                    <t t-if="object.maquina_destino_id">
+                        para ser instalada(s) en la máquina destino 
+                        <strong><t t-out="object.maquina_destino_id.name.name"/> (Serie: <t t-out="object.maquina_destino_id.serie"/>)</strong>.
+                    </t>
+                </p>
+            </div>
+
             <!-- Detalles de la Máquina Origen -->
             <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
                 <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Máquina Origen</div>
@@ -417,6 +428,17 @@
                 <div style="margin: 5px 0;">Marca: <strong><t t-out="object.maquina_origen_id.marca"/></strong></div>
                 <div style="margin: 5px 0;">Tipo: <strong><t t-out="object.maquina_origen_id.tipo_maquina"/></strong></div>
             </div>
+
+            <!-- Máquina Destino (si existe) -->
+            <t t-if="object.maquina_destino_id">
+                <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Máquina Destino</div>
+                    <div style="margin: 5px 0;">Máquina: <strong><t t-out="object.maquina_destino_id.name.name"/></strong></div>
+                    <div style="margin: 5px 0;">Serie: <strong><t t-out="object.maquina_destino_id.serie"/></strong></div>
+                    <div style="margin: 5px 0;">Marca: <strong><t t-out="object.maquina_destino_id.marca"/></strong></div>
+                    <div style="margin: 5px 0;">Tipo: <strong><t t-out="object.maquina_destino_id.tipo_maquina"/></strong></div>
+                </div>
+            </t>
 
             <!-- Solicitante -->
             <div style="margin: 20px 0;">
@@ -436,6 +458,13 @@
                 </t>
             </div>
 
+            <!-- Instrucciones de Aprobación -->
+            <div style="margin: 20px 0; padding: 15px; background-color: #fdf6b2; border-radius: 4px;">
+                <p style="margin: 0; text-align: center; font-size: 16px;">
+                    Para aprobar esta solicitud, por favor haga clic en el botón verde de abajo.
+                </p>
+            </div>
+
             <!-- Botón de Aprobación -->
             <div style="text-align: center; margin: 30px 0;">
                 <a t-attf-href="/partes/approve/alquiler/{{ object.access_token }}" 
@@ -447,7 +476,7 @@
     </div>
 </body>
 </html>
-            ]]></field>
-        </record>
+    ]]></field>
+</record>
     </data>
 </odoo>
