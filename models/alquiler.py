@@ -768,10 +768,13 @@ class SolicitudPartesLinea(models.Model):
         ('defectuoso', 'Defectuoso')
     ], string='Condición')
     
-    @api.depends('solicitud_id.state')
-    def _compute_estado_editable(self):
-        for record in self:
-            record.estado_editable = record.solicitud_id.state in ['approved', 'completed']
+    # Relación con máquina origen a través de solicitud
+    maquina_origen_id = fields.Many2one(
+        'alquiler',
+        string='Máquina Origen',
+        related='solicitud_id.maquina_origen_id',
+        store=True
+    )
 
     def action_retirar(self):
         self.write({'estado': 'retirado'})
@@ -792,7 +795,6 @@ class SolicitudPartesLinea(models.Model):
             'target': 'new',
             'context': {'default_parte_id': self.id}
         }
-
 class WizardEnviarInspeccion(models.TransientModel):
     _name = 'wizard.enviar.inspeccion'
     _description = 'Asistente para enviar inspección'
