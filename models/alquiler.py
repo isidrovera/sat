@@ -670,19 +670,8 @@ class SolicitudPartes(models.Model):
         domain="[('id', '!=', maquina_origen_id), ('estado_alquiler_id', 'not in', ['vendida'])]"
     )
     
-    fecha_solicitud = fields.Datetime(
-        string='Fecha de Solicitud', 
-        default=fields.Datetime.now, 
-        tracking=True,
-        readonly=True
-    )
-    solicitante_id = fields.Many2one(
-        'res.users', 
-        string='Solicitante',
-        default=lambda self: self.env.user, 
-        tracking=True,
-        readonly=True
-    )
+    fecha_solicitud = fields.Datetime(string='Fecha de Solicitud', default=fields.Datetime.now, tracking=True, readonly=True)
+    solicitante_id = fields.Many2one('res.users', string='Solicitante', default=lambda self: self.env.user, tracking=True, readonly=True)
     
     state = fields.Selection([
         ('draft', 'Borrador'),
@@ -691,46 +680,22 @@ class SolicitudPartes(models.Model):
         ('completed', 'Completado'),
         ('replaced', 'Reemplazado'),
         ('rejected', 'Rechazado')
-    ], string='Estado', default='draft', tracking=True, copy=False)
+    ], string='Estado', default='draft', tracking=True)
     
-    parte_ids = fields.One2many(
-        'solicitud.partes.linea', 
-        'solicitud_id', 
-        string='Partes Solicitadas',
-        states={'completed': [('readonly', True)], 'replaced': [('readonly', True)]}
-    )
-    
+    # Campos de autorización
     autorizado_por = fields.Many2one('res.users', string='Autorizado por', tracking=True, readonly=True)
     fecha_autorizacion = fields.Datetime(string='Fecha de Autorización', tracking=True, readonly=True)
     
+    # Campos de retiro
     retirado_por = fields.Many2one('res.users', string='Retirado por', tracking=True, readonly=True)
     fecha_retiro = fields.Datetime(string='Fecha de Retiro', tracking=True, readonly=True)
+
+    # Campos de reemplazo
+    reemplazado_por = fields.Many2one('res.users', string='Reemplazado por', tracking=True, readonly=True)
+    fecha_reemplazo = fields.Datetime(string='Fecha de Reemplazo', tracking=True, readonly=True)
     
+    parte_ids = fields.One2many('solicitud.partes.linea', 'solicitud_id', string='Partes Solicitadas')
     access_token = fields.Char('Token de Acceso', copy=False, readonly=True)
-
-    # Campos computados
-    cantidad_partes = fields.Integer(
-        string='Cantidad de Partes',
-        compute='_compute_cantidad_partes',
-        store=True
-    )
-
-    @api.depends('parte_ids')
-    def _compute_cantidad_partes(self):
-        for record in self:
-            record.cantidad_partes = len(record.parte_ids)
-
-    @api.constrains('maquina_origen_id', 'maquina_destino_id')
-    def _check_maquinas(self):
-        for record in self:
-            if record.maquina_origen_id == record.maquina_destino_id:
-                raise ValidationError(_('La máquina origen y destino no pueden ser la misma.'))
-
-    @api.constrains('parte_ids')
-    def _check_partes(self):
-        for record in self:
-            if not record.parte_ids:
-                raise ValidationError(_('Debe especificar al menos una parte para solicitar.'))
 
     @api.model
     def create(self, vals):
@@ -738,7 +703,7 @@ class SolicitudPartes(models.Model):
             vals['name'] = self.env['ir.sequence'].next_by_code('solicitud.partes') or 'Nuevo'
         vals['access_token'] = uuid.uuid4().hex
         return super().create(vals)
-    
+
     def action_submit(self):
         self.ensure_one()
         if not self.parte_ids:
@@ -746,51 +711,46 @@ class SolicitudPartes(models.Model):
         self.write({'state': 'submitted'})
         template = self.env.ref('sat.email_template_solicitud_partes_alquiler')
         template.send_mail(self.id, force_send=True)
-    
+
     def action_approve(self):
         self.ensure_one()
-        if self.state != 'submitted':
-            raise UserError(_('Solo se pueden aprobar solicitudes en estado "Enviado".'))
         self.write({
             'state': 'approved',
             'autorizado_por': self.env.user.id,
             'fecha_autorizacion': fields.Datetime.now()
         })
-        self.maquina_origen_id.write({'estado_alquiler_id': 'con_problemas'})
 
-    def action_complete_withdrawal(self):
+    def action_complete(self):
         self.ensure_one()
-        if self.state != 'approved':
-            raise UserError(_('Solo se pueden completar solicitudes aprobadas.'))
+        if not all(line.estado in ['retirado', 'reemplazado'] for line in self.parte_ids):
+            raise UserError(_('Todas las partes deben estar retiradas o reemplazadas.'))
         self.write({
             'state': 'completed',
             'retirado_por': self.env.user.id,
             'fecha_retiro': fields.Datetime.now()
         })
+        self.maquina_origen_id.write({'estado_alquiler_id': 'con_problemas'})
+
+    def action_replace(self):
+        self.ensure_one()
+        if not all(line.estado == 'reemplazado' for line in self.parte_ids):
+            raise UserError(_('Todas las partes deben estar reemplazadas.'))
+        self.write({
+            'state': 'replaced',
+            'reemplazado_por': self.env.user.id,
+            'fecha_reemplazo': fields.Datetime.now()
+        })
+        # Si todas las partes están en buen estado, restaurar estado de la máquina
+        if all(line.condicion == 'bueno' for line in self.parte_ids):
+            self.maquina_origen_id.write({'estado_alquiler_id': 'alquilada'})
 
     def action_reject(self):
-        self.ensure_one()
-        if self.state not in ['submitted', 'approved']:
-            raise UserError(_('Solo se pueden rechazar solicitudes enviadas o aprobadas.'))
         self.write({'state': 'rejected'})
 
-    @api.model
-    def approve_from_token(self, token):
-        solicitud = self.search([
-            ('access_token', '=', token),
-            ('state', '=', 'submitted')
-        ], limit=1)
-        if solicitud:
-            try:
-                solicitud.action_approve()
-                return {'success': True}
-            except Exception as e:
-                return {'error': str(e)}
-        return {'error': 'Token inválido o solicitud no encontrada'}
 class SolicitudPartesLinea(models.Model):
     _name = 'solicitud.partes.linea'
     _description = 'Línea de Solicitud de Partes'
-
+    
     solicitud_id = fields.Many2one('solicitud.partes', string='Solicitud')
     parte = fields.Char(string='Parte/Unidad', required=True)
     descripcion = fields.Text(string='Descripción')
@@ -799,14 +759,39 @@ class SolicitudPartesLinea(models.Model):
         ('retirado', 'Retirado'),
         ('reemplazado', 'Reemplazado')
     ], string='Estado', default='pendiente')
-    fecha_reemplazo = fields.Datetime(string='Fecha de Reemplazo')
+    
+    # Campos de reemplazo
+    fecha_reemplazo = fields.Datetime(string='Fecha Reemplazo')
     reemplazado_por = fields.Many2one('res.users', string='Reemplazado por')
-    maquina_origen_id = fields.Many2one(
-        'alquiler',
-        related='solicitud_id.maquina_origen_id',
-        store=True,
-        string='Máquina Origen'
-    )
+    condicion = fields.Selection([
+        ('bueno', 'Buen Estado'),
+        ('defectuoso', 'Defectuoso')
+    ], string='Condición')
+    
+    @api.depends('solicitud_id.state')
+    def _compute_estado_editable(self):
+        for record in self:
+            record.estado_editable = record.solicitud_id.state in ['approved', 'completed']
+
+    def action_retirar(self):
+        self.write({'estado': 'retirado'})
+        
+    def action_reemplazar(self):
+        self.write({
+            'estado': 'reemplazado',
+            'fecha_reemplazo': fields.Datetime.now(),
+            'reemplazado_por': self.env.user.id
+        })
+
+    def action_registrar_condicion(self):
+        return {
+            'name': 'Registrar Condición',
+            'type': 'ir.actions.act_window',
+            'res_model': 'registro.condicion.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_parte_id': self.id}
+        }
 
 class WizardEnviarInspeccion(models.TransientModel):
     _name = 'wizard.enviar.inspeccion'

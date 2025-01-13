@@ -6,21 +6,16 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_submit" 
-                            string="Enviar" 
-                            type="object" 
-                            class="oe_highlight" 
-                            invisible="state != 'draft'"/>
-                    <button name="action_approve" 
-                            string="Aprobar" 
-                            type="object" 
-                            class="oe_highlight" 
-                            invisible="state != 'submitted'"/>
-                    <button name="action_complete_withdrawal" 
-                            string="Completar Retiro" 
-                            type="object" 
-                            class="oe_highlight" 
-                            invisible="state != 'approved'"/>
+                    <button name="action_submit" string="Enviar" type="object" 
+                        class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_approve" string="Aprobar" type="object" 
+                            class="oe_highlight" invisible="state != 'submitted'"/>
+                    <button name="action_complete" string="Completar" type="object" 
+                            class="oe_highlight" invisible="state != 'approved'"/>
+                    <button name="action_replace" string="Reemplazar" type="object" 
+                            class="oe_highlight" invisible="state != 'completed'"/>
+                    <button name="action_reject" string="Rechazar" type="object" 
+                            invisible="state in ['rejected', 'replaced']"/>
                     <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
@@ -41,6 +36,8 @@
                             <field name="fecha_autorizacion"/>
                             <field name="retirado_por"/>
                             <field name="fecha_retiro"/>
+                            <field name="reemplazado_por"/>
+                            <field name="fecha_reemplazo"/>
                         </group>
                     </group>
                     <notebook>
@@ -50,8 +47,15 @@
                                     <field name="parte"/>
                                     <field name="descripcion"/>
                                     <field name="estado"/>
+                                    <button name="action_retirar" string="Retirar" type="object" 
+                                            icon="fa-arrow-right" invisible="estado != 'pendiente'"/>
+                                    <button name="action_reemplazar" string="Reemplazar" type="object" 
+                                            icon="fa-exchange" invisible="estado != 'retirado'"/>
+                                    <button name="action_registrar_condicion" string="Condición" type="object" 
+                                            icon="fa-check" invisible="estado != 'reemplazado'"/>
                                     <field name="fecha_reemplazo"/>
                                     <field name="reemplazado_por"/>
+                                    <field name="condicion"/>
                                 </list>
                             </field>
                         </page>
