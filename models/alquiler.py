@@ -747,6 +747,21 @@ class SolicitudPartes(models.Model):
     def action_reject(self):
         self.write({'state': 'rejected'})
 
+    @api.model
+    def approve_from_token(self, token):
+        solicitud = self.search([
+            ('access_token', '=', token),
+            ('state', '=', 'submitted')
+        ], limit=1)
+        
+        if solicitud:
+            try:
+                solicitud.action_approve()
+                return {'success': True}
+            except Exception as e:
+                return {'error': str(e)}
+        return {'error': 'Token inválido o solicitud no encontrada'}
+
 class SolicitudPartesLinea(models.Model):
     _name = 'solicitud.partes.linea'
     _description = 'Línea de Solicitud de Partes'
