@@ -11,7 +11,7 @@ import base64
 import re
 import qrcode
 import io
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 from urllib.parse import urlencode
 import uuid
 
