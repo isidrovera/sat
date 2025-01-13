@@ -106,7 +106,7 @@
     </record>
 
     <menuitem id="menu_solicitud_partes"
-              name="Solicitudes de Partes"
+              name="Solicitudes de Partes Alquiler"
               action="action_solicitud_partes"
               parent="sat.ajustes"/>
 </odoo>
