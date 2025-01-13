@@ -16,7 +16,7 @@
                             class="oe_highlight" invisible="state != 'completed'"/>
                     <button name="action_reject" string="Rechazar" type="object" 
                             invisible="state in ['rejected', 'replaced']"/>
-                    <field name="state" widget="statusbar"/>
+                    <field name="state" widget="statusbar"  options="{'clickable': '1'}"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
