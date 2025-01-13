@@ -433,6 +433,7 @@
             <t t-if="object.maquina_destino_id">
                 <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
                     <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Máquina Destino</div>
+                    <div style="margin: 5px 0;">Cliente: <strong><t t-out="object.maquina_destino_id.cliente_id.name"/></strong></div>
                     <div style="margin: 5px 0;">Máquina: <strong><t t-out="object.maquina_destino_id.name.name"/></strong></div>
                     <div style="margin: 5px 0;">Serie: <strong><t t-out="object.maquina_destino_id.serie"/></strong></div>
                     <div style="margin: 5px 0;">Marca: <strong><t t-out="object.maquina_destino_id.marca"/></strong></div>
