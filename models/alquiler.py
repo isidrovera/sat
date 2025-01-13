@@ -683,16 +683,16 @@ class SolicitudPartes(models.Model):
     ], string='Estado', default='draft', tracking=True)
     
     # Campos de autorización
-    autorizado_por = fields.Many2one('res.users', string='Autorizado por', tracking=True, readonly=True)
-    fecha_autorizacion = fields.Datetime(string='Fecha de Autorización', tracking=True, readonly=True)
+    autorizado_por = fields.Many2one('res.users', string='Autorizado por', tracking=True, readonly=False)
+    fecha_autorizacion = fields.Datetime(string='Fecha de Autorización', tracking=True, readonly=False)
     
     # Campos de retiro
-    retirado_por = fields.Many2one('res.users', string='Retirado por', tracking=True, readonly=True)
-    fecha_retiro = fields.Datetime(string='Fecha de Retiro', tracking=True, readonly=True)
+    retirado_por = fields.Many2one('res.users', string='Retirado por', tracking=True, readonly=False)
+    fecha_retiro = fields.Datetime(string='Fecha de Retiro', tracking=True, readonly=False)
 
     # Campos de reemplazo
-    reemplazado_por = fields.Many2one('res.users', string='Reemplazado por', tracking=True, readonly=True)
-    fecha_reemplazo = fields.Datetime(string='Fecha de Reemplazo', tracking=True, readonly=True)
+    reemplazado_por = fields.Many2one('res.users', string='Reemplazado por', tracking=True, readonly=False)
+    fecha_reemplazo = fields.Datetime(string='Fecha de Reemplazo', tracking=True, readonly=False)
     
     parte_ids = fields.One2many('solicitud.partes.linea', 'solicitud_id', string='Partes Solicitadas')
     access_token = fields.Char('Token de Acceso', copy=False, readonly=True)
