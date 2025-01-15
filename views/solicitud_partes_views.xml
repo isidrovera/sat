@@ -77,6 +77,8 @@
                 <field name="maquina_destino_id"/>
                 <field name="fecha_solicitud"/>
                 <field name="solicitante_id"/>
+                <field name="autorizado_por"/>
+                <field name="fecha_autorizacion"/>
                 <field name="state"/>
             </list>
         </field>
