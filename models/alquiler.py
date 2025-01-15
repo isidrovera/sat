@@ -146,6 +146,7 @@ class UnidadAlquiler(models.Model):
         order_id = sale_order.create({
             'partner_id': self.cliente_id.id,
             'equipo_id': self.id,
+            'tipo_pedido': 'delivery',
 
         })
         return {
