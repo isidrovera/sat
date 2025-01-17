@@ -45,56 +45,56 @@ class CustomerSearchController(http.Controller):
 class CustomerRecordsController(http.Controller):
 
     @http.route('/customer/records', auth='public', type='http', website=True)
-def show_customer_records(self, customer_id=None, user_name=None, phone_number=None):
-    _logger.info(f"Iniciando show_customer_records con customer_id={customer_id}")
-    
-    if not customer_id:
-        _logger.warning("No se proporcionó customer_id")
-        return request.render('website.400', {'message': 'ID de cliente no proporcionado'})
+    def show_customer_records(self, customer_id=None, user_name=None, phone_number=None):
+        _logger.info(f"Iniciando show_customer_records con customer_id={customer_id}")
+        
+        if not customer_id:
+            _logger.warning("No se proporcionó customer_id")
+            return request.render('website.400', {'message': 'ID de cliente no proporcionado'})
 
-    try:
-        customer_id = int(customer_id)
-        
-        # Verificación detallada del cliente
-        cliente = request.env['res.partner'].sudo().browse(customer_id)
-        _logger.info(f"Datos del cliente: ID={cliente.id}, Nombre={cliente.name}, Existe={cliente.exists()}")
-        
-        if not cliente.exists():
-            _logger.error(f"Cliente con ID {customer_id} no existe")
-            return request.render('website.400', {'message': 'Cliente no encontrado'})
-
-        # Verificación del modelo alquiler
-        Alquiler = request.env['alquiler'].sudo()
-        _logger.info("Modelo alquiler accesible")
-        
-        # Búsqueda con información detallada
-        domain = [('cliente_id', '=', customer_id)]
-        _logger.info(f"Dominio de búsqueda: {domain}")
-        
-        registros = Alquiler.search(domain)
-        _logger.info(f"SQL Query generado: {str(registros._where_calc([('cliente_id', '=', customer_id)]))}")
-        _logger.info(f"Número de registros encontrados: {len(registros)}")
-        
-        if registros:
-            _logger.info("Registros encontrados:")
-            for reg in registros:
-                _logger.info(f"  - ID: {reg.id}, Cliente_ID: {reg.cliente_id.id}, Fecha: {reg.create_date}")
+        try:
+            customer_id = int(customer_id)
             
-            return request.render('sat.customer_records_page', {
-                'registros': registros,
-                'cliente': cliente.name,
-                'user_name': user_name,
-                'phone_number': phone_number
-            })
-        else:
-            _logger.warning(f"No se encontraron registros para el cliente {cliente.name} (ID: {customer_id})")
-            return request.render('website.400', {
-                'message': f'No se encontraron registros para el cliente {cliente.name}'
-            })
+            # Verificación detallada del cliente
+            cliente = request.env['res.partner'].sudo().browse(customer_id)
+            _logger.info(f"Datos del cliente: ID={cliente.id}, Nombre={cliente.name}, Existe={cliente.exists()}")
+            
+            if not cliente.exists():
+                _logger.error(f"Cliente con ID {customer_id} no existe")
+                return request.render('website.400', {'message': 'Cliente no encontrado'})
 
-    except ValueError as e:
-        _logger.error(f"Error de conversión de ID: {str(e)}")
-        return request.render('website.400', {'message': 'ID de cliente inválido'})
-    except Exception as e:
-        _logger.error(f"Error inesperado: {str(e)}", exc_info=True)
-        return request.render('website.400', {'message': 'Error interno del servidor'})
+            # Verificación del modelo alquiler
+            Alquiler = request.env['alquiler'].sudo()
+            _logger.info("Modelo alquiler accesible")
+            
+            # Búsqueda con información detallada
+            domain = [('cliente_id', '=', customer_id)]
+            _logger.info(f"Dominio de búsqueda: {domain}")
+            
+            registros = Alquiler.search(domain)
+            _logger.info(f"SQL Query generado: {str(registros._where_calc([('cliente_id', '=', customer_id)]))}")
+            _logger.info(f"Número de registros encontrados: {len(registros)}")
+            
+            if registros:
+                _logger.info("Registros encontrados:")
+                for reg in registros:
+                    _logger.info(f"  - ID: {reg.id}, Cliente_ID: {reg.cliente_id.id}, Fecha: {reg.create_date}")
+                
+                return request.render('sat.customer_records_page', {
+                    'registros': registros,
+                    'cliente': cliente.name,
+                    'user_name': user_name,
+                    'phone_number': phone_number
+                })
+            else:
+                _logger.warning(f"No se encontraron registros para el cliente {cliente.name} (ID: {customer_id})")
+                return request.render('website.400', {
+                    'message': f'No se encontraron registros para el cliente {cliente.name}'
+                })
+
+        except ValueError as e:
+            _logger.error(f"Error de conversión de ID: {str(e)}")
+            return request.render('website.400', {'message': 'ID de cliente inválido'})
+        except Exception as e:
+            _logger.error(f"Error inesperado: {str(e)}", exc_info=True)
+            return request.render('website.400', {'message': 'Error interno del servidor'})
