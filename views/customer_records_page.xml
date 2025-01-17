@@ -71,4 +71,38 @@
 
         </t>
     </template>
+    <template id="pagina_sin_registros" name="No se encontraron registros">
+        <t t-call="website.layout">
+            <div class="container mt-4">
+                <div class="alert alert-info">
+                    <h4 class="alert-heading">No se encontraron registros</h4>
+                    <p>No hay registros de alquiler disponibles para el cliente: <strong t-esc="cliente"/></p>
+                    <t t-if="user_name">
+                        <p>Usuario: <span t-esc="user_name"/></p>
+                    </t>
+                    <t t-if="phone_number">
+                        <p>Teléfono: <span t-esc="phone_number"/></p>
+                    </t>
+                    <hr/>
+                    <p class="mb-0">
+                        <a href="/" class="btn btn-primary">Volver al inicio</a>
+                    </p>
+                </div>
+            </div>
+        </t>
+    </template>
+    <template id="pagina_error" name="Página de Error">
+    <t t-call="website.layout">
+        <div class="container mt-4">
+            <div class="alert alert-danger">
+                <h4 class="alert-heading">Error</h4>
+                <p>Ha ocurrido un error al procesar su solicitud.</p>
+                <hr/>
+                <p class="mb-0">
+                    <a href="/" class="btn btn-primary">Volver al inicio</a>
+                </p>
+            </div>
+        </div>
+    </t>
+</template>
 </odoo>
