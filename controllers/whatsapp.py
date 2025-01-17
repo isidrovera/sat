@@ -7,23 +7,21 @@ _logger = logging.getLogger(__name__)
 class CustomerSearchController(http.Controller):
 
     @http.route('/api/customer_search', auth='public', type='json', methods=['POST'])
-    def customer_search(self, **kwargs):
-        _logger.info(f"Kwargs recibidos: {kwargs}")
+    def customer_search(self, name=None, **post):
+        _logger.info(f"Recibiendo petición con name={name} y post={post}")
         
-        # El name vendrá directamente en kwargs cuando usamos type='json'
-        name_part = kwargs.get('name')
-        if not name_part:
+        if not name:
             _logger.error("El parámetro 'name' es requerido pero no fue proporcionado.")
             return {'error': 'El parámetro "name" es requerido'}
 
         try:
             # Buscar los clientes cuyo nombre coincida parcialmente
-            _logger.info(f"Buscando clientes con nombre que contiene: {name_part}")
-            clientes = request.env['res.partner'].sudo().search([('name', 'ilike', name_part)])
+            _logger.info(f"Buscando clientes con nombre que contiene: {name}")
+            clientes = request.env['res.partner'].sudo().search([('name', 'ilike', name)])
             _logger.info(f"Se encontraron {len(clientes)} clientes.")
 
             if not clientes:
-                _logger.warning(f"No se encontraron clientes con el nombre que contiene: {name_part}")
+                _logger.warning(f"No se encontraron clientes con el nombre que contiene: {name}")
                 return {'message': 'No se encontraron clientes'}
 
             # Buscar registros de alquiler asociados con estos clientes
@@ -31,7 +29,7 @@ class CustomerSearchController(http.Controller):
             _logger.info(f"Se encontraron {len(registros)} registros de alquiler para los clientes.")
 
             if not registros:
-                _logger.warning(f"No se encontraron registros de alquiler para el/los cliente(s) con nombre que contiene: {name_part}")
+                _logger.warning(f"No se encontraron registros de alquiler para el/los cliente(s) con nombre que contiene: {name}")
                 return {'message': 'No se encontraron registros de alquiler para este cliente'}
 
             # Se redirige al primer cliente encontrado
@@ -45,6 +43,7 @@ class CustomerSearchController(http.Controller):
         except Exception as e:
             _logger.error(f"Ocurrió un error al buscar el cliente: {str(e)}", exc_info=True)
             return {'error': 'Ocurrió un error inesperado'}
+
 class CustomerRecordsController(http.Controller):
 
     @http.route('/customer/records', auth='public', type='http', website=True)
