@@ -46,26 +46,54 @@ class CustomerRecordsController(http.Controller):
 
     @http.route('/customer/records', auth='public', type='http', website=True)
     def show_customer_records(self, customer_id=None, user_name=None, phone_number=None):
+        _logger.info(f"Iniciando show_customer_records con customer_id={customer_id}")
+        
         if not customer_id:
-            return request.render('sat.pagina_error', {})
+            _logger.warning("No se proporcionó customer_id")
+            return request.render('sat.pagina_error', {'error_message': 'No se proporcionó ID de cliente'})
 
         try:
-            registros = request.env['alquiler'].sudo().search([('cliente_id', '=', int(customer_id))])
+            # Verificar que podemos convertir customer_id a entero
+            customer_id = int(customer_id)
+            _logger.info(f"customer_id convertido a entero: {customer_id}")
+
+            # Obtener el cliente
+            cliente = request.env['res.partner'].sudo().browse(customer_id)
+            if not cliente.exists():
+                _logger.warning(f"Cliente con ID {customer_id} no encontrado")
+                return request.render('sat.pagina_error', {
+                    'error_message': 'Cliente no encontrado'
+                })
+
+            _logger.info(f"Cliente encontrado: {cliente.name}")
+
+            # Buscar registros
+            registros = request.env['alquiler'].sudo().search([('cliente_id', '=', customer_id)])
+            _logger.info(f"Registros encontrados: {len(registros)}")
+
+            # Imprimir algunos detalles de los registros para debug
+            for reg in registros:
+                _logger.info(f"Registro ID: {reg.id}, Cliente ID: {reg.cliente_id.id}")
 
             if not registros:
+                _logger.warning(f"No se encontraron registros para el cliente {cliente.name}")
                 return request.render('sat.pagina_sin_registros', {
-                    'cliente': request.env['res.partner'].sudo().browse(int(customer_id)).name,
+                    'cliente': cliente.name,
                     'user_name': user_name,
                     'phone_number': phone_number
                 })
 
+            _logger.info("Renderizando template customer_records_page")
             return request.render('sat.customer_records_page', {
                 'registros': registros,
-                'cliente': request.env['res.partner'].sudo().browse(int(customer_id)).name,
+                'cliente': cliente.name,
                 'user_name': user_name,
                 'phone_number': phone_number
             })
 
+        except ValueError as e:
+            _logger.error(f"Error al convertir customer_id: {str(e)}", exc_info=True)
+            return request.render('sat.pagina_error', {'error_message': 'ID de cliente inválido'})
         except Exception as e:
-            _logger.error(f"An error occurred while displaying customer records: {str(e)}", exc_info=True)
-            return request.render('sat.pagina_error', {})
+            _logger.error(f"Error inesperado: {str(e)}", exc_info=True)
+            return request.render('sat.pagina_error', {'error_message': 'Error interno del servidor'})
