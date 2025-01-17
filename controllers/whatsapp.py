@@ -8,11 +8,10 @@ class CustomerSearchController(http.Controller):
 
     @http.route('/api/customer_search', auth='public', type='json', methods=['POST'])
     def customer_search(self, **kwargs):
-        # Obtener los datos del JSON request
-        data = request.jsonrequest
-        _logger.info(f"Datos recibidos: {data}")  # Para debug
+        _logger.info(f"Kwargs recibidos: {kwargs}")
         
-        name_part = data.get('name')
+        # El name vendrá directamente en kwargs cuando usamos type='json'
+        name_part = kwargs.get('name')
         if not name_part:
             _logger.error("El parámetro 'name' es requerido pero no fue proporcionado.")
             return {'error': 'El parámetro "name" es requerido'}
