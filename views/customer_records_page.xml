@@ -71,41 +71,4 @@
 
         </t>
     </template>
-     <!-- Plantilla para cuando no hay registros -->
-        <template id="pagina_sin_registros" name="No Records Found" page="True">
-            <t t-call="website.layout">
-                <div class="container mt-4">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="alert alert-info">
-                                <h4>Sin Registros</h4>
-                                <p>No se encontraron registros para el cliente: <strong t-esc="cliente"/></p>
-                                <t t-if="user_name">
-                                    <p>Usuario: <span t-esc="user_name"/></p>
-                                </t>
-                                <t t-if="phone_number">
-                                    <p>Teléfono: <span t-esc="phone_number"/></p>
-                                </t>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </t>
-        </template>
-
-        <!-- Plantilla para página de error -->
-        <template id="pagina_error" name="Error Page" page="True">
-            <t t-call="website.layout">
-                <div class="container mt-4">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="alert alert-danger">
-                                <h4>Error</h4>
-                                <p>Ha ocurrido un error al procesar su solicitud.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </t>
-        </template>
 </odoo>
