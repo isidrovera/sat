@@ -8,10 +8,10 @@
             <form>
                 <header>
                     <button name="action_approve" string="Aprobar" type="object" 
-                            groups="sat.grupo_autorizador_partes" 
+                            
                             invisible="state != 'draft'"/>
                     <button name="action_deliver" string="Entregar" type="object"
-                            groups="sat.grupo_logistica_partes"
+                            
                             invisible="state != 'approved'"/>
                     <field name="state" widget="statusbar"/>
                 </header>
@@ -61,10 +61,7 @@
                         </page>
                     </notebook>
                 </sheet>
-                <div class="oe_chatter">
-                    <field name="message_follower_ids"/>
-                    <field name="message_ids"/>
-                </div>
+                <chatter/>
             </form>
         </field>
     </record>
