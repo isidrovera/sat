@@ -40,18 +40,18 @@
                     <notebook>
                         <page string="Detalles de Solicitud">
                             <group>
-                                <group string="Disco Duro">
+                                <group string="Disco Duro" icon="fa-hdd-o">
                                     <field name="disco_duro_requerido"/>
                                     <field name="motivo_disco" 
                                            invisible="not disco_duro_requerido"
                                            required="disco_duro_requerido"/>
                                 </group>
-                                <group string="Ruedas">
+                                <group string="Ruedas" icon="fa-circle">
                                     <field name="ruedas_requeridas"/>
                                     <field name="cantidad_ruedas" 
                                            invisible="not ruedas_requeridas"/>
                                 </group>
-                                <group string="Cable de Poder">
+                                <group string="Cable de Poder" icon="fa-plug">
                                     <field name="cable_poder_requerido"/>
                                     <field name="motivo_cable"
                                            invisible="not cable_poder_requerido"
