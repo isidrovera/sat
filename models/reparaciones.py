@@ -1100,7 +1100,14 @@ class CopierPartsRequest(models.Model):
     
     ruedas_requeridas = fields.Boolean('Requiere Ruedas', tracking=True)
     cantidad_ruedas = fields.Integer('Cantidad de Ruedas', default=4, readonly=True)
-    
+    # Nuevo campo para solicitud de cable de poder
+    cable_poder_requerido = fields.Boolean('Requiere Cable de Poder', tracking=True)
+    motivo_cable = fields.Selection([
+        ('sin_cable', 'Llegó sin Cable'),
+        ('danado', 'Cable Dañado'),
+        ('extraviado', 'Cable Extraviado')
+    ], string='Motivo Solicitud Cable', tracking=True)
+
     state = fields.Selection([
         ('draft', 'Pendiente'),
         ('approved', 'Aprobado'),
@@ -1139,16 +1146,30 @@ class CopierPartsRequest(models.Model):
 
     def _actualizar_falla_proveedor(self):
         """Actualiza el campo falla_proveedor en reparaciones"""
+        fallas = []
+        
         if self.disco_duro_requerido:
-            descripcion = 'Llegó sin disco duro' if self.motivo_disco == 'sin_disco' else 'Disco duro malogrado'
+            descripcion_disco = 'Llegó sin disco duro' if self.motivo_disco == 'sin_disco' else 'Disco duro malogrado'
+            fallas.append(descripcion_disco)
             
-            # Actualizar en reparaciones.reparaciones
+        if self.cable_poder_requerido:
+            motivos_cable = {
+                'sin_cable': 'Llegó sin cable de poder',
+                'danado': 'Cable de poder dañado',
+                'extraviado': 'Cable de poder extraviado'
+            }
+            descripcion_cable = motivos_cable.get(self.motivo_cable, '')
+            if descripcion_cable:
+                fallas.append(descripcion_cable)
+        
+        if fallas:
             reparacion = self.reparacion_id or self.env['reparaciones.reparaciones'].search(
                 [('maquina_id', '=', self.maquina_id.id)], limit=1)
             
             if reparacion:
+                fallas_html = ''.join(f'<p>{falla}</p>' for falla in fallas)
                 reparacion.write({
-                    'falla_proveedor': f'<p>{descripcion}</p>'
+                    'falla_proveedor': fallas_html
                 })
 
     def get_motivo_disco_display(self):
@@ -1227,20 +1248,33 @@ Serie: {self.serie}
 Solicitante: {self.solicitante_id.name}
 Disco Duro: {'Sí' if self.disco_duro_requerido else 'No'}
 Ruedas: {'Sí' if self.ruedas_requeridas else 'No'}
+Cable de Poder: {'Sí' if self.cable_poder_requerido else 'No'}
 Estado: Pendiente de aprobación
 
 Ver solicitud: {self.generate_approval_url()}"""
 
     def _get_whatsapp_message_approval(self):
         """Genera el mensaje de WhatsApp para la aprobación"""
+        items = []
+        if self.disco_duro_requerido:
+            items.append(" - Disco Duro")
+        if self.ruedas_requeridas:
+            items.append(f" - {self.cantidad_ruedas} Ruedas")
+        if self.cable_poder_requerido:
+            items.append(" - Cable de Poder")
+            
+        items_text = "\n".join(items)
+        
         return f"""¡Solicitud de partes #{self.name} aprobada!
         
 Puede pasar a recoger los siguientes items:
-{' - Disco Duro' if self.disco_duro_requerido else ''}
-{f' - {self.cantidad_ruedas} Ruedas' if self.ruedas_requeridas else ''}
+{items_text}
 
 Máquina: {self.marca} {self.modelo}
 Serie: {self.serie}"""
+
+
+
 class PartsRequestWizard(models.TransientModel):
     _name = 'copier.parts.request.wizard'
     _description = 'Asistente de Solicitud de Partes'

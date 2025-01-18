@@ -49,19 +49,27 @@
                                 <group string="Ruedas">
                                     <field name="ruedas_requeridas"/>
                                     <field name="cantidad_ruedas" 
-                                           invisible="not ruedas_requeridas"
-                                           readonly="1"/>
+                                           invisible="not ruedas_requeridas"/>
+                                </group>
+                                <group string="Cable de Poder">
+                                    <field name="cable_poder_requerido"/>
+                                    <field name="motivo_cable"
+                                           invisible="not cable_poder_requerido"
+                                           required="cable_poder_requerido"/>
                                 </group>
                             </group>
                         </page>
                     </notebook>
                 </sheet>
-                <chatter/>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
             </form>
         </field>
     </record>
 
-    <!-- Vista List (antes Tree) -->
+    <!-- Vista List -->
     <record id="view_copier_parts_request_list" model="ir.ui.view">
         <field name="name">copier.parts.request.list</field>
         <field name="model">copier.parts.request</field>
@@ -74,6 +82,7 @@
                 <field name="solicitante_id"/>
                 <field name="disco_duro_requerido"/>
                 <field name="ruedas_requeridas"/>
+                <field name="cable_poder_requerido"/>
                 <field name="state" widget="badge"
                        decoration-info="state == 'draft'"
                        decoration-success="state == 'approved'"
@@ -94,6 +103,9 @@
                 <field name="serie"/>
                 <field name="solicitante_id"/>
                 <field name="state"/>
+                <field name="disco_duro_requerido"/>
+                <field name="ruedas_requeridas"/>
+                <field name="cable_poder_requerido"/>
                 <templates>
                     <t t-name="kanban-box">
                         <div class="oe_kanban_global_click">
@@ -113,10 +125,12 @@
                                     </div>
                                 </div>
                                 <div class="o_kanban_tags_section">
-                                    <span t-if="record.disco_duro_requerido" 
+                                    <span t-if="record.disco_duro_requerido.raw_value" 
                                           class="badge text-bg-info">Disco Duro</span>
-                                    <span t-if="record.ruedas_requeridas" 
+                                    <span t-if="record.ruedas_requeridas.raw_value" 
                                           class="badge text-bg-warning">Ruedas</span>
+                                    <span t-if="record.cable_poder_requerido.raw_value" 
+                                          class="badge text-bg-danger">Cable Poder</span>
                                 </div>
                             </div>
                         </div>
@@ -125,7 +139,6 @@
             </kanban>
         </field>
     </record>
-
 
     <!-- Vista Search -->
     <record id="view_copier_parts_request_search" model="ir.ui.view">
