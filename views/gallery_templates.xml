@@ -331,12 +331,13 @@
                         </t>
                     </div>
                 </div>
+                <!-- Visor de imágenes a pantalla completa (añadir antes de los scripts) -->
                 <div id="slideshowModal" class="slideshow-modal">
                     <div class="slideshow-content">
-                        <span class="slideshow-close">&times;</span>
+                        <span class="slideshow-close">×</span>
                         <div class="slideshow-container">
                             <div class="slideshow-image-container">
-                                <img id="slideshowImage" src="" alt="">
+                                <img id="slideshowImage" src="" alt=""/>
                             </div>
                             <h4 id="slideshowCaption" class="slideshow-caption"></h4>
                             <a class="slideshow-prev">&#10094;</a>
