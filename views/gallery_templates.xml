@@ -7,6 +7,7 @@
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
                 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+                <link href="/sat/static/src/css/image-viewer.css" rel="stylesheet" />
                 <style>
                     :root {
                         --primary-color: #4a90e2;
@@ -106,138 +107,6 @@
                     .photo-container:hover img {
                         transform: scale(1.05);
                     }
-                    .slideshow-modal {
-                        display: none;
-                        position: fixed;
-                        z-index: 10000;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                        height: 100%;
-                        background-color: rgba(0, 0, 0, 0.9);
-                        overflow: hidden;
-                    }
-
-                    .slideshow-content {
-                        position: relative;
-                        width: 100%;
-                        height: 100%;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: center;
-                    }
-
-                    .slideshow-close {
-                        position: absolute;
-                        top: 15px;
-                        right: 25px;
-                        color: #f1f1f1;
-                        font-size: 40px;
-                        font-weight: bold;
-                        transition: 0.3s;
-                        z-index: 20;
-                        cursor: pointer;
-                    }
-
-                    .slideshow-close:hover {
-                        color: #bbb;
-                    }
-
-                    .slideshow-container {
-                        position: relative;
-                        width: 90%;
-                        max-width: 1200px;
-                        height: 80%;
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                    }
-
-                    .slideshow-image-container {
-                        width: 100%;
-                        height: 90%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        overflow: hidden;
-                    }
-
-                    .slideshow-image-container img {
-                        max-width: 100%;
-                        max-height: 100%;
-                        object-fit: contain;
-                    }
-
-                    .slideshow-caption {
-                        color: #fff;
-                        margin-top: 10px;
-                        text-align: center;
-                        font-size: 16px;
-                        max-width: 80%;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
-                    }
-
-                    .slideshow-prev, .slideshow-next {
-                        cursor: pointer;
-                        position: absolute;
-                        top: 50%;
-                        width: auto;
-                        padding: 16px;
-                        margin-top: -50px;
-                        color: white;
-                        font-weight: bold;
-                        font-size: 30px;
-                        transition: 0.6s ease;
-                        user-select: none;
-                        -webkit-user-select: none;
-                        background-color: rgba(0, 0, 0, 0.2);
-                        border-radius: 50%;
-                        height: 60px;
-                        width: 60px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    }
-
-                    .slideshow-next {
-                        right: 0;
-                    }
-
-                    .slideshow-prev {
-                        left: 0;
-                    }
-
-                    .slideshow-prev:hover, .slideshow-next:hover {
-                        background-color: rgba(0, 0, 0, 0.8);
-                    }
-
-                    .slideshow-counter {
-                        position: absolute;
-                        bottom: 20px;
-                        color: white;
-                        font-size: 16px;
-                        padding: 8px 16px;
-                        background-color: rgba(0, 0, 0, 0.5);
-                        border-radius: 20px;
-                    }
-
-                    @media only screen and (max-width: 768px) {
-                        .slideshow-prev, .slideshow-next {
-                            font-size: 20px;
-                            padding: 10px;
-                            height: 40px;
-                            width: 40px;
-                        }
-                        
-                        .slideshow-close {
-                            font-size: 30px;
-                            top: 10px;
-                            right: 15px;
-                        }
-                    }
 
                     .actions-bar {
                         display: flex;
@@ -274,7 +143,6 @@
                             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
                             gap: 1rem;
                         }
-
                     }
                 </style>
             </head>
@@ -331,7 +199,7 @@
                         </t>
                     </div>
                 </div>
-                <!-- Visor de imágenes a pantalla completa (añadir antes de los scripts) -->
+                <!-- Visor de imágenes a pantalla completa -->
                 <div id="slideshowModal" class="slideshow-modal">
                     <div class="slideshow-content">
                         <span class="slideshow-close">×</span>
@@ -354,7 +222,7 @@
                 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
                 <script src="/sat/static/src/js/gallery.js"></script>
                 <!-- Añade esto justo antes del cierre del body -->
-                <script src="/sat/static/src/js/image-viewer.js"></script>
+                 <script src="/sat/static/src/js/image-viewer.js"></script>
             </body>
         </html>
     </template>

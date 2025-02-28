@@ -1,138 +1,6 @@
-// Agregar este código al final de tu archivo gallery.js
-// O crear un nuevo archivo y agregarlo después de cargar gallery.js
-
+// Archivo: /sat/static/src/js/image-viewer.js
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Inicializando visor de imágenes...');
-    
-    // Añadir HTML para el visor modal
-    const modalHTML = `
-    <div id="imageViewer" class="modal-viewer" style="display:none;">
-        <span class="close-viewer">&times;</span>
-        <div class="modal-content-viewer">
-            <img id="viewerImage" src="">
-            <div class="navigation">
-                <a class="prev-btn">&#10094;</a>
-                <a class="next-btn">&#10095;</a>
-            </div>
-            <div class="image-counter">
-                <span id="currentImage">1</span> / <span id="totalImages">0</span>
-            </div>
-        </div>
-    </div>`;
-    
-    // Añadir estilos para el visor
-    const styleCSS = `
-    .modal-viewer {
-        display: none;
-        position: fixed;
-        z-index: 9999;
-        padding-top: 30px;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0,0,0,0.9);
-    }
-    
-    .modal-content-viewer {
-        position: relative;
-        margin: auto;
-        display: block;
-        width: 90%;
-        height: 90%;
-        max-width: 1200px;
-        text-align: center;
-    }
-    
-    #viewerImage {
-        max-height: 85vh;
-        max-width: 100%;
-        object-fit: contain;
-    }
-    
-    .close-viewer {
-        position: absolute;
-        top: 10px;
-        right: 25px;
-        color: #f1f1f1;
-        font-size: 40px;
-        font-weight: bold;
-        transition: 0.3s;
-        z-index: 10000;
-        cursor: pointer;
-    }
-    
-    .close-viewer:hover,
-    .close-viewer:focus {
-        color: #bbb;
-        text-decoration: none;
-        cursor: pointer;
-    }
-    
-    .navigation {
-        position: absolute;
-        top: 50%;
-        width: 100%;
-        margin-top: -30px;
-    }
-    
-    .prev-btn, .next-btn {
-        cursor: pointer;
-        position: absolute;
-        color: white;
-        font-weight: bold;
-        font-size: 30px;
-        transition: 0.6s ease;
-        user-select: none;
-        -webkit-user-select: none;
-        background-color: rgba(0, 0, 0, 0.3);
-        padding: 16px;
-        border-radius: 50%;
-        height: 30px;
-        width: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .next-btn {
-        right: 0;
-    }
-    
-    .prev-btn {
-        left: 0;
-    }
-    
-    .prev-btn:hover, .next-btn:hover {
-        background-color: rgba(0, 0, 0, 0.8);
-    }
-    
-    .image-counter {
-        position: absolute;
-        bottom: 20px;
-        width: 100%;
-        text-align: center;
-        color: white;
-        font-size: 16px;
-        padding: 10px;
-    }
-    `;
-    
-    // Agregar el HTML y estilos al documento
-    function initializeViewer() {
-        // Agregar estilos
-        const styleElement = document.createElement('style');
-        styleElement.textContent = styleCSS;
-        document.head.appendChild(styleElement);
-        
-        // Agregar el modal al body
-        const modalElement = document.createElement('div');
-        modalElement.innerHTML = modalHTML;
-        document.body.appendChild(modalElement.firstElementChild);
-        
-        console.log('Visor inicializado y agregado al DOM');
-    }
     
     // Variables para seguimiento de imágenes
     let currentIndex = 0;
@@ -140,10 +8,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configurar los eventos del visor
     function setupViewerEvents() {
-        const modal = document.getElementById('imageViewer');
-        const closeBtn = document.querySelector('.close-viewer');
-        const prevBtn = document.querySelector('.prev-btn');
-        const nextBtn = document.querySelector('.next-btn');
+        const modal = document.getElementById('slideshowModal');
+        const closeBtn = document.querySelector('.slideshow-close');
+        const prevBtn = document.querySelector('.slideshow-prev');
+        const nextBtn = document.querySelector('.slideshow-next');
+        
+        if (!modal || !closeBtn || !prevBtn || !nextBtn) {
+            console.error('No se encontraron elementos necesarios del visor');
+            return;
+        }
         
         // Cerrar al hacer clic en X
         closeBtn.addEventListener('click', function() {
@@ -194,11 +67,30 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Actualizar la imagen en el visor
     function updateViewerImage() {
-        const viewerImage = document.getElementById('viewerImage');
-        const currentImageEl = document.getElementById('currentImage');
+        const viewerImage = document.getElementById('slideshowImage');
+        const caption = document.getElementById('slideshowCaption');
+        const currentCounter = document.getElementById('slideshowCurrent');
         
+        if (!viewerImage || !caption || !currentCounter) {
+            console.error('No se encontraron elementos necesarios para actualizar la imagen');
+            return;
+        }
+        
+        // Asegurarnos que la imagen anterior se descargue antes de mostrar la nueva
+        viewerImage.style.opacity = '0.2';
+        
+        // Establecer la URL de la imagen completa (no la miniatura)
         viewerImage.src = galleryImages[currentIndex].fullUrl;
-        currentImageEl.textContent = currentIndex + 1;
+        viewerImage.alt = galleryImages[currentIndex].name || '';
+        
+        // Actualizar pie de foto y contador
+        caption.textContent = galleryImages[currentIndex].name || '';
+        currentCounter.textContent = currentIndex + 1;
+        
+        // Restaurar opacidad después de carga
+        viewerImage.onload = function() {
+            viewerImage.style.opacity = '1';
+        };
         
         console.log(`Mostrando imagen ${currentIndex + 1} de ${galleryImages.length}`);
     }
@@ -217,6 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
         photoCards.forEach((card, index) => {
             const id = card.dataset.photoId;
             const img = card.querySelector('img');
+            const nameEl = card.querySelector('.photo-name');
             
             if (img) {
                 // Obtener URL de imagen completa (reemplazar /thumb/ si existe)
@@ -228,7 +121,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 galleryImages.push({
                     id: id,
                     fullUrl: fullUrl,
-                    thumbUrl: img.src
+                    thumbUrl: img.src,
+                    name: nameEl ? nameEl.textContent : ''
                 });
                 
                 // Si es la imagen que se hizo clic, guardar el índice
@@ -245,10 +139,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Actualizar contador total
-        document.getElementById('totalImages').textContent = galleryImages.length;
+        const totalCounter = document.getElementById('slideshowTotal');
+        if (totalCounter) {
+            totalCounter.textContent = galleryImages.length;
+        }
         
         // Mostrar el visor
-        const modal = document.getElementById('imageViewer');
+        const modal = document.getElementById('slideshowModal');
+        if (!modal) {
+            console.error('No se encontró el elemento del modal');
+            return;
+        }
+        
         modal.style.display = 'block';
         document.body.style.overflow = 'hidden';  // Prevenir scroll
         
@@ -262,21 +164,25 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log(`Configurando eventos de clic para ${photoCards.length} tarjetas de fotos`);
         
         photoCards.forEach(card => {
-            card.addEventListener('click', function(e) {
-                // No abrir el visor si se hace clic en los botones de acción
-                if (e.target.closest('.actions-bar') || e.target.closest('button') || e.target.closest('a')) {
-                    return;
-                }
-                
-                const photoId = this.dataset.photoId;
-                console.log(`Clic en tarjeta de foto ${photoId}`);
-                openImageViewer(photoId);
-            });
+            // Solo configurar evento en la parte de la imagen
+            const photoContainer = card.querySelector('.photo-container');
+            if (photoContainer) {
+                photoContainer.addEventListener('click', function(e) {
+                    // Prevenir propagación y comportamiento por defecto
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const photoId = card.dataset.photoId;
+                    console.log(`Clic en contenedor de foto ${photoId}`);
+                    openImageViewer(photoId);
+                });
+            }
         });
     }
     
-    // Inicializar todo
-    initializeViewer();
+    // Iniciar la configuración
     setupViewerEvents();
     setupGalleryClicks();
+    
+    console.log('Inicialización del visor completada');
 });
