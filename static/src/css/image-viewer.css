@@ -1,4 +1,5 @@
-/* Versión simplificada del CSS */
+/* image-viewer.css - Estilos para el visor de imágenes a pantalla completa */
+
 .slideshow-modal {
     display: none;
     position: fixed;
@@ -8,6 +9,7 @@
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.9);
+    overflow: hidden;
 }
 
 .slideshow-content {
@@ -16,8 +18,8 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
+    align-items: center;
 }
 
 .slideshow-close {
@@ -27,13 +29,23 @@
     color: #f1f1f1;
     font-size: 40px;
     font-weight: bold;
+    transition: 0.3s;
+    z-index: 20;
     cursor: pointer;
+}
+
+.slideshow-close:hover {
+    color: #bbb;
 }
 
 .slideshow-container {
     position: relative;
-    width: 90%;
-    height: 80%;
+    width: 95%;
+    max-width: 1500px;
+    height: 85%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .slideshow-image-container {
@@ -42,22 +54,51 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .slideshow-image-container img {
-    max-width: 90%;
-    max-height: 90%;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: 95% !important;
+    max-height: 95% !important;
+    object-fit: contain !important;
+    transition: opacity 0.3s ease;
 }
 
-/* Estilos simplificados para navegación */
+.slideshow-caption {
+    color: #fff;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 16px;
+    max-width: 80%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .slideshow-prev, .slideshow-next {
+    cursor: pointer;
     position: absolute;
     top: 50%;
+    padding: 16px;
+    margin-top: -50px;
     color: white;
+    font-weight: bold;
     font-size: 30px;
-    cursor: pointer;
+    transition: 0.6s ease;
+    user-select: none;
+    -webkit-user-select: none;
     background-color: rgba(0, 0, 0, 0.2);
-    padding: 10px;
+    border-radius: 50%;
+    height: 60px;
+    width: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .slideshow-next {
@@ -68,8 +109,36 @@
     left: 0;
 }
 
+.slideshow-prev:hover, .slideshow-next:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
 .slideshow-counter {
     position: absolute;
     bottom: 20px;
     color: white;
+    font-size: 16px;
+    padding: 8px 16px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+}
+
+/* Estilos específicos para dispositivos móviles */
+@media only screen and (max-width: 768px) {
+    .slideshow-prev, .slideshow-next {
+        font-size: 20px;
+        padding: 10px;
+        height: 40px;
+        width: 40px;
+    }
+    
+    .slideshow-close {
+        font-size: 30px;
+        top: 10px;
+        right: 15px;
+    }
+    
+    .slideshow-image-container img {
+        max-width: 90% !important;
+    }
 }
