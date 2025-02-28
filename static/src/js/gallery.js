@@ -222,45 +222,86 @@ document.addEventListener('DOMContentLoaded', function() {
             // Configura el evento de click para abrir la imagen en el visor
             const photoCard = img.closest('.photo-card');
             if (photoCard) {
-                photoCard.addEventListener('click', (e) => {
+                // Eliminamos cualquier evento anterior para evitar duplicados
+                photoCard.removeEventListener('click', this._handleCardClick);
+                
+                // Guardamos la referencia de la función para poder removerla después si es necesario
+                this._handleCardClick = (e) => {
                     // Solo abrir si no se hizo clic en los botones de acción
-                    if (!e.target.closest('.actions-bar')) {
+                    if (!e.target.closest('.actions-bar') && !e.target.closest('.btn')) {
                         const photoId = photoCard.dataset.photoId;
+                        console.log('Clic en imagen detectado. Abriendo visor para foto ID:', photoId);
                         this.openPhotoViewer(photoId);
+                        e.preventDefault(); // Prevenir comportamiento por defecto
+                        e.stopPropagation(); // Detener propagación del evento
                     }
-                });
+                };
+                
+                // Añadimos el evento
+                photoCard.addEventListener('click', this._handleCardClick);
             }
+        
         },
 
         openPhotoViewer(photoId) {
             console.log(`Abriendo visor para la foto con ID: ${photoId}`);
+            
             // Obtener todas las fotos en la cuadrícula
             const photoElements = document.querySelectorAll('.photo-card');
+            console.log(`Total de fotos encontradas: ${photoElements.length}`);
+            
             const photos = Array.from(photoElements).map(el => {
                 const img = el.querySelector('img');
                 const nameEl = el.querySelector('.photo-name');
+                
+                // Verificar que tenemos los elementos necesarios
+                if (!img) {
+                    console.error('No se encontró imagen para la tarjeta:', el);
+                    return null;
+                }
+                
+                let fullImageUrl = img.src;
+                // Intentar obtener URL de la imagen completa cambiando la ruta
+                if (fullImageUrl.includes('/thumb/')) {
+                    fullImageUrl = fullImageUrl.replace('/thumb/', '/');
+                }
+                
                 return {
                     id: el.dataset.photoId,
-                    // Cambia la ruta de la miniatura a la imagen completa
-                    url: img.src.replace('/thumb/', '/'),
+                    url: fullImageUrl,
                     name: nameEl ? nameEl.textContent : 'Foto'
                 };
-            });
+            }).filter(photo => photo !== null);
+            
+            if (photos.length === 0) {
+                console.error('No se pudieron obtener datos de fotos');
+                return;
+            }
             
             // Encontrar el índice de la foto actual
             const currentIndex = photos.findIndex(photo => photo.id === photoId);
             
             if (currentIndex === -1) {
-                console.error('No se encontró la foto en la galería');
+                console.error(`No se encontró la foto con ID ${photoId} en la galería`);
                 return;
             }
             
             // Configurar el modal
             const modal = document.getElementById('slideshowModal');
+            if (!modal) {
+                console.error('No se encontró el elemento del modal #slideshowModal');
+                return;
+            }
+            
             const modalImg = document.getElementById('slideshowImage');
             const captionText = document.getElementById('slideshowCaption');
             const currentCounter = document.getElementById('slideshowCurrent');
             const totalCounter = document.getElementById('slideshowTotal');
+            
+            if (!modalImg || !captionText || !currentCounter || !totalCounter) {
+                console.error('Faltan elementos del visor de imágenes');
+                return;
+            }
             
             // Establecer los datos iniciales
             this.currentPhotoIndex = currentIndex;
@@ -271,6 +312,8 @@ document.addEventListener('DOMContentLoaded', function() {
             captionText.textContent = photos[currentIndex].name;
             currentCounter.textContent = currentIndex + 1;
             totalCounter.textContent = photos.length;
+            
+            console.log(`Mostrando imagen ${currentIndex + 1}/${photos.length}: ${photos[currentIndex].url}`);
             
             // Mostrar el modal
             modal.style.display = 'block';
@@ -577,6 +620,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         initializeImagePreviews() {
             console.log('Inicializando vistas previas de imágenes.');
+            
+            // Seleccionar todas las tarjetas de fotos para añadir el evento de clic
+            const photoCards = document.querySelectorAll('.photo-card');
+            console.log(`Se encontraron ${photoCards.length} tarjetas de fotos para configurar eventos.`);
+            
+            photoCards.forEach(card => {
+                const img = card.querySelector('img');
+                if (img) {
+                    this.setupImageHandling(img);
+                    console.log(`Configurado evento de clic para imagen en tarjeta con ID: ${card.dataset.photoId}`);
+                }
+            });
+            
+            // La implementación original con IntersectionObserver permanece como respaldo
             if ('IntersectionObserver' in window) {
                 const imageObserver = new IntersectionObserver((entries, observer) => {
                     entries.forEach(entry => {
@@ -589,18 +646,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
                 });
-
+        
                 document.querySelectorAll('.preview-image:not(.loaded)').forEach(img => {
                     imageObserver.observe(img);
                 });
-            } else {
-                document.querySelectorAll('.preview-image:not(.loaded)').forEach(img => {
-                    this.setupImageHandling(img);
-                    img.classList.add('loaded');
-                });
             }
         }
-    };
+}
 
     // Inicializar galería
     gallery.init();
