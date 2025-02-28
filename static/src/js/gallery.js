@@ -51,6 +51,9 @@ document.addEventListener('DOMContentLoaded', function() {
         bindEvents() {
             console.log('Iniciando bindEvents...');
             
+            // Inicializar eventos de slideshow
+            this.slideshowEventsInitialized = false;
+            
             if (this.fileInput && !this.isMobile()) {
                 this.fileInput.addEventListener('change', (e) => this.handleMassiveUpload(e));
                 console.log('Evento de subida masiva vinculado');
@@ -83,7 +86,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         },
         
-
         handleDownload(event) {
             event.preventDefault();
             const button = event.currentTarget;
@@ -114,7 +116,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     this.showError('Error', 'No se pudo descargar la foto. Inténtalo de nuevo.');
                 });
         },
-
 
         handleShareGallery() {
             console.log('handleShareGallery fue llamado');  // Verifica que la función se está ejecutando
@@ -147,8 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.warn('Clipboard API no disponible. Usando método alternativo.');
             }
-        } ,
-        
+        },
         tryClipboardAPI(currentUrl) {
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(currentUrl)
@@ -215,9 +215,141 @@ document.addEventListener('DOMContentLoaded', function() {
             } finally {
                 document.body.removeChild(tempInput);
             }
-        },   
-        
-        
+        },
+
+        // Nuevas funciones para el visor de imágenes
+        setupImageHandling(img) {
+            // Configura el evento de click para abrir la imagen en el visor
+            const photoCard = img.closest('.photo-card');
+            if (photoCard) {
+                photoCard.addEventListener('click', (e) => {
+                    // Solo abrir si no se hizo clic en los botones de acción
+                    if (!e.target.closest('.actions-bar')) {
+                        const photoId = photoCard.dataset.photoId;
+                        this.openPhotoViewer(photoId);
+                    }
+                });
+            }
+        },
+
+        openPhotoViewer(photoId) {
+            console.log(`Abriendo visor para la foto con ID: ${photoId}`);
+            // Obtener todas las fotos en la cuadrícula
+            const photoElements = document.querySelectorAll('.photo-card');
+            const photos = Array.from(photoElements).map(el => {
+                const img = el.querySelector('img');
+                const nameEl = el.querySelector('.photo-name');
+                return {
+                    id: el.dataset.photoId,
+                    // Cambia la ruta de la miniatura a la imagen completa
+                    url: img.src.replace('/thumb/', '/'),
+                    name: nameEl ? nameEl.textContent : 'Foto'
+                };
+            });
+            
+            // Encontrar el índice de la foto actual
+            const currentIndex = photos.findIndex(photo => photo.id === photoId);
+            
+            if (currentIndex === -1) {
+                console.error('No se encontró la foto en la galería');
+                return;
+            }
+            
+            // Configurar el modal
+            const modal = document.getElementById('slideshowModal');
+            const modalImg = document.getElementById('slideshowImage');
+            const captionText = document.getElementById('slideshowCaption');
+            const currentCounter = document.getElementById('slideshowCurrent');
+            const totalCounter = document.getElementById('slideshowTotal');
+            
+            // Establecer los datos iniciales
+            this.currentPhotoIndex = currentIndex;
+            this.galleryPhotos = photos;
+            
+            // Actualizar la imagen y la información
+            modalImg.src = photos[currentIndex].url;
+            captionText.textContent = photos[currentIndex].name;
+            currentCounter.textContent = currentIndex + 1;
+            totalCounter.textContent = photos.length;
+            
+            // Mostrar el modal
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Prevenir scroll
+            
+            // Configurar los eventos de navegación si aún no están configurados
+            if (!this.slideshowEventsInitialized) {
+                this.initSlideshowEvents();
+            }
+        },
+
+        initSlideshowEvents() {
+            // Configurar cerrar modal
+            const modal = document.getElementById('slideshowModal');
+            const closeBtn = modal.querySelector('.slideshow-close');
+            
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+                document.body.style.overflow = ''; // Restaurar scroll
+            });
+            
+            // Configurar botones de navegación
+            const prevBtn = modal.querySelector('.slideshow-prev');
+            const nextBtn = modal.querySelector('.slideshow-next');
+            
+            prevBtn.addEventListener('click', () => this.navigateSlideshow(-1));
+            nextBtn.addEventListener('click', () => this.navigateSlideshow(1));
+            
+            // Configurar navegación con teclado
+            document.addEventListener('keydown', (e) => {
+                if (modal.style.display === 'block') {
+                    if (e.key === 'ArrowLeft') {
+                        this.navigateSlideshow(-1);
+                    } else if (e.key === 'ArrowRight') {
+                        this.navigateSlideshow(1);
+                    } else if (e.key === 'Escape') {
+                        modal.style.display = 'none';
+                        document.body.style.overflow = '';
+                    }
+                }
+            });
+            
+            // Cerrar al hacer clic fuera de la imagen
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+            });
+            
+            this.slideshowEventsInitialized = true;
+        },
+
+        navigateSlideshow(step) {
+            if (!this.galleryPhotos || this.galleryPhotos.length === 0) return;
+            
+            // Calcular nuevo índice
+            const newIndex = (this.currentPhotoIndex + step + this.galleryPhotos.length) % this.galleryPhotos.length;
+            this.currentPhotoIndex = newIndex;
+            
+            // Actualizar la imagen y la información
+            const photo = this.galleryPhotos[newIndex];
+            const modalImg = document.getElementById('slideshowImage');
+            const captionText = document.getElementById('slideshowCaption');
+            const currentCounter = document.getElementById('slideshowCurrent');
+            
+            // Añadir clase para efecto de transición
+            modalImg.classList.add('changing');
+            
+            // Actualizar imagen con efecto de carga
+            modalImg.src = photo.url;
+            captionText.textContent = photo.name;
+            currentCounter.textContent = newIndex + 1;
+            
+            // Quitar clase después de la transición
+            setTimeout(() => {
+                modalImg.classList.remove('changing');
+            }, 300);
+        },
 
         handleMassiveUpload(event) {
             console.log('Subida masiva de archivos iniciada.');
@@ -245,7 +377,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             this.processBatches(batches, 0, validFiles.length);
         },
-
         processBatches(batches, uploadedCount, totalFiles) {
             console.log(`Iniciando proceso de lotes de subida. Total archivos: ${totalFiles}`);
             if (batches.length === 0) {
@@ -408,7 +539,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         },
         
-
         showLoading(message = 'Cargando...') {
             console.log(`Mostrando carga: ${message}`);
             Swal.fire({
