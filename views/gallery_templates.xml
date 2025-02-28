@@ -7,7 +7,7 @@
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
                 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
-                <link href="/sat/static/src/css/image-viewer.css" rel="stylesheet" />
+                
                 <style>
                     :root {
                         --primary-color: #4a90e2;
@@ -199,6 +199,7 @@
                         </t>
                     </div>
                 </div>
+                <!-- Visor de imágenes a pantalla completa -->
                 <!-- Visor de imágenes a pantalla completa -->
                 <div id="slideshowModal" class="slideshow-modal">
                     <div class="slideshow-content">

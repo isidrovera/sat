@@ -2,6 +2,153 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Inicializando visor de imágenes...');
     
+    // Cargar los estilos CSS dinámicamente para evitar problemas de compilación en Odoo
+    function loadExternalStyles() {
+        // URL del archivo CSS (ajusta la ruta según sea necesario)
+        const cssUrl = '/sat/static/src/css/image-viewer.css';
+        
+        // Crear el elemento link
+        const linkElement = document.createElement('link');
+        linkElement.rel = 'stylesheet';
+        linkElement.type = 'text/css';
+        linkElement.href = cssUrl;
+        
+        // Agregar al head
+        document.head.appendChild(linkElement);
+        
+        console.log('Estilos del visor cargados dinámicamente');
+        
+        // Manejar posibles errores de carga
+        linkElement.onerror = function() {
+            console.error('Error al cargar los estilos del visor. Aplicando estilos en línea de respaldo');
+            applyInlineStyles();
+        };
+    }
+    
+    // Función de respaldo que aplica estilos en línea si falla la carga del CSS externo
+    function applyInlineStyles() {
+        const styles = `
+            .slideshow-modal {
+                display: none;
+                position: fixed;
+                z-index: 10000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.9);
+                overflow: hidden;
+            }
+            
+            .slideshow-content {
+                position: relative;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            .slideshow-close {
+                position: absolute;
+                top: 15px;
+                right: 25px;
+                color: #f1f1f1;
+                font-size: 40px;
+                font-weight: bold;
+                transition: 0.3s;
+                z-index: 20;
+                cursor: pointer;
+            }
+            
+            .slideshow-close:hover {
+                color: #bbb;
+            }
+            
+            .slideshow-container {
+                position: relative;
+                width: 95%;
+                max-width: 1500px;
+                height: 85%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .slideshow-image-container {
+                width: 100%;
+                height: 90%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+            
+            .slideshow-image-container img {
+                max-width: 95% !important;
+                max-height: 95% !important;
+                object-fit: contain !important;
+            }
+            
+            .slideshow-caption {
+                color: #fff;
+                margin-top: 10px;
+                text-align: center;
+                font-size: 16px;
+                max-width: 80%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            
+            .slideshow-prev, .slideshow-next {
+                cursor: pointer;
+                position: absolute;
+                top: 50%;
+                padding: 16px;
+                margin-top: -50px;
+                color: white;
+                font-weight: bold;
+                font-size: 30px;
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 50%;
+                height: 60px;
+                width: 60px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .slideshow-next {
+                right: 0;
+            }
+            
+            .slideshow-prev {
+                left: 0;
+            }
+            
+            .slideshow-counter {
+                position: absolute;
+                bottom: 20px;
+                color: white;
+                font-size: 16px;
+                padding: 8px 16px;
+                background-color: rgba(0, 0, 0, 0.5);
+                border-radius: 20px;
+            }
+        `;
+        
+        const styleElement = document.createElement('style');
+        styleElement.textContent = styles;
+        document.head.appendChild(styleElement);
+        
+        console.log('Estilos en línea aplicados como respaldo');
+    }
+    
+    // Intentar cargar los estilos externos
+    loadExternalStyles();
+    
     // Variables para seguimiento de imágenes
     let currentIndex = 0;
     let galleryImages = [];
