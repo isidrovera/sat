@@ -144,6 +144,7 @@
             'sat/static/src/js/gallery.js',
             'sat/static/src/js/list_dashboard.js',
             'sat/static/src/js/parts_request_message.js',
+            'sat/static/src/js/image-viewer.js',
             
             
             
