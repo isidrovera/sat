@@ -1,185 +1,52 @@
 // Archivo: /sat/static/src/js/image-viewer.js
+
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando visor de imágenes mejorado...');
+    console.log('Inicializando visor de imágenes mejorado v2...');
     
-    // Cargar los estilos CSS dinámicamente
-    function loadExternalStyles() {
-        const cssUrl = '/sat/static/src/css/image-viewer.css';
-        
-        const linkElement = document.createElement('link');
-        linkElement.rel = 'stylesheet';
-        linkElement.type = 'text/css';
-        linkElement.href = cssUrl;
-        
-        document.head.appendChild(linkElement);
-        
-        console.log('Estilos del visor cargados dinámicamente');
-        
-        linkElement.onerror = function() {
-            console.error('Error al cargar los estilos del visor. Aplicando estilos en línea de respaldo');
-            applyInlineStyles();
-        };
-    }
+    // Variables para seguimiento de imágenes
+    let currentIndex = 0;
+    let galleryImages = [];
     
-    // Función de respaldo que aplica estilos en línea si falla la carga del CSS externo
-    function applyInlineStyles() {
-        const styles = `
-            .slideshow-modal {
-                display: none;
-                position: fixed;
-                z-index: 10000;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.9);
-                overflow: hidden;
-            }
-            
-            .slideshow-content {
-                position: relative;
-                width: 100%;
-                height: 100%;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-            }
-            
-            .slideshow-close {
-                position: absolute;
-                top: 15px;
-                right: 25px;
-                color: #f1f1f1;
-                font-size: 40px;
-                font-weight: bold;
-                transition: 0.3s;
-                z-index: 20;
-                cursor: pointer;
-            }
-            
-            .slideshow-close:hover {
-                color: #bbb;
-            }
-            
-            .slideshow-container {
-                position: relative;
-                width: 95%;
-                max-width: 1500px;
-                height: 85%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .slideshow-image-container {
-                width: 100%;
-                height: 90%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-            }
-            
-            .slideshow-image-container img {
-                position: static !important;
-                top: auto !important;
-                left: auto !important;
-                width: auto !important;
-                height: auto !important;
-                max-width: 95% !important;
-                max-height: 95% !important;
-                object-fit: contain !important;
-                transform: none !important;
-            }
-            
-            .slideshow-caption {
-                color: #fff;
-                margin-top: 10px;
-                text-align: center;
-                font-size: 16px;
-                max-width: 80%;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-            
-            .slideshow-prev, .slideshow-next {
-                cursor: pointer;
-                position: absolute;
-                top: 50%;
-                padding: 16px;
-                margin-top: -50px;
-                color: white;
-                font-weight: bold;
-                font-size: 30px;
-                background-color: rgba(0, 0, 0, 0.2);
-                border-radius: 50%;
-                height: 60px;
-                width: 60px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            
-            .slideshow-next {
-                right: 0;
-            }
-            
-            .slideshow-prev {
-                left: 0;
-            }
-            
-            .slideshow-counter {
-                position: absolute;
-                bottom: 20px;
-                color: white;
-                font-size: 16px;
-                padding: 8px 16px;
-                background-color: rgba(0, 0, 0, 0.5);
-                border-radius: 20px;
-            }
-        `;
-        
-        const styleElement = document.createElement('style');
-        styleElement.textContent = styles;
-        document.head.appendChild(styleElement);
-        
-        console.log('Estilos en línea aplicados como respaldo');
-    }
-    
-    // Intentar cargar los estilos externos
-    loadExternalStyles();
-    
-    // Aplicar directamente los estilos críticos como respaldo adicional
+    // Aplicar estilos críticos directamente al DOM
     function applyImageViewerStyles() {
+        const slideshowModal = document.getElementById('slideshowModal');
         const slideshowImageContainer = document.querySelector('.slideshow-image-container');
         const slideshowImage = document.getElementById('slideshowImage');
         
-        if (slideshowImageContainer && slideshowImage) {
+        if (slideshowModal) {
+            // Estilos para el modal
+            slideshowModal.style.zIndex = '10000';
+        }
+        
+        if (slideshowImageContainer) {
             // Estilos para el contenedor de la imagen
             slideshowImageContainer.style.width = '100%';
             slideshowImageContainer.style.height = '90%';
             slideshowImageContainer.style.display = 'flex';
             slideshowImageContainer.style.alignItems = 'center';
             slideshowImageContainer.style.justifyContent = 'center';
-            
-            // Estilos críticos para la imagen
-            slideshowImage.style.position = 'static';
-            slideshowImage.style.maxWidth = '95%';
-            slideshowImage.style.maxHeight = '95%';
-            slideshowImage.style.width = 'auto';
-            slideshowImage.style.height = 'auto';
-            slideshowImage.style.objectFit = 'contain';
-            slideshowImage.style.transform = 'none';
-            
-            console.log('Estilos críticos aplicados directamente a los elementos del visor');
+            slideshowImageContainer.style.overflow = 'hidden';
         }
+        
+        if (slideshowImage) {
+            // Estilos críticos para la imagen - estos sobreescriben cualquier otro estilo
+            Object.assign(slideshowImage.style, {
+                position: 'static',
+                top: 'auto',
+                left: 'auto',
+                width: 'auto',
+                height: 'auto',
+                maxWidth: '90%',
+                maxHeight: '90%',
+                objectFit: 'contain',
+                transform: 'none',
+                transition: 'opacity 0.3s ease',
+                opacity: '1'
+            });
+        }
+        
+        console.log('Estilos críticos aplicados directamente a los elementos del visor');
     }
-    
-    // Variables para seguimiento de imágenes
-    let currentIndex = 0;
-    let galleryImages = [];
     
     // Configurar los eventos del visor
     function setupViewerEvents() {
@@ -251,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Indicador de carga
+        // Indicar carga en progreso
         viewerImage.style.opacity = '0.2';
         
         // Asegurarnos de usar la URL de la imagen completa, no la miniatura
@@ -259,29 +126,44 @@ document.addEventListener('DOMContentLoaded', function() {
         if (fullUrl.includes('/thumb/')) {
             fullUrl = fullUrl.replace('/thumb/', '/');
         }
+        if (fullUrl.includes('/gallery/preview/')) {
+            fullUrl = fullUrl.replace('/gallery/preview/', '/gallery/download/');
+        }
+        
+        console.log(`Cargando imagen desde URL: ${fullUrl}`);
         
         // Cargar la nueva imagen
         const newImage = new Image();
         newImage.onload = function() {
+            console.log('Imagen cargada correctamente');
+            
             // Actualizar la imagen en el DOM solo después de que se haya cargado
             viewerImage.src = fullUrl;
             viewerImage.alt = galleryImages[currentIndex].name || '';
             
             // Restablecer todos los estilos críticos
-            viewerImage.style.position = 'static';
-            viewerImage.style.top = 'auto';
-            viewerImage.style.left = 'auto';
-            viewerImage.style.width = 'auto';
-            viewerImage.style.height = 'auto';
-            viewerImage.style.maxWidth = '95%';
-            viewerImage.style.maxHeight = '95%';
-            viewerImage.style.objectFit = 'contain';
-            viewerImage.style.transform = 'none';
+            Object.assign(viewerImage.style, {
+                position: 'static',
+                top: 'auto',
+                left: 'auto',
+                width: 'auto',
+                height: 'auto',
+                maxWidth: '90%',
+                maxHeight: '90%',
+                objectFit: 'contain',
+                transform: 'none'
+            });
             
             // Mostrar la imagen con transición
             setTimeout(() => {
                 viewerImage.style.opacity = '1';
             }, 50);
+        };
+        
+        newImage.onerror = function() {
+            console.error(`Error al cargar la imagen desde: ${fullUrl}`);
+            viewerImage.src = '/sat/static/src/img/placeholder.png';
+            viewerImage.style.opacity = '1';
         };
         
         // Iniciar la carga de la imagen
@@ -313,6 +195,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (img) {
                 // Obtener URL de imagen completa (reemplazar /thumb/ si existe)
                 let fullUrl = img.src;
+                
+                // Si es una URL de vista previa, cambiarla a URL de descarga
+                if (fullUrl.includes('/gallery/preview/')) {
+                    fullUrl = fullUrl.replace('/gallery/preview/', '/gallery/download/');
+                }
+                
+                // Si tiene /thumb/ en la ruta, cambiarlo
                 if (fullUrl.includes('/thumb/')) {
                     fullUrl = fullUrl.replace('/thumb/', '/');
                 }
@@ -385,6 +274,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Iniciar la configuración
     setupViewerEvents();
     setupGalleryClicks();
+    
+    // Aplicar estilos iniciales al cargar la página
+    applyImageViewerStyles();
     
     console.log('Inicialización del visor mejorado completada');
 });
