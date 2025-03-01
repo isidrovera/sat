@@ -1,24 +1,20 @@
 // Archivo: /sat/static/src/js/image-viewer.js
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando visor de imágenes...');
+    console.log('Inicializando visor de imágenes mejorado...');
     
-    // Cargar los estilos CSS dinámicamente para evitar problemas de compilación en Odoo
+    // Cargar los estilos CSS dinámicamente
     function loadExternalStyles() {
-        // URL del archivo CSS (ajusta la ruta según sea necesario)
         const cssUrl = '/sat/static/src/css/image-viewer.css';
         
-        // Crear el elemento link
         const linkElement = document.createElement('link');
         linkElement.rel = 'stylesheet';
         linkElement.type = 'text/css';
         linkElement.href = cssUrl;
         
-        // Agregar al head
         document.head.appendChild(linkElement);
         
         console.log('Estilos del visor cargados dinámicamente');
         
-        // Manejar posibles errores de carga
         linkElement.onerror = function() {
             console.error('Error al cargar los estilos del visor. Aplicando estilos en línea de respaldo');
             applyInlineStyles();
@@ -86,9 +82,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             .slideshow-image-container img {
+                position: static !important;
+                top: auto !important;
+                left: auto !important;
+                width: auto !important;
+                height: auto !important;
                 max-width: 95% !important;
                 max-height: 95% !important;
                 object-fit: contain !important;
+                transform: none !important;
             }
             
             .slideshow-caption {
@@ -148,6 +150,32 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Intentar cargar los estilos externos
     loadExternalStyles();
+    
+    // Aplicar directamente los estilos críticos como respaldo adicional
+    function applyImageViewerStyles() {
+        const slideshowImageContainer = document.querySelector('.slideshow-image-container');
+        const slideshowImage = document.getElementById('slideshowImage');
+        
+        if (slideshowImageContainer && slideshowImage) {
+            // Estilos para el contenedor de la imagen
+            slideshowImageContainer.style.width = '100%';
+            slideshowImageContainer.style.height = '90%';
+            slideshowImageContainer.style.display = 'flex';
+            slideshowImageContainer.style.alignItems = 'center';
+            slideshowImageContainer.style.justifyContent = 'center';
+            
+            // Estilos críticos para la imagen
+            slideshowImage.style.position = 'static';
+            slideshowImage.style.maxWidth = '95%';
+            slideshowImage.style.maxHeight = '95%';
+            slideshowImage.style.width = 'auto';
+            slideshowImage.style.height = 'auto';
+            slideshowImage.style.objectFit = 'contain';
+            slideshowImage.style.transform = 'none';
+            
+            console.log('Estilos críticos aplicados directamente a los elementos del visor');
+        }
+    }
     
     // Variables para seguimiento de imágenes
     let currentIndex = 0;
@@ -213,56 +241,62 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Actualizar la imagen en el visor
-    // Actualizar la imagen en el visor
-function updateViewerImage() {
-    const viewerImage = document.getElementById('slideshowImage');
-    const caption = document.getElementById('slideshowCaption');
-    const currentCounter = document.getElementById('slideshowCurrent');
-    
-    if (!viewerImage || !caption || !currentCounter) {
-        console.error('No se encontraron elementos necesarios para actualizar la imagen');
-        return;
+    function updateViewerImage() {
+        const viewerImage = document.getElementById('slideshowImage');
+        const caption = document.getElementById('slideshowCaption');
+        const currentCounter = document.getElementById('slideshowCurrent');
+        
+        if (!viewerImage || !caption || !currentCounter) {
+            console.error('No se encontraron elementos necesarios para actualizar la imagen');
+            return;
+        }
+        
+        // Indicador de carga
+        viewerImage.style.opacity = '0.2';
+        
+        // Asegurarnos de usar la URL de la imagen completa, no la miniatura
+        let fullUrl = galleryImages[currentIndex].fullUrl;
+        if (fullUrl.includes('/thumb/')) {
+            fullUrl = fullUrl.replace('/thumb/', '/');
+        }
+        
+        // Cargar la nueva imagen
+        const newImage = new Image();
+        newImage.onload = function() {
+            // Actualizar la imagen en el DOM solo después de que se haya cargado
+            viewerImage.src = fullUrl;
+            viewerImage.alt = galleryImages[currentIndex].name || '';
+            
+            // Restablecer todos los estilos críticos
+            viewerImage.style.position = 'static';
+            viewerImage.style.top = 'auto';
+            viewerImage.style.left = 'auto';
+            viewerImage.style.width = 'auto';
+            viewerImage.style.height = 'auto';
+            viewerImage.style.maxWidth = '95%';
+            viewerImage.style.maxHeight = '95%';
+            viewerImage.style.objectFit = 'contain';
+            viewerImage.style.transform = 'none';
+            
+            // Mostrar la imagen con transición
+            setTimeout(() => {
+                viewerImage.style.opacity = '1';
+            }, 50);
+        };
+        
+        // Iniciar la carga de la imagen
+        newImage.src = fullUrl;
+        
+        // Actualizar pie de foto y contador
+        caption.textContent = galleryImages[currentIndex].name || '';
+        currentCounter.textContent = currentIndex + 1;
+        
+        console.log(`Mostrando imagen ${currentIndex + 1} de ${galleryImages.length}`);
     }
-    
-    // Asegurarnos que la imagen anterior se descargue antes de mostrar la nueva
-    viewerImage.style.opacity = '0.2';
-    
-    // Establecer la URL de la imagen completa (no la miniatura)
-    let fullUrl = galleryImages[currentIndex].fullUrl;
-    
-    // Asegurarse de que estamos usando la URL de la imagen completa
-    if (fullUrl.includes('/thumb/')) {
-        fullUrl = fullUrl.replace('/thumb/', '/');
-    }
-    
-    viewerImage.src = fullUrl;
-    viewerImage.alt = galleryImages[currentIndex].name || '';
-    
-    // Restablecer todos los estilos que puedan afectar al tamaño
-    viewerImage.style.position = 'relative';
-    viewerImage.style.top = 'auto';
-    viewerImage.style.left = 'auto';
-    viewerImage.style.width = 'auto';
-    viewerImage.style.height = 'auto';
-    viewerImage.style.maxWidth = '95%';
-    viewerImage.style.maxHeight = '95%';
-    viewerImage.style.objectFit = 'contain';
-    
-    // Actualizar pie de foto y contador
-    caption.textContent = galleryImages[currentIndex].name || '';
-    currentCounter.textContent = currentIndex + 1;
-    
-    // Restaurar opacidad después de carga
-    viewerImage.onload = function() {
-        viewerImage.style.opacity = '1';
-    };
-    
-    console.log(`Mostrando imagen ${currentIndex + 1} de ${galleryImages.length}`);
-}
     
     // Abrir el visor con una imagen específica
     function openImageViewer(imageId) {
-        console.log(`Abriendo visor para imagen ID: ${imageId}`);
+        console.log(`Abriendo visor mejorado para imagen ID: ${imageId}`);
         
         // Recopilar todas las imágenes de la galería
         const photoCards = document.querySelectorAll('.photo-card');
@@ -316,6 +350,9 @@ function updateViewerImage() {
             return;
         }
         
+        // Asegurar que los estilos se aplican correctamente
+        applyImageViewerStyles();
+        
         modal.style.display = 'block';
         document.body.style.overflow = 'hidden';  // Prevenir scroll
         
@@ -349,5 +386,5 @@ function updateViewerImage() {
     setupViewerEvents();
     setupGalleryClicks();
     
-    console.log('Inicialización del visor completada');
+    console.log('Inicialización del visor mejorado completada');
 });

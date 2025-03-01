@@ -57,9 +57,11 @@
     overflow: hidden;
 }
 
-/* Reglas corregidas para las imágenes en el visor */
-.slideshow-image-container img {
-    position: relative !important;
+/* Importante: Reglas específicas para anular los estilos de la galería */
+#slideshowModal .slideshow-image-container img,
+.slideshow-image-container img,
+#slideshowImage {
+    position: static !important;
     top: auto !important;
     left: auto !important;
     width: auto !important;
@@ -67,7 +69,8 @@
     max-width: 95% !important;
     max-height: 95% !important;
     object-fit: contain !important;
-    transition: opacity 0.3s ease;
+    transform: none !important;
+    transition: opacity 0.3s ease !important;
 }
 
 .slideshow-caption {
@@ -142,4 +145,9 @@
     .slideshow-image-container img {
         max-width: 90% !important;
     }
+}
+
+/* Regla para forzar reseteo de estilos para el visor */
+.reset-styles {
+    all: unset !important;
 }
