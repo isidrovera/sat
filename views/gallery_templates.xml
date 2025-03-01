@@ -145,6 +145,7 @@
                         }
                     }
                 </style>
+                 <link rel="stylesheet" type="text/css" href="/sat/static/src/css/image-viewer.css" />
             </head>
             <body>
                 <div class="container-fluid py-4">
@@ -200,21 +201,22 @@
                     </div>
                 </div>
                 <!-- Visor de imágenes a pantalla completa -->
-                <div id="slideshowModal" class="slideshow-modal">
+               <div id="slideshowModal" class="slideshow-modal">
                     <div class="slideshow-content">
                         <span class="slideshow-close">×</span>
                         <div class="slideshow-container">
-                            <div class="slideshow-image-container">
-                                <img id="slideshowImage" src="" alt="" 
-                                    style="position: static !important; 
-                                            top: auto !important;
-                                            left: auto !important;
-                                            width: auto !important; 
-                                            height: auto !important; 
-                                            max-width: 90% !important; 
-                                            max-height: 90% !important; 
-                                            object-fit: contain !important;
-                                            transform: none !important;"/>
+                            <div class="slideshow-image-container" style="display:flex !important; align-items:center !important; justify-content:center !important; width:100% !important; height:90% !important;">
+                                <img id="slideshowImage" src="" alt=""
+                                     style="position:static !important; 
+                                            top:auto !important;
+                                            left:auto !important;
+                                            width:auto !important; 
+                                            height:auto !important; 
+                                            max-width:90% !important; 
+                                            max-height:90% !important; 
+                                            object-fit:contain !important;
+                                            transform:none !important;
+                                            margin:0 auto !important;" />
                             </div>
                             <h4 id="slideshowCaption" class="slideshow-caption"></h4>
                             <a class="slideshow-prev">&#10094;</a>
@@ -225,7 +227,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Scripts -->
                 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
                 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

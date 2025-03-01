@@ -1,6 +1,6 @@
 // Archivo: /sat/static/src/js/image-viewer.js
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando visor de imágenes mejorado v3...');
+    console.log('Inicializando visor de imágenes - SOLUCIÓN FINAL');
     
     // Variables para seguimiento de imágenes
     let currentIndex = 0;
@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Configurar eventos de clic en las imágenes de la galería
         setupGalleryClicks();
+        
+        // Agregar estilos adicionales
+        addExtraStyles();
         
         console.log('Inicialización del visor completada');
     }
@@ -46,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <img id="slideshowImage" src="" alt="" 
                                  style="position:static !important; width:auto !important; height:auto !important; 
                                        max-width:90% !important; max-height:90% !important; object-fit:contain !important; 
-                                       transform:none !important; transition:opacity 0.3s ease !important;">
+                                       transform:none !important; transition:opacity 0.3s ease !important; margin:0 auto !important;">
                         </div>
                         <h4 id="slideshowCaption" class="slideshow-caption"></h4>
                         <a class="slideshow-prev">&#10094;</a>
@@ -68,9 +71,66 @@ document.addEventListener('DOMContentLoaded', function() {
                 slideshowImage.setAttribute('style', 
                     'position:static !important; width:auto !important; height:auto !important; ' +
                     'max-width:90% !important; max-height:90% !important; object-fit:contain !important; ' +
-                    'transform:none !important; transition:opacity 0.3s ease !important;');
+                    'transform:none !important; transition:opacity 0.3s ease !important; margin:0 auto !important;');
             }
         }
+    }
+    
+    // Agregar estilos adicionales directamente al DOM
+    function addExtraStyles() {
+        const styleId = 'imageViewerExtraStyles';
+        
+        // Evitar duplicados
+        if (document.getElementById(styleId)) {
+            return;
+        }
+        
+        const styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        
+        // Estilos adicionales para forzar el tamaño correcto
+        styleEl.textContent = `
+            #slideshowImage {
+                position: static !important;
+                top: auto !important;
+                left: auto !important;
+                width: auto !important;
+                height: auto !important;
+                max-width: 90% !important;
+                max-height: 90% !important;
+                object-fit: contain !important;
+                transform: none !important;
+                transition: opacity 0.3s ease !important;
+                margin: 0 auto !important;
+            }
+            
+            .slideshow-image-container {
+                width: 100% !important;
+                height: 90% !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                overflow: hidden !important;
+            }
+            
+            /* Reset para anular cualquier transformación */
+            .slideshow-image-container > img {
+                position: static !important;
+                transform: none !important;
+                max-width: 90% !important;
+                max-height: 90% !important;
+            }
+            
+            /* Estilos para forzar visualización correcta */
+            .photo-container img.visor-full {
+                position: static !important;
+                width: auto !important;
+                height: auto !important;
+            }
+        `;
+        
+        document.head.appendChild(styleEl);
+        console.log('Estilos adicionales inyectados');
     }
     
     // Aplicar estilos críticos directamente al DOM
@@ -86,12 +146,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (slideshowImageContainer) {
             // Estilos para el contenedor de la imagen
-            slideshowImageContainer.style.width = '100%';
-            slideshowImageContainer.style.height = '90%';
-            slideshowImageContainer.style.display = 'flex';
-            slideshowImageContainer.style.alignItems = 'center';
-            slideshowImageContainer.style.justifyContent = 'center';
-            slideshowImageContainer.style.overflow = 'hidden';
+            Object.assign(slideshowImageContainer.style, {
+                width: '100%',
+                height: '90%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden'
+            });
         }
         
         if (slideshowImage) {
@@ -107,7 +169,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 objectFit: 'contain',
                 transform: 'none',
                 transition: 'opacity 0.3s ease',
-                opacity: '1'
+                opacity: '1',
+                margin: '0 auto'
             });
         }
         
@@ -203,6 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Actualizar la imagen en el DOM solo después de que se haya cargado
             viewerImage.src = fullUrl;
             viewerImage.alt = galleryImages[currentIndex].name || '';
+            viewerImage.className = 'visor-full';
             
             // Restablecer todos los estilos críticos
             Object.assign(viewerImage.style, {
@@ -214,8 +278,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 maxWidth: '90%',
                 maxHeight: '90%',
                 objectFit: 'contain',
-                transform: 'none'
+                transform: 'none',
+                margin: '0 auto'
             });
+            
+            // Aplicar estilos adicionales directamente al elemento
+            viewerImage.setAttribute('style', 
+                'position:static !important; width:auto !important; height:auto !important; ' +
+                'max-width:90% !important; max-height:90% !important; object-fit:contain !important; ' +
+                'transform:none !important; transition:opacity 0.3s ease !important; margin:0 auto !important;');
             
             // Mostrar la imagen con transición
             setTimeout(() => {
