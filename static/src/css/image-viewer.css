@@ -57,6 +57,7 @@
     overflow: hidden;
 }
 
+/* Reglas corregidas para las imágenes en el visor */
 .slideshow-image-container img {
     position: relative !important;
     top: auto !important;

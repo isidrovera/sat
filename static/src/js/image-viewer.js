@@ -213,34 +213,52 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Actualizar la imagen en el visor
-    function updateViewerImage() {
-        const viewerImage = document.getElementById('slideshowImage');
-        const caption = document.getElementById('slideshowCaption');
-        const currentCounter = document.getElementById('slideshowCurrent');
-        
-        if (!viewerImage || !caption || !currentCounter) {
-            console.error('No se encontraron elementos necesarios para actualizar la imagen');
-            return;
-        }
-        
-        // Asegurarnos que la imagen anterior se descargue antes de mostrar la nueva
-        viewerImage.style.opacity = '0.2';
-        
-        // Establecer la URL de la imagen completa (no la miniatura)
-        viewerImage.src = galleryImages[currentIndex].fullUrl;
-        viewerImage.alt = galleryImages[currentIndex].name || '';
-        
-        // Actualizar pie de foto y contador
-        caption.textContent = galleryImages[currentIndex].name || '';
-        currentCounter.textContent = currentIndex + 1;
-        
-        // Restaurar opacidad después de carga
-        viewerImage.onload = function() {
-            viewerImage.style.opacity = '1';
-        };
-        
-        console.log(`Mostrando imagen ${currentIndex + 1} de ${galleryImages.length}`);
+    // Actualizar la imagen en el visor
+function updateViewerImage() {
+    const viewerImage = document.getElementById('slideshowImage');
+    const caption = document.getElementById('slideshowCaption');
+    const currentCounter = document.getElementById('slideshowCurrent');
+    
+    if (!viewerImage || !caption || !currentCounter) {
+        console.error('No se encontraron elementos necesarios para actualizar la imagen');
+        return;
     }
+    
+    // Asegurarnos que la imagen anterior se descargue antes de mostrar la nueva
+    viewerImage.style.opacity = '0.2';
+    
+    // Establecer la URL de la imagen completa (no la miniatura)
+    let fullUrl = galleryImages[currentIndex].fullUrl;
+    
+    // Asegurarse de que estamos usando la URL de la imagen completa
+    if (fullUrl.includes('/thumb/')) {
+        fullUrl = fullUrl.replace('/thumb/', '/');
+    }
+    
+    viewerImage.src = fullUrl;
+    viewerImage.alt = galleryImages[currentIndex].name || '';
+    
+    // Restablecer todos los estilos que puedan afectar al tamaño
+    viewerImage.style.position = 'relative';
+    viewerImage.style.top = 'auto';
+    viewerImage.style.left = 'auto';
+    viewerImage.style.width = 'auto';
+    viewerImage.style.height = 'auto';
+    viewerImage.style.maxWidth = '95%';
+    viewerImage.style.maxHeight = '95%';
+    viewerImage.style.objectFit = 'contain';
+    
+    // Actualizar pie de foto y contador
+    caption.textContent = galleryImages[currentIndex].name || '';
+    currentCounter.textContent = currentIndex + 1;
+    
+    // Restaurar opacidad después de carga
+    viewerImage.onload = function() {
+        viewerImage.style.opacity = '1';
+    };
+    
+    console.log(`Mostrando imagen ${currentIndex + 1} de ${galleryImages.length}`);
+}
     
     // Abrir el visor con una imagen específica
     function openImageViewer(imageId) {
