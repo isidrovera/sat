@@ -1,4 +1,4 @@
-/* image-viewer.css - Estilos optimizados para el visor de imágenes */
+/* image-viewer.css - Estilos optimizados para el visor de imágenes con zoom */
 
 /* Modal principal */
 .slideshow-modal {
@@ -75,6 +75,7 @@
     border-radius: 5px !important;
     padding: 10px !important;
     box-sizing: border-box !important;
+    position: relative !important;
 }
 
 /* Imagen en el visor */
@@ -93,6 +94,65 @@
     margin: 0 auto !important;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
     border-radius: 4px !important;
+    cursor: zoom-in !important;
+    transform-origin: center !important;
+}
+
+/* Estilos para imagen ampliada */
+#slideshowImage.zoomed {
+    cursor: move !important;
+    max-width: none !important;
+    max-height: none !important;
+    position: relative !important;
+}
+
+/* Controles de zoom */
+.zoom-controls {
+    position: absolute !important;
+    top: 15px !important;
+    left: 15px !important;
+    z-index: 20 !important;
+    display: flex !important;
+    gap: 5px !important;
+}
+
+.zoom-controls button {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    color: white !important;
+    font-size: 18px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background-color 0.3s !important;
+}
+
+.zoom-controls button:hover {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Indicador de nivel de zoom */
+.zoom-level {
+    position: absolute !important;
+    bottom: 60px !important;
+    right: 20px !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    color: white !important;
+    padding: 5px 10px !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+    z-index: 20 !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s !important;
+}
+
+.zoom-level.visible {
+    opacity: 1 !important;
 }
 
 /* Clases específicas para imágenes verticales u horizontales */
@@ -107,18 +167,12 @@
 }
 
 /* Eliminar todas las transformaciones de la imagen del visor */
-#slideshowModal img,
-#slideshowImage {
+#slideshowModal img:not(.zoomed) {
     transform: none !important;
     -webkit-transform: none !important;
     -moz-transform: none !important;
     -ms-transform: none !important;
     -o-transform: none !important;
-}
-
-/* Efecto de zoom sutil al hover */
-#slideshowImage:hover {
-    transform: scale(1.02) !important;
 }
 
 /* Pie de foto */
@@ -199,6 +253,17 @@
         right: 15px !important;
         width: 35px !important;
         height: 35px !important;
+    }
+    
+    .zoom-controls {
+        top: 10px !important;
+        left: 10px !important;
+    }
+    
+    .zoom-controls button {
+        width: 35px !important;
+        height: 35px !important;
+        font-size: 16px !important;
     }
     
     .slideshow-image-container img,
