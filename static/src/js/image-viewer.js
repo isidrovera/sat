@@ -1,17 +1,10 @@
 // Archivo: /sat/static/src/js/image-viewer.js
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando visor de imágenes con ZOOM - v1.0');
+    console.log('Inicializando visor de imágenes - VERSIÓN OPTIMIZADA');
     
-    // Variables para seguimiento de imágenes y estado
+    // Variables para seguimiento de imágenes
     let currentIndex = 0;
     let galleryImages = [];
-    let isZoomed = false;
-    let zoomLevel = 1;
-    let dragStartX = 0;
-    let dragStartY = 0;
-    let dragOffsetX = 0;
-    let dragOffsetY = 0;
-    let isDragging = false;
     
     // Función principal de inicialización
     function init() {
@@ -51,11 +44,6 @@ document.addEventListener('DOMContentLoaded', function() {
             modal.innerHTML = `
                 <div class="slideshow-content">
                     <span class="slideshow-close">×</span>
-                    <div class="zoom-controls">
-                        <button class="zoom-in-btn" title="Acercar">+</button>
-                        <button class="zoom-out-btn" title="Alejar">−</button>
-                        <button class="zoom-reset-btn" title="Restablecer zoom">↺</button>
-                    </div>
                     <div class="slideshow-container">
                         <div class="slideshow-image-container" style="display:flex !important; align-items:center !important; justify-content:center !important;">
                             <img id="slideshowImage" src="" alt=""
@@ -66,8 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         max-height:95% !important; 
                                         object-fit:contain !important;
                                         transform:none !important;
-                                        margin:0 auto !important;
-                                        cursor: zoom-in !important;" />
+                                        margin:0 auto !important;" />
                         </div>
                         <h4 id="slideshowCaption" class="slideshow-caption"></h4>
                         <a class="slideshow-prev">&#10094;</a>
@@ -89,20 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 slideshowImage.setAttribute('style', 
                     'position:static !important; width:auto !important; height:auto !important; ' +
                     'max-width:95% !important; max-height:95% !important; object-fit:contain !important; ' +
-                    'transform:none !important; transition:opacity 0.3s ease !important; margin:0 auto !important; ' +
-                    'cursor: zoom-in !important;');
-            }
-            
-            // Agregar controles de zoom si no existen
-            if (!modal.querySelector('.zoom-controls')) {
-                const zoomControls = document.createElement('div');
-                zoomControls.className = 'zoom-controls';
-                zoomControls.innerHTML = `
-                    <button class="zoom-in-btn" title="Acercar">+</button>
-                    <button class="zoom-out-btn" title="Alejar">−</button>
-                    <button class="zoom-reset-btn" title="Restablecer zoom">↺</button>
-                `;
-                modal.querySelector('.slideshow-content').appendChild(zoomControls);
+                    'transform:none !important; transition:opacity 0.3s ease !important; margin:0 auto !important;');
             }
         }
     }
@@ -119,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const styleEl = document.createElement('style');
         styleEl.id = styleId;
         
-        // Estilos adicionales para zoom y navegación
+        // Estilos adicionales para ajuste automático según dimensiones originales
         styleEl.textContent = `
             /* Contenedor principal del visor */
             .slideshow-container {
@@ -146,7 +120,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 border-radius: 5px !important;
                 padding: 10px !important;
                 box-sizing: border-box !important;
-                position: relative !important;
             }
             
             /* Imagen en el visor */
@@ -163,65 +136,96 @@ document.addEventListener('DOMContentLoaded', function() {
                 transition: all 0.3s ease !important;
                 margin: 0 auto !important;
                 box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
-                cursor: zoom-in !important;
-                transform-origin: center !important;
             }
             
-            /* Imagen ampliada */
-            #slideshowImage.zoomed {
-                cursor: move !important;
-                max-width: none !important;
-                max-height: none !important;
-                position: relative !important;
+            /* Estilos para imágenes verticales */
+            #slideshowImage.vertical {
+                max-height: 95% !important;
+                max-width: 90% !important;
             }
             
-            /* Controles de zoom */
-            .zoom-controls {
-                position: absolute !important;
-                top: 15px !important;
-                left: 15px !important;
-                z-index: 20 !important;
-                display: flex !important;
-                gap: 5px !important;
+            /* Estilos para imágenes horizontales */
+            #slideshowImage.horizontal {
+                max-width: 95% !important;
+                max-height: 90% !important;
             }
             
-            .zoom-controls button {
-                width: 40px !important;
-                height: 40px !important;
-                border-radius: 50% !important;
-                background-color: rgba(0, 0, 0, 0.5) !important;
-                color: white !important;
-                font-size: 18px !important;
-                font-weight: bold !important;
+            /* Estilos mejorados para navegación */
+            .slideshow-prev, .slideshow-next {
                 cursor: pointer !important;
-                border: none !important;
+                position: absolute !important;
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+                padding: 16px !important;
+                color: white !important;
+                font-weight: bold !important;
+                font-size: 24px !important;
+                transition: 0.3s ease !important;
+                user-select: none !important;
+                -webkit-user-select: none !important;
+                background-color: rgba(0, 0, 0, 0.3) !important;
+                border-radius: 50% !important;
+                height: 50px !important;
+                width: 50px !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
-                transition: background-color 0.3s !important;
+                z-index: 10 !important;
             }
             
-            .zoom-controls button:hover {
-                background-color: rgba(0, 0, 0, 0.8) !important;
+            .slideshow-next {
+                right: 15px !important;
             }
             
-            /* Indicador de zoom */
-            .zoom-level {
+            .slideshow-prev {
+                left: 15px !important;
+            }
+            
+            .slideshow-prev:hover, .slideshow-next:hover {
+                background-color: rgba(0, 0, 0, 0.7) !important;
+            }
+            
+            /* Contador mejorado */
+            .slideshow-counter {
                 position: absolute !important;
-                bottom: 60px !important;
-                right: 20px !important;
-                background-color: rgba(0, 0, 0, 0.5) !important;
+                bottom: 20px !important;
                 color: white !important;
-                padding: 5px 10px !important;
-                border-radius: 10px !important;
-                font-size: 14px !important;
-                z-index: 20 !important;
-                opacity: 0 !important;
-                transition: opacity 0.3s !important;
+                font-size: 16px !important;
+                padding: 8px 20px !important;
+                background-color: rgba(0, 0, 0, 0.5) !important;
+                border-radius: 20px !important;
+                z-index: 5 !important;
+                font-weight: bold !important;
             }
             
-            .zoom-level.visible {
-                opacity: 1 !important;
+            /* Botón de cierre mejorado */
+            .slideshow-close {
+                position: absolute !important;
+                top: 15px !important;
+                right: 25px !important;
+                color: #f1f1f1 !important;
+                font-size: 40px !important;
+                font-weight: bold !important;
+                transition: 0.3s !important;
+                z-index: 20 !important;
+                cursor: pointer !important;
+                width: 40px !important;
+                height: 40px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                border-radius: 50% !important;
+                background-color: rgba(0, 0, 0, 0.3) !important;
+                line-height: 1 !important;
+            }
+            
+            .slideshow-close:hover {
+                background-color: rgba(0, 0, 0, 0.7) !important;
+            }
+            
+            /* Efecto de zoom al pasar el mouse */
+            #slideshowImage:hover {
+                transform: scale(1.02) !important;
             }
         `;
         
@@ -248,8 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                overflow: 'hidden',
-                position: 'relative'
+                overflow: 'hidden'
             });
         }
         
@@ -265,195 +268,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 maxHeight: '95%',
                 objectFit: 'contain',
                 transform: 'none',
-                transition: 'all 0.3s ease',
+                transition: 'opacity 0.3s ease',
                 opacity: '1',
-                margin: '0 auto',
-                cursor: 'zoom-in'
+                margin: '0 auto'
             });
         }
         
         console.log('Estilos críticos aplicados directamente a los elementos del visor');
-    }
-    
-    // Función para resetear el zoom
-    function resetZoom() {
-        const viewerImage = document.getElementById('slideshowImage');
-        if (!viewerImage) return;
-        
-        viewerImage.classList.remove('zoomed');
-        viewerImage.style.transform = 'none';
-        viewerImage.style.cursor = 'zoom-in';
-        
-        // Resetear variables
-        isZoomed = false;
-        zoomLevel = 1;
-        dragOffsetX = 0;
-        dragOffsetY = 0;
-        
-        // Ocultar indicador de zoom
-        const zoomLevelIndicator = document.querySelector('.zoom-level');
-        if (zoomLevelIndicator) {
-            zoomLevelIndicator.classList.remove('visible');
-        }
-        
-        console.log('Zoom reseteado');
-    }
-    
-    // Función para aplicar zoom
-    function applyZoom(newZoomLevel, centerX = null, centerY = null) {
-        const viewerImage = document.getElementById('slideshowImage');
-        const container = document.querySelector('.slideshow-image-container');
-        
-        if (!viewerImage || !container) return;
-        
-        // Limitar el zoom entre 1 y 5
-        newZoomLevel = Math.max(1, Math.min(5, newZoomLevel));
-        
-        // Si el zoom es 1, resetear
-        if (newZoomLevel === 1) {
-            resetZoom();
-            return;
-        }
-        
-        // Si no estaba ampliado, marcar como ampliado
-        if (!isZoomed) {
-            viewerImage.classList.add('zoomed');
-            viewerImage.style.cursor = 'move';
-            isZoomed = true;
-        }
-        
-        // Calcular el centro si no se proporciona
-        if (centerX === null || centerY === null) {
-            centerX = container.clientWidth / 2;
-            centerY = container.clientHeight / 2;
-        }
-        
-        // Aplicar transformación
-        zoomLevel = newZoomLevel;
-        viewerImage.style.transform = `translate(${dragOffsetX}px, ${dragOffsetY}px) scale(${zoomLevel})`;
-        
-        // Mostrar indicador de zoom
-        let zoomLevelIndicator = document.querySelector('.zoom-level');
-        if (!zoomLevelIndicator) {
-            zoomLevelIndicator = document.createElement('div');
-            zoomLevelIndicator.className = 'zoom-level';
-            container.appendChild(zoomLevelIndicator);
-        }
-        
-        zoomLevelIndicator.textContent = `${Math.round(zoomLevel * 100)}%`;
-        zoomLevelIndicator.classList.add('visible');
-        
-        // Ocultar el indicador después de 2 segundos
-        setTimeout(() => {
-            zoomLevelIndicator.classList.remove('visible');
-        }, 2000);
-        
-        console.log(`Zoom aplicado: ${zoomLevel}x, offset: (${dragOffsetX}, ${dragOffsetY})`);
-    }
-    
-    // Configurar los eventos de zoom y arrastre
-    function setupZoomEvents() {
-        const viewerImage = document.getElementById('slideshowImage');
-        const container = document.querySelector('.slideshow-image-container');
-        const zoomInBtn = document.querySelector('.zoom-in-btn');
-        const zoomOutBtn = document.querySelector('.zoom-out-btn');
-        const zoomResetBtn = document.querySelector('.zoom-reset-btn');
-        
-        if (!viewerImage || !container) return;
-        
-        // Evento de clic en la imagen para zoom
-        viewerImage.addEventListener('click', function(e) {
-            if (!isZoomed) {
-                // Si no está ampliado, hacer zoom al 200%
-                applyZoom(2, e.clientX, e.clientY);
-            } else {
-                // Si ya está ampliado, resetear zoom
-                resetZoom();
-            }
-        });
-        
-        // Evento de rueda del mouse para zoom
-        viewerImage.addEventListener('wheel', function(e) {
-            e.preventDefault();
-            
-            if (!isZoomed && e.deltaY < 0) {
-                // Primer zoom con la rueda
-                applyZoom(1.5, e.clientX, e.clientY);
-            } else if (isZoomed) {
-                // Ajustar zoom existente
-                const zoomDelta = e.deltaY > 0 ? -0.2 : 0.2;
-                applyZoom(zoomLevel + zoomDelta, e.clientX, e.clientY);
-            }
-        });
-        
-        // Eventos de arrastre para mover la imagen ampliada
-        viewerImage.addEventListener('mousedown', function(e) {
-            if (!isZoomed) return;
-            
-            isDragging = true;
-            dragStartX = e.clientX;
-            dragStartY = e.clientY;
-            
-            // Cambiar cursor durante el arrastre
-            viewerImage.style.cursor = 'grabbing';
-            e.preventDefault();
-        });
-        
-        document.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
-            
-            const deltaX = e.clientX - dragStartX;
-            const deltaY = e.clientY - dragStartY;
-            
-            // Actualizar offset
-            dragOffsetX += deltaX;
-            dragOffsetY += deltaY;
-            
-            // Aplicar transformación
-            viewerImage.style.transform = `translate(${dragOffsetX}px, ${dragOffsetY}px) scale(${zoomLevel})`;
-            
-            // Actualizar posición inicial para el próximo movimiento
-            dragStartX = e.clientX;
-            dragStartY = e.clientY;
-        });
-        
-        document.addEventListener('mouseup', function() {
-            if (!isDragging) return;
-            
-            isDragging = false;
-            viewerImage.style.cursor = 'move';
-        });
-        
-        // Botones de control de zoom
-        if (zoomInBtn) {
-            zoomInBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                applyZoom(zoomLevel + 0.5);
-            });
-        }
-        
-        if (zoomOutBtn) {
-            zoomOutBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                applyZoom(zoomLevel - 0.5);
-            });
-        }
-        
-        if (zoomResetBtn) {
-            zoomResetBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                resetZoom();
-            });
-        }
-        
-        // Evitar que el reseteo de zoom afecte la navegación
-        container.addEventListener('click', function(e) {
-            if (isDragging) {
-                e.stopPropagation();
-            }
-        });
-        
-        console.log('Eventos de zoom configurados');
     }
     
     // Configurar los eventos del visor
@@ -472,7 +293,6 @@ document.addEventListener('DOMContentLoaded', function() {
         closeBtn.addEventListener('click', function() {
             modal.style.display = 'none';
             document.body.style.overflow = '';
-            resetZoom(); // Resetear zoom al cerrar
         });
         
         // Cerrar al hacer clic fuera de la imagen
@@ -480,7 +300,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target === modal) {
                 modal.style.display = 'none';
                 document.body.style.overflow = '';
-                resetZoom(); // Resetear zoom al cerrar
             }
         });
         
@@ -506,19 +325,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (e.key === 'Escape') {
                     modal.style.display = 'none';
                     document.body.style.overflow = '';
-                    resetZoom(); // Resetear zoom al cerrar
-                } else if (e.key === '+' || e.key === '=') {
-                    applyZoom(zoomLevel + 0.5);
-                } else if (e.key === '-') {
-                    applyZoom(zoomLevel - 0.5);
-                } else if (e.key === '0') {
-                    resetZoom();
                 }
             }
         });
-        
-        // Configurar eventos de zoom
-        setupZoomEvents();
         
         console.log('Eventos del visor configurados');
     }
@@ -533,9 +342,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('No se encontraron elementos necesarios para actualizar la imagen');
             return;
         }
-        
-        // Resetear zoom al cambiar de imagen
-        resetZoom();
         
         // Indicar carga en progreso
         viewerImage.style.opacity = '0.2';
@@ -621,8 +427,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 objectFit: 'contain',
                 transform: 'none',
                 margin: '0 auto',
-                transition: 'all 0.3s ease',
-                cursor: 'zoom-in'
+                transition: 'all 0.3s ease'
             });
             
             // Aplicar estilos de visualización mejorados
@@ -657,9 +462,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('No hay imágenes para navegar');
             return;
         }
-        
-        // Resetear zoom al navegar
-        resetZoom();
         
         currentIndex = (currentIndex + step + galleryImages.length) % galleryImages.length;
         updateViewerImage();
@@ -727,9 +529,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Asegurar que los estilos se aplican correctamente
         applyImageViewerStyles();
-        
-        // Resetear zoom
-        resetZoom();
         
         modal.style.display = 'block';
         document.body.style.overflow = 'hidden';  // Prevenir scroll
