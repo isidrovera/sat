@@ -1,6 +1,6 @@
 // Archivo: /sat/static/src/js/image-viewer.js
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando visor de imágenes - VERSIÓN OPTIMIZADA');
+    console.log('Inicializando visor de imágenes - SOLUCIÓN FINAL');
     
     // Variables para seguimiento de imágenes
     let currentIndex = 0;
@@ -45,16 +45,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="slideshow-content">
                     <span class="slideshow-close">×</span>
                     <div class="slideshow-container">
-                        <div class="slideshow-image-container" style="display:flex !important; align-items:center !important; justify-content:center !important;">
-                            <img id="slideshowImage" src="" alt=""
-                                 style="position:static !important; 
-                                        width:auto !important; 
-                                        height:auto !important; 
-                                        max-width:95% !important; 
-                                        max-height:95% !important; 
-                                        object-fit:contain !important;
-                                        transform:none !important;
-                                        margin:0 auto !important;" />
+                        <div class="slideshow-image-container">
+                            <img id="slideshowImage" src="" alt="" 
+                                 style="position:static !important; width:auto !important; height:auto !important; 
+                                       max-width:90% !important; max-height:90% !important; object-fit:contain !important; 
+                                       transform:none !important; transition:opacity 0.3s ease !important; margin:0 auto !important;">
                         </div>
                         <h4 id="slideshowCaption" class="slideshow-caption"></h4>
                         <a class="slideshow-prev">&#10094;</a>
@@ -75,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Asegurando que la imagen del visor tiene los estilos correctos');
                 slideshowImage.setAttribute('style', 
                     'position:static !important; width:auto !important; height:auto !important; ' +
-                    'max-width:95% !important; max-height:95% !important; object-fit:contain !important; ' +
+                    'max-width:90% !important; max-height:90% !important; object-fit:contain !important; ' +
                     'transform:none !important; transition:opacity 0.3s ease !important; margin:0 auto !important;');
             }
         }
@@ -93,22 +88,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const styleEl = document.createElement('style');
         styleEl.id = styleId;
         
-        // Estilos adicionales para ajuste automático según dimensiones originales
+        // Estilos adicionales para forzar el tamaño correcto
         styleEl.textContent = `
-            /* Contenedor principal del visor */
-            .slideshow-container {
-                position: relative !important;
-                width: 95% !important;
-                max-width: 1600px !important;
-                height: 85% !important;
-                display: flex !important;
-                flex-direction: column !important;
-                align-items: center !important;
-                justify-content: center !important;
+            #slideshowImage {
+                position: static !important;
+                top: auto !important;
+                left: auto !important;
+                width: auto !important;
+                height: auto !important;
+                max-width: 90% !important;
+                max-height: 90% !important;
+                object-fit: contain !important;
+                transform: none !important;
+                transition: opacity 0.3s ease !important;
                 margin: 0 auto !important;
             }
             
-            /* Contenedor de la imagen */
             .slideshow-image-container {
                 width: 100% !important;
                 height: 90% !important;
@@ -116,116 +111,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 align-items: center !important;
                 justify-content: center !important;
                 overflow: hidden !important;
-                background-color: rgba(0, 0, 0, 0.1) !important;
-                border-radius: 5px !important;
-                padding: 10px !important;
-                box-sizing: border-box !important;
             }
             
-            /* Imagen en el visor */
-            #slideshowImage {
+            /* Reset para anular cualquier transformación */
+            .slideshow-image-container > img {
                 position: static !important;
-                top: auto !important;
-                left: auto !important;
-                width: auto !important;
-                height: auto !important;
-                max-width: 95% !important;
-                max-height: 95% !important;
-                object-fit: contain !important;
                 transform: none !important;
-                transition: all 0.3s ease !important;
-                margin: 0 auto !important;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
-            }
-            
-            /* Estilos para imágenes verticales */
-            #slideshowImage.vertical {
-                max-height: 95% !important;
                 max-width: 90% !important;
-            }
-            
-            /* Estilos para imágenes horizontales */
-            #slideshowImage.horizontal {
-                max-width: 95% !important;
                 max-height: 90% !important;
             }
             
-            /* Estilos mejorados para navegación */
-            .slideshow-prev, .slideshow-next {
-                cursor: pointer !important;
-                position: absolute !important;
-                top: 50% !important;
-                transform: translateY(-50%) !important;
-                padding: 16px !important;
-                color: white !important;
-                font-weight: bold !important;
-                font-size: 24px !important;
-                transition: 0.3s ease !important;
-                user-select: none !important;
-                -webkit-user-select: none !important;
-                background-color: rgba(0, 0, 0, 0.3) !important;
-                border-radius: 50% !important;
-                height: 50px !important;
-                width: 50px !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                z-index: 10 !important;
-            }
-            
-            .slideshow-next {
-                right: 15px !important;
-            }
-            
-            .slideshow-prev {
-                left: 15px !important;
-            }
-            
-            .slideshow-prev:hover, .slideshow-next:hover {
-                background-color: rgba(0, 0, 0, 0.7) !important;
-            }
-            
-            /* Contador mejorado */
-            .slideshow-counter {
-                position: absolute !important;
-                bottom: 20px !important;
-                color: white !important;
-                font-size: 16px !important;
-                padding: 8px 20px !important;
-                background-color: rgba(0, 0, 0, 0.5) !important;
-                border-radius: 20px !important;
-                z-index: 5 !important;
-                font-weight: bold !important;
-            }
-            
-            /* Botón de cierre mejorado */
-            .slideshow-close {
-                position: absolute !important;
-                top: 15px !important;
-                right: 25px !important;
-                color: #f1f1f1 !important;
-                font-size: 40px !important;
-                font-weight: bold !important;
-                transition: 0.3s !important;
-                z-index: 20 !important;
-                cursor: pointer !important;
-                width: 40px !important;
-                height: 40px !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                border-radius: 50% !important;
-                background-color: rgba(0, 0, 0, 0.3) !important;
-                line-height: 1 !important;
-            }
-            
-            .slideshow-close:hover {
-                background-color: rgba(0, 0, 0, 0.7) !important;
-            }
-            
-            /* Efecto de zoom al pasar el mouse */
-            #slideshowImage:hover {
-                transform: scale(1.02) !important;
+            /* Estilos para forzar visualización correcta */
+            .photo-container img.visor-full {
+                position: static !important;
+                width: auto !important;
+                height: auto !important;
             }
         `;
         
@@ -264,8 +164,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 left: 'auto',
                 width: 'auto',
                 height: 'auto',
-                maxWidth: '95%',
-                maxHeight: '95%',
+                maxWidth: '90%',
+                maxHeight: '90%',
                 objectFit: 'contain',
                 transform: 'none',
                 transition: 'opacity 0.3s ease',
@@ -332,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Eventos del visor configurados');
     }
     
-    // Actualizar la imagen en el visor con ajuste automático según sus dimensiones
+    // Actualizar la imagen en el visor
     function updateViewerImage() {
         const viewerImage = document.getElementById('slideshowImage');
         const caption = document.getElementById('slideshowCaption');
@@ -358,81 +258,35 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log(`Cargando imagen desde URL: ${fullUrl}`);
         
-        // Cargar la nueva imagen y determinar si es vertical u horizontal
+        // Cargar la nueva imagen
         const newImage = new Image();
         newImage.onload = function() {
-            console.log(`Imagen cargada correctamente. Dimensiones: ${newImage.width}x${newImage.height}`);
+            console.log('Imagen cargada correctamente');
             
-            // Determinar la orientación de la imagen
-            const isVertical = newImage.height > newImage.width;
-            
-            // Actualizar la imagen en el DOM
+            // Actualizar la imagen en el DOM solo después de que se haya cargado
             viewerImage.src = fullUrl;
             viewerImage.alt = galleryImages[currentIndex].name || '';
+            viewerImage.className = 'visor-full';
             
-            // Aplicar clase según orientación
-            viewerImage.className = isVertical ? 'visor-full vertical' : 'visor-full horizontal';
-            
-            // Calcular dimensiones óptimas
-            const container = document.querySelector('.slideshow-image-container');
-            const containerWidth = container ? container.clientWidth * 0.95 : window.innerWidth * 0.9;
-            const containerHeight = container ? container.clientHeight * 0.95 : window.innerHeight * 0.8;
-            
-            // Calcular proporciones
-            const imageRatio = newImage.width / newImage.height;
-            const containerRatio = containerWidth / containerHeight;
-            
-            // Aplicar dimensiones específicas para aprovechar mejor el espacio
-            if (isVertical) {
-                // Imagen vertical
-                if (newImage.height > containerHeight) {
-                    const newHeight = containerHeight;
-                    const newWidth = newHeight * imageRatio;
-                    
-                    if (newWidth > containerWidth) {
-                        viewerImage.style.width = `${containerWidth}px`;
-                        viewerImage.style.height = 'auto';
-                    } else {
-                        viewerImage.style.height = `${newHeight}px`;
-                        viewerImage.style.width = 'auto';
-                    }
-                } else {
-                    viewerImage.style.height = 'auto';
-                    viewerImage.style.width = 'auto';
-                }
-            } else {
-                // Imagen horizontal
-                if (newImage.width > containerWidth) {
-                    const newWidth = containerWidth;
-                    const newHeight = newWidth / imageRatio;
-                    
-                    if (newHeight > containerHeight) {
-                        viewerImage.style.height = `${containerHeight}px`;
-                        viewerImage.style.width = 'auto';
-                    } else {
-                        viewerImage.style.width = `${newWidth}px`;
-                        viewerImage.style.height = 'auto';
-                    }
-                } else {
-                    viewerImage.style.width = 'auto';
-                    viewerImage.style.height = 'auto';
-                }
-            }
-            
-            // Restablecer estilos críticos adicionales
+            // Restablecer todos los estilos críticos
             Object.assign(viewerImage.style, {
                 position: 'static',
                 top: 'auto',
                 left: 'auto',
+                width: 'auto',
+                height: 'auto',
+                maxWidth: '90%',
+                maxHeight: '90%',
                 objectFit: 'contain',
                 transform: 'none',
-                margin: '0 auto',
-                transition: 'all 0.3s ease'
+                margin: '0 auto'
             });
             
-            // Aplicar estilos de visualización mejorados
-            viewerImage.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.2)';
-            viewerImage.style.borderRadius = '4px';
+            // Aplicar estilos adicionales directamente al elemento
+            viewerImage.setAttribute('style', 
+                'position:static !important; width:auto !important; height:auto !important; ' +
+                'max-width:90% !important; max-height:90% !important; object-fit:contain !important; ' +
+                'transform:none !important; transition:opacity 0.3s ease !important; margin:0 auto !important;');
             
             // Mostrar la imagen con transición
             setTimeout(() => {
@@ -469,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Abrir el visor con una imagen específica
     function openImageViewer(imageId) {
-        console.log(`Abriendo visor optimizado para imagen ID: ${imageId}`);
+        console.log(`Abriendo visor mejorado para imagen ID: ${imageId}`);
         
         // Recopilar todas las imágenes de la galería
         const photoCards = document.querySelectorAll('.photo-card');
