@@ -272,19 +272,30 @@
             <!-- Partes a Entregar -->
             <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
                 <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📦 Entregar las siguientes partes:</div>
+
                 <t t-if="object.disco_duro_requerido">
                     <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #48bb78;">
                         <div style="font-weight: bold;">💽 Disco Duro</div>
                         <div>Motivo: <strong><t t-out="object.get_motivo_disco_display()"/></strong></div>
                     </div>
                 </t>
+
                 <t t-if="object.ruedas_requeridas">
                     <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #4299e1;">
                         <div style="font-weight: bold;">⚙️ Ruedas</div>
                         <div>Cantidad: <strong>4 unidades</strong></div>
                     </div>
                 </t>
+
+                <t t-if="object.cable_poder_requerido">
+                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #ed8936;">
+                        <div style="font-weight: bold;">🔌 Cable de Poder</div>
+                        <div>Motivo: <strong><t t-out="object.motivo_cable_display"/></strong></div>
+                    </div>
+                </t>
+
             </div>
+
              <!-- Detalles de la Máquina -->
             <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
                 <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Información del Equipo</div>
