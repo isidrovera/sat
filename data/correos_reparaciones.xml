@@ -231,6 +231,12 @@
                         <div>Cantidad: <strong>4 unidades</strong></div>
                     </div>
                 </t>
+                <t t-if="object.cable_poder_requerido">
+                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #ed8936;">
+                        <div style="font-weight: bold;">🔌 Cable de Poder</div>
+                        <div>Motivo: <strong><t t-out="object.motivo_cable_display"/></strong></div>
+                    </div>
+                </t>
             </div>
 
             <!-- Botón de Aprobación -->
