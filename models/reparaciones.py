@@ -1108,6 +1108,19 @@ class CopierPartsRequest(models.Model):
         ('extraviado', 'Cable Extraviado')
     ], string='Motivo Solicitud Cable', tracking=True)
 
+    motivo_cable_display = fields.Char(
+        string='Motivo Cable Display', 
+        compute='_compute_motivo_cable_display',
+        store=True
+    )
+
+    @api.depends('motivo_cable')
+    def _compute_motivo_cable_display(self):
+        for record in self:
+            record.motivo_cable_display = dict(
+                self._fields['motivo_cable'].selection
+            ).get(record.motivo_cable, '')
+
     state = fields.Selection([
         ('draft', 'Pendiente'),
         ('approved', 'Aprobado'),
