@@ -205,75 +205,74 @@
 
 
     <!-- Búsqueda -->
-   <record id="Sat_search_view" model="ir.ui.view">
-      <field name="name">sat.sat.search</field>
-      <field name="model">sat.sat</field>
-      <field name="arch" type="xml">
+    <record id="Sat_search_view" model="ir.ui.view">
+    <field name="name">sat.sat.search</field>
+    <field name="model">sat.sat</field>
+    <field name="arch" type="xml">
         <search>
-          <!-- Campos de búsqueda -->
-          <field name="tipo_maquina"/>
-          <field name="marca"/>
-          <field name="name"/>
-          <field name="serie_id"/>
-          <field name="cliente_id"/>
-          <field name="ubicacion_id"/>
-          <field name="asesora_id"/>
+            <!-- Campos de búsqueda -->
+            <field name="tipo_maquina"/>
+            <field name="marca"/>
+            <field name="name"/>
+            <field name="serie_id"/>
+            <field name="cliente_id"/>
+            <field name="ubicacion_id"/>
+            <field name="asesora_id"/>
 
-          <!-- Filtros existentes -->
-          <filter name="filter_disponible" 
-                  string="Disponibles" 
-                  domain="[('disponibilidad_id', '=', 'disponible')]"/>
-          <filter name="filter_separada" 
-                  string="Separadas" 
-                  domain="[('disponibilidad_id', '=', 'separada')]"/>
-          <filter name="filter_no_disponible" 
-                  string="No disponibles" 
-                  domain="[('disponibilidad_id', '=', 'no_disponible')]"/>
-          
-          <separator/>
-          
-          <filter name="filter_sin_revisar" 
-                  string="Sin revisar" 
-                  domain="[('estado_ventas_id', '=', 'sin_revisar')]"/>
-          <filter name="filter_revision" 
-                  string="En revisión" 
-                  domain="[('estado_ventas_id', '=', 'en_revision')]"/>
-          <filter name="filter_finalizado" 
-                  string="Finalizado" 
-                  domain="[('estado_ventas_id', '=', 'finalizado')]"/>
-          <filter name="filter_problemas" 
-                  string="Con problemas" 
-                  domain="[('estado_ventas_id', '=', 'con_problemas')]"/>
-          <filter name="filter_partes" 
-                  string="De partes" 
-                  domain="[('estado_ventas_id', '=', 'de_partes')]"/>
-          <filter name="filter_entregada" 
-                  string="Entregada" 
-                  domain="[('estado_ventas_id', '=', 'entregada')]"/>
+            <!-- Filtros -->
+            <filter name="filter_disponible" 
+                    string="Disponibles" 
+                    domain="[('disponibilidad_id', '=', 'disponible')]"/>
+            <filter name="filter_separada" 
+                    string="Separadas" 
+                    domain="[('disponibilidad_id', '=', 'separada')]"/>
+            <filter name="filter_no_disponible" 
+                    string="No disponibles" 
+                    domain="[('disponibilidad_id', '=', 'no_disponible')]"/>
+            
+            <separator/>
+            
+            <filter name="filter_sin_revisar" 
+                    string="Sin revisar" 
+                    domain="[('estado_ventas_id', '=', 'sin_revisar')]"/>
+            <filter name="filter_revision" 
+                    string="En revisión" 
+                    domain="[('estado_ventas_id', '=', 'en_revision')]"/>
+            <filter name="filter_finalizado" 
+                    string="Finalizado" 
+                    domain="[('estado_ventas_id', '=', 'finalizado')]"/>
+            <filter name="filter_problemas" 
+                    string="Con problemas" 
+                    domain="[('estado_ventas_id', '=', 'con_problemas')]"/>
+            <filter name="filter_partes" 
+                    string="De partes" 
+                    domain="[('estado_ventas_id', '=', 'de_partes')]"/>
+            <filter name="filter_entregada" 
+                    string="Entregada" 
+                    domain="[('estado_ventas_id', '=', 'entregada')]"/>
 
-          <!-- Nuevo filtro para NO entregadas -->
-          <filter name="filter_no_entregada"
-                  string="No entregadas"
-                  domain="[('estado_ventas_id','!=','entregada')]"/>
-
-          <!-- Agrupamiento -->
-          <group expand="0" string="Agrupar Por">
-            <filter name="group_disponibilidad" 
-                    string="Disponibilidad" 
-                    context="{'group_by': 'disponibilidad_id'}"/>
-            <filter name="group_estado" 
-                    string="Estado" 
-                    context="{'group_by': 'estado_ventas_id'}"/>
-            <filter name="group_marca" 
-                    string="Marca" 
-                    context="{'group_by': 'marca'}"/>
-            <filter name="group_ubicacion" 
-                    string="Ubicación" 
-                    context="{'group_by': 'ubicacion_id'}"/>
-          </group>
+            <!-- Agrupamiento -->
+            <group expand="0" string="Agrupar Por">
+                <filter name="group_disponibilidad" 
+                        string="Disponibilidad" 
+                        context="{'group_by': 'disponibilidad_id'}"/>
+                <filter name="group_estado" 
+                        string="Estado" 
+                        context="{'group_by': 'estado_ventas_id'}"/>
+                <filter name="group_marca" 
+                        string="Marca" 
+                        context="{'group_by': 'marca'}"/>
+                <filter name="group_ubicacion" 
+                        string="Ubicación" 
+                        context="{'group_by': 'ubicacion_id'}"/>
+            </group>
+           <!-- <searchpanel>            
+              <field name="estado_ventas_id" string="Estado" icon="fa-hourglass-start" enable_counters="1" colors='{"sin_revisar": "red", "en_revision": "blue", "finalizado": "green", "entregada": "purple"}'/>
+              <field name="disponibilidad_id" string="Disponibilidad" icon="fa-check-circle" enable_counters="1" colors='{"disponible": "green", "separada": "orange", "no_disponible": "red"}'/>                                 
+          </searchpanel>-->              
         </search>
-      </field>
-    </record>
+    </field>
+</record>
     <!-- Kanban -->
     <record id="maquinas_kanban_view" model="ir.ui.view">
       <field name="name">maquinas.kanban</field>
