@@ -452,10 +452,14 @@ class ticket_alquiler(models.Model):
         }
 
     def action_finalizar(self):
-        # Deshabilitar las reglas de acceso temporalmente para evitar el error
-        self = self.sudo()  # Utilizamos sudo() para evitar restricciones
+        # Deshabilitar las reglas de acceso temporalmente para evitar restricciones
+        self = self.sudo()
 
-        # Realizar todas las acciones necesarias antes de cambiar el estado
+        # Llamar manualmente a la función de validación para cada registro
+        for record in self:
+            record._check_contometro_values()
+
+        # Realizar las acciones necesarias antes de cambiar el estado
         if self.line_ids:
             self.create_sale_order()
 
@@ -503,7 +507,7 @@ class ticket_alquiler(models.Model):
             'name': 'Tickets',
             'view_mode': 'list,form',
             'res_model': 'ticket.alquiler',
-            'view_id': False,  # Puedes especificar una vista de lista si es necesario
+            'view_id': False,
             'target': 'main',
         }
 
