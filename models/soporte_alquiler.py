@@ -299,7 +299,7 @@ class ticket_alquiler(models.Model):
             if previous_record and current_k <= prev_k:
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO K ES INCORRECTO\n\n"
-                    "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
+                    "Debe ingresar un valor MAYOR que el último valor registrado  para esta máquina."
                     .format(prev_k))
                 )
 
@@ -308,7 +308,7 @@ class ticket_alquiler(models.Model):
                 if previous_record and current_color <= prev_color:
                     raise ValidationError(
                         _("❗ ERROR: EL VALOR DEL CONTÓMETRO COLOR ES INCORRECTO\n\n"
-                        "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
+                        "Debe ingresar un valor MAYOR que el último valor registrado para esta máquina."
                         .format(prev_color))
                     )
                 if current_color == 0:
@@ -321,7 +321,7 @@ class ticket_alquiler(models.Model):
             if previous_record and current_scanner <= prev_scanner:
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO SCANNER ES INCORRECTO\n\n"
-                    "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
+                    "Debe ingresar un valor MAYOR que el último valor registrado  para esta máquina."
                     .format(prev_scanner))
                 )
 
