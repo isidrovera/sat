@@ -285,43 +285,53 @@ class ticket_alquiler(models.Model):
                 limit=1,
                 order='id desc'
             )
-            
+
+            # Convertir los valores a enteros (si no tienen valor, se asume 0)
+            current_k = int(record.contometrok_id) if record.contometrok_id else 0
+            current_color = int(record.contometroc_id) if record.contometroc_id else 0
+            current_scanner = int(record.contometros_id) if record.contometros_id else 0
+
+            prev_k = int(previous_record.contometrok_id) if previous_record and previous_record.contometrok_id else 0
+            prev_color = int(previous_record.contometroc_id) if previous_record and previous_record.contometroc_id else 0
+            prev_scanner = int(previous_record.contometros_id) if previous_record and previous_record.contometros_id else 0
+
             # Validar contómetro K
-            if previous_record and record.contometrok_id <= previous_record.contometrok_id:
+            if previous_record and current_k <= prev_k:
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO K ES INCORRECTO\n\n"
                     "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
-                    .format(previous_record.contometrok_id))
+                    .format(prev_k))
                 )
 
             # Validar contómetro color solo si es máquina a color
             if record.tipo_id == 'color':
-                if previous_record and record.contometroc_id <= previous_record.contometroc_id:
+                if previous_record and current_color <= prev_color:
                     raise ValidationError(
                         _("❗ ERROR: EL VALOR DEL CONTÓMETRO COLOR ES INCORRECTO\n\n"
                         "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
-                        .format(previous_record.contometroc_id))
+                        .format(prev_color))
                     )
-                if record.contometroc_id == 0:
+                if current_color == 0:
                     raise ValidationError(
                         _("❗ ERROR: EL VALOR DEL CONTÓMETRO COLOR NO PUEDE SER 0\n\n"
                         "Debe ingresar el valor ACTUAL del contómetro.")
                     )
 
             # Validar contómetro scanner
-            if previous_record and record.contometros_id <= previous_record.contometros_id:
+            if previous_record and current_scanner <= prev_scanner:
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO SCANNER ES INCORRECTO\n\n"
                     "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
-                    .format(previous_record.contometros_id))
+                    .format(prev_scanner))
                 )
 
-            # Validar valores en 0 para K y scanner
-            if record.contometrok_id == 0 or record.contometros_id == 0:
+            # Validar que ni K ni scanner sean 0
+            if current_k == 0 or current_scanner == 0:
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
                     "Debe ingresar el valor ACTUAL del contómetro.")
                 )
+
 
     
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
