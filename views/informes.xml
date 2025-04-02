@@ -70,7 +70,7 @@
             <field name="name">Informes.list</field>
             <field name="model">informes</field>
             <field name="arch" type="xml">
-                <list string="Informes" decoration-success="state=='sent'" decoration-info="state=='draft'">
+                <list default_order="id desc" string="Informes" decoration-success="state=='sent'" decoration-info="state=='draft'">
                     <field name="name"/>
                     <field name="importacion"/>
                     <field name="invoice"/>
