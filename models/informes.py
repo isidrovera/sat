@@ -23,24 +23,22 @@ class Informes(models.Model):
         tracking=True
     )
     detalle_ids = fields.Many2many('fallas', tracking=True)
+    
+    # Campo de estado simplificado (solo borrador y enviado)
+    state = fields.Selection([
+        ('draft', 'Borrador'),
+        ('sent', 'Enviado')
+    ], string='Estado', default='draft', tracking=True, copy=False)
+    
+    # Fechas de creación y envío
+    create_date = fields.Datetime(string='Fecha de Creación', readonly=True)
+    sent_date = fields.Datetime(string='Fecha de Envío', tracking=True, copy=False, readonly=True)
 
     @api.model
     def create(self, vals):
         if not vals.get('name') or vals['name'] == '/':
             vals['name'] = self.env['ir.sequence'].next_by_code('informes')
         return super(Informes, self).create(vals)
-
-    def _get_customer_information(self):
-        """Retorna la información del cliente necesaria para el correo"""
-        self.ensure_one()
-        return {
-            'name': self.proveedor_id.name or '',
-            'email': self.proveedor_id.email or '',
-            'lang': self.proveedor_id.lang or '',
-            'mobile': self.proveedor_id.mobile or '',
-            'phone': self.proveedor_id.phone or '',
-            'commercial_company_name': self.proveedor_id.commercial_company_name or '',
-        }
 
     def send_email(self):
         """Abre el wizard de composición de correo para enviar el informe"""
@@ -63,6 +61,18 @@ class Informes(models.Model):
             'default_email_to': 'lincoln@corapsac.com',
             'default_partner_to': False  # Evita que busque el partner del proveedor
         }
+        
+        # Actualizar el estado a enviado después de abrir el compositor de correo
+        self.write({
+            'state': 'sent',
+            'sent_date': fields.Datetime.now()
+        })
+        
+        # Registrar en el chatter que se ha enviado el correo
+        self.message_post(
+            body=f"Informe enviado por correo a: lincoln@corapsac.com",
+            subject=f"Envío de Informe {self.name}"
+        )
         
         return {
             'name': 'Enviar Informe por Correo',
