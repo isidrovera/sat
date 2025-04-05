@@ -693,11 +693,11 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
     email = fields.Char(string='Correo Electrónico', required=True)
     subject = fields.Char(string='Asunto', default='Reportes de Evaluación del Personal', required=True)
     body = fields.Html(
-        string='Cuerpo del Mensaje',
+       string='Cuerpo del Mensaje',
         default="""
-            <p>Estimado/a,</p>
-            <p>Adjunto los reportes de evaluación del personal solicitados.</p>
-            <p>Saludos cordiales,</p>
+            <p>Lincoln:</p>
+            <p>Por medio de la presente,  hago llegar los reportes de evaluación del personal. Los documentos adjuntos contienen información detallada sobre el desempeño, competencias y resultados de cada colaborador durante el período evaluado.</p>
+            <p>Saludos cordiales,</p>            
         """,
         required=True
     )
