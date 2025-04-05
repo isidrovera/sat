@@ -37,25 +37,7 @@
                 <form>
                     <!-- En la sección del header, reemplazamos states por invisible -->
                     <header>
-                        <button name="action_enviar_revision"
-                            string="Enviar a Revisión"
-                            type="object"
-                            class="oe_highlight"
-                            invisible="state not in ('borrador')" />
-                        <button name="action_aprobar"
-                            string="Aprobar"
-                            type="object"
-                            class="oe_highlight"
-                            invisible="state not in ('en_revision')" />
-                        <button name="action_finalizar"
-                            string="Finalizar"
-                            type="object"
-                            class="oe_highlight"
-                            invisible="state not in ('aprobado')" />
-                        <button name="action_borrador"
-                            string="Volver a Borrador"
-                            type="object"
-                            invisible="state not in ('en_revision')" />
+                        
                         <field name="state" widget="statusbar"
                             statusbar_visible="borrador,en_revision,aprobado,finalizado" />
                     </header>

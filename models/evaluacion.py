@@ -58,9 +58,7 @@ class EvaluacionPersonal(models.Model):
     
     state = fields.Selection([
         ('borrador', 'Borrador'),
-        ('en_revision', 'En Revisión'),
-        ('aprobado', 'Aprobado'),
-        ('finalizado', 'Finalizado')
+        ('enviado', 'Enviado')
     ], default='borrador', tracking=True, string='Estado')
 
     # Relación con otros modelos
@@ -184,17 +182,7 @@ class EvaluacionPersonal(models.Model):
             vals['name'] = self.env['ir.sequence'].next_by_code('evaluacion.personal') or 'New'
         return super(EvaluacionPersonal, self).create(vals)
 
-    def action_enviar_revision(self):
-        self.state = 'en_revision'
-
-    def action_aprobar(self):
-        self.state = 'aprobado'
-
-    def action_finalizar(self):
-        self.state = 'finalizado'
-
-    def action_borrador(self):
-        self.state = 'borrador'
+    
 
     def ver_reparaciones(self):
         return {
@@ -846,8 +834,8 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                 'body_html': self.body,
                 'email_to': self.email,
                 'attachment_ids': [(6, 0, attachment_ids)],
-                'mail_server_id': mail_server.id,  # Especificar el servidor de correo explícitamente
-                'auto_delete': False,  # Mantener el registro del correo para depuración
+                'mail_server_id': mail_server.id,
+                'auto_delete': False,
             }
             
             _logger.info("Creando objeto mail.mail")
@@ -857,17 +845,24 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
             # Usar el método send que incluye más logs
             try:
                 _logger.info("Iniciando envío de correo...")
-                mail.send(raise_exception=True)  # Forzar excepciones para obtener más detalles
+                mail.send(raise_exception=True)
                 _logger.info(f"Estado del correo después del envío: {mail.state}")
                 
                 if mail.state == 'sent':
                     _logger.info("Correo enviado exitosamente")
+                    
+                    # NUEVA LÓGICA: Actualizar estado de evaluaciones a "enviado"
+                    _logger.info("Actualizando estado de evaluaciones a 'enviado'")
+                    for evaluacion in self.evaluacion_ids:
+                        evaluacion.write({'state': 'enviado'})
+                        _logger.info(f"Evaluación {evaluacion.name} actualizada a estado 'enviado'")
+                    
                     return {
                         'type': 'ir.actions.client',
                         'tag': 'display_notification',
                         'params': {
                             'title': 'Éxito',
-                            'message': f'Se han enviado {len(attachments)} reportes al correo {self.email}',
+                            'message': f'Se han enviado {len(attachments)} reportes al correo {self.email} y se actualizaron los estados a "enviado"',
                             'type': 'success',
                             'sticky': False,
                         }
@@ -907,16 +902,6 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                     }
                 }
             
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Éxito',
-                    'message': f'Se han enviado {len(attachments)} reportes al correo {self.email}',
-                    'type': 'success',
-                    'sticky': False,
-                }
-            }
         except Exception as e:
             _logger.error(f"Error al enviar correo: {str(e)}")
             _logger.error(f"Detalles del error: {traceback.format_exc()}")
