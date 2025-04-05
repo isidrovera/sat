@@ -809,11 +809,27 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
         # Enviar correo con todos los reportes adjuntos
         try:
             _logger.info(f"Preparando envío de correo a: {self.email}")
+            
+            # Crear los adjuntos de manera adecuada para mail.mail
+            attachment_ids = []
+            for filename, content in attachments:
+                _logger.info(f"Creando adjunto para correo: {filename}")
+                attachment_data = {
+                    'name': filename,
+                    'datas': base64.b64encode(content),
+                    'res_model': 'mail.mail',
+                    'res_id': False,
+                    'type': 'binary',
+                }
+                attachment = self.env['ir.attachment'].create(attachment_data)
+                attachment_ids.append(attachment.id)
+                _logger.info(f"Adjunto para correo creado con ID: {attachment.id}")
+            
             mail_values = {
                 'subject': self.subject,
                 'body_html': self.body,
                 'email_to': self.email,
-                'attachments': attachments,
+                'attachment_ids': [(6, 0, attachment_ids)],
             }
             
             _logger.info("Creando objeto mail.mail")
