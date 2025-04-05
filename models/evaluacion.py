@@ -810,6 +810,22 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
         try:
             _logger.info(f"Preparando envío de correo a: {self.email}")
             
+            # Verificar servidor de correo saliente
+            mail_server = self.env['ir.mail_server'].search([], limit=1)
+            if not mail_server:
+                _logger.warning("No se encontró un servidor de correo saliente configurado")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Advertencia',
+                        'message': 'No hay un servidor de correo saliente configurado en el sistema. Por favor, configúrelo en Ajustes > Técnico > Correo electrónico > Servidores de correo saliente.',
+                        'type': 'warning',
+                        'sticky': True,
+                    }
+                }
+            _logger.info(f"Usando servidor de correo: {mail_server.name}")
+            
             # Crear los adjuntos de manera adecuada para mail.mail
             attachment_ids = []
             for filename, content in attachments:
@@ -830,13 +846,66 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                 'body_html': self.body,
                 'email_to': self.email,
                 'attachment_ids': [(6, 0, attachment_ids)],
+                'mail_server_id': mail_server.id,  # Especificar el servidor de correo explícitamente
+                'auto_delete': False,  # Mantener el registro del correo para depuración
             }
             
             _logger.info("Creando objeto mail.mail")
             mail = self.env['mail.mail'].create(mail_values)
             _logger.info(f"Enviando correo con ID: {mail.id}")
-            mail.send()
-            _logger.info("Correo enviado exitosamente")
+            
+            # Usar el método send que incluye más logs
+            try:
+                _logger.info("Iniciando envío de correo...")
+                mail.send(raise_exception=True)  # Forzar excepciones para obtener más detalles
+                _logger.info(f"Estado del correo después del envío: {mail.state}")
+                
+                if mail.state == 'sent':
+                    _logger.info("Correo enviado exitosamente")
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': 'Éxito',
+                            'message': f'Se han enviado {len(attachments)} reportes al correo {self.email}',
+                            'type': 'success',
+                            'sticky': False,
+                        }
+                    }
+                else:
+                    _logger.warning(f"El correo no se envió correctamente. Estado: {mail.state}, Detalles: {mail.failure_reason}")
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': 'Advertencia',
+                            'message': f'El correo no pudo enviarse correctamente. Por favor, revise la configuración del servidor de correo. Detalles: {mail.failure_reason or "Sin detalles disponibles"}',
+                            'type': 'warning',
+                            'sticky': True,
+                        }
+                    }
+            except Exception as email_error:
+                _logger.error(f"Error durante el envío del correo: {str(email_error)}")
+                _logger.error(f"Detalles del error: {traceback.format_exc()}")
+                
+                # Verificar si hay problemas con la configuración del servidor
+                if "Connection refused" in str(email_error) or "could not connect" in str(email_error):
+                    error_message = f"No se pudo conectar al servidor de correo. Verifique la configuración (host, puerto, SSL/TLS). Detalles: {str(email_error)}"
+                elif "Authentication failed" in str(email_error) or "authentication" in str(email_error):
+                    error_message = f"Fallo de autenticación en el servidor de correo. Verifique el usuario y contraseña. Detalles: {str(email_error)}"
+                else:
+                    error_message = f"Error al enviar el correo: {str(email_error)}"
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Error',
+                        'message': error_message,
+                        'type': 'danger',
+                        'sticky': True,
+                    }
+                }
             
             return {
                 'type': 'ir.actions.client',
