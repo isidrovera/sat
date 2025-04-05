@@ -5,8 +5,12 @@ import logging
 from datetime import datetime, date, timedelta, time
 import calendar
 import babel
+import base64
 
 _logger = logging.getLogger(__name__)
+
+
+
 
 class EvaluacionPersonal(models.Model):
     _name = 'evaluacion.personal'
@@ -679,3 +683,128 @@ class EvaluacionPersonal(models.Model):
         template = self.env.ref('evaluacion_personal.email_template_nueva_evaluacion', False)
         if template:
             template.send_mail(evaluacion.id, force_send=True)
+    def action_enviar_reportes_masivo(self):
+        """Acción para abrir el asistente de envío masivo de reportes"""
+        return {
+            'name': 'Enviar Reportes por Correo',
+            'type': 'ir.actions.act_window',
+            'res_model': 'evaluacion.personal.envio.masivo',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'active_ids': self.ids,
+            }
+        }
+
+
+
+
+
+class EvaluacionPersonalEnvioMasivo(models.TransientModel):
+    _name = 'evaluacion.personal.envio.masivo'
+    _description = 'Asistente para Envío Masivo de Reportes'
+    
+    email = fields.Char(
+        string='Correo Electrónico',
+        required=True,
+    )
+    
+    subject = fields.Char(
+        string='Asunto',
+        default='Reportes de Evaluación del Personal',
+        required=True,
+    )
+    
+    body = fields.Html(
+        string='Cuerpo del Mensaje',
+        default="""
+            <p>Estimado/a,</p>
+            <p>Adjunto los reportes de evaluación del personal solicitados.</p>
+            <p>Saludos cordiales,</p>
+        """,
+        required=True,
+    )
+    
+    evaluacion_ids = fields.Many2many(
+        'evaluacion.personal',
+        string='Evaluaciones',
+        readonly=True,
+    )
+    
+    @api.model
+    def default_get(self, fields_list):
+        res = super(EvaluacionPersonalEnvioMasivo, self).default_get(fields_list)
+        
+        # Obtener evaluaciones seleccionadas del contexto
+        active_ids = self.env.context.get('active_ids', [])
+        if active_ids:
+            res['evaluacion_ids'] = [(6, 0, active_ids)]
+            
+            # Obtener correo del usuario actual
+            res['email'] = self.env.user.email
+            
+        return res
+    
+    def action_enviar_reportes(self):
+        self.ensure_one()
+        
+        if not self.evaluacion_ids:
+            return {'type': 'ir.actions.act_window_close'}
+        
+        # Lista para almacenar los adjuntos
+        attachments = []
+        
+        # Generar reportes PDF para cada evaluación seleccionada
+        for evaluacion in self.evaluacion_ids:
+            # Generar nombre de archivo
+            filename = f"Evaluacion_{evaluacion.name}_{evaluacion.nombre_usuario}.pdf"
+            
+            # Generar reporte PDF
+            report = self.env.ref('evaluacion_personal.report_evaluacion_personal')
+            pdf_content, _ = report.sudo()._render_qweb_pdf([evaluacion.id])
+            
+            # Crear adjunto
+            attachment_vals = {
+                'name': filename,
+                'datas': base64.b64encode(pdf_content),
+                'res_model': 'evaluacion.personal',
+                'res_id': evaluacion.id,
+                'type': 'binary',
+            }
+            attachment = self.env['ir.attachment'].create(attachment_vals)
+            attachments.append((filename, pdf_content))
+        
+        # Enviar correo con todos los reportes adjuntos
+        try:
+            mail_values = {
+                'subject': self.subject,
+                'body_html': self.body,
+                'email_to': self.email,
+                'attachments': attachments,
+            }
+            
+            mail = self.env['mail.mail'].create(mail_values)
+            mail.send()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Éxito',
+                    'message': f'Se han enviado {len(attachments)} reportes al correo {self.email}',
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+        except Exception as e:
+            _logger.error("Error al enviar correo: %s", str(e))
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Error',
+                    'message': f'Error al enviar el correo: {str(e)}',
+                    'type': 'danger',
+                    'sticky': True,
+                }
+            }

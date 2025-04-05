@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista para el asistente de envío masivo -->
+    <record id="view_evaluacion_personal_envio_masivo_form" model="ir.ui.view">
+        <field name="name">evaluacion.personal.envio.masivo.form</field>
+        <field name="model">evaluacion.personal.envio.masivo</field>
+        <field name="arch" type="xml">
+            <form string="Enviar Reportes por Correo">
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        Se enviarán reportes PDF de las evaluaciones seleccionadas.
+                    </div>
+                    <group>
+                        <field name="email" placeholder="correo@ejemplo.com"/>
+                        <field name="subject"/>
+                    </group>
+                    <group string="Cuerpo del Mensaje">
+                        <field name="body" widget="html" options="{'style-inline': true}"/>
+                    </group>
+                    <group string="Evaluaciones Seleccionadas">
+                        <field name="evaluacion_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_enviar_reportes" string="Enviar" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Acción para el botón en la vista de lista -->
+    <record id="action_evaluacion_personal_envio_masivo" model="ir.actions.act_window">
+        <field name="name">Enviar Reportes por Correo</field>
+        <field name="res_model">evaluacion.personal.envio.masivo</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_evaluacion_personal"/>
+        <field name="binding_view_types">list</field>
+    </record>
+    
+    <!-- Añadir botón a la vista de lista -->
+    <record id="view_evaluacion_personal_tree_inherit" model="ir.ui.view">
+        <field name="name">evaluacion.personal.list.inherit</field>
+        <field name="model">evaluacion.personal</field>
+        <field name="inherit_id" ref="evaluacion_personal.view_evaluacion_personal_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="decoration-muted">state=='borrador'</attribute>
+                <attribute name="decoration-danger">nivel_desempeno=='deficiente'</attribute>
+                <attribute name="decoration-warning">nivel_desempeno=='regular'</attribute>
+            </xpath>
+            <xpath expr="//list" position="inside">
+                <header>
+                    <button name="action_enviar_reportes_masivo" string="Enviar Reportes" type="object" class="btn-primary"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+    
+    <!-- Configuración de seguridad para el nuevo modelo -->
+    <record id="access_evaluacion_personal_envio_masivo" model="ir.model.access">
+        <field name="name">evaluacion.personal.envio.masivo.access</field>
+        <field name="model_id" ref="model_evaluacion_personal_envio_masivo"/>
+        <field name="group_id" ref="base.group_user"/>
+        <field name="perm_read" eval="1"/>
+        <field name="perm_write" eval="1"/>
+        <field name="perm_create" eval="1"/>
+        <field name="perm_unlink" eval="0"/>
+    </record>
+</odoo>
