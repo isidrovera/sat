@@ -755,19 +755,34 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
             # Generar nombre de archivo
             filename = f"Evaluacion_{evaluacion.name}_{evaluacion.nombre_usuario}.pdf"
             
-            # Generar reporte PDF
-            pdf_content, _ = report.sudo()._render_qweb_pdf([evaluacion.id])
-            
-            # Crear adjunto
-            attachment_vals = {
-                'name': filename,
-                'datas': base64.b64encode(pdf_content),
-                'res_model': 'evaluacion.personal',
-                'res_id': evaluacion.id,
-                'type': 'binary',
+            try:
+                # Usar directamente el método render del reporte
+                pdf_content, _ = report.sudo()._render(evaluacion.id)
+                
+                # Crear adjunto
+                attachment_vals = {
+                    'name': filename,
+                    'datas': base64.b64encode(pdf_content),
+                    'res_model': 'evaluacion.personal',
+                    'res_id': evaluacion.id,
+                    'type': 'binary',
+                }
+                attachment = self.env['ir.attachment'].create(attachment_vals)
+                attachments.append((filename, pdf_content))
+            except Exception as e:
+                _logger.error(f"Error al generar el PDF para {evaluacion.name}: {str(e)}")
+        
+        if not attachments:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Error',
+                    'message': 'No se pudo generar ningún reporte PDF',
+                    'type': 'danger',
+                    'sticky': True,
+                }
             }
-            attachment = self.env['ir.attachment'].create(attachment_vals)
-            attachments.append((filename, pdf_content))
         
         # Enviar correo con todos los reportes adjuntos
         try:
@@ -803,4 +818,3 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                     'sticky': True,
                 }
             }
-
