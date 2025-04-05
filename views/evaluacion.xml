@@ -2,12 +2,17 @@
 <odoo>
     <data>
         <!-- Vista de lista -->
-        <record id="view_evaluacion_personal_tree" model="ir.ui.view">
+         <record id="view_evaluacion_personal_tree" model="ir.ui.view">
             <field name="name">evaluacion.personal.tree</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
                 <list default_order="fecha desc" decoration-danger="puntaje_total&lt;60"
-                    decoration-warning="puntaje_total&lt;80" decoration-success="puntaje_total>=80">
+                    decoration-warning="puntaje_total&lt;80" decoration-success="puntaje_total>=80"
+                    decoration-muted="state=='borrador'">
+                    <!-- Añadir el botón de envío aquí -->
+                    <header>
+                        <button name="action_enviar_reportes_masivo" string="Enviar Reportes" type="object" class="btn-primary"/>
+                    </header>
                     <field name="name" />
                     <field name="fecha" />
                     <field name="usuario_id" />

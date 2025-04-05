@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Vista para el asistente de envío masivo -->
+    <!-- Modelo del asistente -->
+    <record id="model_evaluacion_personal_envio_masivo" model="ir.model">
+        <field name="name">Envío Masivo de Evaluaciones</field>
+        <field name="model">evaluacion.personal.envio.masivo</field>
+        <field name="arch" type="xml">
+            <form string="Envío Masivo">
+                <field name="name" class="oe_inline" readonly="1"/>
+            </form>
+        </field>
+        <field name="rule_group_id" ref="base.group_system"/>
+    </record>
+    
+    <!-- Vista del formulario del asistente -->
     <record id="view_evaluacion_personal_envio_masivo_form" model="ir.ui.view">
         <field name="name">evaluacion.personal.envio.masivo.form</field>
         <field name="model">evaluacion.personal.envio.masivo</field>
@@ -29,36 +41,7 @@
         </field>
     </record>
     
-    <!-- Vista de lista personalizada (en lugar de heredar la existente) -->
-    <record id="view_evaluacion_personal_list_con_boton" model="ir.ui.view">
-        <field name="name">evaluacion.personal.list.con.boton</field>
-        <field name="model">evaluacion.personal</field>
-        <field name="arch" type="xml">
-            <list default_order="fecha desc" 
-                  decoration-danger="puntaje_total&lt;60"
-                  decoration-warning="puntaje_total&lt;80" 
-                  decoration-success="puntaje_total>=80"
-                  decoration-muted="state=='borrador'">
-                <header>
-                    <button name="action_enviar_reportes_masivo" string="Enviar Reportes" type="object" class="btn-primary"/>
-                </header>
-                <field name="name" />
-                <field name="fecha" />
-                <field name="usuario_id" />
-                <field name="cantidad_reparaciones" />
-                <field name="objetivo_reparaciones" />
-                <field name="porcentaje_reparaciones" widget="percentage" />
-                <field name="cantidad_tickets" />
-                <field name="objetivo_tickets" />
-                <field name="porcentaje_tickets" widget="percentage" />
-                <field name="puntaje_total" widget="progressbar" />
-                <field name="nivel_desempeno" />
-                <field name="state" widget="badge" />
-            </list>
-        </field>
-    </record>
-
-    <!-- Acción para el botón en la vista de lista -->
+    <!-- Acción para abrir el asistente -->
     <record id="action_evaluacion_personal_envio_masivo" model="ir.actions.act_window">
         <field name="name">Enviar Reportes por Correo</field>
         <field name="res_model">evaluacion.personal.envio.masivo</field>
@@ -68,10 +51,34 @@
         <field name="binding_view_types">list</field>
     </record>
     
-    <!-- Modificar la acción de ventana para usar nuestra vista personalizada -->
-    <record id="evaluacion_personal.action_evaluacion_personal" model="ir.actions.act_window">
-        <field name="view_mode">list,form,kanban,pivot,graph</field>
-        <field name="view_id" ref="view_evaluacion_personal_list_con_boton"/>
+    <!-- Acción del servidor para el botón en la vista de lista -->
+    <record id="ir_action_server_enviar_reportes_masivo" model="ir.actions.server">
+        <field name="name">Enviar Reportes por Correo</field>
+        <field name="model_id" ref="model_evaluacion_personal"/>
+        <field name="binding_model_id" ref="model_evaluacion_personal"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+            action = {
+                'name': 'Enviar Reportes por Correo',
+                'type': 'ir.actions.act_window',
+                'res_model': 'evaluacion.personal.envio.masivo',
+                'view_mode': 'form',
+                'target': 'new',
+                'context': {
+                    'active_ids': env.context.get('active_ids', []),
+                },
+            }
+        </field>
+    </record>
+    
+    <!-- Enlace de menú para acceder al asistente (opcional) -->
+    <record id="menu_action_evaluacion_personal_envio_masivo" model="ir.ui.menu">
+        <field name="name">Enviar Reportes por Correo</field>
+        <field name="parent_id" ref="sat_menu_root"/>
+        <field name="action" ref="action_evaluacion_personal_envio_masivo"/>
+        <field name="sequence" eval="20"/>
+        <field name="groups_id" eval="[(4, ref('base.group_user'))]"/>
     </record>
     
     <!-- Configuración de seguridad para el nuevo modelo -->
