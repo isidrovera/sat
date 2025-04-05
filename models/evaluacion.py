@@ -697,24 +697,12 @@ class EvaluacionPersonal(models.Model):
         }
 
 
-
-
-
 class EvaluacionPersonalEnvioMasivo(models.TransientModel):
     _name = 'evaluacion.personal.envio.masivo'
     _description = 'Asistente para Envío Masivo de Reportes'
     
-    email = fields.Char(
-        string='Correo Electrónico',
-        required=True,
-    )
-    
-    subject = fields.Char(
-        string='Asunto',
-        default='Reportes de Evaluación del Personal',
-        required=True,
-    )
-    
+    email = fields.Char(string='Correo Electrónico', required=True)
+    subject = fields.Char(string='Asunto', default='Reportes de Evaluación del Personal', required=True)
     body = fields.Html(
         string='Cuerpo del Mensaje',
         default="""
@@ -722,27 +710,17 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
             <p>Adjunto los reportes de evaluación del personal solicitados.</p>
             <p>Saludos cordiales,</p>
         """,
-        required=True,
+        required=True
     )
-    
-    evaluacion_ids = fields.Many2many(
-        'evaluacion.personal',
-        string='Evaluaciones',
-        readonly=True,
-    )
+    evaluacion_ids = fields.Many2many('evaluacion.personal', string='Evaluaciones', readonly=True)
     
     @api.model
     def default_get(self, fields_list):
         res = super(EvaluacionPersonalEnvioMasivo, self).default_get(fields_list)
-        
-        # Obtener evaluaciones seleccionadas del contexto
         active_ids = self.env.context.get('active_ids', [])
         if active_ids:
             res['evaluacion_ids'] = [(6, 0, active_ids)]
-            
-            # Obtener correo del usuario actual
             res['email'] = self.env.user.email
-            
         return res
     
     def action_enviar_reportes(self):
@@ -754,13 +732,30 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
         # Lista para almacenar los adjuntos
         attachments = []
         
+        # Obtener el reporte para las evaluaciones
+        report = self.env['ir.actions.report'].search([
+            ('model', '=', 'evaluacion.personal'),
+            ('report_type', '=', 'qweb-pdf')
+        ], limit=1)
+        
+        if not report:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Error',
+                    'message': 'No se encontró un reporte PDF para evaluaciones',
+                    'type': 'danger',
+                    'sticky': True,
+                }
+            }
+        
         # Generar reportes PDF para cada evaluación seleccionada
         for evaluacion in self.evaluacion_ids:
             # Generar nombre de archivo
             filename = f"Evaluacion_{evaluacion.name}_{evaluacion.nombre_usuario}.pdf"
             
             # Generar reporte PDF
-            report = self.env.ref('evaluacion_personal.report_evaluacion_personal')
             pdf_content, _ = report.sudo()._render_qweb_pdf([evaluacion.id])
             
             # Crear adjunto
@@ -808,3 +803,4 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                     'sticky': True,
                 }
             }
+
