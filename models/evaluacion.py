@@ -609,3 +609,70 @@ class EvaluacionPersonal(models.Model):
                 record.nivel_desempeno = 'regular'
             else:
                 record.nivel_desempeno = 'deficiente'
+
+
+    @api.model
+    def _cron_duplicar_evaluaciones_mensuales(self):
+        """
+        Cron para duplicar evaluaciones del mes anterior el último día del mes
+        Sólo copia la evaluación y actualiza la fecha, dejando que los campos calculados
+        se actualicen automáticamente
+        """
+        _logger.info("Iniciando duplicación automática de evaluaciones mensuales")
+        
+        # Verificar si es último día del mes
+        hoy = date.today()
+        ultimo_dia_mes = calendar.monthrange(hoy.year, hoy.month)[1]
+        
+        if hoy.day == ultimo_dia_mes:
+            # Obtener el mes anterior
+            mes_anterior_inicio = hoy.replace(day=1) - relativedelta(months=1)
+            mes_anterior_fin = hoy.replace(day=1) - relativedelta(days=1)
+            
+            # Buscar todas las evaluaciones del mes anterior que estén finalizadas
+            evaluaciones_anteriores = self.search([
+                ('fecha', '>=', mes_anterior_inicio),
+                ('fecha', '<=', mes_anterior_fin),
+                ('state', '=', 'finalizado')
+            ])
+            
+            for evaluacion in evaluaciones_anteriores:
+                # Verificar si ya existe una evaluación para este técnico en el mes actual
+                existe_evaluacion = self.search_count([
+                    ('usuario_id', '=', evaluacion.usuario_id.id),
+                    ('fecha', '>=', hoy.replace(day=1)),
+                    ('fecha', '<=', hoy)
+                ])
+                
+                if not existe_evaluacion:
+                    # Duplicar la evaluación
+                    nueva_evaluacion = evaluacion.copy({
+                        'name': 'New',  # El secuencial se generará automáticamente
+                        'fecha': hoy,
+                        'state': 'borrador',
+                        # No copiar campos calculados
+                        'cantidad_reparaciones': False,
+                        'cantidad_tickets': False,
+                        'porcentaje_reparaciones': False,
+                        'porcentaje_tickets': False,
+                        'puntaje_objetivos': False,
+                        'puntaje_desempeno': False,
+                        'puntaje_total': False,
+                        'nivel_desempeno': False,
+                        'fortalezas': False,
+                        'areas_mejora': False,
+                        'plan_accion': False
+                    })
+                    
+                    _logger.info(f"Duplicada evaluación automática para {evaluacion.usuario_id.name}")
+                    
+                    # Notificar al evaluador
+                    self._notificar_evaluador(nueva_evaluacion)
+            
+            _logger.info("Finalizada duplicación automática de evaluaciones mensuales")
+    
+    def _notificar_evaluador(self, evaluacion):
+        """Notifica al evaluador sobre la nueva evaluación pendiente"""
+        template = self.env.ref('evaluacion_personal.email_template_nueva_evaluacion', False)
+        if template:
+            template.send_mail(evaluacion.id, force_send=True)
