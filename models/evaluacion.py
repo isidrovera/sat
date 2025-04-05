@@ -6,6 +6,7 @@ from datetime import datetime, date, timedelta, time
 import calendar
 import babel
 import base64
+import traceback
 
 _logger = logging.getLogger(__name__)
 
@@ -716,29 +717,40 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
     
     @api.model
     def default_get(self, fields_list):
+        _logger.info("Iniciando default_get en EvaluacionPersonalEnvioMasivo")
         res = super(EvaluacionPersonalEnvioMasivo, self).default_get(fields_list)
         active_ids = self.env.context.get('active_ids', [])
         if active_ids:
+            _logger.info(f"Active IDs encontrados: {active_ids}")
             res['evaluacion_ids'] = [(6, 0, active_ids)]
             res['email'] = self.env.user.email
+            _logger.info(f"Email del usuario actual: {self.env.user.email}")
+        else:
+            _logger.warning("No se encontraron IDs activos en el contexto")
         return res
     
     def action_enviar_reportes(self):
+        _logger.info("Iniciando action_enviar_reportes")
         self.ensure_one()
         
         if not self.evaluacion_ids:
+            _logger.warning("No hay evaluaciones seleccionadas para enviar")
             return {'type': 'ir.actions.act_window_close'}
+        
+        _logger.info(f"Preparando envío para {len(self.evaluacion_ids)} evaluaciones")
         
         # Lista para almacenar los adjuntos
         attachments = []
         
         # Obtener el reporte para las evaluaciones
+        _logger.info("Buscando reporte PDF para evaluaciones")
         report = self.env['ir.actions.report'].search([
             ('model', '=', 'evaluacion.personal'),
             ('report_type', '=', 'qweb-pdf')
         ], limit=1)
         
         if not report:
+            _logger.error("No se encontró un reporte PDF para evaluaciones")
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -750,14 +762,19 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                 }
             }
         
+        _logger.info(f"Reporte encontrado: {report.name}, report_name: {report.report_name}")
+        
         # Generar reportes PDF para cada evaluación seleccionada
         for evaluacion in self.evaluacion_ids:
             # Generar nombre de archivo
             filename = f"Evaluacion_{evaluacion.name}_{evaluacion.nombre_usuario}.pdf"
+            _logger.info(f"Procesando evaluación {evaluacion.name}, generando archivo: {filename}")
             
             try:
-                # Usar directamente el método render del reporte
-                pdf_content, _ = report.sudo()._render(evaluacion.id)
+                # Usar correctamente el método render del reporte
+                _logger.info(f"Intentando generar PDF para evaluación ID: {evaluacion.id}")
+                pdf_content, report_format = report.sudo()._render(report.report_name, res_ids=[evaluacion.id])
+                _logger.info(f"PDF generado exitosamente para {evaluacion.name}, tamaño: {len(pdf_content)} bytes, formato: {report_format}")
                 
                 # Crear adjunto
                 attachment_vals = {
@@ -768,11 +785,14 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                     'type': 'binary',
                 }
                 attachment = self.env['ir.attachment'].create(attachment_vals)
+                _logger.info(f"Adjunto creado con ID: {attachment.id}")
                 attachments.append((filename, pdf_content))
             except Exception as e:
                 _logger.error(f"Error al generar el PDF para {evaluacion.name}: {str(e)}")
+                _logger.error(f"Detalles del error: {traceback.format_exc()}")
         
         if not attachments:
+            _logger.error("No se pudo generar ningún reporte PDF")
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -784,8 +804,11 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                 }
             }
         
+        _logger.info(f"Se generaron {len(attachments)} adjuntos correctamente")
+        
         # Enviar correo con todos los reportes adjuntos
         try:
+            _logger.info(f"Preparando envío de correo a: {self.email}")
             mail_values = {
                 'subject': self.subject,
                 'body_html': self.body,
@@ -793,8 +816,11 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                 'attachments': attachments,
             }
             
+            _logger.info("Creando objeto mail.mail")
             mail = self.env['mail.mail'].create(mail_values)
+            _logger.info(f"Enviando correo con ID: {mail.id}")
             mail.send()
+            _logger.info("Correo enviado exitosamente")
             
             return {
                 'type': 'ir.actions.client',
@@ -807,7 +833,8 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                 }
             }
         except Exception as e:
-            _logger.error("Error al enviar correo: %s", str(e))
+            _logger.error(f"Error al enviar correo: {str(e)}")
+            _logger.error(f"Detalles del error: {traceback.format_exc()}")
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
