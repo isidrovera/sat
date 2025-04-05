@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 from dateutil.relativedelta import relativedelta
-from datetime import datetime, time
-import babel
+import logging
+from datetime import datetime, date, timedelta, time
 import calendar
+import babel
+
+_logger = logging.getLogger(__name__)
 
 class EvaluacionPersonal(models.Model):
     _name = 'evaluacion.personal'
