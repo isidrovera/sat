@@ -5,7 +5,7 @@
         <field name="name">evaluacion.personal.envio.masivo.form</field>
         <field name="model">evaluacion.personal.envio.masivo</field>
         <field name="arch" type="xml">
-            <form string="Enviar Reportes por Correo">
+            <form>
                 <sheet>
                     <div class="alert alert-info" role="alert">
                         Se enviarán reportes PDF de las evaluaciones seleccionadas.
@@ -14,16 +14,16 @@
                         <field name="email" placeholder="correo@ejemplo.com"/>
                         <field name="subject"/>
                     </group>
-                    <group string="Cuerpo del Mensaje">
+                    <group>
                         <field name="body" widget="html" options="{'style-inline': true}"/>
                     </group>
-                    <group string="Evaluaciones Seleccionadas">
-                        <field name="evaluacion_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                    <group>
+                        <field name="evaluacion_ids" widget="many2many_tags" options="{'no_create': true}"/>
                     </group>
                 </sheet>
                 <footer>
                     <button name="action_enviar_reportes" string="Enviar" type="object" class="btn-primary"/>
-                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
                 </footer>
             </form>
         </field>
@@ -40,21 +40,21 @@
     </record>
     
     <!-- Añadir botón a la vista de lista -->
-    <record id="view_evaluacion_personal_tree_inherit" model="ir.ui.view">
+    <record id="view_evaluacion_personal_list_inherit" model="ir.ui.view">
         <field name="name">evaluacion.personal.list.inherit</field>
         <field name="model">evaluacion.personal</field>
-        <field name="inherit_id" ref="evaluacion_personal.view_evaluacion_personal_tree"/>
+        <field name="inherit_id" ref="evaluacion_personal.evaluacion_personal_list_view"/>
         <field name="arch" type="xml">
-            <xpath expr="//list" position="attributes">
+            <list position="attributes">
                 <attribute name="decoration-muted">state=='borrador'</attribute>
                 <attribute name="decoration-danger">nivel_desempeno=='deficiente'</attribute>
                 <attribute name="decoration-warning">nivel_desempeno=='regular'</attribute>
-            </xpath>
-            <xpath expr="//list" position="inside">
+            </list>
+            <list position="inside">
                 <header>
                     <button name="action_enviar_reportes_masivo" string="Enviar Reportes" type="object" class="btn-primary"/>
                 </header>
-            </xpath>
+            </list>
         </field>
     </record>
     
