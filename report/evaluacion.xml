@@ -116,9 +116,13 @@
 
                         <!-- Encabezado -->
                         <div class="report-header">
+                            <div class="eval-info">
+                                <i class="fa fa-list-ol"></i>
+                                <span>Evaluación N°: <t t-esc="o.name" /></span>
+                            </div>
                             <div class="date-info">
                                 <i class="fa fa-calendar"></i>
-                                <span>Evaluación N°: <t t-esc="o.name" /></span>
+                                <span>Fecha: <t t-esc="o.fecha" t-options='{"widget": "date"}'/></span>
                             </div>
                             <div class="user-info">
                                 <i class="fa fa-user"></i>
