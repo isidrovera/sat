@@ -40,10 +40,10 @@
     </record>
     
     <!-- Añadir botón a la vista de lista -->
-    <record id="view_evaluacion_personal_list_inherit" model="ir.ui.view">
-        <field name="name">evaluacion.personal.list.inherit</field>
+    <record id="view_evaluacion_personal_tree_inherit" model="ir.ui.view">
+        <field name="name">evaluacion.personal.tree.inherit</field>
         <field name="model">evaluacion.personal</field>
-        <field name="inherit_id" ref="evaluacion_personal.evaluacion_personal_list_view"/>
+        <field name="inherit_id" ref="evaluacion_personal.view_evaluacion_personal_tree"/>
         <field name="arch" type="xml">
             <list position="attributes">
                 <attribute name="decoration-muted">state=='borrador'</attribute>
