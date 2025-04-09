@@ -292,14 +292,14 @@
                             <div class="d-flex align-items-center mb-2">
                                 <i class="fa fa-print text-primary me-2" title="Modelo"/>
                                 <span class="text-muted me-1">Modelo:</span>
-                                <field name="maquina_id" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"/>
+                                <field name="maquina_id" />
                             </div>
 
                             <!-- Serie -->
                             <div class="d-flex align-items-center mb-2">
                                 <i class="fa fa-qrcode text-secondary me-2" title="Serie"/>
                                 <span class="text-muted me-1">Serie:</span>
-                                <field name="serie_id" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"/>
+                                <field name="serie_id" />
                             </div>
 
                             <!-- Contómetro -->
