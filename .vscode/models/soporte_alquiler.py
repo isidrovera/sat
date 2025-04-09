@@ -225,7 +225,7 @@ class ticket_alquiler(models.Model):
 
     
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
-                                         ("mantenimiento_preventivo", "Mantenimeinto preventivo"), (
+                                         ("mantenimiento_preventivo", "Mantenimiento preventivo"), (
                                              "mantenimiento_correctivo", "Mantenimiento correctivo"),
                                          ("cambio_repuestos", "Cambio de repuestos"), ("remoto", "Asistencia remoto"),
                                          ("revision", "Revisión"), ("dejar_toner", "Dejar Toner")],

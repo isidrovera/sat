@@ -83,8 +83,8 @@
                                 <field name="tipo_id" invisible="1" />
                                 <field name="tipo_machine" />
                                 <field name="marca" />
-                                <field name="maquina_id" domain="[('estado_ventas_id', '=', 'sin_revisar')]" options="{'no_create': True}" readonly="estado_id == 'en_revision'" />
-                                <field name="serie_id" />
+                                <field name="maquina_id" domain="[('estado_ventas_id', '=', 'sin_revisar')]" options="{'no_create': True}" readonly="estado_id == 'en_revision'" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;" />
+                                <field name="serie_id" readonly="True" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"/>
                                 <field name="contometrok_id" />
                                 <field name="contometro_inicial" invisible="True"/>
                                 <field name="nombre_maquina" invisible='True' />
