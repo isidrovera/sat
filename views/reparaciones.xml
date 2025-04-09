@@ -206,8 +206,8 @@
                     <field name="name" />
                     <field name="cliente_id" widget="many2one_avatar" />
                     <field name="marca" />
-                    <field name="maquina_id" />
-                    <field name="serie_id" />
+                    <field name="maquina_id" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"/>
+                    <field name="serie_id" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"/>
                     <field name="prioridad" widget="badge" />
                     <field name="tipo_revision" widget="badge" />
                     <field name="ubicacion_id" widget="badge" />
@@ -292,14 +292,14 @@
                             <div class="d-flex align-items-center mb-2">
                                 <i class="fa fa-print text-primary me-2" title="Modelo"/>
                                 <span class="text-muted me-1">Modelo:</span>
-                                <field name="maquina_id"/>
+                                <field name="maquina_id" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"/>
                             </div>
 
                             <!-- Serie -->
                             <div class="d-flex align-items-center mb-2">
                                 <i class="fa fa-qrcode text-secondary me-2" title="Serie"/>
                                 <span class="text-muted me-1">Serie:</span>
-                                <field name="serie_id"/>
+                                <field name="serie_id" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"/>
                             </div>
 
                             <!-- Contómetro -->
