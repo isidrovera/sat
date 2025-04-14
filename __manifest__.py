@@ -40,6 +40,7 @@
         'data/print.xml',
         'data/cron_data.xml',
         'data/cron_evaluador_diario.xml',
+        'data/cron_tickets.xml',
         'data/ir.secuence_incidencia.xml',
         'data/plantillas_correo.xml',
         'data/correos_reparaciones.xml',
