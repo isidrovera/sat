@@ -317,11 +317,11 @@ class ticket_alquiler(models.Model):
                         "Debe ingresar el valor ACTUAL del contómetro.")
                     )
 
-            # Validar contómetro scanner
-            if previous_record and current_scanner <= prev_scanner:
+            # Validar contómetro scanner - MODIFICADO para permitir valores iguales o mayores
+            if previous_record and current_scanner < prev_scanner:
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO SCANNER ES INCORRECTO\n\n"
-                    "Debe ingresar un valor MAYOR que el último valor registrado  para esta máquina."
+                    "Debe ingresar un valor IGUAL O MAYOR que el último valor registrado para esta máquina."
                     .format(prev_scanner))
                 )
 
@@ -331,7 +331,6 @@ class ticket_alquiler(models.Model):
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
                     "Debe ingresar el valor ACTUAL del contómetro.")
                 )
-
 
     
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
@@ -451,6 +450,116 @@ class ticket_alquiler(models.Model):
             'target': 'current',
         }
 
+    # Nuevo campo para controlar cuando se envió la última notificación
+    last_pending_notification = fields.Datetime(string="Última notificación de pendiente", readonly=True)
+    
+    # Método programado para ejecutarse diariamente (se configura en data XML)
+    @api.model
+    def _cron_notificar_tickets_pendientes(self):
+        """
+        Método cron para notificar a los técnicos sobre tickets pendientes por finalizar.
+        Se ejecuta automáticamente según la programación definida.
+        """
+        _logger.info("Iniciando verificación de tickets pendientes por finalizar")
+        
+        # Agrupar tickets pendientes por técnico
+        tecnicos_con_tickets = {}
+        
+        # Buscar todos los tickets en proceso
+        tickets_pendientes = self.search([
+            ('estado', '=', 'proceso'),
+            ('agenda', '<', fields.Datetime.now())  # Solo tickets cuya fecha de visita ya pasó
+        ])
+        
+        # Agrupar por técnico
+        for ticket in tickets_pendientes:
+            if not ticket.responsable:
+                continue
+                
+            tech_id = ticket.responsable.id
+            if tech_id not in tecnicos_con_tickets:
+                tecnicos_con_tickets[tech_id] = {
+                    'tecnico': ticket.responsable,
+                    'tickets': []
+                }
+            
+            tecnicos_con_tickets[tech_id]['tickets'].append(ticket)
+        
+        # Enviar notificaciones a cada técnico
+        for tech_data in tecnicos_con_tickets.values():
+            self._enviar_notificacion_pendientes(tech_data['tecnico'], tech_data['tickets'])
+            
+        return True
+    
+    def _enviar_notificacion_pendientes(self, tecnico, tickets):
+        """
+        Envía notificación por WhatsApp al técnico sobre sus tickets pendientes.
+        
+        Args:
+            tecnico: objeto res.users del técnico
+            tickets: lista de tickets pendientes
+        """
+        if not tecnico or not tickets:
+            return False
+            
+        # Verificar si el técnico tiene número de teléfono limpio
+        phone_number = None
+        for ticket in tickets:
+            if ticket.responsable_mobile_clean and ticket.responsable_mobile_clean != 'NA':
+                phone_number = ticket.responsable_mobile_clean
+                break
+                
+        if not phone_number:
+            _logger.warning(f"No se encontró número de teléfono válido para el técnico {tecnico.name}")
+            return False
+            
+        # Construir mensaje
+        cantidad_tickets = len(tickets)
+        lista_tickets = "\n".join([
+            f"• Ticket: {t.name} - Cliente: {t.partner_id.name or 'NA'} - Fecha: {t.agenda_local or 'NA'}"
+            for t in tickets[:5]  # Mostrar máximo 5 tickets para no hacer el mensaje muy largo
+        ])
+        
+        if cantidad_tickets > 5:
+            lista_tickets += f"\n... y {cantidad_tickets - 5} tickets más."
+        
+        mensaje = f"""
+⚠️ *ALERTA DE TICKETS PENDIENTES* ⚠️
+
+Hola *{tecnico.name}*,
+
+Tienes *{cantidad_tickets} tickets* en proceso que necesitan ser finalizados:
+
+{lista_tickets}
+
+Por favor, finaliza estos tickets lo antes posible. 
+        
+*IMPORTANTE:* Si no cierras estos tickets a tiempo, se notificará a gerencia y no podrás solicitar movilidad hasta regularizar tu situación.
+
+Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finalizar".
+"""
+        
+        # Enviar mensaje por WhatsApp
+        try:
+            for ticket in tickets:
+                # Usar el primer ticket para enviar el mensaje
+                resultado = ticket.send_whatsapp_message(phone_number, mensaje)
+                # Registrar la notificación en el log de los tickets
+                for t in tickets:
+                    t.write({'last_pending_notification': fields.Datetime.now()})
+                    t.message_post(
+                        body=f"Notificación automática enviada al técnico sobre tickets pendientes por finalizar. "
+                             f"Total: {cantidad_tickets} ticket(s)."
+                    )
+                
+                _logger.info(f"Mensaje de alerta enviado al técnico {tecnico.name} sobre {cantidad_tickets} tickets pendientes")
+                break
+                
+            return True
+        except Exception as e:
+            _logger.error(f"Error al enviar notificación de tickets pendientes: {str(e)}")
+            return False
+
     def action_finalizar(self):
         # Deshabilitar las reglas de acceso temporalmente para evitar restricciones
         self = self.sudo()
@@ -498,9 +607,12 @@ class ticket_alquiler(models.Model):
                 'fecha_inicio': ''
             })
 
-        # Cambiar el estado del ticket a 'finalizado'
-        self.write({'estado': 'finalizado'})
-
+        
+        # Cambiar el estado del ticket a 'finalizado' y restablecer la notificación pendiente
+        self.write({
+            'estado': 'finalizado',
+            'last_pending_notification': False  # Restablecer el campo de notificación
+        })
         # Redirigir a la vista de lista de tickets después de finalizar
         return {
             'type': 'ir.actions.act_window',
