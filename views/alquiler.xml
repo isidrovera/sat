@@ -359,106 +359,111 @@
     <field name="name">Alquiler.tree</field>
     <field name="model">alquiler</field>
     <field name="arch" type="xml">
-        <list string="Alquiler List" default_order="estado_alquiler_id" 
+        <list string="Alquiler List" 
               decoration-bf="fecha_recurrente and fecha_recurrente &lt;= current_date"
-              decoration-danger="estado_alquiler_id == 'con_problemas'" 
+              decoration-danger="estado_alquiler_id in ('con_problemas', 'partes')" 
               decoration-warning="estado_alquiler_id == 'sin_revisar'" 
               decoration-info="estado_alquiler_id == 'alquilada'" 
               decoration-success="estado_alquiler_id == 'lista'"
               decoration-muted="estado_alquiler_id == 'vendida'">
             
-            <field name="cliente_id" widget="many2one_avatar" />
-            <field name="name" string="Modelo" />
-            <field name="serie" />
-            <field name="marca" />
-            
-            <field name="estado_alquiler_id" string="Estado" widget="badge"
-                   decoration-danger="estado_alquiler_id == 'con_problemas'" 
-                   decoration-warning="estado_alquiler_id == 'sin_revisar'" 
-                   decoration-info="estado_alquiler_id == 'alquilada'" 
-                   decoration-success="estado_alquiler_id == 'lista'"
-                   decoration-muted="estado_alquiler_id == 'vendida'"
-                   decoration-dark="estado_alquiler_id == 'partes'"
-                   decoration-primary="estado_alquiler_id == 'externo'" />
-            
-            <field name="fecha_recurrente" string="Próximo Mantenimiento" widget="remaining_days" 
-                   decoration-danger="fecha_recurrente and fecha_recurrente &lt;= current_date" />
-            
-            <field name="estado_programacion" widget="state_selection" 
-                   options="{
-                       'state_colors': {
-                           'pendiente': 'warning',
-                           'confirmado': 'success',
-                           'reprogramado': 'danger'
-                       }
-                   }"/>
-            
-            <field name="direccion" optional="show" />
-            <field name="contacto_id" optional="hide" />
-            <field name="celular" widget="phone" optional="show" />
+            <field name="cliente_id" class="oe_avatar" />
             <field name="tipo_maquina_id" optional="hide" />
             <field name="tipo_maquina" optional="hide" />
+            <field name="marca" optional="hide" />
+            <field name="name" string="Modelo" />
+            <field name="serie" />
+            <field name="direccion" optional="hide" />
+            <field name="contacto_id" optional="hide" />
+            <field name="celular" widget="phone" optional="hide" />
+            <field name="fecha_recurrente" string="Mantenimiento" widget="remaining_days" 
+                   decoration-danger="fecha_recurrente and fecha_recurrente &lt;= current_date" />
             
-            <!-- Estadísticas en la lista -->
-            <field name="ticket_count" string="Tickets" sum="Total Tickets"/>
-            <field name="pedidos_count" string="Pedidos" sum="Total Pedidos"/>
-            <field name="repuestos_count" string="Repuestos" sum="Total Repuestos"/>
+            <field name="estado_alquiler_id" string="Estado" widget="badge"
+                decoration-muted="estado_alquiler_id == 'sin_revisar'"
+                decoration-info="estado_alquiler_id == 'alquilada'"
+                decoration-success="estado_alquiler_id == 'lista'"
+                decoration-danger="estado_alquiler_id in ('con_problemas', 'partes')"
+                decoration-warning="estado_alquiler_id == 'vendida'"
+                decoration-primary="estado_alquiler_id == 'externo'" />
             
-            <!-- Botones de acción -->
-            <button string="" type="object" name="generate_qr_code" icon="fa-qrcode" class="text-primary"/>
-            <button string="" type="object" name="get_ticket" icon="fa-wrench" class="text-info"/>
-            <button string="" type="object" name="get_pedidos" icon="fa-shopping-cart" class="text-success"/>
-            <button string="" type="object" name="get_repuestos" icon="fa-cogs" class="text-warning"/>
-            <button string="" name="create_ticket" type="object" icon="fa-plus-circle" class="text-danger"/>
+            <field name="estado_programacion" 
+                widget="state_selection" 
+                class="d-block"
+                options="{
+                    'state_colors': {
+                        'pendiente': 'warning',
+                        'confirmado': 'success',
+                        'reprogramado': 'danger'
+                    }
+                }"/>
+            
+            <field name="qr_image" widget="binary" />
+            <field name="ticket_count" string="Tickets" sum="Total Tickets" optional="show"/>
+            <field name="pedidos_count" string="Pedidos" sum="Total Pedidos" optional="show"/>
+            <field name="repuestos_count" string="Repuestos" sum="Total Repuestos" optional="show"/>
+            
+            <button string=" " type="object" name="generate_qr_code" icon="fa-qrcode" class="text-primary" />
+            <button class="oe_stat_button text-info" type="object" name="get_ticket" icon="fa-wrench">
+            </button>
+            <button class="oe_stat_button text-success" type="object" name="get_pedidos"
+                icon="fa-shopping-cart">
+            </button>
+            <button class="oe_stat_button text-warning" type="object" name="get_repuestos" icon="fa-cogs">
+            </button>
         </list>
     </field>
 </record>
+        <record id="alquiler_andes_search_view" model="ir.ui.view">
+            <field name="name">alquiler_andes.search</field>
+            <field name="model">alquiler</field>
+            <field name="arch" type="xml">
+                <search string="alquiler" position="inside">
+                    <group>
+                        <!--Este
+                        son filtros rapidos-->
+                        <separator />
+                        <filter name="estado_alquiler_id" string="Sin revisar"
+                            domain="[('estado_alquiler_id', '=', 'sin_revisar')]" />
+                        <separator />
+                        <filter name="estado_alquiler_id" string="Lista"
+                            domain="[('estado_alquiler_id', '=', 'lista')]" />
+                        <separator />
+                        <filter name="estado_alquiler_id" string="Revisada"
+                            domain="[('estado_alquiler_id', '=', 'revisada')]" />
+                        <separator />
+                        <filter name="estado_alquiler_id" string="Alquilada"
+                            domain="[('estado_alquiler_id', '=', 'alquilada')]" />
+                        <separator />
+                        <filter name="estado_alquiler_id" string="Con problemas"
+                            domain="[('estado_alquiler_id', '=', 'con_problemas')]" />
+                        <separator />
+                        <filter name="estado_alquiler_id" string="De partes"
+                            domain="[('estado_alquiler_id', '=', 'partes')]" />
+                        <separator />
+                        <filter name="estado_alquiler_id" string="Externo"
+                            domain="[('estado_alquiler_id', '=', 'externo')]" />
+                        <separator />
+                        <filter name="estado_alquiler_id" string="Vendida"
+                            domain="[('estado_alquiler_id', '=', 'vendida')]" />
+                        <separator />
 
-<!-- Vista de búsqueda mejorada -->
-<record id="alquiler_andes_search_view" model="ir.ui.view">
-    <field name="name">alquiler_andes.search</field>
-    <field name="model">alquiler</field>
-    <field name="arch" type="xml">
-        <search string="Alquiler">
-            <!-- Búsqueda general -->
-            <field name="serie" string="Serie"/>
-            <field name="cliente_id" string="Cliente"/>
-            <field name="marca" string="Marca"/>
-            <field name="name" string="Modelo"/>
-            <field name="direccion" string="Dirección"/>
-            
-            <!-- Filtros modernos -->
-            <filter name="mantenimiento_hoy" string="Mantenimiento Hoy" 
-                    domain="[('fecha_recurrente', '=', context_today())]"/>
-            <filter name="mantenimiento_pendiente" string="Mantenimiento Pendiente" 
-                    domain="[('fecha_recurrente', '&lt;=', context_today())]"/>
-            
-            <separator/>
-            <filter name="sin_revisar" string="Sin revisar" domain="[('estado_alquiler_id', '=', 'sin_revisar')]"/>
-            <filter name="lista" string="Lista" domain="[('estado_alquiler_id', '=', 'lista')]"/>
-            <filter name="alquilada" string="Alquilada" domain="[('estado_alquiler_id', '=', 'alquilada')]"/>
-            <filter name="con_problemas" string="Con problemas" domain="[('estado_alquiler_id', '=', 'con_problemas')]"/>
-            <filter name="partes" string="De partes" domain="[('estado_alquiler_id', '=', 'partes')]"/>
-            <filter name="externo" string="Externo" domain="[('estado_alquiler_id', '=', 'externo')]"/>
-            <filter name="vendida" string="Vendida" domain="[('estado_alquiler_id', '=', 'vendida')]"/>
-            
-            <!-- Agrupamiento -->
-            <group expand="0" string="Agrupar por">
-                <filter name="group_by_estado" string="Estado" context="{'group_by': 'estado_alquiler_id'}"/>
-                <filter name="group_by_cliente" string="Cliente" context="{'group_by': 'cliente_id'}"/>
-                <filter name="group_by_marca" string="Marca" context="{'group_by': 'marca'}"/>
-                <filter name="group_by_modelo" string="Modelo" context="{'group_by': 'name'}"/>
-                <filter name="group_by_fecha_mantenimiento" string="Fecha Mantenimiento" context="{'group_by': 'fecha_recurrente:month'}"/>
-            </group>
-            
-            <!-- Favoritos predefinidos -->
-            <searchpanel>
-                <field name="estado_alquiler_id" string="Estado" enable_counters="1" icon="fa-tasks"/>
-                <field name="marca" string="Marca" enable_counters="1" icon="fa-tag"/>
-            </searchpanel>
-        </search>
-    </field>
-</record>
+
+                        <!--Este
+                        es agrupar rapido-->
+                        <filter name="estado_alquiler_id" string="Estado"
+                            context="{'group_by': 'estado_alquiler_id'}" />
+                    </group>
+                    <field name="serie" />
+                    <field name="cliente_id" />
+                    <field name="marca" />
+                    <field name="name" />
+                    
+                </search>
+
+
+            </field>
+        </record>
         <record id="alquiler_view_calendar" model="ir.ui.view">
             <field name="name">alquiler.calendar</field>
             <field name="model">alquiler</field>
