@@ -413,8 +413,7 @@
             </button>
         </list>
     </field>
-</record>
-        <record id="alquiler_andes_search_view" model="ir.ui.view">
+<record id="alquiler_andes_search_view" model="ir.ui.view">
     <field name="name">alquiler_andes.search</field>
     <field name="model">alquiler</field>
     <field name="arch" type="xml">
@@ -464,9 +463,9 @@
                     context="{'group_by': 'marca'}" />
             </group>
             
+            <!-- Solo incluimos el panel con estado_alquiler_id que es una selección -->
             <searchpanel>
-                <field name="estado_alquiler_id" string="Estado" enable_counters="1" icon="fa-tasks"/>
-                <field name="marca" string="Marca" enable_counters="1" icon="fa-tag"/>
+                <field name="estado_alquiler_id" string="Estado" enable_counters="1"/>
             </searchpanel>
         </search>
     </field>
