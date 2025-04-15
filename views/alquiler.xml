@@ -415,55 +415,63 @@
     </field>
 </record>
         <record id="alquiler_andes_search_view" model="ir.ui.view">
-            <field name="name">alquiler_andes.search</field>
-            <field name="model">alquiler</field>
-            <field name="arch" type="xml">
-                <search string="alquiler" position="inside">
-                    <group>
-                        <!--Este
-                        son filtros rapidos-->
-                        <separator />
-                        <filter name="estado_alquiler_id" string="Sin revisar"
-                            domain="[('estado_alquiler_id', '=', 'sin_revisar')]" />
-                        <separator />
-                        <filter name="estado_alquiler_id" string="Lista"
-                            domain="[('estado_alquiler_id', '=', 'lista')]" />
-                        <separator />
-                        <filter name="estado_alquiler_id" string="Revisada"
-                            domain="[('estado_alquiler_id', '=', 'revisada')]" />
-                        <separator />
-                        <filter name="estado_alquiler_id" string="Alquilada"
-                            domain="[('estado_alquiler_id', '=', 'alquilada')]" />
-                        <separator />
-                        <filter name="estado_alquiler_id" string="Con problemas"
-                            domain="[('estado_alquiler_id', '=', 'con_problemas')]" />
-                        <separator />
-                        <filter name="estado_alquiler_id" string="De partes"
-                            domain="[('estado_alquiler_id', '=', 'partes')]" />
-                        <separator />
-                        <filter name="estado_alquiler_id" string="Externo"
-                            domain="[('estado_alquiler_id', '=', 'externo')]" />
-                        <separator />
-                        <filter name="estado_alquiler_id" string="Vendida"
-                            domain="[('estado_alquiler_id', '=', 'vendida')]" />
-                        <separator />
+    <field name="name">alquiler_andes.search</field>
+    <field name="model">alquiler</field>
+    <field name="arch" type="xml">
+        <search string="alquiler">
+            <field name="serie" />
+            <field name="cliente_id" />
+            <field name="marca" />
+            <field name="name" />
+            
+            <filter name="mantenimiento_hoy" string="Mantenimiento Hoy" 
+                    domain="[('fecha_recurrente', '=', context_today())]"/>
+            <filter name="mantenimiento_pendiente" string="Mantenimiento Pendiente" 
+                    domain="[('fecha_recurrente', '&lt;=', context_today())]"/>
+            
+            <separator />
+            <filter name="estado_sin_revisar" string="Sin revisar"
+                domain="[('estado_alquiler_id', '=', 'sin_revisar')]" />
+            <separator />
+            <filter name="estado_lista" string="Lista"
+                domain="[('estado_alquiler_id', '=', 'lista')]" />
+            <separator />
+            <filter name="estado_revisada" string="Revisada"
+                domain="[('estado_alquiler_id', '=', 'revisada')]" />
+            <separator />
+            <filter name="estado_alquilada" string="Alquilada"
+                domain="[('estado_alquiler_id', '=', 'alquilada')]" />
+            <separator />
+            <filter name="estado_con_problemas" string="Con problemas"
+                domain="[('estado_alquiler_id', '=', 'con_problemas')]" />
+            <separator />
+            <filter name="estado_partes" string="De partes"
+                domain="[('estado_alquiler_id', '=', 'partes')]" />
+            <separator />
+            <filter name="estado_externo" string="Externo"
+                domain="[('estado_alquiler_id', '=', 'externo')]" />
+            <separator />
+            <filter name="estado_vendida" string="Vendida"
+                domain="[('estado_alquiler_id', '=', 'vendida')]" />
+            <separator />
 
+            <group>
+                <filter name="group_by_estado" string="Estado"
+                    context="{'group_by': 'estado_alquiler_id'}" />
+                <filter name="group_by_cliente" string="Cliente" 
+                    context="{'group_by': 'cliente_id'}" />
+                <filter name="group_by_marca" string="Marca" 
+                    context="{'group_by': 'marca'}" />
+            </group>
+            
+            <searchpanel>
+                <field name="estado_alquiler_id" string="Estado" enable_counters="1" icon="fa-tasks"/>
+                <field name="marca" string="Marca" enable_counters="1" icon="fa-tag"/>
+            </searchpanel>
+        </search>
+    </field>
+</record>
 
-                        <!--Este
-                        es agrupar rapido-->
-                        <filter name="estado_alquiler_id" string="Estado"
-                            context="{'group_by': 'estado_alquiler_id'}" />
-                    </group>
-                    <field name="serie" />
-                    <field name="cliente_id" />
-                    <field name="marca" />
-                    <field name="name" />
-                    
-                </search>
-
-
-            </field>
-        </record>
         <record id="alquiler_view_calendar" model="ir.ui.view">
             <field name="name">alquiler.calendar</field>
             <field name="model">alquiler</field>
