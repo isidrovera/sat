@@ -359,14 +359,15 @@
     <field name="name">Alquiler.tree</field>
     <field name="model">alquiler</field>
     <field name="arch" type="xml">
-        <list string="Alquiler List" default_group_by="estado_alquiler_id" decoration-bf="fecha_recurrente and fecha_recurrente &lt;= current_date"
+        <list string="Alquiler List" default_order="estado_alquiler_id" 
+              decoration-bf="fecha_recurrente and fecha_recurrente &lt;= current_date"
               decoration-danger="estado_alquiler_id == 'con_problemas'" 
               decoration-warning="estado_alquiler_id == 'sin_revisar'" 
               decoration-info="estado_alquiler_id == 'alquilada'" 
               decoration-success="estado_alquiler_id == 'lista'"
               decoration-muted="estado_alquiler_id == 'vendida'">
             
-            <field name="cliente_id" class="fw-bold" widget="many2one_avatar" />
+            <field name="cliente_id" widget="many2one_avatar" />
             <field name="name" string="Modelo" />
             <field name="serie" />
             <field name="marca" />
