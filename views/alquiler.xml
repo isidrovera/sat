@@ -395,7 +395,7 @@
             <field name="estado_programacion"
                 decoration-success="estado_programacion == 'confirmado'"
                 decoration-warning="estado_programacion == 'pendiente'"
-                decoration-danger="estado_programacion == 'reprogramado'"/>
+                decoration-danger="estado_programacion == 'reprogramado'" string="Mantenimiento"/>
 
             
             <field name="qr_image" widget="binary" />
