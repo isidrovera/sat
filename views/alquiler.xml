@@ -392,16 +392,11 @@
                 decoration-warning="estado_alquiler_id == 'vendida'"
                 decoration-primary="estado_alquiler_id == 'externo'" />
             
-            <field name="estado_programacion" 
-                widget="state_selection" 
-                class="d-block"
-                options="{
-                    'state_colors': {
-                        'pendiente': 'warning',
-                        'confirmado': 'success',
-                        'reprogramado': 'danger'
-                    }
-                }"/>
+            <field name="estado_programacion"
+                decoration-success="estado_programacion == 'confirmado'"
+                decoration-warning="estado_programacion == 'pendiente'"
+                decoration-danger="estado_programacion == 'reprogramado'"/>
+
             
             <field name="qr_image" widget="binary" />
             <field name="ticket_count" string="Tickets" sum="Total Tickets" optional="show"/>
