@@ -381,7 +381,7 @@
             <field name="direccion" optional="hide" />
             <field name="contacto_id" optional="hide" />
             <field name="celular" widget="phone" optional="hide" />
-            <field name="fecha_recurrente" string="Mantenimiento" widget="remaining_days" 
+            <field name="fecha_recurrente" string="Fecha Man." widget="remaining_days" 
                    decoration-danger="fecha_recurrente and fecha_recurrente &lt;= current_date" />
             
             <field name="estado_alquiler_id" string="Estado" widget="badge"
