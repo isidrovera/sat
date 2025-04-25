@@ -16,15 +16,27 @@ class MaintenanceController(http.Controller):
                     'error_message': 'No se encontró el registro de mantenimiento solicitado.'
                 })
 
-            # Crear tickets
+            # ✅ Buscar todos los equipos del mismo cliente y fecha
+            equipos = request.env['alquiler'].sudo().search([
+                ('cliente_id', '=', alquiler.cliente_id.id),
+                ('fecha_recurrente', '=', alquiler.fecha_recurrente),
+                ('control_mantenimiento', '=', True)
+            ])
+
+            # ✅ Verificar si alguno ya está confirmado
+            if any(equipo.estado_programacion == 'confirmado' for equipo in equipos):
+                return request.render('sat.maintenance_error_template', {
+                    'error_message': 'Esta visita de mantenimiento ya fue confirmada anteriormente.'
+                })
+
+            # ✅ Si no está confirmado, crear los tickets
             if alquiler._create_maintenance_tickets():
-                # La fecha ya viene como date desde el modelo
                 fecha_visita = alquiler.fecha_recurrente
-                
+
                 return request.render('sat.maintenance_confirmation_template', {
                     'message': 'Gracias por confirmar la fecha de mantenimiento. Nuestro equipo técnico lo visitará según lo programado.',
                     'visit_date': fecha_visita,
-                    'datetime': datetime  # Pasar el módulo datetime al template
+                    'datetime': datetime
                 })
             else:
                 return request.render('sat.maintenance_error_template', {
@@ -36,6 +48,7 @@ class MaintenanceController(http.Controller):
             return request.render('sat.maintenance_error_template', {
                 'error_message': 'Ocurrió un error al procesar su solicitud.'
             })
+
 
     @http.route('/mantenimiento/reprogramar/<int:alquiler_id>', type='http', auth='public', website=True)
     def request_reschedule(self, alquiler_id):

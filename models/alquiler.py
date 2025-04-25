@@ -445,13 +445,17 @@ class UnidadAlquiler(models.Model):
                     'corre_id_r': equipo.correo_,
                 })
             
-            self.write({
+            # ✅ CORREGIDO: Actualizar TODOS los equipos
+            equipos.write({
                 'estado_programacion': 'confirmado',
                 'fecha_confirmacion': fields.Datetime.now()
             })
+
+            # ✅ Opcional: enviar email solo una vez
             template = self.env.ref('sat.mail_template_maintenance_confirmation')
             template.send_mail(self.id, force_send=True)
-            
+
+            # ✅ Opcional: log solo en el primer equipo
             self.message_post(
                 body=f"✅ Mantenimiento confirmado para {self.fecha_recurrente.strftime('%d/%m/%Y')}",
                 message_type='notification'
@@ -461,6 +465,7 @@ class UnidadAlquiler(models.Model):
         except Exception as e:
             _logger.error("Error al crear tickets de mantenimiento: %s", str(e))
             return False
+
 
     def _send_reschedule_request(self):
         """Enviar solicitud de reprogramación"""
