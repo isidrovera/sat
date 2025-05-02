@@ -50,7 +50,7 @@
                             string="Solicitar Partes" 
                             type="object" 
                             class="oe_highlight"
-                            
+                            options="{'no_required_fields_validation': true}"
                         />
                     </header>
                     <sheet>
@@ -97,73 +97,73 @@
                             <page string="Informe Técnico">
                                 <group>
                                     <group>
-                                        <field name="informe" required="estado_id == 'en_revision'" />
+                                        <field name="informe" required_for_finalization="True" />
                                     </group>
                                     <group>
-                                        <field name="calidad_id" required="estado_id == 'en_revision'" />
-                                        <field name="tapas_id" required="estado_id == 'en_revision'" />
-                                        <field name="panel_id" required="estado_id == 'en_revision'" />
+                                        <field name="calidad_id" required_for_finalization="True" />
+                                        <field name="tapas_id" required_for_finalization="True" />
+                                        <field name="panel_id" required_for_finalization="True" />
                                     </group>
                                 </group>
                             </page>
                             <page string="Accesorios">
                                 <group>
                                     <group>
-                                        <field name="tray_id" placeholder="Detalla la cantidad de caseteras." required="estado_id == 2" />
-                                        <field name="adf_simple_id" arequired="estado_id == 'en_revision'" />
-                                        <field name="adf_dual_id" required="estado_id == 'en_revision'" />
-                                        <field name="finalizador_interno_id" required="estado_id == 'en_revision'" />
-                                        <field name="finalizador_externo_id" required="estado_id == 'en_revision'" />
-                                        <field name="mueble_id" required="estado_id == 'en_revision'" />
-                                        <field name="lct_id" required="estado_id == 'en_revision'" />
+                                        <field name="tray_id" placeholder="Detalla la cantidad de caseteras." required_for_finalization="True" />
+                                        <field name="adf_simple_id" required_for_finalization="True" />
+                                        <field name="adf_dual_id" required_for_finalization="True" />
+                                        <field name="finalizador_interno_id" required_for_finalization="True" />
+                                        <field name="finalizador_externo_id" required_for_finalization="True" />
+                                        <field name="mueble_id" required_for_finalization="True" />
+                                        <field name="lct_id" required_for_finalization="True" />
                                     </group>
                                     <group>
-                                        <field name="wi_fi_id" required="estado_id == 'en_revision'" />
-                                        <field name="cable_poder_id" required="estado_id == 'en_revision'" />
-                                        <field name="panel_normal_id" required="estado_id == 'en_revision'" />
-                                        <field name="panel_smart_id" required="estado_id == 'en_revision'" />
-                                        <field name="ot_id" required="estado_id == 'en_revision'" />
-                                        <field name="hdd_id" required="estado_id == 'en_revision'" />
+                                        <field name="wi_fi_id" required_for_finalization="True" />
+                                        <field name="cable_poder_id" required_for_finalization="True" />
+                                        <field name="panel_normal_id" required_for_finalization="True" />
+                                        <field name="panel_smart_id" required_for_finalization="True" />
+                                        <field name="ot_id" required_for_finalization="True" />
+                                        <field name="hdd_id" required_for_finalization="True" />
                                     </group>
                                 </group>
                             </page>
                             <page string="Check List">
                                 <group>
                                     <group>
-                                        <field name="copia_id" required="estado_id == 'en_revision'" />
-                                        <field name="impresion_id" required="estado_id == 'en_revision'" />
-                                        <field name="impresion_usb_id" required="estado_id == 'en_revision'" />
-                                        <field name="scaner_smb_id" required="estado_id == 'en_revision'" />
-                                        <field name="scaner_usb_id" required="estado_id == 'en_revision'" />
-                                        <field name="scaner_ftp_id" required="estado_id == 'en_revision'" />
-                                        <field name="scaner_mail_id" required="estado_id == 'en_revision'" />
-                                        <field name="bypass_id" required="estado_id == 'en_revision'" />
-                                        <field name="tray1_id" required="estado_id == 'en_revision'" />
-                                        <field name="tray2_id" required="estado_id == 'en_revision'" />
-                                        <field name="tray3_id" required="estado_id == 'en_revision'" />
-                                        <field name="tray4_id" required="estado_id == 'en_revision'" />
-                                        <field name="adf_id" required="estado_id == 'en_revision'" />
-                                        <field name="finalizador_id" required="estado_id == 'en_revision'" />
-                                        <field name="tacho_id" required="estado_id == 'en_revision'" />
+                                        <field name="copia_id" required_for_finalization="True" />
+                                        <field name="impresion_id" required_for_finalization="True" />
+                                        <field name="impresion_usb_id" required_for_finalization="True" />
+                                        <field name="scaner_smb_id" required_for_finalization="True" />
+                                        <field name="scaner_usb_id" required_for_finalization="True" />
+                                        <field name="scaner_ftp_id" required_for_finalization="True" />
+                                        <field name="scaner_mail_id" required_for_finalization="True" />
+                                        <field name="bypass_id" required_for_finalization="True" />
+                                        <field name="tray1_id" required_for_finalization="True" />
+                                        <field name="tray2_id" required_for_finalization="True" />
+                                        <field name="tray3_id" required_for_finalization="True" />
+                                        <field name="tray4_id" required_for_finalization="True" />
+                                        <field name="adf_id" required_for_finalization="True" />
+                                        <field name="finalizador_id" required_for_finalization="True" />
+                                        <field name="tacho_id" required_for_finalization="True" />
                                     </group>
                                     <group>
-                                        <field name="fusora_id" required="estado_id == 'en_revision'" />
-                                        <field name="rodillo_id" required="estado_id == 'en_revision'" />
-                                        <field name="calor_id" required="estado_id == 'en_revision'" />
-                                        <field name="transfer_id" required="estado_id == 'en_revision'" />
-                                        <field name="optico_id" required="estado_id == 'en_revision'" />
-                                        <field name="toner_black_id" required="estado_id == 'en_revision'" />
-                                        <field name="toner_magenta_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
-                                        <field name="toner_cyan_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
-                                        <field name="toner_yellow_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
-                                        <field name="black_id" required="estado_id == 'en_revision'" />
-                                        <field name="magenta_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
-                                        <field name="cyan_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
-                                        <field name="yellow_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
-                                        <field name="developerk_id" required="estado_id == 'en_revision'" />
-                                        <field name="developerm_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
-                                        <field name="developerc_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
-                                        <field name="developery_id" required="estado_id == 'en_revision' and tipo_id == 'color'" invisible="tipo_id != 'color'" />
+                                        <field name="fusora_id" required_for_finalization="True" />
+                                        <field name="rodillo_id" required_for_finalization="True" />
+                                        <field name="calor_id" required_for_finalization="True" />
+                                        <field name="transfer_id" required_for_finalization="True" />
+                                        <field name="optico_id" required_for_finalization="True" />
+                                        <field name="toner_black_id" required_for_finalization="True" />
+                                        <field name="toner_magenta_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
+                                        <field name="toner_cyan_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
+                                        <field name="toner_yellow_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
+                                        <field name="black_id" required_for_finalization="True" />
+                                        <field name="magenta_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
+                                        <field name="cyan_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
+                                        <field name="yellow_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
+                                        <field name="developerk_id" required_for_finalization="True" />
+                                        <field name="developerm_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
+                                        <field name="developerc_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
+                                        <field name="developery_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
                                     </group>
                                 </group>
                             </page>
