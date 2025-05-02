@@ -14,7 +14,7 @@
                         <button name="action_crear_evaluacion" string="Generar Evaluación" type="object"                          
                             icon="fa-check-circle"  groups="base.group_system"/>
                         <button string="Proceso" name="action_proceso" type="object" class="oe_highlight" groups="base.group_system" />
-                        <button string="Nuevo" name="action_nuevo" type="object" class="oe_highlight" groups="base.group_system"  />
+                        <button string="Nuevo" name="action_nuevo" type="object" class="oe_highlight" groups="base.group_system" options="{'no_required_fields_validation': true}" />
                         <button string="Crear pedido" name="create_sale_order" type="object" class="oe_highlight"  groups="base.group_system"/>
                     </header>
                     <sheet>
