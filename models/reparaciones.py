@@ -896,7 +896,57 @@ class Reparaciones(models.Model):
             _logger.info('No se encontró ninguna máquina que cumpla con los criterios de selección.')
 
 
+    from odoo import api, fields, models, _
+from odoo.exceptions import ValidationError, UserError
+import logging
+
+_logger = logging.getLogger(__name__)
+
+class ReparacionesReparaciones(models.Model):
+    _name = 'reparaciones.reparaciones'
+    _description = 'Reparaciones'
+    
+    # Aquí van tus definiciones de campos...
+    
     def action_finalizar_reparacion(self):
+        # Primero validamos los campos requeridos para finalización
+        self.ensure_one()
+        
+        # Lista de campos marcados con required_for_finalization=True
+        required_fields = [
+            'informe', 'calidad_id', 'tapas_id', 'panel_id',
+            'tray_id', 'adf_simple_id', 'adf_dual_id', 'finalizador_interno_id',
+            'finalizador_externo_id', 'mueble_id', 'lct_id', 'wi_fi_id',
+            'cable_poder_id', 'panel_normal_id', 'panel_smart_id', 'ot_id', 'hdd_id',
+            'copia_id', 'impresion_id', 'impresion_usb_id', 'scaner_smb_id',
+            'scaner_usb_id', 'scaner_ftp_id', 'scaner_mail_id', 'bypass_id',
+            'tray1_id', 'tray2_id', 'tray3_id', 'tray4_id', 'adf_id',
+            'finalizador_id', 'tacho_id', 'fusora_id', 'rodillo_id',
+            'calor_id', 'transfer_id', 'optico_id', 'toner_black_id',
+            'black_id', 'developerk_id'
+        ]
+        
+        # Agregar campos específicos para equipos a color
+        if self.tipo_id == 'color':
+            required_fields.extend([
+                'toner_magenta_id', 'toner_cyan_id', 'toner_yellow_id',
+                'magenta_id', 'cyan_id', 'yellow_id',
+                'developerm_id', 'developerc_id', 'developery_id'
+            ])
+        
+        # Validar que todos los campos requeridos tengan valor
+        missing_fields = []
+        for field in required_fields:
+            if not self[field]:
+                field_name = self._fields[field].string
+                missing_fields.append(field_name)
+        
+        if missing_fields:
+            raise ValidationError(_(
+                "Para finalizar la reparación, debes completar los siguientes campos: %s"
+            ) % ", ".join(missing_fields))
+        
+        # Continuar con el código original de la función action_finalizar_reparacion
         # Deshabilitar las reglas de acceso temporalmente para evitar restricciones
         self = self.sudo()  # Utilizamos sudo() para evitar restricciones de acceso
     
@@ -989,7 +1039,7 @@ class Reparaciones(models.Model):
         except Exception as e:
             _logger.error(f"Error generando reporte QR para reparación ID {self.id}: {e}")
             raise UserError(_("❗ Error generando el reporte QR. Por favor, contacte al administrador."))
-
+            
     @api.depends('tipo_revision')
     def obtener_tipo_revision_legible(self):
         tipo_revision_legible = ""
