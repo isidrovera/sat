@@ -896,17 +896,7 @@ class Reparaciones(models.Model):
             _logger.info('No se encontró ninguna máquina que cumpla con los criterios de selección.')
 
 
-    from odoo import api, fields, models, _
-from odoo.exceptions import ValidationError, UserError
-import logging
-
-_logger = logging.getLogger(__name__)
-
-class ReparacionesReparaciones(models.Model):
-    _name = 'reparaciones.reparaciones'
-    _description = 'Reparaciones'
     
-    # Aquí van tus definiciones de campos...
     
     def action_finalizar_reparacion(self):
         # Primero validamos los campos requeridos para finalización
