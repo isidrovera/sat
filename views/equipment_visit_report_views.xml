@@ -16,8 +16,6 @@
   <!-- ================================
        Menú
   =================================== -->
- 
-
   <menuitem id="menu_equipment_visit_reports"
             name="Informes de Visitas"
             parent="sat.ajustes"
@@ -52,9 +50,9 @@
       <form string="Informe de Visitas Técnicas">
         <header>
           <button name="action_generate_report" type="object" string="Generar" class="btn-primary"
-                  states="draft"/>
+                  invisible="state != 'draft'"/>
           <button name="action_send_report" type="object" string="Enviar" class="btn-secondary"
-                  states="generated"/>
+                  invisible="state != 'generated'"/>
           <field name="state" widget="statusbar" statusbar_visible="draft,generated,sent"/>
         </header>
         <sheet>
