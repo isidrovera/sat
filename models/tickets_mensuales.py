@@ -150,12 +150,156 @@ class EquipmentVisitReport(models.Model):
                 
                 technician_visits[tech_id]['count'] += 1
         
+        # DATOS PARA GRÁFICO 4: Visitas por equipo
+        equipment_visits = {}
+        
+        for ticket in tickets:
+            eq_id = ticket.product_alquiler.id
+            eq_name = ticket.product_alquiler.name.name if hasattr(ticket.product_alquiler, 'name') and hasattr(ticket.product_alquiler.name, 'name') else 'Sin modelo'
+            eq_serie = ticket.serie_id_r or 'Sin serie'
+            
+            eq_key = f"{eq_id}_{eq_serie}"
+            eq_label = f"{eq_name} ({eq_serie})"
+            
+            if eq_key not in equipment_visits:
+                equipment_visits[eq_key] = {
+                    'label': eq_label,
+                    'count': 0,
+                    'partner': ticket.partner_id.name if ticket.partner_id else 'Sin cliente',
+                    'model': eq_name,
+                    'serie': eq_serie,
+                    'is_critical': False,
+                    'visits': [],
+                    'technicians': set(),
+                    'problems': []
+                }
+            
+            equipment_visits[eq_key]['count'] += 1
+            
+            if ticket.responsable:
+                equipment_visits[eq_key]['technicians'].add(ticket.responsable.name)
+            
+            if ticket.description:
+                equipment_visits[eq_key]['problems'].append(ticket.description)
+            
+            equipment_visits[eq_key]['visits'].append({
+                'id': ticket.id,
+                'date': ticket.agenda,
+                'tech_name': ticket.responsable.name if ticket.responsable else 'Sin técnico',
+                'tech_id': ticket.responsable.id if ticket.responsable else False
+            })
+        
+        # DATOS PARA GRÁFICO 5: Visitas por cliente
+        client_visits = {}
+        
+        for ticket in tickets:
+            if ticket.partner_id:
+                client_id = ticket.partner_id.id
+                client_name = ticket.partner_id.name
+                
+                if client_id not in client_visits:
+                    client_visits[client_id] = {
+                        'name': client_name,
+                        'count': 0
+                    }
+                
+                client_visits[client_id]['count'] += 1
+        
+        # Identificar equipos críticos y procesar datos para gráficos
+        equipment_chart = {
+            'labels': [],
+            'data': [],
+            'critical_threshold': self.visit_threshold
+        }
+        
+        client_chart = {
+            'labels': [],
+            'data': []
+        }
+        
+        special_analysis = []
+        table_data = []
+        
+        # Procesar datos para gráficos y análisis
+        for eq_key, eq_data in equipment_visits.items():
+            # Determinar si es crítico
+            if eq_data['count'] >= self.visit_threshold:
+                eq_data['is_critical'] = True
+            
+            # Datos para gráfico de equipos (solo los 10 con más visitas)
+            equipment_chart['labels'].append(eq_data['label'])
+            equipment_chart['data'].append(eq_data['count'])
+            
+            # Determinar si hay visitas cercanas
+            has_close_visits = False
+            
+            if len(eq_data['visits']) > 1:
+                sorted_visits = sorted(eq_data['visits'], key=lambda x: x.get('date') or fields.Datetime.now())
+                
+                for i in range(1, len(sorted_visits)):
+                    current_visit = sorted_visits[i]
+                    prev_visit = sorted_visits[i-1]
+                    
+                    if current_visit.get('date') and prev_visit.get('date'):
+                        days_diff = (current_visit.get('date') - prev_visit.get('date')).days
+                        
+                        if days_diff <= self.same_issue_days:
+                            has_close_visits = True
+                            break
+            
+            # Determinar problema común
+            common_problem = "No especificado"
+            if eq_data['problems']:
+                # Usar la última descripción como problema común (simplificación)
+                common_problem = eq_data['problems'][-1][:50] + "..." if len(eq_data['problems'][-1]) > 50 else eq_data['problems'][-1]
+            
+            # Datos para tabla
+            table_data.append({
+                'model': eq_data['model'],
+                'serie': eq_data['serie'],
+                'partner': eq_data['partner'],
+                'visit_count': eq_data['count'],
+                'is_critical': eq_data['is_critical'],
+                'has_close_visits': has_close_visits,
+                'problem': common_problem,
+                'technicians': list(eq_data['technicians'])
+            })
+            
+            # Datos para análisis especial
+            if eq_data['is_critical'] or has_close_visits:
+                special_analysis.append({
+                    'model': eq_data['model'],
+                    'serie': eq_data['serie'],
+                    'partner': eq_data['partner'],
+                    'visit_count': eq_data['count'],
+                    'common_problem': common_problem,
+                    'has_close_visits': has_close_visits,
+                    'technicians': list(eq_data['technicians'])
+                })
+        
+        # Ordenar y limitar datos para gráficos
+        equipment_chart_data = sorted(zip(equipment_chart['labels'], equipment_chart['data']), 
+                                    key=lambda x: x[1], reverse=True)[:10]
+        
+        equipment_chart['labels'] = [item[0] for item in equipment_chart_data]
+        equipment_chart['data'] = [item[1] for item in equipment_chart_data]
+        
+        # Ordenar y limitar datos para gráfico de clientes
+        client_chart_data = sorted([(data['name'], data['count']) for client_id, data in client_visits.items()], 
+                                key=lambda x: x[1], reverse=True)[:5]
+        
+        client_chart['labels'] = [item[0] for item in client_chart_data]
+        client_chart['data'] = [item[1] for item in client_chart_data]
+        
+        # Ordenar tabla por cantidad de visitas
+        table_data = sorted(table_data, key=lambda x: x['visit_count'], reverse=True)
+        
         # Estructurar datos para gráficos
         chart_data = {
-            'daily_visits': [{'date': date, 'count': count} for date, count in daily_visits.items()],
-            'service_types': [{'type': type, 'count': count} for type, count in service_types.items()],
-            'technician_visits': [{'id': id, 'name': data['name'], 'count': data['count']} 
-                                for id, data in technician_visits.items()]
+            'equipment_chart': equipment_chart,
+            'client_chart': client_chart,
+            'table': table_data,
+            'special_analysis': special_analysis
         }
         
         # Guardar como JSON
