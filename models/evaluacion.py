@@ -625,7 +625,8 @@ class EvaluacionPersonal(models.Model):
         evaluaciones_finalizadas = self.search([
             ('fecha', '>=', inicio_mes_anterior),
             ('fecha', '<=', fin_mes_anterior),
-            ('state', '=', 'finalizado')
+            ('state', '=', 'enviado')
+')
         ])
 
         if not evaluaciones_finalizadas:
