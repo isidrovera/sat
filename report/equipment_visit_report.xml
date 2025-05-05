@@ -18,7 +18,7 @@
         <field name="bundle">web.assets_common</field> <!-- ESTA LÍNEA ES CLAVE -->
         <field name="directive">append</field>
         <field name="target">web.report_assets_common</field>
-        <field name="path">equipment_visit/static/src/css/equipment_visit_report.css</field>
+        <field name="path">sat/static/src/css/equipment_visit_report.css</field>
     </record>
     
     <record id="equipment_visit_report_js_asset" model="ir.asset">
@@ -26,7 +26,7 @@
         <field name="bundle">web.assets_common</field> <!-- TAMBIÉN AQUÍ -->
         <field name="directive">append</field>
         <field name="target">web.report_assets_common</field>
-        <field name="path">equipment_visit/static/src/js/chart.min.js</field>
+        <field name="path">sat/static/src/js/chart.min.js</field>
     </record>
     
 
