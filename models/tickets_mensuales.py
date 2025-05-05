@@ -97,7 +97,71 @@ class EquipmentVisitReport(models.Model):
         if vals.get('name', _('Nuevo')) == _('Nuevo'):
             vals['name'] = self.env['ir.sequence'].next_by_code('equipment.visit.report') or _('Nuevo')
         return super(EquipmentVisitReport, self).create(vals)
-    
+    def _generate_chart_data(self):
+        """Genera datos para gráficos de análisis"""
+        self.ensure_one()
+        
+        # Obtener todas las visitas técnicas en el período
+        tickets = self.env['ticket.alquiler'].search([
+            ('agenda', '>=', self.date_from),
+            ('agenda', '<=', self.date_to),
+            ('product_alquiler', '!=', False)
+        ])
+        
+        # DATOS PARA GRÁFICO 1: Visitas por día/semana
+        date_format = '%Y-%m-%d'
+        daily_visits = {}
+        
+        current_date = self.date_from
+        while current_date <= self.date_to:
+            daily_visits[current_date.strftime(date_format)] = 0
+            current_date += relativedelta(days=1)
+        
+        for ticket in tickets:
+            if ticket.agenda:
+                visit_date = ticket.agenda.date().strftime(date_format)
+                if visit_date in daily_visits:
+                    daily_visits[visit_date] += 1
+        
+        # DATOS PARA GRÁFICO 2: Visitas por tipo de servicio
+        service_types = {}
+        
+        for ticket in tickets:
+            service_type = ticket.tipo_servicio_id if hasattr(ticket, 'tipo_servicio_id') else 'sin_especificar'
+            
+            if service_type not in service_types:
+                service_types[service_type] = 0
+            
+            service_types[service_type] += 1
+        
+        # DATOS PARA GRÁFICO 3: Visitas por técnico
+        technician_visits = {}
+        
+        for ticket in tickets:
+            if ticket.responsable:
+                tech_id = ticket.responsable.id
+                tech_name = ticket.responsable.name
+                
+                if tech_id not in technician_visits:
+                    technician_visits[tech_id] = {
+                        'name': tech_name,
+                        'count': 0
+                    }
+                
+                technician_visits[tech_id]['count'] += 1
+        
+        # Estructurar datos para gráficos
+        chart_data = {
+            'daily_visits': [{'date': date, 'count': count} for date, count in daily_visits.items()],
+            'service_types': [{'type': type, 'count': count} for type, count in service_types.items()],
+            'technician_visits': [{'id': id, 'name': data['name'], 'count': data['count']} 
+                                for id, data in technician_visits.items()]
+        }
+        
+        # Guardar como JSON
+        self.write({
+            'chart_data': json.dumps(chart_data)
+        })
     def action_generate_report(self):
         """Genera el informe de visitas técnicas"""
         self.ensure_one()
@@ -133,6 +197,121 @@ class EquipmentVisitReport(models.Model):
             'target': 'current',
             'context': {'form_view_initial_mode': 'edit'},
         }
+    def _compute_general_statistics(self):
+        """Calcula estadísticas generales de visitas técnicas"""
+        self.ensure_one()
+        
+        # Obtener todas las visitas técnicas en el período
+        tickets = self.env['ticket.alquiler'].search([
+            ('agenda', '>=', self.date_from),
+            ('agenda', '<=', self.date_to),
+            ('product_alquiler', '!=', False)
+        ])
+        
+        # Contadores básicos
+        total_visits = len(tickets)
+        equipment_visits = {}  # Por equipo
+        client_visits = {}     # Por cliente
+        
+        # Tiempos de respuesta
+        response_times = []
+        first_visit_counts = 0
+        resolution_first_visit = 0
+        
+        # Procesar cada ticket
+        for ticket in tickets:
+            # Contar por equipo
+            eq_key = (ticket.product_alquiler.id, ticket.serie_id_r or '')
+            
+            if eq_key not in equipment_visits:
+                equipment_visits[eq_key] = []
+            
+            equipment_visits[eq_key].append({
+                'id': ticket.id,
+                'date': ticket.agenda,
+                'description': ticket.description,
+                'partner_id': ticket.partner_id.id if ticket.partner_id else False,
+                'resolved': ticket.state == 'done',
+                'creation_date': ticket.create_date
+            })
+            
+            # Contar por cliente
+            if ticket.partner_id:
+                client_id = ticket.partner_id.id
+                if client_id not in client_visits:
+                    client_visits[client_id] = 0
+                client_visits[client_id] += 1
+            
+            # Calcular tiempo de respuesta (desde creación hasta agenda)
+            if ticket.create_date and ticket.agenda:
+                response_time = (ticket.agenda - ticket.create_date).total_seconds() / 86400  # Días
+                response_times.append(response_time)
+        
+        # Análisis de equipos recurrentes y críticos
+        recurring_equipment_count = 0
+        critical_equipment_count = 0
+        
+        for eq_key, visits in equipment_visits.items():
+            # Solo si hay más de una visita al mismo equipo
+            if len(visits) > 1:
+                # Ordenar visitas por fecha
+                sorted_visits = sorted(visits, key=lambda x: x['date'] or fields.Datetime.now())
+                
+                # Verificar si hay visitas recurrentes (mismo problema)
+                recurring = False
+                
+                for i in range(1, len(sorted_visits)):
+                    current = sorted_visits[i]
+                    prev = sorted_visits[i-1]
+                    
+                    # Verificar que ambas fechas existen
+                    if current['date'] and prev['date']:
+                        days_diff = (current['date'] - prev['date']).days
+                        
+                        # Si es una visita en plazo corto (mismo problema)
+                        if days_diff <= self.same_issue_days:
+                            recurring = True
+                            break
+                
+                if recurring:
+                    recurring_equipment_count += 1
+                
+                # Es crítico si supera el umbral de visitas
+                if len(visits) >= self.visit_threshold:
+                    critical_equipment_count += 1
+            
+            # Primera visita
+            if len(visits) == 1:
+                first_visit_counts += 1
+                # Si está resuelta en primera visita
+                if visits[0]['resolved']:
+                    resolution_first_visit += 1
+        
+        # Encontrar cliente con más visitas
+        top_client_id = False
+        top_client_visit_count = 0
+        
+        for client_id, count in client_visits.items():
+            if count > top_client_visit_count:
+                top_client_id = client_id
+                top_client_visit_count = count
+        
+        # Calcular tasa de resolución en primera visita
+        first_visit_resolution_rate = (resolution_first_visit / first_visit_counts * 100) if first_visit_counts > 0 else 0
+        
+        # Calcular tiempo promedio de respuesta
+        average_response_time = sum(response_times) / len(response_times) if response_times else 0
+        
+        # Guardar resultados
+        self.write({
+            'total_visits': total_visits,
+            'recurring_equipment_count': recurring_equipment_count,
+            'critical_equipment_count': critical_equipment_count,
+            'first_visit_resolution_rate': first_visit_resolution_rate,
+            'average_response_time': average_response_time,
+            'top_client_id': top_client_id,
+            'top_client_visit_count': top_client_visit_count
+        })
     def action_send_report(self):
         """Envía el informe por correo electrónico a los destinatarios configurados"""
         self.ensure_one()
