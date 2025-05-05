@@ -66,7 +66,7 @@
     <field name="model">equipment.technician.performance.report</field>
     <field name="arch" type="xml">
       <list>
-        <field name="date_range"/>
+        
         <field name="date_from"/>
         <field name="date_to"/>
         <field name="technician_id"/>
@@ -103,7 +103,7 @@
         </header>
         <sheet>
           <div class="oe_title">
-            <h1><field name="name" placeholder="Nombre del Informe"/></h1>
+            <h1><field name="" placeholder="Nombre del Informe"/></h1>
           </div>
           <group>
             <group>
