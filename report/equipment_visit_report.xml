@@ -1,29 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Definición del Reporte -->
+    <!-- Acción del Reporte -->
     <record id="equipment_visit_report_action" model="ir.actions.report">
         <field name="name">Informe de Visitas Técnicas</field>
         <field name="model">equipment.visit.report</field>
         <field name="report_type">qweb-pdf</field>
-        <field name="report_name">equipment_visit.report_equipment_visit</field>
-        <field name="report_file">equipment_visit.report_equipment_visit</field>
+        <field name="report_name">sat.report_equipment_visit</field>
+        <field name="report_file">sat.report_equipment_visit</field>
         <field name="print_report_name">'Informe de Visitas - %s' % (object.name)</field>
         <field name="binding_model_id" ref="model_equipment_visit_report"/>
         <field name="binding_type">report</field>
         <field name="paperformat_id" ref="base.paperformat_euro"/>
     </record>
 
+    <!-- Assets del Reporte -->
     <record id="equipment_visit_report_asset" model="ir.asset">
         <field name="name">Equipment Visit Report Assets</field>
-        <field name="bundle">web.assets_common</field> <!-- ESTA LÍNEA ES CLAVE -->
+        <field name="bundle">web.assets_common</field>
         <field name="directive">append</field>
         <field name="target">web.report_assets_common</field>
         <field name="path">sat/static/src/css/equipment_visit_report.css</field>
     </record>
-    
+
     <record id="equipment_visit_report_js_asset" model="ir.asset">
         <field name="name">Equipment Visit Report JS Assets</field>
-        <field name="bundle">web.assets_common</field> <!-- TAMBIÉN AQUÍ -->
+        <field name="bundle">web.assets_common</field>
         <field name="directive">append</field>
         <field name="target">web.report_assets_common</field>
         <field name="path">sat/static/src/js/chart.min.js</field>
@@ -31,7 +32,7 @@
     
 
     <!-- Plantilla Principal del Reporte -->
-    <template id="report_equipment_visit">
+    <template id="report_equipment_visit" name="sat.report_equipment_visit">
         <t t-call="web.html_container">
             <t t-foreach="docs" t-as="doc">
                 <t t-call="web.external_layout">
