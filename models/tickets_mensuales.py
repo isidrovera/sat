@@ -133,6 +133,60 @@ class EquipmentVisitReport(models.Model):
             'target': 'current',
             'context': {'form_view_initial_mode': 'edit'},
         }
+    def action_send_report(self):
+        """Envía el informe por correo electrónico a los destinatarios configurados"""
+        self.ensure_one()
+        if self.state != 'generated':
+            raise UserError(_('Solo puede enviarse un informe que esté en estado Generado.'))
+        
+        if not self.recipient_ids and not self.email_to:
+            raise UserError(_('Debe especificar al menos un destinatario para enviar el informe.'))
+        
+        # Preparar plantilla de correo
+        template_id = self.env.ref('sat.email_template_equipment_visit_report', raise_if_not_found=False)
+        
+        if not template_id:
+            # Si no encuentra la plantilla específica, usar una genérica
+            template_values = {
+                'subject': f'Informe de Visitas Técnicas: {self.name}',
+                'body_html': f'''
+                    <p>Estimado/a,</p>
+                    <p>Adjunto encontrará el informe de visitas técnicas correspondiente al período 
+                    {self.date_from.strftime('%d/%m/%Y')} - {self.date_to.strftime('%d/%m/%Y')}.</p>
+                    <p>Resumen:</p>
+                    <ul>
+                        <li>Total de visitas: {self.total_visits}</li>
+                        <li>Equipos recurrentes: {self.recurring_equipment_count}</li>
+                        <li>Equipos críticos: {self.critical_equipment_count}</li>
+                        <li>Tasa de resolución en primera visita: {self.first_visit_resolution_rate:.1f}%</li>
+                    </ul>
+                    <p>Saludos cordiales,<br/>{self.user_id.name}</p>
+                ''',
+                'email_from': self.user_id.email_formatted or self.env.company.email_formatted,
+                'email_to': self.email_to or '',
+                'partner_to': ','.join(str(user.partner_id.id) for user in self.recipient_ids if user.partner_id),
+                'attachment_ids': [(4, self.report_data)] if self.report_data else [],
+            }
+            
+            # Enviar correo
+            mail = self.env['mail.mail'].create(template_values)
+            mail.send()
+        else:
+            # Usar la plantilla existente
+            for user in self.recipient_ids:
+                if user.partner_id and user.partner_id.email:
+                    template_id.send_mail(self.id, force_send=True, email_values={'partner_ids': [(4, user.partner_id.id)]})
+            
+            # Si hay destinatarios adicionales por email
+            if self.email_to:
+                template_id.send_mail(self.id, force_send=True, email_values={'email_to': self.email_to})
+        
+        # Marcar como enviado
+        self.write({
+            'state': 'sent'
+        })
+        
+        return True
     def _analyze_technician_performance(self):
         """Analiza el desempeño de cada técnico en base a las visitas realizadas"""
         self.ensure_one()
@@ -876,9 +930,9 @@ class EquipmentVisitReport(models.Model):
                     'sticky': False,
                 }
             }
-            
-    # Clase para el dashboard de análisis
-    class EquipmentTechnicianDashboard(models.Model):
+
+
+class EquipmentTechnicianDashboard(models.Model):
         _name = 'equipment.technician.dashboard'
         _description = 'Dashboard de Desempeño de Técnicos'
         _rec_name = 'date_range'
@@ -1126,6 +1180,7 @@ class EquipmentVisitReport(models.Model):
                 'problematic_equipment_ids': json.dumps(problematic_equipment),
                 'chart_data': json.dumps(chart_data)
             })
+    
 
 class EquipmentVisitReportSettings(models.TransientModel):
     _name = 'equipment.visit.report.settings'
