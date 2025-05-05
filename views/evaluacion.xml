@@ -43,6 +43,11 @@
                         
                         <field name="state" widget="statusbar"
                             statusbar_visible="borrador,en_revision,aprobado,finalizado" />
+                            <button name="action_duplicar_abril"
+                            string="Duplicar Evaluaciones de Abril"
+                            type="object"
+                            class="btn btn-primary"
+                            />
                     </header>
                     <sheet>
                         <div class="oe_button_box" name="button_box">
