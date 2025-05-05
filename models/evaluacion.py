@@ -321,9 +321,9 @@ class EvaluacionPersonal(models.Model):
             else:
                 record.porcentaje_tickets = 0
     @api.depends('porcentaje_reparaciones', 'porcentaje_tickets',
-            'calidad_trabajo', 'conocimiento_tecnico', 'resolucion_problemas',
-            'uso_herramientas', 'puntualidad', 'compromiso', 'trabajo_equipo',
-            'trato_cliente', 'comunicacion_cliente', 'manejo_conflictos')
+        'calidad_trabajo', 'conocimiento_tecnico', 'resolucion_problemas',
+        'uso_herramientas', 'puntualidad', 'compromiso', 'trabajo_equipo',
+        'trato_cliente', 'comunicacion_cliente', 'manejo_conflictos')
     def _compute_puntajes(self):
         for record in self:
             # Puntaje de métricas objetivas (40%)
@@ -335,35 +335,44 @@ class EvaluacionPersonal(models.Model):
                 'calidad_trabajo', 'conocimiento_tecnico', 
                 'resolucion_problemas', 'uso_herramientas'
             ]
-            puntaje_tecnico = self._calcular_promedio_campos(campos_tecnicos) * 0.25
+            # Llamar al método en un solo registro
+            puntaje_tecnico = record._calcular_promedio_campos(campos_tecnicos) * 0.25
             
             # Puntaje actitudinal (20%)
             campos_actitud = [
                 'puntualidad', 'compromiso', 'trabajo_equipo'
             ]
-            puntaje_actitud = self._calcular_promedio_campos(campos_actitud) * 0.20
+            puntaje_actitud = record._calcular_promedio_campos(campos_actitud) * 0.20
             
             # Puntaje atención cliente (15%)
             campos_cliente = [
                 'trato_cliente', 'comunicacion_cliente', 'manejo_conflictos'
             ]
-            puntaje_cliente = self._calcular_promedio_campos(campos_cliente) * 0.15
+            puntaje_cliente = record._calcular_promedio_campos(campos_cliente) * 0.15
             
             # Asignar puntajes
             record.puntaje_objetivos = puntaje_reparaciones + puntaje_tickets
             record.puntaje_desempeno = puntaje_tecnico + puntaje_actitud + puntaje_cliente
-    def _calcular_promedio_campos(self, campos):
+        def _calcular_promedio_campos(self, campos):
         """Método auxiliar para calcular promedio de campos de evaluación"""
-        self.ensure_one()  # Asegura que este método solo se llama en un registro
-
-        suma = 0
-        count = 0
-        for campo in campos:
-            valor = self[campo]
-            if valor:
-                suma += int(valor)
-                count += 1
-        return (suma / count / 5 * 100) if count > 0 else 0
+        # Remove ensure_one() to handle multiple records
+        resultados = {}
+        for record in self:
+            suma = 0
+            count = 0
+            for campo in campos:
+                valor = record[campo]
+                if valor:
+                    suma += int(valor)
+                    count += 1
+            resultados[record.id] = (suma / count / 5 * 100) if count > 0 else 0
+        
+        # Para mantener la compatibilidad con el método original
+        # Si solo hay un registro, devolvemos directamente el valor
+        if len(self) == 1:
+            return list(resultados.values())[0]
+        # Si hay múltiples registros, devolvemos el diccionario
+        return resultados
       
 
     @api.depends('puntaje_objetivos', 'puntaje_desempeno')
