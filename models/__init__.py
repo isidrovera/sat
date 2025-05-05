@@ -24,6 +24,7 @@ from . import fotos_reparaciones
 from . import ticket_create_import
 from . import onboarding
 from . import technical_service_evaluation
+from . import tickets_mensuales
 
 
 

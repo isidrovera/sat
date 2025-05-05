@@ -73,3 +73,5 @@ access_parts_request_wizard_user,Wizard Solicitud Partes Usuario,model_copier_pa
 
 access_solicitud_partes_user,solicitud.partes.user,model_solicitud_partes,base.group_user,1,1,1,1
 access_solicitud_partes_linea_user,solicitud.partes.linea.user,model_solicitud_partes_linea,base.group_user,1,1,1,1
+access_equipment_visit_report_user,equipment.visit.report user,model_equipment_visit_report,base.group_user,1,1,1,0
+access_equipment_visit_report_admin,equipment.visit.report admin,model_equipment_visit_report,base.group_system,1,1,1,1
