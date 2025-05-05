@@ -111,6 +111,7 @@
         'views/partes_templates_alquiler.xml',
         'views/envio_masivo_evaluaciones.xml',
         'views/equipment_visit_report_views.xml',
+        'views/equipment_visit_report.xml',
         
         
     ],
@@ -126,8 +127,7 @@
             'sat/static/src/css/evaluation_form.css',
             'sat/static/src/css/parts_request_message.css',
             'sat/static/src/css/image-viewer.css',
-            
-            
+            'sat/static/src/css/equipment_visit_report.css'
             
             
 
