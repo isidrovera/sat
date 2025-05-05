@@ -1126,3 +1126,73 @@ class EquipmentVisitReport(models.Model):
                 'problematic_equipment_ids': json.dumps(problematic_equipment),
                 'chart_data': json.dumps(chart_data)
             })
+
+class EquipmentVisitReportSettings(models.TransientModel):
+    _name = 'equipment.visit.report.settings'
+    _description = 'Configuración de Informes de Visitas Técnicas'
+    
+    def _default_recipient_ids(self):
+        return self.env['ir.default'].get('equipment.visit.report', 'recipient_ids')
+    
+    def _default_email_to(self):
+        return self.env['ir.default'].get('equipment.visit.report', 'email_to')
+    
+    def _default_threshold(self):
+        return self.env['ir.default'].get('equipment.visit.report', 'visit_threshold') or 3
+    
+    def _default_days(self):
+        return self.env['ir.default'].get('equipment.visit.report', 'same_issue_days') or 7
+    
+    # Nuevos campos para umbrales de alerta
+    def _default_post_installation_alert(self):
+        return self.env['ir.default'].get('equipment.visit.report', 'post_installation_alert') or 20
+    
+    def _default_post_maintenance_alert(self):
+        return self.env['ir.default'].get('equipment.visit.report', 'post_maintenance_alert') or 25
+    
+    def _default_post_repair_alert(self):
+        return self.env['ir.default'].get('equipment.visit.report', 'post_repair_alert') or 25
+    
+    def _default_post_review_alert(self):
+        return self.env['ir.default'].get('equipment.visit.report', 'post_review_alert') or 25
+    
+    recipient_ids = fields.Many2many('res.users', string='Destinatarios Predeterminados', default=_default_recipient_ids)
+    email_to = fields.Char(string='Emails Adicionales', default=_default_email_to, help='Separados por coma')
+    visit_threshold = fields.Integer(string='Umbral de Visitas Críticas', default=_default_threshold)
+    same_issue_days = fields.Integer(string='Días para Considerar Mismo Problema', default=_default_days)
+    
+    # Nuevos campos para configuración de alertas
+    post_installation_alert = fields.Integer(string='Alerta de Tasa Post-Instalación (%)', default=_default_post_installation_alert,
+                                          help='Porcentaje a partir del cual se considera problemático un técnico por visitas post-instalación')
+    post_maintenance_alert = fields.Integer(string='Alerta de Tasa Post-Mantenimiento (%)', default=_default_post_maintenance_alert,
+                                         help='Porcentaje a partir del cual se considera problemático un técnico por visitas post-mantenimiento')
+    post_repair_alert = fields.Integer(string='Alerta de Tasa Post-Reparación (%)', default=_default_post_repair_alert,
+                                     help='Porcentaje a partir del cual se considera problemático un técnico por visitas post-reparación')
+    post_review_alert = fields.Integer(string='Alerta de Tasa Post-Revisión (%)', default=_default_post_review_alert,
+                                     help='Porcentaje a partir del cual se considera problemático un técnico por visitas post-revisión')
+    
+    def save_settings(self):
+        """Guarda la configuración en valores predeterminados"""
+        self.ensure_one()
+        
+        IrDefault = self.env['ir.default']
+        IrDefault.set('equipment.visit.report', 'recipient_ids', self.recipient_ids.ids)
+        IrDefault.set('equipment.visit.report', 'email_to', self.email_to)
+        IrDefault.set('equipment.visit.report', 'visit_threshold', self.visit_threshold)
+        IrDefault.set('equipment.visit.report', 'same_issue_days', self.same_issue_days)
+        
+        # Guardar nuevas configuraciones
+        IrDefault.set('equipment.visit.report', 'post_installation_alert', self.post_installation_alert)
+        IrDefault.set('equipment.visit.report', 'post_maintenance_alert', self.post_maintenance_alert)
+        IrDefault.set('equipment.visit.report', 'post_repair_alert', self.post_repair_alert)
+        IrDefault.set('equipment.visit.report', 'post_review_alert', self.post_review_alert)
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'message': _('Configuración guardada correctamente.'),
+                'type': 'success',
+                'sticky': False,
+            }
+        }
