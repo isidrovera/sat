@@ -151,7 +151,7 @@ class EquipmentVisitReport(models.Model):
             
             equipment_visits[equipment_key]['visits'].append({
                 'id': ticket.id,
-                'date': ticket.agenda.strftime('%Y-%m-%d') if ticket.agenda else None,,
+                'date': ticket.agenda.strftime('%Y-%m-%d') if ticket.agenda else None,
                 'description': ticket.description,
                 'responsable': ticket.responsable.id if ticket.responsable else False
             })
