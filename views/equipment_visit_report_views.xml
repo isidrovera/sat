@@ -4,37 +4,38 @@
   <!-- ================================
        Acción
   =================================== -->
-  <record id="action_equipment_visit_report" model="ir.actions.act_window">
-    <field name="name">Informes de Visitas</field>
-    <field name="res_model">equipment.visit.report</field>
+  <record id="action_equipment_technician_performance_report" model="ir.actions.act_window">
+    <field name="name">Informes de Rendimiento de Técnicos</field>
+    <field name="res_model">equipment.technician.performance.report</field>
     <field name="view_mode">kanban,list,form</field>
     <field name="help" type="html">
-      <p>Crea y consulta informes estadísticos sobre visitas técnicas por equipo.</p>
+      <p>Crea y consulta informes de evaluación de rendimiento de técnicos.</p>
     </field>
   </record>
 
   <!-- ================================
        Menú
   =================================== -->
-  <menuitem id="menu_equipment_visit_reports"
-            name="Informes de Visitas"
+  <menuitem id="menu_equipment_technician_performance_reports"
+            name="Informes de Rendimiento"
             parent="sat.ajustes"
-            action="action_equipment_visit_report"
-            sequence="90" />
+            action="action_equipment_technician_performance_report"
+            sequence="91" />
 
   <!-- ================================
        Vista Listado (list)
   =================================== -->
-  <record id="view_equipment_visit_report_list" model="ir.ui.view">
-    <field name="name">equipment.visit.report.list</field>
-    <field name="model">equipment.visit.report</field>
+  <record id="view_equipment_technician_performance_report_list" model="ir.ui.view">
+    <field name="name">equipment.technician.performance.report.list</field>
+    <field name="model">equipment.technician.performance.report</field>
     <field name="arch" type="xml">
       <list>
         <field name="name"/>
         <field name="date_from"/>
         <field name="date_to"/>
-        <field name="total_visits"/>
-        <field name="critical_equipment_count"/>
+        <field name="total_technicians"/>
+        <field name="total_rental_machines"/>
+        <field name="problematic_visits_count"/>
         <field name="state"/>
       </list>
     </field>
@@ -43,11 +44,11 @@
   <!-- ================================
        Vista Formulario (form)
   =================================== -->
-  <record id="view_equipment_visit_report_form" model="ir.ui.view">
-    <field name="name">equipment.visit.report.form</field>
-    <field name="model">equipment.visit.report</field>
+  <record id="view_equipment_technician_performance_report_form" model="ir.ui.view">
+    <field name="name">equipment.technician.performance.report.form</field>
+    <field name="model">equipment.technician.performance.report</field>
     <field name="arch" type="xml">
-      <form string="Informe de Visitas Técnicas">
+      <form string="Informe de Evaluación de Rendimiento de Técnicos">
         <header>
           <button name="action_generate_report" type="object" string="Generar" class="btn-primary"
                   invisible="state != 'draft'"/>
@@ -56,34 +57,47 @@
           <field name="state" widget="statusbar" statusbar_visible="draft,generated,sent"/>
         </header>
         <sheet>
+          <div class="oe_title">
+            <h1>
+              <field name="name" readonly="1"/>
+            </h1>
+          </div>
           <group>
-            <field name="name"/>
-            <field name="date_from"/>
-            <field name="date_to"/>
-            <field name="user_id"/>
-            <field name="company_id"/>
+            <group>
+              <field name="date_from"/>
+              <field name="date_to"/>
+              <field name="user_id"/>
+              <field name="company_id"/>
+            </group>
+            <group>
+              <field name="critical_days"/>
+              <field name="technician_ids" widget="many2many_tags"/>
+            </group>
           </group>
           <group string="Estadísticas" col="2">
-            <field name="total_visits" readonly="1"/>
-            <field name="recurring_equipment_count" readonly="1"/>
-            <field name="critical_equipment_count" readonly="1"/>
-            <field name="first_visit_resolution_rate" readonly="1"/>
-            <field name="average_response_time" readonly="1"/>
-            <field name="top_client_id" readonly="1"/>
-            <field name="top_client_visit_count" readonly="1"/>
+            <field name="total_technicians" readonly="1"/>
+            <field name="total_rental_machines" readonly="1"/>
+            <field name="problematic_visits_count" readonly="1"/>
           </group>
-          <group string="Configuración">
-            <field name="visit_threshold"/>
-            <field name="same_issue_days"/>
-          </group>
-          <group string="Destinatarios">
-            <field name="recipient_ids" widget="many2many_tags"/>
-            <field name="email_to"/>
-          </group>
-          <group string="Archivo">
-            <field name="report_filename" readonly="1"/>
-            <field name="report_data" filename="report_filename" readonly="1"/>
-          </group>
+          
+          <notebook invisible="state == 'draft'">
+            <page string="Rendimiento de Técnicos">
+              <field name="technician_performance" widget="json_viewer" invisible="1"/>
+              <widget name="web_client_widget" data="chart_data" widget_type="technician_performance_chart" 
+                     title="Top 10 Técnicos por Tasa de Fallo"/>
+            </page>
+            <page string="Equipos Problemáticos">
+              <field name="problematic_equipment" widget="json_viewer" invisible="1"/>
+              <widget name="web_client_widget" data="chart_data" widget_type="problematic_equipment_chart" 
+                     title="Equipos con Servicio Deficiente"/>
+            </page>
+            <page string="Análisis de Servicio">
+              <widget name="web_client_widget" data="chart_data" widget_type="service_type_chart" 
+                     title="Problemas por Tipo de Servicio"/>
+              <widget name="web_client_widget" data="chart_data" widget_type="days_chart" 
+                     title="Distribución de Días entre Servicios Problemáticos"/>
+            </page>
+          </notebook>
         </sheet>
       </form>
     </field>
@@ -92,24 +106,27 @@
   <!-- ================================
        Vista Kanban
   =================================== -->
-  <record id="view_equipment_visit_report_kanban" model="ir.ui.view">
-    <field name="name">equipment.visit.report.kanban</field>
-    <field name="model">equipment.visit.report</field>
+  <record id="view_equipment_technician_performance_report_kanban" model="ir.ui.view">
+    <field name="name">equipment.technician.performance.report.kanban</field>
+    <field name="model">equipment.technician.performance.report</field>
     <field name="arch" type="xml">
       <kanban class="o_kanban_example">
         <field name="name"/>
         <field name="state"/>
         <field name="date_from"/>
         <field name="date_to"/>
-        <field name="total_visits"/>
+        <field name="total_technicians"/>
+        <field name="total_rental_machines"/>
+        <field name="problematic_visits_count"/>
         <templates>
           <t t-name="kanban-box">
             <div class="o_kanban_record">
               <div class="oe_kanban_details">
                 <strong><field name="name"/></strong>
                 <div><i class="fa fa-calendar"></i> <field name="date_from"/> – <field name="date_to"/></div>
-                <div><i class="fa fa-cogs"></i> Visitas: <field name="total_visits"/></div>
-                <div><i class="fa fa-exclamation-triangle"></i> Críticos: <field name="critical_equipment_count"/></div>
+                <div><i class="fa fa-users"></i> Técnicos: <field name="total_technicians"/></div>
+                <div><i class="fa fa-cogs"></i> Máquinas: <field name="total_rental_machines"/></div>
+                <div><i class="fa fa-exclamation-triangle"></i> Visitas Problemáticas: <field name="problematic_visits_count"/></div>
                 <div>
                   <span class="badge badge-primary">
                     <field name="state"/>
