@@ -218,6 +218,10 @@ class EquipmentVisitReport(models.Model):
         first_visit_counts = 0
         resolution_first_visit = 0
         
+        # Registrar información de campos para depuración
+        if tickets and len(tickets) > 0:
+            _logger.info("Campos disponibles en ticket.alquiler: %s", list(tickets[0]._fields.keys()))
+        
         # Procesar cada ticket
         for ticket in tickets:
             # Contar por equipo
@@ -226,12 +230,26 @@ class EquipmentVisitReport(models.Model):
             if eq_key not in equipment_visits:
                 equipment_visits[eq_key] = []
             
+            # Verificar estado de resolución
+            # Intentar con varios nombres posibles para el campo estado
+            is_resolved = False
+            
+            # Primero verificar si el ticket tiene campos relacionados con finalización
+            if hasattr(ticket, 'finalizado'):
+                is_resolved = bool(ticket.finalizado)
+            elif hasattr(ticket, 'estado') and ticket.estado in ['finalizado', 'terminado', 'done']:
+                is_resolved = True
+            elif hasattr(ticket, 'state') and ticket.state in ['finalizado', 'terminado', 'done']:
+                is_resolved = True
+            elif hasattr(ticket, 'stage_id') and ticket.stage_id.name in ['Finalizado', 'Terminado', 'Resuelto']:
+                is_resolved = True
+            
             equipment_visits[eq_key].append({
                 'id': ticket.id,
                 'date': ticket.agenda,
                 'description': ticket.description,
                 'partner_id': ticket.partner_id.id if ticket.partner_id else False,
-                'resolved': ticket.state == 'done',
+                'resolved': is_resolved,
                 'creation_date': ticket.create_date
             })
             
