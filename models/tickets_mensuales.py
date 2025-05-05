@@ -440,8 +440,11 @@ class EquipmentVisitReport(models.Model):
             elif service_type in ['revision']:
                 technician_data[tech_id]['total_reviews'] += 1
             
-            # Agrupar visitas por equipo
-            eq_key = (ticket.product_alquiler.id, ticket.serie_id_r or '')
+            # Agrupar visitas por equipo - CORRECCIÓN: usar string como clave en lugar de tupla
+            # Convertir la tupla a string para usarla como clave
+            eq_id = ticket.product_alquiler.id
+            eq_serie = ticket.serie_id_r or ''
+            eq_key = f"{eq_id}_{eq_serie}"  # Usar una cadena como clave en lugar de una tupla
             
             if eq_key not in technician_data[tech_id]['equipment_visits']:
                 technician_data[tech_id]['equipment_visits'][eq_key] = []
@@ -563,9 +566,34 @@ class EquipmentVisitReport(models.Model):
         avg_post_repair_rate = total_post_repair_rate / total_techs if total_techs > 0 else 0
         avg_post_review_rate = total_post_review_rate / total_techs if total_techs > 0 else 0
         
+        # CORRECCIÓN: Convertir tech_data a formato serializable JSON
+        # No podemos usar directamente technician_data porque contiene objetos que no son serializables
+        serializable_tech_data = {}
+        for tech_id, data in technician_data.items():
+            # Convertir tech_id a string para usarlo como clave
+            serializable_tech_data[str(tech_id)] = {
+                'name': data['name'],
+                'total_visits': data['total_visits'],
+                'repeat_visits': data['repeat_visits'],
+                'repeat_rate': data['repeat_rate'],
+                'post_installation_visits': data['post_installation_visits'],
+                'post_maintenance_visits': data['post_maintenance_visits'],
+                'post_repair_visits': data['post_repair_visits'],
+                'post_review_visits': data['post_review_visits'],
+                'total_installations': data['total_installations'],
+                'total_maintenances': data['total_maintenances'],
+                'total_repairs': data['total_repairs'],
+                'total_reviews': data['total_reviews'],
+                'post_installation_rate': data['post_installation_rate'],
+                'post_maintenance_rate': data['post_maintenance_rate'],
+                'post_repair_rate': data['post_repair_rate'],
+                'post_review_rate': data['post_review_rate'],
+                'problematic_sequences': data['problematic_sequences']
+            }
+        
         # Guardar resultados
         self.write({
-            'technician_evaluation': json.dumps(technician_data),
+            'technician_evaluation': json.dumps(serializable_tech_data),
             'problematic_technicians': [(6, 0, problematic_technicians)],
             'post_installation_visit_rate': avg_post_installation_rate,
             'post_maintenance_visit_rate': avg_post_maintenance_rate,
