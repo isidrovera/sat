@@ -13,20 +13,22 @@
         <field name="paperformat_id" ref="base.paperformat_euro"/>
     </record>
 
-    <!-- Definición de los assets en Odoo 18 -->
     <record id="equipment_visit_report_asset" model="ir.asset">
         <field name="name">Equipment Visit Report Assets</field>
+        <field name="bundle">web.assets_common</field> <!-- ESTA LÍNEA ES CLAVE -->
         <field name="directive">append</field>
         <field name="target">web.report_assets_common</field>
         <field name="path">equipment_visit/static/src/css/equipment_visit_report.css</field>
     </record>
-
+    
     <record id="equipment_visit_report_js_asset" model="ir.asset">
         <field name="name">Equipment Visit Report JS Assets</field>
+        <field name="bundle">web.assets_common</field> <!-- TAMBIÉN AQUÍ -->
         <field name="directive">append</field>
         <field name="target">web.report_assets_common</field>
         <field name="path">equipment_visit/static/src/js/chart.min.js</field>
     </record>
+    
 
     <!-- Plantilla Principal del Reporte -->
     <template id="report_equipment_visit">
