@@ -353,15 +353,18 @@ class EvaluacionPersonal(models.Model):
             record.puntaje_objetivos = puntaje_reparaciones + puntaje_tickets
             record.puntaje_desempeno = puntaje_tecnico + puntaje_actitud + puntaje_cliente
     def _calcular_promedio_campos(self, campos):
-                """Método auxiliar para calcular promedio de campos de evaluación"""
-                suma = 0
-                count = 0
-                for campo in campos:
-                    valor = self[campo]
-                    if valor:
-                        suma += int(valor)
-                        count += 1
-                return (suma / count / 5 * 100) if count > 0 else 0       
+        """Método auxiliar para calcular promedio de campos de evaluación"""
+        self.ensure_one()  # Asegura que este método solo se llama en un registro
+
+        suma = 0
+        count = 0
+        for campo in campos:
+            valor = self[campo]
+            if valor:
+                suma += int(valor)
+                count += 1
+        return (suma / count / 5 * 100) if count > 0 else 0
+      
 
     @api.depends('puntaje_objetivos', 'puntaje_desempeno')
     def _compute_puntaje_total(self):
