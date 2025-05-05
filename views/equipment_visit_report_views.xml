@@ -22,7 +22,7 @@
             action="action_equipment_visit_report"
             sequence="90" />
 
-  <!-- ================================
+   <!-- ================================
        Vista Listado (list)
   =================================== -->
   <record id="view_equipment_technician_performance_report_list" model="ir.ui.view">
