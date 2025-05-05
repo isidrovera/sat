@@ -4,23 +4,23 @@
   <!-- ================================
        Acción
   =================================== -->
-  <record id="action_equipment_technician_performance_report" model="ir.actions.act_window">
-    <field name="name">Informes de Rendimiento de Técnicos</field>
-    <field name="res_model">equipment.technician.performance.report</field>
+  <record id="action_equipment_visit_report" model="ir.actions.act_window">
+    <field name="name">Informes de Visitas</field>
+    <field name="res_model">equipment.visit.report</field>
     <field name="view_mode">kanban,list,form</field>
     <field name="help" type="html">
-      <p>Crea y consulta informes de evaluación de rendimiento de técnicos.</p>
+      <p>Crea y consulta informes estadísticos sobre visitas técnicas por equipo.</p>
     </field>
   </record>
 
   <!-- ================================
        Menú
   =================================== -->
-  <menuitem id="menu_equipment_technician_performance_reports"
-            name="Informes de Rendimiento"
+  <menuitem id="menu_equipment_visit_reports"
+            name="Informes de Visitas"
             parent="sat.ajustes"
-            action="action_equipment_technician_performance_report"
-            sequence="91" />
+            action="action_equipment_visit_report"
+            sequence="90" />
 
   <!-- ================================
        Vista Listado (list)
