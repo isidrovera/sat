@@ -110,6 +110,7 @@
         'views/solicitud_partes_views.xml',
         'views/partes_templates_alquiler.xml',
         'views/envio_masivo_evaluaciones.xml',
+        'views/equipment_visit_report_views.xml',
         
         
     ],
