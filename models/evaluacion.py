@@ -626,7 +626,6 @@ class EvaluacionPersonal(models.Model):
             ('fecha', '>=', inicio_mes_anterior),
             ('fecha', '<=', fin_mes_anterior),
             ('state', '=', 'enviado')
-')
         ])
 
         if not evaluaciones_finalizadas:
