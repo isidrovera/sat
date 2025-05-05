@@ -353,7 +353,7 @@ class EvaluacionPersonal(models.Model):
             # Asignar puntajes
             record.puntaje_objetivos = puntaje_reparaciones + puntaje_tickets
             record.puntaje_desempeno = puntaje_tecnico + puntaje_actitud + puntaje_cliente
-        def _calcular_promedio_campos(self, campos):
+    def _calcular_promedio_campos(self, campos):
             """Método auxiliar para calcular promedio de campos de evaluación"""
             # Remove ensure_one() to handle multiple records
             resultados = {}
