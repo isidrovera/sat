@@ -608,8 +608,9 @@ class EvaluacionPersonal(models.Model):
 
     def action_duplicar_abril(self):
         """
-        Acción manual para duplicar evaluaciones que evaluaron Marzo (deben ser duplicadas para Abril).
-        Útil para ejecutar manualmente en mayo si no se hizo automáticamente.
+        Acción manual para duplicar evaluaciones que evaluaron Marzo,
+        útil para ejecutar manualmente en mayo si no se hizo automáticamente.
+        Se puede ejecutar sobre varios registros a la vez.
         """
         _logger.info("📌 Acción manual: Duplicar Evaluaciones de Abril (basadas en Marzo)")
 
@@ -617,7 +618,8 @@ class EvaluacionPersonal(models.Model):
         inicio_abril = date(2025, 4, 1)
         fin_abril = date(2025, 4, 30)
 
-        evaluaciones = self.search([
+        # Buscar todas las evaluaciones con mes marzo y año 2025 (no solo las seleccionadas)
+        evaluaciones = self.env['evaluacion.personal'].search([
             ('mes', '=', 'Marzo'),
             ('anio', '=', '2025'),
             ('state', '=', 'enviado')
@@ -673,6 +675,7 @@ class EvaluacionPersonal(models.Model):
                 'sticky': False,
             }
         }
+
 
     @api.model
     def _cron_duplicar_evaluaciones_mensuales(self):
