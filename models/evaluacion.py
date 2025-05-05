@@ -610,62 +610,82 @@ class EvaluacionPersonal(models.Model):
     @api.model
     def _cron_duplicar_evaluaciones_mensuales(self):
         """
-        Cron robusto: duplica evaluaciones del mes anterior una sola vez por técnico.
-        Ejecutable en cualquier día posterior al cierre del mes.
+        Cron robusto: Duplica evaluaciones del mes anterior con estado 'enviado' una vez por técnico.
+        Se puede ejecutar cualquier día del mes actual, solo duplica si aún no existen duplicados.
         """
-        _logger.info("Iniciando duplicación automática de evaluaciones mensuales")
+        _logger.info("⏳ [CRON] Iniciando duplicación automática de evaluaciones mensuales")
 
-        hoy = fields.Date.today()
-        inicio_mes_actual = hoy.replace(day=1)
-        inicio_mes_anterior = inicio_mes_actual - relativedelta(months=1)
-        fin_mes_anterior = inicio_mes_actual - relativedelta(days=1)
+        try:
+            hoy = fields.Date.today()
+            inicio_mes_actual = hoy.replace(day=1)
+            inicio_mes_anterior = inicio_mes_actual - relativedelta(months=1)
+            fin_mes_anterior = inicio_mes_actual - relativedelta(days=1)
 
-        _logger.info("Buscando evaluaciones finalizadas entre %s y %s", inicio_mes_anterior, fin_mes_anterior)
+            _logger.info("📆 Fecha actual: %s", hoy)
+            _logger.info("📅 Rango a evaluar: %s hasta %s", inicio_mes_anterior, fin_mes_anterior)
 
-        evaluaciones_finalizadas = self.search([
-            ('fecha', '>=', inicio_mes_anterior),
-            ('fecha', '<=', fin_mes_anterior),
-            ('state', '=', 'enviado')
-        ])
-
-        if not evaluaciones_finalizadas:
-            _logger.info("No hay evaluaciones finalizadas el mes pasado. Nada que duplicar.")
-            return
-
-        duplicadas = 0
-
-        for evaluacion in evaluaciones_finalizadas:
-            ya_existe = self.search_count([
-                ('usuario_id', '=', evaluacion.usuario_id.id),
-                ('fecha', '>=', inicio_mes_actual)
+            # Buscar evaluaciones enviadas del mes anterior
+            evaluaciones_anteriores = self.search([
+                ('fecha', '>=', inicio_mes_anterior),
+                ('fecha', '<=', fin_mes_anterior),
+                ('state', '=', 'enviado')  # corregido aquí
             ])
 
-            if ya_existe:
-                _logger.info("Ya existe evaluación en %s para %s. Se omite.", hoy.strftime('%B'), evaluacion.usuario_id.name)
-                continue
+            _logger.info("🔍 Evaluaciones encontradas con estado 'enviado': %s", len(evaluaciones_anteriores))
 
-            nueva = evaluacion.copy({
-                'name': 'New',
-                'fecha': hoy,
-                'state': 'borrador',
-                'cantidad_reparaciones': False,
-                'cantidad_tickets': False,
-                'porcentaje_reparaciones': False,
-                'porcentaje_tickets': False,
-                'puntaje_objetivos': False,
-                'puntaje_desempeno': False,
-                'puntaje_total': False,
-                'nivel_desempeno': False,
-                'fortalezas': False,
-                'areas_mejora': False,
-                'plan_accion': False
-            })
+            if not evaluaciones_anteriores:
+                _logger.info("⚠️ No hay evaluaciones 'enviadas' el mes pasado. Nada que duplicar.")
+                return
 
-            self._notificar_evaluador(nueva)
-            duplicadas += 1
-            _logger.info("Duplicada evaluación para %s", evaluacion.usuario_id.name)
+            duplicadas = 0
+            omitidas = 0
 
-        _logger.info("Duplicación completada. Total duplicadas: %s", duplicadas)
+            for evaluacion in evaluaciones_anteriores:
+                # Verifica si ya existe evaluación para este técnico en este mes
+                existe = self.search_count([
+                    ('usuario_id', '=', evaluacion.usuario_id.id),
+                    ('fecha', '>=', inicio_mes_actual),
+                    ('fecha', '<=', hoy)
+                ])
+
+                if existe:
+                    _logger.info("⏭️ Ya existe evaluación para %s en %s. Se omite duplicación.",
+                                evaluacion.usuario_id.name, hoy.strftime('%B'))
+                    omitidas += 1
+                    continue
+
+                # Duplicar evaluación
+                nueva_eval = evaluacion.copy({
+                    'name': 'New',  # Genera nuevo secuencial
+                    'fecha': hoy,
+                    'state': 'borrador',
+                    # Limpiar campos calculados
+                    'cantidad_reparaciones': False,
+                    'cantidad_tickets': False,
+                    'porcentaje_reparaciones': False,
+                    'porcentaje_tickets': False,
+                    'puntaje_objetivos': False,
+                    'puntaje_desempeno': False,
+                    'puntaje_total': False,
+                    'nivel_desempeno': False,
+                    'fortalezas': False,
+                    'areas_mejora': False,
+                    'plan_accion': False
+                })
+
+                _logger.info("✅ Evaluación duplicada para técnico: %s (nueva ID: %s)",
+                            evaluacion.usuario_id.name, nueva_eval.id)
+
+                # Notificar al evaluador
+                self._notificar_evaluador(nueva_eval)
+                duplicadas += 1
+
+            _logger.info("🟢 Proceso finalizado. Total duplicadas: %s | Omitidas (ya existentes): %s", duplicadas, omitidas)
+
+        except Exception as e:
+            _logger.error("❌ Error en el proceso de duplicación automática: %s", str(e))
+            _logger.error(traceback.format_exc())
+
 
     
     def _notificar_evaluador(self, evaluacion):
