@@ -151,7 +151,7 @@ class EquipmentVisitReport(models.Model):
             
             equipment_visits[equipment_key]['visits'].append({
                 'id': ticket.id,
-                'date': ticket.agenda.strftime('%Y-%m-%d') if ticket.agenda else None,
+                'date': ticket.agenda if ticket.agenda else None,  # Store as datetime object, not string
                 'description': ticket.description,
                 'responsable': ticket.responsable.id if ticket.responsable else False
             })
@@ -195,16 +195,18 @@ class EquipmentVisitReport(models.Model):
                 first_visits += 1
             else:
                 # Ordenar visitas por fecha
-                sorted_visits = sorted(eq_data['visits'], key=lambda x: x['date'])
+                sorted_visits = sorted(eq_data['visits'], key=lambda x: x['date'] or fields.Datetime.now())
                 
                 for i in range(1, len(sorted_visits)):
                     current_visit = sorted_visits[i]
                     prev_visit = sorted_visits[i-1]
                     
-                    # Si hay visitas cercanas con el mismo problema, contar como problema recurrente
-                    days_diff = (current_visit['date'] - prev_visit['date']).days
-                    if days_diff <= self.same_issue_days and current_visit['description'] == prev_visit['description']:
-                        recurring_issues += 1
+                    # Verificar que ambas fechas existen
+                    if current_visit['date'] and prev_visit['date']:
+                        # Ambas fechas son objetos datetime, se pueden restar directamente
+                        days_diff = (current_visit['date'] - prev_visit['date']).days
+                        if days_diff <= self.same_issue_days and current_visit['description'] == prev_visit['description']:
+                            recurring_issues += 1
         
         # Calcular tasa de resolución en primera visita
         resolution_rate = 0
@@ -304,7 +306,7 @@ class EquipmentVisitReport(models.Model):
             
             equipment_visits[eq_key]['visits'].append({
                 'id': ticket.id,
-                'date': ticket.agenda.strftime('%Y-%m-%d') if ticket.agenda else None,
+                'date': ticket.agenda if ticket.agenda else None,  # Store as datetime object
                 'problem': ticket.description or 'Sin descripción',
                 'technician': ticket.responsable.name if ticket.responsable else 'Sin técnico',
             })
@@ -313,23 +315,36 @@ class EquipmentVisitReport(models.Model):
         for eq_key, eq_data in equipment_visits.items():
             if len(eq_data['visits']) >= self.visit_threshold:
                 # Ordenar visitas por fecha
-                eq_data['visits'] = sorted(eq_data['visits'], key=lambda x: x['date'])
+                eq_data['visits'] = sorted(eq_data['visits'], key=lambda x: x['date'] or fields.Datetime.now())
                 
                 # Determinar si las visitas son por el mismo problema
                 for i in range(1, len(eq_data['visits'])):
                     current = eq_data['visits'][i]
                     prev = eq_data['visits'][i-1]
-                    days_diff = (current['date'] - prev['date']).days
                     
-                    # Determinar si es el mismo problema basado en la descripción y el tiempo
-                    if days_diff <= self.same_issue_days and current['problem'] == prev['problem']:
-                        current['same_problem'] = True
+                    # Verificar que ambas fechas existen
+                    if current['date'] and prev['date']:
+                        # Ambas fechas son objetos datetime, se pueden restar directamente
+                        days_diff = (current['date'] - prev['date']).days
+                        
+                        # Determinar si es el mismo problema basado en la descripción y el tiempo
+                        if days_diff <= self.same_issue_days and current['problem'] == prev['problem']:
+                            current['same_problem'] = True
+                        else:
+                            current['same_problem'] = False
                     else:
                         current['same_problem'] = False
                 
                 # Marcar la primera visita como no recurrente
                 if eq_data['visits']:
                     eq_data['visits'][0]['same_problem'] = False
+                
+                # Convertir los objetos datetime a strings para la serialización JSON
+                for visit in eq_data['visits']:
+                    if visit['date']:
+                        visit['date'] = visit['date'].strftime('%Y-%m-%d')
+                    else:
+                        visit['date'] = None
                 
                 timeline_data.append({
                     'model': eq_data['model'],
@@ -343,8 +358,8 @@ class EquipmentVisitReport(models.Model):
         
         for eq_key, eq_data in equipment_visits.items():
             if len(eq_data['visits']) > 1:
-                # Ordenar visitas por fecha
-                sorted_visits = sorted(eq_data['visits'], key=lambda x: x['date'])
+                # Ordenar visitas por fecha - considerando que ahora son strings
+                sorted_visits = sorted(eq_data['visits'], key=lambda x: x['date'] or "")
                 
                 # Agrupar problemas similares
                 problems = {}
@@ -356,15 +371,28 @@ class EquipmentVisitReport(models.Model):
                 # Encontrar problema más común
                 common_problem = max(problems.items(), key=lambda x: x[1])[0] if problems else 'Varios'
                 
-                # Recopilar fechas de visita
-                visit_dates = [v['date'].strftime('%d/%m/%Y') for v in sorted_visits]
+                # Recopilar fechas de visita - asegurarse de que son strings
+                visit_dates = []
+                for v in sorted_visits:
+                    if v['date']:
+                        # Si la fecha ya es un string, usarla directamente
+                        if isinstance(v['date'], str):
+                            date_str = v['date']
+                            # Convertir el formato si es necesario (de YYYY-MM-DD a DD/MM/YYYY)
+                            if '-' in date_str:
+                                try:
+                                    parts = date_str.split('-')
+                                    date_str = f"{parts[2]}/{parts[1]}/{parts[0]}" if len(parts) == 3 else date_str
+                                except:
+                                    pass
+                            visit_dates.append(date_str)
+                        # Si la fecha es un objeto datetime, convertirlo
+                        else:
+                            visit_dates.append(v['date'].strftime('%d/%m/%Y'))
                 
                 # Determinar si hay visitas cercanas (menos de X días entre visitas consecutivas)
-                close_visits = False
-                for i in range(1, len(sorted_visits)):
-                    if (sorted_visits[i]['date'] - sorted_visits[i-1]['date']).days <= self.same_issue_days:
-                        close_visits = True
-                        break
+                # Esto ya se calculó anteriormente cuando se determinó 'same_problem'
+                close_visits = any(v.get('same_problem', False) for v in sorted_visits if v != sorted_visits[0])
                 
                 table_data.append({
                     'partner': eq_data['partner'],
