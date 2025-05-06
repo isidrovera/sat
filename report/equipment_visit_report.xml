@@ -114,22 +114,20 @@
                         </div>
 
                        <!-- Sección de Gráficos -->
+<!-- Sección de Gráficos usando imágenes base64 para PDF -->
 <div class="ev-charts-section mt-4">
     <h3 class="ev-section-title">Análisis Visual</h3>
+    <t t-set="chart_imgs" t-value="json.loads(doc.chart_images or '{}')"/>
+
     <div class="row">
         <div class="col-6">
             <div class="ev-chart-container">
                 <h4 class="ev-chart-title">
                     <i class="fa fa-chart-bar"/> Equipos con Más Visitas
                 </h4>
-                <t t-set="equipment_chart_data" t-value="json.loads(doc.chart_data or '{}').get('equipment_chart', {})"/>
-                <t t-call="sat.chart_canvas_container">
-                    <t t-set="type" t-value="'equipment'"/>
-                    <t t-set="chart_id" t-value="'equipmentChart' + str(doc.id)"/>
-                    <t t-set="chart_data" t-value="equipment_chart_data"/>
-                    <t t-set="threshold" t-value="str(equipment_chart_data.get('critical_threshold', 3))"/>
-                    <t t-set="image_key" t-value="'equipment_chart'"/>
-                </t>
+                <img t-if="chart_imgs.get('equipment_chart')" 
+                     t-att-src="'data:image/png;base64,' + chart_imgs.get('equipment_chart')" 
+                     style="width:100%; max-height:300px;" />
             </div>
         </div>
         <div class="col-6">
@@ -137,31 +135,22 @@
                 <h4 class="ev-chart-title">
                     <i class="fa fa-chart-pie"/> Distribución por Cliente
                 </h4>
-                <t t-set="client_chart_data" t-value="json.loads(doc.chart_data or '{}').get('client_chart', {})"/>
-                <t t-call="sat.chart_canvas_container">
-                    <t t-set="type" t-value="'client'"/>
-                    <t t-set="chart_id" t-value="'clientChart' + str(doc.id)"/>
-                    <t t-set="chart_data" t-value="client_chart_data"/>
-                    <t t-set="image_key" t-value="'client_chart'"/>
-                </t>
+                <img t-if="chart_imgs.get('client_chart')" 
+                     t-att-src="'data:image/png;base64,' + chart_imgs.get('client_chart')" 
+                     style="width:100%; max-height:300px;" />
             </div>
         </div>
     </div>
-    
-    <!-- Segunda fila de gráficos -->
+
     <div class="row mt-4">
         <div class="col-6">
             <div class="ev-chart-container">
                 <h4 class="ev-chart-title">
                     <i class="fa fa-chart-line"/> Tendencia de Tiempos de Respuesta
                 </h4>
-                <t t-set="trend_chart_data" t-value="json.loads(doc.chart_data or '{}').get('trend_chart', {})"/>
-                <t t-call="sat.chart_canvas_container">
-                    <t t-set="type" t-value="'trend'"/>
-                    <t t-set="chart_id" t-value="'trendChart' + str(doc.id)"/>
-                    <t t-set="chart_data" t-value="trend_chart_data"/>
-                    <t t-set="image_key" t-value="'trend_chart'"/>
-                </t>
+                <img t-if="chart_imgs.get('trend_chart')" 
+                     t-att-src="'data:image/png;base64,' + chart_imgs.get('trend_chart')" 
+                     style="width:100%; max-height:300px;" />
             </div>
         </div>
         <div class="col-6">
@@ -169,17 +158,14 @@
                 <h4 class="ev-chart-title">
                     <i class="fa fa-bullseye"/> Categorías de Problemas
                 </h4>
-                <t t-set="problems_chart_data" t-value="json.loads(doc.chart_data or '{}').get('problems_chart', {})"/>
-                <t t-call="sat.chart_canvas_container">
-                    <t t-set="type" t-value="'problems'"/>
-                    <t t-set="chart_id" t-value="'problemsChart' + str(doc.id)"/>
-                    <t t-set="chart_data" t-value="problems_chart_data"/>
-                    <t t-set="image_key" t-value="'problems_chart'"/>
-                </t>
+                <img t-if="chart_imgs.get('problems_chart')" 
+                     t-att-src="'data:image/png;base64,' + chart_imgs.get('problems_chart')" 
+                     style="width:100%; max-height:300px;" />
             </div>
         </div>
     </div>
 </div>
+
                         <!-- Tabla de Equipos Críticos -->
                         <div class="ev-critical-equipment mt-4">
                             <h3 class="ev-section-title">Equipos Críticos</h3>
@@ -462,19 +448,7 @@
         </t>
     </t>
 </template>
-<template id="chart_canvas_container">
-    <t t-set="chart_labels" t-value="chart_data.get('labels', [])"/>
-    <t t-set="chart_values" t-value="chart_data.get('values', [])"/>
-    <t t-set="chart_threshold" t-value="chart_data.get('critical_threshold', 3)"/>
 
-    <canvas t-att-id="chart_id"
-            t-att-data-labels="','.join(chart_labels)"
-            t-att-data-values="','.join([str(v) for v in chart_values])"
-            t-att-data-threshold="chart_threshold"
-            width="400" height="200"
-            style="width:100%; height:300px;">
-    </canvas>
-</template>
 
 
 </odoo>
