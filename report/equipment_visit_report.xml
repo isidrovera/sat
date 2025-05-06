@@ -126,8 +126,9 @@
                     <i class="fa fa-chart-bar"/> Equipos con Más Visitas
                 </h4>
                 <img t-if="chart_imgs.get('equipment_chart')" 
-                     t-att-src="'data:image/png;base64,' + chart_imgs.get('equipment_chart')" 
-                     style="width:100%; max-height:300px;" />
+     t-att-src="'data:image/png;base64,' + chart_imgs.get('equipment_chart')" 
+     style="width: 100%; height: auto; max-height: 250px; display: block; margin: 0 auto;" />
+
             </div>
         </div>
         <div class="col-6">
