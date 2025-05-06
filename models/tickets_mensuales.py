@@ -9,9 +9,7 @@ import base64
 from io import BytesIO
 import pandas as pd
 import math
-import json
-import base64
-import io
+
 try:
     import matplotlib
     matplotlib.use('Agg')  # Backend que no requiere interfaz gráfica
@@ -20,7 +18,6 @@ try:
     MATPLOTLIB_ENABLED = True
 except ImportError:
     MATPLOTLIB_ENABLED = False
-
 _logger = logging.getLogger(__name__)
 
 class EquipmentVisitReport(models.Model):
