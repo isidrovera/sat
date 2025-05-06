@@ -196,7 +196,7 @@ class EquipmentVisitReport(models.Model):
         # Guardar las imágenes en el registro
         self.write({'chart_images': json.dumps(chart_images)})
         
-        return True                                 help='Porcentaje de revisiones que requirieron visitas adicionales en periodo corto')
+        return True      
     def set_webkit_params(cr, registry):
         env = api.Environment(cr, SUPERUSER_ID, {})
         IrConfigParameter = env['ir.config_parameter']
