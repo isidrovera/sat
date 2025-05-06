@@ -119,7 +119,7 @@
     'assets': {
         'web.assets_backend': [
             
-            
+            'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
             # CSS Files
             'sat/static/src/css/dashboard.css',
             'sat/static/src/css/style.css',

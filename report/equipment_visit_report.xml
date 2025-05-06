@@ -341,7 +341,7 @@
                     <t t-if="not is_pdf and not is_print">
                         <link rel="stylesheet" type="text/css" href="/sat/static/src/css/equipment_visit_report.css"/>
                         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-                    </t>
+                    
                     
                     <!-- Script para renderizar gráficos - Coloca esta parte justo antes del cierre del body -->
                     <script type="text/javascript">
@@ -622,6 +622,7 @@
                             }
                         })();
                     </script>
+                    </t>
             </t>
         </t>
     </t>
