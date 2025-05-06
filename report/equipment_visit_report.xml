@@ -8,9 +8,9 @@
         <field name="report_name">sat.report_equipment_visit</field>
         <field name="report_file">sat.report_equipment_visit</field>
         <field name="print_report_name">'Informe de Visitas - %s' % (object.name)</field>
-        <field name="binding_model_id" ref="model_equipment_visit_report"/>
+        <field name="binding_model_id" ref="model_equipment_visit_report" />
         <field name="binding_type">report</field>
-        <field name="paperformat_id" ref="base.paperformat_euro"/>
+        <field name="paperformat_id" ref="base.paperformat_euro" />
     </record>
 
     <!-- Assets para CSS -->
@@ -33,21 +33,27 @@
                             <div class="row">
                                 <div class="col-6">
                                     <h2 class="ev-title">
-                                        <i class="fa fa-wrench ev-icon"/> Informe de Visitas Técnicas
-                                    </h2>
-                                    <h3 class="ev-subtitle"><t t-esc="doc.name"/></h3>
+                                        <i class="fa fa-wrench ev-icon" /> Informe de Visitas
+                                        Técnicas </h2>
+                                    <h3 class="ev-subtitle">
+                                        <t t-esc="doc.name" />
+                                    </h3>
                                 </div>
                                 <div class="col-6 text-end">
                                     <div class="ev-date-range">
                                         <span class="ev-date-label">Período:</span>
                                         <span class="ev-date-value">
-                                            <t t-esc="doc.date_from" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/> -
-                                            <t t-esc="doc.date_to" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
+                                            <t t-esc="doc.date_from"
+                                                t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}" />
+                                            - <t t-esc="doc.date_to"
+                                                t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}" />
                                         </span>
                                     </div>
                                     <div class="ev-generated-by">
                                         <span class="ev-label">Generado por:</span>
-                                        <span class="ev-value"><t t-esc="doc.user_id.name"/></span>
+                                        <span class="ev-value">
+                                            <t t-esc="doc.user_id.name" />
+                                        </span>
                                     </div>
                                     <div class="ev-state">
                                         <span class="ev-label">Estado:</span>
@@ -67,10 +73,12 @@
                                 <div class="col-3">
                                     <div class="ev-card ev-total-visits">
                                         <div class="ev-card-icon">
-                                            <i class="fa fa-calendar-check"/>
+                                            <i class="fa fa-calendar-check" />
                                         </div>
                                         <div class="ev-card-content">
-                                            <div class="ev-card-value"><t t-esc="doc.total_visits"/></div>
+                                            <div class="ev-card-value">
+                                                <t t-esc="doc.total_visits" />
+                                            </div>
                                             <div class="ev-card-label">Total Visitas</div>
                                         </div>
                                     </div>
@@ -78,10 +86,12 @@
                                 <div class="col-3">
                                     <div class="ev-card ev-recurring">
                                         <div class="ev-card-icon">
-                                            <i class="fa fa-sync"/>
+                                            <i class="fa fa-sync" />
                                         </div>
                                         <div class="ev-card-content">
-                                            <div class="ev-card-value"><t t-esc="doc.recurring_equipment_count"/></div>
+                                            <div class="ev-card-value">
+                                                <t t-esc="doc.recurring_equipment_count" />
+                                            </div>
                                             <div class="ev-card-label">Equipos Recurrentes</div>
                                         </div>
                                     </div>
@@ -89,10 +99,12 @@
                                 <div class="col-3">
                                     <div class="ev-card ev-critical">
                                         <div class="ev-card-icon">
-                                            <i class="fa fa-exclamation-triangle"/>
+                                            <i class="fa fa-exclamation-triangle" />
                                         </div>
                                         <div class="ev-card-content">
-                                            <div class="ev-card-value"><t t-esc="doc.critical_equipment_count"/></div>
+                                            <div class="ev-card-value">
+                                                <t t-esc="doc.critical_equipment_count" />
+                                            </div>
                                             <div class="ev-card-label">Equipos Críticos</div>
                                         </div>
                                     </div>
@@ -100,11 +112,12 @@
                                 <div class="col-3">
                                     <div class="ev-card ev-resolution">
                                         <div class="ev-card-icon">
-                                            <i class="fa fa-check-circle"/>
+                                            <i class="fa fa-check-circle" />
                                         </div>
                                         <div class="ev-card-content">
                                             <div class="ev-card-value">
-                                                <t t-esc="round(doc.first_visit_resolution_rate, 1)"/>%
+                                                <t t-esc="round(doc.first_visit_resolution_rate, 1)" />
+                                                %
                                             </div>
                                             <div class="ev-card-label">Res. Primera Visita</div>
                                         </div>
@@ -120,57 +133,58 @@
                                 <div class="col-6">
                                     <div class="ev-chart-container">
                                         <h4 class="ev-chart-title">
-                                            <i class="fa fa-chart-bar"/> Equipos con Más Visitas
-                                        </h4>
+                                            <i class="fa fa-chart-bar" /> Equipos con Más Visitas </h4>
                                         <div class="ev-equipment-chart" style="height: 250px;">
-                                            <t t-set="equipment_chart_data" t-value="json.loads(doc.chart_data or '{}').get('equipment_chart', {})"/>
-                                            <canvas t-att-id="'equipmentChart' + str(doc.id)" 
-                                                   t-att-data-labels="','.join(equipment_chart_data.get('labels', []))" 
-                                                   t-att-data-values="','.join([str(x) for x in equipment_chart_data.get('data', [])])"
-                                                   t-att-data-threshold="str(equipment_chart_data.get('critical_threshold', 3))"/>
+                                            <t t-set="equipment_chart_data"
+                                                t-value="json.loads(doc.chart_data or '{}').get('equipment_chart', {})" />
+                                            <canvas t-att-id="'equipmentChart' + str(doc.id)"
+                                                t-att-data-labels="','.join(equipment_chart_data.get('labels', []))"
+                                                t-att-data-values="','.join([str(x) for x in equipment_chart_data.get('data', [])])"
+                                                t-att-data-threshold="str(equipment_chart_data.get('critical_threshold', 3))" />
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-6">
                                     <div class="ev-chart-container">
                                         <h4 class="ev-chart-title">
-                                            <i class="fa fa-chart-pie"/> Distribución por Cliente
-                                        </h4>
+                                            <i class="fa fa-chart-pie" /> Distribución por Cliente </h4>
                                         <div class="ev-client-chart" style="height: 250px;">
-                                            <t t-set="client_chart_data" t-value="json.loads(doc.chart_data or '{}').get('client_chart', {})"/>
-                                            <canvas t-att-id="'clientChart' + str(doc.id)" 
-                                                   t-att-data-labels="','.join(client_chart_data.get('labels', []))" 
-                                                   t-att-data-values="','.join([str(x) for x in client_chart_data.get('data', [])])"/>
+                                            <t t-set="client_chart_data"
+                                                t-value="json.loads(doc.chart_data or '{}').get('client_chart', {})" />
+                                            <canvas t-att-id="'clientChart' + str(doc.id)"
+                                                t-att-data-labels="','.join(client_chart_data.get('labels', []))"
+                                                t-att-data-values="','.join([str(x) for x in client_chart_data.get('data', [])])" />
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Segunda fila de gráficos -->
                             <div class="row mt-4">
                                 <div class="col-6">
                                     <div class="ev-chart-container">
                                         <h4 class="ev-chart-title">
-                                            <i class="fa fa-chart-line"/> Tendencia de Tiempos de Respuesta
-                                        </h4>
+                                            <i class="fa fa-chart-line" /> Tendencia de Tiempos de
+                                            Respuesta </h4>
                                         <div class="ev-trend-chart" style="height: 250px;">
-                                            <t t-set="trend_chart_data" t-value="json.loads(doc.chart_data or '{}').get('trend_chart', {})"/>
-                                            <canvas t-att-id="'trendChart' + str(doc.id)" 
-                                                   t-att-data-labels="','.join(trend_chart_data.get('labels', []))" 
-                                                   t-att-data-values="','.join([str(x) for x in trend_chart_data.get('data', [])])"/>
+                                            <t t-set="trend_chart_data"
+                                                t-value="json.loads(doc.chart_data or '{}').get('trend_chart', {})" />
+                                            <canvas t-att-id="'trendChart' + str(doc.id)"
+                                                t-att-data-labels="','.join(trend_chart_data.get('labels', []))"
+                                                t-att-data-values="','.join([str(x) for x in trend_chart_data.get('data', [])])" />
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-6">
                                     <div class="ev-chart-container">
                                         <h4 class="ev-chart-title">
-                                            <i class="fa fa-bullseye"/> Categorías de Problemas
-                                        </h4>
+                                            <i class="fa fa-bullseye" /> Categorías de Problemas </h4>
                                         <div class="ev-problems-chart" style="height: 250px;">
-                                            <t t-set="problems_chart_data" t-value="json.loads(doc.chart_data or '{}').get('problems_chart', {})"/>
-                                            <canvas t-att-id="'problemsChart' + str(doc.id)" 
-                                                   t-att-data-labels="','.join(problems_chart_data.get('labels', []))" 
-                                                   t-att-data-values="','.join([str(x) for x in problems_chart_data.get('data', [])])"/>
+                                            <t t-set="problems_chart_data"
+                                                t-value="json.loads(doc.chart_data or '{}').get('problems_chart', {})" />
+                                            <canvas t-att-id="'problemsChart' + str(doc.id)"
+                                                t-att-data-labels="','.join(problems_chart_data.get('labels', []))"
+                                                t-att-data-values="','.join([str(x) for x in problems_chart_data.get('data', [])])" />
                                         </div>
                                     </div>
                                 </div>
@@ -179,14 +193,17 @@
                         <!-- Tabla de Equipos Críticos -->
                         <div class="ev-critical-equipment mt-4">
                             <h3 class="ev-section-title">Equipos Críticos</h3>
-                            <t t-set="table_data" t-value="json.loads(doc.chart_data or '{}').get('table', [])"/>
-                            <t t-set="critical_equipment" t-value="[item for item in table_data if item.get('is_critical')]"/>
-                            
+                            <t t-set="table_data"
+                                t-value="json.loads(doc.chart_data or '{}').get('table', [])" />
+                            <t t-set="critical_equipment"
+                                t-value="[item for item in table_data if item.get('is_critical')]" />
+
                             <div t-if="not critical_equipment" class="ev-no-data">
-                                <i class="fa fa-info-circle"/> No se encontraron equipos críticos durante este período.
-                            </div>
-                            
-                            <table t-if="critical_equipment" class="table table-sm table-bordered ev-table">
+                                <i class="fa fa-info-circle" /> No se encontraron equipos críticos
+                                durante este período. </div>
+
+                            <table t-if="critical_equipment"
+                                class="table table-sm table-bordered ev-table">
                                 <thead>
                                     <tr>
                                         <th>Cliente</th>
@@ -199,15 +216,28 @@
                                 </thead>
                                 <tbody>
                                     <t t-foreach="critical_equipment" t-as="item">
-                                        <tr t-att-class="'ev-close-visits' if item.get('has_close_visits') else ''">
-                                            <td><t t-esc="item.get('partner')"/></td>
-                                            <td><t t-esc="item.get('model')"/></td>
-                                            <td><t t-esc="item.get('serie')"/></td>
-                                            <td><t t-esc="item.get('problem')"/></td>
-                                            <td class="text-center">
-                                                <span class="ev-visit-count"><t t-esc="item.get('visit_count')"/></span>
+                                        <tr
+                                            t-att-class="'ev-close-visits' if item.get('has_close_visits') else ''">
+                                            <td>
+                                                <t t-esc="item.get('partner')" />
                                             </td>
-                                            <td><t t-esc="', '.join(item.get('technicians', []))"/></td>
+                                            <td>
+                                                <t t-esc="item.get('model')" />
+                                            </td>
+                                            <td>
+                                                <t t-esc="item.get('serie')" />
+                                            </td>
+                                            <td>
+                                                <t t-esc="item.get('problem')" />
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="ev-visit-count">
+                                                    <t t-esc="item.get('visit_count')" />
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <t t-esc="', '.join(item.get('technicians', []))" />
+                                            </td>
                                         </tr>
                                     </t>
                                 </tbody>
@@ -220,20 +250,29 @@
                             <div class="ev-client-info-card">
                                 <div class="row">
                                     <div class="col-2 ev-client-icon">
-                                        <i class="fa fa-building"/>
+                                        <i class="fa fa-building" />
                                     </div>
                                     <div class="col-10">
-                                        <div class="ev-client-name"><t t-esc="doc.top_client_id.name or 'Sin datos'"/></div>
+                                        <div class="ev-client-name">
+                                            <t t-esc="doc.top_client_id.name or 'Sin datos'" />
+                                        </div>
                                         <div class="ev-client-visit-info">
-                                            <span class="ev-client-visit-count"><t t-esc="doc.top_client_visit_count or 0"/></span>
-                                            <span class="ev-client-visit-text">visitas durante el período</span>
+                                            <span class="ev-client-visit-count">
+                                                <t t-esc="doc.top_client_visit_count or 0" />
+                                            </span>
+                                            <span class="ev-client-visit-text">visitas durante el
+                                                período</span>
                                         </div>
                                         <div t-if="doc.top_client_id" class="ev-client-contact">
-                                            <div t-if="doc.top_client_id.phone" class="ev-contact-phone">
-                                                <i class="fa fa-phone"/> <t t-esc="doc.top_client_id.phone"/>
+                                            <div t-if="doc.top_client_id.phone"
+                                                class="ev-contact-phone">
+                                                <i class="fa fa-phone" />
+                                                <t t-esc="doc.top_client_id.phone" />
                                             </div>
-                                            <div t-if="doc.top_client_id.email" class="ev-contact-email">
-                                                <i class="fa fa-envelope"/> <t t-esc="doc.top_client_id.email"/>
+                                            <div t-if="doc.top_client_id.email"
+                                                class="ev-contact-email">
+                                                <i class="fa fa-envelope" />
+                                                <t t-esc="doc.top_client_id.email" />
                                             </div>
                                         </div>
                                     </div>
@@ -244,39 +283,47 @@
                         <!-- Análisis Especial -->
                         <div class="ev-special-analysis mt-4">
                             <h3 class="ev-section-title">Análisis Especial y Recomendaciones</h3>
-                            <t t-set="special_analysis" t-value="json.loads(doc.chart_data or '{}').get('special_analysis', [])"/>
-                            
+                            <t t-set="special_analysis"
+                                t-value="json.loads(doc.chart_data or '{}').get('special_analysis', [])" />
+
                             <div t-if="not special_analysis" class="ev-no-data">
-                                <i class="fa fa-info-circle"/> No hay suficientes datos para un análisis especial.
-                            </div>
-                            
+                                <i class="fa fa-info-circle" /> No hay suficientes datos para un
+                                análisis especial. </div>
+
                             <div t-if="special_analysis" class="ev-analysis-cards">
                                 <t t-foreach="special_analysis" t-as="analysis">
                                     <div class="ev-analysis-card">
                                         <div class="ev-analysis-header">
-                                            <span class="ev-analysis-model"><t t-esc="analysis.get('model')"/></span>
-                                            <span class="ev-analysis-serie">Serie: <t t-esc="analysis.get('serie')"/></span>
+                                            <span class="ev-analysis-model">
+                                                <t t-esc="analysis.get('model')" />
+                                            </span>
+                                            <span class="ev-analysis-serie">Serie: <t
+                                                    t-esc="analysis.get('serie')" /></span>
                                         </div>
                                         <div class="ev-analysis-body">
                                             <div class="ev-analysis-client">
-                                                <i class="fa fa-user"/> Cliente: <t t-esc="analysis.get('partner')"/>
+                                                <i class="fa fa-user" /> Cliente: <t
+                                                    t-esc="analysis.get('partner')" />
                                             </div>
                                             <div class="ev-analysis-visits">
-                                                <i class="fa fa-calendar"/> <t t-esc="analysis.get('visit_count')"/> visitas
-                                            </div>
+                                                <i class="fa fa-calendar" /> <t
+                                                    t-esc="analysis.get('visit_count')" /> visitas </div>
                                             <div class="ev-analysis-problem">
-                                                <i class="fa fa-exclamation-circle"/> Problema común: <t t-esc="analysis.get('common_problem')"/>
+                                                <i class="fa fa-exclamation-circle" /> Problema
+                                                común: <t t-esc="analysis.get('common_problem')" />
                                             </div>
-                                            <div t-if="analysis.get('has_close_visits')" class="ev-analysis-warning">
-                                                <i class="fa fa-warning"/> Múltiples visitas en períodos cortos
-                                            </div>
+                                            <div t-if="analysis.get('has_close_visits')"
+                                                class="ev-analysis-warning">
+                                                <i class="fa fa-warning" /> Múltiples visitas en
+                                                períodos cortos </div>
                                         </div>
                                         <div class="ev-analysis-recommendation">
-                                            <i class="fa fa-lightbulb"/> Recomendación:
-                                            <t t-if="analysis.get('visit_count') >= 5">
+                                            <i class="fa fa-lightbulb" /> Recomendación: <t
+                                                t-if="analysis.get('visit_count') >= 5">
                                                 Revisar a fondo / Considerar reemplazo
                                             </t>
-                                            <t t-else="">
+                                            <t
+                                                t-else="">
                                                 Verificar mantenimiento preventivo
                                             </t>
                                         </div>
@@ -290,11 +337,11 @@
                             <h3 class="ev-section-title">Tiempo Promedio de Respuesta</h3>
                             <div class="ev-time-container">
                                 <div class="ev-time-value">
-                                    <t t-esc="round(doc.average_response_time, 1)"/> días
-                                </div>
+                                    <t t-esc="round(doc.average_response_time, 1)" /> días </div>
                                 <div class="ev-time-gauge">
                                     <div class="ev-gauge-container">
-                                        <div t-attf-class="ev-gauge-fill" t-attf-style="width: {{ min(100, max(0, doc.average_response_time * 10)) }}%;">
+                                        <div t-attf-class="ev-gauge-fill"
+                                            t-attf-style="width: {{ min(100, max(0, doc.average_response_time * 10)) }}%;">
                                         </div>
                                     </div>
                                     <div class="ev-gauge-labels">
@@ -324,13 +371,12 @@
                         <div class="ev-report-footer mt-4">
                             <div class="row">
                                 <div class="col-6">
-                                    <div class="ev-report-date">
-                                        Generado el: <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                                    <div class="ev-report-date"> Generado el: <t
+                                            t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')" />
                                     </div>
                                 </div>
                                 <div class="col-6 text-end">
-                                    <div class="ev-report-id">
-                                        ID de informe: <t t-esc="doc.id"/>
+                                    <div class="ev-report-id"> ID de informe: <t t-esc="doc.id" />
                                     </div>
                                 </div>
                             </div>
@@ -339,293 +385,165 @@
 
                     <!-- Asegúrate de que Chart.js se cargue correctamente usando CDN -->
                     <t t-if="not is_pdf and not is_print">
-                        <link rel="stylesheet" type="text/css" href="/sat/static/src/css/equipment_visit_report.css"/>
-                        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+                        <link rel="stylesheet" type="text/css"
+                            href="/sat/static/src/css/equipment_visit_report.css" />
+                        <script
+                            src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+                        <!-- Script para renderizar gráficos -->
+                        <script type="text/javascript"> (function() { // Aseguramos que el script se
+                            ejecute cuando todo el documento esté listo function initCharts() { try
+                            { console.log("Inicializando gráficos..."); // Configuración de colores
+                            const colors = { blue: 'rgba(52, 152, 219, 0.7)', red: 'rgba(231, 76,
+                            60, 0.7)', green: 'rgba(46, 204, 113, 0.7)', orange: 'rgba(243, 156, 18,
+                            0.7)', purple: 'rgba(155, 89, 182, 0.7)', teal: 'rgba(26, 188, 156,
+                            0.7)', gray: 'rgba(149, 165, 166, 0.7)', dark: 'rgba(52, 73, 94, 0.7)'
+                            }; const palette = [ colors.blue, colors.green, colors.orange,
+                            colors.purple, colors.red, colors.teal, colors.dark ]; // 1. Gráfico de
+                            Equipos con Más Visitas (barras) const equipmentChartId =
+                            'equipmentChart' + '<t t-esc="doc.id" />'; const equipmentChartEl =
+                            document.getElementById(equipmentChartId); if (equipmentChartEl) {
+                            console.log("Renderizando gráfico de equipos..."); // Obtener datos del
+                            backend let labels = (equipmentChartEl.getAttribute('data-labels') ||
+                            '').split(','); let values =
+                            (equipmentChartEl.getAttribute('data-values') ||
+                            '').split(',').map(Number); const threshold =
+                            parseInt(equipmentChartEl.getAttribute('data-threshold') || '3'); //
+                            Verificar si los datos existen if (!labels.length || labels[0] === '') {
+                            console.warn("No se encontraron datos para el gráfico de equipos");
+                            return; } // Colores basados en el umbral crítico const barColors =
+                            values.map(function(v) { return v >= threshold ? colors.red :
+                            colors.blue; }); new Chart(equipmentChartEl, { type: 'bar', data: {
+                            labels: labels, datasets: [{ label: 'Número de Visitas', data: values,
+                            backgroundColor: barColors, borderWidth: 0 }] }, options: { responsive:
+                            true, maintainAspectRatio: false, scales: { y: { beginAtZero: true,
+                            ticks: { precision: 0 } } }, plugins: { legend: { display: false },
+                            tooltip: { callbacks: { afterLabel: function(context) { return
+                            context.parsed.y >= threshold ? 'Equipo crítico' : ''; } } } } } }); }
+                            else { console.log("Elemento para gráfico de equipos no encontrado"); }
+                            // 2. Gráfico de Distribución por Cliente (pie) const clientChartId =
+                            'clientChart' + '<t t-esc="doc.id" />'; const clientChartEl =
+                            document.getElementById(clientChartId); if (clientChartEl) {
+                            console.log("Renderizando gráfico de clientes..."); // Obtener datos del
+                            backend let labels = (clientChartEl.getAttribute('data-labels') ||
+                            '').split(','); let values = (clientChartEl.getAttribute('data-values')
+                            || '').split(',').map(Number); // Verificar si los datos existen if
+                            (!labels.length || labels[0] === '') { console.warn("No se encontraron
+                            datos para el gráfico de clientes"); return; } new Chart(clientChartEl,
+                            { type: 'pie', data: { labels: labels, datasets: [{ data: values,
+                            backgroundColor: palette.slice(0, labels.length), borderWidth: 1 }] },
+                            options: { responsive: true, maintainAspectRatio: false, plugins: {
+                            legend: { position: 'right', labels: { boxWidth: 15, padding: 15 } },
+                            tooltip: { callbacks: { label: function(context) { var total = 0; for
+                            (var i = 0; i < context.dataset.data.length ; i++) {
+                                total += context.dataset.data[i];
+                                }
+                                var percentage= Math.round((context.raw / total) * 100);
+                                return context.label + ': ' + context.raw + ' (' + percentage + '%)' ;
+                                }
+                                }
+                                }
+                                }
+                                }
+                                });
+                                } else {
+                                console.log("Elemento para gráfico de clientes no encontrado" );
+                                }
                     
-                    
-                    <!-- Script para renderizar gráficos - Coloca esta parte justo antes del cierre del body -->
-                    <script type="text/javascript">
-                        (function() {
-                            // Aseguramos que el script se ejecute cuando todo el documento esté listo
-                            function initCharts() {
-                                try {
-                                    console.log("Inicializando gráficos...");
-                                    
-                                    // Configuración de colores
-                                    const colors = {
-                                        blue: 'rgba(52, 152, 219, 0.7)',
-                                        red: 'rgba(231, 76, 60, 0.7)',
-                                        green: 'rgba(46, 204, 113, 0.7)',
-                                        orange: 'rgba(243, 156, 18, 0.7)',
-                                        purple: 'rgba(155, 89, 182, 0.7)',
-                                        teal: 'rgba(26, 188, 156, 0.7)',
-                                        gray: 'rgba(149, 165, 166, 0.7)',
-                                        dark: 'rgba(52, 73, 94, 0.7)'
-                                    };
-                                    
-                                    const palette = [
-                                        colors.blue,
-                                        colors.green,
-                                        colors.orange,
-                                        colors.purple,
-                                        colors.red,
-                                        colors.teal,
-                                        colors.dark
-                                    ];
-                    
-                                    // 1. Gráfico de Equipos con Más Visitas (barras)
-                                    const equipmentChartId = 'equipmentChart' + '<t t-esc="doc.id"/>';
-                                    const equipmentChartEl = document.getElementById(equipmentChartId);
-                                    
-                                    if (equipmentChartEl) {
-                                        console.log("Renderizando gráfico de equipos...");
-                                        
-                                        // Obtener datos o usar datos de muestra
-                                        let labels = (equipmentChartEl.getAttribute('data-labels') || '').split(',');
-                                        let values = (equipmentChartEl.getAttribute('data-values') || '').split(',').map(Number);
-                                        const threshold = parseInt(equipmentChartEl.getAttribute('data-threshold') || '3');
-                                        
-                                        // Si no hay datos, usar datos de ejemplo basados en el PDF
-                                        if (!labels.length || labels[0] === '') {
-                                            labels = ['bizhub 658e', 'ADVANCE IR400', 'MP 6054', 'bizhub 284e', 'MP 3055'];
-                                            values = [4, 3, 3, 3, 3];
+                    //
+                                3. Gráfico de Tendencia de Tiempos de Respuesta (línea)
+                                const
+                                trendChartId='trendChart' + '<t t-esc="doc.id"/>' ;
+                                const trendChartEl= document.getElementById(trendChartId);
+                                if (trendChartEl) {
+                                console.log("Renderizando gráfico de tendencia..." );
+                        
+                        //
+                                Obtener datos del backend
+                                let labels= (trendChartEl.getAttribute('data-labels' ) || '' ).split(',' );
+                                let values= (trendChartEl.getAttribute('data-values' ) || '' ).split(',' ).map(Number);
+                        
+                        //
+                                Verificar si los datos existen
+                                if (!labels.length ||
+                                labels[0]=== '') {
+                            console.warn("No se encontraron datos para el gráfico de tendencia");
+                            return;
+                        }
+                        
+                        new Chart(trendChartEl, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Días promedio',
+                                    data: values,
+                                    borderColor: colors.teal,
+                                    backgroundColor: 'rgba(26, 188, 156, 0.1)',
+                                    fill: true,
+                                    tension: 0.3,
+                                    pointRadius: 5,
+                                    pointHoverRadius: 7
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Días'
                                         }
-                                        
-                                        // Colores basados en el umbral crítico
-                                        const barColors = values.map(v =&gt; v &gt;= threshold ? colors.red : colors.blue);
-                                        
-                                        new Chart(equipmentChartEl, {
-                                            type: 'bar',
-                                            data: {
-                                                labels: labels,
-                                                datasets: [{
-                                                    label: 'Número de Visitas',
-                                                    data: values,
-                                                    backgroundColor: barColors,
-                                                    borderWidth: 0
-                                                }]
-                                            },
-                                            options: {
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                scales: {
-                                                    y: {
-                                                        beginAtZero: true,
-                                                        ticks: {
-                                                            precision: 0
-                                                        }
-                                                    }
-                                                },
-                                                plugins: {
-                                                    legend: {
-                                                        display: false
-                                                    },
-                                                    tooltip: {
-                                                        callbacks: {
-                                                            afterLabel: function(context) {
-                                                                return context.parsed.y &gt;= threshold ? 'Equipo crítico' : '';
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        });
-                                    } else {
-                                        console.log("Elemento para gráfico de equipos no encontrado");
                                     }
-                                    
-                                    // 2. Gráfico de Distribución por Cliente (pie)
-                                    const clientChartId = 'clientChart' + '<t t-esc="doc.id"/>';
-                                    const clientChartEl = document.getElementById(clientChartId);
-                                    
-                                    if (clientChartEl) {
-                                        console.log("Renderizando gráfico de clientes...");
-                                        
-                                        // Obtener datos o usar datos de muestra
-                                        let labels = (clientChartEl.getAttribute('data-labels') || '').split(',');
-                                        let values = (clientChartEl.getAttribute('data-values') || '').split(',').map(Number);
-                                        
-                                        // Si no hay datos, usar datos de ejemplo basados en el PDF
-                                        if (!labels.length || labels[0] === '') {
-                                            labels = ['ZAMBRANO RODRIGUEZ', 'KITCHEN CENTER', 'CONSTRUREDES', 'ADUANERA CAPRICORNIO', 'Otros'];
-                                            values = [16, 6, 5, 6, 22];
-                                        }
-                                        
-                                        new Chart(clientChartEl, {
-                                            type: 'pie',
-                                            data: {
-                                                labels: labels,
-                                                datasets: [{
-                                                    data: values,
-                                                    backgroundColor: palette.slice(0, labels.length),
-                                                    borderWidth: 1
-                                                }]
-                                            },
-                                            options: {
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                plugins: {
-                                                    legend: {
-                                                        position: 'right',
-                                                        labels: {
-                                                            boxWidth: 15,
-                                                            padding: 15
-                                                        }
-                                                    },
-                                                    tooltip: {
-                                                        callbacks: {
-                                                            label: function(context) {
-                                                                const total = context.dataset.data.reduce((a, b) =&lt; a + b, 0);
-                                                                const percentage = Math.round((context.raw / total) * 100);
-                                                                return `${context.label}: ${context.raw} (${percentage}%)`;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        });
-                                    } else {
-                                        console.log("Elemento para gráfico de clientes no encontrado");
+                                },
+                                plugins: {
+                                    title: {
+                                        display: false,
+                                        text: 'Tendencia de Tiempos de Respuesta'
                                     }
-                                    
-                                    // 3. Gráfico de Tendencia de Tiempos de Respuesta (línea)
-                                    const trendChartId = 'trendChart' + '<t t-esc="doc.id"/>';
-                                    const trendChartEl = document.getElementById(trendChartId);
-                                    
-                                    if (trendChartEl) {
-                                        console.log("Renderizando gráfico de tendencia...");
-                                        
-                                        // Obtener datos o usar datos de muestra
-                                        let labels = (trendChartEl.getAttribute('data-labels') || '').split(',');
-                                        let values = (trendChartEl.getAttribute('data-values') || '').split(',').map(Number);
-                                        
-                                        // Si no hay datos, usar datos de ejemplo
-                                        if (!labels.length || labels[0] === '') {
-                                            labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May'];
-                                            values = [3.2, 2.9, 2.6, 2.4, 2.2];
-                                        }
-                                        
-                                        new Chart(trendChartEl, {
-                                            type: 'line',
-                                            data: {
-                                                labels: labels,
-                                                datasets: [{
-                                                    label: 'Días promedio',
-                                                    data: values,
-                                                    borderColor: colors.teal,
-                                                    backgroundColor: 'rgba(26, 188, 156, 0.1)',
-                                                    fill: true,
-                                                    tension: 0.3,
-                                                    pointRadius: 5,
-                                                    pointHoverRadius: 7
-                                                }]
-                                            },
-                                            options: {
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                scales: {
-                                                    y: {
-                                                        beginAtZero: true,
-                                                        title: {
-                                                            display: true,
-                                                            text: 'Días'
-                                                        }
-                                                    }
-                                                },
-                                                plugins: {
-                                                    title: {
-                                                        display: false,
-                                                        text: 'Tendencia de Tiempos de Respuesta'
-                                                    }
-                                                }
-                                            }
-                                        });
-                                    } else {
-                                        console.log("Elemento para gráfico de tendencia no encontrado");
-                                    }
-                                    
-                                    // 4. Gráfico de Categorías de Problemas (radar)
-                                    const problemsChartId = 'problemsChart' + '<t t-esc="doc.id"/>';
-                                    const problemsChartEl = document.getElementById(problemsChartId);
-                                    
-                                    if (problemsChartEl) {
-                                        console.log("Renderizando gráfico de problemas...");
-                                        
-                                        // Obtener datos o usar datos de muestra
-                                        let labels = (problemsChartEl.getAttribute('data-labels') || '').split(',');
-                                        let values = (problemsChartEl.getAttribute('data-values') || '').split(',').map(Number);
-                                        
-                                        // Si no hay datos, usar datos de ejemplo
-                                        if (!labels.length || labels[0] === '') {
-                                            labels = ['Mantenimiento', 'Atascos', 'Hardware', 'Software', 'Conectividad', 'Calidad'];
-                                            values = [45, 15, 10, 8, 7, 15];
-                                        }
-                                        
-                                        new Chart(problemsChartEl, {
-                                            type: 'radar',
-                                            data: {
-                                                labels: labels,
-                                                datasets: [{
-                                                    label: 'Frecuencia',
-                                                    data: values,
-                                                    backgroundColor: 'rgba(243, 156, 18, 0.2)',
-                                                    borderColor: 'rgba(243, 156, 18, 0.8)',
-                                                    pointBackgroundColor: 'rgba(243, 156, 18, 1)',
-                                                    pointHoverBackgroundColor: '#fff'
-                                                }]
-                                            },
-                                            options: {
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                elements: {
-                                                    line: {
-                                                        borderWidth: 2
-                                                    }
-                                                },
-                                                scales: {
-                                                    r: {
-                                                        angleLines: {
-                                                            display: true
-                                                        },
-                                                        suggestedMin: 0
-                                                    }
-                                                }
-                                            }
-                                        });
-                                    } else {
-                                        console.log("Elemento para gráfico de problemas no encontrado");
-                                    }
-                                    
-                                    console.log("Todos los gráficos inicializados correctamente");
-                                    
-                                } catch (error) {
-                                    console.error("Error al inicializar gráficos:", error);
                                 }
                             }
-                            
-                            // Comprobar si Chart.js está cargado, si no, cargarlo dinámicamente
-                            if (typeof Chart === 'undefined') {
-                                console.log("Chart.js no encontrado, cargando dinámicamente...");
-                                var script = document.createElement('script');
-                                script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
-                                script.onload = function() {
-                                    console.log("Chart.js cargado correctamente");
-                                    initCharts();
-                                };
-                                script.onerror = function() {
-                                    console.error("Error al cargar Chart.js");
-                                };
-                                document.head.appendChild(script);
-                            } else {
-                                // Chart.js ya está cargado
-                                window.addEventListener('load', initCharts);
-                            }
-                        })();
-                    </script>
+                        });
+                    } else {
+                        console.log("Elemento para gráfico de tendencia no encontrado");
+                    }
+                    
+                    // 4. Gráfico de Categorías de Problemas (radar)
+                    const problemsChartId = 'problemsChart' + '<t t-esc="doc.id" />'; const problemsChartEl =
+                            document.getElementById(problemsChartId); if (problemsChartEl) {
+                            console.log("Renderizando gráfico de problemas..."); // Obtener datos
+                            del backend let labels = (problemsChartEl.getAttribute('data-labels') ||
+                            '').split(','); let values =
+                            (problemsChartEl.getAttribute('data-values') ||
+                            '').split(',').map(Number); // Verificar si los datos existen if
+                            (!labels.length || labels[0] === '') { console.warn("No se encontraron
+                            datos para el gráfico de problemas"); return; } new
+                            Chart(problemsChartEl, { type: 'radar', data: { labels: labels,
+                            datasets: [{ label: 'Frecuencia', data: values, backgroundColor:
+                            'rgba(243, 156, 18, 0.2)', borderColor: 'rgba(243, 156, 18, 0.8)',
+                            pointBackgroundColor: 'rgba(243, 156, 18, 1)',
+                            pointHoverBackgroundColor: '#fff' }] }, options: { responsive: true,
+                            maintainAspectRatio: false, elements: { line: { borderWidth: 2 } },
+                            scales: { r: { angleLines: { display: true }, suggestedMin: 0 } } } });
+                            } else { console.log("Elemento para gráfico de problemas no
+                            encontrado"); } console.log("Todos los gráficos inicializados
+                            correctamente"); } catch (error) { console.error("Error al inicializar
+                            gráficos:", error); } } // Comprobar si Chart.js está cargado, si no,
+                            cargarlo dinámicamente if (typeof Chart === 'undefined') {
+                            console.log("Chart.js no encontrado, cargando dinámicamente..."); var
+                            script = document.createElement('script'); script.src =
+                            'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+                            script.onload = function() { console.log("Chart.js cargado
+                            correctamente"); initCharts(); }; script.onerror = function() {
+                            console.error("Error al cargar Chart.js"); };
+                            document.head.appendChild(script); } else { // Chart.js ya está cargado
+                            window.addEventListener('load', initCharts); } })();                     </script>
                     </t>
+                </t>
             </t>
         </t>
-    </t>
-</template>
+    </template>
 
 </odoo>
