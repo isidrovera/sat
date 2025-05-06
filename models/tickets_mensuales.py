@@ -83,7 +83,8 @@ class EquipmentVisitReport(models.Model):
                                               help='Porcentaje de mantenimientos que requirieron visitas adicionales en periodo corto')
     post_repair_visit_rate = fields.Float(string='Tasa de Visitas Post-Reparación (%)', readonly=True,
                                          help='Porcentaje de reparaciones que requirieron visitas adicionales en periodo corto')
-    post_review_visit_rate = fields.Float(string='Tasa de Visitas Post-Revisión (%)', readonly=True,     post_review_visit_rate = fields.Float(string='Tasa de Visitas Post-Revisión (%)', readonly=True,
+        
+    post_review_visit_rate = fields.Float(string='Tasa de Visitas Post-Revisión (%)', readonly=True,
                                           help='Porcentaje de revisiones que requirieron visitas adicionales en periodo corto')
 
     
@@ -196,7 +197,7 @@ class EquipmentVisitReport(models.Model):
         # Guardar las imágenes en el registro
         self.write({'chart_images': json.dumps(chart_images)})
         
-        return True      
+        return True
     def set_webkit_params(cr, registry):
         env = api.Environment(cr, SUPERUSER_ID, {})
         IrConfigParameter = env['ir.config_parameter']
