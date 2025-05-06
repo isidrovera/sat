@@ -417,18 +417,10 @@ class EquipmentVisitReport(models.Model):
         client_chart['labels'] = [item[0] for item in client_chart_data]
         client_chart['data'] = [item[1] for item in client_chart_data]
         
+        
         # Ordenar tabla por cantidad de visitas
         table_data = sorted(table_data, key=lambda x: x['visit_count'], reverse=True)
-        
-        # Estructurar datos para gráficos
-        chart_data = {
-            'equipment_chart': equipment_chart,
-            'client_chart': client_chart,
-            'table': table_data,
-            'special_analysis': special_analysis,
-            'trend_chart': trend_chart,
-            'problems_chart': problems_chart
-        }
+
         # Gráfico de tendencia de tiempos de respuesta (simulado con visitas diarias)
         trend_chart = {
             'labels': list(daily_visits.keys()),
@@ -448,6 +440,18 @@ class EquipmentVisitReport(models.Model):
             'labels': [p[0].capitalize() for p in sorted_problems],
             'data': [p[1] for p in sorted_problems]
         }
+
+        # ✅ Ahora sí, armar el JSON con todos los gráficos
+        chart_data = {
+            'equipment_chart': equipment_chart,
+            'client_chart': client_chart,
+            'table': table_data,
+            'special_analysis': special_analysis,
+            'trend_chart': trend_chart,
+            'problems_chart': problems_chart
+        }
+
+        
 
         
         # Guardar como JSON
