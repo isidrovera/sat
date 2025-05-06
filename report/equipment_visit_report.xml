@@ -13,23 +13,14 @@
         <field name="paperformat_id" ref="base.paperformat_euro"/>
     </record>
 
-    <!-- Assets del Reporte -->
+    <!-- Assets para CSS -->
     <record id="equipment_visit_report_asset" model="ir.asset">
         <field name="name">Equipment Visit Report Assets</field>
-        <field name="bundle">web.assets_common</field>
+        <field name="bundle">web.assets_backend</field>
         <field name="directive">append</field>
         <field name="target">web.report_assets_common</field>
         <field name="path">sat/static/src/css/equipment_visit_report.css</field>
     </record>
-
-    <record id="equipment_visit_report_js_asset" model="ir.asset">
-        <field name="name">Equipment Visit Report JS Assets</field>
-        <field name="bundle">web.assets_common</field>
-        <field name="directive">append</field>
-        <field name="target">web.report_assets_common</field>
-        <field name="path">sat/static/src/js/chart.min.js</field>
-    </record>
-    
 
     <!-- Plantilla Principal del Reporte -->
     <template id="report_equipment_visit" name="sat.report_equipment_visit">
@@ -37,6 +28,7 @@
             <t t-foreach="docs" t-as="doc">
                 <t t-call="web.external_layout">
                     <div class="page">
+                        <!-- Cabecera del Informe -->
                         <div class="ev-report-header">
                             <div class="row">
                                 <div class="col-6">
@@ -121,7 +113,7 @@
                             </div>
                         </div>
 
-                        <!-- Gráficos -->
+                        <!-- Sección de Gráficos -->
                         <div class="ev-charts-section mt-4">
                             <h3 class="ev-section-title">Análisis Visual</h3>
                             <div class="row">
@@ -130,7 +122,7 @@
                                         <h4 class="ev-chart-title">
                                             <i class="fa fa-chart-bar"/> Equipos con Más Visitas
                                         </h4>
-                                        <div class="ev-equipment-chart">
+                                        <div class="ev-equipment-chart" style="height: 250px;">
                                             <t t-set="equipment_chart_data" t-value="json.loads(doc.chart_data or '{}').get('equipment_chart', {})"/>
                                             <canvas t-att-id="'equipmentChart' + str(doc.id)" 
                                                    t-att-data-labels="','.join(equipment_chart_data.get('labels', []))" 
@@ -144,7 +136,7 @@
                                         <h4 class="ev-chart-title">
                                             <i class="fa fa-chart-pie"/> Distribución por Cliente
                                         </h4>
-                                        <div class="ev-client-chart">
+                                        <div class="ev-client-chart" style="height: 250px;">
                                             <t t-set="client_chart_data" t-value="json.loads(doc.chart_data or '{}').get('client_chart', {})"/>
                                             <canvas t-att-id="'clientChart' + str(doc.id)" 
                                                    t-att-data-labels="','.join(client_chart_data.get('labels', []))" 
@@ -153,8 +145,37 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Segunda fila de gráficos -->
+                            <div class="row mt-4">
+                                <div class="col-6">
+                                    <div class="ev-chart-container">
+                                        <h4 class="ev-chart-title">
+                                            <i class="fa fa-chart-line"/> Tendencia de Tiempos de Respuesta
+                                        </h4>
+                                        <div class="ev-trend-chart" style="height: 250px;">
+                                            <t t-set="trend_chart_data" t-value="json.loads(doc.chart_data or '{}').get('trend_chart', {})"/>
+                                            <canvas t-att-id="'trendChart' + str(doc.id)" 
+                                                   t-att-data-labels="','.join(trend_chart_data.get('labels', []))" 
+                                                   t-att-data-values="','.join([str(x) for x in trend_chart_data.get('data', [])])"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="ev-chart-container">
+                                        <h4 class="ev-chart-title">
+                                            <i class="fa fa-bullseye"/> Categorías de Problemas
+                                        </h4>
+                                        <div class="ev-problems-chart" style="height: 250px;">
+                                            <t t-set="problems_chart_data" t-value="json.loads(doc.chart_data or '{}').get('problems_chart', {})"/>
+                                            <canvas t-att-id="'problemsChart' + str(doc.id)" 
+                                                   t-att-data-labels="','.join(problems_chart_data.get('labels', []))" 
+                                                   t-att-data-values="','.join([str(x) for x in problems_chart_data.get('data', [])])"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
                         <!-- Tabla de Equipos Críticos -->
                         <div class="ev-critical-equipment mt-4">
                             <h3 class="ev-section-title">Equipos Críticos</h3>
@@ -316,20 +337,63 @@
                         </div>
                     </div>
 
+                    <!-- Incluir Chart.js desde CDN -->
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.min.js"></script>
+                    
                     <!-- Script para renderizar los gráficos -->
                     <script type="text/javascript">
                         document.addEventListener("DOMContentLoaded", function() {
                             try {
-                                // Gráfico de equipos
-                                var equipmentChartEl = document.getElementById('equipmentChart' + <t t-esc="doc.id"/>);
+                                // Configuración de colores para gráficos
+                                const colors = {
+                                    primary: {
+                                        fill: 'rgba(52, 152, 219, 0.6)',
+                                        stroke: 'rgba(52, 152, 219, 1)'
+                                    },
+                                    success: {
+                                        fill: 'rgba(46, 204, 113, 0.6)',
+                                        stroke: 'rgba(46, 204, 113, 1)'
+                                    },
+                                    warning: {
+                                        fill: 'rgba(241, 196, 15, 0.6)',
+                                        stroke: 'rgba(241, 196, 15, 1)'
+                                    },
+                                    danger: {
+                                        fill: 'rgba(231, 76, 60, 0.6)',
+                                        stroke: 'rgba(231, 76, 60, 1)'
+                                    },
+                                    info: {
+                                        fill: 'rgba(26, 188, 156, 0.6)',
+                                        stroke: 'rgba(26, 188, 156, 1)'
+                                    }
+                                };
+                                
+                                // Paleta para gráficos con múltiples colores
+                                const colorPalette = [
+                                    'rgba(52, 152, 219, 0.6)',  // azul
+                                    'rgba(46, 204, 113, 0.6)',  // verde
+                                    'rgba(155, 89, 182, 0.6)',  // morado
+                                    'rgba(241, 196, 15, 0.6)',  // amarillo
+                                    'rgba(231, 76, 60, 0.6)',   // rojo
+                                    'rgba(26, 188, 156, 0.6)',  // turquesa
+                                    'rgba(52, 73, 94, 0.6)',    // azul oscuro
+                                    'rgba(243, 156, 18, 0.6)'   // naranja
+                                ];
+                                
+                                // Gráfico 1: Equipos con más visitas (barras)
+                                var equipmentChartEl = document.getElementById('equipmentChart' + '<t t-esc="doc.id"/>');
                                 if (equipmentChartEl) {
                                     var labels = equipmentChartEl.getAttribute('data-labels').split(',');
                                     var values = equipmentChartEl.getAttribute('data-values').split(',').map(Number);
                                     var threshold = parseInt(equipmentChartEl.getAttribute('data-threshold'));
                                     
-                                    // Colores basados en el umbral
+                                    // Definir colores basados en el umbral
                                     var barColors = values.map(function(value) {
-                                        return value >= threshold ? '#e74c3c' : '#3498db';
+                                        return value &gt;= threshold ? colors.danger.fill : colors.primary.fill;
+                                    });
+                                    
+                                    var barBorderColors = values.map(function(value) {
+                                        return value &gt;= threshold ? colors.danger.stroke : colors.primary.stroke;
                                     });
                                     
                                     new Chart(equipmentChartEl, {
@@ -340,11 +404,13 @@
                                                 label: 'Visitas',
                                                 data: values,
                                                 backgroundColor: barColors,
-                                                borderColor: barColors,
+                                                borderColor: barBorderColors,
                                                 borderWidth: 1
                                             }]
                                         },
                                         options: {
+                                            responsive: true,
+                                            maintainAspectRatio: false,
                                             scales: {
                                                 y: {
                                                     beginAtZero: true,
@@ -356,23 +422,29 @@
                                             plugins: {
                                                 legend: {
                                                     display: false
+                                                },
+                                                tooltip: {
+                                                    callbacks: {
+                                                        label: function(context) {
+                                                            var value = context.parsed.y;
+                                                            return value + ' visita' + (value !== 1 ? 's' : '');
+                                                        },
+                                                        afterLabel: function(context) {
+                                                            var value = context.parsed.y;
+                                                            return value &gt;= threshold ? '⚠️ Equipo crítico' : '';
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
                                     });
                                 }
                                 
-                                // Gráfico de clientes
-                                var clientChartEl = document.getElementById('clientChart' + <t t-esc="doc.id"/>);
+                                // Gráfico 2: Distribución por cliente (pie)
+                                var clientChartEl = document.getElementById('clientChart' + '<t t-esc="doc.id"/>');
                                 if (clientChartEl) {
                                     var labels = clientChartEl.getAttribute('data-labels').split(',');
                                     var values = clientChartEl.getAttribute('data-values').split(',').map(Number);
-                                    
-                                    // Colores para el gráfico de pastel
-                                    var pieColors = [
-                                        '#3498db', '#2ecc71', '#9b59b6', '#f1c40f', '#e74c3c',
-                                        '#1abc9c', '#34495e', '#16a085', '#27ae60', '#2980b9'
-                                    ];
                                     
                                     new Chart(clientChartEl, {
                                         type: 'pie',
@@ -380,19 +452,114 @@
                                             labels: labels,
                                             datasets: [{
                                                 data: values,
-                                                backgroundColor: pieColors.slice(0, values.length),
+                                                backgroundColor: colorPalette.slice(0, labels.length),
                                                 borderWidth: 1
                                             }]
                                         },
                                         options: {
+                                            responsive: true,
+                                            maintainAspectRatio: false,
                                             plugins: {
                                                 legend: {
-                                                    position: 'right'
+                                                    position: 'right',
+                                                    labels: {
+                                                        boxWidth: 12,
+                                                        padding: 10
+                                                    }
+                                                },
+                                                tooltip: {
+                                                    callbacks: {
+                                                        label: function(context) {
+                                                            var total = context.dataset.data.reduce((sum, val) =&lt; sum + val, 0);
+                                                            var percentage = Math.round((context.parsed / total) * 100);
+                                                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
                                     });
                                 }
+                                var trendChartEl = document.getElementById('trendChart' + '<t t-esc="doc.id"/>');
+                                if (trendChartEl) {
+                                    var labels = trendChartEl.getAttribute('data-labels').split(',');
+                                    var values = trendChartEl.getAttribute('data-values').split(',').map(Number);
+                                    
+                                    new Chart(trendChartEl, {
+                                        type: 'line',
+                                        data: {
+                                            labels: labels,
+                                            datasets: [{
+                                                label: 'Tiempo de Respuesta (días)',
+                                                data: values,
+                                                fill: true,
+                                                backgroundColor: colors.info.fill,
+                                                borderColor: colors.info.stroke,
+                                                tension: 0.4,
+                                                pointRadius: 4,
+                                                pointHoverRadius: 6
+                                            }]
+                                        },
+                                        options: {
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            scales: {
+                                                y: {
+                                                    beginAtZero: true,
+                                                    title: {
+                                                        display: true,
+                                                        text: 'Días'
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                                
+                                // Gráfico 4: Categorías de problemas (radar)
+                                var problemsChartEl = document.getElementById('problemsChart' + '<t t-esc="doc.id"/>');
+                                if (problemsChartEl) {
+                                    var labels = problemsChartEl.getAttribute('data-labels').split(',');
+                                    var values = problemsChartEl.getAttribute('data-values').split(',').map(Number);
+                                    
+                                    new Chart(problemsChartEl, {
+                                        type: 'radar',
+                                        data: {
+                                            labels: labels,
+                                            datasets: [{
+                                                label: 'Frecuencia',
+                                                data: values,
+                                                backgroundColor: colors.warning.fill,
+                                                borderColor: colors.warning.stroke,
+                                                pointBackgroundColor: colors.warning.stroke,
+                                                pointHoverBackgroundColor: '#fff',
+                                                pointHoverBorderColor: colors.warning.stroke
+                                            }]
+                                        },
+                                        options: {
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            scales: {
+                                                r: {
+                                                    angleLines: {
+                                                        display: true
+                                                    },
+                                                    suggestedMin: 0,
+                                                    ticks: {
+                                                        stepSize: 1,
+                                                        backdropColor: 'rgba(0, 0, 0, 0)'
+                                                    }
+                                                }
+                                            },
+                                            plugins: {
+                                                legend: {
+                                                    position: 'bottom'
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                                
                             } catch (e) {
                                 console.error("Error al renderizar gráficos:", e);
                             }
@@ -401,5 +568,261 @@
                 </t>
             </t>
         </t>
+    </template>
+
+    <!-- CSS para los gráficos y el informe -->
+    <template id="equipment_visit_report_css_content" name="Equipment Visit Report CSS">
+        .ev-chart-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .ev-chart-title {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .ev-chart-title i {
+            margin-right: 5px;
+            color: #3498db;
+        }
+
+        .ev-section-title {
+            font-size: 18px;
+            color: #34495e;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            display: inline-block;
+        }
+
+        /* Estilos para las tarjetas de resumen */
+        .ev-summary-cards .ev-card {
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            background-color: #ffffff;
+            transition: transform 0.3s;
+            height: 100%;
+        }
+
+        .ev-summary-cards .ev-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .ev-card-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 12px;
+            font-size: 20px;
+        }
+
+        .ev-total-visits .ev-card-icon {
+            background-color: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+        }
+
+        .ev-recurring .ev-card-icon {
+            background-color: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+        }
+
+        .ev-critical .ev-card-icon {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+
+        .ev-resolution .ev-card-icon {
+            background-color: rgba(241, 196, 15, 0.1);
+            color: #f1c40f;
+        }
+
+        .ev-card-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2c3e50;
+            line-height: 1;
+        }
+
+        .ev-card-label {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+
+        /* Estilos para tablas */
+        .ev-table thead {
+            background-color: #f8f9fa;
+        }
+
+        .ev-table thead th {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .ev-table tbody tr:nth-child(odd) {
+            background-color: rgba(236, 240, 241, 0.3);
+        }
+
+        .ev-table .ev-visit-count {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            text-align: center;
+            border-radius: 50%;
+            background-color: #3498db;
+            color: white;
+            font-weight: 600;
+        }
+
+        .ev-close-visits {
+            background-color: rgba(231, 76, 60, 0.05) !important;
+        }
+
+        .ev-close-visits .ev-visit-count {
+            background-color: #e74c3c;
+        }
+
+        /* Clases para la tarjeta del cliente principal */
+        .ev-client-info-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+        }
+
+        .ev-client-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: #3498db;
+        }
+
+        .ev-client-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .ev-client-visit-count {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e74c3c;
+            margin-right: 5px;
+        }
+
+        /* Estilos para tarjetas de análisis */
+        .ev-analysis-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .ev-analysis-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            padding: 15px;
+            border-left: 4px solid #3498db;
+        }
+
+        .ev-analysis-header {
+            border-bottom: 1px solid #f1f1f1;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .ev-analysis-model {
+            font-weight: 600;
+            color: #2c3e50;
+            display: block;
+        }
+
+        /* Estilos para la sección de tiempo de respuesta */
+        .ev-time-container {
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .ev-time-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .ev-gauge-container {
+            height: 20px;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .ev-gauge-fill {
+            height: 100%;
+            background: linear-gradient(to right, #2ecc71, #f1c40f, #e74c3c);
+            border-radius: 10px;
+        }
+
+        .ev-gauge-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        .ev-time-excellent {
+            color: #2ecc71;
+        }
+
+        .ev-time-good {
+            color: #3498db;
+        }
+
+        .ev-time-average {
+            color: #f1c40f;
+        }
+
+        .ev-time-poor {
+            color: #e74c3c;
+        }
+
+        /* Estilos para impresión */
+        @media print {
+            .ev-chart-container, 
+            .ev-summary-cards .ev-card,
+            .ev-analysis-card,
+            .ev-time-container, 
+            .ev-client-info-card {
+                box-shadow: none;
+                border: 1px solid #e0e0e0;
+            }
+            
+            .page-break {
+                page-break-after: always;
+            }
+        }
     </template>
 </odoo>
