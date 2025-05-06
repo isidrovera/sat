@@ -462,5 +462,19 @@
         </t>
     </t>
 </template>
+<template id="chart_canvas_container">
+    <t t-set="chart_labels" t-value="chart_data.get('labels', [])"/>
+    <t t-set="chart_values" t-value="chart_data.get('values', [])"/>
+    <t t-set="chart_threshold" t-value="chart_data.get('critical_threshold', 3)"/>
+
+    <canvas t-att-id="chart_id"
+            t-att-data-labels="','.join(chart_labels)"
+            t-att-data-values="','.join([str(v) for v in chart_values])"
+            t-att-data-threshold="chart_threshold"
+            width="400" height="200"
+            style="width:100%; height:300px;">
+    </canvas>
+</template>
+
 
 </odoo>
