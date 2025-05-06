@@ -9,7 +9,7 @@ import base64
 from io import BytesIO
 import pandas as pd
 import math
-
+import io
 try:
     import matplotlib
     matplotlib.use('Agg')  # Backend que no requiere interfaz gráfica
