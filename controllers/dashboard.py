@@ -72,19 +72,16 @@ class DashboardController(http.Controller):
 
 
 
-
 class EquipmentVisitReportController(ReportController):
     @http.route(['/report/pdf/sat.report_equipment_visit/<int:id>'], type='http', auth='user')
     def report_equipment_visit_pdf(self, id, **kwargs):
         """Genera imágenes de gráficos antes de renderizar el PDF."""
-        # Buscar el informe y generar sus imágenes
         report = http.request.env['equipment.visit.report'].browse(int(id))
         report.generate_chart_images()
         
-        # Continuar con el proceso normal de generación de PDF
         return super().report_routes(
             reportname='sat.report_equipment_visit',
-            docids=id,
+            docids=str(id),  # 👈 Convertido a string
             converter='pdf',
             **kwargs
         )
