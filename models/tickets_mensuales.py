@@ -425,8 +425,30 @@ class EquipmentVisitReport(models.Model):
             'equipment_chart': equipment_chart,
             'client_chart': client_chart,
             'table': table_data,
-            'special_analysis': special_analysis
+            'special_analysis': special_analysis,
+            'trend_chart': trend_chart,
+            'problems_chart': problems_chart
         }
+        # Gráfico de tendencia de tiempos de respuesta (simulado con visitas diarias)
+        trend_chart = {
+            'labels': list(daily_visits.keys()),
+            'data': list(daily_visits.values())
+        }
+
+        # Gráfico de problemas más frecuentes
+        problem_counts = {}
+        for ticket in tickets:
+            if ticket.description:
+                problem = ticket.description.strip().lower()
+                problem_counts[problem] = problem_counts.get(problem, 0) + 1
+
+        sorted_problems = sorted(problem_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+
+        problems_chart = {
+            'labels': [p[0].capitalize() for p in sorted_problems],
+            'data': [p[1] for p in sorted_problems]
+        }
+
         
         # Guardar como JSON
         self.write({
@@ -438,6 +460,9 @@ class EquipmentVisitReport(models.Model):
         if self.state != 'draft':
             raise UserError(_('Solo puede generarse un informe que esté en estado Borrador.'))
         
+        # 🔧 Genera las imágenes base64 para el PDF
+        self.generate_chart_images()
+
         # Calcula las estadísticas generales
         self._compute_general_statistics()
         
