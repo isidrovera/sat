@@ -9,9 +9,6 @@
         <field name="report_file">sat.report_equipment_visit</field>
         <field name="print_report_name">'Informe de Visitas - %s' % (object.name)</field>
         <field name="binding_model_id" ref="model_equipment_visit_report"/>
-        <field name="webkit_header" eval="False"/>
-        <field name="webkit_debug" eval="True"/>
-        
         <field name="binding_type">report</field>
         <field name="paperformat_id" ref="base.paperformat_euro"/>
     </record>
