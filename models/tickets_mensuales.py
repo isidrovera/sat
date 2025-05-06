@@ -9,6 +9,17 @@ import base64
 from io import BytesIO
 import pandas as pd
 import math
+import json
+import base64
+import io
+try:
+    import matplotlib
+    matplotlib.use('Agg')  # Backend que no requiere interfaz gráfica
+    import matplotlib.pyplot as plt
+    import numpy as np
+    MATPLOTLIB_ENABLED = True
+except ImportError:
+    MATPLOTLIB_ENABLED = False
 
 _logger = logging.getLogger(__name__)
 
@@ -28,7 +39,7 @@ class EquipmentVisitReport(models.Model):
         ('generated', 'Generado'),
         ('sent', 'Enviado')
     ], string='Estado', default='draft', tracking=True)
-    
+    chart_images = fields.Text("Imágenes de gráficos en base64", help="Almacena las imágenes de los gráficos en formato JSON con base64")
     # Datos del análisis
     total_visits = fields.Integer(string='Total de Visitas', readonly=True)
     recurring_equipment_count = fields.Integer(string='Equipos Recurrentes', readonly=True)
@@ -76,7 +87,117 @@ class EquipmentVisitReport(models.Model):
     post_repair_visit_rate = fields.Float(string='Tasa de Visitas Post-Reparación (%)', readonly=True,
                                          help='Porcentaje de reparaciones que requirieron visitas adicionales en periodo corto')
     post_review_visit_rate = fields.Float(string='Tasa de Visitas Post-Revisión (%)', readonly=True,
-                                         help='Porcentaje de revisiones que requirieron visitas adicionales en periodo corto')
+    
+    def generate_chart_images(self):
+        """Genera las imágenes de los gráficos para el PDF."""
+        if not MATPLOTLIB_ENABLED:
+            _logger.warning("Matplotlib no está instalado. No se pueden generar imágenes de gráficos.")
+            return False
+        
+        chart_images = {}
+        
+        # Obtener datos de los gráficos
+        chart_data = json.loads(self.chart_data or '{}')
+        
+        # 1. Gráfico de equipos
+        if 'equipment_chart' in chart_data:
+            equipment_data = chart_data['equipment_chart']
+            labels = equipment_data.get('labels', [])
+            data = equipment_data.get('data', [])
+            threshold = equipment_data.get('critical_threshold', 3)
+            
+            if labels and data:
+                plt.figure(figsize=(8, 5))
+                colors = ['#e74c3c' if d >= threshold else '#3498db' for d in data]
+                plt.bar(labels, data, color=colors)
+                plt.xticks(rotation=45, ha='right')
+                plt.ylabel('Número de Visitas')
+                plt.title('Equipos con Más Visitas')
+                plt.tight_layout()
+                
+                # Convertir a PNG
+                img_data = io.BytesIO()
+                plt.savefig(img_data, format='png', dpi=100)
+                img_data.seek(0)
+                chart_images['equipment_chart'] = base64.b64encode(img_data.getvalue()).decode('utf-8')
+                plt.close()
+        
+        # 2. Gráfico de clientes
+        if 'client_chart' in chart_data:
+            client_data = chart_data['client_chart']
+            labels = client_data.get('labels', [])
+            data = client_data.get('data', [])
+            
+            if labels and data:
+                plt.figure(figsize=(8, 5))
+                colors = plt.cm.Paired(np.linspace(0, 1, len(data)))
+                plt.pie(data, labels=labels, autopct='%1.1f%%', startangle=90, colors=colors)
+                plt.axis('equal')
+                plt.title('Distribución por Cliente')
+                plt.tight_layout()
+                
+                # Convertir a PNG
+                img_data = io.BytesIO()
+                plt.savefig(img_data, format='png', dpi=100)
+                img_data.seek(0)
+                chart_images['client_chart'] = base64.b64encode(img_data.getvalue()).decode('utf-8')
+                plt.close()
+        
+        # 3. Gráfico de tendencia
+        if 'trend_chart' in chart_data:
+            trend_data = chart_data['trend_chart']
+            labels = trend_data.get('labels', [])
+            data = trend_data.get('data', [])
+            
+            if labels and data:
+                plt.figure(figsize=(8, 5))
+                plt.plot(labels, data, marker='o', color='#1abc9c', linewidth=2)
+                plt.fill_between(labels, data, alpha=0.2, color='#1abc9c')
+                plt.xticks(rotation=45, ha='right')
+                plt.ylabel('Días')
+                plt.title('Tendencia de Tiempos de Respuesta')
+                plt.tight_layout()
+                
+                # Convertir a PNG
+                img_data = io.BytesIO()
+                plt.savefig(img_data, format='png', dpi=100)
+                img_data.seek(0)
+                chart_images['trend_chart'] = base64.b64encode(img_data.getvalue()).decode('utf-8')
+                plt.close()
+        
+        # 4. Gráfico de problemas
+        if 'problems_chart' in chart_data:
+            problems_data = chart_data['problems_chart']
+            labels = problems_data.get('labels', [])
+            data = problems_data.get('data', [])
+            
+            if labels and data:
+                plt.figure(figsize=(8, 5))
+                
+                # Crear gráfico de radar
+                angles = np.linspace(0, 2*np.pi, len(labels), endpoint=False).tolist()
+                data = data + [data[0]]  # Cerrar el gráfico
+                angles = angles + [angles[0]]  # Cerrar el gráfico
+                labels = labels + [labels[0]]  # Cerrar el gráfico
+                
+                fig, ax = plt.subplots(figsize=(8, 5), subplot_kw=dict(polar=True))
+                ax.plot(angles, data, color='#f39c12', linewidth=2)
+                ax.fill(angles, data, color='#f39c12', alpha=0.2)
+                ax.set_thetagrids(np.degrees(angles[:-1]), labels[:-1])
+                plt.title('Categorías de Problemas')
+                plt.tight_layout()
+                
+                # Convertir a PNG
+                img_data = io.BytesIO()
+                plt.savefig(img_data, format='png', dpi=100)
+                img_data.seek(0)
+                chart_images['problems_chart'] = base64.b64encode(img_data.getvalue()).decode('utf-8')
+                plt.close()
+        
+        # Guardar las imágenes en el registro
+        self.write({'chart_images': json.dumps(chart_images)})
+        
+        return True                                 help='Porcentaje de revisiones que requirieron visitas adicionales en periodo corto')
     def set_webkit_params(cr, registry):
         env = api.Environment(cr, SUPERUSER_ID, {})
         IrConfigParameter = env['ir.config_parameter']

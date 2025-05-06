@@ -1,5 +1,7 @@
 from odoo import http
 
+from odoo.addons.web.controllers.report import ReportController
+
 class DashboardController(http.Controller):
     @http.route('/dashboard/data', auth='public', type='json')
     def get_dashboard_data(self, **kw):
@@ -28,3 +30,23 @@ class DashboardController(http.Controller):
             results[tech][service_type] = record['tipo_servicio_id_count']
 
         return results
+
+
+
+
+
+class EquipmentVisitReportController(ReportController):
+    @http.route(['/report/pdf/sat.report_equipment_visit/<int:id>'], type='http', auth='user')
+    def report_equipment_visit_pdf(self, id, **kwargs):
+        """Genera imágenes de gráficos antes de renderizar el PDF."""
+        # Buscar el informe y generar sus imágenes
+        report = http.request.env['equipment.visit.report'].browse(int(id))
+        report.generate_chart_images()
+        
+        # Continuar con el proceso normal de generación de PDF
+        return super().report_routes(
+            reportname='sat.report_equipment_visit',
+            docids=id,
+            converter='pdf',
+            **kwargs
+        )
