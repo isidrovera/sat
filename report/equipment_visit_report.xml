@@ -334,116 +334,145 @@
                     <!-- Script para renderizar gráficos -->
                     <script type="text/javascript">
                         (function() {
-                            // Aseguramos que el script se ejecute cuando todo el documento esté listo
-                            function initCharts() {
-                                try {
-                                    console.log("Inicializando gráficos...");
-                                    
-                                    // Configuración de colores
-                                    var colors = {
-                                        blue: 'rgba(52, 152, 219, 0.7)',
-                                        red: 'rgba(231, 76, 60, 0.7)',
-                                        green: 'rgba(46, 204, 113, 0.7)',
-                                        orange: 'rgba(243, 156, 18, 0.7)',
-                                        purple: 'rgba(155, 89, 182, 0.7)',
-                                        teal: 'rgba(26, 188, 156, 0.7)',
-                                        gray: 'rgba(149, 165, 166, 0.7)',
-                                        dark: 'rgba(52, 73, 94, 0.7)'
-                                    };
-                                    
-                                    var palette = [
-                                        colors.blue,
-                                        colors.green,
-                                        colors.orange,
-                                        colors.purple,
-                                        colors.red,
-                                        colors.teal,
-                                        colors.dark
-                                    ];
-                    
-                                    // 1. Gráfico de Equipos con Más Visitas (barras)
-                                    var equipmentChartId = 'equipmentChart' + '<t t-esc="doc.id"/>';
-                                    var equipmentChartEl = document.getElementById(equipmentChartId);
-                                    
-                                    if (equipmentChartEl) {
-                                        console.log("Renderizando gráfico de equipos...");
-                                        
-                                        // Obtener datos del backend
-                                        var labels = (equipmentChartEl.getAttribute('data-labels') || '').split(',').filter(Boolean);
-                                        var values = (equipmentChartEl.getAttribute('data-values') || '').split(',').map(function(v) { return Number(v); }).filter(Boolean);
-                                        var threshold = parseInt(equipmentChartEl.getAttribute('data-threshold') || '3');
-                                        
-                                        if (labels.length &amp;&amp; values.length) {
-                                            // Colores basados en el umbral crítico
-                                            var barColors = values.map(function(v) {
-                                                return v &gt;= threshold ? colors.red : colors.blue;
-                                            });
-                                            
-                                            new Chart(equipmentChartEl, {
-                                                type: 'bar',
-                                                data: {
-                                                    labels: labels,
-                                                    datasets: [{
-                                                        label: 'Número de Visitas',
-                                                        data: values,
-                                                        backgroundColor: barColors,
-                                                        borderWidth: 0
-                                                    }]
-                                                },
-                                                options: {
-                                                    responsive: true,
-                                                    maintainAspectRatio: false,
-                                                    scales: {
-                                                        y: {
-                                                            beginAtZero: true,
-                                                            ticks: {
-                                                                precision: 0
-                                                            }
-                                                        }
-                                                    },
-                                                    plugins: {
-                                                        legend: {
-                                                            display: false
-                                                        },
-                                                        tooltip: {
-                                                            callbacks: {
-                                                                afterLabel: function(context) {
-                                                                    return context.parsed.y &gt;= threshold ? 'Equipo crítico' : '';
-                                                                }
-                                                            }
-                                                        }
-                                                    }
+                            function renderBarChart(el, threshold) {
+                                const labels = (el.getAttribute('data-labels') || '').split(',').filter(Boolean);
+                                const values = (el.getAttribute('data-values') || '').split(',').map(Number).filter(v =&gt; !isNaN(v));
+                                const barColors = values.map(v =&gt; v &gt;= threshold ? 'rgba(231, 76, 60, 0.7)' : 'rgba(52, 152, 219, 0.7)');
+                        
+                                new Chart(el, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Cantidad',
+                                            data: values,
+                                            backgroundColor: barColors,
+                                            borderWidth: 1
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        plugins: {
+                                            tooltip: {
+                                                callbacks: {
+                                                    label: ctx =&gt; `${ctx.dataset.label}: ${ctx.raw}`
                                                 }
-                                            });
+                                            }
+                                        },
+                                        scales: {
+                                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
                                         }
                                     }
-                                    
-                                    // (Implementación de los otros gráficos...código abreviado por brevedad)
-                                    
-                                } catch (error) {
-                                    console.error("Error al inicializar gráficos:", error);
-                                }
+                                });
                             }
-                            
-                            // Comprobar si Chart.js está cargado, si no, cargarlo dinámicamente
+                        
+                            function renderPieChart(el) {
+                                const labels = (el.getAttribute('data-labels') || '').split(',').filter(Boolean);
+                                const values = (el.getAttribute('data-values') || '').split(',').map(Number).filter(v =&gt; !isNaN(v));
+                                const backgroundColors = [
+                                    'rgba(52, 152, 219, 0.7)', 'rgba(46, 204, 113, 0.7)', 'rgba(243, 156, 18, 0.7)',
+                                    'rgba(155, 89, 182, 0.7)', 'rgba(231, 76, 60, 0.7)', 'rgba(26, 188, 156, 0.7)'
+                                ];
+                        
+                                new Chart(el, {
+                                    type: 'pie',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Cantidad',
+                                            data: values,
+                                            backgroundColor: backgroundColors
+                                        }]
+                                    }
+                                });
+                            }
+                        
+                            function renderLineChart(el) {
+                                const labels = (el.getAttribute('data-labels') || '').split(',').filter(Boolean);
+                                const values = (el.getAttribute('data-values') || '').split(',').map(Number).filter(v =&gt; !isNaN(v));
+                        
+                                new Chart(el, {
+                                    type: 'line',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Tiempo (días)',
+                                            data: values,
+                                            borderColor: 'rgba(26, 188, 156, 1)',
+                                            backgroundColor: 'rgba(26, 188, 156, 0.2)',
+                                            fill: true,
+                                            tension: 0.3
+                                        }]
+                                    },
+                                    options: {
+                                        plugins: {
+                                            tooltip: {
+                                                callbacks: {
+                                                    label: ctx =&gt; `Días: ${ctx.raw}`
+                                                }
+                                            }
+                                        },
+                                        scales: {
+                                            y: { beginAtZero: true }
+                                        }
+                                    }
+                                });
+                            }
+                        
+                            function renderRadarChart(el) {
+                                const labels = (el.getAttribute('data-labels') || '').split(',').filter(Boolean);
+                                const values = (el.getAttribute('data-values') || '').split(',').map(Number).filter(v =&gt; !isNaN(v));
+                        
+                                new Chart(el, {
+                                    type: 'radar',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Problemas Detectados',
+                                            data: values,
+                                            backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                                            borderColor: 'rgba(243, 156, 18, 1)',
+                                            pointBackgroundColor: 'rgba(243, 156, 18, 1)'
+                                        }]
+                                    },
+                                    options: {
+                                        elements: {
+                                            line: { borderWidth: 2 }
+                                        }
+                                    }
+                                });
+                            }
+                        
+                            function initCharts() {
+                                const charts = document.querySelectorAll('canvas[id^="equipmentChart"], canvas[id^="clientChart"], canvas[id^="trendChart"], canvas[id^="problemsChart"]');
+                        
+                                charts.forEach(el =&gt; {
+                                    const id = el.id;
+                                    const type = id.includes('equipmentChart') ? 'bar'
+                                                : id.includes('clientChart') ? 'pie'
+                                                : id.includes('trendChart') ? 'line'
+                                                : id.includes('problemsChart') ? 'radar' : null;
+                                    const threshold = parseInt(el.getAttribute('data-threshold') || '3');
+                        
+                                    if (type === 'bar') renderBarChart(el, threshold);
+                                    else if (type === 'pie') renderPieChart(el);
+                                    else if (type === 'line') renderLineChart(el);
+                                    else if (type === 'radar') renderRadarChart(el);
+                                });
+                            }
+                        
                             if (typeof Chart === 'undefined') {
-                                console.log("Chart.js no encontrado, cargando dinámicamente...");
-                                var script = document.createElement('script');
+                                const script = document.createElement('script');
                                 script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
-                                script.onload = function() {
-                                    console.log("Chart.js cargado correctamente");
-                                    initCharts();
-                                };
-                                script.onerror = function() {
-                                    console.error("Error al cargar Chart.js");
-                                };
+                                script.onload = initCharts;
                                 document.head.appendChild(script);
                             } else {
-                                // Chart.js ya está cargado
                                 window.addEventListener('load', initCharts);
                             }
                         })();
-                    </script>
+                        </script>
+                        
+                        
             </t>
         </t>
     </t>
