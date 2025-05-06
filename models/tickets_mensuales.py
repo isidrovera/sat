@@ -83,7 +83,9 @@ class EquipmentVisitReport(models.Model):
                                               help='Porcentaje de mantenimientos que requirieron visitas adicionales en periodo corto')
     post_repair_visit_rate = fields.Float(string='Tasa de Visitas Post-Reparación (%)', readonly=True,
                                          help='Porcentaje de reparaciones que requirieron visitas adicionales en periodo corto')
-    post_review_visit_rate = fields.Float(string='Tasa de Visitas Post-Revisión (%)', readonly=True,
+    post_review_visit_rate = fields.Float(string='Tasa de Visitas Post-Revisión (%)', readonly=True,     post_review_visit_rate = fields.Float(string='Tasa de Visitas Post-Revisión (%)', readonly=True,
+                                          help='Porcentaje de revisiones que requirieron visitas adicionales en periodo corto')
+
     
     def generate_chart_images(self):
         """Genera las imágenes de los gráficos para el PDF."""
