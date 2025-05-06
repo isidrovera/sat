@@ -9,6 +9,9 @@
         <field name="report_file">sat.report_equipment_visit</field>
         <field name="print_report_name">'Informe de Visitas - %s' % (object.name)</field>
         <field name="binding_model_id" ref="model_equipment_visit_report"/>
+        <field name="webkit_header" eval="False"/>
+        <field name="webkit_debug" eval="True"/>
+        <field name="webkit_options">{"javascript-delay": 3000}</field>
         <field name="binding_type">report</field>
         <field name="paperformat_id" ref="base.paperformat_euro"/>
     </record>
@@ -337,296 +340,294 @@
                         </div>
                     </div>
 
-                    <!-- Asegúrate de que Chart.js se cargue correctamente usando CDN -->
-                    <t t-if="not is_pdf and not is_print">
-                        <link rel="stylesheet" type="text/css" href="/sat/static/src/css/equipment_visit_report.css"/>
-                        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+                    <!-- Incluir todos los recursos necesarios independientemente del formato -->
+                    <link rel="stylesheet" type="text/css" href="/sat/static/src/css/equipment_visit_report.css"/>
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+                    <!-- Script para renderizar gráficos -->
+                    <script type="text/javascript">
+                        (function() {
+                            // Aseguramos que el script se ejecute cuando todo el documento esté listo
+                            function initCharts() {
+                                try {
+                                    console.log("Inicializando gráficos...");
+                                    
+                                    // Configuración de colores
+                                    const colors = {
+                                        blue: 'rgba(52, 152, 219, 0.7)',
+                                        red: 'rgba(231, 76, 60, 0.7)',
+                                        green: 'rgba(46, 204, 113, 0.7)',
+                                        orange: 'rgba(243, 156, 18, 0.7)',
+                                        purple: 'rgba(155, 89, 182, 0.7)',
+                                        teal: 'rgba(26, 188, 156, 0.7)',
+                                        gray: 'rgba(149, 165, 166, 0.7)',
+                                        dark: 'rgba(52, 73, 94, 0.7)'
+                                    };
+                                    
+                                    const palette = [
+                                        colors.blue,
+                                        colors.green,
+                                        colors.orange,
+                                        colors.purple,
+                                        colors.red,
+                                        colors.teal,
+                                        colors.dark
+                                    ];
                         
-                        <!-- Script para renderizar gráficos -->
-                        <script type="text/javascript">
-                            (function() {
-                                // Aseguramos que el script se ejecute cuando todo el documento esté listo
-                                function initCharts() {
-                                    try {
-                                        console.log("Inicializando gráficos...");
+                                    // 1. Gráfico de Equipos con Más Visitas (barras)
+                                    const equipmentChartId = 'equipmentChart' + '<t t-esc="doc.id"/>';
+                                    const equipmentChartEl = document.getElementById(equipmentChartId);
+                                    
+                                    if (equipmentChartEl) {
+                                        console.log("Renderizando gráfico de equipos...");
                                         
-                                        // Configuración de colores
-                                        const colors = {
-                                            blue: 'rgba(52, 152, 219, 0.7)',
-                                            red: 'rgba(231, 76, 60, 0.7)',
-                                            green: 'rgba(46, 204, 113, 0.7)',
-                                            orange: 'rgba(243, 156, 18, 0.7)',
-                                            purple: 'rgba(155, 89, 182, 0.7)',
-                                            teal: 'rgba(26, 188, 156, 0.7)',
-                                            gray: 'rgba(149, 165, 166, 0.7)',
-                                            dark: 'rgba(52, 73, 94, 0.7)'
-                                        };
+                                        // Obtener datos del backend
+                                        let labels = (equipmentChartEl.getAttribute('data-labels') || '').split(',');
+                                        let values = (equipmentChartEl.getAttribute('data-values') || '').split(',').map(Number);
+                                        const threshold = parseInt(equipmentChartEl.getAttribute('data-threshold') || '3');
                                         
-                                        const palette = [
-                                            colors.blue,
-                                            colors.green,
-                                            colors.orange,
-                                            colors.purple,
-                                            colors.red,
-                                            colors.teal,
-                                            colors.dark
-                                        ];
-                            
-                                        // 1. Gráfico de Equipos con Más Visitas (barras)
-                                        const equipmentChartId = 'equipmentChart' + '<t t-esc="doc.id"/>';
-                                        const equipmentChartEl = document.getElementById(equipmentChartId);
+                                        // Verificar si los datos existen
+                                        if (!labels.length || labels[0] === '') {
+                                            console.warn("No se encontraron datos para el gráfico de equipos");
+                                            return;
+                                        }
                                         
-                                        if (equipmentChartEl) {
-                                            console.log("Renderizando gráfico de equipos...");
-                                            
-                                            // Obtener datos del backend
-                                            let labels = (equipmentChartEl.getAttribute('data-labels') || '').split(',');
-                                            let values = (equipmentChartEl.getAttribute('data-values') || '').split(',').map(Number);
-                                            const threshold = parseInt(equipmentChartEl.getAttribute('data-threshold') || '3');
-                                            
-                                            // Verificar si los datos existen
-                                            if (!labels.length || labels[0] === '') {
-                                                console.warn("No se encontraron datos para el gráfico de equipos");
-                                                return;
-                                            }
-                                            
-                                            // Colores basados en el umbral crítico
-                                            const barColors = values.map(function(v) { 
-                                                return v &gt;= threshold ? colors.red : colors.blue; 
-                                            });
-                                            
-                                            new Chart(equipmentChartEl, {
-                                                type: 'bar',
-                                                data: {
-                                                    labels: labels,
-                                                    datasets: [{
-                                                        label: 'Número de Visitas',
-                                                        data: values,
-                                                        backgroundColor: barColors,
-                                                        borderWidth: 0
-                                                    }]
-                                                },
-                                                options: {
-                                                    responsive: true,
-                                                    maintainAspectRatio: false,
-                                                    scales: {
-                                                        y: {
-                                                            beginAtZero: true,
-                                                            ticks: {
-                                                                precision: 0
-                                                            }
+                                        // Colores basados en el umbral crítico
+                                        const barColors = values.map(function(v) { 
+                                            return v &gt;= threshold ? colors.red : colors.blue; 
+                                        });
+                                        
+                                        new Chart(equipmentChartEl, {
+                                            type: 'bar',
+                                            data: {
+                                                labels: labels,
+                                                datasets: [{
+                                                    label: 'Número de Visitas',
+                                                    data: values,
+                                                    backgroundColor: barColors,
+                                                    borderWidth: 0
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                scales: {
+                                                    y: {
+                                                        beginAtZero: true,
+                                                        ticks: {
+                                                            precision: 0
                                                         }
+                                                    }
+                                                },
+                                                plugins: {
+                                                    legend: {
+                                                        display: false
                                                     },
-                                                    plugins: {
-                                                        legend: {
-                                                            display: false
-                                                        },
-                                                        tooltip: {
-                                                            callbacks: {
-                                                                afterLabel: function(context) {
-                                                                    return context.parsed.y &gt;= threshold ? 'Equipo crítico' : '';
-                                                                }
+                                                    tooltip: {
+                                                        callbacks: {
+                                                            afterLabel: function(context) {
+                                                                return context.parsed.y &gt;= threshold ? 'Equipo crítico' : '';
                                                             }
                                                         }
                                                     }
                                                 }
-                                            });
-                                        } else {
-                                            console.log("Elemento para gráfico de equipos no encontrado");
-                                        }
-                                        
-                                        // 2. Gráfico de Distribución por Cliente (pie)
-                                        const clientChartId = 'clientChart' + '<t t-esc="doc.id"/>';
-                                        const clientChartEl = document.getElementById(clientChartId);
-                                        
-                                        if (clientChartEl) {
-                                            console.log("Renderizando gráfico de clientes...");
-                                            
-                                            // Obtener datos del backend
-                                            let labels = (clientChartEl.getAttribute('data-labels') || '').split(',');
-                                            let values = (clientChartEl.getAttribute('data-values') || '').split(',').map(Number);
-                                            
-                                            // Verificar si los datos existen
-                                            if (!labels.length || labels[0] === '') {
-                                                console.warn("No se encontraron datos para el gráfico de clientes");
-                                                return;
                                             }
-                                            
-                                            new Chart(clientChartEl, {
-                                                type: 'pie',
-                                                data: {
-                                                    labels: labels,
-                                                    datasets: [{
-                                                        data: values,
-                                                        backgroundColor: palette.slice(0, labels.length),
-                                                        borderWidth: 1
-                                                    }]
-                                                },
-                                                options: {
-                                                    responsive: true,
-                                                    maintainAspectRatio: false,
-                                                    plugins: {
-                                                        legend: {
-                                                            position: 'right',
-                                                            labels: {
-                                                                boxWidth: 15,
-                                                                padding: 15
-                                                            }
-                                                        },
-                                                        tooltip: {
-                                                            callbacks: {
-                                                                label: function(context) {
-                                                                    var total = 0;
-                                                                    for (var i = 0; i &lt; context.dataset.data.length; i++) {
-                                                                        total += context.dataset.data[i];
-                                                                    }
-                                                                    var percentage = Math.round((context.raw / total) * 100);
-                                                                    return context.label + ': ' + context.raw + ' (' + percentage + '%)';
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        } else {
-                                            console.log("Elemento para gráfico de clientes no encontrado");
-                                        }
-                                        
-                                        // 3. Gráfico de Tendencia de Tiempos de Respuesta (línea)
-                                        const trendChartId = 'trendChart' + '<t t-esc="doc.id"/>';
-                                        const trendChartEl = document.getElementById(trendChartId);
-                                        
-                                        if (trendChartEl) {
-                                            console.log("Renderizando gráfico de tendencia...");
-                                            
-                                            // Obtener datos del backend
-                                            let labels = (trendChartEl.getAttribute('data-labels') || '').split(',');
-                                            let values = (trendChartEl.getAttribute('data-values') || '').split(',').map(Number);
-                                            
-                                            // Verificar si los datos existen
-                                            if (!labels.length || labels[0] === '') {
-                                                console.warn("No se encontraron datos para el gráfico de tendencia");
-                                                return;
-                                            }
-                                            
-                                            new Chart(trendChartEl, {
-                                                type: 'line',
-                                                data: {
-                                                    labels: labels,
-                                                    datasets: [{
-                                                        label: 'Días promedio',
-                                                        data: values,
-                                                        borderColor: colors.teal,
-                                                        backgroundColor: 'rgba(26, 188, 156, 0.1)',
-                                                        fill: true,
-                                                        tension: 0.3,
-                                                        pointRadius: 5,
-                                                        pointHoverRadius: 7
-                                                    }]
-                                                },
-                                                options: {
-                                                    responsive: true,
-                                                    maintainAspectRatio: false,
-                                                    scales: {
-                                                        y: {
-                                                            beginAtZero: true,
-                                                            title: {
-                                                                display: true,
-                                                                text: 'Días'
-                                                            }
-                                                        }
-                                                    },
-                                                    plugins: {
-                                                        title: {
-                                                            display: false,
-                                                            text: 'Tendencia de Tiempos de Respuesta'
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        } else {
-                                            console.log("Elemento para gráfico de tendencia no encontrado");
-                                        }
-                                        
-                                        // 4. Gráfico de Categorías de Problemas (radar)
-                                        const problemsChartId = 'problemsChart' + '<t t-esc="doc.id"/>';
-                                        const problemsChartEl = document.getElementById(problemsChartId);
-                                        
-                                        if (problemsChartEl) {
-                                            console.log("Renderizando gráfico de problemas...");
-                                            
-                                            // Obtener datos del backend
-                                            let labels = (problemsChartEl.getAttribute('data-labels') || '').split(',');
-                                            let values = (problemsChartEl.getAttribute('data-values') || '').split(',').map(Number);
-                                            
-                                            // Verificar si los datos existen
-                                            if (!labels.length || labels[0] === '') {
-                                                console.warn("No se encontraron datos para el gráfico de problemas");
-                                                return;
-                                            }
-                                            
-                                            new Chart(problemsChartEl, {
-                                                type: 'radar',
-                                                data: {
-                                                    labels: labels,
-                                                    datasets: [{
-                                                        label: 'Frecuencia',
-                                                        data: values,
-                                                        backgroundColor: 'rgba(243, 156, 18, 0.2)',
-                                                        borderColor: 'rgba(243, 156, 18, 0.8)',
-                                                        pointBackgroundColor: 'rgba(243, 156, 18, 1)',
-                                                        pointHoverBackgroundColor: '#fff'
-                                                    }]
-                                                },
-                                                options: {
-                                                    responsive: true,
-                                                    maintainAspectRatio: false,
-                                                    elements: {
-                                                        line: {
-                                                            borderWidth: 2
-                                                        }
-                                                    },
-                                                    scales: {
-                                                        r: {
-                                                            angleLines: {
-                                                                display: true
-                                                            },
-                                                            suggestedMin: 0
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        } else {
-                                            console.log("Elemento para gráfico de problemas no encontrado");
-                                        }
-                                        
-                                        console.log("Todos los gráficos inicializados correctamente");
-                                        
-                                    } catch (error) {
-                                        console.error("Error al inicializar gráficos:", error);
+                                        });
+                                    } else {
+                                        console.log("Elemento para gráfico de equipos no encontrado");
                                     }
+                                    
+                                    // 2. Gráfico de Distribución por Cliente (pie)
+                                    const clientChartId = 'clientChart' + '<t t-esc="doc.id"/>';
+                                    const clientChartEl = document.getElementById(clientChartId);
+                                    
+                                    if (clientChartEl) {
+                                        console.log("Renderizando gráfico de clientes...");
+                                        
+                                        // Obtener datos del backend
+                                        let labels = (clientChartEl.getAttribute('data-labels') || '').split(',');
+                                        let values = (clientChartEl.getAttribute('data-values') || '').split(',').map(Number);
+                                        
+                                        // Verificar si los datos existen
+                                        if (!labels.length || labels[0] === '') {
+                                            console.warn("No se encontraron datos para el gráfico de clientes");
+                                            return;
+                                        }
+                                        
+                                        new Chart(clientChartEl, {
+                                            type: 'pie',
+                                            data: {
+                                                labels: labels,
+                                                datasets: [{
+                                                    data: values,
+                                                    backgroundColor: palette.slice(0, labels.length),
+                                                    borderWidth: 1
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: {
+                                                        position: 'right',
+                                                        labels: {
+                                                            boxWidth: 15,
+                                                            padding: 15
+                                                        }
+                                                    },
+                                                    tooltip: {
+                                                        callbacks: {
+                                                            label: function(context) {
+                                                                var total = 0;
+                                                                for (var i = 0; i &lt; context.dataset.data.length; i++) {
+                                                                    total += context.dataset.data[i];
+                                                                }
+                                                                var percentage = Math.round((context.raw / total) * 100);
+                                                                return context.label + ': ' + context.raw + ' (' + percentage + '%)';
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    } else {
+                                        console.log("Elemento para gráfico de clientes no encontrado");
+                                    }
+                                    
+                                    // 3. Gráfico de Tendencia de Tiempos de Respuesta (línea)
+                                    const trendChartId = 'trendChart' + '<t t-esc="doc.id"/>';
+                                    const trendChartEl = document.getElementById(trendChartId);
+                                    
+                                    if (trendChartEl) {
+                                        console.log("Renderizando gráfico de tendencia...");
+                                        
+                                        // Obtener datos del backend
+                                        let labels = (trendChartEl.getAttribute('data-labels') || '').split(',');
+                                        let values = (trendChartEl.getAttribute('data-values') || '').split(',').map(Number);
+                                        
+                                        // Verificar si los datos existen
+                                        if (!labels.length || labels[0] === '') {
+                                            console.warn("No se encontraron datos para el gráfico de tendencia");
+                                            return;
+                                        }
+                                        
+                                        new Chart(trendChartEl, {
+                                            type: 'line',
+                                            data: {
+                                                labels: labels,
+                                                datasets: [{
+                                                    label: 'Días promedio',
+                                                    data: values,
+                                                    borderColor: colors.teal,
+                                                    backgroundColor: 'rgba(26, 188, 156, 0.1)',
+                                                    fill: true,
+                                                    tension: 0.3,
+                                                    pointRadius: 5,
+                                                    pointHoverRadius: 7
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                scales: {
+                                                    y: {
+                                                        beginAtZero: true,
+                                                        title: {
+                                                            display: true,
+                                                            text: 'Días'
+                                                        }
+                                                    }
+                                                },
+                                                plugins: {
+                                                    title: {
+                                                        display: false,
+                                                        text: 'Tendencia de Tiempos de Respuesta'
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    } else {
+                                        console.log("Elemento para gráfico de tendencia no encontrado");
+                                    }
+                                    
+                                    // 4. Gráfico de Categorías de Problemas (radar)
+                                    const problemsChartId = 'problemsChart' + '<t t-esc="doc.id"/>';
+                                    const problemsChartEl = document.getElementById(problemsChartId);
+                                    
+                                    if (problemsChartEl) {
+                                        console.log("Renderizando gráfico de problemas...");
+                                        
+                                        // Obtener datos del backend
+                                        let labels = (problemsChartEl.getAttribute('data-labels') || '').split(',');
+                                        let values = (problemsChartEl.getAttribute('data-values') || '').split(',').map(Number);
+                                        
+                                        // Verificar si los datos existen
+                                        if (!labels.length || labels[0] === '') {
+                                            console.warn("No se encontraron datos para el gráfico de problemas");
+                                            return;
+                                        }
+                                        
+                                        new Chart(problemsChartEl, {
+                                            type: 'radar',
+                                            data: {
+                                                labels: labels,
+                                                datasets: [{
+                                                    label: 'Frecuencia',
+                                                    data: values,
+                                                    backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                                                    borderColor: 'rgba(243, 156, 18, 0.8)',
+                                                    pointBackgroundColor: 'rgba(243, 156, 18, 1)',
+                                                    pointHoverBackgroundColor: '#fff'
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                elements: {
+                                                    line: {
+                                                        borderWidth: 2
+                                                    }
+                                                },
+                                                scales: {
+                                                    r: {
+                                                        angleLines: {
+                                                            display: true
+                                                        },
+                                                        suggestedMin: 0
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    } else {
+                                        console.log("Elemento para gráfico de problemas no encontrado");
+                                    }
+                                    
+                                    console.log("Todos los gráficos inicializados correctamente");
+                                    
+                                } catch (error) {
+                                    console.error("Error al inicializar gráficos:", error);
                                 }
-                                
-                                // Comprobar si Chart.js está cargado, si no, cargarlo dinámicamente
-                                if (typeof Chart === 'undefined') {
-                                    console.log("Chart.js no encontrado, cargando dinámicamente...");
-                                    var script = document.createElement('script');
-                                    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
-                                    script.onload = function() {
-                                        console.log("Chart.js cargado correctamente");
-                                        initCharts();
-                                    };
-                                    script.onerror = function() {
-                                        console.error("Error al cargar Chart.js");
-                                    };
-                                    document.head.appendChild(script);
-                                } else {
-                                    // Chart.js ya está cargado
-                                    window.addEventListener('load', initCharts);
-                                }
-                            })();
-                        </script>
-                    </t>
+                            }
+                            
+                            // Comprobar si Chart.js está cargado, si no, cargarlo dinámicamente
+                            if (typeof Chart === 'undefined') {
+                                console.log("Chart.js no encontrado, cargando dinámicamente...");
+                                var script = document.createElement('script');
+                                script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+                                script.onload = function() {
+                                    console.log("Chart.js cargado correctamente");
+                                    initCharts();
+                                };
+                                script.onerror = function() {
+                                    console.error("Error al cargar Chart.js");
+                                };
+                                document.head.appendChild(script);
+                            } else {
+                                // Chart.js ya está cargado
+                                window.addEventListener('load', initCharts);
+                            }
+                        })();
+                    </script>
             </t>
         </t>
     </t>

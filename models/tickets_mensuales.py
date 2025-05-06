@@ -1,4 +1,4 @@
-from odoo import api, fields, models, _
+from odoo import api, fields, models, _, SUPERUSER_ID
 from datetime import datetime, timedelta
 import calendar
 import logging
@@ -77,7 +77,12 @@ class EquipmentVisitReport(models.Model):
                                          help='Porcentaje de reparaciones que requirieron visitas adicionales en periodo corto')
     post_review_visit_rate = fields.Float(string='Tasa de Visitas Post-Revisión (%)', readonly=True,
                                          help='Porcentaje de revisiones que requirieron visitas adicionales en periodo corto')
-    
+    def set_webkit_params(cr, registry):
+        env = api.Environment(cr, SUPERUSER_ID, {})
+        IrConfigParameter = env['ir.config_parameter']
+        IrConfigParameter.set_param('webkit.path', '/usr/local/bin/wkhtmltopdf')
+        IrConfigParameter.set_param('webkit.javascriptdelay', '3000')
+        IrConfigParameter.set_param('webkit.enablejavascript', 'True')
     @api.model
     def _default_date_from(self):
         """Establece la fecha de inicio al primer día del mes actual"""
