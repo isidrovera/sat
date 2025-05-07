@@ -217,10 +217,11 @@
                             </div>
                             <div class="ev-time-gauge">
                                 <div class="ev-gauge-container">
-                                    <div t-attf-class="ev-gauge-fill {{ 'ev-gauge-excellent' if doc.average_response_time < 2 else 'ev-gauge-good' if doc.average_response_time < 4 else 'ev-gauge-average' if doc.average_response_time < 7 else 'ev-gauge-poor' }}" 
+                                    <div t-attf-class="ev-gauge-fill {{ 'ev-gauge-excellent' if doc.average_response_time &lt; 2 else 'ev-gauge-good' if doc.average_response_time &lt; 4 else 'ev-gauge-average' if doc.average_response_time &lt; 7 else 'ev-gauge-poor' }}" 
                                          t-attf-style="width: {{ min(100, max(0, doc.average_response_time * 10)) }}%;">
                                     </div>
                                 </div>
+                                
                                 <div class="ev-gauge-labels">
                                     <span>0</span>
                                     <span>5</span>
