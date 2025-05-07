@@ -90,26 +90,32 @@
 }
 
 .table-cards {
-    border-collapse: separate;
-    border-spacing: 12px;
+    border-collapse: separate !important;
+    border-spacing: 12px !important;
     width: 100%;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
 .card-cell {
-    padding: 0;
+    padding: 0 !important;
     vertical-align: top;
+    border: none !important;
+    background: transparent !important;
 }
 
 .ev-card {
     background-color: var(--white);
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow);
-    border: none;
+    border: none !important;
     padding: 15px;
     height: 110px;
     position: relative;
     overflow: hidden;
 }
+
 .ev-total-visits {
     background-color: var(--primary-light);
 }
@@ -156,12 +162,16 @@
 .icon-cell {
     vertical-align: middle;
     text-align: center;
+    border: none !important;
+    background: transparent !important;
 }
 
 .content-cell {
     vertical-align: middle;
     text-align: right;
     padding-right: 10px;
+    border: none !important;
+    background: transparent !important;
 }
 
 /* Iconos modernos - círculos con fondo de color */
@@ -227,14 +237,19 @@
 }
 
 .charts-table {
-    border-collapse: separate;
-    border-spacing: 12px;
+    border-collapse: separate !important;
+    border-spacing: 12px !important;
     width: 100%;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
 .chart-cell {
-    padding: 0;
+    padding: 0 !important;
     vertical-align: top;
+    border: none !important;
+    background: transparent !important;
 }
 
 .ev-chart-container {
@@ -531,128 +546,163 @@
     font-size: 12px;
 }
 
-/* Ajustes específicos para impresión PDF */
-@media print {
-    .ev-summary-cards {
-        page-break-inside: avoid !important;
-    }
-    
-    .ev-charts-section {
-        page-break-inside: avoid !important;
-    }
-    
-    .charts-table {
-        page-break-inside: avoid !important;
-    }
-    
-    .ev-chart-container {
-        page-break-inside: avoid !important;
-    }
-    
-    /* Eliminación de bordes para impresión */
-    table, tr, td {
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
-        outline: none !important;
-        border-collapse: separate !important;
-    }
-    
-    .ev-card {
-        page-break-inside: avoid !important;
-        border: none !important;
-        outline: none !important;
-    }
-}
+/* Correcciones para los recuadros no deseados */
 
-/* Solución completa para eliminar todos los bordes no deseados */
-
-/* Eliminar contornos y bordes de las tablas internas de tarjetas */
-.ev-summary-cards table,
-.ev-summary-cards td,
-.ev-summary-cards tr {
+/* 1. Corrección general para TODAS las tablas del informe */
+.page table, 
+.page tr, 
+.page td, 
+.page th {
     border: none !important;
-    background: none !important;
-    box-shadow: none !important;
     outline: none !important;
+    background-color: transparent !important;
 }
 
-.ev-summary-cards table {
-    border-collapse: separate !important;
-    border-spacing: 0 0 !important;
-}
-
-/* Regla general para eliminar bordes en todas las tablas de tarjetas */
-.table-cards,
-.table-cards td,
-.table-cards tr {
+/* 2. Corrección específica para las tablas internas en tarjetas */
+.ev-card table, 
+.ev-card tr, 
+.ev-card td {
     border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
     outline: none !important;
-}
-
-/* Regla para tablas de gráficos */
-.charts-table,
-.charts-table td,
-.charts-table tr {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    outline: none !important;
-}
-
-/* Reforzar estilo limpio en tarjetas PDF */
-.ev-card {
-    background-color: var(--white) !important;
-    border: none !important;
-    box-shadow: var(--shadow) !important;
-    border-radius: var(--border-radius-lg) !important;
-    outline: none !important;
-}
-
-/* Forzar eliminación de bordes en contenedores de gráficos mientras mantiene el estilo deseado */
-.ev-chart-container {
-    box-shadow: var(--shadow) !important;
-    border: 1px solid var(--gray-light) !important;
-    border-radius: var(--border-radius) !important;
-    outline: none !important;
-}
-
-/* Asegurar que no hay bordes heredados para todo elemento */
-* {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-}
-
-/* Eliminar líneas de tabla globalmente */
-table.no-borders,
-table.no-borders tr,
-table.no-borders td {
-    border: none !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
-    background: transparent !important;
+    background: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-/* 🔥 Fix Final - Elimina completamente los contornos extraños en el PDF */
-.table-cards,
-.table-cards td,
-.table-cards tr,
-.ev-summary-cards table,
-.ev-summary-cards td,
-.ev-summary-cards tr,
-.charts-table,
-.charts-table td,
+/* 3. Correcciones para todas las tablas con clase table-cards y charts-table */
+.table-cards, 
+.table-cards td, 
+.table-cards tr, 
+.charts-table, 
+.charts-table td, 
 .charts-table tr {
     border: none !important;
-    background: transparent !important;
+    background-color: transparent !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     outline: none !important;
     border-collapse: separate !important;
     border-spacing: 12px !important;
+}
+
+/* 4. Asegurar que las tablas no tengan padding extra */
+.table-cards td, 
+.charts-table td {
+    padding: 0 !important;
+}
+
+/* 5. Estilos específicos para impresión */
+@media print {
+    /* Evitar saltos de página dentro de elementos importantes */
+    .ev-summary-cards, 
+    .ev-chart-container, 
+    .ev-analysis-card {
+        page-break-inside: avoid !important;
+    }
+    
+    /* Eliminar cualquier borde en la impresión */
+    * {
+        border-color: transparent !important;
+        outline: none !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    /* Corrección específica para tablas en PDF */
+    table, tr, td, th {
+        border: none !important;
+        outline: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    
+    /* Mantener estilos específicos en las tarjetas */
+    .ev-card {
+        background-color: var(--white) !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: var(--shadow) !important;
+        border-radius: var(--border-radius-lg) !important;
+    }
+    
+    /* Mantener estilos específicos en los contenedores de gráficos */
+    .ev-chart-container {
+        background-color: var(--white) !important;
+        border: 1px solid var(--gray-light) !important;
+        outline: none !important;
+        box-shadow: var(--shadow) !important;
+        border-radius: var(--border-radius) !important;
+    }
+    
+    /* Forzar separación en las tablas de tarjetas */
+    .table-cards,
+    .charts-table {
+        border-spacing: 12px !important;
+        border-collapse: separate !important;
+    }
+    
+    /* Eliminar bordes de las celdas de manera específica */
+    .card-cell,
+    .chart-cell,
+    .icon-cell,
+    .content-cell {
+        border: none !important;
+        background: transparent !important;
+    }
+}
+
+/* 6. Corrección para tablas internas de tarjetas en las tarjetas de resumen */
+.ev-card table {
+    width: 100%;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border: none !important;
+}
+
+/* 7. Corrección para tablas anidadas */
+table table {
+    border: none !important;
+    outline: none !important;
+    border-collapse: separate !important;
+}
+
+/* 8. Reset para tablas anidadas */
+.page table table {
+    margin: 0 !important;
+    padding: 0 !important;
+    border-spacing: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+/* 9. Corrección para tablas de Odoo */
+.o_report_layout table {
+    border: none !important;
+}
+
+/* 10. Forzar eliminación de todas las propiedades de borde */
+* {
+    border-image: none !important;
+    border-style: none !important;
+}
+
+/* 11. Agregar !important a todos los estilos de borde */
+.table-cards,
+.table-cards td,
+.table-cards tr,
+.charts-table,
+.charts-table td,
+.charts-table tr,
+.ev-card,
+.card-cell,
+.chart-cell,
+.icon-cell,
+.content-cell {
+    border-top: none !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
 }
