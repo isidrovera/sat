@@ -1296,17 +1296,20 @@ class EquipmentVisitReport(models.Model):
     def action_view_problematic_technicians(self):
         """Acción para ver los técnicos considerados problemáticos"""
         self.ensure_one()
-        
+
         if not self.problematic_technicians:
             raise UserError(_('No hay técnicos problemáticos identificados.'))
-        
+
         return {
             'name': _('Técnicos con Problemas'),
             'type': 'ir.actions.act_window',
             'res_model': 'res.users',
             'view_mode': 'tree,form',
+            'views': [(False, 'tree'), (False, 'form')],
             'domain': [('id', 'in', self.problematic_technicians.ids)],
+            'target': 'current',
         }
+
 
     def action_export_technician_analysis(self):
         """Exporta un informe detallado del análisis de técnicos"""
