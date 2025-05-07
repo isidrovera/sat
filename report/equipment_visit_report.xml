@@ -61,7 +61,7 @@
                             </div>
                         </div>
 
-                        <!-- Tarjetas de Resumen usando tabla para mejor control en PDF -->
+                        <!-- Tarjetas de Resumen con iconos modernos -->
                         <div class="ev-summary-cards">
                             <table class="table-cards" width="100%" cellspacing="10" cellpadding="0">
                                 <tr>
@@ -70,7 +70,9 @@
                                             <table width="100%" cellpadding="0" cellspacing="0">
                                                 <tr>
                                                     <td width="30%" class="icon-cell">
-                                                        <i class="fa fa-calendar-check ev-card-icon"/>
+                                                        <div class="ev-card-icon">
+                                                            <i class="fa fa-calendar-check"/>
+                                                        </div>
                                                     </td>
                                                     <td width="70%" class="content-cell">
                                                         <div class="ev-card-value"><t t-esc="doc.total_visits"/></div>
@@ -85,7 +87,9 @@
                                             <table width="100%" cellpadding="0" cellspacing="0">
                                                 <tr>
                                                     <td width="30%" class="icon-cell">
-                                                        <i class="fa fa-sync ev-card-icon"/>
+                                                        <div class="ev-card-icon">
+                                                            <i class="fa fa-sync"/>
+                                                        </div>
                                                     </td>
                                                     <td width="70%" class="content-cell">
                                                         <div class="ev-card-value"><t t-esc="doc.recurring_equipment_count"/></div>
@@ -100,7 +104,9 @@
                                             <table width="100%" cellpadding="0" cellspacing="0">
                                                 <tr>
                                                     <td width="30%" class="icon-cell">
-                                                        <i class="fa fa-exclamation-triangle ev-card-icon"/>
+                                                        <div class="ev-card-icon">
+                                                            <i class="fa fa-exclamation-triangle"/>
+                                                        </div>
                                                     </td>
                                                     <td width="70%" class="content-cell">
                                                         <div class="ev-card-value"><t t-esc="doc.critical_equipment_count"/></div>
@@ -115,7 +121,9 @@
                                             <table width="100%" cellpadding="0" cellspacing="0">
                                                 <tr>
                                                     <td width="30%" class="icon-cell">
-                                                        <i class="fa fa-check-circle ev-card-icon"/>
+                                                        <div class="ev-card-icon">
+                                                            <i class="fa fa-check-circle"/>
+                                                        </div>
                                                     </td>
                                                     <td width="70%" class="content-cell">
                                                         <div class="ev-card-value">
@@ -131,9 +139,9 @@
                             </table>
                         </div>
 
-                        <!-- Sección de Gráficos usando una estructura de tabla para control preciso -->
+                        <!-- Sección de Gráficos con estilo moderno -->
                         <div class="ev-charts-section mt-4">
-                            <h3 class="ev-section-title">Análisis Visual</h3>
+                            <h3 class="ev-section-title"><i class="fa fa-chart-area mr-2" style="color: var(--primary);"></i> Análisis Visual</h3>
                             <t t-set="chart_imgs" t-value="json.loads(doc.chart_images or '{}')"/>
 
                             <!-- Primera fila de gráficos -->
@@ -146,8 +154,8 @@
                                             </h4>
                                             <div class="ev-chart-img-wrapper">
                                                 <img t-if="chart_imgs.get('equipment_chart')" 
-                                                     t-att-src="'data:image/png;base64,' + chart_imgs.get('equipment_chart')" 
-                                                     class="ev-chart-img"/>
+                                                    t-att-src="'data:image/png;base64,' + chart_imgs.get('equipment_chart')" 
+                                                    class="ev-chart-img"/>
                                             </div>
                                         </div>
                                     </td>
@@ -158,8 +166,8 @@
                                             </h4>
                                             <div class="ev-chart-img-wrapper">
                                                 <img t-if="chart_imgs.get('client_chart')" 
-                                                     t-att-src="'data:image/png;base64,' + chart_imgs.get('client_chart')" 
-                                                     class="ev-chart-img"/>
+                                                    t-att-src="'data:image/png;base64,' + chart_imgs.get('client_chart')" 
+                                                    class="ev-chart-img"/>
                                             </div>
                                         </div>
                                     </td>
@@ -179,8 +187,8 @@
                                             </h4>
                                             <div class="ev-chart-img-wrapper">
                                                 <img t-if="chart_imgs.get('trend_chart')" 
-                                                     t-att-src="'data:image/png;base64,' + chart_imgs.get('trend_chart')" 
-                                                     class="ev-chart-img"/>
+                                                    t-att-src="'data:image/png;base64,' + chart_imgs.get('trend_chart')" 
+                                                    class="ev-chart-img"/>
                                             </div>
                                         </div>
                                     </td>
@@ -191,8 +199,8 @@
                                             </h4>
                                             <div class="ev-chart-img-wrapper">
                                                 <img t-if="chart_imgs.get('problems_chart')" 
-                                                     t-att-src="'data:image/png;base64,' + chart_imgs.get('problems_chart')" 
-                                                     class="ev-chart-img"/>
+                                                    t-att-src="'data:image/png;base64,' + chart_imgs.get('problems_chart')" 
+                                                    class="ev-chart-img"/>
                                             </div>
                                         </div>
                                     </td>
