@@ -110,6 +110,21 @@
     position: relative;
     overflow: hidden;
 }
+.ev-total-visits {
+    background-color: var(--primary-light);
+}
+
+.ev-recurring {
+    background-color: var(--warning-light);
+}
+
+.ev-critical {
+    background-color: var(--danger-light);
+}
+
+.ev-resolution {
+    background-color: var(--secondary-light);
+}
 
 /* Añadimos una línea de color a cada tarjeta */
 .ev-card:before {
@@ -533,4 +548,18 @@
     .ev-chart-container {
         page-break-inside: avoid !important;
     }
+}
+
+/* Quitar contornos y bordes de las tablas internas de tarjetas */
+.ev-summary-cards table,
+.ev-summary-cards td,
+.ev-summary-cards tr {
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+}
+
+.ev-summary-cards table {
+    border-collapse: separate !important;
+    border-spacing: 0 0 !important;
 }
