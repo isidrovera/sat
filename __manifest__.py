@@ -127,7 +127,7 @@
             'sat/static/src/css/evaluation_form.css',
             'sat/static/src/css/parts_request_message.css',
             'sat/static/src/css/image-viewer.css',
-            #'sat/static/src/css/equipment_visit_report.css',
+            'sat/static/src/css/equipment_visit_report.css',
             
             
 
