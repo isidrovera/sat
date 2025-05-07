@@ -1,536 +1,542 @@
 /* Archivo: /static/src/css/equipment_visit_report.css */
 
-/* Paleta de colores moderna */
+/* Paleta de colores inspirada en Tailwind CSS */
 :root {
-    --primary: #2563eb;       /* Azul más vibrante */
-    --primary-light: #dbeafe; /* Azul muy claro */
-    --primary-dark: #1e40af;  /* Azul oscuro */
-    --secondary: #10b981;     /* Verde esmeralda */
-    --secondary-light: #d1fae5;
-    --accent: #f97316;        /* Naranja */
-    --accent-light: #ffedd5;
-    --danger: #ef4444;        /* Rojo */
-    --danger-light: #fee2e2;
-    --warning: #f59e0b;       /* Ámbar */
-    --warning-light: #fef3c7;
-    --dark: #111827;          /* Casi negro */
-    --gray-dark: #374151;
-    --gray: #6b7280;
-    --gray-light: #e5e7eb;
-    --light: #f9fafb;
-    --white: #ffffff;
-    --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --transition: all 0.3s ease;
-    --border-radius: 10px;
-    --border-radius-lg: 15px;
+    /* Colores primarios */
+    --blue-50: #eff6ff;
+    --blue-100: #dbeafe;
+    --blue-500: #3b82f6;
+    --blue-600: #2563eb;
+    --blue-700: #1d4ed8;
+    --blue-800: #1e40af;
+    --blue-900: #1e3a8a;
+    
+    /* Colores secundarios */
+    --red-500: #ef4444;
+    --red-100: #fee2e2;
+    --green-500: #10b981;
+    --green-100: #d1fae5;
+    --amber-500: #f59e0b;
+    --amber-100: #fef3c7;
+    
+    /* Grises */
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    
+    /* Sombras */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    
+    /* Bordes y radios */
+    --border-radius-sm: 0.125rem;
+    --border-radius: 0.25rem;
+    --border-radius-md: 0.375rem;
+    --border-radius-lg: 0.5rem;
+    --border-radius-xl: 0.75rem;
+    --border-radius-2xl: 1rem;
+    --border-radius-3xl: 1.5rem;
+    --border-radius-full: 9999px;
 }
 
-/* Estilos generales del reporte */
-.ev-report-header {
-    padding: 20px;
-    margin-bottom: 25px;
-    border-bottom: 2px solid var(--primary);
-    background-color: var(--primary-light);
-    border-radius: var(--border-radius);
+/* Estilos generales modernos */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--gray-700);
+    background-color: var(--gray-50);
+    line-height: 1.5;
 }
 
-.ev-title {
-    color: var(--primary-dark);
-    font-weight: 700;
-    font-size: 2.2rem;
-    margin-bottom: 5px;
-}
-
-.ev-subtitle {
-    color: var(--primary);
-    font-size: 1.6rem;
-    font-weight: 600;
-}
-
-.ev-icon {
-    color: var(--primary);
-    margin-right: 10px;
-}
-
-.ev-date-label, .ev-label {
-    font-weight: bold;
-    color: var(--gray);
-}
-
-.ev-date-value, .ev-value {
-    color: var(--dark);
-    font-weight: 500;
-}
-
-.ev-state-badge {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    color: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.state-draft {
-    background-color: var(--gray);
-}
-
-.state-generated {
-    background-color: var(--secondary);
-}
-
-.state-sent {
-    background-color: var(--primary);
-}
-
-/* TARJETAS DE RESUMEN - estilo moderno */
-.ev-summary-cards {
-    margin: 25px 0 35px 0;
-}
-
-.table-cards {
-    border-collapse: separate;
-    border-spacing: 12px;
-    width: 100%;
-}
-
-.card-cell {
+.page {
     padding: 0;
-    vertical-align: top;
+    margin: 0;
+    background-color: white;
 }
 
-.ev-card {
-    background-color: var(--white);
+/* Cabecera del Dashboard */
+.ev-dashboard-header {
+    background-color: var(--gray-800);
+    color: white;
+    padding: 1.5rem;
     border-radius: var(--border-radius-lg);
+    margin-bottom: 1.5rem;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ev-dashboard-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    margin: 0;
+}
+
+.ev-period {
+    font-size: 1.125rem;
+    font-weight: 500;
+    background-color: var(--blue-700);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-full);
+}
+
+/* Resumen Ejecutivo */
+.ev-executive-summary {
+    margin-bottom: 1.5rem;
+}
+
+.ev-section-header {
+    margin-bottom: 1rem;
+}
+
+.ev-section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--gray-200);
+}
+
+.ev-summary-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.ev-stat-card {
+    flex: 1;
+    min-width: 170px;
+    background-color: white;
+    border-radius: var(--border-radius-lg);
+    padding: 1rem;
     box-shadow: var(--shadow);
-    border: none;
-    padding: 15px;
-    height: 110px;
     position: relative;
     overflow: hidden;
 }
 
-/* Añadimos una línea de color a cada tarjeta */
-.ev-card:before {
+.ev-stat-card::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
+    right: 0;
     height: 4px;
-    background-color: var(--primary);
 }
 
-.ev-total-visits:before {
-    background-color: var(--primary);
+.ev-stat-visits::before {
+    background-color: var(--blue-500);
 }
 
-.ev-recurring:before {
-    background-color: var(--warning);
+.ev-stat-recurring::before {
+    background-color: var(--amber-500);
 }
 
-.ev-critical:before {
-    background-color: var(--danger);
+.ev-stat-resolution::before {
+    background-color: var(--green-500);
 }
 
-.ev-resolution:before {
-    background-color: var(--secondary);
+.ev-stat-time::before {
+    background-color: var(--gray-500);
 }
 
-.icon-cell {
-    vertical-align: middle;
+.ev-stat-content {
     text-align: center;
 }
 
-.content-cell {
-    vertical-align: middle;
-    text-align: right;
-    padding-right: 10px;
-}
-
-/* Iconos modernos - círculos con fondo de color */
-.ev-card-icon {
-    font-size: 22px;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-    color: white;
-}
-
-.ev-total-visits .ev-card-icon {
-    background-color: var(--primary);
-}
-
-.ev-recurring .ev-card-icon {
-    background-color: var(--warning);
-}
-
-.ev-critical .ev-card-icon {
-    background-color: var(--danger);
-}
-
-.ev-resolution .ev-card-icon {
-    background-color: var(--secondary);
-}
-
-.ev-card-value {
-    font-size: 28px;
+.ev-stat-value {
+    font-size: 2rem;
     font-weight: 700;
-    color: var(--dark);
-    line-height: 1.1;
-    margin-bottom: 5px;
-}
-
-.ev-card-label {
-    font-size: 14px;
-    color: var(--gray);
+    color: var(--gray-800);
     line-height: 1.2;
-    font-weight: 500;
 }
 
-/* Secciones */
-.ev-section-title {
-    color: var(--primary-dark);
-    font-size: 1.5rem;
-    font-weight: 600;
-    padding-bottom: 10px;
-    border-bottom: 2px solid var(--primary-light);
-    margin-bottom: 20px;
-    margin-top: 30px;
-    clear: both;
+.ev-stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin-top: 0.25rem;
 }
 
-/* GRÁFICOS MODERNOS */
-.ev-charts-section {
-    margin-bottom: 40px;
-    page-break-inside: avoid;
+/* Gráficos */
+.ev-dashboard-charts {
+    margin-bottom: 2rem;
 }
 
-.charts-table {
-    border-collapse: separate;
-    border-spacing: 12px;
+.ev-chart-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.ev-chart-column {
+    flex: 1;
+    min-width: 280px;
+}
+
+.ev-chart-full-width {
     width: 100%;
 }
 
-.chart-cell {
-    padding: 0;
-    vertical-align: top;
+.ev-chart-card {
+    background-color: white;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    height: 100%;
 }
 
-.ev-chart-container {
-    background-color: var(--white);
-    border-radius: var(--border-radius);
-    padding: 18px;
-    box-shadow: var(--shadow);
-    height: 320px;
-    border: 1px solid var(--gray-light);
+.ev-chart-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--gray-200);
 }
 
 .ev-chart-title {
-    color: var(--primary);
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 600;
-    margin-bottom: 15px;
-    text-align: center;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--gray-light);
+    color: var(--gray-700);
+    margin: 0;
 }
 
-.ev-chart-img-wrapper {
-    width: 100%;
-    height: 240px;
-    text-align: center;
-    display: block;
+.ev-chart-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 300px;
+}
+
+.ev-timeline-chart {
+    height: 250px;
 }
 
 .ev-chart-img {
     max-width: 100%;
-    max-height: 240px;
-    margin: 0 auto;
-    display: block;
+    max-height: 220px;
+    object-fit: contain;
 }
 
-/* Tablas */
-.ev-table {
-    box-shadow: var(--shadow);
-    border-radius: var(--border-radius);
+.ev-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    width: 100%;
+    justify-content: center;
+}
+
+.ev-legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+}
+
+.ev-legend-bullet {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--border-radius-full);
+    margin-right: 0.375rem;
+}
+
+.ev-critical .ev-legend-bullet {
+    background-color: var(--red-500);
+}
+
+.ev-normal .ev-legend-bullet {
+    background-color: var(--blue-500);
+}
+
+.ev-critical-visits .ev-legend-bullet {
+    background-color: var(--red-500);
+}
+
+.ev-different-issues .ev-legend-bullet {
+    background-color: var(--blue-500);
+}
+
+/* Tablas de datos */
+.ev-data-table-container {
+    margin-top: 1rem;
+    border-radius: var(--border-radius-lg);
     overflow: hidden;
-    border: none;
+    box-shadow: var(--shadow);
 }
 
-.ev-table thead {
-    background-color: var(--primary-dark);
+.ev-data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ev-data-table thead {
+    background-color: var(--gray-800);
     color: white;
 }
 
-.ev-table th {
-    padding: 12px 15px;
+.ev-data-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
     font-weight: 600;
-    border: none;
+    font-size: 0.875rem;
 }
 
-.ev-table td {
-    padding: 10px 15px;
-    border-bottom: 1px solid var(--gray-light);
-    vertical-align: middle;
+.ev-data-table tbody tr {
+    background-color: white;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.ev-data-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.ev-data-table td {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: var(--gray-700);
 }
 
 .ev-close-visits {
-    background-color: var(--warning-light);
+    background-color: var(--amber-100);
 }
 
 .ev-visit-count {
-    display: inline-block;
-    background-color: var(--primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--blue-500);
     color: white;
-    padding: 3px 10px;
-    border-radius: 15px;
-    font-weight: bold;
-    min-width: 30px;
-    text-align: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--border-radius-full);
+    font-weight: 600;
 }
 
-/* Cliente con más visitas */
-.ev-client-info-card {
-    background-color: var(--white);
-    border-radius: var(--border-radius);
-    padding: 20px;
-    box-shadow: var(--shadow);
-    border-left: 5px solid var(--primary);
+/* Cliente Top */
+.ev-client-card {
+    display: flex;
+    background-color: white;
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    margin-top: 1rem;
+    border-left: 5px solid var(--blue-600);
 }
 
-.ev-client-icon {
-    font-size: 40px;
-    color: var(--primary);
+.ev-client-icon-container {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--primary-light);
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
+    width: 4rem;
+    height: 4rem;
+    background-color: var(--blue-100);
+    border-radius: var(--border-radius-full);
+    margin-right: 1.5rem;
+    flex-shrink: 0;
+}
+
+.ev-client-icon {
+    font-size: 1.75rem;
+    color: var(--blue-600);
+}
+
+.ev-client-details {
+    flex-grow: 1;
 }
 
 .ev-client-name {
-    font-size: 20px;
-    font-weight: bold;
-    color: var(--dark);
-    margin-bottom: 8px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 0.5rem;
 }
 
-.ev-client-visit-count {
-    font-size: 20px;
-    font-weight: bold;
-    color: var(--danger);
-    background-color: var(--danger-light);
-    padding: 2px 10px;
-    border-radius: 15px;
+.ev-client-stat {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
 }
 
-.ev-client-contact {
-    margin-top: 12px;
-    color: var(--gray);
+.ev-client-count {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--red-500);
+    background-color: var(--red-100);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--border-radius-full);
+    margin-right: 0.5rem;
 }
 
-.ev-contact-phone, .ev-contact-email {
-    margin-top: 5px;
+.ev-client-label {
+    color: var(--gray-600);
+    font-size: 0.875rem;
 }
 
-/* Análisis especial */
-.ev-analysis-cards {
+.ev-client-contact-info {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 1rem;
 }
 
-.ev-analysis-card {
-    background-color: var(--white);
-    border-radius: var(--border-radius);
-    padding: 18px;
-    box-shadow: var(--shadow);
-    width: calc(50% - 20px);
-    border-top: 4px solid var(--primary);
+.ev-contact-item {
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
 }
 
-.ev-analysis-header {
-    border-bottom: 1px solid var(--gray-light);
-    padding-bottom: 12px;
-    margin-bottom: 12px;
+.ev-contact-icon {
+    color: var(--gray-400);
+    margin-right: 0.5rem;
 }
 
-.ev-analysis-model {
-    font-size: 17px;
-    font-weight: bold;
-    color: var(--dark);
-    margin-right: 10px;
-}
-
-.ev-analysis-serie {
-    color: var(--gray);
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.ev-analysis-body {
-    margin-bottom: 12px;
-}
-
-.ev-analysis-client,
-.ev-analysis-visits,
-.ev-analysis-problem {
-    margin-bottom: 6px;
-    padding-left: 25px;
-    position: relative;
-}
-
-.ev-analysis-client i,
-.ev-analysis-visits i,
-.ev-analysis-problem i {
-    position: absolute;
-    left: 0;
-    top: 2px;
-    color: var(--primary);
-}
-
-.ev-analysis-warning {
-    color: var(--danger);
-    font-weight: bold;
-    margin-top: 10px;
-    padding-left: 25px;
-    position: relative;
-}
-
-.ev-analysis-warning i {
-    position: absolute;
-    left: 0;
-    top: 2px;
-    color: var(--danger);
-}
-
-.ev-analysis-recommendation {
-    background-color: var(--light);
-    padding: 12px;
-    border-radius: var(--border-radius);
-    font-weight: 600;
-    color: var(--dark);
-    margin-top: 12px;
-    border-left: 3px solid var(--secondary);
-    position: relative;
-    padding-left: 30px;
-}
-
-.ev-analysis-recommendation i {
-    position: absolute;
-    left: 8px;
-    top: 12px;
-    color: var(--secondary);
-}
-
-/* Tiempo de respuesta */
-.ev-time-container {
-    background-color: var(--white);
-    border-radius: var(--border-radius);
-    padding: 25px;
-    box-shadow: var(--shadow);
+/* Medidor de Tiempo */
+.ev-gauge-card {
+    background-color: white;
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    margin-top: 1rem;
     text-align: center;
 }
 
-.ev-time-value {
-    font-size: 36px;
-    font-weight: bold;
-    color: var(--dark);
-    margin-bottom: 18px;
+.ev-gauge-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 1rem;
 }
 
 .ev-gauge-container {
-    height: 20px;
-    background-color: var(--gray-light);
-    border-radius: 10px;
-    margin-bottom: 5px;
+    margin: 0 auto;
+    max-width: 500px;
+    margin-bottom: 1rem;
+}
+
+.ev-gauge-track {
+    height: 1rem;
+    background-color: var(--gray-200);
+    border-radius: var(--border-radius-full);
     overflow: hidden;
 }
 
 .ev-gauge-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--secondary) 0%, var(--warning) 50%, var(--danger) 100%);
+    background: linear-gradient(90deg, var(--green-500) 0%, var(--amber-500) 50%, var(--red-500) 100%);
+    border-radius: var(--border-radius-full);
 }
 
 .ev-gauge-labels {
     display: flex;
     justify-content: space-between;
-    color: var(--gray);
-    font-size: 12px;
-    margin-bottom: 20px;
+    margin-top: 0.5rem;
+    color: var(--gray-500);
+    font-size: 0.75rem;
 }
 
-.ev-time-assessment {
-    font-size: 20px;
-    font-weight: bold;
-    padding: 5px 15px;
-    border-radius: 20px;
+.ev-gauge-assessment {
+    margin-top: 1rem;
+}
+
+.ev-time-excellent,
+.ev-time-good,
+.ev-time-average,
+.ev-time-poor {
+    font-weight: 600;
+    padding: 0.375rem 1rem;
+    border-radius: var(--border-radius-full);
     display: inline-block;
-    margin-top: 5px;
 }
 
 .ev-time-excellent {
-    color: white;
-    background-color: var(--secondary);
+    background-color: var(--green-100);
+    color: var(--green-500);
 }
 
 .ev-time-good {
-    color: white;
-    background-color: var(--primary);
+    background-color: var(--blue-100);
+    color: var(--blue-600);
 }
 
 .ev-time-average {
-    color: white;
-    background-color: var(--warning);
+    background-color: var(--amber-100);
+    color: var(--amber-500);
 }
 
 .ev-time-poor {
-    color: white;
-    background-color: var(--danger);
+    background-color: var(--red-100);
+    color: var(--red-500);
 }
 
 /* Mensajes vacíos */
 .ev-no-data {
-    background-color: var(--light);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    color: var(--gray);
+    background-color: var(--gray-50);
+    border: 1px dashed var(--gray-300);
+    border-radius: var(--border-radius-lg);
+    padding: 2rem;
     text-align: center;
-    margin-bottom: 20px;
-    border: 1px dashed var(--gray-light);
+    color: var(--gray-500);
+    margin-top: 1rem;
 }
 
-/* Pie de informe */
+/* Pie de página */
 .ev-report-footer {
-    padding-top: 20px;
-    border-top: 1px solid var(--gray-light);
-    color: var(--gray);
-    font-size: 12px;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
 }
 
-/* Ajustes específicos para impresión PDF */
+.ev-footer-content {
+    display: flex;
+    justify-content: space-between;
+    color: var(--gray-500);
+    font-size: 0.75rem;
+}
+
+/* Media queries para PDF */
 @media print {
-    .ev-summary-cards {
-        page-break-inside: avoid !important;
+    .ev-dashboard-header {
+        background-color: var(--gray-800) !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     
-    .ev-charts-section {
-        page-break-inside: avoid !important;
+    .ev-data-table thead {
+        background-color: var(--gray-800) !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     
-    .charts-table {
-        page-break-inside: avoid !important;
+    .ev-close-visits {
+        background-color: var(--amber-100) !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     
-    .ev-chart-container {
-        page-break-inside: avoid !important;
+    .ev-visit-count {
+        background-color: var(--blue-500) !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .ev-gauge-fill {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }
