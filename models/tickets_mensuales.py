@@ -217,12 +217,13 @@ class EquipmentVisitReport(models.Model):
         last_day = calendar.monthrange(today.year, today.month)[1]
         return today.replace(day=last_day)
     
-    @api.model
+   @api.model
     def create(self, vals):
         """Sobreescribe create para asignar nombre secuencial"""
         if vals.get('name', _('Nuevo')) == _('Nuevo'):
             vals['name'] = self.env['ir.sequence'].next_by_code('equipment.visit.report') or _('Nuevo')
         return super(EquipmentVisitReport, self).create(vals)
+
     def _generate_chart_data(self):
         """Genera datos para gráficos de análisis"""
         self.ensure_one()
