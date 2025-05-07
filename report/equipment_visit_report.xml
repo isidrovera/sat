@@ -13,28 +13,13 @@
         <field name="paperformat_id" ref="base.paperformat_euro"/>
     </record>
 
-    <!-- Assets para CSS -->
-    <record id="equipment_visit_report_asset" model="ir.asset">
-        <field name="name">Equipment Visit Report Assets</field>
-        <field name="bundle">web.assets_backend</field>
-        <field name="directive">append</field>
-        <field name="target">web.report_assets_common</field>
-        <field name="path">sat/static/src/css/equipment_visit_report.css</field>
-    </record>
-    <record id="equipment_visit_report_js_asset" model="ir.asset">
-        <field name="name">Equipment Visit Report JS Assets</field>
-        <field name="bundle">web.assets_backend</field>
-        <field name="directive">append</field>
-        <field name="target">web.report_assets_common</field>
-        <field name="path">sat/static/src/js/equipment_visit_report.js</field>
-    </record>
-
+   
     <!-- Plantilla Principal del Reporte -->
     <template id="report_equipment_visit" name="sat.report_equipment_visit">
         <t t-call="web.html_container">
             <t t-foreach="docs" t-as="doc">
                 <t t-call="web.external_layout">
-                    <div class="page">
+                    <div class="page equipment_visit_report_container">
                         <!-- Cabecera del Informe -->
                         <div class="ev-report-header">
                             <div class="row">
@@ -379,6 +364,188 @@
                     <!-- Incluir todos los recursos necesarios independientemente del formato -->
                     <link rel="stylesheet" type="text/css" href="/sat/static/src/css/equipment_visit_report.css"/>
                     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+                    <style>
+                        /* Paleta de colores moderna */
+                        .equipment_visit_report_container {
+                            --primary: #2563eb;       /* Azul más vibrante */
+                            --primary-light: #dbeafe; /* Azul muy claro */
+                            --primary-dark: #1e40af;  /* Azul oscuro */
+                            --secondary: #10b981;     /* Verde esmeralda */
+                            --secondary-light: #d1fae5;
+                            --accent: #f97316;        /* Naranja */
+                            --accent-light: #ffedd5;
+                            --danger: #ef4444;        /* Rojo */
+                            --danger-light: #fee2e2;
+                            --warning: #f59e0b;       /* Ámbar */
+                            --warning-light: #fef3c7;
+                            --dark: #111827;          /* Casi negro */
+                            --gray-dark: #374151;
+                            --gray: #6b7280;
+                            --gray-light: #e5e7eb;
+                            --light: #f9fafb;
+                            --white: #ffffff;
+                            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                            --transition: all 0.3s ease;
+                            --border-radius: 10px;
+                            --border-radius-lg: 15px;
+                        }
+                        
+                        /* Estilos generales del reporte */
+                        .equipment_visit_report_container .ev-report-header {
+                            padding: 20px;
+                            margin-bottom: 25px;
+                            border-bottom: 2px solid var(--primary);
+                            background-color: var(--primary-light);
+                            border-radius: var(--border-radius);
+                        }
+                        
+                        .equipment_visit_report_container .ev-title {
+                            color: var(--primary-dark);
+                            font-weight: 700;
+                            font-size: 2.2rem;
+                            margin-bottom: 5px;
+                        }
+                        
+                        .equipment_visit_report_container .ev-subtitle {
+                            color: var(--primary);
+                            font-size: 1.6rem;
+                            font-weight: 600;
+                        }
+                        
+                        .equipment_visit_report_container .ev-icon {
+                            color: var(--primary);
+                            margin-right: 10px;
+                        }
+                        
+                        .equipment_visit_report_container .ev-date-label, 
+                        .equipment_visit_report_container .ev-label {
+                            font-weight: bold;
+                            color: var(--gray);
+                        }
+                        
+                        .equipment_visit_report_container .ev-date-value, 
+                        .equipment_visit_report_container .ev-value {
+                            color: var(--dark);
+                            font-weight: 500;
+                        }
+                        
+                        .equipment_visit_report_container .ev-state-badge {
+                            display: inline-block;
+                            padding: 6px 12px;
+                            border-radius: 20px;
+                            font-weight: bold;
+                            color: white;
+                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                        }
+                        
+                        .equipment_visit_report_container .state-draft {
+                            background-color: var(--gray);
+                        }
+                        
+                        .equipment_visit_report_container .state-generated {
+                            background-color: var(--secondary);
+                        }
+                        
+                        .equipment_visit_report_container .state-sent {
+                            background-color: var(--primary);
+                        }
+                        
+                        /* TARJETAS DE RESUMEN - estilo moderno */
+                        .equipment_visit_report_container .ev-summary-cards {
+                            margin: 25px 0 35px 0;
+                        }
+                        
+                        .equipment_visit_report_container .table-cards {
+                            border-collapse: separate !important;
+                            border-spacing: 12px !important;
+                            width: 100%;
+                            border: none !important;
+                            background: transparent !important;
+                            box-shadow: none !important;
+                        }
+                        
+                        .equipment_visit_report_container .card-cell {
+                            padding: 0 !important;
+                            vertical-align: top;
+                            border: none !important;
+                            background: transparent !important;
+                        }
+                        
+                        .equipment_visit_report_container .ev-card {
+                            background-color: var(--white);
+                            border-radius: var(--border-radius-lg);
+                            box-shadow: var(--shadow);
+                            border: none !important;
+                            padding: 15px;
+                            height: 110px;
+                            position: relative;
+                            overflow: hidden;
+                        }
+                        
+                        /* Continuar con todos los demás estilos... */
+                        
+                        /* Solución para tablas y celdas */
+                        .equipment_visit_report_container table,
+                        .equipment_visit_report_container tr,
+                        .equipment_visit_report_container td {
+                            border: none !important;
+                            background: transparent !important;
+                            box-shadow: none !important;
+                        }
+                        
+                        .equipment_visit_report_container .table-cards,
+                        .equipment_visit_report_container .table-cards td,
+                        .equipment_visit_report_container .table-cards tr,
+                        .equipment_visit_report_container .charts-table,
+                        .equipment_visit_report_container .charts-table td,
+                        .equipment_visit_report_container .charts-table tr {
+                            border: none !important;
+                            background: transparent !important;
+                            box-shadow: none !important;
+                            border-radius: 0 !important;
+                            outline: none !important;
+                            border-collapse: separate !important;
+                            border-spacing: 12px !important;
+                        }
+                        
+                        .equipment_visit_report_container .ev-card table,
+                        .equipment_visit_report_container .ev-card tr,
+                        .equipment_visit_report_container .ev-card td {
+                            border: none !important;
+                            background: transparent !important;
+                            box-shadow: none !important;
+                            border-collapse: separate !important;
+                            border-spacing: 0 !important;
+                        }
+                        
+                        /* Ajustes específicos para impresión PDF */
+                        @media print {
+                            .equipment_visit_report_container .ev-summary-cards {
+                                page-break-inside: avoid !important;
+                            }
+                            
+                            .equipment_visit_report_container .ev-charts-section {
+                                page-break-inside: avoid !important;
+                            }
+                            
+                            .equipment_visit_report_container .charts-table {
+                                page-break-inside: avoid !important;
+                            }
+                            
+                            .equipment_visit_report_container .ev-chart-container {
+                                page-break-inside: avoid !important;
+                            }
+                            
+                            .equipment_visit_report_container table,
+                            .equipment_visit_report_container tr,
+                            .equipment_visit_report_container td {
+                                border: none !important;
+                                background: transparent !important;
+                                box-shadow: none !important;
+                            }
+                        }
+                    </style>
                     <!-- Script para renderizar gráficos -->
                     <script type="text/javascript">
                         (function() {
