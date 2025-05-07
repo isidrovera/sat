@@ -99,6 +99,12 @@
                   invisible="state != 'generated'" class="btn-warning"/>
           <button name="action_export_technician_analysis" type="object" string="Exportar Análisis de Técnicos" 
                   invisible="state != 'generated'" class="btn-info"/>
+          <button name="action_print_report_pdf"
+                  type="object"
+                  string="Imprimir PDF"
+                  class="btn-primary"
+                  icon="fa-print"/>
+          
           <field name="state" widget="statusbar" statusbar_visible="draft,generated,sent"/>
         </header>
         <sheet>

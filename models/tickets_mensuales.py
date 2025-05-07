@@ -233,7 +233,13 @@ class EquipmentVisitReport(models.Model):
     def _generate_chart_data(self):
         """Genera datos para gráficos de análisis"""
         self.ensure_one()
-        
+    def action_print_report_pdf(self):
+        self.ensure_one()
+        return self.env.ref('sat.equipment_visit_report_action').report_action(
+            self,
+            print_report_name=self._get_report_base_filename()
+        )
+
         # Obtener todas las visitas técnicas en el período
         tickets = self.env['ticket.alquiler'].search([
             ('agenda', '>=', self.date_from),
