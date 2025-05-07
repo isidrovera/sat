@@ -21,7 +21,13 @@
         <field name="target">web.report_assets_common</field>
         <field name="path">sat/static/src/css/equipment_visit_report.css</field>
     </record>
-  
+  <!-- Assets para JavaScript en Odoo 18 -->
+  <record id="equipment_visit_report_js_asset" model="ir.asset">
+    <field name="name">Equipment Visit Report JS</field>
+    <field name="bundle">web.report_assets_common</field>
+    <field name="directive">append</field>
+    <field name="path">sat/static/src/js/equipment_visit_report.js</field>
+</record>
 
     <!-- Plantilla Principal del Reporte -->
     <template id="report_equipment_visit" name="sat.report_equipment_visit">
