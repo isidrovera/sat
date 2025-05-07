@@ -365,10 +365,8 @@
                     <link rel="stylesheet" type="text/css" href="/sat/static/src/css/equipment_visit_report.css"/>
                     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
                     <style>
-                        /* Archivo: /static/src/css/equipment_visit_report.css */
-    
                         /* Paleta de colores moderna */
-                        :root {
+                        .equipment_visit_report_container {
                             --primary: #2563eb;       /* Azul más vibrante */
                             --primary-light: #dbeafe; /* Azul muy claro */
                             --primary-dark: #1e40af;  /* Azul oscuro */
@@ -392,45 +390,47 @@
                             --border-radius: 10px;
                             --border-radius-lg: 15px;
                         }
-    
+                        
                         /* Estilos generales del reporte */
-                        .ev-report-header {
+                        .equipment_visit_report_container .ev-report-header {
                             padding: 20px;
                             margin-bottom: 25px;
                             border-bottom: 2px solid var(--primary);
                             background-color: var(--primary-light);
                             border-radius: var(--border-radius);
                         }
-    
-                        .ev-title {
+                        
+                        .equipment_visit_report_container .ev-title {
                             color: var(--primary-dark);
                             font-weight: 700;
                             font-size: 2.2rem;
                             margin-bottom: 5px;
                         }
-    
-                        .ev-subtitle {
+                        
+                        .equipment_visit_report_container .ev-subtitle {
                             color: var(--primary);
                             font-size: 1.6rem;
                             font-weight: 600;
                         }
-    
-                        .ev-icon {
+                        
+                        .equipment_visit_report_container .ev-icon {
                             color: var(--primary);
                             margin-right: 10px;
                         }
-    
-                        .ev-date-label, .ev-label {
+                        
+                        .equipment_visit_report_container .ev-date-label, 
+                        .equipment_visit_report_container .ev-label {
                             font-weight: bold;
                             color: var(--gray);
                         }
-    
-                        .ev-date-value, .ev-value {
+                        
+                        .equipment_visit_report_container .ev-date-value, 
+                        .equipment_visit_report_container .ev-value {
                             color: var(--dark);
                             font-weight: 500;
                         }
-    
-                        .ev-state-badge {
+                        
+                        .equipment_visit_report_container .ev-state-badge {
                             display: inline-block;
                             padding: 6px 12px;
                             border-radius: 20px;
@@ -438,517 +438,112 @@
                             color: white;
                             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                         }
-    
-                        .state-draft {
+                        
+                        .equipment_visit_report_container .state-draft {
                             background-color: var(--gray);
                         }
-    
-                        .state-generated {
+                        
+                        .equipment_visit_report_container .state-generated {
                             background-color: var(--secondary);
                         }
-    
-                        .state-sent {
+                        
+                        .equipment_visit_report_container .state-sent {
                             background-color: var(--primary);
                         }
-    
+                        
                         /* TARJETAS DE RESUMEN - estilo moderno */
-                        .ev-summary-cards {
+                        .equipment_visit_report_container .ev-summary-cards {
                             margin: 25px 0 35px 0;
                         }
-    
-                        .table-cards {
-                            border-collapse: separate;
-                            border-spacing: 12px;
+                        
+                        .equipment_visit_report_container .table-cards {
+                            border-collapse: separate !important;
+                            border-spacing: 12px !important;
                             width: 100%;
+                            border: none !important;
+                            background: transparent !important;
+                            box-shadow: none !important;
                         }
-    
-                        .card-cell {
-                            padding: 0;
+                        
+                        .equipment_visit_report_container .card-cell {
+                            padding: 0 !important;
                             vertical-align: top;
+                            border: none !important;
+                            background: transparent !important;
                         }
-    
-                        .ev-card {
+                        
+                        .equipment_visit_report_container .ev-card {
                             background-color: var(--white);
                             border-radius: var(--border-radius-lg);
                             box-shadow: var(--shadow);
-                            border: none;
+                            border: none !important;
                             padding: 15px;
                             height: 110px;
                             position: relative;
                             overflow: hidden;
                         }
-                        .ev-total-visits {
-                            background-color: var(--primary-light);
-                        }
-    
-                        .ev-recurring {
-                            background-color: var(--warning-light);
-                        }
-    
-                        .ev-critical {
-                            background-color: var(--danger-light);
-                        }
-    
-                        .ev-resolution {
-                            background-color: var(--secondary-light);
-                        }
-    
-                        /* Añadimos una línea de color a cada tarjeta */
-                        .ev-card:before {
-                            content: '';
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            width: 100%;
-                            height: 4px;
-                            background-color: var(--primary);
-                        }
-    
-                        .ev-total-visits:before {
-                            background-color: var(--primary);
-                        }
-    
-                        .ev-recurring:before {
-                            background-color: var(--warning);
-                        }
-    
-                        .ev-critical:before {
-                            background-color: var(--danger);
-                        }
-    
-                        .ev-resolution:before {
-                            background-color: var(--secondary);
-                        }
-    
-                        .icon-cell {
-                            vertical-align: middle;
-                            text-align: center;
-                        }
-    
-                        .content-cell {
-                            vertical-align: middle;
-                            text-align: right;
-                            padding-right: 10px;
-                        }
-    
-                        /* Iconos modernos - círculos con fondo de color */
-                        .ev-card-icon {
-                            font-size: 22px;
-                            width: 50px;
-                            height: 50px;
-                            border-radius: 50%;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            margin: 0 auto;
-                            color: white;
-                        }
-    
-                        .ev-total-visits .ev-card-icon {
-                            background-color: var(--primary);
-                        }
-    
-                        .ev-recurring .ev-card-icon {
-                            background-color: var(--warning);
-                        }
-    
-                        .ev-critical .ev-card-icon {
-                            background-color: var(--danger);
-                        }
-    
-                        .ev-resolution .ev-card-icon {
-                            background-color: var(--secondary);
-                        }
-    
-                        .ev-card-value {
-                            font-size: 28px;
-                            font-weight: 700;
-                            color: var(--dark);
-                            line-height: 1.1;
-                            margin-bottom: 5px;
-                        }
-    
-                        .ev-card-label {
-                            font-size: 14px;
-                            color: var(--gray);
-                            line-height: 1.2;
-                            font-weight: 500;
-                        }
-    
-                        /* Secciones */
-                        .ev-section-title {
-                            color: var(--primary-dark);
-                            font-size: 1.5rem;
-                            font-weight: 600;
-                            padding-bottom: 10px;
-                            border-bottom: 2px solid var(--primary-light);
-                            margin-bottom: 20px;
-                            margin-top: 30px;
-                            clear: both;
-                        }
-    
-                        /* GRÁFICOS MODERNOS */
-                        .ev-charts-section {
-                            margin-bottom: 40px;
-                            page-break-inside: avoid;
-                        }
-    
-                        .charts-table {
-                            border-collapse: separate;
-                            border-spacing: 12px;
-                            width: 100%;
-                        }
-    
-                        .chart-cell {
-                            padding: 0;
-                            vertical-align: top;
-                        }
-    
-                        .ev-chart-container {
-                            background-color: var(--white);
-                            border-radius: var(--border-radius);
-                            padding: 18px;
-                            box-shadow: var(--shadow);
-                            height: 320px;
-                            border: 1px solid var(--gray-light);
-                        }
-    
-                        .ev-chart-title {
-                            color: var(--primary);
-                            font-size: 16px;
-                            font-weight: 600;
-                            margin-bottom: 15px;
-                            text-align: center;
-                            padding-bottom: 10px;
-                            border-bottom: 1px solid var(--gray-light);
-                        }
-    
-                        .ev-chart-img-wrapper {
-                            width: 100%;
-                            height: 240px;
-                            text-align: center;
-                            display: block;
-                        }
-    
-                        .ev-chart-img {
-                            max-width: 100%;
-                            max-height: 240px;
-                            margin: 0 auto;
-                            display: block;
-                        }
-    
-                        /* Tablas */
-                        .ev-table {
-                            box-shadow: var(--shadow);
-                            border-radius: var(--border-radius);
-                            overflow: hidden;
-                            border: none;
-                        }
-    
-                        .ev-table thead {
-                            background-color: var(--primary-dark);
-                            color: white;
-                        }
-    
-                        .ev-table th {
-                            padding: 12px 15px;
-                            font-weight: 600;
-                            border: none;
-                        }
-    
-                        .ev-table td {
-                            padding: 10px 15px;
-                            border-bottom: 1px solid var(--gray-light);
-                            vertical-align: middle;
-                        }
-    
-                        .ev-close-visits {
-                            background-color: var(--warning-light);
-                        }
-    
-                        .ev-visit-count {
-                            display: inline-block;
-                            background-color: var(--primary);
-                            color: white;
-                            padding: 3px 10px;
-                            border-radius: 15px;
-                            font-weight: bold;
-                            min-width: 30px;
-                            text-align: center;
-                        }
-    
-                        /* Cliente con más visitas */
-                        .ev-client-info-card {
-                            background-color: var(--white);
-                            border-radius: var(--border-radius);
-                            padding: 20px;
-                            box-shadow: var(--shadow);
-                            border-left: 5px solid var(--primary);
-                        }
-    
-                        .ev-client-icon {
-                            font-size: 40px;
-                            color: var(--primary);
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            background-color: var(--primary-light);
-                            width: 70px;
-                            height: 70px;
-                            border-radius: 50%;
-                        }
-    
-                        .ev-client-name {
-                            font-size: 20px;
-                            font-weight: bold;
-                            color: var(--dark);
-                            margin-bottom: 8px;
-                        }
-    
-                        .ev-client-visit-count {
-                            font-size: 20px;
-                            font-weight: bold;
-                            color: var(--danger);
-                            background-color: var(--danger-light);
-                            padding: 2px 10px;
-                            border-radius: 15px;
-                        }
-    
-                        .ev-client-contact {
-                            margin-top: 12px;
-                            color: var(--gray);
-                        }
-    
-                        .ev-contact-phone, .ev-contact-email {
-                            margin-top: 5px;
-                        }
-    
-                        /* Análisis especial */
-                        .ev-analysis-cards {
-                            display: flex;
-                            flex-wrap: wrap;
-                            gap: 20px;
-                        }
-    
-                        .ev-analysis-card {
-                            background-color: var(--white);
-                            border-radius: var(--border-radius);
-                            padding: 18px;
-                            box-shadow: var(--shadow);
-                            width: calc(50% - 20px);
-                            border-top: 4px solid var(--primary);
-                        }
-    
-                        .ev-analysis-header {
-                            border-bottom: 1px solid var(--gray-light);
-                            padding-bottom: 12px;
-                            margin-bottom: 12px;
-                        }
-    
-                        .ev-analysis-model {
-                            font-size: 17px;
-                            font-weight: bold;
-                            color: var(--dark);
-                            margin-right: 10px;
-                        }
-    
-                        .ev-analysis-serie {
-                            color: var(--gray);
-                            font-size: 14px;
-                            font-weight: 500;
-                        }
-    
-                        .ev-analysis-body {
-                            margin-bottom: 12px;
-                        }
-    
-                        .ev-analysis-client,
-                        .ev-analysis-visits,
-                        .ev-analysis-problem {
-                            margin-bottom: 6px;
-                            padding-left: 25px;
-                            position: relative;
-                        }
-    
-                        .ev-analysis-client i,
-                        .ev-analysis-visits i,
-                        .ev-analysis-problem i {
-                            position: absolute;
-                            left: 0;
-                            top: 2px;
-                            color: var(--primary);
-                        }
-    
-                        .ev-analysis-warning {
-                            color: var(--danger);
-                            font-weight: bold;
-                            margin-top: 10px;
-                            padding-left: 25px;
-                            position: relative;
-                        }
-    
-                        .ev-analysis-warning i {
-                            position: absolute;
-                            left: 0;
-                            top: 2px;
-                            color: var(--danger);
-                        }
-    
-                        .ev-analysis-recommendation {
-                            background-color: var(--light);
-                            padding: 12px;
-                            border-radius: var(--border-radius);
-                            font-weight: 600;
-                            color: var(--dark);
-                            margin-top: 12px;
-                            border-left: 3px solid var(--secondary);
-                            position: relative;
-                            padding-left: 30px;
-                        }
-    
-                        .ev-analysis-recommendation i {
-                            position: absolute;
-                            left: 8px;
-                            top: 12px;
-                            color: var(--secondary);
-                        }
-    
-                        /* Tiempo de respuesta */
-                        .ev-time-container {
-                            background-color: var(--white);
-                            border-radius: var(--border-radius);
-                            padding: 25px;
-                            box-shadow: var(--shadow);
-                            text-align: center;
-                        }
-    
-                        .ev-time-value {
-                            font-size: 36px;
-                            font-weight: bold;
-                            color: var(--dark);
-                            margin-bottom: 18px;
-                        }
-    
-                        .ev-gauge-container {
-                            height: 20px;
-                            background-color: var(--gray-light);
-                            border-radius: 10px;
-                            margin-bottom: 5px;
-                            overflow: hidden;
-                        }
-    
-                        .ev-gauge-fill {
-                            height: 100%;
-                            background: linear-gradient(90deg, var(--secondary) 0%, var(--warning) 50%, var(--danger) 100%);
-                        }
-    
-                        .ev-gauge-labels {
-                            display: flex;
-                            justify-content: space-between;
-                            color: var(--gray);
-                            font-size: 12px;
-                            margin-bottom: 20px;
-                        }
-    
-                        .ev-time-assessment {
-                            font-size: 20px;
-                            font-weight: bold;
-                            padding: 5px 15px;
-                            border-radius: 20px;
-                            display: inline-block;
-                            margin-top: 5px;
-                        }
-    
-                        .ev-time-excellent {
-                            color: white;
-                            background-color: var(--secondary);
-                        }
-    
-                        .ev-time-good {
-                            color: white;
-                            background-color: var(--primary);
-                        }
-    
-                        .ev-time-average {
-                            color: white;
-                            background-color: var(--warning);
-                        }
-    
-                        .ev-time-poor {
-                            color: white;
-                            background-color: var(--danger);
-                        }
-    
-                        /* Mensajes vacíos */
-                        .ev-no-data {
-                            background-color: var(--light);
-                            padding: 20px;
-                            border-radius: var(--border-radius);
-                            color: var(--gray);
-                            text-align: center;
-                            margin-bottom: 20px;
-                            border: 1px dashed var(--gray-light);
-                        }
-    
-                        /* Pie de informe */
-                        .ev-report-footer {
-                            padding-top: 20px;
-                            border-top: 1px solid var(--gray-light);
-                            color: var(--gray);
-                            font-size: 12px;
-                        }
-    
-                        /* Ajustes específicos para impresión PDF */
-                        @media print {
-                            .ev-summary-cards {
-                                page-break-inside: avoid !important;
-                            }
-                            
-                            .ev-charts-section {
-                                page-break-inside: avoid !important;
-                            }
-                            
-                            .charts-table {
-                                page-break-inside: avoid !important;
-                            }
-                            
-                            .ev-chart-container {
-                                page-break-inside: avoid !important;
-                            }
-                        }
-    
-                        /* Quitar contornos y bordes de las tablas internas de tarjetas */
-                        .ev-summary-cards table,
-                        .ev-summary-cards td,
-                        .ev-summary-cards tr {
+                        
+                        /* Continuar con todos los demás estilos... */
+                        
+                        /* Solución para tablas y celdas */
+                        .equipment_visit_report_container table,
+                        .equipment_visit_report_container tr,
+                        .equipment_visit_report_container td {
                             border: none !important;
-                            background: none !important;
+                            background: transparent !important;
                             box-shadow: none !important;
                         }
-    
-                        .ev-summary-cards table {
-                            border-collapse: separate !important;
-                            border-spacing: 0 0 !important;
-                        }
                         
-                        /* 🔥 Fix Final - Elimina completamente los contornos extraños en el PDF */
-                        .table-cards,
-                        .table-cards td,
-                        .table-cards tr {
+                        .equipment_visit_report_container .table-cards,
+                        .equipment_visit_report_container .table-cards td,
+                        .equipment_visit_report_container .table-cards tr,
+                        .equipment_visit_report_container .charts-table,
+                        .equipment_visit_report_container .charts-table td,
+                        .equipment_visit_report_container .charts-table tr {
                             border: none !important;
                             background: transparent !important;
                             box-shadow: none !important;
                             border-radius: 0 !important;
                             outline: none !important;
+                            border-collapse: separate !important;
+                            border-spacing: 12px !important;
                         }
-    
-                        /* Reforzar estilo limpio en tarjetas PDF */
-                        .ev-card {
-                            background-color: var(--white) !important;
+                        
+                        .equipment_visit_report_container .ev-card table,
+                        .equipment_visit_report_container .ev-card tr,
+                        .equipment_visit_report_container .ev-card td {
                             border: none !important;
-                            box-shadow: var(--shadow) !important;
-                            border-radius: var(--border-radius-lg) !important;
-                            outline: none !important;
+                            background: transparent !important;
+                            box-shadow: none !important;
+                            border-collapse: separate !important;
+                            border-spacing: 0 !important;
+                        }
+                        
+                        /* Ajustes específicos para impresión PDF */
+                        @media print {
+                            .equipment_visit_report_container .ev-summary-cards {
+                                page-break-inside: avoid !important;
+                            }
+                            
+                            .equipment_visit_report_container .ev-charts-section {
+                                page-break-inside: avoid !important;
+                            }
+                            
+                            .equipment_visit_report_container .charts-table {
+                                page-break-inside: avoid !important;
+                            }
+                            
+                            .equipment_visit_report_container .ev-chart-container {
+                                page-break-inside: avoid !important;
+                            }
+                            
+                            .equipment_visit_report_container table,
+                            .equipment_visit_report_container tr,
+                            .equipment_visit_report_container td {
+                                border: none !important;
+                                background: transparent !important;
+                                box-shadow: none !important;
+                            }
                         }
                     </style>
                     <!-- Script para renderizar gráficos -->
