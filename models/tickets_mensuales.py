@@ -226,6 +226,7 @@ class EquipmentVisitReport(models.Model):
 
     def _get_report_base_filename(self):
         self.ensure_one()
+        _logger.info("📄 Generando nombre de archivo para reporte: %s", self.name)
         return f"Informe de Visitas - {self.name}"
 
 
