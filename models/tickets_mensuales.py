@@ -10,6 +10,7 @@ from io import BytesIO
 import pandas as pd
 import math
 import io
+import re
 try:
     import matplotlib
     matplotlib.use('Agg')  # Backend que no requiere interfaz gráfica
@@ -226,19 +227,22 @@ class EquipmentVisitReport(models.Model):
 
     def _get_report_base_filename(self):
         self.ensure_one()
-        _logger.info("📄 Generando nombre de archivo para reporte: %s", self.name)
-        return f"Informe de Visitas - {self.name}"
+        safe_name = re.sub(r'[^\w\-]', '_', self.name)  # reemplaza todo lo no seguro
+        return f"Informe_Visitas_{safe_name}"
 
+    def action_print_report_pdf(self):
+        self.ensure_one()
+        report_name = self._get_report_base_filename()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/report/pdf/sat.report_equipment_visit/{self.id}?download=true&filename={report_name}.pdf',
+            'target': 'self',
+        }
 
     def _generate_chart_data(self):
         """Genera datos para gráficos de análisis"""
         self.ensure_one()
-    def action_print_report_pdf(self):
-        self.ensure_one()
-        return self.env.ref('sat.equipment_visit_report_action').report_action(
-            self,
-            print_report_name=self._get_report_base_filename()
-        )
+    
 
         # Obtener todas las visitas técnicas en el período
         tickets = self.env['ticket.alquiler'].search([
