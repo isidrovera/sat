@@ -362,6 +362,7 @@
                     </div>
 
                     <!-- Incluir todos los recursos necesarios independientemente del formato -->
+                    <link rel="stylesheet" type="text/css" href="/sat/static/src/css/equipment_visit_report.css"/>
                     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
                     <style>
                         /* Archivo: /static/src/css/equipment_visit_report.css */
@@ -456,16 +457,13 @@
                         }
     
                         .table-cards {
-                            border-collapse: separate !important;
-                            border-spacing: 12px !important;
+                            border-collapse: separate;
+                            border-spacing: 12px;
                             width: 100%;
-                            border: none !important;
-                            background: transparent !important;
-                            box-shadow: none !important;
                         }
     
                         .card-cell {
-                            padding: 0 !important;
+                            padding: 0;
                             vertical-align: top;
                         }
     
@@ -473,7 +471,7 @@
                             background-color: var(--white);
                             border-radius: var(--border-radius-lg);
                             box-shadow: var(--shadow);
-                            border: none !important;
+                            border: none;
                             padding: 15px;
                             height: 110px;
                             position: relative;
@@ -596,16 +594,13 @@
                         }
     
                         .charts-table {
-                            border-collapse: separate !important;
-                            border-spacing: 12px !important;
+                            border-collapse: separate;
+                            border-spacing: 12px;
                             width: 100%;
-                            border: none !important;
-                            background: transparent !important;
-                            box-shadow: none !important;
                         }
     
                         .chart-cell {
-                            padding: 0 !important;
+                            padding: 0;
                             vertical-align: top;
                         }
     
@@ -939,10 +934,7 @@
                         /* 🔥 Fix Final - Elimina completamente los contornos extraños en el PDF */
                         .table-cards,
                         .table-cards td,
-                        .table-cards tr,
-                        .charts-table,
-                        .charts-table td,
-                        .charts-table tr {
+                        .table-cards tr {
                             border: none !important;
                             background: transparent !important;
                             box-shadow: none !important;
@@ -957,106 +949,6 @@
                             box-shadow: var(--shadow) !important;
                             border-radius: var(--border-radius-lg) !important;
                             outline: none !important;
-                        }
-                        
-                        /* REGLAS SUPER ESTRICTAS PARA ELIMINAR CUALQUIER RECUADRO */
-                        /* 1. Reset global para todas las tablas */
-                        table, tr, td, th {
-                            border: none !important;
-                            border-top: none !important;
-                            border-bottom: none !important;
-                            border-left: none !important;
-                            border-right: none !important;
-                            border-color: transparent !important;
-                            border-width: 0 !important;
-                            border-style: none !important;
-                            border-image: none !important;
-                            background: transparent !important;
-                            outline: none !important;
-                            box-shadow: none !important;
-                        }
-                        
-                        /* 2. Reset específico para tablas internas */
-                        .ev-card table,
-                        .ev-card tr,
-                        .ev-card td,
-                        .ev-card th {
-                            border: none !important;
-                            border-top: none !important;
-                            border-bottom: none !important;
-                            border-left: none !important;
-                            border-right: none !important;
-                            outline: none !important;
-                            box-shadow: none !important;
-                            margin: 0 !important;
-                            padding: 0 !important;
-                        }
-                        
-                        /* 3. Override para cualquier otra regla */
-                        * {
-                            border-collapse: separate !important;
-                        }
-                        
-                        .table-cards,
-                        .charts-table {
-                            border-spacing: 12px !important;
-                            border-collapse: separate !important;
-                        }
-                        
-                        .ev-card table {
-                            border-spacing: 0 !important;
-                            border-collapse: separate !important;
-                        }
-                        
-                        /* 4. Eliminar cualquier margen o padding no deseado */
-                        .card-cell, 
-                        .chart-cell {
-                            padding: 0 !important;
-                        }
-                        
-                        /* 5. Reglas específicas para eliminar recuadros en wkhtmltopdf */
-                        @page {
-                            margin: 0.5cm;
-                        }
-                        
-                        @media print {
-                            table, tr, td, th {
-                                -webkit-box-shadow: none !important;
-                                box-shadow: none !important;
-                                border: none !important;
-                                border-color: transparent !important;
-                                border-width: 0 !important;
-                                border-style: none !important;
-                                border-image: none !important;
-                                outline: none !important;
-                            }
-                            
-                            .table-cards,
-                            .charts-table {
-                                border-spacing: 12px !important;
-                                border-collapse: separate !important;
-                            }
-                            
-                            .ev-card {
-                                box-shadow: var(--shadow) !important;
-                                border: none !important;
-                            }
-                        }
-                        
-                        /* 6. Más específico para tablas en wkhtmltopdf */
-                        table.table-cards,
-                        table.charts-table {
-                            border-collapse: separate !important;
-                            border-spacing: 12px !important;
-                        }
-                        
-                        /* 7. Override final para asegurar que las tablas no tengan bordes */
-                        .equipment_visit_report_container table,
-                        .equipment_visit_report_container tr,
-                        .equipment_visit_report_container td,
-                        .equipment_visit_report_container th {
-                            border: 0 !important;
-                            border-width: 0 !important;
                         }
                     </style>
                     <!-- Script para renderizar gráficos -->
