@@ -43,7 +43,8 @@
                                 </div>
                                 <div class="period-section">
                                     <span class="ev-period">
-                                        <t t-esc="context_timestamp(doc.date_from).strftime('%B %Y')"/>
+                                        <!-- AQUÍ ESTÁ LA CORRECCIÓN: Uso directo de strftime en doc.date_from -->
+                                        <t t-esc="doc.date_from.strftime('%B %Y')"/>
                                     </span>
                                 </div>
                             </div>
