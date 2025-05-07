@@ -1,33 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Acción del Reporte -->
-    <record id="technical_visits_report_action" model="ir.actions.report">
+    <record id="equipment_visit_report_action" model="ir.actions.report">
         <field name="name">Informe de Visitas Técnicas</field>
-        <field name="model">technical.visits.report</field>
+        <field name="model">equipment.visit.report</field>
         <field name="report_type">qweb-pdf</field>
-        <field name="report_name">technical_service.report_technical_visits</field>
-        <field name="report_file">technical_service.report_technical_visits</field>
-        <field name="print_report_name">'Informe de Visitas Técnicas - %s' % (object.name)</field>
-        <field name="binding_model_id" ref="model_technical_visits_report"/>
+        <field name="report_name">sat.report_equipment_visit</field>
+        <field name="report_file">sat.report_equipment_visit</field>
+        <field name="print_report_name">'Informe de Visitas - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_equipment_visit_report"/>
         <field name="binding_type">report</field>
         <field name="paperformat_id" ref="base.paperformat_euro"/>
     </record>
 
     <!-- Assets para CSS -->
-    <record id="technical_visits_report_assets" model="ir.asset">
-        <field name="name">Technical Visits Report Assets</field>
+    <record id="equipment_visit_report_asset" model="ir.asset">
+        <field name="name">Equipment Visit Report Assets</field>
         <field name="bundle">web.assets_backend</field>
         <field name="directive">append</field>
         <field name="target">web.report_assets_common</field>
-        <field name="path">technical_service/static/src/css/equipment_visits_report.css</field>
+        <field name="path">sat/static/src/css/equipment_visit_report.css</field>
     </record>
-
-    <!-- Assets para JavaScript -->
-    <record id="technical_visits_report_js" model="ir.asset">
-        <field name="name">Technical Visits Report JS</field>
+    <!-- Assets para JavaScript en Odoo 18 -->
+    <record id="equipment_visit_report_js_asset" model="ir.asset">
+        <field name="name">Equipment Visit Report JS</field>
         <field name="bundle">web.report_assets_common</field>
         <field name="directive">append</field>
-        <field name="path">technical_service/static/src/js/equipment_visits_report.js</field>
+        <field name="path">sat/static/src/js/equipment_visit_report.js</field>
     </record>
 
     <!-- Plantilla Principal del Reporte -->
