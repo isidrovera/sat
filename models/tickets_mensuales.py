@@ -224,6 +224,11 @@ class EquipmentVisitReport(models.Model):
             vals['name'] = self.env['ir.sequence'].next_by_code('equipment.visit.report') or _('Nuevo')
         return super(EquipmentVisitReport, self).create(vals)
 
+    def _get_report_base_filename(self):
+        self.ensure_one()
+        return f"Informe de Visitas - {self.name}"
+
+
     def _generate_chart_data(self):
         """Genera datos para gráficos de análisis"""
         self.ensure_one()
