@@ -217,7 +217,7 @@ class EquipmentVisitReport(models.Model):
         last_day = calendar.monthrange(today.year, today.month)[1]
         return today.replace(day=last_day)
     
-   @api.model
+    @api.model
     def create(self, vals):
         """Sobreescribe create para asignar nombre secuencial"""
         if vals.get('name', _('Nuevo')) == _('Nuevo'):
