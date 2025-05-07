@@ -33,21 +33,27 @@
                             <div class="row">
                                 <div class="col-6">
                                     <h2 class="ev-title">
-                                        <i class="fa fa-wrench ev-icon"/> Informe de Visitas Técnicas
+                                        <i class="fa fa-wrench ev-icon"/>
+ Informe de Visitas Técnicas
                                     </h2>
-                                    <h3 class="ev-subtitle"><t t-esc="doc.name"/></h3>
+                                    <h3 class="ev-subtitle">
+                                        <t t-esc="doc.name"/>
+                                    </h3>
                                 </div>
                                 <div class="col-6 text-end">
                                     <div class="ev-date-range">
                                         <span class="ev-date-label">Período:</span>
                                         <span class="ev-date-value">
-                                            <t t-esc="doc.date_from" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/> -
+                                            <t t-esc="doc.date_from" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
+ -
                                             <t t-esc="doc.date_to" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
                                         </span>
                                     </div>
                                     <div class="ev-generated-by">
                                         <span class="ev-label">Generado por:</span>
-                                        <span class="ev-value"><t t-esc="doc.user_id.name"/></span>
+                                        <span class="ev-value">
+                                            <t t-esc="doc.user_id.name"/>
+                                        </span>
                                     </div>
                                     <div class="ev-state">
                                         <span class="ev-label">Estado:</span>
@@ -70,7 +76,9 @@
                                             <i class="fa fa-calendar-check"/>
                                         </div>
                                         <div class="ev-card-content">
-                                            <div class="ev-card-value"><t t-esc="doc.total_visits"/></div>
+                                            <div class="ev-card-value">
+                                                <t t-esc="doc.total_visits"/>
+                                            </div>
                                             <div class="ev-card-label">Total Visitas</div>
                                         </div>
                                     </div>
@@ -81,7 +89,9 @@
                                             <i class="fa fa-sync"/>
                                         </div>
                                         <div class="ev-card-content">
-                                            <div class="ev-card-value"><t t-esc="doc.recurring_equipment_count"/></div>
+                                            <div class="ev-card-value">
+                                                <t t-esc="doc.recurring_equipment_count"/>
+                                            </div>
                                             <div class="ev-card-label">Equipos Recurrentes</div>
                                         </div>
                                     </div>
@@ -92,7 +102,9 @@
                                             <i class="fa fa-exclamation-triangle"/>
                                         </div>
                                         <div class="ev-card-content">
-                                            <div class="ev-card-value"><t t-esc="doc.critical_equipment_count"/></div>
+                                            <div class="ev-card-value">
+                                                <t t-esc="doc.critical_equipment_count"/>
+                                            </div>
                                             <div class="ev-card-label">Equipos Críticos</div>
                                         </div>
                                     </div>
@@ -104,7 +116,8 @@
                                         </div>
                                         <div class="ev-card-content">
                                             <div class="ev-card-value">
-                                                <t t-esc="round(doc.first_visit_resolution_rate, 1)"/>%
+                                                <t t-esc="round(doc.first_visit_resolution_rate, 1)"/>
+%
                                             </div>
                                             <div class="ev-card-label">Res. Primera Visita</div>
                                         </div>
@@ -112,68 +125,64 @@
                                 </div>
                             </div>
                         </div>
-                       <!-- Sección de Gráficos -->
-                       <div class="ev-charts-section mt-4">
-                        <h3 class="ev-section-title">Análisis Visual</h3>
-                        <t t-set="chart_imgs" t-value="json.loads(doc.chart_images or '{}')"/>
-                    
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="ev-chart-container">
-                                    <h4 class="ev-chart-title">
-                                        <i class="fa fa-chart-bar"/> Equipos con Más Visitas
-                                    </h4>
-                                    <div class="ev-chart-img-container">
-                                        <img t-if="chart_imgs.get('equipment_chart')" 
-                                             t-att-src="'data:image/png;base64,' + chart_imgs.get('equipment_chart')" 
-                                             class="ev-chart-img"/>
+                        <!-- Sección de Gráficos -->
+                        <div class="ev-charts-section mt-4">
+                            <h3 class="ev-section-title">Análisis Visual</h3>
+                            <t t-set="chart_imgs" t-value="json.loads(doc.chart_images or '{}')"/>
+
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="ev-chart-container">
+                                        <h4 class="ev-chart-title">
+                                            <i class="fa fa-chart-bar"/>
+ Equipos con Más Visitas
+                                        </h4>
+                                        <div class="ev-chart-img-container">
+                                            <img t-if="chart_imgs.get('equipment_chart')" t-att-src="'data:image/png;base64,' + chart_imgs.get('equipment_chart')" class="ev-chart-img"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="ev-chart-container">
+                                        <h4 class="ev-chart-title">
+                                            <i class="fa fa-chart-pie"/>
+ Distribución por Cliente
+                                        </h4>
+                                        <div class="ev-chart-img-container">
+                                            <img t-if="chart_imgs.get('client_chart')" t-att-src="'data:image/png;base64,' + chart_imgs.get('client_chart')" class="ev-chart-img"/>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-6">
-                                <div class="ev-chart-container">
-                                    <h4 class="ev-chart-title">
-                                        <i class="fa fa-chart-pie"/> Distribución por Cliente
-                                    </h4>
-                                    <div class="ev-chart-img-container">
-                                        <img t-if="chart_imgs.get('client_chart')" 
-                                             t-att-src="'data:image/png;base64,' + chart_imgs.get('client_chart')" 
-                                             class="ev-chart-img"/>
+
+                            <!-- Forzar un claro para que los gráficos inferiores se posicionen correctamente -->
+                            <div style="clear: both;"></div>
+
+                            <div class="row mt-4">
+                                <div class="col-6">
+                                    <div class="ev-chart-container">
+                                        <h4 class="ev-chart-title">
+                                            <i class="fa fa-chart-line"/>
+ Tendencia de Tiempos de Respuesta
+                                        </h4>
+                                        <div class="ev-chart-img-container">
+                                            <img t-if="chart_imgs.get('trend_chart')" t-att-src="'data:image/png;base64,' + chart_imgs.get('trend_chart')" class="ev-chart-img"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="ev-chart-container">
+                                        <h4 class="ev-chart-title">
+                                            <i class="fa fa-bullseye"/>
+ Categorías de Problemas
+                                        </h4>
+                                        <div class="ev-chart-img-container">
+                                            <img t-if="chart_imgs.get('problems_chart')" t-att-src="'data:image/png;base64,' + chart_imgs.get('problems_chart')" class="ev-chart-img"/>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    
-                        <!-- Forzar un claro para que los gráficos inferiores se posicionen correctamente -->
-                        <div style="clear: both;"></div>
-                    
-                        <div class="row mt-4">
-                            <div class="col-6">
-                                <div class="ev-chart-container">
-                                    <h4 class="ev-chart-title">
-                                        <i class="fa fa-chart-line"/> Tendencia de Tiempos de Respuesta
-                                    </h4>
-                                    <div class="ev-chart-img-container">
-                                        <img t-if="chart_imgs.get('trend_chart')" 
-                                             t-att-src="'data:image/png;base64,' + chart_imgs.get('trend_chart')" 
-                                             class="ev-chart-img"/>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="ev-chart-container">
-                                    <h4 class="ev-chart-title">
-                                        <i class="fa fa-bullseye"/> Categorías de Problemas
-                                    </h4>
-                                    <div class="ev-chart-img-container">
-                                        <img t-if="chart_imgs.get('problems_chart')" 
-                                             t-att-src="'data:image/png;base64,' + chart_imgs.get('problems_chart')" 
-                                             class="ev-chart-img"/>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
 
                         <!-- Tabla de Equipos Críticos -->
@@ -181,11 +190,12 @@
                             <h3 class="ev-section-title">Equipos Críticos</h3>
                             <t t-set="table_data" t-value="json.loads(doc.chart_data or '{}').get('table', [])"/>
                             <t t-set="critical_equipment" t-value="[item for item in table_data if item.get('is_critical')]"/>
-                            
+
                             <div t-if="not critical_equipment" class="ev-no-data">
-                                <i class="fa fa-info-circle"/> No se encontraron equipos críticos durante este período.
+                                <i class="fa fa-info-circle"/>
+ No se encontraron equipos críticos durante este período.
                             </div>
-                            
+
                             <table t-if="critical_equipment" class="table table-sm table-bordered ev-table">
                                 <thead>
                                     <tr>
@@ -200,14 +210,26 @@
                                 <tbody>
                                     <t t-foreach="critical_equipment" t-as="item">
                                         <tr t-att-class="'ev-close-visits' if item.get('has_close_visits') else ''">
-                                            <td><t t-esc="item.get('partner')"/></td>
-                                            <td><t t-esc="item.get('model')"/></td>
-                                            <td><t t-esc="item.get('serie')"/></td>
-                                            <td><t t-esc="item.get('problem')"/></td>
-                                            <td class="text-center">
-                                                <span class="ev-visit-count"><t t-esc="item.get('visit_count')"/></span>
+                                            <td>
+                                                <t t-esc="item.get('partner')"/>
                                             </td>
-                                            <td><t t-esc="', '.join(item.get('technicians', []))"/></td>
+                                            <td>
+                                                <t t-esc="item.get('model')"/>
+                                            </td>
+                                            <td>
+                                                <t t-esc="item.get('serie')"/>
+                                            </td>
+                                            <td>
+                                                <t t-esc="item.get('problem')"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="ev-visit-count">
+                                                    <t t-esc="item.get('visit_count')"/>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <t t-esc="', '.join(item.get('technicians', []))"/>
+                                            </td>
                                         </tr>
                                     </t>
                                 </tbody>
@@ -223,17 +245,23 @@
                                         <i class="fa fa-building"/>
                                     </div>
                                     <div class="col-10">
-                                        <div class="ev-client-name"><t t-esc="doc.top_client_id.name or 'Sin datos'"/></div>
+                                        <div class="ev-client-name">
+                                            <t t-esc="doc.top_client_id.name or 'Sin datos'"/>
+                                        </div>
                                         <div class="ev-client-visit-info">
-                                            <span class="ev-client-visit-count"><t t-esc="doc.top_client_visit_count or 0"/></span>
+                                            <span class="ev-client-visit-count">
+                                                <t t-esc="doc.top_client_visit_count or 0"/>
+                                            </span>
                                             <span class="ev-client-visit-text">visitas durante el período</span>
                                         </div>
                                         <div t-if="doc.top_client_id" class="ev-client-contact">
                                             <div t-if="doc.top_client_id.phone" class="ev-contact-phone">
-                                                <i class="fa fa-phone"/> <t t-esc="doc.top_client_id.phone"/>
+                                                <i class="fa fa-phone"/>
+                                                <t t-esc="doc.top_client_id.phone"/>
                                             </div>
                                             <div t-if="doc.top_client_id.email" class="ev-contact-email">
-                                                <i class="fa fa-envelope"/> <t t-esc="doc.top_client_id.email"/>
+                                                <i class="fa fa-envelope"/>
+                                                <t t-esc="doc.top_client_id.email"/>
                                             </div>
                                         </div>
                                     </div>
@@ -245,34 +273,44 @@
                         <div class="ev-special-analysis mt-4">
                             <h3 class="ev-section-title">Análisis Especial y Recomendaciones</h3>
                             <t t-set="special_analysis" t-value="json.loads(doc.chart_data or '{}').get('special_analysis', [])"/>
-                            
+
                             <div t-if="not special_analysis" class="ev-no-data">
-                                <i class="fa fa-info-circle"/> No hay suficientes datos para un análisis especial.
+                                <i class="fa fa-info-circle"/>
+ No hay suficientes datos para un análisis especial.
                             </div>
-                            
+
                             <div t-if="special_analysis" class="ev-analysis-cards">
                                 <t t-foreach="special_analysis" t-as="analysis">
                                     <div class="ev-analysis-card">
                                         <div class="ev-analysis-header">
-                                            <span class="ev-analysis-model"><t t-esc="analysis.get('model')"/></span>
-                                            <span class="ev-analysis-serie">Serie: <t t-esc="analysis.get('serie')"/></span>
+                                            <span class="ev-analysis-model">
+                                                <t t-esc="analysis.get('model')"/>
+                                            </span>
+                                            <span class="ev-analysis-serie">Serie: <t t-esc="analysis.get('serie')"/>
+                                            </span>
                                         </div>
                                         <div class="ev-analysis-body">
                                             <div class="ev-analysis-client">
-                                                <i class="fa fa-user"/> Cliente: <t t-esc="analysis.get('partner')"/>
+                                                <i class="fa fa-user"/>
+ Cliente: <t t-esc="analysis.get('partner')"/>
                                             </div>
                                             <div class="ev-analysis-visits">
-                                                <i class="fa fa-calendar"/> <t t-esc="analysis.get('visit_count')"/> visitas
+                                                <i class="fa fa-calendar"/>
+                                                <t t-esc="analysis.get('visit_count')"/>
+ visitas
                                             </div>
                                             <div class="ev-analysis-problem">
-                                                <i class="fa fa-exclamation-circle"/> Problema común: <t t-esc="analysis.get('common_problem')"/>
+                                                <i class="fa fa-exclamation-circle"/>
+ Problema común: <t t-esc="analysis.get('common_problem')"/>
                                             </div>
                                             <div t-if="analysis.get('has_close_visits')" class="ev-analysis-warning">
-                                                <i class="fa fa-warning"/> Múltiples visitas en períodos cortos
+                                                <i class="fa fa-warning"/>
+ Múltiples visitas en períodos cortos
                                             </div>
                                         </div>
                                         <div class="ev-analysis-recommendation">
-                                            <i class="fa fa-lightbulb"/> Recomendación:
+                                            <i class="fa fa-lightbulb"/>
+ Recomendación:
                                             <t t-if="analysis.get('visit_count') >= 5">
                                                 Revisar a fondo / Considerar reemplazo
                                             </t>
@@ -290,7 +328,8 @@
                             <h3 class="ev-section-title">Tiempo Promedio de Respuesta</h3>
                             <div class="ev-time-container">
                                 <div class="ev-time-value">
-                                    <t t-esc="round(doc.average_response_time, 1)"/> días
+                                    <t t-esc="round(doc.average_response_time, 1)"/>
+ días
                                 </div>
                                 <div class="ev-time-gauge">
                                     <div class="ev-gauge-container">
@@ -480,13 +519,13 @@
                                 window.addEventListener('load', initCharts);
                             }
                         })();
-                        </script>
-                        
-                        
+                    </script>
+
+
+                </t>
             </t>
         </t>
-    </t>
-</template>
+    </template>
 
 
 
