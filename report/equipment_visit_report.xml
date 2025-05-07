@@ -21,11 +21,11 @@
         <field name="target">web.report_assets_common</field>
         <field name="path">sat/static/src/css/equipment_visit_report.css</field>
     </record>
-    <!-- Assets para JavaScript en Odoo 18 -->
     <record id="equipment_visit_report_js_asset" model="ir.asset">
-        <field name="name">Equipment Visit Report JS</field>
-        <field name="bundle">web.report_assets_common</field>
+        <field name="name">Equipment Visit Report JS Assets</field>
+        <field name="bundle">web.assets_backend</field>
         <field name="directive">append</field>
+        <field name="target">web.report_assets_common</field>
         <field name="path">sat/static/src/js/equipment_visit_report.js</field>
     </record>
 
@@ -35,312 +35,492 @@
             <t t-foreach="docs" t-as="doc">
                 <t t-call="web.external_layout">
                     <div class="page">
-                        <!-- Cabecera del Informe - Diseño moderno -->
-                        <div class="tech-visit-header">
-                            <div class="header-content">
-                                <h1 class="tv-title">INFORME MENSUAL DE VISITAS TÉCNICAS</h1>
-                                <div class="tv-period">
-                                    <span class="tv-period-icon"><i class="fa fa-calendar"></i></span>
-                                    <span t-esc="doc.date_from.strftime('%B %Y').capitalize()"/>
+                        <!-- Cabecera del Informe -->
+                        <div class="ev-report-header">
+                            <div class="row">
+                                <div class="col-6">
+                                    <h2 class="ev-title">
+                                        <i class="fa fa-wrench ev-icon"/> Informe de Visitas Técnicas
+                                    </h2>
+                                    <h3 class="ev-subtitle"><t t-esc="doc.name"/></h3>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <div class="ev-date-range">
+                                        <span class="ev-date-label">Período:</span>
+                                        <span class="ev-date-value">
+                                            <t t-esc="doc.date_from" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/> -
+                                            <t t-esc="doc.date_to" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
+                                        </span>
+                                    </div>
+                                    <div class="ev-generated-by">
+                                        <span class="ev-label">Generado por:</span>
+                                        <span class="ev-value"><t t-esc="doc.user_id.name"/></span>
+                                    </div>
+                                    <div class="ev-state">
+                                        <span class="ev-label">Estado:</span>
+                                        <span t-att-class="'ev-state-badge state-' + doc.state">
+                                            <t t-if="doc.state == 'draft'">Borrador</t>
+                                            <t t-elif="doc.state == 'generated'">Generado</t>
+                                            <t t-elif="doc.state == 'sent'">Enviado</t>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Resumen Ejecutivo con Estadísticas -->
-                        <section class="tv-summary-section">
-                            <h2 class="tv-section-title">Resumen Ejecutivo</h2>
-                            <div class="tv-stat-cards">
-                                <div class="tv-stat-card tv-total-visits">
-                                    <div class="tv-stat-icon"><i class="fa fa-wrench"></i></div>
-                                    <div class="tv-stat-content">
-                                        <div class="tv-stat-value">
-                                            <t t-esc="doc.total_visits"/>
+                        <!-- Tarjetas de Resumen con iconos modernos -->
+                        <div class="ev-summary-cards">
+                            <table class="table-cards" width="100%" cellspacing="10" cellpadding="0">
+                                <tr>
+                                    <td width="25%" class="card-cell">
+                                        <div class="ev-card ev-total-visits">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td width="30%" class="icon-cell">
+                                                        <div class="ev-card-icon">
+                                                            <i class="fa fa-calendar-check"/>
+                                                        </div>
+                                                    </td>
+                                                    <td width="70%" class="content-cell">
+                                                        <div class="ev-card-value"><t t-esc="doc.total_visits"/></div>
+                                                        <div class="ev-card-label">Total Visitas</div>
+                                                    </td>
+                                                </tr>
+                                            </table>
                                         </div>
-                                        <div class="tv-stat-label">Total Visitas</div>
-                                    </div>
-                                </div>
-                                <div class="tv-stat-card tv-recurring">
-                                    <div class="tv-stat-icon"><i class="fa fa-repeat"></i></div>
-                                    <div class="tv-stat-content">
-                                        <div class="tv-stat-value">
-                                            <t t-esc="doc.recurring_equipment_count"/>
+                                    </td>
+                                    <td width="25%" class="card-cell">
+                                        <div class="ev-card ev-recurring">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td width="30%" class="icon-cell">
+                                                        <div class="ev-card-icon">
+                                                            <i class="fa fa-sync"/>
+                                                        </div>
+                                                    </td>
+                                                    <td width="70%" class="content-cell">
+                                                        <div class="ev-card-value"><t t-esc="doc.recurring_equipment_count"/></div>
+                                                        <div class="ev-card-label">Equipos Recurrentes</div>
+                                                    </td>
+                                                </tr>
+                                            </table>
                                         </div>
-                                        <div class="tv-stat-label">Equipos Recurrentes</div>
-                                    </div>
-                                </div>
-                                <div class="tv-stat-card tv-resolution">
-                                    <div class="tv-stat-icon"><i class="fa fa-check-circle"></i></div>
-                                    <div class="tv-stat-content">
-                                        <div class="tv-stat-value">
-                                            <t t-esc="round(doc.first_visit_resolution_rate, 1)"/>
-                                            <span class="tv-unit">%</span>
+                                    </td>
+                                    <td width="25%" class="card-cell">
+                                        <div class="ev-card ev-critical">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td width="30%" class="icon-cell">
+                                                        <div class="ev-card-icon">
+                                                            <i class="fa fa-exclamation-triangle"/>
+                                                        </div>
+                                                    </td>
+                                                    <td width="70%" class="content-cell">
+                                                        <div class="ev-card-value"><t t-esc="doc.critical_equipment_count"/></div>
+                                                        <div class="ev-card-label">Equipos Críticos</div>
+                                                    </td>
+                                                </tr>
+                                            </table>
                                         </div>
-                                        <div class="tv-stat-label">Tasa Resolución</div>
-                                    </div>
-                                </div>
-                                <div class="tv-stat-card tv-response-time">
-                                    <div class="tv-stat-icon"><i class="fa fa-clock-o"></i></div>
-                                    <div class="tv-stat-content">
-                                        <div class="tv-stat-value">
-                                            <t t-esc="round(doc.average_response_time, 1)"/>
-                                            <span class="tv-unit">días</span>
+                                    </td>
+                                    <td width="25%" class="card-cell">
+                                        <div class="ev-card ev-resolution">
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                <tr>
+                                                    <td width="30%" class="icon-cell">
+                                                        <div class="ev-card-icon">
+                                                            <i class="fa fa-check-circle"/>
+                                                        </div>
+                                                    </td>
+                                                    <td width="70%" class="content-cell">
+                                                        <div class="ev-card-value">
+                                                            <t t-esc="round(doc.first_visit_resolution_rate, 1)"/>%
+                                                        </div>
+                                                        <div class="ev-card-label">Res. Primera Visita</div>
+                                                    </td>
+                                                </tr>
+                                            </table>
                                         </div>
-                                        <div class="tv-stat-label">Tiempo Promedio</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
 
-                        <!-- Gráficos principales en formato dashboard -->
-                        <section class="tv-charts-container">
-                            <div class="tv-chart-grid">
-                                <div class="tv-chart-card">
-                                    <div class="tv-chart-header">
-                                        <h3 class="tv-chart-title">Equipos con Mayor Número de Visitas</h3>
-                                        <div class="tv-chart-actions">
-                                            <span class="tv-chart-action" title="Descargar"><i class="fa fa-download"></i></span>
-                                            <span class="tv-chart-action" title="Expandir"><i class="fa fa-expand"></i></span>
-                                        </div>
-                                    </div>
-                                    <div class="tv-chart-body">
-                                        <t t-if="doc.chart_images">
-                                            <img t-if="json.loads(doc.chart_images).get('equipment_chart')" 
-                                                t-att-src="'data:image/png;base64,' + json.loads(doc.chart_images).get('equipment_chart')" 
-                                                class="tv-chart-img"/>
-                                        </t>
-                                        <div t-if="not doc.chart_images or not json.loads(doc.chart_images or '{}').get('equipment_chart')" class="tv-no-data">
-                                            <div class="tv-no-data-icon"><i class="fa fa-bar-chart"></i></div>
-                                            <p>No hay datos suficientes para mostrar el gráfico.</p>
-                                        </div>
-                                    </div>
-                                    <div class="tv-chart-legend">
-                                        <div class="tv-legend-item tv-critical">
-                                            <span class="tv-legend-marker"></span>
-                                            <span>Crítico (≥3 visitas)</span>
-                                        </div>
-                                        <div class="tv-legend-item tv-normal">
-                                            <span class="tv-legend-marker"></span>
-                                            <span>Normal (1-2 visitas)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="tv-chart-card">
-                                    <div class="tv-chart-header">
-                                        <h3 class="tv-chart-title">Distribución de Visitas por Cliente</h3>
-                                        <div class="tv-chart-actions">
-                                            <span class="tv-chart-action" title="Descargar"><i class="fa fa-download"></i></span>
-                                            <span class="tv-chart-action" title="Expandir"><i class="fa fa-expand"></i></span>
-                                        </div>
-                                    </div>
-                                    <div class="tv-chart-body">
-                                        <t t-if="doc.chart_images">
-                                            <img t-if="json.loads(doc.chart_images).get('client_chart')" 
-                                                t-att-src="'data:image/png;base64,' + json.loads(doc.chart_images).get('client_chart')" 
-                                                class="tv-chart-img"/>
-                                        </t>
-                                        <div t-if="not doc.chart_images or not json.loads(doc.chart_images or '{}').get('client_chart')" class="tv-no-data">
-                                            <div class="tv-no-data-icon"><i class="fa fa-pie-chart"></i></div>
-                                            <p>No hay datos suficientes para mostrar el gráfico.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <!-- Sección de Gráficos con estilo moderno -->
+                        <div class="ev-charts-section mt-4">
+                            <h3 class="ev-section-title"><i class="fa fa-chart-area mr-2" style="color: var(--primary);"></i> Análisis Visual</h3>
+                            <t t-set="chart_imgs" t-value="json.loads(doc.chart_images or '{}')"/>
 
-                            <!-- Gráfico de línea temporal - Ancho completo -->
-                            <div class="tv-chart-card tv-chart-wide">
-                                <div class="tv-chart-header">
-                                    <h3 class="tv-chart-title">Línea de Tiempo: Equipos con Problemas Recurrentes</h3>
-                                    <div class="tv-chart-actions">
-                                        <span class="tv-chart-action" title="Descargar"><i class="fa fa-download"></i></span>
-                                        <span class="tv-chart-action" title="Expandir"><i class="fa fa-expand"></i></span>
-                                    </div>
-                                </div>
-                                <div class="tv-chart-body tv-timeline-chart">
-                                    <t t-if="doc.chart_images">
-                                        <img t-if="json.loads(doc.chart_images).get('trend_chart')" 
-                                            t-att-src="'data:image/png;base64,' + json.loads(doc.chart_images).get('trend_chart')" 
-                                            class="tv-chart-img"/>
-                                    </t>
-                                    <div t-if="not doc.chart_images or not json.loads(doc.chart_images or '{}').get('trend_chart')" class="tv-no-data">
-                                        <div class="tv-no-data-icon"><i class="fa fa-line-chart"></i></div>
-                                        <p>No hay datos suficientes para mostrar el gráfico.</p>
-                                    </div>
-                                </div>
-                                <div class="tv-chart-legend">
-                                    <div class="tv-legend-item tv-same-issue">
-                                        <span class="tv-legend-marker"></span>
-                                        <span>Visitas críticas (mismo problema)</span>
-                                    </div>
-                                    <div class="tv-legend-item tv-different-issue">
-                                        <span class="tv-legend-marker"></span>
-                                        <span>Visitas por problemas distintos</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
+                            <!-- Primera fila de gráficos -->
+                            <table width="100%" cellspacing="10" cellpadding="0" class="charts-table">
+                                <tr>
+                                    <td width="50%" class="chart-cell">
+                                        <div class="ev-chart-container">
+                                            <h4 class="ev-chart-title">
+                                                <i class="fa fa-chart-bar"/> Equipos con Más Visitas
+                                            </h4>
+                                            <div class="ev-chart-img-wrapper">
+                                                <img t-if="chart_imgs.get('equipment_chart')" 
+                                                    t-att-src="'data:image/png;base64,' + chart_imgs.get('equipment_chart')" 
+                                                    class="ev-chart-img"/>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td width="50%" class="chart-cell">
+                                        <div class="ev-chart-container">
+                                            <h4 class="ev-chart-title">
+                                                <i class="fa fa-chart-pie"/> Distribución por Cliente
+                                            </h4>
+                                            <div class="ev-chart-img-wrapper">
+                                                <img t-if="chart_imgs.get('client_chart')" 
+                                                    t-att-src="'data:image/png;base64,' + chart_imgs.get('client_chart')" 
+                                                    class="ev-chart-img"/>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
 
-                        <!-- Tabla de Detalles de Equipos con Visitas Frecuentes -->
-                        <section class="tv-table-section">
-                            <h2 class="tv-section-title">Detalles de Equipos con Visitas Frecuentes</h2>
-                            
+                            <!-- Espacio entre filas de gráficos -->
+                            <div style="height: 20px; clear: both;"></div>
+
+                            <!-- Segunda fila de gráficos -->
+                            <table width="100%" cellspacing="10" cellpadding="0" class="charts-table">
+                                <tr>
+                                    <td width="50%" class="chart-cell">
+                                        <div class="ev-chart-container">
+                                            <h4 class="ev-chart-title">
+                                                <i class="fa fa-chart-line"/> Tendencia de Tiempos de Respuesta
+                                            </h4>
+                                            <div class="ev-chart-img-wrapper">
+                                                <img t-if="chart_imgs.get('trend_chart')" 
+                                                    t-att-src="'data:image/png;base64,' + chart_imgs.get('trend_chart')" 
+                                                    class="ev-chart-img"/>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td width="50%" class="chart-cell">
+                                        <div class="ev-chart-container">
+                                            <h4 class="ev-chart-title">
+                                                <i class="fa fa-bullseye"/> Categorías de Problemas
+                                            </h4>
+                                            <div class="ev-chart-img-wrapper">
+                                                <img t-if="chart_imgs.get('problems_chart')" 
+                                                    t-att-src="'data:image/png;base64,' + chart_imgs.get('problems_chart')" 
+                                                    class="ev-chart-img"/>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Tabla de Equipos Críticos -->
+                        <div class="ev-critical-equipment mt-4">
+                            <h3 class="ev-section-title">Equipos Críticos</h3>
                             <t t-set="table_data" t-value="json.loads(doc.chart_data or '{}').get('table', [])"/>
-                            <t t-set="frequent_equipment" t-value="table_data"/>
+                            <t t-set="critical_equipment" t-value="[item for item in table_data if item.get('is_critical')]"/>
                             
-                            <div t-if="not frequent_equipment" class="tv-no-data">
-                                <div class="tv-no-data-icon"><i class="fa fa-table"></i></div>
-                                <p>No se encontraron equipos con visitas frecuentes durante este período.</p>
+                            <div t-if="not critical_equipment" class="ev-no-data">
+                                <i class="fa fa-info-circle"/> No se encontraron equipos críticos durante este período.
                             </div>
                             
-                            <div t-if="frequent_equipment" class="tv-data-table-wrapper">
-                                <table class="tv-data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Cliente</th>
-                                            <th>Modelo</th>
-                                            <th>Serie</th>
-                                            <th>Problema</th>
-                                            <th>Fechas de Visita</th>
-                                            <th>Técnico</th>
-                                            <th class="text-center">Visitas</th>
+                            <table t-if="critical_equipment" class="table table-sm table-bordered ev-table">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Modelo</th>
+                                        <th>Serie</th>
+                                        <th>Problema Principal</th>
+                                        <th>Visitas</th>
+                                        <th>Técnicos</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="critical_equipment" t-as="item">
+                                        <tr t-att-class="'ev-close-visits' if item.get('has_close_visits') else ''">
+                                            <td><t t-esc="item.get('partner')"/></td>
+                                            <td><t t-esc="item.get('model')"/></td>
+                                            <td><t t-esc="item.get('serie')"/></td>
+                                            <td><t t-esc="item.get('problem')"/></td>
+                                            <td class="text-center">
+                                                <span class="ev-visit-count"><t t-esc="item.get('visit_count')"/></span>
+                                            </td>
+                                            <td><t t-esc="', '.join(item.get('technicians', []))"/></td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-foreach="frequent_equipment" t-as="item">
-                                            <tr t-att-class="'tv-close-visits' if item.get('has_close_visits') else ''">
-                                                <td><t t-esc="item.get('partner')"/></td>
-                                                <td><t t-esc="item.get('model')"/></td>
-                                                <td><t t-esc="item.get('serie')"/></td>
-                                                <td><t t-esc="item.get('problem')"/></td>
-                                                <td><t t-esc="item.get('visit_dates')"/></td>
-                                                <td><t t-esc="', '.join(item.get('technicians', []))"/></td>
-                                                <td class="text-center">
-                                                    <span t-att-class="'tv-visit-count ' + 
-                                                        ('tv-count-high' if item.get('visit_count', 0) >= 3 else 
-                                                        'tv-count-med' if item.get('visit_count', 0) == 2 else 
-                                                        'tv-count-low')">
-                                                        <t t-esc="item.get('visit_count')"/>
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        </t>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </section>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
 
-                        <!-- Cliente con Más Visitas - Card moderna -->
-                        <section class="tv-client-section">
-                            <h2 class="tv-section-title">Cliente con Más Visitas</h2>
-                            <div class="tv-client-card">
-                                <div class="tv-client-icon">
-                                    <i class="fa fa-building"></i>
-                                </div>
-                                <div class="tv-client-details">
-                                    <div class="tv-client-name"><t t-esc="doc.top_client_id.name or 'Sin datos'"/></div>
-                                    <div class="tv-client-stat">
-                                        <span class="tv-client-visits"><t t-esc="doc.top_client_visit_count or 0"/></span>
-                                        <span class="tv-client-label">visitas durante el período</span>
+                        <!-- Cliente con Más Visitas -->
+                        <div class="ev-top-client mt-4">
+                            <h3 class="ev-section-title">Cliente con Más Visitas</h3>
+                            <div class="ev-client-info-card">
+                                <div class="row">
+                                    <div class="col-2 ev-client-icon">
+                                        <i class="fa fa-building"/>
                                     </div>
-                                    <div t-if="doc.top_client_id" class="tv-client-contact">
-                                        <div t-if="doc.top_client_id.phone" class="tv-contact-item">
-                                            <i class="fa fa-phone tv-contact-icon"></i> <t t-esc="doc.top_client_id.phone"/>
+                                    <div class="col-10">
+                                        <div class="ev-client-name"><t t-esc="doc.top_client_id.name or 'Sin datos'"/></div>
+                                        <div class="ev-client-visit-info">
+                                            <span class="ev-client-visit-count"><t t-esc="doc.top_client_visit_count or 0"/></span>
+                                            <span class="ev-client-visit-text">visitas durante el período</span>
                                         </div>
-                                        <div t-if="doc.top_client_id.email" class="tv-contact-item">
-                                            <i class="fa fa-envelope tv-contact-icon"></i> <t t-esc="doc.top_client_id.email"/>
-                                        </div>
-                                        <div t-if="doc.top_client_id.city" class="tv-contact-item">
-                                            <i class="fa fa-map-marker tv-contact-icon"></i> <t t-esc="doc.top_client_id.city"/>
+                                        <div t-if="doc.top_client_id" class="ev-client-contact">
+                                            <div t-if="doc.top_client_id.phone" class="ev-contact-phone">
+                                                <i class="fa fa-phone"/> <t t-esc="doc.top_client_id.phone"/>
+                                            </div>
+                                            <div t-if="doc.top_client_id.email" class="ev-contact-email">
+                                                <i class="fa fa-envelope"/> <t t-esc="doc.top_client_id.email"/>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </section>
+                        </div>
 
-                        <!-- Tiempo Promedio de Respuesta - Modern gauge -->
-                        <section class="tv-response-time-section">
-                            <h2 class="tv-section-title">Tiempo Promedio de Respuesta</h2>
-                            <div class="tv-response-gauge">
-                                <div class="tv-gauge-value">
+                        <!-- Análisis Especial -->
+                        <div class="ev-special-analysis mt-4">
+                            <h3 class="ev-section-title">Análisis Especial y Recomendaciones</h3>
+                            <t t-set="special_analysis" t-value="json.loads(doc.chart_data or '{}').get('special_analysis', [])"/>
+                            
+                            <div t-if="not special_analysis" class="ev-no-data">
+                                <i class="fa fa-info-circle"/> No hay suficientes datos para un análisis especial.
+                            </div>
+                            
+                            <div t-if="special_analysis" class="ev-analysis-cards">
+                                <t t-foreach="special_analysis" t-as="analysis">
+                                    <div class="ev-analysis-card">
+                                        <div class="ev-analysis-header">
+                                            <span class="ev-analysis-model"><t t-esc="analysis.get('model')"/></span>
+                                            <span class="ev-analysis-serie">Serie: <t t-esc="analysis.get('serie')"/></span>
+                                        </div>
+                                        <div class="ev-analysis-body">
+                                            <div class="ev-analysis-client">
+                                                <i class="fa fa-user"/> Cliente: <t t-esc="analysis.get('partner')"/>
+                                            </div>
+                                            <div class="ev-analysis-visits">
+                                                <i class="fa fa-calendar"/> <t t-esc="analysis.get('visit_count')"/> visitas
+                                            </div>
+                                            <div class="ev-analysis-problem">
+                                                <i class="fa fa-exclamation-circle"/> Problema común: <t t-esc="analysis.get('common_problem')"/>
+                                            </div>
+                                            <div t-if="analysis.get('has_close_visits')" class="ev-analysis-warning">
+                                                <i class="fa fa-warning"/> Múltiples visitas en períodos cortos
+                                            </div>
+                                        </div>
+                                        <div class="ev-analysis-recommendation">
+                                            <i class="fa fa-lightbulb"/> Recomendación:
+                                            <t t-if="analysis.get('visit_count') >= 5">
+                                                Revisar a fondo / Considerar reemplazo
+                                            </t>
+                                            <t t-else="">
+                                                Verificar mantenimiento preventivo
+                                            </t>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- Tiempo Promedio de Respuesta -->
+                        <div class="ev-response-time mt-4">
+                            <h3 class="ev-section-title">Tiempo Promedio de Respuesta</h3>
+                            <div class="ev-time-container">
+                                <div class="ev-time-value">
                                     <t t-esc="round(doc.average_response_time, 1)"/> días
                                 </div>
-                                <div class="tv-gauge-container">
-                                    <div class="tv-gauge-track">
-                                        <div t-attf-class="tv-gauge-fill" t-attf-style="width: {{ min(100, max(0, doc.average_response_time * 10)) }}%;">
+                                <div class="ev-time-gauge">
+                                    <div class="ev-gauge-container">
+                                        <div t-attf-class="ev-gauge-fill" t-attf-style="width: {{ min(100, max(0, doc.average_response_time * 10)) }}%;">
                                         </div>
                                     </div>
-                                    <div class="tv-gauge-labels">
+                                    <div class="ev-gauge-labels">
                                         <span>0</span>
                                         <span>5</span>
                                         <span>10+</span>
                                     </div>
                                 </div>
-                                <div class="tv-gauge-rating">
+                                <div class="ev-time-assessment">
                                     <t t-if="doc.average_response_time &lt; 2">
-                                        <span class="tv-time-rating tv-rating-excellent">Excelente</span>
+                                        <span class="ev-time-excellent">Excelente</span>
                                     </t>
                                     <t t-elif="doc.average_response_time &lt; 4">
-                                        <span class="tv-time-rating tv-rating-good">Bueno</span>
+                                        <span class="ev-time-good">Bueno</span>
                                     </t>
                                     <t t-elif="doc.average_response_time &lt; 7">
-                                        <span class="tv-time-rating tv-rating-average">Regular</span>
+                                        <span class="ev-time-average">Regular</span>
                                     </t>
                                     <t t-else="">
-                                        <span class="tv-time-rating tv-rating-poor">Mejorable</span>
+                                        <span class="ev-time-poor">Mejorable</span>
                                     </t>
                                 </div>
                             </div>
-                        </section>
-
-                        <!-- Análisis especial para equipos críticos -->
-                        <section class="tv-analysis-section">
-                            <h2 class="tv-section-title">Análisis Especial: Equipos Críticos</h2>
-                            
-                            <t t-set="critical_equipment" t-value="[item for item in table_data if item.get('is_critical')]"/>
-                            
-                            <div t-if="not critical_equipment" class="tv-no-data">
-                                <div class="tv-no-data-icon"><i class="fa fa-search"></i></div>
-                                <p>No se encontraron equipos críticos que requieran análisis especial.</p>
-                            </div>
-                            
-                            <t t-if="critical_equipment" t-foreach="critical_equipment" t-as="item">
-                                <div class="tv-analysis-card">
-                                    <div class="tv-analysis-header">
-                                        <h3 class="tv-analysis-title">
-                                            <i class="fa fa-exclamation-triangle tv-warning-icon"></i>
-                                            <span class="tv-analysis-title-text">
-                                                <t t-esc="item.get('model')"/> (S/N: <t t-esc="item.get('serie')"/>) - <t t-esc="item.get('partner')"/>
-                                            </span>
-                                        </h3>
-                                    </div>
-                                    <div class="tv-analysis-content">
-                                        <p class="tv-root-cause">Análisis de causa raíz:</p>
-                                        <ul class="tv-analysis-list">
-                                            <li>Las visitas repetidas por <t t-esc="item.get('problem')"/> indican un problema con el <t t-esc="'componente ' + item.get('component') if item.get('component') else 'equipo'"/>.</li>
-                                            <li>Los sensores de <t t-esc="item.get('sensor_type') or 'presencia'"/> podrían estar dañados o mal calibrados.</li>
-                                            <li>La situación es recurrente desde hace <t t-esc="item.get('issue_months') or 'varios'"/> meses. Se recomienda un análisis más profundo.</li>
-                                        </ul>
-                                        <p class="tv-recommendation">Recomendación: Programar una revisión completa y considerar el reemplazo preventivo del módulo afectado.</p>
-                                    </div>
-                                </div>
-                            </t>
-                        </section>
+                        </div>
 
                         <!-- Pie de informe -->
-                        <div class="tv-report-footer">
-                            <div class="tv-footer-content">
-                                <div class="tv-report-date">
-                                    Generado el: <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                        <div class="ev-report-footer mt-4">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="ev-report-date">
+                                        Generado el: <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                                    </div>
                                 </div>
-                                <div class="tv-report-id">
-                                    ID de informe: <t t-esc="doc.id"/>
+                                <div class="col-6 text-end">
+                                    <div class="ev-report-id">
+                                        ID de informe: <t t-esc="doc.id"/>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Incluir todos los recursos necesarios independientemente del formato -->
+                    <link rel="stylesheet" type="text/css" href="/sat/static/src/css/equipment_visit_report.css"/>
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+                    <!-- Script para renderizar gráficos -->
+                    <script type="text/javascript">
+                        (function() {
+                            function renderBarChart(el, threshold) {
+                                const labels = (el.getAttribute('data-labels') || '').split(',').filter(Boolean);
+                                const values = (el.getAttribute('data-values') || '').split(',').map(Number).filter(v =&gt; !isNaN(v));
+                                const barColors = values.map(v =&gt; v &gt;= threshold ? 'rgba(231, 76, 60, 0.7)' : 'rgba(52, 152, 219, 0.7)');
+                        
+                                new Chart(el, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Cantidad',
+                                            data: values,
+                                            backgroundColor: barColors,
+                                            borderWidth: 1
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        plugins: {
+                                            tooltip: {
+                                                callbacks: {
+                                                    label: ctx =&gt; `${ctx.dataset.label}: ${ctx.raw}`
+                                                }
+                                            }
+                                        },
+                                        scales: {
+                                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                                        }
+                                    }
+                                });
+                            }
+                        
+                            function renderPieChart(el) {
+                                const labels = (el.getAttribute('data-labels') || '').split(',').filter(Boolean);
+                                const values = (el.getAttribute('data-values') || '').split(',').map(Number).filter(v =&gt; !isNaN(v));
+                                const backgroundColors = [
+                                    'rgba(52, 152, 219, 0.7)', 'rgba(46, 204, 113, 0.7)', 'rgba(243, 156, 18, 0.7)',
+                                    'rgba(155, 89, 182, 0.7)', 'rgba(231, 76, 60, 0.7)', 'rgba(26, 188, 156, 0.7)'
+                                ];
+                        
+                                new Chart(el, {
+                                    type: 'pie',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Cantidad',
+                                            data: values,
+                                            backgroundColor: backgroundColors
+                                        }]
+                                    }
+                                });
+                            }
+                        
+                            function renderLineChart(el) {
+                                const labels = (el.getAttribute('data-labels') || '').split(',').filter(Boolean);
+                                const values = (el.getAttribute('data-values') || '').split(',').map(Number).filter(v =&gt; !isNaN(v));
+                        
+                                new Chart(el, {
+                                    type: 'line',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Tiempo (días)',
+                                            data: values,
+                                            borderColor: 'rgba(26, 188, 156, 1)',
+                                            backgroundColor: 'rgba(26, 188, 156, 0.2)',
+                                            fill: true,
+                                            tension: 0.3
+                                        }]
+                                    },
+                                    options: {
+                                        plugins: {
+                                            tooltip: {
+                                                callbacks: {
+                                                    label: ctx =&gt; `Días: ${ctx.raw}`
+                                                }
+                                            }
+                                        },
+                                        scales: {
+                                            y: { beginAtZero: true }
+                                        }
+                                    }
+                                });
+                            }
+                        
+                            function renderRadarChart(el) {
+                                const labels = (el.getAttribute('data-labels') || '').split(',').filter(Boolean);
+                                const values = (el.getAttribute('data-values') || '').split(',').map(Number).filter(v =&gt; !isNaN(v));
+                        
+                                new Chart(el, {
+                                    type: 'radar',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Problemas Detectados',
+                                            data: values,
+                                            backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                                            borderColor: 'rgba(243, 156, 18, 1)',
+                                            pointBackgroundColor: 'rgba(243, 156, 18, 1)'
+                                        }]
+                                    },
+                                    options: {
+                                        elements: {
+                                            line: { borderWidth: 2 }
+                                        }
+                                    }
+                                });
+                            }
+                        
+                            function initCharts() {
+                                const charts = document.querySelectorAll('canvas[id^="equipmentChart"], canvas[id^="clientChart"], canvas[id^="trendChart"], canvas[id^="problemsChart"]');
+                        
+                                charts.forEach(el =&gt; {
+                                    const id = el.id;
+                                    const type = id.includes('equipmentChart') ? 'bar'
+                                                : id.includes('clientChart') ? 'pie'
+                                                : id.includes('trendChart') ? 'line'
+                                                : id.includes('problemsChart') ? 'radar' : null;
+                                    const threshold = parseInt(el.getAttribute('data-threshold') || '3');
+                        
+                                    if (type === 'bar') renderBarChart(el, threshold);
+                                    else if (type === 'pie') renderPieChart(el);
+                                    else if (type === 'line') renderLineChart(el);
+                                    else if (type === 'radar') renderRadarChart(el);
+                                });
+                            }
+                        
+                            if (typeof Chart === 'undefined') {
+                                const script = document.createElement('script');
+                                script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+                                script.onload = initCharts;
+                                document.head.appendChild(script);
+                            } else {
+                                window.addEventListener('load', initCharts);
+                            }
+                        })();
+                    </script>
                 </t>
             </t>
         </t>
-        <script type="text/javascript" src="/technical_service/static/src/js/equipment_visits_report.js"></script>
     </template>
 </odoo>
