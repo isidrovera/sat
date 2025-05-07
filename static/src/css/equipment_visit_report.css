@@ -563,3 +563,22 @@
     border-collapse: separate !important;
     border-spacing: 0 0 !important;
 }
+/* 🔥 Fix Final - Elimina completamente los contornos extraños en el PDF */
+.table-cards,
+.table-cards td,
+.table-cards tr {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    outline: none !important;
+}
+
+/* Reforzar estilo limpio en tarjetas PDF */
+.ev-card {
+    background-color: var(--white) !important;
+    border: none !important;
+    box-shadow: var(--shadow) !important;
+    border-radius: var(--border-radius-lg) !important;
+    outline: none !important;
+}
