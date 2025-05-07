@@ -51,35 +51,36 @@
     background-color: #3498db;
 }
 
-/* Tarjetas de resumen */
+/* MEJORA: Tarjetas de resumen - optimizadas para mejor visualización */
 .ev-summary-cards {
-    margin: 25px 0;
+    margin: 25px 0 35px 0; /* Más espacio inferior */
 }
 
 .ev-card {
     display: flex;
     background-color: white;
     border-radius: 10px;
-    padding: 15px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-    /* Usamos min-height en lugar de height fijo */
+    padding: 15px 10px; /* Reducido padding horizontal */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Sombra mejorada */
     min-height: 100px;
-    overflow: visible; /* Cambiamos de hidden a visible */
+    overflow: visible;
     transition: transform 0.3s ease;
-    margin-bottom: 10px; /* Añadimos margen inferior */
+    margin-bottom: 15px;
+    border: 1px solid #ecf0f1; /* Borde sutil */
 }
 
 .ev-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-3px);
 }
 
 .ev-card-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 60px;
-    font-size: 24px;
+    width: 50px; /* Reducido */
+    font-size: 22px;
     color: white;
+    padding-left: 5px; /* Añadido */
 }
 
 .ev-total-visits .ev-card-icon {
@@ -108,14 +109,17 @@
 }
 
 .ev-card-value {
-    font-size: 24px;
+    font-size: 26px; /* Aumentado */
     font-weight: bold;
     color: #2c3e50;
+    line-height: 1.1; /* Añadido */
+    margin-bottom: 5px; /* Añadido */
 }
 
 .ev-card-label {
-    font-size: 14px;
+    font-size: 13px; /* Reducido */
     color: #7f8c8d;
+    line-height: 1.2; /* Añadido */
 }
 
 /* Secciones */
@@ -126,9 +130,23 @@
     padding-bottom: 10px;
     border-bottom: 1px solid #ecf0f1;
     margin-bottom: 15px;
+    margin-top: 30px; /* Añadido para mejor separación */
+    clear: both; /* Asegura que empiece en una línea limpia */
 }
 
-/* Contenedores de gráficos */
+/* MEJORA: Contenedores de gráficos - forzando mejor presentación visual */
+.ev-charts-section {
+    margin-bottom: 40px; /* Más espacio inferior */
+    clear: both; /* Asegurar que los flotantes anteriores no afecten */
+    page-break-inside: avoid; /* Intenta evitar el salto de página dentro de la sección */
+}
+
+.ev-charts-section .row {
+    margin-bottom: 30px; /* Más espacio entre filas de gráficos */
+    display: flex;
+    flex-wrap: wrap;
+}
+
 .ev-chart-container {
     width: 100%;
     margin-bottom: 20px;
@@ -136,15 +154,18 @@
     border-radius: 10px;
     padding: 15px;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    height: 330px; /* Altura fija para consistencia */
+    page-break-inside: avoid; /* Evita división dentro del contenedor */
 }
 
 .ev-chart-title {
     color: #7f8c8d;
     font-size: 16px;
     margin-bottom: 15px;
+    text-align: center;
 }
 
-/* Contenedor de la imagen del gráfico */
+/* Contenedor específico para la imagen del gráfico */
 .ev-chart-img-container {
     width: 100%;
     height: 250px;
@@ -153,9 +174,10 @@
     align-items: center;
     justify-content: center;
     margin: 0 auto;
+    position: relative; /* Ayuda con posicionamiento absoluto si es necesario */
 }
 
-/* Estilo para la imagen del gráfico */
+/* Imagen del gráfico */
 .ev-chart-img {
     max-width: 100%;
     max-height: 250px;
@@ -164,9 +186,20 @@
     object-fit: contain;
 }
 
-/* Aseguramos que los gráficos tengan espacio suficiente entre sí */
-.ev-charts-section .row {
-    margin-bottom: 20px;
+/* Forzar cada gráfico en su columna */
+.ev-charts-section .col-6 {
+    float: left;
+    width: 50%;
+    padding: 0 15px;
+    box-sizing: border-box;
+}
+
+/* Control de salto de página para los gráficos inferiores */
+.ev-charts-section .row:nth-child(2) {
+    page-break-before: auto; /* Permitir que decida si necesita salto */
+    page-break-inside: avoid; /* Pero mantener la fila junta */
+    page-break-after: auto;
+    clear: both; /* Asegura que empiece en una línea limpia */
 }
 
 /* Tablas */
@@ -354,9 +387,30 @@
     font-size: 12px;
 }
 
-.ev-chart-container img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 0 auto;
+/* Soporte para impresión PDF */
+@media print {
+    .ev-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .ev-chart-container {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .ev-charts-section .row {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    /* Mejor manejo de saltos de página */
+    .ev-charts-section {
+        page-break-inside: avoid;
+    }
+    
+    /* Forzar que los gráficos inferiores se vean correctamente */
+    .ev-charts-section .row:nth-child(2) {
+        page-break-before: auto;
+    }
 }

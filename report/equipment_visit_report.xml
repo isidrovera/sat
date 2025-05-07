@@ -62,117 +62,118 @@
                         </div>
 
                         <!-- Tarjetas de Resumen -->
-<div class="ev-summary-cards">
-    <div class="row mt-4">
-        <div class="col-3">
-            <div class="ev-card ev-total-visits">
-                <div class="ev-card-icon">
-                    <i class="fa fa-calendar-check"/>
-                </div>
-                <div class="ev-card-content">
-                    <div class="ev-card-value"><t t-esc="doc.total_visits"/></div>
-                    <div class="ev-card-label">Total Visitas</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-3">
-            <div class="ev-card ev-recurring">
-                <div class="ev-card-icon">
-                    <i class="fa fa-sync"/>
-                </div>
-                <div class="ev-card-content">
-                    <div class="ev-card-value"><t t-esc="doc.recurring_equipment_count"/></div>
-                    <div class="ev-card-label">Equipos Recurrentes</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-3">
-            <div class="ev-card ev-critical">
-                <div class="ev-card-icon">
-                    <i class="fa fa-exclamation-triangle"/>
-                </div>
-                <div class="ev-card-content">
-                    <div class="ev-card-value"><t t-esc="doc.critical_equipment_count"/></div>
-                    <div class="ev-card-label">Equipos Críticos</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-3">
-            <div class="ev-card ev-resolution">
-                <div class="ev-card-icon">
-                    <i class="fa fa-check-circle"/>
-                </div>
-                <div class="ev-card-content">
-                    <div class="ev-card-value">
-                        <t t-esc="round(doc.first_visit_resolution_rate, 1)"/>%
-                    </div>
-                    <div class="ev-card-label">Res. Primera Visita</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
+                        <div class="ev-summary-cards">
+                            <div class="row mt-4">
+                                <div class="col-3">
+                                    <div class="ev-card ev-total-visits">
+                                        <div class="ev-card-icon">
+                                            <i class="fa fa-calendar-check"/>
+                                        </div>
+                                        <div class="ev-card-content">
+                                            <div class="ev-card-value"><t t-esc="doc.total_visits"/></div>
+                                            <div class="ev-card-label">Total Visitas</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="ev-card ev-recurring">
+                                        <div class="ev-card-icon">
+                                            <i class="fa fa-sync"/>
+                                        </div>
+                                        <div class="ev-card-content">
+                                            <div class="ev-card-value"><t t-esc="doc.recurring_equipment_count"/></div>
+                                            <div class="ev-card-label">Equipos Recurrentes</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="ev-card ev-critical">
+                                        <div class="ev-card-icon">
+                                            <i class="fa fa-exclamation-triangle"/>
+                                        </div>
+                                        <div class="ev-card-content">
+                                            <div class="ev-card-value"><t t-esc="doc.critical_equipment_count"/></div>
+                                            <div class="ev-card-label">Equipos Críticos</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="ev-card ev-resolution">
+                                        <div class="ev-card-icon">
+                                            <i class="fa fa-check-circle"/>
+                                        </div>
+                                        <div class="ev-card-content">
+                                            <div class="ev-card-value">
+                                                <t t-esc="round(doc.first_visit_resolution_rate, 1)"/>%
+                                            </div>
+                                            <div class="ev-card-label">Res. Primera Visita</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                        <!-- Sección de Gráficos -->
-<!-- Sección de Gráficos usando imágenes base64 para PDF -->
-<div class="ev-charts-section mt-4">
-    <h3 class="ev-section-title">Análisis Visual</h3>
-    <t t-set="chart_imgs" t-value="json.loads(doc.chart_images or '{}')"/>
-
-    <div class="row">
-        <div class="col-6">
-            <div class="ev-chart-container">
-                <h4 class="ev-chart-title">
-                    <i class="fa fa-chart-bar"/> Equipos con Más Visitas
-                </h4>
-                <div class="ev-chart-img-container">
-                    <img t-if="chart_imgs.get('equipment_chart')" 
-                         t-att-src="'data:image/png;base64,' + chart_imgs.get('equipment_chart')" 
-                         class="ev-chart-img"/>
-                </div>
-            </div>
-        </div>
-        <div class="col-6">
-            <div class="ev-chart-container">
-                <h4 class="ev-chart-title">
-                    <i class="fa fa-chart-pie"/> Distribución por Cliente
-                </h4>
-                <div class="ev-chart-img-container">
-                    <img t-if="chart_imgs.get('client_chart')" 
-                         t-att-src="'data:image/png;base64,' + chart_imgs.get('client_chart')" 
-                         class="ev-chart-img"/>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mt-4">
-        <div class="col-6">
-            <div class="ev-chart-container">
-                <h4 class="ev-chart-title">
-                    <i class="fa fa-chart-line"/> Tendencia de Tiempos de Respuesta
-                </h4>
-                <div class="ev-chart-img-container">
-                    <img t-if="chart_imgs.get('trend_chart')" 
-                         t-att-src="'data:image/png;base64,' + chart_imgs.get('trend_chart')" 
-                         class="ev-chart-img"/>
-                </div>
-            </div>
-        </div>
-        <div class="col-6">
-            <div class="ev-chart-container">
-                <h4 class="ev-chart-title">
-                    <i class="fa fa-bullseye"/> Categorías de Problemas
-                </h4>
-                <div class="ev-chart-img-container">
-                    <img t-if="chart_imgs.get('problems_chart')" 
-                         t-att-src="'data:image/png;base64,' + chart_imgs.get('problems_chart')" 
-                         class="ev-chart-img"/>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+                       <div class="ev-charts-section mt-4">
+                        <h3 class="ev-section-title">Análisis Visual</h3>
+                        <t t-set="chart_imgs" t-value="json.loads(doc.chart_images or '{}')"/>
+                    
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="ev-chart-container">
+                                    <h4 class="ev-chart-title">
+                                        <i class="fa fa-chart-bar"/> Equipos con Más Visitas
+                                    </h4>
+                                    <div class="ev-chart-img-container">
+                                        <img t-if="chart_imgs.get('equipment_chart')" 
+                                             t-att-src="'data:image/png;base64,' + chart_imgs.get('equipment_chart')" 
+                                             class="ev-chart-img"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="ev-chart-container">
+                                    <h4 class="ev-chart-title">
+                                        <i class="fa fa-chart-pie"/> Distribución por Cliente
+                                    </h4>
+                                    <div class="ev-chart-img-container">
+                                        <img t-if="chart_imgs.get('client_chart')" 
+                                             t-att-src="'data:image/png;base64,' + chart_imgs.get('client_chart')" 
+                                             class="ev-chart-img"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    
+                        <!-- Forzar un claro para que los gráficos inferiores se posicionen correctamente -->
+                        <div style="clear: both;"></div>
+                    
+                        <div class="row mt-4">
+                            <div class="col-6">
+                                <div class="ev-chart-container">
+                                    <h4 class="ev-chart-title">
+                                        <i class="fa fa-chart-line"/> Tendencia de Tiempos de Respuesta
+                                    </h4>
+                                    <div class="ev-chart-img-container">
+                                        <img t-if="chart_imgs.get('trend_chart')" 
+                                             t-att-src="'data:image/png;base64,' + chart_imgs.get('trend_chart')" 
+                                             class="ev-chart-img"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="ev-chart-container">
+                                    <h4 class="ev-chart-title">
+                                        <i class="fa fa-bullseye"/> Categorías de Problemas
+                                    </h4>
+                                    <div class="ev-chart-img-container">
+                                        <img t-if="chart_imgs.get('problems_chart')" 
+                                             t-att-src="'data:image/png;base64,' + chart_imgs.get('problems_chart')" 
+                                             class="ev-chart-img"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
 
                         <!-- Tabla de Equipos Críticos -->
