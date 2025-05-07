@@ -548,25 +548,56 @@
     .ev-chart-container {
         page-break-inside: avoid !important;
     }
+    
+    /* Eliminación de bordes para impresión */
+    table, tr, td {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        outline: none !important;
+        border-collapse: separate !important;
+    }
+    
+    .ev-card {
+        page-break-inside: avoid !important;
+        border: none !important;
+        outline: none !important;
+    }
 }
 
-/* Quitar contornos y bordes de las tablas internas de tarjetas */
+/* Solución completa para eliminar todos los bordes no deseados */
+
+/* Eliminar contornos y bordes de las tablas internas de tarjetas */
 .ev-summary-cards table,
 .ev-summary-cards td,
 .ev-summary-cards tr {
     border: none !important;
     background: none !important;
     box-shadow: none !important;
+    outline: none !important;
 }
 
 .ev-summary-cards table {
     border-collapse: separate !important;
     border-spacing: 0 0 !important;
 }
-/* 🔥 Fix Final - Elimina completamente los contornos extraños en el PDF */
+
+/* Regla general para eliminar bordes en todas las tablas de tarjetas */
 .table-cards,
 .table-cards td,
 .table-cards tr {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    outline: none !important;
+}
+
+/* Regla para tablas de gráficos */
+.charts-table,
+.charts-table td,
+.charts-table tr {
     border: none !important;
     background: transparent !important;
     box-shadow: none !important;
@@ -581,4 +612,47 @@
     box-shadow: var(--shadow) !important;
     border-radius: var(--border-radius-lg) !important;
     outline: none !important;
+}
+
+/* Forzar eliminación de bordes en contenedores de gráficos mientras mantiene el estilo deseado */
+.ev-chart-container {
+    box-shadow: var(--shadow) !important;
+    border: 1px solid var(--gray-light) !important;
+    border-radius: var(--border-radius) !important;
+    outline: none !important;
+}
+
+/* Asegurar que no hay bordes heredados para todo elemento */
+* {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+/* Eliminar líneas de tabla globalmente */
+table.no-borders,
+table.no-borders tr,
+table.no-borders td {
+    border: none !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background: transparent !important;
+}
+
+/* 🔥 Fix Final - Elimina completamente los contornos extraños en el PDF */
+.table-cards,
+.table-cards td,
+.table-cards tr,
+.ev-summary-cards table,
+.ev-summary-cards td,
+.ev-summary-cards tr,
+.charts-table,
+.charts-table td,
+.charts-table tr {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    outline: none !important;
+    border-collapse: separate !important;
+    border-spacing: 12px !important;
 }
