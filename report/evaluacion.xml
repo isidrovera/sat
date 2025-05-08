@@ -6,127 +6,179 @@
                 <t t-call="web.external_layout">
                     <div class="page">
                         <style>
+                            /* Estilos generales minimalistas */
+                            .page {
+                                font-family: 'Helvetica Neue', Arial, sans-serif;
+                                color: #333;
+                                line-height: 1.6;
+                            }
+                            
+                            /* Encabezado más compacto */
                             .report-header {
-                            display: flex;
-                            justify-content: space-between;
-                            margin-bottom: 30px;
-                            padding: 20px;
-                            background: #f8f9fa;
-                            border-radius: 10px;
+                                display: flex;
+                                justify-content: space-between;
+                                margin-bottom: 25px;
+                                padding: 15px;
+                                border-bottom: 1px solid #eee;
                             }
-                            .date-info, .user-info {
-                            display: flex;
-                            align-items: center;
+                            
+                            .header-item {
+                                display: flex;
+                                align-items: center;
                             }
-                            .date-info i, .user-info i {
-                            color: #3498db;
-                            margin-right: 10px;
+                            
+                            .header-item i {
+                                color: #555;
+                                margin-right: 8px;
+                                font-size: 14px;
                             }
+                            
+                            /* Métricas principales más limpias */
                             .metrics-container {
-                            display: grid;
-                            grid-template-columns: repeat(3, 1fr);
-                            gap: 20px;
-                            margin-bottom: 30px;
+                                display: grid;
+                                grid-template-columns: repeat(3, 1fr);
+                                gap: 15px;
+                                margin-bottom: 25px;
                             }
+                            
                             .metric-card {
-                            background: white;
-                            border-radius: 15px;
-                            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-                            padding: 20px;
-                            position: relative;
-                            overflow: hidden;
+                                background: white;
+                                border-radius: 4px;
+                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                                padding: 15px;
+                                border-top: 3px solid transparent;
+                                transition: transform 0.2s ease;
                             }
-                            .metric-card::before {
-                            content: '';
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            width: 100%;
-                            height: 4px;
-                            }
-                            .metric-card.score::before { background: #3498db; }
-                            .metric-card.repairs::before { background: #2ecc71; }
-                            .metric-card.tickets::before { background: #e74c3c; }
+                            
+                            .metric-card.score { border-top-color: #3498db; }
+                            .metric-card.repairs { border-top-color: #2ecc71; }
+                            .metric-card.tickets { border-top-color: #e74c3c; }
+                            
                             .metric-title {
-                            color: #2c3e50;
-                            font-size: 16px;
-                            margin-bottom: 10px;
-                            display: flex;
-                            align-items: center;
+                                color: #555;
+                                font-size: 14px;
+                                margin-bottom: 8px;
+                                display: flex;
+                                align-items: center;
                             }
+                            
                             .metric-title i {
-                            margin-right: 10px;
-                            font-size: 20px;
-                            color: #3498db;
+                                margin-right: 8px;
+                                font-size: 14px;
+                                color: #555;
                             }
+                            
                             .metric-value {
-                            font-size: 32px;
-                            font-weight: bold;
-                            color: #2c3e50;
+                                font-size: 24px;
+                                font-weight: 500;
+                                color: #333;
                             }
-                            .section-title {
-                            background: #2c3e50;
-                            color: white;
-                            padding: 15px;
-                            border-radius: 10px;
-                            margin: 30px 0 20px;
-                            font-weight: bold;
-                            font-size: 18px;
-                            }
+                            
+                            /* Barra de progreso más delgada */
                             .progress-container {
-                            margin-top: 10px;
+                                margin-top: 8px;
                             }
+                            
                             .progress-bar {
-                            height: 8px;
-                            background: #ecf0f1;
-                            border-radius: 4px;
-                            overflow: hidden;
+                                height: 4px;
+                                background: #f5f5f5;
+                                border-radius: 2px;
+                                overflow: hidden;
                             }
+                            
                             .progress-fill {
-                            height: 100%;
-                            transition: width 0.3s ease;
+                                height: 100%;
+                                transition: width 0.3s ease;
                             }
+                            
                             .progress-fill.excellent { background: #27ae60; }
                             .progress-fill.good { background: #2ecc71; }
                             .progress-fill.regular { background: #f1c40f; }
                             .progress-fill.poor { background: #e74c3c; }
+                            
+                            /* Títulos de sección más discretos */
+                            .section-title {
+                                background: transparent;
+                                color: #333;
+                                padding: 0;
+                                margin: 25px 0 15px;
+                                font-weight: 500;
+                                font-size: 16px;
+                                border-bottom: 1px solid #eee;
+                                padding-bottom: 8px;
+                            }
+                            
+                            .section-title i {
+                                color: #555;
+                                margin-right: 8px;
+                            }
+                            
+                            /* Grid de evaluación más limpio */
                             .evaluation-grid {
-                            display: grid;
-                            grid-template-columns: repeat(2, 1fr);
-                            gap: 20px;
-                            margin-bottom: 30px;
+                                display: grid;
+                                grid-template-columns: repeat(2, 1fr);
+                                gap: 15px;
+                                margin-bottom: 25px;
                             }
+                            
                             .evaluation-item {
-                            background: white;
-                            border-radius: 10px;
-                            padding: 20px;
-                            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                                background: white;
+                                border-radius: 4px;
+                                padding: 15px;
+                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
                             }
-                            .evaluation-label {
-                            color: #7f8c8d;
-                            margin-bottom: 10px;
-                            }
+                            
                             .evaluation-value {
-                            font-size: 24px;
-                            font-weight: bold;
-                            color: #2c3e50;
-                            margin-bottom: 10px;
+                                font-size: 18px;
+                                font-weight: 500;
+                                color: #333;
+                                margin-bottom: 8px;
+                            }
+                            
+                            /* Sección de retroalimentación */
+                            .feedback-container {
+                                margin-bottom: 25px;
+                            }
+                            
+                            .feedback-section {
+                                background: white;
+                                border-radius: 4px;
+                                padding: 15px;
+                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                                margin-bottom: 15px;
+                            }
+                            
+                            .feedback-content {
+                                white-space: pre-line;
+                                color: #555;
+                            }
+                            
+                            /* Firma minimalista */
+                            .signatures-section {
+                                margin-top: 30px;
+                            }
+                            
+                            .signature-line {
+                                border-top: 1px solid #ddd;
+                                padding-top: 10px;
+                                font-size: 14px;
+                                color: #555;
                             }
                         </style>
 
                         <!-- Encabezado -->
                         <div class="report-header">
-                            <div class="eval-info">
+                            <div class="header-item">
                                 <i class="fa fa-list-ol"></i>
-                                <span>Evaluación N°: <t t-esc="o.name" /></span>
+                                <span>Evaluación: <t t-esc="o.name" /></span>
                             </div>
-                            <div class="date-info">
+                            <div class="header-item">
                                 <i class="fa fa-calendar"></i>
-                                <span>Fecha: <t t-esc="o.fecha" t-options='{"widget": "date"}'/></span>
+                                <span><t t-esc="o.fecha" t-options='{"widget": "date"}'/></span>
                             </div>
-                            <div class="user-info">
+                            <div class="header-item">
                                 <i class="fa fa-user"></i>
-                                <span>Técnico: <t t-esc="o.nombre_usuario" /></span>
+                                <span><t t-esc="o.nombre_usuario" /></span>
                             </div>
                         </div>
 
@@ -135,9 +187,11 @@
                             <!-- Puntaje Total -->
                             <div class="metric-card score">
                                 <div class="metric-title">
-                                    <i class="fa fa-star"></i> Puntaje Total </div>
+                                    <i class="fa fa-star"></i>Puntaje
+                                </div>
                                 <div class="metric-value">
-                                    <t t-esc="'%.1f' % o.puntaje_total" />% </div>
+                                    <t t-esc="'%.1f' % o.puntaje_total" />%
+                                </div>
                                 <div class="progress-container">
                                     <div class="progress-bar">
                                         <div
@@ -155,7 +209,8 @@
                             <!-- Reparaciones -->
                             <div class="metric-card repairs">
                                 <div class="metric-title">
-                                    <i class="fa fa-tools"></i> Reparaciones </div>
+                                    <i class="fa fa-tools"></i>Reparaciones
+                                </div>
                                 <div class="metric-value">
                                     <t t-esc="o.cantidad_reparaciones" />
                                 </div>
@@ -170,7 +225,8 @@
                             <!-- Tickets -->
                             <div class="metric-card tickets">
                                 <div class="metric-title">
-                                    <i class="fa fa-ticket-alt"></i> Tickets </div>
+                                    <i class="fa fa-ticket-alt"></i>Tickets
+                                </div>
                                 <div class="metric-value">
                                     <t t-esc="o.cantidad_tickets" />
                                 </div>
@@ -185,15 +241,16 @@
 
                         <!-- Evaluación Técnica -->
                         <div class="section-title">
-                            <i class="fa fa-cogs me-2"></i> EVALUACIÓN TÉCNICA </div>
+                            <i class="fa fa-cogs"></i>EVALUACIÓN TÉCNICA
+                        </div>
                         <div class="evaluation-grid">
                             <!-- Calidad del Trabajo -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-check-circle"></i> Calidad del Trabajo </div>
+                                    <i class="fa fa-check-circle"></i>Calidad del Trabajo
+                                </div>
                                 <div class="evaluation-value">
-                                    <t
-                                        t-esc="dict(o._fields['calidad_trabajo'].selection).get(o.calidad_trabajo)" />
+                                    <t t-esc="dict(o._fields['calidad_trabajo'].selection).get(o.calidad_trabajo)" />
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill good"
@@ -204,10 +261,10 @@
                             <!-- Conocimiento Técnico -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-brain"></i> Conocimiento Técnico </div>
+                                    <i class="fa fa-brain"></i>Conocimiento Técnico
+                                </div>
                                 <div class="evaluation-value">
-                                    <t
-                                        t-esc="dict(o._fields['conocimiento_tecnico'].selection).get(o.conocimiento_tecnico)" />
+                                    <t t-esc="dict(o._fields['conocimiento_tecnico'].selection).get(o.conocimiento_tecnico)" />
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill good"
@@ -218,10 +275,10 @@
                             <!-- Resolución de Problemas -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-puzzle-piece"></i> Resolución de Problemas </div>
+                                    <i class="fa fa-puzzle-piece"></i>Resolución de Problemas
+                                </div>
                                 <div class="evaluation-value">
-                                    <t
-                                        t-esc="dict(o._fields['resolucion_problemas'].selection).get(o.resolucion_problemas)" />
+                                    <t t-esc="dict(o._fields['resolucion_problemas'].selection).get(o.resolucion_problemas)" />
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill good"
@@ -232,10 +289,10 @@
                             <!-- Uso de Herramientas -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-wrench"></i> Uso de Herramientas </div>
+                                    <i class="fa fa-wrench"></i>Uso de Herramientas
+                                </div>
                                 <div class="evaluation-value">
-                                    <t
-                                        t-esc="dict(o._fields['uso_herramientas'].selection).get(o.uso_herramientas)" />
+                                    <t t-esc="dict(o._fields['uso_herramientas'].selection).get(o.uso_herramientas)" />
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill good"
@@ -246,15 +303,16 @@
 
                         <!-- Evaluación Actitudinal -->
                         <div class="section-title">
-                            <i class="fa fa-user-check me-2"></i> EVALUACIÓN ACTITUDINAL </div>
+                            <i class="fa fa-user-check"></i>EVALUACIÓN ACTITUDINAL
+                        </div>
                         <div class="evaluation-grid">
                             <!-- Puntualidad -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-clock"></i> Puntualidad </div>
+                                    <i class="fa fa-clock"></i>Puntualidad
+                                </div>
                                 <div class="evaluation-value">
-                                    <t
-                                        t-esc="dict(o._fields['puntualidad'].selection).get(o.puntualidad)" />
+                                    <t t-esc="dict(o._fields['puntualidad'].selection).get(o.puntualidad)" />
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill good"
@@ -265,10 +323,10 @@
                             <!-- Compromiso -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-handshake"></i> Compromiso </div>
+                                    <i class="fa fa-handshake"></i>Compromiso
+                                </div>
                                 <div class="evaluation-value">
-                                    <t
-                                        t-esc="dict(o._fields['compromiso'].selection).get(o.compromiso)" />
+                                    <t t-esc="dict(o._fields['compromiso'].selection).get(o.compromiso)" />
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill good"
@@ -279,10 +337,10 @@
                             <!-- Trabajo en Equipo -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-users"></i> Trabajo en Equipo </div>
+                                    <i class="fa fa-users"></i>Trabajo en Equipo
+                                </div>
                                 <div class="evaluation-value">
-                                    <t
-                                        t-esc="dict(o._fields['trabajo_equipo'].selection).get(o.trabajo_equipo)" />
+                                    <t t-esc="dict(o._fields['trabajo_equipo'].selection).get(o.trabajo_equipo)" />
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill good"
@@ -293,15 +351,16 @@
 
                         <!-- Atención al Cliente -->
                         <div class="section-title">
-                            <i class="fa fa-headset me-2"></i> ATENCIÓN AL CLIENTE </div>
+                            <i class="fa fa-headset"></i>ATENCIÓN AL CLIENTE
+                        </div>
                         <div class="evaluation-grid">
                             <!-- Trato al Cliente -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-smile"></i> Trato al Cliente </div>
+                                    <i class="fa fa-smile"></i>Trato al Cliente
+                                </div>
                                 <div class="evaluation-value">
-                                    <t
-                                        t-esc="dict(o._fields['trato_cliente'].selection).get(o.trato_cliente)" />
+                                    <t t-esc="dict(o._fields['trato_cliente'].selection).get(o.trato_cliente)" />
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill good"
@@ -312,10 +371,10 @@
                             <!-- Comunicación con Cliente -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-comments"></i> Comunicación con Cliente </div>
+                                    <i class="fa fa-comments"></i>Comunicación con Cliente
+                                </div>
                                 <div class="evaluation-value">
-                                    <t
-                                        t-esc="dict(o._fields['comunicacion_cliente'].selection).get(o.comunicacion_cliente)" />
+                                    <t t-esc="dict(o._fields['comunicacion_cliente'].selection).get(o.comunicacion_cliente)" />
                                 </div>
                                 <div class="progress-bar">
                                     <div class="progress-fill good"
@@ -326,12 +385,14 @@
 
                         <!-- Retroalimentación -->
                         <div class="section-title">
-                            <i class="fa fa-comments me-2"></i> RETROALIMENTACIÓN </div>
+                            <i class="fa fa-comments"></i>RETROALIMENTACIÓN
+                        </div>
                         <div class="feedback-container">
                             <!-- Fortalezas -->
                             <div class="feedback-section">
                                 <div class="metric-title">
-                                    <i class="fa fa-star"></i> Fortalezas Identificadas </div>
+                                    <i class="fa fa-star"></i>Fortalezas Identificadas
+                                </div>
                                 <div class="feedback-content">
                                     <t t-esc="o.fortalezas" />
                                 </div>
@@ -340,7 +401,8 @@
                             <!-- Áreas de Mejora -->
                             <div class="feedback-section">
                                 <div class="metric-title">
-                                    <i class="fa fa-arrow-up"></i> Áreas de Mejora </div>
+                                    <i class="fa fa-arrow-up"></i>Áreas de Mejora
+                                </div>
                                 <div class="feedback-content">
                                     <t t-esc="o.areas_mejora" />
                                 </div>
@@ -349,7 +411,8 @@
                             <!-- Plan de Acción -->
                             <div class="feedback-section">
                                 <div class="metric-title">
-                                    <i class="fa fa-tasks"></i> Plan de Acción </div>
+                                    <i class="fa fa-tasks"></i>Plan de Acción
+                                </div>
                                 <div class="feedback-content">
                                     <t t-esc="o.plan_accion" />
                                 </div>
@@ -358,7 +421,8 @@
                             <!-- Comentarios -->
                             <div class="feedback-section">
                                 <div class="metric-title">
-                                    <i class="fa fa-comment"></i> Comentarios Adicionales </div>
+                                    <i class="fa fa-comment"></i>Comentarios Adicionales
+                                </div>
                                 <div class="feedback-content">
                                     <t t-esc="o.comentarios" />
                                 </div>
@@ -367,14 +431,16 @@
 
                         <!-- Firmas -->
                         <div class="signatures-section">
-                            <div class="row mt-5">
+                            <div class="row mt-4">
                                 <div class="col-6 text-center">
                                     <div class="signature-line">
-                                        <i class="fa fa-user-tie"></i> Firma del Evaluador </div>
+                                        <i class="fa fa-user-tie"></i> Evaluador
+                                    </div>
                                 </div>
                                 <div class="col-6 text-center">
                                     <div class="signature-line">
-                                        <i class="fa fa-user"></i> Firma del Técnico Evaluado </div>
+                                        <i class="fa fa-user"></i> Técnico Evaluado
+                                    </div>
                                 </div>
                             </div>
                         </div>
