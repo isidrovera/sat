@@ -6,220 +6,193 @@
                 <t t-call="web.external_layout">
                     <div class="page">
                         <style>
-                            /* Estilos base y tipografía */
+                            /* Estilos generales minimalistas */
                             .page {
-                                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-                                color: #2d3748;
+                                font-family: 'Helvetica Neue', Arial, sans-serif;
+                                color: #333;
                                 line-height: 1.6;
-                                background-color: #f7fafc;
-                                padding: 20px;
                             }
                             
-                            /* Variables de color para consistencia */
-                            :root {
-                                --primary: #4299e1;
-                                --primary-dark: #3182ce;
-                                --success: #48bb78;
-                                --warning: #ecc94b;
-                                --danger: #f56565;
-                                --info: #4facfe;
-                                --neutral: #a0aec0;
-                                --light: #edf2f7;
-                                --dark: #2d3748;
-                            }
-                            
-                            /* Contenedor principal tipo dashboard */
-                            .dashboard-container {
-                                display: grid;
-                                grid-template-columns: 1fr;
-                                gap: 20px;
-                            }
-                            
-                            /* Encabezado del dashboard */
-                            .dashboard-header {
-                                background: white;
-                                border-radius: 8px;
-                                padding: 20px;
-                                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+                            /* Encabezado más compacto */
+                            .report-header {
                                 display: flex;
-                                flex-wrap: wrap;
                                 justify-content: space-between;
-                                align-items: center;
-                                margin-bottom: 20px;
+                                margin-bottom: 25px;
+                                padding: 15px;
+                                border-bottom: 1px solid #eee;
                             }
                             
-                            .dashboard-title {
-                                font-size: 1.5rem;
-                                font-weight: 600;
-                                color: var(--dark);
+                            .header-item {
                                 display: flex;
                                 align-items: center;
-                                gap: 10px;
                             }
                             
-                            .dashboard-title i {
-                                color: var(--primary);
+                            .header-item i {
+                                color: #555;
+                                margin-right: 8px;
+                                font-size: 14px;
                             }
                             
-                            .dashboard-meta {
-                                display: flex;
-                                flex-wrap: wrap;
-                                gap: 20px;
-                            }
-                            
-                            .meta-item {
-                                display: flex;
-                                align-items: center;
-                                gap: 8px;
-                                font-size: 0.9rem;
-                                color: var(--neutral);
-                            }
-                            
-                            .meta-item i {
-                                color: var(--primary);
-                                font-size: 1rem;
-                            }
-                            
-                            /* Tarjetas de métricas principales */
-                            .metrics-grid {
+                            /* Métricas principales más limpias */
+                            .metrics-container {
                                 display: grid;
-                                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                                gap: 20px;
-                                margin-bottom: 30px;
+                                grid-template-columns: repeat(3, 1fr);
+                                gap: 15px;
+                                margin-bottom: 25px;
                             }
                             
                             .metric-card {
                                 background: white;
-                                border-radius: 8px;
-                                box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-                                padding: 20px;
-                                transition: transform 0.2s, box-shadow 0.2s;
-                                position: relative;
-                                overflow: hidden;
+                                border-radius: 4px;
+                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                                padding: 15px;
+                                border-top: 3px solid transparent;
+                                transition: transform 0.2s ease;
                             }
                             
-                            .metric-card:hover {
-                                transform: translateY(-3px);
-                                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                            .metric-card.score { border-top-color: #3498db; }
+                            .metric-card.repairs { border-top-color: #2ecc71; }
+                            .metric-card.tickets { border-top-color: #e74c3c; }
+                            
+                            .metric-title {
+                                color: #555;
+                                font-size: 14px;
+                                margin-bottom: 8px;
+                                display: flex;
+                                align-items: center;
                             }
                             
-                            .metric-card.primary { border-left: 4px solid var(--primary); }
-                            .metric-card.success { border-left: 4px solid var(--success); }
-                            .metric-card.warning { border-left: 4px solid var(--warning); }
-                            .metric-card.danger { border-left: 4px solid var(--danger); }
-                            
-                            .metric-card::before {
-                                content: '';
-                                position: absolute;
-                                top: 0;
-                                right: 0;
-                                height: 100%;
-                                width: 4px;
-                                background: rgba(0,0,0,0.03);
-                            }
-                            
-                            .metric-icon {
-                                position: absolute;
-                                top: 20px;
-                                right: 20px;
-                                font-size: 2.5rem;
-                                opacity: 0.1;
-                                color: var(--dark);
-                            }
-                            
-                            .metric-label {
-                                font-size: 0.85rem;
-                                text-transform: uppercase;
-                                letter-spacing: 0.05em;
-                                color: var(--neutral);
-                                margin-bottom: 5px;
-                                font-weight: 500;
+                            .metric-title i {
+                                margin-right: 8px;
+                                font-size: 14px;
+                                color: #555;
                             }
                             
                             .metric-value {
-                                font-size: 2rem;
-                                font-weight: 700;
-                                color: var(--dark);
-                                margin-bottom: 10px;
+                                font-size: 24px;
+                                font-weight: 500;
+                                color: #333;
                             }
                             
-                            .metric-trend {
-                                font-size: 0.85rem;
-                                color: var(--neutral);
-                                display: flex;
-                                align-items: center;
-                                gap: 5px;
+                            /* Barra de progreso más delgada */
+                            .progress-container {
+                                margin-top: 8px;
                             }
                             
-                            .metric-trend i {
-                                font-size: 0.85rem;
-                            }
-                            
-                            .metric-trend.up { color: var(--success); }
-                            .metric-trend.down { color: var(--danger); }
-                            
-                            /* Barra de progreso moderna */
                             .progress-bar {
-                                height: 5px;
-                                background: var(--light);
-                                border-radius: 3px;
+                                height: 4px;
+                                background: #f5f5f5;
+                                border-radius: 2px;
                                 overflow: hidden;
-                                margin-top: 10px;
                             }
                             
                             .progress-fill {
                                 height: 100%;
-                                transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+                                transition: width 0.3s ease;
                             }
                             
-                            .progress-fill.excellent { background: var(--success); }
-                            .progress-fill.good { background: var(--info); }
-                            .progress-fill.regular { background: var(--warning); }
-                            .progress-fill.poor { background: var(--danger); }
+                            .progress-fill.excellent { background: #27ae60; }
+                            .progress-fill.good { background: #2ecc71; }
+                            .progress-fill.regular { background: #f1c40f; }
+                            .progress-fill.poor { background: #e74c3c; }
+                            
+                            /* Títulos de sección más discretos */
+                            .section-title {
+                                background: transparent;
+                                color: #333;
+                                padding: 0;
+                                margin: 25px 0 15px;
+                                font-weight: 500;
+                                font-size: 16px;
+                                border-bottom: 1px solid #eee;
+                                padding-bottom: 8px;
+                            }
+                            
+                            .section-title i {
+                                color: #555;
+                                margin-right: 8px;
+                            }
+                            
+                            /* Grid de evaluación más limpio */
+                            .evaluation-grid {
+                                display: grid;
+                                grid-template-columns: repeat(2, 1fr);
+                                gap: 15px;
+                                margin-bottom: 25px;
+                            }
+                            
+                            .evaluation-item {
+                                background: white;
+                                border-radius: 4px;
+                                padding: 15px;
+                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                            }
+                            
+                            .evaluation-value {
+                                font-size: 18px;
+                                font-weight: 500;
+                                color: #333;
+                                margin-bottom: 8px;
+                            }
+                            
+                            /* Sección de retroalimentación */
+                            .feedback-container {
+                                margin-bottom: 25px;
+                            }
+                            
+                            .feedback-section {
+                                background: white;
+                                border-radius: 4px;
+                                padding: 15px;
+                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                                margin-bottom: 15px;
+                            }
+                            
+                            .feedback-content {
+                                white-space: pre-line;
+                                color: #555;
+                            }
+                            
+                            /* Firma minimalista */
+                            .signatures-section {
+                                margin-top: 30px;
+                            }
+                            
+                            .signature-line {
+                                border-top: 1px solid #ddd;
+                                padding-top: 10px;
+                                font-size: 14px;
+                                color: #555;
+                            }
                         </style>
 
-                        <!-- Contenedor principal del dashboard -->
-                        <div class="dashboard-container">
-                            <!-- Cabecera del dashboard -->
-                            <div class="dashboard-header">
-                                <div class="dashboard-title">
-                                    <i class="fa fa-clipboard-check"></i>
-                                    <span>Evaluación de Desempeño: <t t-esc="o.name" /></span>
-                                </div>
-                                <div class="dashboard-meta">
-                                    <div class="meta-item">
-                                        <i class="fa fa-calendar-alt"></i>
-                                        <span><t t-esc="o.fecha" t-options='{"widget": "date"}'/></span>
-                                    </div>
-                                    <div class="meta-item">
-                                        <i class="fa fa-user-circle"></i>
-                                        <span><t t-esc="o.nombre_usuario" /></span>
-                                    </div>
-                                </div>
+                        <!-- Encabezado -->
+                        <div class="report-header">
+                            <div class="header-item">
+                                <i class="fa fa-list-ol"></i>
+                                <span>Evaluación: <t t-esc="o.name" /></span>
                             </div>
-                            <!-- Métricas principales destacadas -->
-                            <div class="metrics-grid">
-                                <!-- Puntaje General -->
-                                <div class="metric-card primary">
-                                    <i class="fa fa-award metric-icon"></i>
-                                    <div class="metric-label">Puntaje General</div>
-                                    <div class="metric-value">
-                                        <t t-esc="'%.1f' % o.puntaje_total" />%
-                                    </div>
-                                    <div class="metric-trend">
-                                        <t t-if="o.puntaje_total >= 90">
-                                            <i class="fa fa-circle" style="color: var(--success)"></i> Excelente
-                                        </t>
-                                        <t t-elif="o.puntaje_total >= 80">
-                                            <i class="fa fa-circle" style="color: var(--info)"></i> Bueno
-                                        </t>
-                                        <t t-elif="o.puntaje_total >= 70">
-                                            <i class="fa fa-circle" style="color: var(--warning)"></i> Regular
-                                        </t>
-                                        <t t-else="">
-                                            <i class="fa fa-circle" style="color: var(--danger)"></i> Necesita mejorar
-                                        </t>
-                                    </div>
+                            <div class="header-item">
+                                <i class="fa fa-calendar"></i>
+                                <span><t t-esc="o.fecha" t-options='{"widget": "date"}'/></span>
+                            </div>
+                            <div class="header-item">
+                                <i class="fa fa-user"></i>
+                                <span><t t-esc="o.nombre_usuario" /></span>
+                            </div>
+                        </div>
+
+                        <!-- Métricas Principales -->
+                        <div class="metrics-container">
+                            <!-- Puntaje Total -->
+                            <div class="metric-card score">
+                                <div class="metric-title">
+                                    <i class="fa fa-star"></i>Puntaje
+                                </div>
+                                <div class="metric-value">
+                                    <t t-esc="'%.1f' % o.puntaje_total" />%
+                                </div>
+                                <div class="progress-container">
                                     <div class="progress-bar">
                                         <div
                                             t-attf-class="progress-fill {{
@@ -231,621 +204,245 @@
                                             t-attf-style="width: #{min(o.puntaje_total, 100)}%" />
                                     </div>
                                 </div>
+                            </div>
 
-                                <!-- Reparaciones completadas -->
-                                <div class="metric-card success">
-                                    <i class="fa fa-tools metric-icon"></i>
-                                    <div class="metric-label">Reparaciones completadas</div>
-                                    <div class="metric-value">
-                                        <t t-esc="o.cantidad_reparaciones" />
-                                    </div>
-                                    <div class="metric-trend">
-                                        <t t-if="o.objetivo_reparaciones > 0">
-                                            <span>
-                                                <t t-esc="int((o.cantidad_reparaciones/o.objetivo_reparaciones)*100)" />% del objetivo
-                                            </span>
-                                        </t>
-                                        <t t-else="">
-                                            <span>Sin objetivo definido</span>
-                                        </t>
-                                    </div>
+                            <!-- Reparaciones -->
+                            <div class="metric-card repairs">
+                                <div class="metric-title">
+                                    <i class="fa fa-tools"></i>Reparaciones
+                                </div>
+                                <div class="metric-value">
+                                    <t t-esc="o.cantidad_reparaciones" />
+                                </div>
+                                <div class="progress-container">
                                     <div class="progress-bar">
                                         <div class="progress-fill good"
                                             t-attf-style="width: #{min((o.cantidad_reparaciones/o.objetivo_reparaciones)*100 if o.objetivo_reparaciones > 0 else 0, 100)}%" />
                                     </div>
                                 </div>
+                            </div>
 
-                                <!-- Tickets atendidos -->
-                                <div class="metric-card warning">
-                                    <i class="fa fa-ticket-alt metric-icon"></i>
-                                    <div class="metric-label">Tickets atendidos</div>
-                                    <div class="metric-value">
-                                        <t t-esc="o.cantidad_tickets" />
-                                    </div>
-                                    <div class="metric-trend">
-                                        <t t-if="o.objetivo_tickets > 0">
-                                            <span>
-                                                <t t-esc="int((o.cantidad_tickets/o.objetivo_tickets)*100)" />% del objetivo
-                                            </span>
-                                        </t>
-                                        <t t-else="">
-                                            <span>Sin objetivo definido</span>
-                                        </t>
-                                    </div>
+                            <!-- Tickets -->
+                            <div class="metric-card tickets">
+                                <div class="metric-title">
+                                    <i class="fa fa-ticket-alt"></i>Tickets
+                                </div>
+                                <div class="metric-value">
+                                    <t t-esc="o.cantidad_tickets" />
+                                </div>
+                                <div class="progress-container">
                                     <div class="progress-bar">
                                         <div class="progress-fill good"
                                             t-attf-style="width: #{min((o.cantidad_tickets/o.objetivo_tickets)*100 if o.objetivo_tickets > 0 else 0, 100)}%" />
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Secciones de evaluación -->
-                            <div class="evaluation-sections">
-                                <!-- Estilos para secciones de evaluación -->
-                                <style>
-                                    /* Contenedor de secciones */
-                                    .evaluation-sections {
-                                        display: grid;
-                                        grid-template-columns: 1fr;
-                                        gap: 30px;
-                                        margin-bottom: 30px;
-                                    }
-                                    
-                                    /* Sección de evaluación */
-                                    .evaluation-section {
-                                        background: white;
-                                        border-radius: 8px;
-                                        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-                                        overflow: hidden;
-                                    }
-                                    
-                                    .section-header {
-                                        background: var(--light);
-                                        padding: 15px 20px;
-                                        border-bottom: 1px solid rgba(0,0,0,0.05);
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 10px;
-                                    }
-                                    
-                                    .section-header i {
-                                        color: var(--primary);
-                                        font-size: 1.2rem;
-                                    }
-                                    
-                                    .section-title {
-                                        font-size: 1.1rem;
-                                        font-weight: 600;
-                                        color: var(--dark);
-                                        margin: 0;
-                                    }
-                                    
-                                    .section-body {
-                                        padding: 20px;
-                                    }
-                                    
-                                    /* Grid de elementos de evaluación */
-                                    .evaluation-grid {
-                                        display: grid;
-                                        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                                        gap: 20px;
-                                    }
-                                    
-                                    .evaluation-item {
-                                        background: var(--light);
-                                        border-radius: 6px;
-                                        padding: 15px;
-                                        transition: transform 0.2s;
-                                    }
-                                    
-                                    .evaluation-item:hover {
-                                        transform: translateY(-2px);
-                                        box-shadow: 0 3px 8px rgba(0,0,0,0.05);
-                                    }
-                                    
-                                    .evaluation-label {
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 8px;
-                                        font-size: 0.9rem;
-                                        color: var(--neutral);
-                                        margin-bottom: 8px;
-                                    }
-                                    
-                                    .evaluation-label i {
-                                        color: var(--primary);
-                                    }
-                                    
-                                    .evaluation-value {
-                                        font-size: 1.2rem;
-                                        font-weight: 600;
-                                        color: var(--dark);
-                                        margin-bottom: 10px;
-                                    }
-                                    
-                                    /* Indicador de nivel de evaluación */
-                                    .level-indicator {
-                                        display: flex;
-                                        gap: 3px;
-                                        margin-bottom: 10px;
-                                    }
-                                    
-                                    .level-dot {
-                                        width: 8px;
-                                        height: 8px;
-                                        border-radius: 50%;
-                                        background: var(--light);
-                                    }
-                                    
-                                    .level-dot.active {
-                                        background: var(--primary);
-                                    }
-                                    
-                                    /* Barra de nivel de evaluación */
-                                    .level-bar {
-                                        height: 4px;
-                                        background: var(--light);
-                                        border-radius: 2px;
-                                        overflow: hidden;
-                                    }
-                                    
-                                    .level-fill {
-                                        height: 100%;
-                                        background: var(--primary);
-                                        border-radius: 2px;
-                                    }
-                                </style>
-
-                                <!-- Evaluación Técnica -->
-                                <div class="evaluation-section">
-                                    <div class="section-header">
-                                        <i class="fa fa-cogs"></i>
-                                        <h3 class="section-title">EVALUACIÓN TÉCNICA</h3>
-                                    </div>
-                                    <div class="section-body">
-                                        <div class="evaluation-grid">
-                                            <!-- Calidad del Trabajo -->
-                                            <div class="evaluation-item">
-                                                <div class="evaluation-label">
-                                                    <i class="fa fa-check-circle"></i>
-                                                    <span>Calidad del Trabajo</span>
-                                                </div>
-                                                <div class="evaluation-value">
-                                                    <t t-esc="dict(o._fields['calidad_trabajo'].selection).get(o.calidad_trabajo)" />
-                                                </div>
-                                                <div class="level-indicator">
-                                                    <t t-foreach="range(1, 6)" t-as="i">
-                                                        <div t-attf-class="level-dot {{ 'active' if int(o.calidad_trabajo or '0') >= i else '' }}"></div>
-                                                    </t>
-                                                </div>
-                                                <div class="level-bar">
-                                                    <div class="level-fill" t-attf-style="width: #{int(o.calidad_trabajo or '0')*20}%"></div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Conocimiento Técnico -->
-                                            <div class="evaluation-item">
-                                                <div class="evaluation-label">
-                                                    <i class="fa fa-brain"></i>
-                                                    <span>Conocimiento Técnico</span>
-                                                </div>
-                                                <div class="evaluation-value">
-                                                    <t t-esc="dict(o._fields['conocimiento_tecnico'].selection).get(o.conocimiento_tecnico)" />
-                                                </div>
-                                                <div class="level-indicator">
-                                                    <t t-foreach="range(1, 6)" t-as="i">
-                                                        <div t-attf-class="level-dot {{ 'active' if int(o.conocimiento_tecnico or '0') >= i else '' }}"></div>
-                                                    </t>
-                                                </div>
-                                                <div class="level-bar">
-                                                    <div class="level-fill" t-attf-style="width: #{int(o.conocimiento_tecnico or '0')*20}%"></div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Resolución de Problemas -->
-                                            <div class="evaluation-item">
-                                                <div class="evaluation-label">
-                                                    <i class="fa fa-puzzle-piece"></i>
-                                                    <span>Resolución de Problemas</span>
-                                                </div>
-                                                <div class="evaluation-value">
-                                                    <t t-esc="dict(o._fields['resolucion_problemas'].selection).get(o.resolucion_problemas)" />
-                                                </div>
-                                                <div class="level-indicator">
-                                                    <t t-foreach="range(1, 6)" t-as="i">
-                                                        <div t-attf-class="level-dot {{ 'active' if int(o.resolucion_problemas or '0') >= i else '' }}"></div>
-                                                    </t>
-                                                </div>
-                                                <div class="level-bar">
-                                                    <div class="level-fill" t-attf-style="width: #{int(o.resolucion_problemas or '0')*20}%"></div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Uso de Herramientas -->
-                                            <div class="evaluation-item">
-                                                <div class="evaluation-label">
-                                                    <i class="fa fa-wrench"></i>
-                                                    <span>Uso de Herramientas</span>
-                                                </div>
-                                                <div class="evaluation-value">
-                                                    <t t-esc="dict(o._fields['uso_herramientas'].selection).get(o.uso_herramientas)" />
-                                                </div>
-                                                <div class="level-indicator">
-                                                    <t t-foreach="range(1, 6)" t-as="i">
-                                                        <div t-attf-class="level-dot {{ 'active' if int(o.uso_herramientas or '0') >= i else '' }}"></div>
-                                                    </t>
-                                                </div>
-                                                <div class="level-bar">
-                                                    <div class="level-fill" t-attf-style="width: #{int(o.uso_herramientas or '0')*20}%"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                        <!-- Evaluación Técnica -->
+                        <div class="section-title">
+                            <i class="fa fa-cogs"></i>EVALUACIÓN TÉCNICA
+                        </div>
+                        <div class="evaluation-grid">
+                            <!-- Calidad del Trabajo -->
+                            <div class="evaluation-item">
+                                <div class="metric-title">
+                                    <i class="fa fa-check-circle"></i>Calidad del Trabajo
                                 </div>
-
-                                <!-- Evaluación Actitudinal -->
-                                <div class="evaluation-section">
-                                    <div class="section-header">
-                                        <i class="fa fa-user-check"></i>
-                                        <h3 class="section-title">EVALUACIÓN ACTITUDINAL</h3>
-                                    </div>
-                                    <div class="section-body">
-                                        <div class="evaluation-grid">
-                                            <!-- Puntualidad -->
-                                            <div class="evaluation-item">
-                                                <div class="evaluation-label">
-                                                    <i class="fa fa-clock"></i>
-                                                    <span>Puntualidad</span>
-                                                </div>
-                                                <div class="evaluation-value">
-                                                    <t t-esc="dict(o._fields['puntualidad'].selection).get(o.puntualidad)" />
-                                                </div>
-                                                <div class="level-indicator">
-                                                    <t t-foreach="range(1, 6)" t-as="i">
-                                                        <div t-attf-class="level-dot {{ 'active' if int(o.puntualidad or '0') >= i else '' }}"></div>
-                                                    </t>
-                                                </div>
-                                                <div class="level-bar">
-                                                    <div class="level-fill" t-attf-style="width: #{int(o.puntualidad or '0')*20}%"></div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Compromiso -->
-                                            <div class="evaluation-item">
-                                                <div class="evaluation-label">
-                                                    <i class="fa fa-handshake"></i>
-                                                    <span>Compromiso</span>
-                                                </div>
-                                                <div class="evaluation-value">
-                                                    <t t-esc="dict(o._fields['compromiso'].selection).get(o.compromiso)" />
-                                                </div>
-                                                <div class="level-indicator">
-                                                    <t t-foreach="range(1, 6)" t-as="i">
-                                                        <div t-attf-class="level-dot {{ 'active' if int(o.compromiso or '0') >= i else '' }}"></div>
-                                                    </t>
-                                                </div>
-                                                <div class="level-bar">
-                                                    <div class="level-fill" t-attf-style="width: #{int(o.compromiso or '0')*20}%"></div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Trabajo en Equipo -->
-                                            <div class="evaluation-item">
-                                                <div class="evaluation-label">
-                                                    <i class="fa fa-users"></i>
-                                                    <span>Trabajo en Equipo</span>
-                                                </div>
-                                                <div class="evaluation-value">
-                                                    <t t-esc="dict(o._fields['trabajo_equipo'].selection).get(o.trabajo_equipo)" />
-                                                </div>
-                                                <div class="level-indicator">
-                                                    <t t-foreach="range(1, 6)" t-as="i">
-                                                        <div t-attf-class="level-dot {{ 'active' if int(o.trabajo_equipo or '0') >= i else '' }}"></div>
-                                                    </t>
-                                                </div>
-                                                <div class="level-bar">
-                                                    <div class="level-fill" t-attf-style="width: #{int(o.trabajo_equipo or '0')*20}%"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div class="evaluation-value">
+                                    <t t-esc="dict(o._fields['calidad_trabajo'].selection).get(o.calidad_trabajo)" />
                                 </div>
-
-                                <!-- Atención al Cliente -->
-                                <div class="evaluation-section">
-                                    <div class="section-header">
-                                        <i class="fa fa-headset"></i>
-                                        <h3 class="section-title">ATENCIÓN AL CLIENTE</h3>
-                                    </div>
-                                    <div class="section-body">
-                                        <div class="evaluation-grid">
-                                            <!-- Trato al Cliente -->
-                                            <div class="evaluation-item">
-                                                <div class="evaluation-label">
-                                                    <i class="fa fa-smile"></i>
-                                                    <span>Trato al Cliente</span>
-                                                </div>
-                                                <div class="evaluation-value">
-                                                    <t t-esc="dict(o._fields['trato_cliente'].selection).get(o.trato_cliente)" />
-                                                </div>
-                                                <div class="level-indicator">
-                                                    <t t-foreach="range(1, 6)" t-as="i">
-                                                        <div t-attf-class="level-dot {{ 'active' if int(o.trato_cliente or '0') >= i else '' }}"></div>
-                                                    </t>
-                                                </div>
-                                                <div class="level-bar">
-                                                    <div class="level-fill" t-attf-style="width: #{int(o.trato_cliente or '0')*20}%"></div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Comunicación con Cliente -->
-                                            <div class="evaluation-item">
-                                                <div class="evaluation-label">
-                                                    <i class="fa fa-comments"></i>
-                                                    <span>Comunicación con Cliente</span>
-                                                </div>
-                                                <div class="evaluation-value">
-                                                    <t t-esc="dict(o._fields['comunicacion_cliente'].selection).get(o.comunicacion_cliente)" />
-                                                </div>
-                                                <div class="level-indicator">
-                                                    <t t-foreach="range(1, 6)" t-as="i">
-                                                        <div t-attf-class="level-dot {{ 'active' if int(o.comunicacion_cliente or '0') >= i else '' }}"></div>
-                                                    </t>
-                                                </div>
-                                                <div class="level-bar">
-                                                    <div class="level-fill" t-attf-style="width: #{int(o.comunicacion_cliente or '0')*20}%"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Sección de Retroalimentación -->
-                            <div class="feedback-section-container">
-                                <style>
-                                    /* Contenedor de retroalimentación */
-                                    .feedback-section-container {
-                                        background: white;
-                                        border-radius: 8px;
-                                        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-                                        overflow: hidden;
-                                        margin-bottom: 30px;
-                                    }
-                                    
-                                    .feedback-header {
-                                        background: var(--light);
-                                        padding: 15px 20px;
-                                        border-bottom: 1px solid rgba(0,0,0,0.05);
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 10px;
-                                    }
-                                    
-                                    .feedback-header i {
-                                        color: var(--primary);
-                                        font-size: 1.2rem;
-                                    }
-                                    
-                                    .feedback-title {
-                                        font-size: 1.1rem;
-                                        font-weight: 600;
-                                        color: var(--dark);
-                                        margin: 0;
-                                    }
-                                    
-                                    .feedback-body {
-                                        padding: 20px;
-                                    }
-                                    
-                                    /* Tarjetas de retroalimentación */
-                                    .feedback-cards {
-                                        display: grid;
-                                        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                                        gap: 20px;
-                                    }
-                                    
-                                    .feedback-card {
-                                        background: var(--light);
-                                        border-radius: 6px;
-                                        padding: 20px;
-                                        position: relative;
-                                        transition: transform 0.2s, box-shadow 0.2s;
-                                    }
-                                    
-                                    .feedback-card:hover {
-                                        transform: translateY(-2px);
-                                        box-shadow: 0 3px 8px rgba(0,0,0,0.05);
-                                    }
-                                    
-                                    .feedback-card-header {
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 10px;
-                                        margin-bottom: 15px;
-                                    }
-                                    
-                                    .feedback-card-icon {
-                                        width: 36px;
-                                        height: 36px;
-                                        background: white;
-                                        border-radius: 50%;
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-                                    }
-                                    
-                                    .feedback-card-icon i {
-                                        color: var(--primary);
-                                        font-size: 1rem;
-                                    }
-                                    
-                                    .feedback-card-title {
-                                        font-size: 1rem;
-                                        font-weight: 600;
-                                        color: var(--dark);
-                                        margin: 0;
-                                    }
-                                    
-                                    .feedback-card-content {
-                                        color: var(--dark);
-                                        font-size: 0.95rem;
-                                        white-space: pre-line;
-                                        line-height: 1.6;
-                                    }
-                                    
-                                    /* Firmas más modernas */
-                                    .signatures-container {
-                                        margin-top: 30px;
-                                        margin-bottom: 20px;
-                                    }
-                                    
-                                    .signatures-grid {
-                                        display: grid;
-                                        grid-template-columns: 1fr 1fr;
-                                        gap: 30px;
-                                    }
-                                    
-                                    .signature-block {
-                                        text-align: center;
-                                    }
-                                    
-                                    .signature-line {
-                                        border-top: 2px solid var(--light);
-                                        margin-top: 30px;
-                                        padding-top: 10px;
-                                        position: relative;
-                                    }
-                                    
-                                    .signature-line::before {
-                                        content: '';
-                                        position: absolute;
-                                        left: 50%;
-                                        top: -10px;
-                                        transform: translateX(-50%);
-                                        width: 20px;
-                                        height: 20px;
-                                        background: white;
-                                        border-radius: 50%;
-                                        border: 2px solid var(--light);
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                    }
-                                    
-                                    .signature-title {
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                        gap: 5px;
-                                        font-size: 0.9rem;
-                                        color: var(--neutral);
-                                    }
-                                    
-                                    .signature-title i {
-                                        color: var(--primary);
-                                    }
-                                    
-                                    /* Estilos responsivos */
-                                    @media (max-width: 768px) {
-                                        .metrics-grid, 
-                                        .evaluation-grid,
-                                        .feedback-cards,
-                                        .signatures-grid {
-                                            grid-template-columns: 1fr;
-                                        }
-                                        
-                                        .dashboard-header {
-                                            flex-direction: column;
-                                            align-items: flex-start;
-                                            gap: 15px;
-                                        }
-                                    }
-                                </style>
-
-                                <div class="feedback-header">
-                                    <i class="fa fa-comment-dots"></i>
-                                    <h3 class="feedback-title">RETROALIMENTACIÓN</h3>
-                                </div>
-                                <div class="feedback-body">
-                                    <div class="feedback-cards">
-                                        <!-- Fortalezas -->
-                                        <div class="feedback-card">
-                                            <div class="feedback-card-header">
-                                                <div class="feedback-card-icon">
-                                                    <i class="fa fa-star"></i>
-                                                </div>
-                                                <h4 class="feedback-card-title">Fortalezas Identificadas</h4>
-                                            </div>
-                                            <div class="feedback-card-content">
-                                                <t t-esc="o.fortalezas" />
-                                            </div>
-                                        </div>
-
-                                        <!-- Áreas de Mejora -->
-                                        <div class="feedback-card">
-                                            <div class="feedback-card-header">
-                                                <div class="feedback-card-icon">
-                                                    <i class="fa fa-arrow-up"></i>
-                                                </div>
-                                                <h4 class="feedback-card-title">Áreas de Mejora</h4>
-                                            </div>
-                                            <div class="feedback-card-content">
-                                                <t t-esc="o.areas_mejora" />
-                                            </div>
-                                        </div>
-
-                                        <!-- Plan de Acción -->
-                                        <div class="feedback-card">
-                                            <div class="feedback-card-header">
-                                                <div class="feedback-card-icon">
-                                                    <i class="fa fa-tasks"></i>
-                                                </div>
-                                                <h4 class="feedback-card-title">Plan de Acción</h4>
-                                            </div>
-                                            <div class="feedback-card-content">
-                                                <t t-esc="o.plan_accion" />
-                                            </div>
-                                        </div>
-
-                                        <!-- Comentarios -->
-                                        <div class="feedback-card">
-                                            <div class="feedback-card-header">
-                                                <div class="feedback-card-icon">
-                                                    <i class="fa fa-comment"></i>
-                                                </div>
-                                                <h4 class="feedback-card-title">Comentarios Adicionales</h4>
-                                            </div>
-                                            <div class="feedback-card-content">
-                                                <t t-esc="o.comentarios" />
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{int(o.calidad_trabajo or '0')*20}%" />
                                 </div>
                             </div>
 
-                            <!-- Sección de Firmas -->
-                            <div class="signatures-container">
-                                <div class="signatures-grid">
-                                    <div class="signature-block">
-                                        <div class="signature-line">
-                                            <div class="signature-title">
-                                                <i class="fa fa-user-tie"></i>
-                                                <span>Evaluador</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="signature-block">
-                                        <div class="signature-line">
-                                            <div class="signature-title">
-                                                <i class="fa fa-user"></i>
-                                                <span>Técnico Evaluado</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                            <!-- Conocimiento Técnico -->
+                            <div class="evaluation-item">
+                                <div class="metric-title">
+                                    <i class="fa fa-brain"></i>Conocimiento Técnico
+                                </div>
+                                <div class="evaluation-value">
+                                    <t t-esc="dict(o._fields['conocimiento_tecnico'].selection).get(o.conocimiento_tecnico)" />
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{int(o.conocimiento_tecnico or '0')*20}%" />
                                 </div>
                             </div>
 
+                            <!-- Resolución de Problemas -->
+                            <div class="evaluation-item">
+                                <div class="metric-title">
+                                    <i class="fa fa-puzzle-piece"></i>Resolución de Problemas
+                                </div>
+                                <div class="evaluation-value">
+                                    <t t-esc="dict(o._fields['resolucion_problemas'].selection).get(o.resolucion_problemas)" />
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{int(o.resolucion_problemas or '0')*20}%" />
+                                </div>
+                            </div>
+
+                            <!-- Uso de Herramientas -->
+                            <div class="evaluation-item">
+                                <div class="metric-title">
+                                    <i class="fa fa-wrench"></i>Uso de Herramientas
+                                </div>
+                                <div class="evaluation-value">
+                                    <t t-esc="dict(o._fields['uso_herramientas'].selection).get(o.uso_herramientas)" />
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{int(o.uso_herramientas or '0')*20}%" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Evaluación Actitudinal -->
+                        <div class="section-title">
+                            <i class="fa fa-user-check"></i>EVALUACIÓN ACTITUDINAL
+                        </div>
+                        <div class="evaluation-grid">
+                            <!-- Puntualidad -->
+                            <div class="evaluation-item">
+                                <div class="metric-title">
+                                    <i class="fa fa-clock"></i>Puntualidad
+                                </div>
+                                <div class="evaluation-value">
+                                    <t t-esc="dict(o._fields['puntualidad'].selection).get(o.puntualidad)" />
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{int(o.puntualidad or '0')*20}%" />
+                                </div>
+                            </div>
+
+                            <!-- Compromiso -->
+                            <div class="evaluation-item">
+                                <div class="metric-title">
+                                    <i class="fa fa-handshake"></i>Compromiso
+                                </div>
+                                <div class="evaluation-value">
+                                    <t t-esc="dict(o._fields['compromiso'].selection).get(o.compromiso)" />
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{int(o.compromiso or '0')*20}%" />
+                                </div>
+                            </div>
+
+                            <!-- Trabajo en Equipo -->
+                            <div class="evaluation-item">
+                                <div class="metric-title">
+                                    <i class="fa fa-users"></i>Trabajo en Equipo
+                                </div>
+                                <div class="evaluation-value">
+                                    <t t-esc="dict(o._fields['trabajo_equipo'].selection).get(o.trabajo_equipo)" />
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{int(o.trabajo_equipo or '0')*20}%" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Atención al Cliente -->
+                        <div class="section-title">
+                            <i class="fa fa-headset"></i>ATENCIÓN AL CLIENTE
+                        </div>
+                        <div class="evaluation-grid">
+                            <!-- Trato al Cliente -->
+                            <div class="evaluation-item">
+                                <div class="metric-title">
+                                    <i class="fa fa-smile"></i>Trato al Cliente
+                                </div>
+                                <div class="evaluation-value">
+                                    <t t-esc="dict(o._fields['trato_cliente'].selection).get(o.trato_cliente)" />
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{int(o.trato_cliente or '0')*20}%" />
+                                </div>
+                            </div>
+
+                            <!-- Comunicación con Cliente -->
+                            <div class="evaluation-item">
+                                <div class="metric-title">
+                                    <i class="fa fa-comments"></i>Comunicación con Cliente
+                                </div>
+                                <div class="evaluation-value">
+                                    <t t-esc="dict(o._fields['comunicacion_cliente'].selection).get(o.comunicacion_cliente)" />
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{int(o.comunicacion_cliente or '0')*20}%" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Retroalimentación -->
+                        <div class="section-title">
+                            <i class="fa fa-comments"></i>RETROALIMENTACIÓN
+                        </div>
+                        <div class="feedback-container">
+                            <!-- Fortalezas -->
+                            <div class="feedback-section">
+                                <div class="metric-title">
+                                    <i class="fa fa-star"></i>Fortalezas Identificadas
+                                </div>
+                                <div class="feedback-content">
+                                    <t t-esc="o.fortalezas" />
+                                </div>
+                            </div>
+
+                            <!-- Áreas de Mejora -->
+                            <div class="feedback-section">
+                                <div class="metric-title">
+                                    <i class="fa fa-arrow-up"></i>Áreas de Mejora
+                                </div>
+                                <div class="feedback-content">
+                                    <t t-esc="o.areas_mejora" />
+                                </div>
+                            </div>
+
+                            <!-- Plan de Acción -->
+                            <div class="feedback-section">
+                                <div class="metric-title">
+                                    <i class="fa fa-tasks"></i>Plan de Acción
+                                </div>
+                                <div class="feedback-content">
+                                    <t t-esc="o.plan_accion" />
+                                </div>
+                            </div>
+
+                            <!-- Comentarios -->
+                            <div class="feedback-section">
+                                <div class="metric-title">
+                                    <i class="fa fa-comment"></i>Comentarios Adicionales
+                                </div>
+                                <div class="feedback-content">
+                                    <t t-esc="o.comentarios" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Firmas -->
+                        <div class="signatures-section">
+                            <div class="row mt-4">
+                                <div class="col-6 text-center">
+                                    <div class="signature-line">
+                                        <i class="fa fa-user-tie"></i> Evaluador
+                                    </div>
+                                </div>
+                                <div class="col-6 text-center">
+                                    <div class="signature-line">
+                                        <i class="fa fa-user"></i> Técnico Evaluado
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </t>
