@@ -37,42 +37,43 @@ class InspeccionController(http.Controller):
         
         vals = {
             'alquiler_id': alquiler.id,
-            'punto_corriente': post.get('punto_corriente'),
-            'voltaje': float(post.get('voltaje', 0)),
-            'punto_red': post.get('punto_red'),
-            'wifi': post.get('wifi'),
-            'area_sistemas': post.get('area_sistemas') == 'on',  # Checkbox enviado como "on"
-            'contacto_sistemas': post.get('contacto_sistemas'),
-            
+            'punto_corriente': post.get('punto_corriente') or '',
+            'voltaje': float(post.get('voltaje') or 0),
+            'punto_red': post.get('punto_red') or '',
+            'wifi': post.get('wifi') or '',
+            'area_sistemas': post.get('area_sistemas') == 'on',
+            'contacto_sistemas': post.get('contacto_sistemas') or '',
+
             # Control de Impresión
             'control_impresion': post.get('control_impresion') == 'on',
-            'tipo_control': post.get('tipo_control'),
-            'cantidad_usuarios': int(post.get('cantidad_usuarios', 0)),
+            'tipo_control': post.get('tipo_control') or '',
+            'cantidad_usuarios': int(post.get('cantidad_usuarios') or 0),
             'requiere_reportes': post.get('requiere_reportes') == 'on',
-            'frecuencia_reportes': post.get('frecuencia_reportes'),
-            
+            'frecuencia_reportes': post.get('frecuencia_reportes') or '',
+
             # Entorno de PCs
-            'cantidad_windows': int(post.get('cantidad_windows', 0)),
-            'cantidad_mac': int(post.get('cantidad_mac', 0)),
-            'cantidad_linux': int(post.get('cantidad_linux', 0)),
-            
+            'cantidad_windows': int(post.get('cantidad_windows') or 0),
+            'cantidad_mac': int(post.get('cantidad_mac') or 0),
+            'cantidad_linux': int(post.get('cantidad_linux') or 0),
+
             # Configuración de Escaneo
             'usar_smb': post.get('usar_smb') == 'on',
             'usar_ftp': post.get('usar_ftp') == 'on',
             'usar_email': post.get('usar_email') == 'on',
-            'tipo_servidor_email': post.get('tipo_servidor_email'),
-            'servidor_email_propio': post.get('servidor_email_propio'),
-            
+            'tipo_servidor_email': post.get('tipo_servidor_email') or '',
+            # 'servidor_email_propio': post.get('servidor_email_propio') or '',  # solo si lo implementas
+
             # Espacio Físico y Acceso
-            'piso': int(post.get('piso', 0)),
+            'piso': int(post.get('piso') or 0),
             'ascensor': post.get('ascensor') == 'on',
-            'espacio': float(post.get('espacio', 0)),
-            'ancho_pasillo': float(post.get('ancho_pasillo', 0)),
+            'espacio': float(post.get('espacio') or 0),
+            'ancho_pasillo': float(post.get('ancho_pasillo') or 0),
             'tiene_estacionamiento': post.get('tiene_estacionamiento') == 'on',
-            'observaciones_estacionamiento': post.get('observaciones_estacionamiento'),
-            
-            'observaciones': post.get('observaciones')
+            'observaciones_estacionamiento': post.get('observaciones_estacionamiento') or '',
+
+            'observaciones': post.get('observaciones') or ''
         }
+
 
                 
         # Si ya existe una inspección anterior, actualizamos
