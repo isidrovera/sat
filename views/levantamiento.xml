@@ -692,7 +692,7 @@ document.addEventListener("DOMContentLoaded", function() {
         contactoSistemasDiv.classList.toggle('d-none', !areaSistemasCheck.checked);
     }
     
-    if (areaSistemasCheck && contactoSistemasDiv) {
+    if (areaSistemasCheck &amp;&amp; contactoSistemasDiv) {
         areaSistemasCheck.addEventListener('change', toggleContactoSistemas);
         // Inicializar estado
         toggleContactoSistemas();
@@ -781,7 +781,7 @@ document.addEventListener("DOMContentLoaded", function() {
     numericalInputs.forEach(input =&gt; {
         input.addEventListener('change', function() {
             const min = parseFloat(this.min);
-            if (this.value && parseFloat(this.value) &lt; min) {
+            if (this.value &amp;&amp; parseFloat(this.value) &lt; min) {
                 this.value = min;
             }
         });
@@ -841,6 +841,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 }
 </style>
+</t>
     </template>
 
     <template id="gracias_inspeccion_template">
