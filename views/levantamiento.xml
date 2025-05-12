@@ -445,12 +445,12 @@
                                 <i class="fa fa-chart-bar me-2"></i> Requiere reportes de uso
                             </label>
                         </div>
-                        <select name="frecuencia_reportes" class="form-select" id="frecuencia_reportes" disabled>
-                            <option value="">Frecuencia de reportes...</option>
-                            <option value="diario">Diario</option>
-                            <option value="semanal">Semanal</option>
-                            <option value="mensual">Mensual</option>
-                        </select>
+                        <select name="frecuencia_reportes" class="form-select" id="frecuencia_reportes">
+                                <option value="">Frecuencia de reportes...</option>
+                                <option value="diario">Diario</option>
+                                <option value="semanal">Semanal</option>
+                                <option value="mensual">Mensual</option>
+                            </select>
                     </div>
                 </div>
             </div>
