@@ -188,660 +188,626 @@
                 }
             </style>
 
-            <!-- Continuación del template con mejoras para las secciones específicas -->
-
-<!-- Título y sección de Levantamiento de Información -->
-<div class="section-card">
-    <div class="card-header bg-secondary text-white">
-        <div class="d-flex align-items-center">
-            <div class="icon-circle bg-white text-secondary">
-                <i class="fa fa-clipboard-list"></i>
-            </div>
-            <h3 class="mb-0 fs-4">Levantamiento de Información para la Instalación</h3>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="alert alert-info bg-info bg-opacity-10 border-0">
-            <i class="fa fa-info-circle me-2 fs-5"></i>
-            <div>
-                <p class="mb-0">Por favor, complete la siguiente información para asegurar una instalación exitosa del equipo. Todos los campos con <span class="text-danger">*</span> son obligatorios.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Sección de Instalación Eléctrica Mejorada -->
-<div class="section-card">
-    <div class="card-header bg-warning text-white">
-        <div class="d-flex align-items-center">
-            <div class="icon-circle bg-white text-warning">
-                <i class="fa fa-bolt"></i>
-            </div>
-            <h3 class="mb-0 fs-4">Instalación Eléctrica</h3>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="alert alert-warning bg-warning bg-opacity-10 border-0">
-            <i class="fa fa-exclamation-triangle me-2 fs-5"></i>
-            <div>
-                <p class="mb-0">Para una correcta instalación, asegúrese de que el punto de corriente sea estable y suministre un voltaje de 220V.</p>
-            </div>
-        </div>
-        <div class="row g-4">
-            <!-- Campo Punto de Corriente -->
-            <div class="col-md-6">
-                <div class="form-group mb-3">
-                    <label class="form-label">
-                        <i class="fa fa-plug me-2"></i> ¿Cuenta con un punto de corriente cercano? <span class="text-danger">*</span>
-                        <i class="fa fa-question-circle info-tooltip" data-bs-toggle="tooltip" title="Seleccione si el área tiene un punto de corriente disponible."></i>
-                    </label>
-                    <select name="punto_corriente" class="form-select" required="required">
-                        <option value="">Seleccionar...</option>
-                        <option value="si">Sí</option>
-                        <option value="no">No</option>
-                        <option value="pendiente">Requiere instalación</option>
-                    </select>
-                    <div class="invalid-feedback">Por favor, seleccione una opción.</div>
-                </div>
-            </div>
-
-            <!-- Campo Voltaje -->
-            <div class="col-md-6">
-                <div class="form-group mb-3">
-                    <label class="form-label">
-                        <i class="fa fa-battery-three-quarters me-2"></i> Voltaje medido (V) <span class="text-danger">*</span>
-                        <i class="fa fa-question-circle info-tooltip" data-bs-toggle="tooltip" title="Indique el voltaje medido en el punto de corriente."></i>
-                    </label>
-                    <div class="input-group">
-                        <input type="number" name="voltaje" class="form-control" required="required" step="0.1" placeholder="220" min="200" max="240" />
-                        <span class="input-group-text">V</span>
-                    </div>
-                    <div class="invalid-feedback">Por favor, ingrese un voltaje válido entre 200V y 240V.</div>
-                    <div class="form-text">El voltaje recomendado es 220V.</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Sección de Infraestructura de Red Mejorada -->
-<div class="section-card">
-    <div class="card-header bg-info text-white">
-        <div class="d-flex align-items-center">
-            <div class="icon-circle bg-white text-info">
-                <i class="fa fa-network-wired"></i>
-            </div>
-            <h3 class="mb-0 fs-4">Infraestructura de Red</h3>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="alert alert-info bg-info bg-opacity-10 border-0">
-            <i class="fa fa-info-circle me-2 fs-5"></i>
-            <div>
-                <p class="mb-0">Todas las PCs deben tener IP fija para garantizar la comunicación estable con el equipo.</p>
-            </div>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-lg-6">
-                <div class="form-group mb-3">
-                    <label class="form-label">
-                        <i class="fa fa-ethernet me-2"></i> Punto de Red <span class="text-danger">*</span>
-                        <i class="fa fa-question-circle info-tooltip" data-bs-toggle="tooltip" title="Se requiere un punto de red para la conexión del equipo"></i>
-                    </label>
-                    <select name="punto_red" class="form-select" required="required">
-                        <option value="">Seleccionar...</option>
-                        <option value="si">Sí cuenta con punto de red</option>
-                        <option value="no">No cuenta con punto de red</option>
-                        <option value="pendiente">Se instalará punto de red</option>
-                    </select>
-                    <div class="invalid-feedback">Por favor, seleccione una opción.</div>
-                    <div class="form-text">Es necesario un punto de red cercano al equipo</div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="form-group mb-3">
-                    <label class="form-label">
-                        <i class="fa fa-wifi me-2"></i> WiFi Disponible <span class="text-danger">*</span>
-                    </label>
-                    <select name="wifi" class="form-select" required="required">
-                        <option value="">Seleccionar...</option>
-                        <option value="si">Sí</option>
-                        <option value="no">No</option>
-                    </select>
-                    <div class="invalid-feedback">Por favor, seleccione una opción.</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row mt-4">
-            <div class="col-lg-6">
-                <div class="form-group mb-3">
-                    <label class="form-label">
-                        <i class="fa fa-laptop-code me-2"></i> ¿Cuenta con área de sistemas?
-                    </label>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="area_sistemas" id="area_sistemas" />
-                        <label class="form-check-label" for="area_sistemas">Sí, contamos con área de TI</label>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6" id="contacto_sistemas_div">
-                <div class="form-group mb-3">
-                    <label class="form-label">
-                        <i class="fa fa-id-card me-2"></i> Contacto del área de sistemas
-                    </label>
-                    <input type="text" name="contacto_sistemas" class="form-control" placeholder="Nombre y forma de contacto" />
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Entorno de PCs Mejorado -->
-<div class="section-card">
-    <div class="card-header bg-primary text-white">
-        <div class="d-flex align-items-center">
-            <div class="icon-circle bg-white text-primary">
-                <i class="fa fa-desktop"></i>
-            </div>
-            <h3 class="mb-0 fs-4">Entorno de PCs</h3>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="form-group mb-3">
-                    <label class="form-label d-flex align-items-center">
-                        <i class="fa fa-windows me-2"></i> PCs Windows <span class="text-danger">*</span>
-                        <i class="fa fa-question-circle info-tooltip" data-bs-toggle="tooltip" title="Cantidad de computadoras con Windows que necesitarán acceso"></i>
-                    </label>
-                    <div class="input-group">
-                        <input type="number" name="cantidad_windows" class="form-control" required="required" min="0" value="0" />
-                        <span class="input-group-text">PCs</span>
-                    </div>
-                    <div class="invalid-feedback">Por favor, ingrese un número válido.</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="form-group mb-3">
-                    <label class="form-label d-flex align-items-center">
-                        <i class="fa fa-apple me-2"></i> PCs Mac <span class="text-danger">*</span>
-                        <i class="fa fa-question-circle info-tooltip" data-bs-toggle="tooltip" title="Cantidad de computadoras Mac que necesitarán acceso"></i>
-                    </label>
-                    <div class="input-group">
-                        <input type="number" name="cantidad_mac" class="form-control" required="required" min="0" value="0" />
-                        <span class="input-group-text">PCs</span>
-                    </div>
-                    <div class="invalid-feedback">Por favor, ingrese un número válido.</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="form-group mb-3">
-                    <label class="form-label d-flex align-items-center">
-                        <i class="fa fa-linux me-2"></i> PCs Linux <span class="text-danger">*</span>
-                        <i class="fa fa-question-circle info-tooltip" data-bs-toggle="tooltip" title="Cantidad de computadoras Linux que necesitarán acceso"></i>
-                    </label>
-                    <div class="input-group">
-                        <input type="number" name="cantidad_linux" class="form-control" required="required" min="0" value="0" />
-                        <span class="input-group-text">PCs</span>
-                    </div>
-                    <div class="invalid-feedback">Por favor, ingrese un número válido.</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Control de Impresión Mejorado -->
-<div class="section-card">
-    <div class="card-header bg-success text-white">
-        <div class="d-flex align-items-center">
-            <div class="icon-circle bg-white text-success">
-                <i class="fa fa-user-lock"></i>
-            </div>
-            <h3 class="mb-0 fs-4">Control de Impresión</h3>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="form-check form-switch mb-4">
-            <input class="form-check-input" type="checkbox" name="control_impresion" id="control_impresion" />
-            <label class="form-check-label fs-5" for="control_impresion">
-                <i class="fa fa-shield-alt me-2"></i> Activar control de impresión
-            </label>
-        </div>
-
-        <div id="opciones_control_impresion" class="border rounded p-4 bg-light">
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label class="form-label d-flex align-items-center">
-                            <i class="fa fa-users-cog me-2"></i> Tipo de Control
-                            <i class="fa fa-question-circle info-tooltip" data-bs-toggle="tooltip" 
-                               title="Seleccione cómo se organizará el control de impresión"></i>
-                        </label>
-                        <select name="tipo_control" class="form-select">
-                            <option value="">Seleccionar...</option>
-                            <option value="usuario">Por Usuario</option>
-                            <option value="departamento">Por Departamento</option>
-                            <option value="proyecto">Por Proyecto</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label class="form-label d-flex align-items-center">
-                            <i class="fa fa-users me-2"></i> Cantidad de Usuarios
-                            <i class="fa fa-question-circle info-tooltip" data-bs-toggle="tooltip"
-                               title="Número total de usuarios que necesitarán acceso"></i>
-                        </label>
-                        <input type="number" name="cantidad_usuarios" class="form-control" min="0" />
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="requiere_reportes" id="requiere_reportes" />
-                            <label class="form-check-label" for="requiere_reportes">
-                                <i class="fa fa-chart-bar me-2"></i> Requiere reportes de uso
-                            </label>
+            <div class="container my-5">
+                <!-- Mensaje informativo IP fija -->
+                <!--<div class="alert alert-info mb-4" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fa fa-info-circle fa-2x me-3"></i>
+                        <div>
+                            <h4 class="alert-heading mb-1">Información Importante</h4>
+                            <p class="mb-0">Para una correcta instalación y funcionamiento del equipo, todas las computadoras deben tener IP fija configurada.</p>
                         </div>
-                        <select name="frecuencia_reportes" class="form-select" id="frecuencia_reportes">
-                                <option value="">Frecuencia de reportes...</option>
-                                <option value="diario">Diario</option>
-                                <option value="semanal">Semanal</option>
-                                <option value="mensual">Mensual</option>
-                            </select>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+                </div>-->
 
-<!-- Configuración de Escaneo Mejorada -->
-<div class="section-card">
-    <div class="card-header bg-warning text-dark">
-        <div class="d-flex align-items-center">
-            <div class="icon-circle bg-white text-warning">
-                <i class="fa fa-scanner"></i>
-            </div>
-            <h3 class="mb-0 fs-4">Configuración de Escaneo</h3>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="alert alert-warning bg-warning bg-opacity-10 border-0">
-            <i class="fa fa-exclamation-triangle me-2 fs-5"></i>
-            <div>
-                <p class="mb-0">Recuerde que para utilizar el escaneo a FTP, todas las PCs deben tener IP fija configurada.</p>
-            </div>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-md-6">
-                <div class="card h-100 border-0 bg-light rounded-3">
-                    <div class="card-body">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="usar_smb" id="usar_smb" />
-                            <label class="form-check-label fs-5" for="usar_smb">
-                                <i class="fa fa-folder-open me-2"></i> Escaneo a carpeta compartida (SMB)
-                            </label>
+                <!-- Alerta de inspección previa 
+                <div t-if="alquiler.resultado_inspeccion" class="alert alert-warning mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="fa fa-exclamation-triangle fa-2x me-3"></i>
+                        <div>
+                            <h4 class="alert-heading mb-1">Inspección Previa Existente</h4>
+                            <p>Estado actual: <strong t-field="alquiler.resultado_inspeccion.estado"/></p>
+                            <t t-if="alquiler.resultado_inspeccion.requisitos_pendientes">
+                                <hr class="my-2"/>
+                                <p class="mb-0">Requisitos pendientes:</p>
+                                <pre t-field="alquiler.resultado_inspeccion.requisitos_pendientes"/>
+                            </t>
                         </div>
-                        <small class="text-muted d-block mt-2">
-                            <i class="fa fa-info-circle me-1"></i> Permite escanear directamente a carpetas compartidas en la red
-                        </small>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card h-100 border-0 bg-light rounded-3">
-                    <div class="card-body">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="usar_ftp" id="usar_ftp" />
-                            <label class="form-check-label fs-5" for="usar_ftp">
-                                <i class="fa fa-upload me-2"></i> Escaneo a FTP
-                            </label>
-                        </div>
-                        <small class="text-muted d-block mt-2">
-                            <i class="fa fa-info-circle me-1"></i> Se requiere IP fija en todas las PCs para esta funcionalidad
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
+                </div>-->
 
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card border-0 bg-light rounded-3">
-                    <div class="card-body">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="usar_email" id="usar_email" />
-                            <label class="form-check-label fs-5" for="usar_email">
-                                <i class="fa fa-envelope me-2"></i> Escaneo a Email
-                            </label>
+                <form action="/inspeccion/submit" method="post" class="needs-validation"
+                    novalidate="novalidate">
+                    <input type="hidden" name="token" t-att-value="alquiler.token" />
+
+                    <!-- Información del Cliente 
+                    <div class="section-card bg-light">
+                        <div class="card-header bg-primary text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white text-primary">
+                                    <i class="fa fa-building"></i>
+                                </div>
+                                <h3 class="mb-0">Información del Cliente</h3>
+                            </div>
                         </div>
-                        <div id="opciones_email" class="mt-3 border-top pt-3">
+                        <div class="card-body">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">
+                                            <i class="fa fa-user me-2"></i>Cliente
+                                        </label>
+                                        <p class="form-control-static fs-5"><t t-esc="alquiler.cliente_id.name"/></p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">
+                                            <i class="fa fa-map-marker-alt me-2"></i>Dirección
+                                        </label>
+                                        <p class="form-control-static fs-5"><t t-esc="alquiler.direccion"/></p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">
+                                            <i class="fa fa-print me-2"></i>Equipo
+                                        </label>
+                                        <p class="form-control-static fs-5"><t t-esc="alquiler.name.name"/></p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">
+                                            <i class="fa fa-barcode me-2"></i>Serie
+                                        </label>
+                                        <p class="form-control-static fs-5"><t t-esc="alquiler.serie"/></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>-->
+                    <!-- Título de Levantamiento de Información -->
+                    <div class="section-card">
+                        <div class="card-header bg-secondary text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white text-secondary">
+                                    <i class="fa fa-clipboard-list"></i>
+                                </div>
+                                <h3 class="mb-0">Levantamiento de Información para la Instalación</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">
+                                Por favor, complete la siguiente información para asegurar una instalación exitosa del equipo. Todos los campos marcados como obligatorios deben ser llenados antes de enviar el formulario.
+                            </p>
+                        </div>
+                    </div>
+
+                                        <!-- Sección de Instalación Eléctrica -->
+                    <div class="section-card">
+                        <div class="card-header bg-warning text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white text-warning">
+                                    <i class="fa fa-bolt"></i>
+                                </div>
+                                <h3 class="mb-0">Instalación Eléctrica</h3>
+                            </div>
+                            <div class="invalid-feedback">
+                                Por favor, ingrese un voltaje válido.
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning bg-warning bg-opacity-10 border-0">
+                                <i class="fa fa-exclamation-triangle me-2"></i> Para una correcta
+                                instalación, asegúrese de que el punto de corriente sea estable y
+                                suministre un voltaje de 220V. </div>
+                            <div class="row g-4">
+                                <!-- Campo Punto de Corriente -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fa fa-plug me-2"></i> ¿Cuenta con un punto de
+                                            corriente cercano? <i
+                                                class="fa fa-question-circle info-tooltip ms-1"
+                                                title="Seleccione si el área tiene un punto de corriente disponible."></i>
+                                        </label>
+                                        <select name="punto_corriente" class="form-select"
+                                            required="required">
+                                            <option value="">Seleccionar...</option>
+                                            <option value="si">Sí</option>
+                                            <option value="no">No</option>
+                                            <option value="pendiente">Requiere instalación</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Campo Voltaje -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fa fa-battery-three-quarters me-2"></i>
+                                            Voltaje medido (V) <i
+                                                class="fa fa-question-circle info-tooltip ms-1"
+                                                title="Indique el voltaje medido en el punto de corriente."></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" name="voltaje" class="form-control"
+                                                required="required" step="0.1" placeholder="220" />
+                                            <span class="input-group-text">V</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="card-header bg-info text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white text-info">
+                                    <i class="fa fa-network-wired"></i>
+                                </div>
+                                <h3 class="mb-0">Infraestructura de Red</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info bg-info bg-opacity-10 border-0">
+                                <i class="fa fa-info-circle me-2"></i> Todas las PCs deben tener IP
+                                fija para garantizar la comunicación estable con el equipo. </div>
+
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fa fa-ethernet me-2"></i> Punto de Red <i
+                                                class="fa fa-question-circle info-tooltip ms-1"
+                                                title="Se requiere un punto de red para la conexión del equipo"></i>
+                                        </label>
+                                        <select name="punto_red" class="form-select"
+                                            required="required">
+                                            <option value="">Seleccionar...</option>
+                                            <option value="si">Sí cuenta con punto de red</option>
+                                            <option value="no">No cuenta con punto de red</option>
+                                            <option value="pendiente">Se instalará punto de red</option>
+                                        </select>
+                                        <div class="form-text">Es necesario un punto de red cercano
+                                            al equipo</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fa fa-wifi me-2"></i> WiFi Disponible </label>
+                                        <select name="wifi" class="form-select" required="required">
+                                            <option value="si">Sí</option>
+                                            <option value="no">No</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fa fa-laptop-code me-2"></i> ¿Cuenta con área
+                                            de sistemas? </label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox"
+                                                name="area_sistemas" id="area_sistemas" />
+                                            <label class="form-check-label" for="area_sistemas">Sí,
+                                                contamos con área de TI</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6" id="contacto_sistemas_div">
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fa fa-id-card me-2"></i> Contacto del área de
+                                            sistemas </label>
+                                        <input type="text" name="contacto_sistemas"
+                                            class="form-control"
+                                            placeholder="Nombre y forma de contacto" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Entorno de PCs -->
+                    <div class="section-card">
+                        <div class="card-header bg-primary text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white text-primary">
+                                    <i class="fa fa-desktop"></i>
+                                </div>
+                                <h3 class="mb-0">Entorno de PCs</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label d-flex align-items-center">
+                                            <i class="fa fa-windows "></i>  PCs Windows <i
+                                                class="fa fa-question-circle info-tooltip ms-2"
+                                                title="Cantidad de computadoras con Windows que necesitarán acceso"></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" name="cantidad_windows"
+                                                class="form-control"
+                                                required="required" min="0" value="0" />
+                                            <span class="input-group-text">PCs</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label d-flex align-items-center">
+                                            <i class="fa fa-apple"></i> PCs Mac <i
+                                                class="fa fa-question-circle info-tooltip ms-2"
+                                                title="Cantidad de computadoras Mac que necesitarán acceso"></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" name="cantidad_mac"
+                                                class="form-control"
+                                                required="required" min="0" value="0" />
+                                            <span class="input-group-text">PCs</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label d-flex align-items-center">
+                                            <i class="fa fa-linux "></i>  PCs Linux <i
+                                                class="fa fa-question-circle info-tooltip ms-2"
+                                                title="Cantidad de computadoras Linux que necesitarán acceso"></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" name="cantidad_linux"
+                                                class="form-control"
+                                                required="required" min="0" value="0" />
+                                            <span class="input-group-text">PCs</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-card">
+                        <div class="card-header bg-success text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white text-success">
+                                    <i class="fa fa-user-lock"></i>
+                                </div>
+                                <h3 class="mb-0">Control de Impresión</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check form-switch mb-4">
+                                <input class="form-check-input" type="checkbox"
+                                    name="control_impresion" id="control_impresion" />
+                                <label class="form-check-label fs-5" for="control_impresion">
+                                    <i class="fa fa-shield-alt me-2"></i> Activar control de
+                                    impresión </label>
+                            </div>
+
+                            <div id="opciones_control_impresion" class="border rounded p-4 bg-light">
+                                <div class="row g-4">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label d-flex align-items-center">
+                                                <i class="fa fa-users-cog me-2"></i> Tipo de Control <i
+                                                    class="fa fa-question-circle info-tooltip ms-2"
+                                                    title="Seleccione cómo se organizará el control de impresión"></i>
+                                            </label>
+                                            <select name="tipo_control" class="form-select">
+                                                <option value="">Seleccionar...</option>
+                                                <option value="usuario">Por Usuario</option>
+                                                <option value="departamento">Por Departamento</option>
+                                                <option value="proyecto">Por Proyecto</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label d-flex align-items-center">
+                                                <i class="fa fa-users me-2"></i> Cantidad de
+                                                Usuarios <i
+                                                    class="fa fa-question-circle info-tooltip ms-2"
+                                                    title="Número total de usuarios que necesitarán acceso"></i>
+                                            </label>
+                                            <input type="number" name="cantidad_usuarios"
+                                                class="form-control" min="0" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox"
+                                                    name="requiere_reportes" id="requiere_reportes" />
+                                                <label class="form-check-label"
+                                                    for="requiere_reportes">
+                                                    <i class="fa fa-chart-bar me-2"></i> Requiere
+                                                    reportes de uso </label>
+                                            </div>
+                                            <select name="frecuencia_reportes" class="form-select"
+                                                id="frecuencia_reportes">
+                                                <option value="">Frecuencia de reportes...</option>
+                                                <option value="diario">Diario</option>
+                                                <option value="semanal">Semanal</option>
+                                                <option value="mensual">Mensual</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuración de Escaneo -->
+                    <div class="section-card">
+                        <div class="card-header bg-warning text-dark py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white text-warning">
+                                    <i class="fa fa-scanner"></i>
+                                </div>
+                                <h3 class="mb-0">Configuración de Escaneo</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning bg-warning bg-opacity-10 border-0">
+                                <i class="fa fa-exclamation-triangle me-2"></i> Recuerde que para
+                                utilizar el escaneo a FTP, todas las PCs deben tener IP fija
+                                configurada. </div>
+
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="card h-100 border-0 bg-light">
+                                        <div class="card-body">
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox"
+                                                    name="usar_smb" id="usar_smb" />
+                                                <label class="form-check-label fs-5" for="usar_smb">
+                                                    <i class="fa fa-folder-open me-2"></i> Escaneo a
+                                                    carpeta compartida (SMB) </label>
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fa fa-info-circle me-1"></i> Permite
+                                                escanear directamente a carpetas compartidas en la
+                                                red </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card h-100 border-0 bg-light">
+                                        <div class="card-body">
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox"
+                                                    name="usar_ftp" id="usar_ftp" />
+                                                <label class="form-check-label fs-5" for="usar_ftp">
+                                                    <i class="fa fa-upload me-2"></i> Escaneo a FTP </label>
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fa fa-info-circle me-1"></i> Se requiere
+                                                IP fija en todas las PCs para esta funcionalidad </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body">
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox"
+                                                    name="usar_email" id="usar_email" />
+                                                <label class="form-check-label fs-5"
+                                                    for="usar_email">
+                                                    <i class="fa fa-envelope me-2"></i> Escaneo a
+                                                    Email </label>
+                                            </div>
+                                            <div id="opciones_email" class="mt-3">
+                                                <div class="form-group">
+                                                    <label class="form-label">Tipo de servidor de
+                                                        correo</label>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio"
+                                                            name="tipo_servidor_email"
+                                                            id="servidor_propio" value="propio" />
+                                                        <label class="form-check-label"
+                                                            for="servidor_propio">
+                                                            Servidor de correo propio
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio"
+                                                            name="tipo_servidor_email"
+                                                            id="servidor_proveedor"
+                                                            value="proveedor" />
+                                                        <label class="form-check-label"
+                                                            for="servidor_proveedor">
+                                                            Usar servidor del proveedor
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-card">
+                        <div class="card-header bg-danger text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white text-danger">
+                                    <i class="fa fa-ruler-combined"></i>
+                                </div>
+                                <h3 class="mb-0">Espacio Físico y Acceso</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info bg-info bg-opacity-10 border-0">
+                                <i class="fa fa-info-circle me-2"></i> Se requiere un espacio mínimo
+                                de 2m² y un pasillo de al menos 1m de ancho para la instalación y
+                                mantenimiento. </div>
+
+                            <div class="row g-4">
+                                <!-- Medidas del espacio -->
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title">
+                                                <i class="fa fa-expand-arrows-alt me-2"></i> Medidas
+                                                del Espacio </h5>
+                                            <div class="form-group mb-3">
+                                                <label class="form-label d-flex align-items-center">
+                                                    <i class="fa fa-square me-2"></i> Espacio
+                                                    Disponible <i
+                                                        class="fa fa-question-circle info-tooltip ms-2"
+                                                        title="Mínimo requerido: 2m²"></i>
+                                                </label>
+                                                <div class="input-group">
+                                                    <input type="number" name="espacio"
+                                                        class="form-control"
+                                                        step="0.1" required="required" />
+                                                    <span class="input-group-text">m²</span>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label d-flex align-items-center">
+                                                    <i class="fa fa-arrows-alt-h me-2"></i> Ancho
+                                                    del Pasillo <i
+                                                        class="fa fa-question-circle info-tooltip ms-2"
+                                                        title="Mínimo requerido: 1m"></i>
+                                                </label>
+                                                <div class="input-group">
+                                                    <input type="number" name="ancho_pasillo"
+                                                        class="form-control"
+                                                        step="0.1" required="required" />
+                                                    <span class="input-group-text">m</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Acceso -->
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title">
+                                                <i class="fa fa-door-open me-2"></i> Acceso al Local </h5>
+                                            <div class="form-group mb-3">
+                                                <label class="form-label">
+                                                    <i class="fa fa-building me-2"></i> Número de
+                                                    Piso </label>
+                                                <input type="number" name="piso"
+                                                    class="form-control" required="required" min="0" />
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox"
+                                                    name="ascensor" id="ascensor" />
+                                                <label class="form-check-label" for="ascensor">
+                                                    <i class="fa fa-elevator me-2"></i> Cuenta con
+                                                    ascensor </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Estacionamiento -->
+                                <div class="col-12">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body">
+                                            <h5 class="card-title">
+                                                <i class="fa fa-truck me-2"></i> Acceso para Entrega </h5>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox"
+                                                    name="tiene_estacionamiento"
+                                                    id="tiene_estacionamiento" />
+                                                <label class="form-check-label"
+                                                    for="tiene_estacionamiento">
+                                                    Cuenta con estacionamiento para el camión de
+                                                    entrega
+                                                </label>
+                                            </div>
+                                            <div class="form-group">
+                                                <textarea name="observaciones_estacionamiento"
+                                                    class="form-control" rows="3"
+                                                    placeholder="Indique restricciones de horario, permisos necesarios u otras observaciones sobre el acceso para la entrega"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="section-card">
+                        <div class="card-header bg-secondary text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-white text-secondary">
+                                    <i class="fa fa-comment-alt"></i>
+                                </div>
+                                <h3 class="mb-0">Observaciones Adicionales</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
                             <div class="form-group">
-                                <label class="form-label d-block mb-2">Tipo de servidor de correo</label>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="tipo_servidor_email" 
-                                           id="servidor_propio" value="propio" />
-                                    <label class="form-check-label" for="servidor_propio">
-                                        Servidor de correo propio
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="tipo_servidor_email" 
-                                           id="servidor_proveedor" value="proveedor" />
-                                    <label class="form-check-label" for="servidor_proveedor">
-                                        Usar servidor del proveedor
-                                    </label>
-                                </div>
+                                <textarea name="observaciones" class="form-control" rows="4"
+                                    placeholder="Ingrese cualquier información adicional relevante para la instalación"></textarea>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Espacio Físico y Acceso -->
-<div class="section-card">
-    <div class="card-header bg-danger text-white">
-        <div class="d-flex align-items-center">
-            <div class="icon-circle bg-white text-danger">
-                <i class="fa fa-ruler-combined"></i>
-            </div>
-            <h3 class="mb-0 fs-4">Espacio Físico y Acceso</h3>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="alert alert-info bg-info bg-opacity-10 border-0">
-            <i class="fa fa-info-circle me-2 fs-5"></i>
-            <div>
-                <p class="mb-0">Se requiere un espacio mínimo de 2m² y un pasillo de al menos 1m de ancho para la instalación y mantenimiento.</p>
-            </div>
-        </div>
-
-        <div class="row g-4">
-            <!-- Medidas del espacio -->
-            <div class="col-md-6">
-                <div class="card border-0 bg-light h-100 rounded-3">
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold mb-3">
-                            <i class="fa fa-expand-arrows-alt me-2"></i> Medidas del Espacio
-                        </h5>
-                        <div class="form-group mb-3">
-                            <label class="form-label d-flex align-items-center">
-                                <i class="fa fa-square me-2"></i> Espacio Disponible <span class="text-danger">*</span>
-                                <i class="fa fa-question-circle info-tooltip" data-bs-toggle="tooltip" 
-                                   title="Mínimo requerido: 2m²"></i>
-                            </label>
-                            <div class="input-group">
-                                <input type="number" name="espacio" class="form-control" step="0.1" 
-                                       required="required" min="2" />
-                                <span class="input-group-text">m²</span>
-                            </div>
-                            <div class="invalid-feedback">El espacio mínimo debe ser de 2m².</div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label d-flex align-items-center">
-                                <i class="fa fa-arrows-alt-h me-2"></i> Ancho del Pasillo <span class="text-danger">*</span>
-                                <i class="fa fa-question-circle info-tooltip" data-bs-toggle="tooltip" 
-                                   title="Mínimo requerido: 1m"></i>
-                            </label>
-                            <div class="input-group">
-                                <input type="number" name="ancho_pasillo" class="form-control" step="0.1" 
-                                       required="required" min="1" />
-                                <span class="input-group-text">m</span>
-                            </div>
-                            <div class="invalid-feedback">El ancho mínimo debe ser de 1m.</div>
-                        </div>
+                    <!-- Botón de envío -->
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg px-5 py-3">
+                            <i class="fa fa-paper-plane me-2"></i> Enviar Inspección </button>
                     </div>
-                </div>
+                </form>
             </div>
 
-            <!-- Acceso -->
-            <div class="col-md-6">
-                <div class="card border-0 bg-light h-100 rounded-3">
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold mb-3">
-                            <i class="fa fa-door-open me-2"></i> Acceso al Local
-                        </h5>
-                        <div class="form-group mb-3">
-                            <label class="form-label">
-                                <i class="fa fa-building me-2"></i> Número de Piso <span class="text-danger">*</span>
-                            </label>
-                            <input type="number" name="piso" class="form-control" required="required" min="0" />
-                            <div class="invalid-feedback">Por favor, ingrese un número de piso válido.</div>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="ascensor" id="ascensor" />
-                            <label class="form-check-label" for="ascensor">
-                                <i class="fa fa-elevator me-2"></i> Cuenta con ascensor
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Scripts para la funcionalidad del formulario -->
+            <script type="text/javascript">
+                $(document).ready(function() {
+                // Toggle opciones de control de impresión
+                $('#control_impresion').change(function() {
+                $('#opciones_control_impresion').toggleClass('d-none', !this.checked);
+                });
 
-            <!-- Estacionamiento -->
-            <div class="col-12">
-                <div class="card border-0 bg-light rounded-3">
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold mb-3">
-                            <i class="fa fa-truck me-2"></i> Acceso para Entrega
-                        </h5>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="tiene_estacionamiento" 
-                                   id="tiene_estacionamiento" />
-                            <label class="form-check-label" for="tiene_estacionamiento">
-                                Cuenta con estacionamiento para el camión de entrega
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <textarea name="observaciones_estacionamiento" class="form-control" rows="3"
-                                placeholder="Indique restricciones de horario, permisos necesarios u otras observaciones sobre el acceso para la entrega"></textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+                // Toggle opciones de email
+                $('#usar_email').change(function() {
+                $('#opciones_email').toggleClass('d-none', !this.checked);
+                });
 
-<!-- Observaciones -->
-<div class="section-card">
-    <div class="card-header bg-secondary text-white">
-        <div class="d-flex align-items-center">
-            <div class="icon-circle bg-white text-secondary">
-                <i class="fa fa-comment-alt"></i>
-            </div>
-            <h3 class="mb-0 fs-4">Observaciones Adicionales</h3>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="form-group">
-            <textarea name="observaciones" class="form-control" rows="4"
-                placeholder="Ingrese cualquier información adicional relevante para la instalación"></textarea>
-        </div>
-    </div>
-</div>
+                // Inicialización
+                $('#opciones_control_impresion').toggleClass('d-none',
+                !$('#control_impresion').is(':checked'));
+                $('#opciones_email').toggleClass('d-none', !$('#usar_email').is(':checked'));
 
-<!-- Botón de envío mejorado -->
-<div class="text-center mt-5 mb-4">
-    <button type="submit" class="btn btn-primary btn-lg px-5 py-3">
-        <i class="fa fa-paper-plane me-2"></i> Enviar Inspección
-    </button>
-</div>
-
-<!-- Scripts mejorados para la funcionalidad del formulario -->
-<script type="text/javascript">
-document.addEventListener("DOMContentLoaded", function() {
-    // Inicialización de tooltips de Bootstrap 5
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    const tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
-    
-    // Manejo de la visibilidad del contacto de sistemas basado en el checkbox
-    const areaSistemasCheck = document.getElementById('area_sistemas');
-    const contactoSistemasDiv = document.getElementById('contacto_sistemas_div');
-    
-    function toggleContactoSistemas() {
-        contactoSistemasDiv.classList.toggle('d-none', !areaSistemasCheck.checked);
-    }
-    
-    if (areaSistemasCheck &amp;&amp; contactoSistemasDiv) {
-        areaSistemasCheck.addEventListener('change', toggleContactoSistemas);
-        // Inicializar estado
-        toggleContactoSistemas();
-    }
-    
-    // Toggle opciones de control de impresión
-    const controlImpresionCheck = document.getElementById('control_impresion');
-    const opcionesControlDiv = document.getElementById('opciones_control_impresion');
-    
-    function toggleControlImpresion() {
-        if (opcionesControlDiv) {
-            opcionesControlDiv.classList.toggle('d-none', !controlImpresionCheck.checked);
-        }
-    }
-    
-    if (controlImpresionCheck) {
-        controlImpresionCheck.addEventListener('change', toggleControlImpresion);
-        // Inicializar estado
-        toggleControlImpresion();
-    }
-    
-    // Toggle opciones de email
-    const usarEmailCheck = document.getElementById('usar_email');
-    const opcionesEmailDiv = document.getElementById('opciones_email');
-    
-    function toggleOpcionesEmail() {
-        if (opcionesEmailDiv) {
-            opcionesEmailDiv.classList.toggle('d-none', !usarEmailCheck.checked);
-        }
-    }
-    
-    if (usarEmailCheck) {
-        usarEmailCheck.addEventListener('change', toggleOpcionesEmail);
-        // Inicializar estado
-        toggleOpcionesEmail();
-    }
-    
-    // Habilitar/deshabilitar selector de frecuencia de reportes
-    const requiereReportesCheck = document.getElementById('requiere_reportes');
-    const frecuenciaReportesSelect = document.getElementById('frecuencia_reportes');
-    
-    function toggleFrecuenciaReportes() {
-        if (frecuenciaReportesSelect) {
-            frecuenciaReportesSelect.disabled = !requiereReportesCheck.checked;
-            if (!requiereReportesCheck.checked) {
-                frecuenciaReportesSelect.value = '';
-            }
-        }
-    }
-    
-    if (requiereReportesCheck) {
-        requiereReportesCheck.addEventListener('change', toggleFrecuenciaReportes);
-        // Inicializar estado
-        toggleFrecuenciaReportes();
-    }
-    
-    // Validación del formulario
-    const form = document.querySelector("form.needs-validation");
-    
-    if (form) {
-        form.addEventListener("submit", function(event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
+                // Habilitar tooltips
+                $('[data-bs-toggle="tooltip"]').tooltip();
+                });
+            </script>
+            <script type="text/javascript">
+                document.addEventListener("DOMContentLoaded", function () {
+                const form = document.querySelector("form.needs-validation");
+                form.addEventListener("submit", function (event) {
+                // Verifica que todos los campos requeridos estén llenos
+                if (!form.checkValidity()) {
+                event.preventDefault(); // Detener el envío
                 event.stopPropagation();
-                
-                // Mostrar mensaje de error
-                const errorElements = form.querySelectorAll(":invalid");
-                if (errorElements.length &gt; 0) {
-                    // Scroll hacia el primer elemento con error
-                    errorElements[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
-                    // Resaltar visualmente
-                    errorElements[0].classList.add('highlight-error');
-                    setTimeout(() =&gt; {
-                        errorElements[0].classList.remove('highlight-error');
-                    }, 2000);
+
+                // Agregar clase de validación
+                form.classList.add("was-validated");
                 }
-            }
-            
-            form.classList.add("was-validated");
-        });
-    }
-    
-    // Validación de valores numéricos para asegurar mínimos
-    const numericalInputs = document.querySelectorAll('input[type="number"][min]');
-    numericalInputs.forEach(input =&gt; {
-        input.addEventListener('change', function() {
-            const min = parseFloat(this.min);
-            if (this.value &amp;&amp; parseFloat(this.value) &lt; min) {
-                this.value = min;
-            }
-        });
-    });
-});
-</script>
+                });
+                });
+            </script>
 
-<!-- Estilos adicionales para destacar errores -->
-<style>
-.highlight-error {
-    animation: pulse-error 1s;
-}
-
-@keyframes pulse-error {
-    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-}
-
-.was-validated .form-control:invalid,
-.was-validated .form-select:invalid {
-    border-color: #dc3545;
-    padding-right: calc(1.5em + 0.75rem);
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right calc(0.375em + 0.1875rem) center;
-    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
-}
-
-.was-validated .form-control:valid,
-.was-validated .form-select:valid {
-    border-color: #198754;
-    padding-right: calc(1.5em + 0.75rem);
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right calc(0.375em + 0.1875rem) center;
-    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
-}
-
-@media (max-width: 767.98px) {
-    .card-header h3 {
-        font-size: 1.2rem;
-    }
-    
-    .alert {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .alert i {
-        margin-bottom: 0.5rem;
-    }
-    
-    .icon-circle {
-        width: 32px;
-        height: 32px;
-    }
-}
-</style>
-</t>
+        </t>
     </template>
 
     <template id="gracias_inspeccion_template">
