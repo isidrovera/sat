@@ -845,7 +845,9 @@ class Reparaciones(models.Model):
 
         # Buscar la siguiente máquina en estado 'para_revision'
         next_maquina = self.env['sat.sat'].search([
-            ('estado_ventas_id', '=', 'para_revision')
+            ('estado_ventas_id', '=', 'para_revision'),
+            ('contometro', '!=', False),
+            ('contometro', '!=', '0')
         ], order='fecha_para_revision asc', limit=1)
 
         if not next_maquina:
@@ -853,22 +855,22 @@ class Reparaciones(models.Model):
             next_maquina = self.env['sat.sat'].search([
                 ('estado_ventas_id', '=', 'sin_revisar'),
                 ('disponibilidad_id', '=', 'disponible'),
-                ('ubicacion_id', 'in', ['primer_piso', 'tercer_piso'])
+                ('ubicacion_id', 'in', ['primer_piso', 'tercer_piso']),
+                ('contometro', '!=', False),
+                ('contometro', '!=', '0')
             ], order='create_date asc', limit=1)
 
         if next_maquina:
             _logger.info('Máquina seleccionada con ID %s para revisión.', next_maquina.id)
             
-            # Verificación del valor de contometro
-            if not next_maquina.contometro or int(next_maquina.contometro) == 0:
-                _logger.error('La máquina con ID %s no tiene un valor de contómetro válido.', next_maquina.id)
-                raise ValidationError("La máquina seleccionada no tiene un valor de contómetro válido.")
+            # La verificación del contómetro ya no es necesaria aquí porque está incluida en las búsquedas
 
             # Verificar duplicado de serie_id
             existing_record = self.env['reparaciones.reparaciones'].search([('serie_id', '=', next_maquina.serie_id)])
             if existing_record:
                 _logger.error('Ya existe un registro con el serie_id %s', next_maquina.serie_id)
-                raise ValidationError(_('Ya existe un registro con el serie_id %s.') % next_maquina.serie_id)
+                _logger.info('No se creará una nueva reparación debido a serie duplicada. Finalizando proceso.')
+                return  # En lugar de lanzar error, simplemente salimos
 
             empleado = self.env['hr.employee'].search([('user_id', '=', self.responsable_id.id)], limit=1)
             if empleado:
@@ -891,11 +893,10 @@ class Reparaciones(models.Model):
                 _logger.info('Mensaje de WhatsApp enviado para la reparación con ID %s.', nueva_reparacion.id)
             else:
                 _logger.error('El responsable con ID %s no está vinculado a ningún empleado.', self.responsable_id.id)
-                raise ValidationError("El responsable asignado no está vinculado a ningún empleado. Por favor, revise la configuración.")
+                _logger.info('No se creará una nueva reparación debido a falta de empleado. Finalizando proceso.')
+                return  # En lugar de lanzar error, simplemente salimos
         else:
             _logger.info('No se encontró ninguna máquina que cumpla con los criterios de selección.')
-
-
     
     
     def action_finalizar_reparacion(self):
