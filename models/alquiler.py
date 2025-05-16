@@ -381,7 +381,11 @@ class UnidadAlquiler(models.Model):
         tracking=True,
         help="Razón por la que se solicita reprogramación"
     )
-
+    usar_fecha_recurrente_como_base = fields.Boolean(
+        string='Usar fecha recurrente como base',
+        default=False,
+        help="Si está activado, usará la fecha recurrente como base para calcular la próxima fecha. Si no, usará la fecha inicial."
+    )
     
     @api.onchange('fecha_inicio', 'patron_recurrencia')
     def _onchange_fecha_inicio(self):
@@ -435,7 +439,7 @@ class UnidadAlquiler(models.Model):
                 )
 
     
-    @api.depends('fecha_inicio', 'intervalo_meses', 'patron_recurrencia', 'semana_mes', 'dia_semana')
+    @api.depends('fecha_inicio', 'intervalo_meses', 'patron_recurrencia', 'semana_mes', 'dia_semana', 'usar_fecha_recurrente_como_base')
     def _compute_fecha_recurrente(self):
         """
         Calcula la próxima fecha de mantenimiento basada en el patrón seleccionado,
@@ -455,10 +459,12 @@ class UnidadAlquiler(models.Model):
                     f"intervalo_meses={record.intervalo_meses}, "
                     f"patron_recurrencia={record.patron_recurrencia}, "
                     f"semana_mes={record.semana_mes}, "
-                    f"dia_semana={record.dia_semana}")
+                    f"dia_semana={record.dia_semana}, "
+                    f"usar_fecha_recurrente_como_base={record.usar_fecha_recurrente_como_base}")
             
-            # Determinar la fecha base para el cálculo
-            if record.fecha_recurrente and record.fecha_recurrente > fields.Date.today():
+            # Determinar la fecha base para el cálculo - MODIFICADO
+            # Solo usar fecha_recurrente si el campo usar_fecha_recurrente_como_base está activado
+            if record.usar_fecha_recurrente_como_base and record.fecha_recurrente and record.fecha_recurrente > fields.Date.today():
                 base_date = record.fecha_recurrente
             else:
                 base_date = record.fecha_inicio
@@ -573,6 +579,35 @@ class UnidadAlquiler(models.Model):
                         body=f"⚠️ Nueva fecha de mantenimiento calculada: {record.fecha_recurrente.strftime('%d/%m/%Y')}",
                         message_type='notification'
                     )
+
+    # Agregar este nuevo método para activar el cálculo recurrente
+    def iniciar_calculo_recurrente(self):
+        """
+        Activa el cálculo recurrente para calcular fechas futuras 
+        a partir de la fecha recurrente actual en vez de la fecha de inicio.
+        """
+        self.ensure_one()
+        self.usar_fecha_recurrente_como_base = True
+        self.message_post(
+            body="🔄 Se ha iniciado el cálculo recurrente. Las próximas fechas se calcularán a partir de la fecha recurrente actual.",
+            message_type='notification'
+        )
+        return True
+
+    # Agregar este método para reiniciar la configuración
+    def reiniciar_configuracion(self):
+        """
+        Reinicia la configuración para volver a calcular la fecha recurrente
+        a partir de la fecha de inicio original.
+        """
+        self.ensure_one()
+        self.usar_fecha_recurrente_como_base = False
+        self._compute_fecha_recurrente()  # Forzar recálculo
+        self.message_post(
+            body="🔄 Configuración reiniciada. La fecha recurrente se calculará a partir de la fecha de inicio.",
+            message_type='notification'
+        )
+        return True
                         
     # Corrección para update_fecha_recurrente
 
