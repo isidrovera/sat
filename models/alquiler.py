@@ -328,10 +328,12 @@ class UnidadAlquiler(models.Model):
         ('2', 'Segunda'),
         ('3', 'Tercera'),
         ('4', 'Cuarta'),
-        ('5', 'Última')
-    ], string='Semana del mes',
-       tracking=True,
-       help="Qué semana del mes debe programarse el mantenimiento"
+        ('-1', 'Última'),
+        ('-2', 'Penúltima'),
+        ('-3', 'Antepenúltima')
+    ], string='Posición en el mes',
+    tracking=True,
+    help="Posición específica del día de la semana en el mes (ej. primer lunes, último viernes, etc.)"
     )
     
     dia_semana = fields.Selection([
@@ -383,50 +385,62 @@ class UnidadAlquiler(models.Model):
     
     @api.onchange('fecha_inicio', 'patron_recurrencia')
     def _onchange_fecha_inicio(self):
+        """
+        Cuando el usuario selecciona una fecha y el patrón 'día específico de la semana',
+        este método detecta automáticamente qué día de la semana es y qué posición
+        ocupa en el mes (primera, segunda, última, etc.)
+        """
         if self.fecha_inicio and self.patron_recurrencia == 'semana_dia':
             # Detectar día de la semana (0-6 donde 0 es lunes)
             dia_semana = self.fecha_inicio.weekday()
             self.dia_semana = str(dia_semana)
             
-            # Obtenemos el último día del mes
-            ultimo_dia = calendar.monthrange(self.fecha_inicio.year, self.fecha_inicio.month)[1]
-            
             # Obtener todas las ocurrencias de este día de la semana en el mes
             ocurrencias = []
+            year, month = self.fecha_inicio.year, self.fecha_inicio.month
+            ultimo_dia = calendar.monthrange(year, month)[1]
+            
             for dia in range(1, ultimo_dia + 1):
-                fecha = self.fecha_inicio.replace(day=dia)
+                fecha = datetime(year, month, dia).date()
                 if fecha.weekday() == dia_semana:
                     ocurrencias.append(dia)
             
-            # Determinar qué ocurrencia es nuestra fecha (contando desde el principio)
-            posicion_desde_inicio = 0
+            # Encontrar la posición de la fecha actual en las ocurrencias
+            posicion = None
             for i, dia in enumerate(ocurrencias):
                 if dia == self.fecha_inicio.day:
-                    posicion_desde_inicio = i + 1  # +1 porque i empieza en 0
+                    posicion = i
                     break
             
-            # Determinar qué ocurrencia es nuestra fecha (contando desde el final)
-            posicion_desde_final = len(ocurrencias) - posicion_desde_inicio + 1
-            
-            # Determinar semana del mes según la lógica actual (que funciona bien para la mayoría de casos)
-            # Si es la última ocurrencia (posición 1 desde el final), usar '5'
-            # Si es penúltima o anterior, usar la posición desde el inicio
-            if posicion_desde_final == 1:  # Es la última ocurrencia
-                self.semana_mes = '5'
-            else:
-                # Usar la posición original desde el inicio
-                self.semana_mes = str(min(posicion_desde_inicio, 4))
-            
-            # Loguear para depuración
-            _logger.info(f"DETECCIÓN DE PATRÓN: Fecha={self.fecha_inicio}, "
-                        f"Día semana={dia_semana}, Ocurrencias en mes={ocurrencias}, "
-                        f"Posición desde inicio={posicion_desde_inicio}, "
-                        f"Posición desde final={posicion_desde_final}, "
-                        f"Semana asignada={self.semana_mes}")
+            if posicion is not None:
+                total_ocurrencias = len(ocurrencias)
+                
+                # Determinar si es mejor expresar desde el inicio o desde el final
+                posicion_desde_final = -1 * (total_ocurrencias - posicion)
+                
+                # Si es una de las últimas 3 posiciones, usar expresión desde el final
+                if posicion_desde_final >= -3:  # Última, penúltima o antepenúltima
+                    self.semana_mes = str(posicion_desde_final)  # -1, -2 o -3
+                else:
+                    # Es mejor expresarlo desde el inicio
+                    self.semana_mes = str(posicion + 1)  # +1 porque la posición empieza en 0
+                
+                # Loguear para depuración
+                _logger.info(
+                    f"DETECCIÓN DE PATRÓN: Fecha={self.fecha_inicio}, "
+                    f"Día semana={dia_semana} ({['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][dia_semana]}), "
+                    f"Ocurrencias en mes={ocurrencias}, "
+                    f"Posición={posicion+1} de {total_ocurrencias}, "
+                    f"Posición asignada={self.semana_mes}"
+                )
 
     
     @api.depends('fecha_inicio', 'intervalo_meses', 'patron_recurrencia', 'semana_mes', 'dia_semana')
     def _compute_fecha_recurrente(self):
+        """
+        Calcula la próxima fecha de mantenimiento basada en el patrón seleccionado,
+        manteniendo la posición relativa correcta de los días en el mes.
+        """
         for record in self:
             if not record.fecha_inicio:
                 record.fecha_recurrente = False
@@ -436,7 +450,6 @@ class UnidadAlquiler(models.Model):
             fecha_anterior = record.fecha_recurrente
             
             # Determinar la fecha base para el cálculo
-            # Si hay una fecha recurrente futura, usarla como base
             if record.fecha_recurrente and record.fecha_recurrente > fields.Date.today():
                 base_date = record.fecha_recurrente
             else:
@@ -465,30 +478,36 @@ class UnidadAlquiler(models.Model):
                 
             elif record.patron_recurrencia == 'semana_dia' and record.semana_mes and record.dia_semana:
                 weekday = int(record.dia_semana)  # 0=Lunes, 6=Domingo
-                week_position = int(record.semana_mes)  # 1-4=desde inicio, 5=desde final
+                position_str = record.semana_mes  # Posición (puede ser desde inicio o final)
                 
                 # Encontrar todas las ocurrencias del día de la semana en el mes objetivo
                 ocurrencias = []
-                first_day = datetime(target_year, target_month, 1).date()
                 last_day = calendar.monthrange(target_year, target_month)[1]
                 
-                # Obtener todas las fechas del mes objetivo que coinciden con el día de la semana
                 for dia in range(1, last_day + 1):
                     fecha = datetime(target_year, target_month, dia).date()
                     if fecha.weekday() == weekday:
                         ocurrencias.append(fecha)
                 
+                # No hay ocurrencias de este día de la semana (raro, pero posible en teoría)
+                if not ocurrencias:
+                    record.fecha_recurrente = base_date + relativedelta(months=meses)
+                    continue
+                
                 # Determinar qué ocurrencia usar según la posición
-                if week_position == 5:  # Si es la última ocurrencia
-                    siguiente_fecha = ocurrencias[-1]  # La última ocurrencia
-                else:
-                    # Si es una posición desde el inicio (1ª, 2ª, 3ª, 4ª)
-                    # Verificar que tengamos suficientes ocurrencias
-                    if week_position <= len(ocurrencias):
-                        siguiente_fecha = ocurrencias[week_position - 1]
-                    else:
-                        # Si no hay suficientes ocurrencias, usar la última disponible
-                        siguiente_fecha = ocurrencias[-1]
+                position = int(position_str)
+                if position < 0:  # Posición desde el final (-1, -2, -3)
+                    # Asegurarnos de que el índice esté dentro del rango
+                    index = position
+                    if abs(position) > len(ocurrencias):
+                        index = -len(ocurrencias)  # Usar la primera ocurrencia si no hay suficientes
+                    siguiente_fecha = ocurrencias[index]
+                else:  # Posición desde el inicio (1, 2, 3, 4)
+                    # Ajustar el índice (position es 1-based, el índice es 0-based)
+                    index = position - 1
+                    if index >= len(ocurrencias):
+                        index = len(ocurrencias) - 1  # Usar la última si no hay suficientes
+                    siguiente_fecha = ocurrencias[index]
                 
                 record.fecha_recurrente = siguiente_fecha
                 
@@ -497,9 +516,19 @@ class UnidadAlquiler(models.Model):
                 record.fecha_recurrente = base_date + relativedelta(months=meses)
             
             # Log para depuración
-            _logger.info(f"CÁLCULO FECHA: Inicio={base_date}, Patrón={record.patron_recurrencia}, "
-                        f"Intervalo={meses} meses, Semana={record.semana_mes}, "
-                        f"Día semana={record.dia_semana}, Resultado={record.fecha_recurrente}")
+            dia_nombre = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+            dia_semana_nombre = ""
+            if record.dia_semana:
+                dia_semana_nombre = dia_nombre[int(record.dia_semana)]
+                
+            _logger.info(
+                f"CÁLCULO FECHA: Base={base_date}, "
+                f"Patrón={record.patron_recurrencia}, "
+                f"Intervalo={meses} meses, "
+                f"Posición={record.semana_mes}, "
+                f"Día={dia_semana_nombre}, "
+                f"Resultado={record.fecha_recurrente}"
+            )
             
             # Actualizar estado si la fecha cambió
             if fecha_anterior and record.fecha_recurrente != fecha_anterior:
@@ -509,12 +538,14 @@ class UnidadAlquiler(models.Model):
                         body=f"⚠️ Nueva fecha de mantenimiento calculada: {record.fecha_recurrente.strftime('%d/%m/%Y')}",
                         message_type='notification'
                     )
-                    
+                        
     # Corrección para update_fecha_recurrente
 
     @api.model
     def update_fecha_recurrente(self):
-        """Actualiza la fecha de mantenimiento recurrente para registros con fechas pasadas"""
+        """
+        Actualiza la fecha de mantenimiento recurrente para registros con fechas pasadas.
+        """
         today = fields.Date.today()
         records = self.search([
             ('fecha_recurrente', '<=', today),
