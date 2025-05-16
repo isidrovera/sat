@@ -294,7 +294,7 @@ class UnidadAlquiler(models.Model):
 
      # Campos originales de fechas
     fecha_inicio = fields.Date(
-        string='Fecha de mantenimiento', 
+        string='Fecha de mantenimiento inicial', 
         required=True,
         tracking=True,
         help="Fecha inicial del mantenimiento"
@@ -312,9 +312,42 @@ class UnidadAlquiler(models.Model):
        tracking=True,
        help="Frecuencia de mantenimiento"
     )
+    patron_recurrencia = fields.Selection([
+        ('fecha_exacta', 'Día específico del mes'),
+        ('semana_dia', 'Día específico de la semana')
+    ], string='Patrón de recurrencia', 
+       default='fecha_exacta',
+       required=True,
+       tracking=True,
+       help="Determina cómo se calculará la próxima fecha de mantenimiento"
+    )
+
+    semana_mes = fields.Selection([
+        ('1', 'Primera'),
+        ('2', 'Segunda'),
+        ('3', 'Tercera'),
+        ('4', 'Cuarta'),
+        ('5', 'Última')
+    ], string='Semana del mes',
+       tracking=True,
+       help="Qué semana del mes debe programarse el mantenimiento"
+    )
+    
+    dia_semana = fields.Selection([
+        ('0', 'Lunes'),
+        ('1', 'Martes'),
+        ('2', 'Miércoles'),
+        ('3', 'Jueves'),
+        ('4', 'Viernes'),
+        ('5', 'Sábado'),
+        ('6', 'Domingo')
+    ], string='Día de la semana',
+       tracking=True,
+       help="Qué día de la semana debe programarse el mantenimiento"
+    )
 
     fecha_recurrente = fields.Date(
-        string='Fecha recurrente',
+        string='Próxima fecha de mantenimiento',
         compute='_compute_fecha_recurrente',
         store=True,
         tracking=True,
@@ -346,35 +379,87 @@ class UnidadAlquiler(models.Model):
         help="Razón por la que se solicita reprogramación"
     )
 
-    @api.depends('fecha_inicio', 'intervalo_meses')
-    def _compute_fecha_recurrente(self):
-        for record in self:
-            if record.fecha_inicio:
+    @api.depends('fecha_inicio', 'intervalo_meses', 'patron_recurrencia', 'semana_mes', 'dia_semana')
+        def _compute_fecha_recurrente(self):
+            for record in self:
+                if not record.fecha_inicio:
+                    record.fecha_recurrente = False
+                    continue
+                    
                 # Guardar fecha anterior para comparación
                 fecha_anterior = record.fecha_recurrente
                 
-                # Obtener día de la semana y número de semana del día inicial
-                dia_semana = record.fecha_inicio.weekday()
-                semana_mes = (record.fecha_inicio.day - 1) // 7 + 1
-
-                # Calcular siguiente fecha según intervalo
-                meses = int(record.intervalo_meses)
-                siguiente_fecha = record.fecha_inicio + relativedelta(months=meses, day=1)
+                # Calcular meses a avanzar basado en el intervalo
+                meses = int(record.intervalo_meses or '1')
                 
-                # Encontrar el mismo día de la semana en la misma semana del mes
-                contador_semana = 0
-                while True:
-                    if siguiente_fecha.weekday() == dia_semana:
-                        contador_semana += 1
-                        if contador_semana == semana_mes:
-                            break
-                    siguiente_fecha += relativedelta(days=1)
-                    if siguiente_fecha.month != (record.fecha_inicio + relativedelta(months=meses)).month:
-                        siguiente_fecha = record.fecha_inicio + relativedelta(months=meses, day=1)
-                        break
-
+                # Fecha base para cálculo (hoy o la próxima fecha programada)
+                if record.fecha_recurrente and record.fecha_recurrente > fields.Date.today():
+                    base_date = record.fecha_recurrente
+                else:
+                    base_date = record.fecha_inicio
+                
+                # Calcular la siguiente fecha según el patrón elegido
+                if record.patron_recurrencia == 'fecha_exacta':
+                    # Mantener el mismo día del mes
+                    day_of_month = base_date.day
+                    next_month = base_date + relativedelta(months=meses)
+                    
+                    # Ajustar si el día no existe en el mes (ej. 31 de febrero)
+                    last_day = calendar.monthrange(next_month.year, next_month.month)[1]
+                    if day_of_month > last_day:
+                        day_of_month = last_day
+                        
+                    siguiente_fecha = next_month.replace(day=day_of_month)
+                    
+                elif record.patron_recurrencia == 'semana_dia' and record.semana_mes and record.dia_semana:
+                    # Calcular basado en "primera/segunda/tercera/cuarta/última semana" y día de la semana
+                    target_month = base_date.month + meses
+                    target_year = base_date.year
+                    
+                    # Ajustar año si el mes excede 12
+                    while target_month > 12:
+                        target_month -= 12
+                        target_year += 1
+                    
+                    # Determinar el primer día del mes objetivo
+                    first_day = datetime(target_year, target_month, 1).date()
+                    
+                    # Calcular el primer día de la semana solicitado en el mes
+                    weekday = int(record.dia_semana)
+                    days_ahead = weekday - first_day.weekday()
+                    if days_ahead < 0:
+                        days_ahead += 7
+                    first_occurrence = first_day + timedelta(days=days_ahead)
+                    
+                    # Calcular la fecha según la semana solicitada
+                    week_num = int(record.semana_mes)
+                    if week_num == 5:  # Última semana del mes
+                        # Obtener la última ocurrencia del día de la semana en el mes
+                        last_day = calendar.monthrange(target_year, target_month)[1]
+                        last_date = datetime(target_year, target_month, last_day).date()
+                        days_backward = last_date.weekday() - weekday
+                        if days_backward < 0:
+                            days_backward += 7
+                        siguiente_fecha = last_date - timedelta(days=days_backward)
+                    else:
+                        # Sumar las semanas necesarias para llegar a la semana solicitada
+                        siguiente_fecha = first_occurrence + timedelta(days=(week_num - 1) * 7)
+                        
+                        # Verificar que la fecha no se haya movido al mes siguiente
+                        if siguiente_fecha.month != target_month:
+                            # Si nos pasamos al mes siguiente, usar la última ocurrencia del mes
+                            last_day = calendar.monthrange(target_year, target_month)[1]
+                            last_date = datetime(target_year, target_month, last_day).date()
+                            days_backward = last_date.weekday() - weekday
+                            if days_backward < 0:
+                                days_backward += 7
+                            siguiente_fecha = last_date - timedelta(days=days_backward)
+                else:
+                    # Si no hay patrón definido, simplemente agregar meses a la fecha inicial
+                    siguiente_fecha = base_date + relativedelta(months=meses)
+                
                 record.fecha_recurrente = siguiente_fecha
-
+                
                 # Actualizar estado si la fecha cambió
                 if fecha_anterior and siguiente_fecha != fecha_anterior:
                     if record.estado_programacion in ['confirmado', 'reprogramado']:
@@ -383,36 +468,84 @@ class UnidadAlquiler(models.Model):
                             body=f"⚠️ Nueva fecha de mantenimiento calculada: {siguiente_fecha.strftime('%d/%m/%Y')}",
                             message_type='notification'
                         )
-            else:
-                record.fecha_recurrente = False
+
 
     @api.model
-    def update_fecha_recurrente(self):
-        today = fields.Date.today()
-        records = self.search([
-            ('fecha_recurrente', '<=', today),
-            ('estado_programacion', 'in', ['confirmado', 'pendiente']),
-            ('control_mantenimiento', '=', True)
-        ])
-        
-        for record in records:
-            if record.fecha_recurrente:
-                dia_semana = record.fecha_inicio.weekday()
-                semana_mes = (record.fecha_inicio.day - 1) // 7 + 1
+        def update_fecha_recurrente(self):
+            """Actualiza la fecha de mantenimiento recurrente para registros con fechas pasadas"""
+            today = fields.Date.today()
+            records = self.search([
+                ('fecha_recurrente', '<=', today),
+                ('estado_programacion', 'in', ['confirmado', 'pendiente']),
+                ('control_mantenimiento', '=', True)
+            ])
+            
+            for record in records:
+                if record.patron_recurrencia == 'fecha_exacta':
+                    # Mantener el mismo día del mes
+                    meses = int(record.intervalo_meses)
+                    base_date = record.fecha_recurrente
+                    day_of_month = base_date.day
+                    next_month = base_date + relativedelta(months=meses)
+                    
+                    # Ajustar si el día no existe en el mes
+                    last_day = calendar.monthrange(next_month.year, next_month.month)[1]
+                    if day_of_month > last_day:
+                        day_of_month = last_day
+                        
+                    siguiente_fecha = next_month.replace(day=day_of_month)
+                    
+                elif record.patron_recurrencia == 'semana_dia' and record.semana_mes and record.dia_semana:
+                    # Calcular basado en semana y día de la semana
+                    meses = int(record.intervalo_meses)
+                    base_date = record.fecha_recurrente
+                    
+                    target_month = base_date.month + meses
+                    target_year = base_date.year
+                    
+                    # Ajustar año si el mes excede 12
+                    while target_month > 12:
+                        target_month -= 12
+                        target_year += 1
+                    
+                    # Determinar el primer día del mes objetivo
+                    first_day = datetime(target_year, target_month, 1).date()
+                    
+                    # Calcular el primer día de la semana solicitado en el mes
+                    weekday = int(record.dia_semana)
+                    days_ahead = weekday - first_day.weekday()
+                    if days_ahead < 0:
+                        days_ahead += 7
+                    first_occurrence = first_day + timedelta(days=days_ahead)
+                    
+                    # Calcular la fecha según la semana solicitada
+                    week_num = int(record.semana_mes)
+                    if week_num == 5:  # Última semana del mes
+                        # Obtener la última ocurrencia del día de la semana en el mes
+                        last_day = calendar.monthrange(target_year, target_month)[1]
+                        last_date = datetime(target_year, target_month, last_day).date()
+                        days_backward = last_date.weekday() - weekday
+                        if days_backward < 0:
+                            days_backward += 7
+                        siguiente_fecha = last_date - timedelta(days=days_backward)
+                    else:
+                        # Sumar las semanas necesarias para llegar a la semana solicitada
+                        siguiente_fecha = first_occurrence + timedelta(days=(week_num - 1) * 7)
+                        
+                        # Verificar que la fecha no se haya movido al mes siguiente
+                        if siguiente_fecha.month != target_month:
+                            # Si nos pasamos al mes siguiente, usar la última ocurrencia del mes
+                            last_day = calendar.monthrange(target_year, target_month)[1]
+                            last_date = datetime(target_year, target_month, last_day).date()
+                            days_backward = last_date.weekday() - weekday
+                            if days_backward < 0:
+                                days_backward += 7
+                            siguiente_fecha = last_date - timedelta(days=days_backward)
+                else:
+                    # Si no hay patrón definido, simplemente agregar meses a la fecha inicial
+                    meses = int(record.intervalo_meses)
+                    siguiente_fecha = record.fecha_recurrente + relativedelta(months=meses)
                 
-                siguiente_fecha = record.fecha_recurrente + relativedelta(months=int(record.intervalo_meses), day=1)
-                
-                contador_semana = 0
-                while True:
-                    if siguiente_fecha.weekday() == dia_semana:
-                        contador_semana += 1
-                        if contador_semana == semana_mes:
-                            break
-                    siguiente_fecha += relativedelta(days=1)
-                    if siguiente_fecha.month != (record.fecha_recurrente + relativedelta(months=int(record.intervalo_meses))).month:
-                        siguiente_fecha = record.fecha_recurrente + relativedelta(months=int(record.intervalo_meses), day=1)
-                        break
-
                 record.write({
                     'fecha_recurrente': siguiente_fecha,
                     'estado_programacion': 'pendiente',

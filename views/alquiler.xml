@@ -123,9 +123,33 @@
                                                             <field name="fecha_inicio" 
                                                                 required="control_mantenimiento == True and estado_alquiler_id == 'alquilada'"
                                                                 class="mb-3"/>
+                                                                
+                                                            <!-- Nuevo campo para el patrón de recurrencia -->
+                                                            <field name="patron_recurrencia"
+                                                                required="control_mantenimiento"
+                                                                class="mb-3"
+                                                                widget="radio"
+                                                                options="{'horizontal': true}"/>
+                                                                
+                                                            <!-- Campos para el patrón de semana y día -->
+                                                            <div class="row" invisible="patron_recurrencia != 'semana_dia'">
+                                                                <div class="col-12 mb-2">
+                                                                    <label for="semana_mes" class="o_form_label">Semana del mes</label>
+                                                                    <field name="semana_mes"
+                                                                        required="control_mantenimiento and patron_recurrencia == 'semana_dia'"
+                                                                        class="w-100"/>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <label for="dia_semana" class="o_form_label">Día de la semana</label>
+                                                                    <field name="dia_semana"
+                                                                        required="control_mantenimiento and patron_recurrencia == 'semana_dia'"
+                                                                        class="w-100"/>
+                                                                </div>
+                                                            </div>
+                                                            
                                                             <field name="fecha_recurrente" 
                                                                 readonly="1" 
-                                                                class="mb-3"
+                                                                class="mb-3 mt-3"
                                                                 decoration-info="True"/>
                                                         </group>
                                                     </div>
@@ -156,11 +180,11 @@
                                             <ul class="list-unstyled m-0">
                                                 <li class="d-flex gap-2 mb-2">
                                                     <i class="bi bi-calendar-check"></i>
-                                                    <span>La fecha que seleccione determinará el patrón de mantenimiento</span>
+                                                    <span>Seleccione el patrón de recurrencia: por fecha específica o por semana/día</span>
                                                 </li>
                                                 <li class="d-flex gap-2 mb-2">
                                                     <i class="bi bi-calendar-week"></i>
-                                                    <span>Si elige un primer viernes del mes, los mantenimientos serán los primeros viernes</span>
+                                                    <span>Si elige "Día específico de la semana", puede programar por ejemplo "el último sábado del mes"</span>
                                                 </li>
                                                 <li class="d-flex gap-2 mb-2">
                                                     <i class="bi bi-arrow-repeat"></i>
