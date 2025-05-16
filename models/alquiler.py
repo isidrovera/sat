@@ -449,16 +449,33 @@ class UnidadAlquiler(models.Model):
             # Guardar fecha anterior para comparación
             fecha_anterior = record.fecha_recurrente
             
+            # DETECCIÓN DE PROBLEMAS: Imprimir valores involucrados en el cálculo
+            _logger.info(f"VALORES DE ENTRADA: fecha_inicio={record.fecha_inicio}, "
+                    f"fecha_recurrente={record.fecha_recurrente}, "
+                    f"intervalo_meses={record.intervalo_meses}, "
+                    f"patron_recurrencia={record.patron_recurrencia}, "
+                    f"semana_mes={record.semana_mes}, "
+                    f"dia_semana={record.dia_semana}")
+            
             # Determinar la fecha base para el cálculo
             if record.fecha_recurrente and record.fecha_recurrente > fields.Date.today():
                 base_date = record.fecha_recurrente
             else:
                 base_date = record.fecha_inicio
             
-            # Calcular meses a avanzar según el intervalo
-            meses = int(record.intervalo_meses or '1')
+            # Asegurarse que intervalo_meses sea un valor válido - IMPORTANTE
+            intervalo_str = record.intervalo_meses or '1'
+            try:
+                meses = int(intervalo_str)
+                # Verificación adicional para valores no válidos
+                if meses <= 0 or meses > 12:
+                    meses = 1  # Valor predeterminado seguro
+                    _logger.warning(f"Valor de intervalo no válido: {intervalo_str}, usando predeterminado: 1")
+            except (ValueError, TypeError):
+                meses = 1  # Valor predeterminado si hay error de conversión
+                _logger.warning(f"Error al convertir intervalo: {intervalo_str}, usando predeterminado: 1")
             
-            # Determinar el mes objetivo
+            # Determinar el mes objetivo sumando exactamente el número de meses del intervalo
             target_date = base_date + relativedelta(months=meses)
             target_year = target_date.year
             target_month = target_date.month
@@ -477,58 +494,76 @@ class UnidadAlquiler(models.Model):
                 record.fecha_recurrente = siguiente_fecha
                 
             elif record.patron_recurrencia == 'semana_dia' and record.semana_mes and record.dia_semana:
-                weekday = int(record.dia_semana)  # 0=Lunes, 6=Domingo
-                position_str = record.semana_mes  # Posición (puede ser desde inicio o final)
-                
-                # Encontrar todas las ocurrencias del día de la semana en el mes objetivo
-                ocurrencias = []
-                last_day = calendar.monthrange(target_year, target_month)[1]
-                
-                for dia in range(1, last_day + 1):
-                    fecha = datetime(target_year, target_month, dia).date()
-                    if fecha.weekday() == weekday:
-                        ocurrencias.append(fecha)
-                
-                # No hay ocurrencias de este día de la semana (raro, pero posible en teoría)
-                if not ocurrencias:
+                try:
+                    weekday = int(record.dia_semana)  # 0=Lunes, 6=Domingo
+                    position_str = record.semana_mes  # Posición (puede ser desde inicio o final)
+                    
+                    # Encontrar todas las ocurrencias del día de la semana en el mes objetivo
+                    ocurrencias = []
+                    last_day = calendar.monthrange(target_year, target_month)[1]
+                    
+                    for dia in range(1, last_day + 1):
+                        fecha = datetime(target_year, target_month, dia).date()
+                        if fecha.weekday() == weekday:
+                            ocurrencias.append(fecha)
+                    
+                    # No hay ocurrencias de este día de la semana (raro, pero posible en teoría)
+                    if not ocurrencias:
+                        record.fecha_recurrente = base_date + relativedelta(months=meses)
+                        _logger.warning(f"No se encontraron ocurrencias de día {weekday} en {target_month}/{target_year}")
+                        continue
+                    
+                    # Determinar qué ocurrencia usar según la posición
+                    position = int(position_str)
+                    if position < 0:  # Posición desde el final (-1, -2, -3)
+                        # Asegurarnos de que el índice esté dentro del rango
+                        index = position
+                        if abs(position) > len(ocurrencias):
+                            index = -len(ocurrencias)  # Usar la primera ocurrencia si no hay suficientes
+                        siguiente_fecha = ocurrencias[index]
+                    else:  # Posición desde el inicio (1, 2, 3, 4)
+                        # Ajustar el índice (position es 1-based, el índice es 0-based)
+                        index = position - 1
+                        if index >= len(ocurrencias):
+                            index = len(ocurrencias) - 1  # Usar la última si no hay suficientes
+                        siguiente_fecha = ocurrencias[index]
+                    
+                    record.fecha_recurrente = siguiente_fecha
+                    
+                except Exception as e:
+                    # Si hay cualquier error en el cálculo, usar un método simple como fallback
+                    _logger.error(f"Error en cálculo de fecha recurrente: {str(e)}")
                     record.fecha_recurrente = base_date + relativedelta(months=meses)
-                    continue
-                
-                # Determinar qué ocurrencia usar según la posición
-                position = int(position_str)
-                if position < 0:  # Posición desde el final (-1, -2, -3)
-                    # Asegurarnos de que el índice esté dentro del rango
-                    index = position
-                    if abs(position) > len(ocurrencias):
-                        index = -len(ocurrencias)  # Usar la primera ocurrencia si no hay suficientes
-                    siguiente_fecha = ocurrencias[index]
-                else:  # Posición desde el inicio (1, 2, 3, 4)
-                    # Ajustar el índice (position es 1-based, el índice es 0-based)
-                    index = position - 1
-                    if index >= len(ocurrencias):
-                        index = len(ocurrencias) - 1  # Usar la última si no hay suficientes
-                    siguiente_fecha = ocurrencias[index]
-                
-                record.fecha_recurrente = siguiente_fecha
-                
             else:
                 # Fallback simple
                 record.fecha_recurrente = base_date + relativedelta(months=meses)
             
-            # Log para depuración
+            # Log para depuración detallada
             dia_nombre = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
             dia_semana_nombre = ""
             if record.dia_semana:
-                dia_semana_nombre = dia_nombre[int(record.dia_semana)]
+                try:
+                    dia_semana_nombre = dia_nombre[int(record.dia_semana)]
+                except (IndexError, ValueError):
+                    dia_semana_nombre = f"Día {record.dia_semana}"
                 
             _logger.info(
                 f"CÁLCULO FECHA: Base={base_date}, "
-                f"Patrón={record.patron_recurrencia}, "
                 f"Intervalo={meses} meses, "
+                f"Mes objetivo={target_month}/{target_year}, "
+                f"Patrón={record.patron_recurrencia}, "
                 f"Posición={record.semana_mes}, "
                 f"Día={dia_semana_nombre}, "
                 f"Resultado={record.fecha_recurrente}"
             )
+            
+            # Verificación adicional del resultado
+            diferencia_meses = (record.fecha_recurrente.year - base_date.year) * 12 + (record.fecha_recurrente.month - base_date.month)
+            if diferencia_meses != meses:
+                _logger.warning(
+                    f"ALERTA: La diferencia de meses ({diferencia_meses}) no coincide con el intervalo ({meses}). "
+                    f"Base={base_date}, Resultado={record.fecha_recurrente}"
+                )
             
             # Actualizar estado si la fecha cambió
             if fecha_anterior and record.fecha_recurrente != fecha_anterior:
