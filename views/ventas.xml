@@ -2,48 +2,67 @@
 <odoo>
   <data>
     <record id="maquinas_form_view" model="ir.ui.view">
-      <field name="name">Sat.form</field>
-      <field name="model">sat.sat</field>
-      <field name="arch" type="xml">
-        <form string="ModelTitle">
+    <field name="name">Sat.form</field>
+    <field name="model">sat.sat</field>
+    <field name="arch" type="xml">
+        <form string="Gestión de Equipos">
+          <!-- HEADER: Mantiene estructura original -->
           <header>
-
-            <button string=" " name="send_records_by_email" type="object" class="oe_highlight" icon="fa-paper-plane" help="Envia por correo lista de maquinas con problemas y de partes" groups="base.group_system"  />
-
-            <button string=" " name="create_reparacion" type="object" class="btn btn-success" icon="fa-wrench" help="Permite crear ordenes de reparaciones" groups="base.group_system" />
-            <button name="action_crear_reparaciones" string="Crear Reparaciones" type="object" class="btn-primary" />
+            <button string="Enviar Reportes" name="send_records_by_email" type="object" 
+                class="oe_highlight" icon="fa-paper-plane" 
+                help="Envía por correo lista de máquinas con problemas y de partes" 
+                groups="base.group_system" />
+                
+            <button string="Crear Reparación" name="create_reparacion" type="object" 
+                class="btn btn-success" icon="fa-wrench" 
+                help="Permite crear órdenes de reparaciones" 
+                groups="base.group_system" />
+                
+            <button name="action_crear_reparaciones" string="Crear Reparaciones" 
+                type="object" class="btn-primary" />
+                
             <field name="disponibilidad_id" widget="statusbar" statusbar_visible="true" />
-
-
-            <field name="estado_ventas_id" widget="statusbar" options="{'clickable': '1'}" class="custom_statusbar" groups="base.group_system, sat_jefes_group_user"/>
-
+            <field name="estado_ventas_id" widget="statusbar" options="{'clickable': '1'}" 
+                class="custom_statusbar" 
+                groups="base.group_system, sat_jefes_group_user"/>
           </header>
 
-          <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" invisible="activador == 'no'"> ¡Esta maquina tiene observaciones, <field name='descripcion' style="color: red;" />
-, si está separando o vendiendo revise antes,
-            consulte con el área correspondiente! </div>
+          <!-- ALERTAS: Manteniendo estructura original -->
+          <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" invisible="activador == 'no'">
+            <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i>
+            <strong>¡Atención!</strong> Esta máquina tiene observaciones: 
+            <field name='descripcion' style="color: red;" />, 
+            si está separando o vendiendo revise antes, consulte con el área correspondiente!
+          </div>
 
-          <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" invisible="ubicacion_id == 'primer_piso' or ubicacion_id == 'tercer_piso'"> ¡Esta
-            maquina está en el almacén, <field name="ubicacion_id" style="background: yellow;" />
-!
-            Si está separando o vendiendo, avisar con anticipación para que pueda ser traída. </div>
+          <div class="alert alert-danger" role="alert" style="margin-bottom: 0px;" invisible="ubicacion_id == 'primer_piso' or ubicacion_id == 'tercer_piso'">
+            <i class="fa fa-warehouse me-2" aria-hidden="true"></i>
+            <strong>¡Ubicación!</strong> Esta máquina está en el almacén, 
+            <field name="ubicacion_id" style="background: yellow;" />!
+            Si está separando o vendiendo, avisar con anticipación para que pueda ser traída.
+          </div>
 
           <sheet>
+            <!-- BOTONES ESTADÍSTICOS: Manteniendo estructura original -->
             <div class="oe_button_box" name="button_box">
               <button name="view_reparaciones_ids" type="object" class="oe_stat_button" icon="fa-wrench">
                 <field name="reparaciones_count" string="Reparaciones" widget="statinfo" />
               </button>
             </div>
 
+            <!-- TÍTULO Y CLIENTE -->
             <div class="oe_title">
-              <label for="cliente_id" />
+              <label for="cliente_id">Cliente</label>
               <h1>
-                <field name="cliente_id" domain="[('tipo_cliente', '=', 'distribuidor')]" placeholder="Datos del Cliente" widget="many2one_avatar" style="width:100%" options="{'no_create': True}" />
+                <field name="cliente_id" domain="[('tipo_cliente', '=', 'distribuidor')]" 
+                    placeholder="Seleccione el cliente" widget="many2one_avatar" 
+                    style="width:100%" options="{'no_create': True}" />
               </h1>
             </div>
 
+            <!-- GRUPOS DE DATOS: Mejorando presentación visual -->
             <group>
-              <group string="Datos del Equipo">
+              <group string="Datos del Equipo" style="background-color: #f8f9fa; border-radius: 8px; padding: 10px;">
                 <field name="tipo_maquina" />
                 <field name="marca" />
                 <field name="name" search="True" options="{'no_create': True}" />
@@ -53,17 +72,18 @@
                 <field name="fecha_separacion" invisible="disponibilidad_id == 'disponible'" readonly="1" />
               </group>
 
-              <group string="Datos de Importación">
+              <group string="Datos de Importación" style="background-color: #e8f4f8; border-radius: 8px; padding: 10px;">
                 <field name="proveedor_id" domain="[('tipo_cliente', '=', 'proveedor')]" options="{'no_create': True}" />
                 <field name="importacion" />
                 <field name="invoice" />
               </group>
-              <group string="Datos para revisión" style="color:red;">
+              
+              <group string="Datos para revisión" style="background-color: #fee; border-radius: 8px; padding: 10px;">
                 <field name="tipo_revision" widget="kanban_label_selection" options="{'classes': {'draft': 'default', 'done': 'success'}}" />
                 <field name="prioridad" widget="selection" />
               </group>
 
-              <group string="Notificar" style="color:green;">
+              <group string="Notificar" style="background-color: #efd; border-radius: 8px; padding: 10px;">
                 <field name="trabajadores_id" widget="many2one_avatar" />
                 <field name="asesora_id" />
                 <field name="fecha_para_revision" />
@@ -71,43 +91,79 @@
               </group>
             </group>
 
+            <!-- PESTAÑAS: Manteniendo estructura original con mejoras visuales -->
             <notebook>
               <page string="Observaciones del equipo">
+                <div style="margin-bottom: 10px; padding: 8px; background-color: #f8f9fa; border-left: 3px solid #17a2b8; border-radius: 4px;">
+                  <i class="fa fa-info-circle"></i> Registre aquí cualquier problema, defecto o condición especial del equipo
+                </div>
                 <group>
                   <group>
-                    <field name="descripcion" />
+                    <field name="descripcion" placeholder="Describa detalladamente los problemas o condiciones especiales..." 
+                        style="min-height: 80px;" />
                   </group>
                   <group>
                     <field name="activador" class="oe_form_field_bottom_separator" invisible="1" />
-                    <field name="foto_problema"/>
+                    <field name="foto_problema" widget="image"/>
+                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                      Adjunte fotos claras que muestren los problemas del equipo
+                    </div>
                   </group>
                 </group>
               </page>
 
               <page string="Precios">
+                <div style="margin-bottom: 10px; padding: 8px; background-color: #f8f9fa; border-left: 3px solid #28a745; border-radius: 4px;">
+                  <i class="fa fa-money-bill"></i> Información financiera relevante para ventas y contabilidad
+                </div>
                 <group>
                   <group>
-                    <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}" groups="base.group_system, sat.Sat_ventas_group_user" />
+                    <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}" 
+                        groups="base.group_system, sat.Sat_ventas_group_user" />
                     <field name="currency_id" string="Tipo de moneda" />
                   </group>
                   <group>
-                    <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" groups="base.group_system, sat_jefes_group_user" />
+                    <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" 
+                        groups="base.group_system, sat_jefes_group_user" />
+                    <div groups="base.group_system, sat_jefes_group_user" style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                      Esta información es confidencial y solo visible para administradores y jefes de área
+                    </div>
                   </group>
                 </group>
               </page>
 
               <page string="Logistica">
+                <div style="margin-bottom: 10px; padding: 8px; background-color: #f8f9fa; border-left: 3px solid #ffc107; border-radius: 4px;">
+                  <i class="fa fa-truck"></i> Información para gestión de entrega y documentación comercial
+                </div>
                 <group>
                   <group>
                     <field name="factura_venta" />
+                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                      Registro para seguimiento administrativo
+                    </div>
                   </group>
                   <group>
                     <field name="fecha_entrega" />
+                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                      Fecha programada o real de entrega al cliente
+                    </div>
                   </group>
                 </group>
+                
+                <div style="margin-top: 15px; padding: 10px; background-color: #f8f9fa; border: 1px solid #ddd; border-radius: 4px;">
+                  <strong>Instrucciones para Logística:</strong>
+                  <ul style="margin-top: 5px; margin-bottom: 0px;">
+                    <li>Verifique que la máquina esté en condiciones óptimas antes de programar la entrega</li>
+                    <li>Coordine con el responsable de almacén si la máquina está en ubicación diferente a piso de venta</li>
+                    <li>Registre cualquier incidencia durante el proceso de entrega en el apartado de observaciones</li>
+                  </ul>
+                </div>
               </page>
             </notebook>
           </sheet>
+          
+          <!-- COMENTARIOS -->
           <chatter />
         </form>
       </field>
