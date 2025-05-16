@@ -637,6 +637,73 @@ class UnidadAlquiler(models.Model):
                 body=f"🔄 Mantenimiento actualizado para: {record.fecha_recurrente.strftime('%d/%m/%Y')}",
                 message_type='notification'
             )
+    def aplicar_configuracion_a_todos(self):
+        """
+        Aplica la configuración de mantenimiento del registro actual a todos 
+        los otros equipos del mismo cliente.
+        """
+        self.ensure_one()
+        
+        # Verificar que haya un cliente asignado
+        if not self.cliente_id:
+            raise UserError(_("Debe seleccionar un cliente antes de aplicar la configuración a todos los equipos."))
+        
+        # Verificar que la configuración de mantenimiento esté completa
+        if not self.fecha_inicio or not self.intervalo_meses:
+            raise UserError(_("Complete la configuración de mantenimiento antes de aplicarla a otros equipos."))
+        
+        # Buscar todos los otros equipos del mismo cliente que tienen mantenimiento activado
+        otros_equipos = self.search([
+            ('id', '!=', self.id),
+            ('cliente_id', '=', self.cliente_id.id),
+            ('control_mantenimiento', '=', True)
+        ])
+        
+        if not otros_equipos:
+            raise UserError(_("No se encontraron otros equipos con mantenimiento activado para este cliente."))
+        
+        # Valores a copiar
+        valores = {
+            'fecha_inicio': self.fecha_inicio,
+            'intervalo_meses': self.intervalo_meses,
+            'patron_recurrencia': self.patron_recurrencia,
+            'usar_fecha_recurrente_como_base': self.usar_fecha_recurrente_como_base
+        }
+        
+        # Si el patrón es "día específico de la semana", también copiar estos campos
+        if self.patron_recurrencia == 'semana_dia':
+            valores.update({
+                'semana_mes': self.semana_mes,
+                'dia_semana': self.dia_semana
+            })
+        
+        # Aplicar la configuración a todos los otros equipos
+        otros_equipos.write(valores)
+        
+        # Forzar el recálculo de la fecha recurrente en todos los equipos actualizados
+        for equipo in otros_equipos:
+            equipo._compute_fecha_recurrente()
+        
+        # Mostrar mensaje de confirmación
+        message = _(f"Configuración de mantenimiento aplicada a {len(otros_equipos)} equipo(s) del cliente {self.cliente_id.name}.")
+        
+        # Registrar la acción en el historial
+        self.message_post(
+            body=f"✅ {message}",
+            message_type='notification'
+        )
+        
+        # Mostrar mensaje al usuario
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Configuración aplicada'),
+                'message': message,
+                'sticky': False,
+                'type': 'success',
+            }
+        }
     def _create_maintenance_tickets(self):
         """Crear tickets de mantenimiento para todos los equipos del cliente"""
         try:
