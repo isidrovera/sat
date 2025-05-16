@@ -2,201 +2,498 @@
 <odoo>
     <data>
         <record id="reparaciones_form_view" model="ir.ui.view">
-            <field name="name">reparaciones.reparaciones.form</field>
-            <field name="model">reparaciones.reparaciones</field>
-            <field name="arch" type="xml">
-                <form string="ModelTitle">
-                    <header>
-                        <field name="estado_id" invisible="1"/>
+    <field name="name">reparaciones.reparaciones.form</field>
+    <field name="model">reparaciones.reparaciones</field>
+    <field name="arch" type="xml">
+        <form string="Gestión de Reparaciones">
+            <!-- HEADER: Con botones mejorados e iconos modernos -->
+            <header>
+                <field name="estado_id" invisible="1"/>
+                
+                <button string="Finalizar Reparación" 
+                        name="action_finalizar_reparacion" 
+                        type="object"
+                        class="btn-success"
+                        help="Completa el proceso de reparación. Solo use este botón cuando TODAS las verificaciones hayan sido completadas satisfactoriamente y el equipo esté operativo 100%."
+                        icon="fa-check-circle"
+                        decoration-info="estado_id == 'en_revision'"
+                        invisible="estado_id != 'en_revision'"/>
+
+                <button string="Asignar Técnico" 
+                    name="enviar_mensaje_whatsapp_reparaciones" 
+                    type="object"
+                    class="btn-primary"
+                    help="Asigna este equipo a un técnico especializado. Automáticamente enviará una notificación por WhatsApp con los detalles de la asignación."
+                    icon="fa-user-plus"
+                    groups="base.group_system"
+                    decoration-info="estado_id in ('para_revision', 'sin_revisar')"
+                    invisible="estado_id not in ('para_revision', 'sin_revisar')"/>
+                
+                <button string="Generar QR" 
+                        name="imprimir_reporte_qr" 
+                        type="object"
+                        class="btn-info"
+                        help="Genera e imprime un código QR único para este equipo. Útil para seguimiento y control de inventario durante el proceso de reparación."
+                        icon="fa-qrcode"
+                        decoration-info="estado_id == 'en_revision'"
+                        invisible="estado_id != 'en_revision'"/>
+
+                <button name="action_open_gallery" 
+                    type="object" 
+                    string="Galería de Fotos"
+                    class="btn-secondary"
+                    help="Visualiza todas las fotografías tomadas durante el diagnóstico y proceso de reparación del equipo."
+                    icon="fa-images"
+                    decoration-info="estado_id in ('en_revision', 'para_revision', 'finalizado', 'entregada')"
+                    invisible="estado_id not in ('en_revision', 'para_revision', 'finalizado', 'entregada')"/>
+                
+                <field name="estado_id" widget="statusbar" statusbar_visible="true" />
+                
+                <button 
+                    name="action_request_parts" 
+                    string="Solicitar Partes" 
+                    type="object" 
+                    class="oe_highlight"
+                    icon="fa-tools"
+                    help="Crea una solicitud formal de partes necesarias para completar la reparación. Complete primero el diagnóstico técnico antes de solicitar partes."
+                    options="{'no_required_fields_validation': true}"
+                />
+            </header>
+
+            <!-- ALERTA PARA REPARACIONES EN PROCESO -->
+            <div class="alert alert-info" role="alert" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;" invisible="estado_id != 'en_revision'">
+                <i class="fa fa-spinner fa-spin fa-2x" style="color: #0d6efd;"></i>
+                <div>
+                    <strong style="font-size: 15px;">REPARACIÓN EN PROCESO</strong><br/>
+                    <b>Recordatorio:</b> Complete todos los campos marcados como requeridos para finalización y documente adecuadamente 
+                    todas las acciones realizadas. El informe técnico debe ser detallado y preciso.
+                </div>
+            </div>
+
+            <!-- ALERTA PARA PRIORIDAD ALTA -->
+            <div class="alert alert-danger" role="alert" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;" invisible="prioridad != 'alta'">
+                <i class="fa fa-exclamation-triangle fa-2x" style="color: #dc3545;"></i>
+                <div>
+                    <strong style="font-size: 15px;">¡REPARACIÓN DE ALTA PRIORIDAD!</strong><br/>
+                    <b>Tiempo máximo de atención: 24 horas</b><br/>
+                    Esta reparación ha sido marcada como urgente. Se requiere atención inmediata y actualización constante del progreso.
+                </div>
+            </div>
+
+            <sheet>
+                <!-- TÍTULO DE LA REPARACIÓN -->
+                <div class="oe_title">
+                    <label for="name" style="font-size: 16px; color: #212529;">Referencia de Reparación</label>
+                    <h1>
+                        <field name="name" placeholder="Número/ID de Reparación" style="font-size: 20px;"/>
+                    </h1>
+                    <div style="margin-top: 5px; font-size: 13px; color: #6c757d; border-top: 1px dotted #ddd; padding-top: 5px;">
+                        <i class="fa fa-info-circle"></i> Identificador único de esta orden de reparación. 
+                        Referencia este número en todas las comunicaciones relacionadas con esta reparación.
+                    </div>
+                </div>
+
+                <!-- CLIENTE -->
+                <div class="oe_title">
+                    <label for="cliente_id" style="font-size: 16px; color: #212529;">Cliente</label>
+                    <h1>
+                        <field name="cliente_id" placeholder="Seleccione el cliente" widget="many2one_avatar" style="font-size: 20px;"/>
+                    </h1>
+                    <div style="margin-top: 5px; font-size: 13px; color: #6c757d; border-top: 1px dotted #ddd; padding-top: 5px;">
+                        <i class="fa fa-user-tag"></i> Cliente asociado a este equipo. Toda comunicación y coordinación debe hacerse 
+                        directamente con el contacto principal de esta cuenta.
+                    </div>
+                </div>
+
+                <!-- DATOS PRINCIPALES EN GRUPOS -->
+                <group>
+                    <!-- GRUPO: DATOS PARA REVISIÓN -->
+                    <group string="Datos para la revisión" style="background-color: #f0f9ff; border-radius: 8px; padding: 15px; border-left: 4px solid #0d6efd;">
+                        <div style="margin-bottom: 15px; font-size: 13px; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;">
+                            <i class="fa fa-clipboard-check"></i> <b>Instrucciones:</b> Esta sección contiene la información necesaria 
+                            para programar y asignar correctamente la reparación. Complete todos los campos antes de asignar al técnico.
+                        </div>
                         
-                        <button string="Finalizar reparación" 
-                                name="action_finalizar_reparacion" 
-                                type="object"
-                                class="btn-success"
-                                help="Finalizar el proceso de reparación"
-                                icon="fa-check-circle"
-                                decoration-info="estado_id == 'en_revision'"
-                                invisible="estado_id != 'en_revision'"/>
-
-                        <button string="Asignar equipo" 
-                            name="enviar_mensaje_whatsapp_reparaciones" 
-                            type="object"
-                            class="btn-primary"
-                            help="Asignar equipo al técnico"
-                            icon="fa-user-plus"
-                            groups="base.group_system"
-                            decoration-info="estado_id in ('para_revision', 'sin_revisar')"
-                            invisible="estado_id not in ('para_revision', 'sin_revisar')"/>
-                        <button string="Imprimir QR" 
-                                name="imprimir_reporte_qr" 
-                                type="object"
-                                class="btn-info"
-                                help="Generar e imprimir código QR"
-                                icon="fa-qrcode"
-                                decoration-info="estado_id == 'en_revision'"
-                                invisible="estado_id != 'en_revision'"/>
-
-                        <button name="action_open_gallery" 
-                            type="object" 
-                            string="Ver fotos"
-                            class="btn-secondary"
-                            help="Ver galería de fotos"
-                            icon="fa-camera"
-                            decoration-info="estado_id in ('en_revision', 'para_revision', 'finalizado', 'entregada')"
-                            invisible="estado_id not in ('en_revision', 'para_revision', 'finalizado', 'entregada')"/>
-                        <field name="estado_id" widget="statusbar" statusbar_visible="true" />
-                        <button 
-                            name="action_request_parts" 
-                            string="Solicitar Partes" 
-                            type="object" 
-                            class="oe_highlight"
-                            options="{'no_required_fields_validation': true}"
-                        />
-                    </header>
-                    <sheet>
-                        <div class="oe_title">
-                            <label for="name" />
-                            <h1>
-                                <field name="name" placeholder="Title" />
-                            </h1>
+                        <field name="prioridad" widget="badge" 
+                            help="Define la urgencia de atención: Alta (24h), Media (48h), Baja (72h). Asignaciones de prioridad alta requieren aprobación de supervisor."/>
+                        <field name="tipo_revision" widget="badge"
+                            help="Tipo de revisión requerida. Determina el protocolo técnico a seguir y el tipo de pruebas a realizar."/>
+                        <field name="ubicacion_id" widget="badge"
+                            help="Ubicación física actual del equipo. Asegúrese de que esta información sea exacta para evitar demoras en la localización."/>
+                        <field name="responsable_id" widget="many2one_avatar" options="{'no_create': True}" readonly="estado_id == 'en_revision'"
+                            help="Técnico responsable asignado a esta reparación. Este técnico será el único autorizado para actualizar el estado de la reparación."/>
+                        <field name="responsable_mobile_clean" 
+                            help="Número de contacto directo del técnico para coordinaciones urgentes."/>
+                        
+                        <div style="margin-top: 10px; font-size: 12px; background-color: #e7f1ff; padding: 8px; border-radius: 4px;">
+                            <i class="fa fa-mobile-alt" style="color: #0d6efd;"></i> <b>Nota:</b> El técnico asignado debe confirmar la recepción 
+                            de la asignación respondiendo al mensaje de WhatsApp dentro de las 2 horas siguientes.
                         </div>
-                        <div class="oe_title">
-                            <label for="cliente_id" />
-                            <h1>
-                                <field name="cliente_id" placeholder="Cliente" widget="many2one_avatar" />
-                            </h1>
+                    </group>
+
+                    <!-- GRUPO: DATOS DEL EQUIPO -->
+                    <group string="Datos del equipo" style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; border-left: 4px solid #495057;">
+                        <div style="margin-bottom: 15px; font-size: 13px; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;">
+                            <i class="fa fa-print"></i> <b>Instrucciones:</b> Verifique que los datos del equipo coincidan exactamente con 
+                            lo físico. Cualquier discrepancia debe ser reportada inmediatamente, especialmente en número de serie.
                         </div>
+                        
+                        <field name="importacion"
+                            help="Referencia del lote de importación al que pertenece este equipo."/>
+                        <field name="nombre_proveedor"
+                            help="Proveedor original del equipo."/>
+                        <field name="tipo_id" invisible="1" />
+                        <field name="tipo_machine"
+                            help="Categoría del equipo (fotocopiadora, impresora, multifuncional, etc.)."/>
+                        <field name="marca"
+                            help="Marca del fabricante del equipo."/>
+                        <field name="maquina_id" domain="[('estado_ventas_id', '=', 'sin_revisar')]" options="{'no_create': True}" readonly="estado_id == 'en_revision'" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
+                            help="Modelo específico del equipo. Esta información es crucial para la identificación de partes compatibles."/>
+                        <field name="serie_id" readonly="True" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
+                            help="NÚMERO DE SERIE ÚNICO. Verifique física y visualmente que coincida con lo que aparece en la etiqueta del equipo."/>
+                        <field name="contometrok_id"
+                            help="Contador interno de impresiones/copias, ubicado en configuración o menú de información del equipo."/>
+                        <field name="contometro_inicial"
+                            help="Lectura inicial del contómetro al momento de iniciar la reparación. Sirve como referencia para pruebas técnicas."/>
+                        <field name="nombre_maquina" invisible='True' />
+                        <field name="nombre_proveedor" invisible='True' />
+                        <field name="autorizacion_cambio_digitos" invisible="True"/>
+                        <field name="autenticacion_correcta" invisible="True"/>
+                        
+                        <div style="margin-top: 10px; font-size: 12px; background-color: #e9ecef; padding: 8px; border-radius: 4px;">
+                            <i class="fa fa-exclamation-circle" style="color: #dc3545;"></i> <b>Importante:</b> Verifique siempre que el número de serie coincida 
+                            exactamente con el físico. Tome fotografía clara de la etiqueta al iniciar la revisión.
+                        </div>
+                    </group>
+                </group>
+                <notebook>
+                    <!-- PESTAÑA: INFORME TÉCNICO -->
+                    <page string="Informe Técnico">
+                        <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #007bff; border-radius: 4px;">
+                            <h4 style="margin-top: 0; font-size: 16px; color: #007bff;"><i class="fa fa-file-medical-alt"></i> Instrucciones para Informe Técnico</h4>
+                            <p style="margin-bottom: 5px; font-size: 13px;">
+                                En esta sección debe documentar detalladamente el diagnóstico y las acciones realizadas:
+                            </p>
+                            <ul style="margin-bottom: 0; font-size: 13px;">
+                                <li><b>Diagnóstico completo:</b> Detalle todos los problemas encontrados, causas y soluciones aplicadas.</li>
+                                <li><b>Partes reemplazadas:</b> Liste todas las piezas reemplazadas con sus códigos de parte correspondientes.</li>
+                                <li><b>Ajustes realizados:</b> Documente cambios en configuración, firmware o ajustes mecánicos.</li>
+                                <li><b>Problemas pendientes:</b> Si existen problemas no resueltos, especifique claramente el motivo.</li>
+                            </ul>
+                            <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
+                                <b>Nota:</b> Este informe es un documento técnico oficial que puede ser consultado por el cliente y otros técnicos.
+                                La precisión y detalle son fundamentales.
+                            </p>
+                        </div>
+                        
                         <group>
-                            <group string="Datos para la revisión">
-                                <field name="prioridad" widget="badge" />
-                                <field name="tipo_revision" widget="badge" />
-                                <field name="ubicacion_id" widget="badge" />
-                                <field name="responsable_id" widget="many2one_avatar" options="{'no_create': True}" readonly="estado_id == 'en_revision'"/>
-                                <field name="responsable_mobile_clean" />
+                            <group>
+                                <field name="informe" required_for_finalization="True"
+                                    placeholder="Detalle aquí el diagnóstico completo, procedimientos realizados, partes reemplazadas y resultados de las pruebas..." 
+                                    style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #f8f9fa;" />
                             </group>
-                            <group string="Datos del equipo">
-                                <!--<field name="qr_image" widget='image' class="oe_avatar" options="{'size':
-                                [90, 90]}"/>
-                                <field name="qr_code_ventas" widget='image' class="oe_avatar" options="{'size': [90, 90]}"/>-->
-                                <field name="importacion" />
-                                <field name="nombre_proveedor" />
-                                <field name="tipo_id" invisible="1" />
-                                <field name="tipo_machine" />
-                                <field name="marca" />
-                                <field name="maquina_id" domain="[('estado_ventas_id', '=', 'sin_revisar')]" options="{'no_create': True}" readonly="estado_id == 'en_revision'" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;" />
-                                <field name="serie_id" readonly="True" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"/>
-                                <field name="contometrok_id" />
-                                <field name="contometro_inicial"/>
-                                <field name="nombre_maquina" invisible='True' />
-                                <field name="nombre_proveedor" invisible='True' />
-                                <field name="autorizacion_cambio_digitos" invisible="True"/>
-                                <field name="autenticacion_correcta" invisible="True"/>
+                            <group>
+                                <field name="calidad_id" required_for_finalization="True" 
+                                    help="Evalúe la calidad general de impresión/copia del equipo después de la intervención."/>
+                                <field name="tapas_id" required_for_finalization="True" 
+                                    help="Estado de las tapas y carcasas externas. Reporte cualquier daño, incluso si es estético."/>
+                                <field name="panel_id" required_for_finalization="True" 
+                                    help="Funcionamiento del panel de control. Todos los botones y pantalla deben operar correctamente."/>
+                                
+                                <div style="margin-top: 20px; font-size: 12px; background-color: #fff3cd; padding: 10px; border-radius: 4px; border-left: 3px solid #ffc107;">
+                                    <i class="fa fa-lightbulb" style="color: #ffc107;"></i> <b>Recomendación:</b><br/>
+                                    Siempre adjunte muestras de impresión o copias escaneadas en la galería de fotos como evidencia 
+                                    de la calidad final después de la reparación.
+                                </div>
                             </group>
                         </group>
-                        <notebook>
-                            <page string="Informe Técnico">
-                                <group>
-                                    <group>
-                                        <field name="informe" required_for_finalization="True" />
-                                    </group>
-                                    <group>
-                                        <field name="calidad_id" required_for_finalization="True" />
-                                        <field name="tapas_id" required_for_finalization="True" />
-                                        <field name="panel_id" required_for_finalization="True" />
-                                    </group>
-                                </group>
-                            </page>
-                            <page string="Accesorios">
-                                <group>
-                                    <group>
-                                        <field name="tray_id" placeholder="Detalla la cantidad de caseteras." required_for_finalization="True" />
-                                        <field name="adf_simple_id" required_for_finalization="True" />
-                                        <field name="adf_dual_id" required_for_finalization="True" />
-                                        <field name="finalizador_interno_id" required_for_finalization="True" />
-                                        <field name="finalizador_externo_id" required_for_finalization="True" />
-                                        <field name="mueble_id" required_for_finalization="True" />
-                                        <field name="lct_id" required_for_finalization="True" />
-                                    </group>
-                                    <group>
-                                        <field name="wi_fi_id" required_for_finalization="True" />
-                                        <field name="cable_poder_id" required_for_finalization="True" />
-                                        <field name="panel_normal_id" required_for_finalization="True" />
-                                        <field name="panel_smart_id" required_for_finalization="True" />
-                                        <field name="ot_id" required_for_finalization="True" />
-                                        <field name="hdd_id" required_for_finalization="True" />
-                                    </group>
-                                </group>
-                            </page>
-                            <page string="Check List">
-                                <group>
-                                    <group>
-                                        <field name="copia_id" required_for_finalization="True" />
-                                        <field name="impresion_id" required_for_finalization="True" />
-                                        <field name="impresion_usb_id" required_for_finalization="True" />
-                                        <field name="scaner_smb_id" required_for_finalization="True" />
-                                        <field name="scaner_usb_id" required_for_finalization="True" />
-                                        <field name="scaner_ftp_id" required_for_finalization="True" />
-                                        <field name="scaner_mail_id" required_for_finalization="True" />
-                                        <field name="bypass_id" required_for_finalization="True" />
-                                        <field name="tray1_id" required_for_finalization="True" />
-                                        <field name="tray2_id" required_for_finalization="True" />
-                                        <field name="tray3_id" required_for_finalization="True" />
-                                        <field name="tray4_id" required_for_finalization="True" />
-                                        <field name="adf_id" required_for_finalization="True" />
-                                        <field name="finalizador_id" required_for_finalization="True" />
-                                        <field name="tacho_id" required_for_finalization="True" />
-                                    </group>
-                                    <group>
-                                        <field name="fusora_id" required_for_finalization="True" />
-                                        <field name="rodillo_id" required_for_finalization="True" />
-                                        <field name="calor_id" required_for_finalization="True" />
-                                        <field name="transfer_id" required_for_finalization="True" />
-                                        <field name="optico_id" required_for_finalization="True" />
-                                        <field name="toner_black_id" required_for_finalization="True" />
-                                        <field name="toner_magenta_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
-                                        <field name="toner_cyan_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
-                                        <field name="toner_yellow_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
-                                        <field name="black_id" required_for_finalization="True" />
-                                        <field name="magenta_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
-                                        <field name="cyan_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
-                                        <field name="yellow_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
-                                        <field name="developerk_id" required_for_finalization="True" />
-                                        <field name="developerm_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
-                                        <field name="developerc_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
-                                        <field name="developery_id" required_for_finalization="True" invisible="tipo_id != 'color'" />
-                                    </group>
-                                </group>
-                            </page>
-                            <page string="Detalle de falla proveedor">
-                                <group>
-                                    <group>
-                                        <field name="falla_proveedor" />
-                                    </group>
-                                    <group>
-                                        <field name="foto_problema"/>
-                                    </group>
-                                </group>
-                            </page>
-                            <page string="Detalle falla ventas">
-                                <group>
-                                    <group>
-                                        <field name="falla_ventas" />
-                                    </group>
-                                    <group>
+                    </page>
 
-                                    </group>
-                                </group>
-                            </page>
-                            <page string="Galería de Fotos" name="fotos" groups="base.group_system" >
-                                <field name="fotos_ids" widget="gallery_widget"/>
-                            </page>
+                    <!-- PESTAÑA: ACCESORIOS -->
+                    <page string="Accesorios">
+                        <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #28a745; border-radius: 4px;">
+                            <h4 style="margin-top: 0; font-size: 16px; color: #28a745;"><i class="fa fa-puzzle-piece"></i> Verificación de Accesorios</h4>
+                            <p style="margin-bottom: 5px; font-size: 13px;">
+                                Verifique detalladamente todos los accesorios del equipo. Esta información es crítica tanto para la reparación
+                                como para la entrega final al cliente:
+                            </p>
+                            <ul style="margin-bottom: 0; font-size: 13px;">
+                                <li><b>Estado funcional:</b> Cada accesorio debe ser probado y verificado individualmente.</li>
+                                <li><b>Integridad física:</b> Reporte cualquier daño visible o desgaste excesivo.</li>
+                                <li><b>Compatibilidad:</b> Confirme que todos los accesorios sean los originales o compatibles aprobados.</li>
+                            </ul>
+                            <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
+                                <b>Importante:</b> Todos los campos son obligatorios para finalizar la reparación. Si un accesorio no aplica para
+                                este modelo específico, seleccione la opción "No Aplica".
+                            </p>
+                        </div>
+                        
+                        <group>
+                            <group style="background-color: #f8fff8; border-radius: 6px; padding: 10px;">
+                                <field name="tray_id" placeholder="Detalla la cantidad de caseteras." required_for_finalization="True" 
+                                    help="Especifique número, tipo y estado de todas las bandejas de papel instaladas."/>
+                                <field name="adf_simple_id" required_for_finalization="True" 
+                                    help="Estado del alimentador automático de documentos simple (una cara)."/>
+                                <field name="adf_dual_id" required_for_finalization="True" 
+                                    help="Estado del alimentador automático de documentos doble (duplex automático)."/>
+                                <field name="finalizador_interno_id" required_for_finalization="True" 
+                                    help="Estado del finalizador interno (grapadora, perforadora, etc.)."/>
+                                <field name="finalizador_externo_id" required_for_finalization="True" 
+                                    help="Estado del finalizador externo (folleto, ordenador, etc.)."/>
+                                <field name="mueble_id" required_for_finalization="True" 
+                                    help="Estado del mueble o base del equipo."/>
+                                <field name="lct_id" required_for_finalization="True" 
+                                    help="Estado de la bandeja de gran capacidad (Large Capacity Tray)."/>
+                            </group>
+                            <group style="background-color: #f8fff8; border-radius: 6px; padding: 10px;">
+                                <field name="wi_fi_id" required_for_finalization="True" 
+                                    help="Funcionamiento del módulo Wi-Fi. Verifique conexión y estabilidad."/>
+                                <field name="cable_poder_id" required_for_finalization="True" 
+                                    help="Estado del cable de alimentación. Verificar integridad y conexión segura."/>
+                                <field name="panel_normal_id" required_for_finalization="True" 
+                                    help="Estado del panel de control estándar."/>
+                                <field name="panel_smart_id" required_for_finalization="True" 
+                                    help="Estado del panel inteligente con pantalla táctil."/>
+                                <field name="ot_id" required_for_finalization="True" 
+                                    help="Estado de la bandeja offset (separadora)."/>
+                                <field name="hdd_id" required_for_finalization="True" 
+                                    help="Estado del disco duro interno. Verificar capacidad y funcionamiento."/>
+                                
+                                <div style="margin-top: 20px; font-size: 12px; background-color: #d4edda; padding: 10px; border-radius: 4px; border-left: 3px solid #28a745;">
+                                    <i class="fa fa-camera" style="color: #28a745;"></i> <b>Evidencia fotográfica:</b><br/>
+                                    Tome fotografías de todos los accesorios, especialmente aquellos con algún daño o que
+                                    requieren reemplazo. Esto es esencial para documentación y posibles reclamos.
+                                </div>
+                            </group>
+                        </group>
+                    </page>
 
-                        </notebook>
-                    </sheet>
-                    <chatter />
-                </form>
-            </field>
-        </record>
+                    <!-- PESTAÑA: CHECK LIST -->
+                    <page string="Check List">
+                        <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #6f42c1; border-radius: 4px;">
+                            <h4 style="margin-top: 0; font-size: 16px; color: #6f42c1;"><i class="fa fa-tasks"></i> Lista de Verificación Completa</h4>
+                            <p style="margin-bottom: 5px; font-size: 13px;">
+                                Este checklist debe completarse íntegramente antes de finalizar la reparación. Cada ítem representa
+                                una función o componente crítico que debe ser verificado:
+                            </p>
+                            <ul style="margin-bottom: 0; font-size: 13px;">
+                                <li><b>Prueba exhaustiva:</b> Cada función debe ser probada en condiciones reales de uso.</li>
+                                <li><b>Verificación de calidad:</b> No basta con que funcione, debe hacerlo correctamente y con la calidad esperada.</li>
+                                <li><b>Documentación:</b> Cualquier anomalía debe ser documentada, incluso si no afecta la funcionalidad principal.</li>
+                            </ul>
+                            <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
+                                <b>Proceso de verificación:</b> Para equipos color, todas las pruebas deben realizarse en todos los modos disponibles
+                                (B/N y Color). Para equipos monocromáticos, los campos de color aparecerán ocultos automáticamente.
+                            </p>
+                        </div>
+                        
+                        <group>
+                            <group style="background-color: #f8f0ff; border-radius: 6px; padding: 10px;">
+                                <div style="margin-bottom: 10px; font-size: 14px; font-weight: bold; color: #6f42c1; border-bottom: 1px solid #e9d8fd; padding-bottom: 5px;">
+                                    Funciones
+                                </div>
+                                <field name="copia_id" required_for_finalization="True" 
+                                    help="Funcionamiento de la función de copia. Probar simplex, duplex y diferentes ampliaciones/reducciones."/>
+                                <field name="impresion_id" required_for_finalization="True" 
+                                    help="Funcionamiento de impresión vía red. Verificar conexión y calidad de impresión."/>
+                                <field name="impresion_usb_id" required_for_finalization="True" 
+                                    help="Funcionamiento de impresión vía USB. Probar con diferentes tipos de archivos."/>
+                                <field name="scaner_smb_id" required_for_finalization="True" 
+                                    help="Funcionamiento de escaneo a carpeta compartida (SMB). Verificar conexión y calidad."/>
+                                <field name="scaner_usb_id" required_for_finalization="True" 
+                                    help="Funcionamiento de escaneo a USB. Probar diferentes formatos (PDF, JPG, TIFF)."/>
+                                <field name="scaner_ftp_id" required_for_finalization="True" 
+                                    help="Funcionamiento de escaneo a servidor FTP. Verificar conexión y transferencia."/>
+                                <field name="scaner_mail_id" required_for_finalization="True" 
+                                    help="Funcionamiento de escaneo a email. Probar con diferentes tamaños de documento."/>
+                            </group>
+                            <group style="background-color: #f8f0ff; border-radius: 6px; padding: 10px;">
+                                <div style="margin-bottom: 10px; font-size: 14px; font-weight: bold; color: #6f42c1; border-bottom: 1px solid #e9d8fd; padding-bottom: 5px;">
+                                    Componentes Mecánicos
+                                </div>
+                                <field name="bypass_id" required_for_finalization="True" 
+                                    help="Funcionamiento de la bandeja bypass (alimentación manual)."/>
+                                <field name="tray1_id" required_for_finalization="True" 
+                                    help="Funcionamiento de la bandeja 1. Probar diferentes gramajes de papel."/>
+                                <field name="tray2_id" required_for_finalization="True" 
+                                    help="Funcionamiento de la bandeja 2. Verificar detección automática de tamaño."/>
+                                <field name="tray3_id" required_for_finalization="True" 
+                                    help="Funcionamiento de la bandeja 3."/>
+                                <field name="tray4_id" required_for_finalization="True" 
+                                    help="Funcionamiento de la bandeja 4."/>
+                                <field name="adf_id" required_for_finalization="True" 
+                                    help="Funcionamiento del alimentador automático de documentos. Probar con diferentes cantidades de hojas."/>
+                                <field name="finalizador_id" required_for_finalization="True" 
+                                    help="Funcionamiento del finalizador (grapadora, perforadora, etc.)."/>
+                                <field name="tacho_id" required_for_finalization="True" 
+                                    help="Estado del contenedor de desechos. Verificar que esté limpio y correctamente instalado."/>
+                            </group>
+                        </group>
+                        
+                        <group>
+                            <group style="background-color: #fff0f0; border-radius: 6px; padding: 10px; margin-top: 15px;">
+                                <div style="margin-bottom: 10px; font-size: 14px; font-weight: bold; color: #dc3545; border-bottom: 1px solid #f8d7da; padding-bottom: 5px;">
+                                    Componentes de Impresión
+                                </div>
+                                <field name="fusora_id" required_for_finalization="True" 
+                                    help="Estado de la unidad fusora. Verificar temperatura y presión adecuadas."/>
+                                <field name="rodillo_id" required_for_finalization="True" 
+                                    help="Estado de los rodillos de tracción y alimentación. Verificar desgaste."/>
+                                <field name="calor_id" required_for_finalization="True" 
+                                    help="Funcionamiento de los sensores de calor y temperatura."/>
+                                <field name="transfer_id" required_for_finalization="True" 
+                                    help="Estado de la unidad de transferencia. Verificar limpieza y alineación."/>
+                                <field name="optico_id" required_for_finalization="True" 
+                                    help="Estado de los componentes ópticos (espejos, lentes, sensores)."/>
+                            </group>
+                            <group style="background-color: #fff8f0; border-radius: 6px; padding: 10px; margin-top: 15px;">
+                                <div style="margin-bottom: 10px; font-size: 14px; font-weight: bold; color: #fd7e14; border-bottom: 1px solid #ffe5d0; padding-bottom: 5px;">
+                                    Consumibles
+                                </div>
+                                <field name="toner_black_id" required_for_finalization="True" 
+                                    help="Estado del tóner negro. Verificar nivel y distribución uniforme."/>
+                                <field name="toner_magenta_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
+                                    help="Estado del tóner magenta. Verificar nivel y distribución uniforme."/>
+                                <field name="toner_cyan_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
+                                    help="Estado del tóner cyan. Verificar nivel y distribución uniforme."/>
+                                <field name="toner_yellow_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
+                                    help="Estado del tóner amarillo. Verificar nivel y distribución uniforme."/>
+                                <field name="black_id" required_for_finalization="True" 
+                                    help="Estado del tambor/unidad de imagen negro."/>
+                                <field name="magenta_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
+                                    help="Estado del tambor/unidad de imagen magenta."/>
+                                <field name="cyan_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
+                                    help="Estado del tambor/unidad de imagen cyan."/>
+                                <field name="yellow_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
+                                    help="Estado del tambor/unidad de imagen amarillo."/>
+                                <field name="developerk_id" required_for_finalization="True" 
+                                    help="Estado del revelador negro."/>
+                                <field name="developerm_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
+                                    help="Estado del revelador magenta."/>
+                                <field name="developerc_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
+                                    help="Estado del revelador cyan."/>
+                                <field name="developery_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
+                                    help="Estado del revelador amarillo."/>
+                            </group>
+                        </group>
+                    </page>
+                    <page string="Detalle de falla proveedor">
+                        <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #dc3545; border-radius: 4px;">
+                            <h4 style="margin-top: 0; font-size: 16px; color: #dc3545;"><i class="fa fa-exclamation-triangle"></i> Fallas Reportadas por Proveedor</h4>
+                            <p style="margin-bottom: 5px; font-size: 13px;">
+                                En esta sección se documentan los problemas reportados originalmente por el proveedor:
+                            </p>
+                            <ul style="margin-bottom: 0; font-size: 13px;">
+                                <li><b>Descripción original:</b> Transcriba exactamente la descripción de falla proporcionada por el proveedor.</li>
+                                <li><b>Evidencia recibida:</b> Adjunte las fotografías o documentación proporcionada por el proveedor.</li>
+                                <li><b>Correlación:</b> Después del diagnóstico, indique si la falla reportada coincide con lo encontrado.</li>
+                            </ul>
+                            <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
+                                <b>Nota importante:</b> Esta información es fundamental para análisis de garantía y reclamos al proveedor.
+                                Sea preciso y objetivo en la documentación.
+                            </p>
+                        </div>
+                        
+                        <group>
+                            <group>
+                                <field name="falla_proveedor" placeholder="Describa exactamente la falla reportada por el proveedor..." 
+                                    style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #fff9f9;" />
+                            </group>
+                            <group>
+                                <field name="foto_problema" widget="image"/>
+                                <div style="font-size: 13px; color: #6c757d; margin-top: 10px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                                    <b>Instrucciones para documentación fotográfica:</b>
+                                    <ul style="margin-top: 5px; margin-bottom: 0;">
+                                        <li>Adjunte las fotos originales proporcionadas por el proveedor</li>
+                                        <li>No modifique ni edite las imágenes originales</li>
+                                        <li>Si toma fotos adicionales, indíquelo claramente en el informe</li>
+                                        <li>Para comparativas, use la galería de fotos separada</li>
+                                    </ul>
+                                </div>
+                            </group>
+                        </group>
+                    </page>
+
+                    <!-- PESTAÑA: DETALLE FALLA VENTAS -->
+                    <page string="Detalle falla ventas">
+                        <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #ffc107; border-radius: 4px;">
+                            <h4 style="margin-top: 0; font-size: 16px; color: #ffc107;"><i class="fa fa-store"></i> Fallas Reportadas por Ventas</h4>
+                            <p style="margin-bottom: 5px; font-size: 13px;">
+                                Documente aquí los problemas o condiciones especiales reportados por el departamento de ventas:
+                            </p>
+                            <ul style="margin-bottom: 0; font-size: 13px;">
+                                <li><b>Contexto comercial:</b> Incluya información sobre el contexto de venta (demo, exhibición, venta regular).</li>
+                                <li><b>Compromisos comerciales:</b> Documente cualquier compromiso hecho al cliente sobre la reparación.</li>
+                                <li><b>Expectativas de tiempo:</b> Si hay plazos comerciales comprometidos, indíquelos claramente.</li>
+                            </ul>
+                            <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
+                                <b>Importante para coordinación:</b> Esta información ayuda a priorizar y coordinar con el área comercial.
+                                La comunicación clara entre técnica y ventas es esencial para la satisfacción del cliente.
+                            </p>
+                        </div>
+                        
+                        <group>
+                            <group>
+                                <field name="falla_ventas" placeholder="Detalle aquí los problemas reportados por ventas y cualquier compromiso comercial relacionado..." 
+                                    style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #fffbf0;" />
+                            </group>
+                            <group>
+                                <div style="border: 1px solid #ffeeba; background-color: #fff3cd; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                                    <h5 style="color: #856404; font-size: 14px; margin-top: 0;"><i class="fa fa-exchange-alt"></i> Proceso de Coordinación Técnica-Ventas</h5>
+                                    <ol style="margin-bottom: 0; font-size: 13px; padding-left: 20px;">
+                                        <li style="margin-bottom: 5px;"><b>Validación técnica:</b> El departamento técnico debe validar si los compromisos de ventas son factibles.</li>
+                                        <li style="margin-bottom: 5px;"><b>Comunicación de hallazgos:</b> Cualquier discrepancia entre lo ofrecido y lo factible debe comunicarse inmediatamente.</li>
+                                        <li style="margin-bottom: 5px;"><b>Actualización de tiempos:</b> Mantener informado al equipo de ventas sobre los plazos reales de reparación.</li>
+                                        <li><b>Documentación final:</b> Al completar la reparación, documentar claramente lo que se reparó para facilitar la comunicación con el cliente.</li>
+                                    </ol>
+                                </div>
+                            </group>
+                        </group>
+                    </page>
+
+                    <!-- PESTAÑA: GALERÍA DE FOTOS -->
+                    <page string="Galería de Fotos" name="fotos" groups="base.group_system" >
+                        <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #17a2b8; border-radius: 4px;">
+                            <h4 style="margin-top: 0; font-size: 16px; color: #17a2b8;"><i class="fa fa-images"></i> Documentación Fotográfica</h4>
+                            <p style="margin-bottom: 5px; font-size: 13px;">
+                                La documentación fotográfica completa es esencial para el seguimiento del proceso de reparación:
+                            </p>
+                            <ul style="margin-bottom: 0; font-size: 13px;">
+                                <li><b>Fotos iniciales:</b> Capture el estado del equipo al recibirlo (exterior e interior).</li>
+                                <li><b>Componentes dañados:</b> Documente claramente todas las piezas con problemas antes de reemplazarlas.</li>
+                                <li><b>Proceso de reparación:</b> Registre los pasos clave durante la reparación para referencia futura.</li>
+                                <li><b>Resultado final:</b> Tome fotos del equipo reparado y muestras de impresión/copia como evidencia.</li>
+                            </ul>
+                            <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
+                                <b>Requerimientos de imagen:</b> Las fotos deben ser claras, bien iluminadas y enfocadas. Incluya una regla o referencia
+                                de tamaño cuando sea relevante. Todas las etiquetas y números de serie deben ser legibles en las imágenes.
+                            </p>
+                        </div>
+                        
+                        <!-- Galería de imágenes -->
+                        <div style="margin: 15px 0;">
+                            <field name="fotos_ids" widget="gallery_widget"/>
+                        </div>
+                        
+                        <div style="margin-top: 15px; padding: 10px; background-color: #e7f5fa; border: 1px solid #bee5eb; border-radius: 6px;">
+                            <h5 style="color: #0c5460; font-size: 14px; margin-top: 0;"><i class="fa fa-camera-retro"></i> Protocolo de Documentación Visual</h5>
+                            <ol style="margin-bottom: 0; font-size: 13px; padding-left: 20px;">
+                                <li style="margin-bottom: 5px;"><b>Fotos de identificación:</b> Siempre incluya fotos del número de serie y etiquetas del fabricante.</li>
+                                <li style="margin-bottom: 5px;"><b>Antes y después:</b> Documente el estado de cada componente antes y después de la intervención.</li>
+                                <li style="margin-bottom: 5px;"><b>Muestras de calidad:</b> Incluya imágenes de impresiones/copias realizadas para evaluación de calidad.</li>
+                                <li style="margin-bottom: 5px;"><b>Organización:</b> Nombre las imágenes con formato descriptivo (ej: "SN12345_FusoraDañada_Antes").</li>
+                                <li><b>Resolución:</b> Use imágenes de al menos 1200x800 píxeles para permitir zoom en detalles importantes.</li>
+                            </ol>
+                        </div>
+                    </page>
+                </notebook>
+            </sheet>
+            
+            <!-- COMENTARIOS -->
+            <chatter/>
+        </form>
+    </field>
+</record>
         <record id="reparaciones_tree_view" model="ir.ui.view">
             <field name="name">reparaciones.reparaciones.tree</field>
             <field name="model">reparaciones.reparaciones</field>
