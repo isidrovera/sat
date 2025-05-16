@@ -14,13 +14,13 @@
                 groups="base.group_system" />
                 
             <button string="Nueva Reparación" name="create_reparacion" type="object" 
-                class="btn btn-success" icon="fa-tools" 
+                class="btn btn-success" icon="fa-wrench" 
                 help="Crea una nueva orden de reparación para esta máquina. Asegúrese de haber registrado correctamente las observaciones del equipo." 
                 groups="base.group_system" />
                 
-            <button name="action_crear_reparaciones" string="Crear Reparaciones Masivas" 
+            <!--<button name="action_crear_reparaciones" string="Crear Reparaciones Masivas" 
                 type="object" class="btn-primary" icon="fa-cogs"
-                help="Permite generar múltiples órdenes de reparación para varios equipos desde una sola operación" />
+                help="Permite generar múltiples órdenes de reparación para varios equipos desde una sola operación" />-->
                 
             <field name="disponibilidad_id" widget="statusbar" statusbar_visible="true" />
             <field name="estado_ventas_id" widget="statusbar" options="{'clickable': '1'}" 
