@@ -43,7 +43,7 @@
                     string="Galería de Fotos"
                     class="btn-secondary"
                     help="Visualiza todas las fotografías tomadas durante el diagnóstico y proceso de reparación del equipo."
-                    icon="fa-images"
+                    icon="fa-camera"
                     decoration-info="estado_id in ('en_revision', 'para_revision', 'finalizado', 'entregada')"
                     invisible="estado_id not in ('en_revision', 'para_revision', 'finalizado', 'entregada')"/>
                 
@@ -54,7 +54,7 @@
                     string="Solicitar Partes" 
                     type="object" 
                     class="oe_highlight"
-                    icon="fa-tools"
+                    icon="fa-cogs"
                     help="Crea una solicitud formal de partes necesarias para completar la reparación. Complete primero el diagnóstico técnico antes de solicitar partes."
                     options="{'no_required_fields_validation': true}"
                 />
