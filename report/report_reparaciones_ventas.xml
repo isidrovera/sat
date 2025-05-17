@@ -346,7 +346,6 @@
                             </table>
                         </div>
                         
-                        <!-- Sección 2: Estado Técnico -->
                         <div class="info-card mb-3">
                             <div style="background: var(--primary-dark); color: white; padding: 8px 15px; font-weight: bold;">
                                 <i class="fa fa-cog"/> ESTADO TÉCNICO
@@ -366,27 +365,12 @@
                                             <t t-esc="calidad"/>
                                         </span>
                                     </td>
-                                    <th style="width: 15%"><i class="fa fa-check"/>Estado</th>
-                                    <td style="width: 19%">
-                                        <t t-set="estado" t-value="selection_labels.get(reparaciones.id, {}).get('estado_id', 'NA')"/>
-                                        <span t-att-class="
-                                            'status-badge ' + 
-                                            (estado == 'Finalizado' and 'status-finalizado' or
-                                             estado == 'En revisión' and 'status-en-revision' or
-                                             estado == 'Con problemas' and 'status-con-problemas' or 
-                                             estado == 'De partes' and 'status-de-partes' or
-                                             estado == 'Sin revisar' and 'status-sin-revisar' or
-                                             estado == 'Para revision' and 'status-para-revision' or
-                                             estado == 'Entregada' and 'status-entregada' or '')">
-                                            <t t-esc="estado"/>
-                                        </span>
-                                    </td>
                                 </tr>
                                 <tr>
                                     <th><i class="fa fa-layer-group"/>Tapas</th>
                                     <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tapas_id', 'NA')"/></td>
                                     <th><i class="fa fa-tablet"/>Panel</th>
-                                    <td colspan="3"><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_id', 'NA')"/></td>
+                                    <td colspan="1"><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_id', 'NA')"/></td>
                                 </tr>
                             </table>
                         </div>
