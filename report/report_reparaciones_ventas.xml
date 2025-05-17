@@ -20,6 +20,15 @@
                                 --warning: #f39c12;
                                 --danger: #e74c3c;
                                 --white: #ffffff;
+                                
+                                /* Estados */
+                                --estado-sin-revisar: #6c757d;
+                                --estado-para-revision: #17a2b8;
+                                --estado-en-revision: #ffc107;
+                                --estado-finalizado: #28a745;
+                                --estado-con-problemas: #dc3545;
+                                --estado-de-partes: #fd7e14;
+                                --estado-entregada: #20c997;
                             }
 
                             body {
@@ -107,6 +116,16 @@
                                 margin-right: 10px;
                             }
                             
+                            /* Sub-secciones */
+                            .subsection-header {
+                                background: var(--primary-dark);
+                                color: var(--white);
+                                padding: 8px 15px;
+                                font-weight: bold;
+                                border-top-left-radius: 8px;
+                                border-top-right-radius: 8px;
+                            }
+                            
                             /* Tarjetas de información */
                             .info-card {
                                 background: var(--white);
@@ -188,21 +207,50 @@
                                 font-size: 12px;
                                 font-weight: bold;
                                 display: inline-block;
+                                color: white;
+                                text-align: center;
                             }
                             
                             .status-ok {
                                 background: var(--success);
-                                color: var(--white);
                             }
                             
                             .status-warning {
                                 background: var(--warning);
-                                color: var(--white);
                             }
                             
                             .status-error {
                                 background: var(--danger);
-                                color: var(--white);
+                            }
+                            
+                            /* Estados específicos */
+                            .status-sin-revisar {
+                                background: var(--estado-sin-revisar);
+                            }
+                            
+                            .status-para-revision {
+                                background: var(--estado-para-revision);
+                            }
+                            
+                            .status-en-revision {
+                                background: var(--estado-en-revision);
+                                color: #333;
+                            }
+                            
+                            .status-finalizado {
+                                background: var(--estado-finalizado);
+                            }
+                            
+                            .status-con-problemas {
+                                background: var(--estado-con-problemas);
+                            }
+                            
+                            .status-de-partes {
+                                background: var(--estado-de-partes);
+                            }
+                            
+                            .status-entregada {
+                                background: var(--estado-entregada);
                             }
                             
                             /* Firmas */
@@ -239,41 +287,109 @@
                             </div>
                             <div class="header-right">
                                 <div class="header-status">
-                                    Estado: <t t-esc="selection_labels.get(reparaciones.id, {}).get('estado_id', 'Sin asignar')"/>
+                                    <t t-set="estado" t-value="selection_labels.get(reparaciones.id, {}).get('estado_id', 'Sin asignar')"/>
+                                    <div t-att-class="
+                                        'status-badge ' + 
+                                        (estado == 'Finalizado' and 'status-finalizado' or
+                                         estado == 'En revisión' and 'status-en-revision' or
+                                         estado == 'Con problemas' and 'status-con-problemas' or 
+                                         estado == 'De partes' and 'status-de-partes' or
+                                         estado == 'Sin revisar' and 'status-sin-revisar' or
+                                         estado == 'Para revision' and 'status-para-revision' or
+                                         estado == 'Entregada' and 'status-entregada' or '')">
+                                        <t t-esc="estado"/>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px; text-align: center; font-size: 12px;">
+                                    Tipo: <strong><t t-esc="reparaciones.tipo_id"/></strong>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Información del equipo -->
                         <div class="section-title">
                             <i class="fa fa-info-circle"/>
                             INFORMACIÓN DEL EQUIPO
                         </div>
-                        <div class="info-card">
+                        
+                        <!-- Sección 1: Información Básica del Equipo -->
+                        <div class="info-card mb-3">
+                            <div style="background: var(--secondary-color); color: white; padding: 8px 15px; font-weight: bold;">
+                                <i class="fa fa-desktop"/> IDENTIFICACIÓN DEL EQUIPO
+                            </div>
                             <table class="info-table">
                                 <tr>
-                                    <th><i class="fa fa-print"/>Tipo de equipo</th>
-                                    <td><t t-esc="reparaciones.tipo_machine"/></td>
-                                    <th><i class="fa fa-tag"/>Marca</th>
-                                    <td><t t-esc="reparaciones.marca"/></td>
-                                    <th><i class="fa fa-desktop"/>Máquina</th>
-                                    <td><t t-esc="reparaciones.maquina_id.name.name"/></td>
+                                    <th style="width: 16%"><i class="fa fa-print"/>Tipo de equipo</th>
+                                    <td style="width: 17%"><t t-esc="reparaciones.tipo_machine"/></td>
+                                    <th style="width: 16%"><i class="fa fa-tag"/>Marca</th>
+                                    <td style="width: 17%"><t t-esc="reparaciones.marca"/></td>
+                                    <th style="width: 16%"><i class="fa fa-desktop"/>Modelo</th>
+                                    <td style="width: 18%"><t t-esc="reparaciones.maquina_id.name.name"/></td>
                                 </tr>
                                 <tr>
-                                    <th><i class="fa fa-barcode"/>Serie</th>
-                                    <td><t t-esc="reparaciones.serie_id"/></td>
-                                    <th><i class="fa fa-user"/>Responsable</th>
-                                    <td><t t-esc="reparaciones.nombre_responsable"/></td>
-                                    <th><i class="fa fa-tachometer-alt"/>Contómetro</th>
-                                    <td><t t-esc="reparaciones.contometrok_id"/></td>
+                                    <th><i class="fa fa-barcode"/>Número de serie</th>
+                                    <td colspan="5"><t t-esc="reparaciones.serie_id"/></td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <!-- Sección 2: Estado Técnico -->
+                        <div class="info-card mb-3">
+                            <div style="background: var(--primary-dark); color: white; padding: 8px 15px; font-weight: bold;">
+                                <i class="fa fa-cog"/> ESTADO TÉCNICO
+                            </div>
+                            <table class="info-table">
+                                <tr>
+                                    <th style="width: 16%"><i class="fa fa-tachometer-alt"/>Contómetro</th>
+                                    <td style="width: 17%"><t t-esc="reparaciones.contometrok_id"/></td>
+                                    <th style="width: 16%"><i class="fa fa-check-circle"/>Calidad</th>
+                                    <td style="width: 17%">
+                                        <t t-set="calidad" t-value="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA')"/>
+                                        <span t-att-class="
+                                            'status-badge ' + 
+                                            (calidad == 'Calidad de Impresión Óptima - Cumple Estándares' and 'status-ok' or
+                                             calidad == 'Calidad de Impresión Aceptable - Requiere Ajustes' and 'status-warning' or
+                                             calidad == 'Calidad de Impresión Deficiente - Requiere Atención Inmediata' and 'status-error' or '')">
+                                            <t t-esc="calidad"/>
+                                        </span>
+                                    </td>
+                                    <th style="width: 16%"><i class="fa fa-check"/>Estado</th>
+                                    <td style="width: 18%">
+                                        <t t-set="estado" t-value="selection_labels.get(reparaciones.id, {}).get('estado_id', 'NA')"/>
+                                        <span t-att-class="
+                                            'status-badge ' + 
+                                            (estado == 'Finalizado' and 'status-finalizado' or
+                                             estado == 'En revisión' and 'status-en-revision' or
+                                             estado == 'Con problemas' and 'status-con-problemas' or 
+                                             estado == 'De partes' and 'status-de-partes' or
+                                             estado == 'Sin revisar' and 'status-sin-revisar' or
+                                             estado == 'Para revision' and 'status-para-revision' or
+                                             estado == 'Entregada' and 'status-entregada' or '')">
+                                            <t t-esc="estado"/>
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr>
-                                    <th><i class="fa fa-check-circle"/>Calidad</th>
-                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA')"/></td>
                                     <th><i class="fa fa-layer-group"/>Tapas</th>
                                     <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tapas_id', 'NA')"/></td>
                                     <th><i class="fa fa-tablet"/>Panel</th>
-                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_id', 'NA')"/></td>
+                                    <td colspan="3"><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_id', 'NA')"/></td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <!-- Sección 3: Responsable -->
+                        <div class="info-card mb-3">
+                            <div style="background: var(--accent-color); color: white; padding: 8px 15px; font-weight: bold;">
+                                <i class="fa fa-user"/> RESPONSABLE TÉCNICO
+                            </div>
+                            <table class="info-table">
+                                <tr>
+                                    <th style="width: 20%"><i class="fa fa-id-badge"/>Nombre completo</th>
+                                    <td style="width: 30%"><t t-esc="reparaciones.nombre_responsable"/></td>
+                                    <th style="width: 20%"><i class="fa fa-calendar-check"/>Fecha asignación</th>
+                                    <td style="width: 30%">
+                                        <t t-if="reparaciones.create_date" t-esc="reparaciones.create_date.strftime('%d/%m/%Y')"/>
+                                        <t t-else="">No registrada</t>
+                                    </td>
                                 </tr>
                             </table>
                         </div>
@@ -335,8 +451,6 @@
                                 </tr>
                             </table>
                         </div>
-
-                        <!-- CHECK LIST -->
                         <div class="section-title">
                             <i class="fa fa-tasks"/>
                             CHECK LIST
@@ -497,12 +611,14 @@
                                     <i class="fa fa-user-tie"/>
                                 </div>
                                 <p>Firma del Técnico</p>
+                                <p><t t-esc="reparaciones.nombre_responsable"/></p>
                             </div>
                             <div class="signature-box">
                                 <div class="signature-icon">
                                     <i class="fa fa-user"/>
                                 </div>
                                 <p>Firma del Cliente</p>
+                                <p><t t-esc="reparaciones.cliente_id.name"/></p>
                             </div>
                         </div>
                     </div>
