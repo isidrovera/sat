@@ -6,25 +6,93 @@
                 <t t-call="web.external_layout">
                     <div class="page">
                         <style>
-                            /* Estilos modernos */
-                            .repair-header {
-                                background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-                                color: white;
-                                padding: 25px;
-                                border-radius: 15px;
-                                margin-bottom: 30px;
+                            /* Variables y estilos base */
+                            :root {
+                                --primary-color: #3498db;
+                                --primary-dark: #2980b9;
+                                --secondary-color: #2c3e50;
+                                --accent-color: #1abc9c;
+                                --light-bg: #f8f9fa;
+                                --border-color: #e9ecef;
+                                --text-color: #333;
+                                --text-light: #6c757d;
+                                --success: #2ecc71;
+                                --warning: #f39c12;
+                                --danger: #e74c3c;
+                                --white: #ffffff;
+                            }
+
+                            body {
+                                font-family: 'Roboto', sans-serif;
+                                color: var(--text-color);
+                                line-height: 1.6;
+                            }
+
+                            /* Clases de utilidad */
+                            .shadow {
                                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                             }
+                            
+                            .rounded {
+                                border-radius: 8px;
+                            }
+                            
+                            .mb-3 {
+                                margin-bottom: 1rem;
+                            }
+                            
+                            .p-3 {
+                                padding: 1rem;
+                            }
+
+                            /* Estilos de cabecera */
+                            .repair-header {
+                                background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+                                color: var(--white);
+                                padding: 25px;
+                                border-radius: 12px;
+                                margin-bottom: 30px;
+                                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                flex-wrap: wrap;
+                            }
+                            
+                            .header-left {
+                                flex: 1;
+                            }
+                            
                             .header-title {
                                 font-size: 28px;
                                 font-weight: bold;
                                 margin-bottom: 10px;
-                                color: #2c3e50; /* Color oscuro para mejor contraste */
+                                color: var(--white);
                             }
                             
+                            .header-subtitle {
+                                font-size: 16px;
+                                color: rgba(255, 255, 255, 0.9);
+                            }
+                            
+                            .header-right {
+                                background: rgba(255, 255, 255, 0.15);
+                                padding: 15px;
+                                border-radius: 8px;
+                                backdrop-filter: blur(10px);
+                                min-width: 200px;
+                            }
+                            
+                            .header-status {
+                                font-weight: bold;
+                                text-transform: uppercase;
+                                text-align: center;
+                            }
+
+                            /* Títulos de sección */
                             .section-title {
-                                background: #2c3e50;
-                                color: white;
+                                background: var(--secondary-color);
+                                color: var(--white);
                                 padding: 12px 20px;
                                 margin: 25px 0 15px;
                                 border-radius: 8px;
@@ -34,65 +102,86 @@
                                 align-items: center;
                                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                             }
+                            
                             .section-title i {
                                 margin-right: 10px;
                             }
+                            
+                            /* Tarjetas de información */
                             .info-card {
-                                background: white;
+                                background: var(--white);
                                 border-radius: 10px;
                                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                                 margin-bottom: 20px;
                                 overflow: hidden;
+                                border: 1px solid var(--border-color);
                             }
+                            
+                            /* Tablas */
                             .info-table {
                                 width: 100%;
                                 border-collapse: separate;
                                 border-spacing: 0;
                                 margin-bottom: 0;
                             }
+                            
                             .info-table th {
-                                background: #f8f9fa;
-                                color: #2c3e50;
+                                background: var(--light-bg);
+                                color: var(--secondary-color);
                                 padding: 12px 15px;
                                 font-weight: bold;
-                                border: 1px solid #e9ecef;
+                                border: 1px solid var(--border-color);
                             }
+                            
                             .info-table td {
                                 padding: 12px 15px;
-                                border: 1px solid #e9ecef;
+                                border: 1px solid var(--border-color);
                             }
+                            
                             .info-table i {
                                 margin-right: 8px;
-                                color: #3498db;
+                                color: var(--primary-color);
                             }
-                            /* Colores para consumibles con gradientes */
-                            /* Estilos simplificados para PDF */
+                            
+                            /* Encabezados de categoría */
+                            .category-header {
+                                background: var(--secondary-color);
+                                color: var(--white);
+                                padding: 10px 15px;
+                                text-align: center;
+                                font-weight: bold;
+                            }
+                            
+                            /* Colores para consumibles */
                             .color-cyan {
-                                background-color: #0bbee6; /* Cyan claro */
+                                background-color: rgba(11, 190, 230, 0.15);
                                 border-left: 4px solid #0bbee6;
                             }
-
+                            
                             .color-magenta {
-                                background-color: #ff00d0; /* Magenta claro */
+                                background-color: rgba(255, 0, 208, 0.15);
                                 border-left: 4px solid #ff00d0;
                             }
-
+                            
                             .color-yellow {
-                                background-color: #ffff00; /* Amarillo claro */
+                                background-color: rgba(255, 255, 0, 0.15);
                                 border-left: 4px solid #ffff00;
                             }
-
+                            
                             .color-black {
-                                background-color: #777878; /* Gris muy claro */
+                                background-color: rgba(119, 120, 120, 0.15);
                                 border-left: 4px solid #777878;
-                                color: #FFFFFF;
                             }
+                            
+                            /* Informe técnico */
                             .informe-tecnico {
                                 padding: 20px;
-                                background: #f8f9fa;
+                                background: var(--light-bg);
                                 border-radius: 8px;
-                                border-left: 4px solid #3498db;
+                                border-left: 4px solid var(--primary-color);
                             }
+                            
+                            /* Insignias de estado */
                             .status-badge {
                                 padding: 6px 12px;
                                 border-radius: 20px;
@@ -100,30 +189,66 @@
                                 font-weight: bold;
                                 display: inline-block;
                             }
+                            
                             .status-ok {
-                                background: #2ecc71;
-                                color: white;
+                                background: var(--success);
+                                color: var(--white);
                             }
+                            
                             .status-warning {
-                                background: #f1c40f;
-                                color: black;
+                                background: var(--warning);
+                                color: var(--white);
                             }
+                            
                             .status-error {
-                                background: #e74c3c;
-                                color: white;
+                                background: var(--danger);
+                                color: var(--white);
+                            }
+                            
+                            /* Firmas */
+                            .signatures {
+                                display: flex;
+                                justify-content: space-between;
+                                margin-top: 40px;
+                            }
+                            
+                            .signature-box {
+                                flex: 0 0 45%;
+                                border-top: 2px solid var(--secondary-color);
+                                padding-top: 15px;
+                                text-align: center;
+                            }
+                            
+                            .signature-icon {
+                                font-size: 24px;
+                                color: var(--secondary-color);
+                                margin-bottom: 8px;
                             }
                         </style>
 
-                        <!-- Encabezado -->
+                        <!-- Encabezado modernizado -->
                         <div class="repair-header">
-                            <div class="header-title">
-                                <i class="fa fa-tools"></i> 
-                                Orden de Reparación: <t t-esc="reparaciones.name"/>
+                            <div class="header-left">
+                                <div class="header-title">
+                                    <i class="fa fa-tools"></i> 
+                                    Orden de Reparación: <t t-esc="reparaciones.name"/>
+                                </div>
+                                <div class="header-subtitle">
+                                    Cliente: <t t-esc="reparaciones.cliente_id.name"/>
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <div class="header-status">
+                                    Estado: <t t-esc="selection_labels.get(reparaciones.id, {}).get('estado_id', 'Sin asignar')"/>
+                                </div>
                             </div>
                         </div>
                         
-
-                        <!-- Información Básica -->
+                        <!-- Información del equipo -->
+                        <div class="section-title">
+                            <i class="fa fa-info-circle"/>
+                            INFORMACIÓN DEL EQUIPO
+                        </div>
                         <div class="info-card">
                             <table class="info-table">
                                 <tr>
@@ -135,16 +260,20 @@
                                     <td><t t-esc="reparaciones.maquina_id.name.name"/></td>
                                 </tr>
                                 <tr>
+                                    <th><i class="fa fa-barcode"/>Serie</th>
+                                    <td><t t-esc="reparaciones.serie_id"/></td>
+                                    <th><i class="fa fa-user"/>Responsable</th>
+                                    <td><t t-esc="reparaciones.nombre_responsable"/></td>
                                     <th><i class="fa fa-tachometer-alt"/>Contómetro</th>
                                     <td><t t-esc="reparaciones.contometrok_id"/></td>
+                                </tr>
+                                <tr>
                                     <th><i class="fa fa-check-circle"/>Calidad</th>
                                     <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA')"/></td>
                                     <th><i class="fa fa-layer-group"/>Tapas</th>
                                     <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tapas_id', 'NA')"/></td>
-                                </tr>
-                                <tr>
                                     <th><i class="fa fa-tablet"/>Panel</th>
-                                    <td colspan="5"><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_id', 'NA')"/></td>
+                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_id', 'NA')"/></td>
                                 </tr>
                             </table>
                         </div>
@@ -217,7 +346,7 @@
                             <table class="info-table">
                                 <thead>
                                     <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
+                                        <th colspan="6" class="category-header">
                                             <i class="fa fa-cogs"/> FUNCIONES BÁSICAS
                                         </th>
                                     </tr>
@@ -234,7 +363,7 @@
                                 <!-- Funciones de Escaneo -->
                                 <thead>
                                     <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
+                                        <th colspan="6" class="category-header">
                                             <i class="fa fa-scanner"/> FUNCIONES DE ESCANEO
                                         </th>
                                     </tr>
@@ -269,7 +398,7 @@
                                 <!-- Componentes -->
                                 <thead>
                                     <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
+                                        <th colspan="6" class="category-header">
                                             <i class="fa fa-cog"/> COMPONENTES
                                         </th>
                                     </tr>
@@ -286,7 +415,7 @@
                                 <!-- Consumibles y Partes -->
                                 <thead>
                                     <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
+                                        <th colspan="6" class="category-header">
                                             <i class="fa fa-print"/> CONSUMIBLES Y PARTES
                                         </th>
                                     </tr>
@@ -308,58 +437,72 @@
                                     <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('black_id', 'NA')"/></td>
                                 </tr>
 
-                                <!-- Unidades de Imagen Color -->
-                                <tr>
-                                    <th><i class="fa fa-tint"/>Unidad Imagen magenta</th>
-                                    <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('magenta_id', 'NA')"/></td>
-                                    <th><i class="fa fa-tint"/>Unidad Imagen cyan</th>
-                                    <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('cyan_id', 'NA')"/></td>
-                                    <th><i class="fa fa-tint"/>Unidad Imagen yellow</th>
-                                    <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('yellow_id', 'NA')"/></td>
-                                </tr>
+                                <!-- ELEMENTOS A COLOR - Solo mostrar si el equipo es a color -->
+                                <t t-if="reparaciones.tipo_id == 'color'">
+                                    <!-- Unidades de Imagen Color -->
+                                    <tr>
+                                        <th><i class="fa fa-tint"/>Unidad Imagen magenta</th>
+                                        <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('magenta_id', 'NA')"/></td>
+                                        <th><i class="fa fa-tint"/>Unidad Imagen cyan</th>
+                                        <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('cyan_id', 'NA')"/></td>
+                                        <th><i class="fa fa-tint"/>Unidad Imagen yellow</th>
+                                        <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('yellow_id', 'NA')"/></td>
+                                    </tr>
 
-                                <!-- Developers -->
-                                <tr>
-                                    <th><i class="fa fa-flask"/>Developer black</th>
-                                    <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerk_id', 'NA')"/></td>
-                                    <th><i class="fa fa-flask"/>Developer magenta</th>
-                                    <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerm_id', 'NA')"/></td>
-                                    <th><i class="fa fa-flask"/>Developer cyan</th>
-                                    <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerc_id', 'NA')"/></td>
-                                </tr>
+                                    <!-- Developers Color -->
+                                    <tr>
+                                        <th><i class="fa fa-flask"/>Developer black</th>
+                                        <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerk_id', 'NA')"/></td>
+                                        <th><i class="fa fa-flask"/>Developer magenta</th>
+                                        <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerm_id', 'NA')"/></td>
+                                        <th><i class="fa fa-flask"/>Developer cyan</th>
+                                        <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerc_id', 'NA')"/></td>
+                                    </tr>
 
-                                <!-- Toners -->
-                                <tr>
-                                    <th><i class="fa fa-flask"/>Developer yellow</th>
-                                    <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developery_id', 'NA')"/></td>
-                                    <th><i class="fa fa-tint"/>Toner black</th>
-                                    <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_black_id', 'NA')"/></td>
-                                    <th><i class="fa fa-tint"/>Toner magenta</th>
-                                    <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_magenta_id', 'NA')"/></td>
-                                </tr>
-                                <tr>
-                                    <th><i class="fa fa-tint"/>Toner cyan</th>
-                                    <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_cyan_id', 'NA')"/></td>
-                                    <th><i class="fa fa-tint"/>Toner yellow</th>
-                                    <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_yellow_id', 'NA')"/></td>
-                                    <td colspan="2"></td>
-                                </tr>
+                                    <!-- Toners Color -->
+                                    <tr>
+                                        <th><i class="fa fa-flask"/>Developer yellow</th>
+                                        <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developery_id', 'NA')"/></td>
+                                        <th><i class="fa fa-tint"/>Toner black</th>
+                                        <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_black_id', 'NA')"/></td>
+                                        <th><i class="fa fa-tint"/>Toner magenta</th>
+                                        <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_magenta_id', 'NA')"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fa fa-tint"/>Toner cyan</th>
+                                        <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_cyan_id', 'NA')"/></td>
+                                        <th><i class="fa fa-tint"/>Toner yellow</th>
+                                        <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_yellow_id', 'NA')"/></td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </t>
+                                
+                                <!-- Solo para equipos MONOCROMÁTICOS -->
+                                <t t-if="reparaciones.tipo_id == 'monocromatica'">
+                                    <tr>
+                                        <th><i class="fa fa-flask"/>Developer black</th>
+                                        <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerk_id', 'NA')"/></td>
+                                        <th><i class="fa fa-tint"/>Toner black</th>
+                                        <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('toner_black_id', 'NA')"/></td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </t>
                             </table>
                         </div>
 
-                        <!-- Firmas -->
-                        <div class="row mt-5">
-                            <div class="col-6">
-                                <div style="border-top: 2px solid #2c3e50; padding-top: 15px; text-align: center;">
-                                    <i class="fa fa-user-tie fa-2x mb-2" style="color: #2c3e50;"/><br/>
-                                    Firma del Técnico
+                        <!-- Firmas modernizadas -->
+                        <div class="signatures">
+                            <div class="signature-box">
+                                <div class="signature-icon">
+                                    <i class="fa fa-user-tie"/>
                                 </div>
+                                <p>Firma del Técnico</p>
                             </div>
-                            <div class="col-6">
-                                <div style="border-top: 2px solid #2c3e50; padding-top: 15px; text-align: center;">
-                                    <i class="fa fa-user fa-2x mb-2" style="color: #2c3e50;"/><br/>
-                                    Firma del Cliente
+                            <div class="signature-box">
+                                <div class="signature-icon">
+                                    <i class="fa fa-user"/>
                                 </div>
+                                <p>Firma del Cliente</p>
                             </div>
                         </div>
                     </div>
