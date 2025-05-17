@@ -204,11 +204,24 @@
                             .status-badge {
                                 padding: 6px 12px;
                                 border-radius: 20px;
-                                font-size: 12px;
+                                font-size: 13px;
                                 font-weight: bold;
                                 display: inline-block;
                                 color: white;
                                 text-align: center;
+                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                                margin: 5px 0;
+                                min-width: 140px;
+                            }
+                            
+                            .header-subtitle .status-badge {
+                                margin-top: 10px;
+                                font-size: 14px;
+                                padding: 8px 15px;
+                            }
+                            
+                            .status-badge i {
+                                margin-right: 5px;
                             }
                             
                             .status-ok {
@@ -282,13 +295,8 @@
                                     Orden de Reparación: <t t-esc="reparaciones.name"/>
                                 </div>
                                 <div class="header-subtitle">
-                                    Cliente: <t t-esc="reparaciones.cliente_id.name"/>
-                                </div>
-                            </div>
-                            <div class="header-right">
-                                <div class="header-status">
                                     <t t-set="estado" t-value="selection_labels.get(reparaciones.id, {}).get('estado_id', 'Sin asignar')"/>
-                                    <div t-att-class="
+                                    <span t-att-class="
                                         'status-badge ' + 
                                         (estado == 'Finalizado' and 'status-finalizado' or
                                          estado == 'En revisión' and 'status-en-revision' or
@@ -297,11 +305,18 @@
                                          estado == 'Sin revisar' and 'status-sin-revisar' or
                                          estado == 'Para revision' and 'status-para-revision' or
                                          estado == 'Entregada' and 'status-entregada' or '')">
-                                        <t t-esc="estado"/>
-                                    </div>
+                                        <i class="fa fa-circle-check"></i> <t t-esc="estado"/>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <div class="header-status">
+                                    Cliente: <t t-esc="reparaciones.cliente_id.name"/>
                                 </div>
                                 <div style="margin-top: 10px; text-align: center; font-size: 12px;">
-                                    Tipo: <strong><t t-esc="reparaciones.tipo_id"/></strong>
+                                    <t t-if="reparaciones.responsable_id">
+                                        Responsable: <t t-esc="reparaciones.nombre_responsable"/>
+                                    </t>
                                 </div>
                             </div>
                         </div>
@@ -338,10 +353,10 @@
                             </div>
                             <table class="info-table">
                                 <tr>
-                                    <th style="width: 16%"><i class="fa fa-tachometer-alt"/>Contómetro</th>
-                                    <td style="width: 17%"><t t-esc="reparaciones.contometrok_id"/></td>
-                                    <th style="width: 16%"><i class="fa fa-check-circle"/>Calidad</th>
-                                    <td style="width: 17%">
+                                    <th style="width: 15%"><i class="fa fa-tachometer-alt"/>Contómetro</th>
+                                    <td style="width: 18%"><t t-esc="reparaciones.contometrok_id"/></td>
+                                    <th style="width: 15%"><i class="fa fa-check-circle"/>Calidad</th>
+                                    <td style="width: 18%">
                                         <t t-set="calidad" t-value="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA')"/>
                                         <span t-att-class="
                                             'status-badge ' + 
@@ -351,8 +366,8 @@
                                             <t t-esc="calidad"/>
                                         </span>
                                     </td>
-                                    <th style="width: 16%"><i class="fa fa-check"/>Estado</th>
-                                    <td style="width: 18%">
+                                    <th style="width: 15%"><i class="fa fa-check"/>Estado</th>
+                                    <td style="width: 19%">
                                         <t t-set="estado" t-value="selection_labels.get(reparaciones.id, {}).get('estado_id', 'NA')"/>
                                         <span t-att-class="
                                             'status-badge ' + 
