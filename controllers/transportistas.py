@@ -57,70 +57,311 @@ class SatController(http.Controller):
             message = f"<b>Cambio de ubicación:</b> De {ubicacion_anterior} a <b>primer_piso</b> el {current_time}"
             record.message_post(body=message, subtype_id=request.env.ref('mail.mt_note').id)
             
+            # Recargar el registro para obtener los datos actualizados
+            record = request.env['sat.sat'].sudo().browse(record_id)
+            
+            # Obtener información del modelo para la página de éxito
+            model_info = {
+                'name': record.name.name if hasattr(record, 'name') and record.name else 'Desconocido',
+                'serie': record.serie_id if hasattr(record, 'serie_id') else 'Desconocido',
+                'marca': record.marca if hasattr(record, 'marca') else 'Desconocido',
+                'ubicacion': 'Primer piso'
+            }
+            
             _logger.info(f"[CONTROLLER] Proceso completado exitosamente")
-            return self._render_success('Ubicación actualizada correctamente')
+            return self._render_success('Ubicación actualizada correctamente', model_info)
             
         except Exception as e:
             _logger.error(f"[CONTROLLER] Error: {str(e)}", exc_info=True)
             return self._render_error(str(e))
     
     def _render_error(self, error_message):
-        """Renderiza una página de error simple sin depender de una plantilla XML"""
+        """Renderiza una página de error moderna con cierre automático"""
         _logger.info(f"[CONTROLLER] Renderizando página de error: {error_message}")
         html = f"""
         <!DOCTYPE html>
-        <html>
+        <html lang="es">
         <head>
             <title>Error - Cambio de Ubicación</title>
             <meta charset="utf-8"/>
             <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; }}
-                .container {{ max-width: 600px; margin: 0 auto; }}
-                .alert-danger {{ background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; }}
-                .btn {{ display: inline-block; padding: 6px 12px; margin-top: 15px; 
-                       background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; }}
+                body {{
+                    background-color: #f8f9fa;
+                    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+                }}
+                .page-container {{
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    padding: 20px;
+                }}
+                .card {{
+                    border: none;
+                    border-radius: 15px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                    overflow: hidden;
+                    max-width: 500px;
+                    width: 100%;
+                }}
+                .card-header {{
+                    background-color: #dc3545;
+                    color: white;
+                    padding: 20px;
+                    text-align: center;
+                    border-bottom: none;
+                }}
+                .icon-bg {{
+                    font-size: 60px;
+                    margin-bottom: 10px;
+                }}
+                .card-body {{
+                    padding: 30px;
+                    background: white;
+                }}
+                .progress-bar {{
+                    height: 5px;
+                    transition: width 1s linear;
+                }}
+                .btn-custom {{
+                    background-color: #dc3545;
+                    border-color: #dc3545;
+                    padding: 10px 20px;
+                    font-weight: 500;
+                }}
+                .btn-custom:hover {{
+                    background-color: #c82333;
+                    border-color: #bd2130;
+                }}
+                .countdown {{
+                    font-size: 14px;
+                    color: #6c757d;
+                    margin-top: 15px;
+                    text-align: center;
+                }}
             </style>
         </head>
         <body>
-            <div class="container">
-                <div class="alert-danger">
-                    <h3>Error</h3>
-                    <p>{error_message}</p>
+            <div class="page-container">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="icon-bg">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <h3 class="m-0">Error</h3>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div id="progress-bar" class="progress-bar bg-danger" role="progressbar" style="width: 100%"></div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger mb-4" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            {error_message}
+                        </div>
+                        <div class="d-grid gap-2">
+                            <a href="/" class="btn btn-custom">
+                                <i class="fas fa-home me-2"></i> Volver al Inicio
+                            </a>
+                        </div>
+                        <div class="countdown mt-3">
+                            Esta página se cerrará automáticamente en <span id="timer" class="fw-bold">10</span> segundos.
+                        </div>
+                    </div>
                 </div>
-                <a href="/" class="btn">Volver al inicio</a>
             </div>
+            
+            <script>
+                // Contador para cerrar la página automáticamente
+                var seconds = 10;
+                var progressBar = document.getElementById('progress-bar');
+                var initialWidth = 100;
+                var step = initialWidth / seconds;
+                
+                function updateCountdown() {{
+                    document.getElementById('timer').textContent = seconds;
+                    progressBar.style.width = (seconds * step) + '%';
+                    
+                    if (seconds <= 0) {{
+                        window.close();
+                        // Si la ventana no se cierra, redirigimos a la página principal
+                        window.location.href = '/';
+                    }} else {{
+                        seconds--;
+                        setTimeout(updateCountdown, 1000);
+                    }}
+                }}
+                
+                // Iniciar el contador cuando se carga la página
+                window.onload = function() {{
+                    updateCountdown();
+                }};
+            </script>
         </body>
         </html>
         """
         return http.Response(html, status=200, mimetype='text/html')
     
-    def _render_success(self, message):
-        """Renderiza una página de éxito simple sin depender de una plantilla XML"""
+    def _render_success(self, message, model_info=None):
+        """Renderiza una página de éxito moderna con cierre automático"""
         _logger.info(f"[CONTROLLER] Renderizando página de éxito: {message}")
+        
+        model_details = ""
+        if model_info:
+            model_details = f"""
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="m-0"><i class="fas fa-info-circle me-2"></i>Detalles de la máquina</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-tag me-2 text-secondary"></i>Modelo:</span>
+                            <span class="fw-bold">{model_info.get('name', 'N/A')}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-barcode me-2 text-secondary"></i>Serie:</span>
+                            <span class="fw-bold">{model_info.get('serie', 'N/A')}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-copyright me-2 text-secondary"></i>Marca:</span>
+                            <span class="fw-bold">{model_info.get('marca', 'N/A')}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-map-marker-alt me-2 text-secondary"></i>Nueva ubicación:</span>
+                            <span class="fw-bold">{model_info.get('ubicacion', 'N/A')}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            """
+        
         html = f"""
         <!DOCTYPE html>
-        <html>
+        <html lang="es">
         <head>
             <title>Éxito - Cambio de Ubicación</title>
             <meta charset="utf-8"/>
             <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; }}
-                .container {{ max-width: 600px; margin: 0 auto; }}
-                .alert-success {{ background-color: #d4edda; color: #155724; padding: 15px; border-radius: 5px; }}
-                .btn {{ display: inline-block; padding: 6px 12px; margin-top: 15px; 
-                       background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; }}
+                body {{
+                    background-color: #f8f9fa;
+                    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+                }}
+                .page-container {{
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    padding: 20px;
+                }}
+                .card {{
+                    border: none;
+                    border-radius: 15px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                    overflow: hidden;
+                    max-width: 500px;
+                    width: 100%;
+                }}
+                .card-header {{
+                    background-color: #28a745;
+                    color: white;
+                    padding: 20px;
+                    text-align: center;
+                    border-bottom: none;
+                }}
+                .icon-bg {{
+                    font-size: 60px;
+                    margin-bottom: 10px;
+                }}
+                .card-body {{
+                    padding: 30px;
+                    background: white;
+                }}
+                .progress-bar {{
+                    height: 5px;
+                    transition: width 1s linear;
+                }}
+                .btn-custom {{
+                    background-color: #28a745;
+                    border-color: #28a745;
+                    padding: 10px 20px;
+                    font-weight: 500;
+                }}
+                .btn-custom:hover {{
+                    background-color: #218838;
+                    border-color: #1e7e34;
+                }}
+                .countdown {{
+                    font-size: 14px;
+                    color: #6c757d;
+                    margin-top: 15px;
+                    text-align: center;
+                }}
             </style>
         </head>
         <body>
-            <div class="container">
-                <div class="alert-success">
-                    <h3>Éxito</h3>
-                    <p>{message}</p>
+            <div class="page-container">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="icon-bg">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h3 class="m-0">¡Éxito!</h3>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div id="progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-success mb-4" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            {message}
+                        </div>
+                        
+                        {model_details}
+                        
+                        <div class="d-grid gap-2">
+                            <a href="/" class="btn btn-custom">
+                                <i class="fas fa-home me-2"></i> Volver al Inicio
+                            </a>
+                        </div>
+                        <div class="countdown mt-3">
+                            Esta página se cerrará automáticamente en <span id="timer" class="fw-bold">10</span> segundos.
+                        </div>
+                    </div>
                 </div>
-                <a href="/" class="btn">Volver al inicio</a>
             </div>
+            
+            <script>
+                // Contador para cerrar la página automáticamente
+                var seconds = 10;
+                var progressBar = document.getElementById('progress-bar');
+                var initialWidth = 100;
+                var step = initialWidth / seconds;
+                
+                function updateCountdown() {{
+                    document.getElementById('timer').textContent = seconds;
+                    progressBar.style.width = (seconds * step) + '%';
+                    
+                    if (seconds <= 0) {{
+                        window.close();
+                        // Si la ventana no se cierra, redirigimos a la página principal
+                        window.location.href = '/';
+                    }} else {{
+                        seconds--;
+                        setTimeout(updateCountdown, 1000);
+                    }}
+                }}
+                
+                // Iniciar el contador cuando se carga la página
+                window.onload = function() {{
+                    updateCountdown();
+                }};
+            </script>
         </body>
         </html>
         """
