@@ -556,7 +556,13 @@ Modificado por: {user_name}"""
             _logger.warning(f"No se encontró la plantilla de correo para ID {self.id}")
 
         return True
-
+    location_change_token = fields.Char(string="Token de cambio de ubicación", copy=False, readonly=True)
+    def generate_location_change_token(self):
+        """Genera un token único para el cambio de ubicación"""
+        import secrets
+        for record in self:
+            record.location_change_token = secrets.token_urlsafe(16)
+        return True
 
     def enviar_notificacion_disponibilidad(self):
         """Envía notificación de disponibilidad cuando se resuelve un problema de la máquina."""
@@ -656,9 +662,15 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
             _logger.error(f"Error al enviar mensaje de WhatsApp a {phone}: {e}")
 
     def crear_url_cambio_ubicacion(self, record):
+        import secrets
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         clean_id = re.sub(r'\D', '', str(record.id))  # Remover cualquier carácter no numérico
-        url = f"{base_url}/sat/change_location/{clean_id}"
+        
+        # Generar token si no existe
+        if not record.location_change_token:
+            record.location_change_token = secrets.token_urlsafe(16)
+        
+        url = f"{base_url}/sat/change_location/{clean_id}?token={record.location_change_token}"
         return url
     def _notify_vendedora(self):
         return {
