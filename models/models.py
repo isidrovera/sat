@@ -666,11 +666,12 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         clean_id = re.sub(r'\D', '', str(record.id))  # Remover cualquier carácter no numérico
         
-        # Generar token si no existe
-        if not record.location_change_token:
-            record.location_change_token = secrets.token_urlsafe(16)
+        # Siempre generar un nuevo token para mayor seguridad
+        token = secrets.token_urlsafe(16)
+        record.write({'location_change_token': token})
+        _logger.info(f"Nuevo token generado y guardado para el registro {record.id}: {token}")
         
-        url = f"{base_url}/sat/change_location/{clean_id}?token={record.location_change_token}"
+        url = f"{base_url}/sat/change_location/{clean_id}?token={token}"
         return url
     def _notify_vendedora(self):
         return {
