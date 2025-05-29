@@ -664,14 +664,34 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
     def crear_url_cambio_ubicacion(self, record):
         import secrets
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        clean_id = re.sub(r'\D', '', str(record.id))  # Remover cualquier carácter no numérico
+        clean_id = re.sub(r'\D', '', str(record.id))
         
-        # Siempre generar un nuevo token para mayor seguridad
-        token = secrets.token_urlsafe(16)
-        record.write({'location_change_token': token})
-        _logger.info(f"Nuevo token generado y guardado para el registro {record.id}: {token}")
+        # Asegurar que no es un NewId
+        if isinstance(record.id, models.NewId):
+            real_record = self.env['sat.sat'].search([('serie_id', '=', record.serie_id)], limit=1)
+            if real_record:
+                record = real_record
+                clean_id = str(record.id)
+            else:
+                _logger.error(f"No se pudo encontrar el registro real para NewId: {record.id}")
+                return None
         
-        url = f"{base_url}/sat/change_location/{clean_id}?token={token}"
+        # Generar token y guardarlo usando SQL directo
+        if not record.location_change_token:
+            token = secrets.token_urlsafe(16)
+            # SQL directo para garantizar la persistencia
+            self.env.cr.execute("""
+                UPDATE sat_sat 
+                SET location_change_token = %s 
+                WHERE id = %s
+            """, (token, record.id))
+            self.env.cr.commit()
+            _logger.info(f"Token generado y guardado directamente en BD para el registro {record.id}: {token}")
+            
+            # Actualizar el campo en memoria también
+            record.location_change_token = token
+        
+        url = f"{base_url}/sat/change_location/{clean_id}?token={record.location_change_token}"
         return url
     def _notify_vendedora(self):
         return {
