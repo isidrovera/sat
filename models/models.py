@@ -561,7 +561,9 @@ Modificado por: {user_name}"""
         """Genera un token único para el cambio de ubicación"""
         import secrets
         for record in self:
-            record.location_change_token = secrets.token_urlsafe(16)
+            token = secrets.token_urlsafe(16)
+            record.write({'location_change_token': token})
+            _logger.info(f"Token generado para el registro {record.id}: {token}")
         return True
 
     def enviar_notificacion_disponibilidad(self):
@@ -676,23 +678,42 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
                 _logger.error(f"No se pudo encontrar el registro real para NewId: {record.id}")
                 return None
         
-        # Generar token y guardarlo usando SQL directo
-        if not record.location_change_token:
-            token = secrets.token_urlsafe(16)
-            # SQL directo para garantizar la persistencia
-            self.env.cr.execute("""
-                UPDATE sat_sat 
-                SET location_change_token = %s 
-                WHERE id = %s
-            """, (token, record.id))
-            self.env.cr.commit()
-            _logger.info(f"Token generado y guardado directamente en BD para el registro {record.id}: {token}")
-            
-            # Actualizar el campo en memoria también
-            record.location_change_token = token
+        # Siempre generar un nuevo token para cada URL (más seguro)
+        token = secrets.token_urlsafe(16)
+        record.write({'location_change_token': token})
+        _logger.info(f"Nuevo token generado y guardado para el registro {record.id}: {token}")
         
-        url = f"{base_url}/sat/change_location/{clean_id}?token={record.location_change_token}"
+        url = f"{base_url}/sat/change_location/{clean_id}?token={token}"
         return url
+
+    def invalidar_token_ubicacion(self):
+        """Invalida el token de cambio de ubicación después de su uso"""
+        try:
+            self.write({'location_change_token': False})
+            _logger.info(f"Token invalidado para el registro {self.id}")
+            return True
+        except Exception as e:
+            _logger.error(f"Error al invalidar token para el registro {self.id}: {e}")
+            return False
+
+    @api.model
+    def limpiar_tokens_antiguos(self):
+        """Limpia tokens de cambio de ubicación más antiguos de 24 horas"""
+        try:
+            from datetime import datetime, timedelta
+            yesterday = datetime.now() - timedelta(hours=24)
+            
+            registros_antiguos = self.search([
+                ('location_change_token', '!=', False),
+                ('write_date', '<', yesterday)
+            ])
+            
+            if registros_antiguos:
+                registros_antiguos.write({'location_change_token': False})
+                _logger.info(f"Se limpiaron {len(registros_antiguos)} tokens antiguos")
+                
+        except Exception as e:
+            _logger.error(f"Error al limpiar tokens antiguos: {e}")
     def _notify_vendedora(self):
         return {
             'warning': {

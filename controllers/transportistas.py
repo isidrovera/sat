@@ -18,44 +18,74 @@ class SatController(http.Controller):
             _logger.info(f"[CONTROLLER] Buscando registro con ID: {record_id}")
             record = request.env['sat.sat'].with_context(force_location_change=True).sudo().browse(record_id)
             
-            _logger.info(f"[CONTROLLER] Registro encontrado: {record.exists()}")
+            _logger.info(f"[CONTROLLER] Registro encontrado: {record}")
             
-            # Validar existencia y token
+            # Validar existencia
             if not record.exists():
                 _logger.error(f"[CONTROLLER] Registro {record_id} no encontrado")
                 return self._render_error('No se encontró la máquina especificada')
                 
-            # Verificar si el campo location_change_token existe en el modelo
+            # Verificar campo token
             if not hasattr(record, 'location_change_token'):
                 _logger.error(f"[CONTROLLER] El campo 'location_change_token' no existe en el modelo")
                 return self._render_error('Error de configuración: Campo de token no existe')
             
-            _logger.info(f"[CONTROLLER] Token almacenado: {record.location_change_token}")
+            _logger.info(f"[CONTROLLER] Token almacenado en BD: {record.location_change_token}")
+            _logger.info(f"[CONTROLLER] Token recibido en URL: {token}")
             
-            # Validar token (solo si hay token)
-            if token and record.location_change_token != token:
+            # Validación mejorada de token
+            if not token:
+                _logger.error(f"[CONTROLLER] No se proporcionó token en la URL")
+                return self._render_error('Token requerido')
+                
+            if not record.location_change_token:
+                _logger.error(f"[CONTROLLER] No hay token válido en la base de datos para el registro {record_id}")
+                return self._render_error('Token no válido o ya utilizado')
+                
+            if record.location_change_token != token:
                 _logger.error(f"[CONTROLLER] Token inválido: {token} vs {record.location_change_token}")
                 return self._render_error('Token inválido o expirado')
             
-            # Guardar ubicación anterior para el registro en el historial
+            _logger.info(f"[CONTROLLER] Token validado correctamente")
+            
+            # Guardar información antes del cambio
             ubicacion_anterior = record.ubicacion_id
             _logger.info(f"[CONTROLLER] Ubicación anterior: {ubicacion_anterior}")
             
-            # Actualizar ubicación usando SQL directo para evitar las restricciones del write
-            _logger.info(f"[CONTROLLER] Actualizando ubicación a primer_piso")
-            request.env.cr.execute("""
-                UPDATE sat_sat 
-                SET ubicacion_id = 'primer_piso',
-                    location_change_token = NULL
-                WHERE id = %s
-            """, (record_id,))
+            # Cambiar ubicación y limpiar token usando el método del modelo
+            try:
+                _logger.info(f"[CONTROLLER] Ejecutando cambio de ubicación a primer_piso")
+                record.write({'ubicacion_id': 'primer_piso'})
+                _logger.info(f"[CONTROLLER] Ubicación actualizada exitosamente")
+                
+                # Invalidar token usando el método del modelo
+                _logger.info(f"[CONTROLLER] Invalidando token")
+                if record.invalidar_token_ubicacion():
+                    _logger.info(f"[CONTROLLER] Token invalidado correctamente")
+                else:
+                    _logger.warning(f"[CONTROLLER] No se pudo invalidar el token completamente")
+                
+                # Confirmar cambios
+                request.env.cr.commit()
+                _logger.info(f"[CONTROLLER] Cambios confirmados en la base de datos")
+                
+            except Exception as e:
+                _logger.error(f"[CONTROLLER] Error al cambiar ubicación: {str(e)}")
+                request.env.cr.rollback()
+                return self._render_error(f'Error al cambiar ubicación: {str(e)}')
             
             # Registrar el cambio en el historial
-            _logger.info(f"[CONTROLLER] Creando mensaje en el historial")
-            peru_tz = pytz.timezone('America/Lima')
-            current_time = datetime.now(peru_tz).strftime('%Y-%m-%d %H:%M:%S')
-            message = f"<b>Cambio de ubicación:</b> De {ubicacion_anterior} a <b>primer_piso</b> el {current_time}"
-            record.message_post(body=message, subtype_id=request.env.ref('mail.mt_note').id)
+            try:
+                _logger.info(f"[CONTROLLER] Creando mensaje en el historial")
+                peru_tz = pytz.timezone('America/Lima')
+                current_time = datetime.now(peru_tz).strftime('%Y-%m-%d %H:%M:%S')
+                message = f"<b>Cambio de ubicación por transportista:</b> De {ubicacion_anterior} a <b>primer_piso</b> el {current_time}"
+                record.message_post(body=message, subtype_id=request.env.ref('mail.mt_note').id)
+                _logger.info(f"[CONTROLLER] Mensaje registrado en el historial")
+                
+            except Exception as e:
+                _logger.error(f"[CONTROLLER] Error al crear mensaje en historial: {str(e)}")
+                # No fallar por esto, continuar
             
             # Recargar el registro para obtener los datos actualizados
             record = request.env['sat.sat'].sudo().browse(record_id)
@@ -68,12 +98,15 @@ class SatController(http.Controller):
                 'ubicacion': 'Primer piso'
             }
             
-            _logger.info(f"[CONTROLLER] Proceso completado exitosamente")
+            _logger.info(f"[CONTROLLER] Información de la máquina: {model_info}")
+            _logger.info(f"[CONTROLLER] Proceso completado exitosamente para registro {record_id}")
+            
             return self._render_success('Ubicación actualizada correctamente', model_info)
             
         except Exception as e:
-            _logger.error(f"[CONTROLLER] Error: {str(e)}", exc_info=True)
-            return self._render_error(str(e))
+            _logger.error(f"[CONTROLLER] Error general: {str(e)}", exc_info=True)
+            request.env.cr.rollback()
+            return self._render_error(f'Error interno: {str(e)}')
     
     def _render_error(self, error_message):
         """Renderiza una página de error moderna con cierre automático"""
