@@ -299,25 +299,32 @@ class SatSat(models.Model):
     def _compute_disponibilidad_id(self):
         for record in self:
             old_disponibilidad = record.disponibilidad_id
-            _logger.debug('Computing Disponibilidad for Record ID: %s', record.id)
-            
+            _logger.debug('Computing Disponibilidad para ID: %s', record.id)
+
             if record.estado_ventas_id in ['sin_revisar', 'en_revision', 'finalizado', 'para_revision'] and record.cliente_id:
-                _logger.debug('Setting disponibilidad_id to separada for Record ID: %s', record.id)
+                _logger.debug('Estado requiere separación, actualizando disponibilidad a separada para ID: %s', record.id)
                 record.disponibilidad_id = 'separada'
-                # Solo actualiza la fecha si el estado anterior no era 'separada'
+
                 if old_disponibilidad != 'separada':
                     record.fecha_separacion = fields.Date.today()
+                    _logger.info(f"[TOKEN AUTO] Máquina ID {record.id} separada. Fecha separacion: {record.fecha_separacion}")
+
+                    # 🚨 Generar token si está en ubicación que lo requiere
+                    if record.ubicacion_id in ['segundo_local', 'covida'] and not record.location_change_token:
+                        _logger.info(f"[TOKEN AUTO] Generando token automáticamente para ID {record.id} en ubicación {record.ubicacion_id}")
+                        record.generate_location_change_token()
+
             elif record.estado_ventas_id in ['sin_revisar', 'en_revision', 'finalizado', 'para_revision'] and not record.cliente_id:
-                _logger.debug('Setting disponibilidad_id to disponible for Record ID: %s', record.id)
+                _logger.debug('Cliente no asignado, disponibilidad = disponible para ID: %s', record.id)
                 record.disponibilidad_id = 'disponible'
                 record.fecha_separacion = False
+
             else:
-                _logger.debug('Setting disponibilidad_id to no disponible for Record ID: %s', record.id)
+                _logger.debug('Estado fuera de revisión. Disponibilidad = no_disponible para ID: %s', record.id)
                 record.disponibilidad_id = 'no_disponible'
                 record.fecha_separacion = False
-                
-            _logger.debug('Disponibilidad ID updated to %s for Record ID: %s', record.disponibilidad_id, record.id)
 
+            _logger.debug('Disponibilidad ID final: %s para ID: %s', record.disponibilidad_id, record.id)
 
 
     @api.onchange('factura_venta')
@@ -558,13 +565,16 @@ Modificado por: {user_name}"""
         return True
     location_change_token = fields.Char(string="Token de cambio de ubicación", copy=False, readonly=True)
     def generate_location_change_token(self):
-        """Genera un token único para el cambio de ubicación"""
         import secrets
         for record in self:
             token = secrets.token_urlsafe(16)
-            record.write({'location_change_token': token})
-            _logger.info(f"Token generado para el registro {record.id}: {token}")
-        return True
+            record.sudo().write({'location_change_token': token})
+            token_verificado = self.env['sat.sat'].sudo().browse(record.id).location_change_token
+            if token_verificado == token:
+                _logger.info(f"[TOKEN AUTO] Token generado y verificado correctamente para ID {record.id}: {token}")
+            else:
+                _logger.error(f"[TOKEN AUTO] FALLO al guardar token para ID {record.id}. Esperado: {token}, Leído: {token_verificado}")
+
 
     def enviar_notificacion_disponibilidad(self):
         """Envía notificación de disponibilidad cuando se resuelve un problema de la máquina."""
