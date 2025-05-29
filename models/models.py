@@ -684,23 +684,31 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         _logger.info(f"[TOKEN] Iniciando generación de token para ID {record.id}")
 
-        # Evitar que se genere un nuevo token si ya existe
+        # Asegurarse de que no sea un NewId
+        if isinstance(record.id, models.NewId):
+            # Buscar por serie_id como referencia
+            record = self.env['sat.sat'].sudo().search([('serie_id', '=', record.serie_id)], limit=1)
+            if not record:
+                _logger.error(f"[TOKEN] No se encontró el registro real para NewId: {record.id}")
+                return None
+
+        # Continuar con el ID real
         if record.location_change_token:
-            _logger.info(f"[TOKEN] Ya existe token para ID {record.id}: {record.location_change_token}")
             token = record.location_change_token
+            _logger.info(f"[TOKEN] Ya existe token para ID {record.id}: {token}")
         else:
             token = secrets.token_urlsafe(16)
             record.sudo().write({'location_change_token': token})
             token_verificado = self.env['sat.sat'].sudo().browse(record.id).location_change_token
-            if token_verificado == token:
-                _logger.info(f"[TOKEN] Token generado correctamente para ID {record.id}: {token}")
-            else:
+            if token_verificado != token:
                 _logger.error(f"[TOKEN] FALLO al guardar token para ID {record.id}. Esperado: {token}, Leído: {token_verificado}")
                 return None
+            _logger.info(f"[TOKEN] Token generado correctamente para ID {record.id}: {token}")
 
         url = f"{base_url}/sat/change_location/{record.id}?token={token}"
         _logger.info(f"[TOKEN] URL final generada: {url}")
         return url
+
 
 
     def invalidar_token_ubicacion(self):
