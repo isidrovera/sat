@@ -754,13 +754,13 @@
                         _escapeHtml: function (text) {
                             if (!text) return '';
                             var map = {
-                                '&': '&amp;',
-                                '<': '&lt;',
-                                '>': '&gt;',
-                                '"': '&quot;',
-                                "'": '&#039;'
+                                '&amp;&amp;': '&amp;',
+                                '&lt;': '&lt;',
+                                '&gt;': '&gt;',
+                                '&quot;': '&quot;',
+                                "&apos;": '&#039;'
                             };
-                            return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+                            return String(text).replace(/[&amp;&lt;&gt;"']/g, function(m) { return map[m]; });
                         },
 
                         filterByStatus: function (status) {
