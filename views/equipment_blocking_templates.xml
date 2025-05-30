@@ -103,7 +103,7 @@
                                                             <t t-esc="dashboard_data.get('equipos_activos', 0)"/>
                                                         </h2>
                                                         <small class="text-success">
-                                                            <i class="fas fa-arrow-up"></i> Funcionando normal
+                                                            <i class="fa-arrow-up"></i> Funcionando normal
                                                         </small>
                                                     </div>
                                                     <div class="bg-success rounded-circle p-3">

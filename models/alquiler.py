@@ -1161,7 +1161,7 @@ class UnidadAlquiler(models.Model):
     Equipo: {} - Serie: {}
     Fecha: {}
 
-    El equipo ha sido desbloqueado. Se puede brindar soporte normal.""".format(
+    El equipo ha sido desbloqueado. Se puede usar normal.""".format(
             self.cliente_id.name,
             self.name.name,
             self.serie,
