@@ -2,11 +2,16 @@
 <odoo>
     <data>
         <!-- Assets -->
-        
+        <template id="equipment_blocking_assets" name="Equipment Blocking Assets">
+            <t t-call-assets="web.assets_frontend" t-js="false"/>
+            <script type="text/javascript" src="/sat/static/src/js/equipment_blocking.js"/>
+            <link rel="stylesheet" type="text/css" href="/sat/static/src/css/equipment_blocking.css"/>
+        </template>
 
         <!-- Template principal del dashboard -->
         <template id="equipment_blocking_dashboard_template" name="Dashboard Bloqueo de Equipos">
             <t t-call="website.layout">
+                <t t-set="additional_title">Sistema de Bloqueo de Equipos</t>
                 <div id="wrap">
                     <div class="container-fluid">
                         <div class="row">
@@ -172,13 +177,13 @@
                                             </div>
                                             <div class="col-lg-6">
                                                 <div class="d-flex gap-2 flex-wrap">
-                                                    <button type="button" class="btn btn-primary btn-lg" onclick="searchEquipments()">
+                                                    <button type="button" class="btn btn-primary btn-lg" onclick="EquipmentBlocking.searchEquipments()">
                                                         <i class="fas fa-search me-2"></i>Buscar
                                                     </button>
-                                                    <button type="button" class="btn btn-warning btn-lg" onclick="loadPendingEquipments()">
+                                                    <button type="button" class="btn btn-warning btn-lg" onclick="EquipmentBlocking.loadPendingEquipments()">
                                                         <i class="fas fa-exclamation-circle me-2"></i>Ver Pendientes
                                                     </button>
-                                                    <button type="button" class="btn btn-info btn-lg" onclick="refreshDashboard()">
+                                                    <button type="button" class="btn btn-info btn-lg" onclick="EquipmentBlocking.refreshDashboard()">
                                                         <i class="fas fa-sync-alt me-2"></i>Actualizar
                                                     </button>
                                                 </div>
@@ -260,6 +265,14 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Incluir el script JavaScript -->
+                <script type="text/javascript">
+                    // Asegurar que el script se ejecute después de que Bootstrap esté cargado
+                    document.addEventListener('DOMContentLoaded', function() {
+                        console.log('Dashboard loaded, Bootstrap available:', typeof bootstrap !== 'undefined');
+                    });
+                </script>
             </t>
         </template>
 
