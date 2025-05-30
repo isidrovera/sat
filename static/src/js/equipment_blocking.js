@@ -9,6 +9,8 @@
     // Inicializar cuando el DOM esté listo
     document.addEventListener('DOMContentLoaded', function() {
         initializeDashboard();
+        // Cargar equipos automáticamente al inicio
+        loadAllEquipments();
     });
 
     function initializeDashboard() {
@@ -156,6 +158,30 @@
                     return ['suspendido', 'bloqueado', 'no_accesible', 'pendiente_bloqueo', 'pendiente_desbloqueo'].includes(eq.estado_bloqueo);
                 });
                 displayEquipments(pendingEquipments);
+            } else {
+                showAlert('danger', 'Error al cargar equipos: ' + result.message);
+            }
+        }).catch(function(error) {
+            showAlert('danger', 'Error de conexión');
+            console.error('Error:', error);
+        });
+    }
+
+    function loadAllEquipments() {
+        var resultsContainer = document.getElementById('equipment-results');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = 
+                '<div class="text-center py-5">' +
+                    '<div class="spinner-border text-primary mb-3" role="status"></div>' +
+                    '<p class="text-muted">Cargando todos los equipos...</p>' +
+                '</div>';
+        }
+
+        return makeJsonRpcCall('/equipment/blocking/search', {
+            search_term: ''
+        }).then(function(result) {
+            if (result.status === 'success') {
+                displayEquipments(result.equipos);
             } else {
                 showAlert('danger', 'Error al cargar equipos: ' + result.message);
             }
@@ -429,6 +455,7 @@
     // Funciones globales para compatibilidad con onclick
     window.searchEquipments = searchEquipments;
     window.loadPendingEquipments = loadPendingEquipments;
+    window.loadAllEquipments = loadAllEquipments;
     window.refreshDashboard = refreshDashboard;
     window.openActionModal = openActionModal;
 

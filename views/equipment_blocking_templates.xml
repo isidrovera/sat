@@ -4,14 +4,14 @@
         <!-- Assets -->
         <record id="equipment_blocking_dashboard_assets" model="ir.asset">
             <field name="name">Equipment Blocking Dashboard Assets</field>
-            <field name="bundle">web.assets_frontend</field>
-            <field name="path">sat/static/src/css/equipment_blocking.css</field>
+            <field name="bundle">web.assets_backend</field>
+            <field name="path">equipment_blocking/static/src/css/equipment_blocking.css</field>
         </record>
-
+        
         <record id="equipment_blocking_dashboard_js" model="ir.asset">
             <field name="name">Equipment Blocking Dashboard JS</field>
-            <field name="bundle">web.assets_frontend</field>
-            <field name="path">sat/static/src/js/equipment_blocking.js</field>
+            <field name="bundle">web.assets_backend</field>
+            <field name="path">equipment_blocking/static/src/js/equipment_blocking.js</field>
         </record>
 
         <!-- Template principal del dashboard -->
@@ -185,6 +185,9 @@
                                                     <button type="button" class="btn btn-primary btn-lg" onclick="searchEquipments()">
                                                         <i class="fas fa-search me-2"></i>Buscar
                                                     </button>
+                                                    <button type="button" class="btn btn-success btn-lg" onclick="loadAllEquipments()">
+                                                        <i class="fas fa-list me-2"></i>Ver Todos
+                                                    </button>
                                                     <button type="button" class="btn btn-warning btn-lg" onclick="loadPendingEquipments()">
                                                         <i class="fas fa-exclamation-circle me-2"></i>Ver Pendientes
                                                     </button>
@@ -274,7 +277,7 @@
         </template>
 
         <!-- Template de error -->
-        <template id="equipment_blocking_error_template" name="Error Template">
+        <template id="error_template" name="Error Template">
             <t t-call="website.layout">
                 <div id="wrap">
                     <div class="container mt-5">
