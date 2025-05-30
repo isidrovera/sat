@@ -281,31 +281,31 @@
             <script type="text/javascript">
                 // Funciones globales disponibles inmediatamente
                 function searchEquipments() {
-                    if (window.equipmentBlockingDashboard && window.equipmentBlockingDashboard.searchEquipments) {
+                    if (window.equipmentBlockingDashboard &amp;&amp; window.equipmentBlockingDashboard.searchEquipments) {
                         window.equipmentBlockingDashboard.searchEquipments();
                     }
                 }
                 
                 function loadAllEquipments() {
-                    if (window.equipmentBlockingDashboard && window.equipmentBlockingDashboard.loadAllEquipments) {
+                    if (window.equipmentBlockingDashboard &amp;&amp; window.equipmentBlockingDashboard.loadAllEquipments) {
                         window.equipmentBlockingDashboard.loadAllEquipments();
                     }
                 }
                 
                 function loadPendingEquipments() {
-                    if (window.equipmentBlockingDashboard && window.equipmentBlockingDashboard.loadPendingEquipments) {
+                    if (window.equipmentBlockingDashboard &amp;&amp; window.equipmentBlockingDashboard.loadPendingEquipments) {
                         window.equipmentBlockingDashboard.loadPendingEquipments();
                     }
                 }
                 
                 function refreshDashboard() {
-                    if (window.equipmentBlockingDashboard && window.equipmentBlockingDashboard.refreshDashboard) {
+                    if (window.equipmentBlockingDashboard &amp;&amp; window.equipmentBlockingDashboard.refreshDashboard) {
                         window.equipmentBlockingDashboard.refreshDashboard();
                     }
                 }
                 
                 function openActionModal(action, equipmentId, serie, equipmentData) {
-                    if (window.equipmentBlockingDashboard && window.equipmentBlockingDashboard.openActionModal) {
+                    if (window.equipmentBlockingDashboard &amp;&amp; window.equipmentBlockingDashboard.openActionModal) {
                         window.equipmentBlockingDashboard.openActionModal(action, equipmentId, serie, equipmentData);
                     }
                 }
