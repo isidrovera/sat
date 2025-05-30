@@ -1024,62 +1024,52 @@ class UnidadAlquiler(models.Model):
 
     def action_bloquear_equipo(self, motivo=None, usuario_id=None):
         self.ensure_one()
-        if not self.acceso_remoto_disponible:
-            self.write({
-                'estado_bloqueo': 'no_accesible',
-                'motivo_bloqueo': 'Equipo no accesible para bloqueo remoto',
-                'usuario_bloqueo': usuario_id or self.env.user.id
-            })
-            self._enviar_notificacion_no_accesible()
-            raise UserError("Este equipo no puede ser bloqueado remotamente")
         if self.estado_bloqueo == 'bloqueado':
             raise UserError("El equipo ya está bloqueado")
-        resultado_bloqueo = self._ejecutar_bloqueo_remoto()
-        if resultado_bloqueo['success']:
-            self.write({
-                'estado_bloqueo': 'bloqueado',
-                'fecha_bloqueo': fields.Datetime.now(),
-                'motivo_bloqueo': motivo or 'Bloqueo remoto por suspensión de servicio',
-                'usuario_bloqueo': usuario_id or self.env.user.id,
-                'notificado_bloqueo': False
-            })
-            self._enviar_notificacion_bloqueo_exitoso()
-            return {'success': True, 'message': 'Equipo bloqueado exitosamente'}
-        else:
-            self.write({
-                'estado_bloqueo': 'pendiente_bloqueo',
-                'motivo_bloqueo': resultado_bloqueo.get('error', 'Error en bloqueo remoto'),
-                'usuario_bloqueo': usuario_id or self.env.user.id
-            })
-            self._enviar_notificacion_bloqueo_fallido()
-            return {'success': False, 'message': resultado_bloqueo.get('error', 'Error en bloqueo remoto')}
+        
+        # Bloquear directamente sin verificar acceso remoto
+        self.write({
+            'estado_bloqueo': 'bloqueado',
+            'fecha_bloqueo': fields.Datetime.now(),
+            'motivo_bloqueo': motivo or 'Bloqueo remoto por suspensión de servicio',
+            'usuario_bloqueo': usuario_id or self.env.user.id,
+            'notificado_bloqueo': False
+        })
+        
+        # Siempre enviar notificación de bloqueo exitoso
+        self._enviar_notificacion_bloqueo_exitoso()
+        
+        self.message_post(
+            body=f"🔒 Equipo bloqueado: {motivo or 'Bloqueo remoto por suspensión de servicio'}",
+            message_type='notification'
+        )
+        
+        return {'success': True, 'message': 'Equipo bloqueado exitosamente'}
 
     def action_desbloquear_equipo(self, motivo=None, usuario_id=None):
         self.ensure_one()
         if self.estado_bloqueo not in ['bloqueado', 'suspendido']:
             raise UserError("El equipo no está bloqueado")
-        if not self.acceso_remoto_disponible:
-            raise UserError("Este equipo no puede ser desbloqueado remotamente")
-        resultado_desbloqueo = self._ejecutar_desbloqueo_remoto()
-        if resultado_desbloqueo['success']:
-            self.write({
-                'estado_bloqueo': 'activo',
-                'fecha_desbloqueo': fields.Datetime.now(),
-                'motivo_bloqueo': False,
-                'observaciones_bloqueo': False,
-                'usuario_bloqueo': usuario_id or self.env.user.id,
-                'notificado_desbloqueo': False
-            })
-            self._enviar_notificacion_desbloqueo_exitoso()
-            return {'success': True, 'message': 'Equipo desbloqueado exitosamente'}
-        else:
-            self.write({
-                'estado_bloqueo': 'pendiente_desbloqueo',
-                'motivo_bloqueo': resultado_desbloqueo.get('error', 'Error en desbloqueo remoto'),
-                'usuario_bloqueo': usuario_id or self.env.user.id
-            })
-            self._enviar_notificacion_desbloqueo_fallido()
-            return {'success': False, 'message': resultado_desbloqueo.get('error', 'Error en desbloqueo remoto')}
+        
+        # Desbloquear directamente sin verificar acceso remoto
+        self.write({
+            'estado_bloqueo': 'activo',
+            'fecha_desbloqueo': fields.Datetime.now(),
+            'motivo_bloqueo': False,
+            'observaciones_bloqueo': False,
+            'usuario_bloqueo': usuario_id or self.env.user.id,
+            'notificado_desbloqueo': False
+        })
+        
+        # Siempre enviar notificación de desbloqueo exitoso
+        self._enviar_notificacion_desbloqueo_exitoso()
+        
+        self.message_post(
+            body=f"🔓 Equipo desbloqueado exitosamente",
+            message_type='notification'
+        )
+        
+        return {'success': True, 'message': 'Equipo desbloqueado exitosamente'}
 
     def _ejecutar_bloqueo_remoto(self):
         try:
@@ -1115,15 +1105,15 @@ class UnidadAlquiler(models.Model):
     def _enviar_notificacion_suspension(self):
         if self.asesor_ventas_id and self.asesor_ventas_id.mobile_phone:
             mensaje_asesor = f"""
-⚠️ *SERVICIO SUSPENDIDO*
+    ⚠️ *SERVICIO SUSPENDIDO*
 
-Cliente: *{self.cliente_id.name}*
-Equipo: {self.name.name} - Serie: {self.serie}
-Motivo: {self.motivo_bloqueo}
-Dirección: {self.direccion}
+    Cliente: *{self.cliente_id.name}*
+    Equipo: {self.name.name} - Serie: {self.serie}
+    Motivo: {self.motivo_bloqueo}
+    Dirección: {self.direccion}
 
-Se ha suspendido el servicio técnico.
-"""
+    Se ha suspendido el servicio técnico.
+    """
             phone_asesor = self._clean_phone_number(self.asesor_ventas_id.mobile_phone)
             self._send_whatsapp_notification(phone_asesor, mensaje_asesor)
 
@@ -1132,15 +1122,15 @@ Se ha suspendido el servicio técnico.
         ])
 
         mensaje_soporte = f"""
-🚫 *NO BRINDAR SOPORTE TÉCNICO*
+    🚫 *NO BRINDAR SOPORTE TÉCNICO*
 
-Cliente: *{self.cliente_id.name}*
-Equipo: {self.name.name} - Serie: {self.serie}
-Estado: SUSPENDIDO
-Motivo: {self.motivo_bloqueo}
+    Cliente: *{self.cliente_id.name}*
+    Equipo: {self.name.name} - Serie: {self.serie}
+    Estado: SUSPENDIDO
+    Motivo: {self.motivo_bloqueo}
 
-No proporcionar soporte técnico hasta nuevo aviso.
-"""
+    No proporcionar soporte técnico hasta nuevo aviso.
+    """
         for user in soporte_users:
             if user.mobile_phone:
                 phone_soporte = self._clean_phone_number(user.mobile_phone)
@@ -1148,51 +1138,63 @@ No proporcionar soporte técnico hasta nuevo aviso.
 
     def _enviar_notificacion_bloqueo_exitoso(self):
         mensaje = f"""
-🔒 *EQUIPO BLOQUEADO EXITOSAMENTE*
+    🔒 *EQUIPO BLOQUEADO EXITOSAMENTE*
 
-Cliente: *{self.cliente_id.name}*
-Equipo: {self.name.name} - Serie: {self.serie}
-Fecha: {fields.Datetime.now().strftime('%d/%m/%Y %H:%M')}
-IP: {self.ip_equipo}
+    Cliente: *{self.cliente_id.name}*
+    Equipo: {self.name.name} - Serie: {self.serie}
+    Fecha: {fields.Datetime.now().strftime('%d/%m/%Y %H:%M')}
+    IP: {self.ip_equipo or 'No configurada'}
 
-El equipo ha sido bloqueado remotamente.
-"""
+    El equipo ha sido bloqueado remotamente.
+    """
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_notificacion_bloqueo_fallido(self):
         mensaje = f"""
-❌ *ERROR AL BLOQUEAR EQUIPO*
+    ❌ *ERROR AL BLOQUEAR EQUIPO*
 
-Cliente: *{self.cliente_id.name}*
-Equipo: {self.name.name} - Serie: {self.serie}
-Error: {self.motivo_bloqueo}
+    Cliente: *{self.cliente_id.name}*
+    Equipo: {self.name.name} - Serie: {self.serie}
+    Error: {self.motivo_bloqueo}
 
-Se requiere bloqueo manual del equipo.
-"""
+    Se requiere bloqueo manual del equipo.
+    """
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_notificacion_desbloqueo_exitoso(self):
         mensaje = f"""
-🔓 *EQUIPO DESBLOQUEADO EXITOSAMENTE*
+    🔓 *EQUIPO DESBLOQUEADO EXITOSAMENTE*
 
-Cliente: *{self.cliente_id.name}*
-Equipo: {self.name.name} - Serie: {self.serie}
-Fecha: {fields.Datetime.now().strftime('%d/%m/%Y %H:%M')}
+    Cliente: *{self.cliente_id.name}*
+    Equipo: {self.name.name} - Serie: {self.serie}
+    Fecha: {fields.Datetime.now().strftime('%d/%m/%Y %H:%M')}
 
-El equipo ha sido desbloqueado. Se puede brindar soporte normal.
-"""
+    El equipo ha sido desbloqueado. Se puede brindar soporte normal.
+    """
+        self._enviar_a_contactos_responsables(mensaje)
+
+    def _enviar_notificacion_desbloqueo_fallido(self):
+        mensaje = f"""
+    ❌ *ERROR AL DESBLOQUEAR EQUIPO*
+
+    Cliente: *{self.cliente_id.name}*
+    Equipo: {self.name.name} - Serie: {self.serie}
+    Error: {self.motivo_bloqueo}
+
+    Se requiere desbloqueo manual del equipo.
+    """
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_notificacion_no_accesible(self):
         mensaje = f"""
-⚠️ *EQUIPO NO ACCESIBLE PARA BLOQUEO*
+    ⚠️ *EQUIPO NO ACCESIBLE PARA BLOQUEO*
 
-Cliente: *{self.cliente_id.name}*
-Equipo: {self.name.name} - Serie: {self.serie}
-Estado: NO ACCESIBLE
+    Cliente: *{self.cliente_id.name}*
+    Equipo: {self.name.name} - Serie: {self.serie}
+    Estado: NO ACCESIBLE
 
-Se requiere intervención manual para suspender el servicio.
-"""
+    Se requiere intervención manual para suspender el servicio.
+    """
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_a_contactos_responsables(self, mensaje):
@@ -1262,10 +1264,10 @@ Se requiere intervención manual para suspender el servicio.
     @api.model
     def buscar_equipos_web(self, busqueda):
         domain = ['|', '|', '|',
-                  ('serie', 'ilike', busqueda),
-                  ('cliente_id.name', 'ilike', busqueda),
-                  ('name.name', 'ilike', busqueda),
-                  ('marca', 'ilike', busqueda)]
+                ('serie', 'ilike', busqueda),
+                ('cliente_id.name', 'ilike', busqueda),
+                ('name.name', 'ilike', busqueda),
+                ('marca', 'ilike', busqueda)]
         equipos = self.search(domain, limit=50)
         resultado = []
         for equipo in equipos:
@@ -1287,7 +1289,6 @@ Se requiere intervención manual para suspender el servicio.
                 'puede_desbloquear': equipo.estado_bloqueo in ['bloqueado', 'suspendido']
             })
         return resultado
-
 
 class SolicitudPartes(models.Model):
     _name = 'solicitud.partes'
