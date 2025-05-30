@@ -1,4 +1,5 @@
 import calendar
+import requests
 import uuid
 from urllib.parse import urlencode
 from odoo.exceptions import UserError, ValidationError
