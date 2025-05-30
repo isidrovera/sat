@@ -1065,7 +1065,7 @@ class UnidadAlquiler(models.Model):
         self._enviar_notificacion_desbloqueo_exitoso()
         
         self.message_post(
-            body=f"🔓 Equipo desbloqueado exitosamente",
+            body="🔓 Equipo desbloqueado exitosamente",
             message_type='notification'
         )
         
@@ -1104,109 +1104,104 @@ class UnidadAlquiler(models.Model):
 
     def _enviar_notificacion_suspension(self):
         if self.asesor_ventas_id and self.asesor_ventas_id.mobile_phone:
-            mensaje_asesor = f"""
-    ⚠️ *SERVICIO SUSPENDIDO*
+            mensaje_asesor = """⚠️ *SERVICIO SUSPENDIDO*
 
-    Cliente: *{self.cliente_id.name}*
-    Equipo: {self.name.name} - Serie: {self.serie}
-    Motivo: {self.motivo_bloqueo}
-    Dirección: {self.direccion}
+    Cliente: *{}*
+    Equipo: {} - Serie: {}
+    Motivo: {}
+    Dirección: {}
 
-    Se ha suspendido el servicio técnico.
-    """
+    Se ha suspendido el servicio técnico.""".format(
+                self.cliente_id.name,
+                self.name.name,
+                self.serie,
+                self.motivo_bloqueo,
+                self.direccion
+            )
             phone_asesor = self._clean_phone_number(self.asesor_ventas_id.mobile_phone)
             self._send_whatsapp_notification(phone_asesor, mensaje_asesor)
 
-        soporte_users = self.env['res.users'].search([
-            ('groups_id', 'in', self.env.ref('sat.group_soporte_tecnico').id)
-        ])
-
-        mensaje_soporte = f"""
-    🚫 *NO BRINDAR SOPORTE TÉCNICO*
-
-    Cliente: *{self.cliente_id.name}*
-    Equipo: {self.name.name} - Serie: {self.serie}
-    Estado: SUSPENDIDO
-    Motivo: {self.motivo_bloqueo}
-
-    No proporcionar soporte técnico hasta nuevo aviso.
-    """
-        for user in soporte_users:
-            if user.mobile_phone:
-                phone_soporte = self._clean_phone_number(user.mobile_phone)
-                self._send_whatsapp_notification(phone_soporte, mensaje_soporte)
-
     def _enviar_notificacion_bloqueo_exitoso(self):
-        mensaje = f"""
-    🔒 *EQUIPO BLOQUEADO EXITOSAMENTE*
+        mensaje = """🔒 *EQUIPO BLOQUEADO EXITOSAMENTE*
 
-    Cliente: *{self.cliente_id.name}*
-    Equipo: {self.name.name} - Serie: {self.serie}
-    Fecha: {fields.Datetime.now().strftime('%d/%m/%Y %H:%M')}
-    IP: {self.ip_equipo or 'No configurada'}
+    Cliente: *{}*
+    Equipo: {} - Serie: {}
+    Fecha: {}
+    IP: {}
 
-    El equipo ha sido bloqueado remotamente.
-    """
+    El equipo ha sido bloqueado remotamente.""".format(
+            self.cliente_id.name,
+            self.name.name,
+            self.serie,
+            fields.Datetime.now().strftime('%d/%m/%Y %H:%M'),
+            self.ip_equipo or 'No configurada'
+        )
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_notificacion_bloqueo_fallido(self):
-        mensaje = f"""
-    ❌ *ERROR AL BLOQUEAR EQUIPO*
+        mensaje = """❌ *ERROR AL BLOQUEAR EQUIPO*
 
-    Cliente: *{self.cliente_id.name}*
-    Equipo: {self.name.name} - Serie: {self.serie}
-    Error: {self.motivo_bloqueo}
+    Cliente: *{}*
+    Equipo: {} - Serie: {}
+    Error: {}
 
-    Se requiere bloqueo manual del equipo.
-    """
+    Se requiere bloqueo manual del equipo.""".format(
+            self.cliente_id.name,
+            self.name.name,
+            self.serie,
+            self.motivo_bloqueo
+        )
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_notificacion_desbloqueo_exitoso(self):
-        mensaje = f"""
-    🔓 *EQUIPO DESBLOQUEADO EXITOSAMENTE*
+        mensaje = """🔓 *EQUIPO DESBLOQUEADO EXITOSAMENTE*
 
-    Cliente: *{self.cliente_id.name}*
-    Equipo: {self.name.name} - Serie: {self.serie}
-    Fecha: {fields.Datetime.now().strftime('%d/%m/%Y %H:%M')}
+    Cliente: *{}*
+    Equipo: {} - Serie: {}
+    Fecha: {}
 
-    El equipo ha sido desbloqueado. Se puede brindar soporte normal.
-    """
+    El equipo ha sido desbloqueado. Se puede brindar soporte normal.""".format(
+            self.cliente_id.name,
+            self.name.name,
+            self.serie,
+            fields.Datetime.now().strftime('%d/%m/%Y %H:%M')
+        )
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_notificacion_desbloqueo_fallido(self):
-        mensaje = f"""
-    ❌ *ERROR AL DESBLOQUEAR EQUIPO*
+        mensaje = """❌ *ERROR AL DESBLOQUEAR EQUIPO*
 
-    Cliente: *{self.cliente_id.name}*
-    Equipo: {self.name.name} - Serie: {self.serie}
-    Error: {self.motivo_bloqueo}
+    Cliente: *{}*
+    Equipo: {} - Serie: {}
+    Error: {}
 
-    Se requiere desbloqueo manual del equipo.
-    """
+    Se requiere desbloqueo manual del equipo.""".format(
+            self.cliente_id.name,
+            self.name.name,
+            self.serie,
+            self.motivo_bloqueo
+        )
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_notificacion_no_accesible(self):
-        mensaje = f"""
-    ⚠️ *EQUIPO NO ACCESIBLE PARA BLOQUEO*
+        mensaje = """⚠️ *EQUIPO NO ACCESIBLE PARA BLOQUEO*
 
-    Cliente: *{self.cliente_id.name}*
-    Equipo: {self.name.name} - Serie: {self.serie}
+    Cliente: *{}*
+    Equipo: {} - Serie: {}
     Estado: NO ACCESIBLE
 
-    Se requiere intervención manual para suspender el servicio.
-    """
+    Se requiere intervención manual para suspender el servicio.""".format(
+            self.cliente_id.name,
+            self.name.name,
+            self.serie
+        )
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_a_contactos_responsables(self, mensaje):
         contactos = []
         if self.asesor_ventas_id and self.asesor_ventas_id.mobile_phone:
             contactos.append(self.asesor_ventas_id.mobile_phone)
-        soporte_users = self.env['res.users'].search([
-            ('groups_id', 'in', self.env.ref('sat.group_soporte_tecnico').id)
-        ])
-        for user in soporte_users:
-            if user.mobile_phone:
-                contactos.append(user.mobile_phone)
+        
         for phone in contactos:
             clean_phone = self._clean_phone_number(phone)
             self._send_whatsapp_notification(clean_phone, mensaje)
