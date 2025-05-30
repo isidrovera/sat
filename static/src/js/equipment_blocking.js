@@ -374,7 +374,7 @@
                         actionModal.hide();
                     }
                     refreshDashboard();
-                    searchEquipments();
+                    loadAllEquipments();
                 }, 2000);
             } else {
                 showModalAlert('danger', result.message);
