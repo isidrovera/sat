@@ -11,14 +11,14 @@ class EquipmentBlockingController(http.Controller):
 
     @http.route('/equipment/blocking/dashboard', type='http', auth='public', website=True)
     def blocking_dashboard(self, **kwargs):
-        """Dashboard principal para gestión de bloqueos"""
+        """Dashboard principal para gestión de bloqueos - ACCESO PÚBLICO"""
         try:
-            # Obtener datos del dashboard
-            equipment_model = request.env['alquiler']
+            # Usar sudo() para acceso sin restricciones de permisos
+            equipment_model = request.env['alquiler'].sudo()
             dashboard_data = equipment_model.get_dashboard_data()
             
-            # Obtener lista de usuarios para asignación
-            users = request.env['res.users'].search([
+            # Obtener lista de usuarios para asignación (también con sudo)
+            users = request.env['res.users'].sudo().search([
                 ('active', '=', True),
                 ('share', '=', False)
             ])
@@ -30,15 +30,48 @@ class EquipmentBlockingController(http.Controller):
             
         except Exception as e:
             _logger.error(f"Error en dashboard de bloqueos: {str(e)}")
-            return request.render('sat.error_template', {
-                'error_message': 'Error al cargar el dashboard'
-            })
+            
+            # Crear respuesta de error simple sin depender de templates faltantes
+            error_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Error en Dashboard</title>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            </head>
+            <body>
+                <div class="container mt-5">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="alert alert-danger" role="alert">
+                                <h4 class="alert-heading">Error en el Dashboard</h4>
+                                <p>Ha ocurrido un error al cargar la información del dashboard.</p>
+                                <p><strong>Detalle técnico:</strong> {str(e)}</p>
+                                <hr>
+                                <div class="d-flex gap-2">
+                                    <button onclick="window.location.reload()" class="btn btn-primary">
+                                        Recargar Página
+                                    </button>
+                                    <a href="/" class="btn btn-secondary">Ir al Inicio</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            return request.make_response(error_html, status=500)
 
-    @http.route('/equipment/blocking/search', type='json', auth='user', methods=['POST'])
+    @http.route('/equipment/blocking/search', type='json', auth='public', methods=['POST'])
     def search_equipments(self, search_term=''):
-        """Busca equipos por serie, cliente, modelo, etc."""
+        """Busca equipos por serie, cliente, modelo, etc. - ACCESO PÚBLICO"""
         try:
-            equipment_model = request.env['alquiler']
+            # Usar sudo() para permitir búsquedas sin autenticación
+            equipment_model = request.env['alquiler'].sudo()
             equipos = equipment_model.buscar_equipos_web(search_term)
             
             return {
@@ -53,11 +86,12 @@ class EquipmentBlockingController(http.Controller):
                 'message': str(e)
             }
 
-    @http.route('/equipment/blocking/suspend', type='json', auth='user', methods=['POST'])
+    @http.route('/equipment/blocking/suspend', type='json', auth='public', methods=['POST'])
     def suspend_service(self, equipment_id, motivo=''):
-        """Suspende el servicio de un equipo"""
+        """Suspende el servicio de un equipo - ACCESO PÚBLICO"""
         try:
-            equipment = request.env['alquiler'].browse(int(equipment_id))
+            # Usar sudo() para operaciones sin autenticación
+            equipment = request.env['alquiler'].sudo().browse(int(equipment_id))
             
             if not equipment.exists():
                 return {
@@ -65,10 +99,10 @@ class EquipmentBlockingController(http.Controller):
                     'message': 'Equipo no encontrado'
                 }
             
-            # Suspender servicio
+            # Suspender servicio - usar ID genérico para usuario público
             equipment.action_suspender_servicio(
                 motivo=motivo,
-                usuario_id=request.env.user.id
+                usuario_id=1  # Usuario administrador como fallback
             )
             
             return {
@@ -83,11 +117,11 @@ class EquipmentBlockingController(http.Controller):
                 'message': str(e)
             }
 
-    @http.route('/equipment/blocking/block', type='json', auth='user', methods=['POST'])
+    @http.route('/equipment/blocking/block', type='json', auth='public', methods=['POST'])
     def block_equipment(self, equipment_id, motivo=''):
-        """Bloquea un equipo remotamente"""
+        """Bloquea un equipo remotamente - ACCESO PÚBLICO"""
         try:
-            equipment = request.env['alquiler'].browse(int(equipment_id))
+            equipment = request.env['alquiler'].sudo().browse(int(equipment_id))
             
             if not equipment.exists():
                 return {
@@ -98,7 +132,7 @@ class EquipmentBlockingController(http.Controller):
             # Bloquear equipo
             resultado = equipment.action_bloquear_equipo(
                 motivo=motivo,
-                usuario_id=request.env.user.id
+                usuario_id=1  # Usuario administrador como fallback
             )
             
             return {
@@ -113,11 +147,11 @@ class EquipmentBlockingController(http.Controller):
                 'message': str(e)
             }
 
-    @http.route('/equipment/blocking/unblock', type='json', auth='user', methods=['POST'])
+    @http.route('/equipment/blocking/unblock', type='json', auth='public', methods=['POST'])
     def unblock_equipment(self, equipment_id, motivo=''):
-        """Desbloquea un equipo"""
+        """Desbloquea un equipo - ACCESO PÚBLICO"""
         try:
-            equipment = request.env['alquiler'].browse(int(equipment_id))
+            equipment = request.env['alquiler'].sudo().browse(int(equipment_id))
             
             if not equipment.exists():
                 return {
@@ -128,7 +162,7 @@ class EquipmentBlockingController(http.Controller):
             # Desbloquear equipo
             resultado = equipment.action_desbloquear_equipo(
                 motivo=motivo,
-                usuario_id=request.env.user.id
+                usuario_id=1  # Usuario administrador como fallback
             )
             
             return {
@@ -143,11 +177,11 @@ class EquipmentBlockingController(http.Controller):
                 'message': str(e)
             }
 
-    @http.route('/equipment/blocking/update_config', type='json', auth='user', methods=['POST'])
+    @http.route('/equipment/blocking/update_config', type='json', auth='public', methods=['POST'])
     def update_equipment_config(self, equipment_id, **kwargs):
-        """Actualiza configuración de un equipo"""
+        """Actualiza configuración de un equipo - ACCESO PÚBLICO"""
         try:
-            equipment = request.env['alquiler'].browse(int(equipment_id))
+            equipment = request.env['alquiler'].sudo().browse(int(equipment_id))
             
             if not equipment.exists():
                 return {
@@ -188,11 +222,11 @@ class EquipmentBlockingController(http.Controller):
                 'message': str(e)
             }
 
-    @http.route('/equipment/blocking/get_equipment_details', type='json', auth='user', methods=['POST'])
+    @http.route('/equipment/blocking/get_equipment_details', type='json', auth='public', methods=['POST'])
     def get_equipment_details(self, equipment_id):
-        """Obtiene detalles completos de un equipo"""
+        """Obtiene detalles completos de un equipo - ACCESO PÚBLICO"""
         try:
-            equipment = request.env['alquiler'].browse(int(equipment_id))
+            equipment = request.env['alquiler'].sudo().browse(int(equipment_id))
             
             if not equipment.exists():
                 return {
@@ -200,8 +234,8 @@ class EquipmentBlockingController(http.Controller):
                     'message': 'Equipo no encontrado'
                 }
             
-            # Obtener historial de tickets
-            tickets = request.env['ticket.alquiler'].search([
+            # Obtener historial de tickets con sudo()
+            tickets = request.env['ticket.alquiler'].sudo().search([
                 ('product_alquiler', '=', equipment.id)
             ], order='create_date desc', limit=5)
             
@@ -211,7 +245,7 @@ class EquipmentBlockingController(http.Controller):
                     'name': ticket.name,
                     'fecha': ticket.create_date.strftime('%d/%m/%Y'),
                     'estado': ticket.estado,
-                    'tipo_servicio': ticket.tipo_servicio_id
+                    'tipo_servicio': ticket.tipo_servicio_id.name if ticket.tipo_servicio_id else ''
                 })
             
             return {
@@ -223,7 +257,7 @@ class EquipmentBlockingController(http.Controller):
                     'modelo': equipment.name.name if equipment.name else '',
                     'marca': equipment.marca,
                     'direccion': equipment.direccion,
-                    'contacto': equipment.contacto_id,
+                    'contacto': equipment.contacto_id.name if equipment.contacto_id else '',
                     'celular': equipment.celular,
                     'correo': equipment.correo_,
                     'estado_bloqueo': equipment.estado_bloqueo,
@@ -248,11 +282,11 @@ class EquipmentBlockingController(http.Controller):
                 'message': str(e)
             }
 
-    @http.route('/equipment/blocking/dashboard_data', type='json', auth='user', methods=['POST'])
+    @http.route('/equipment/blocking/dashboard_data', type='json', auth='public', methods=['POST'])
     def get_dashboard_data(self):
-        """Obtiene datos actualizados del dashboard"""
+        """Obtiene datos actualizados del dashboard - ACCESO PÚBLICO"""
         try:
-            equipment_model = request.env['alquiler']
+            equipment_model = request.env['alquiler'].sudo()
             dashboard_data = equipment_model.get_dashboard_data()
             
             return {
