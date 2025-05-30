@@ -452,7 +452,16 @@
         return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
     }
 
-    // Funciones globales para compatibilidad con onclick
+    // Exponer objeto principal y funciones globales
+    window.equipmentBlockingDashboard = {
+        searchEquipments: searchEquipments,
+        loadPendingEquipments: loadPendingEquipments,
+        loadAllEquipments: loadAllEquipments,
+        refreshDashboard: refreshDashboard,
+        openActionModal: openActionModal
+    };
+
+    // También exponer directamente para compatibilidad
     window.searchEquipments = searchEquipments;
     window.loadPendingEquipments = loadPendingEquipments;
     window.loadAllEquipments = loadAllEquipments;

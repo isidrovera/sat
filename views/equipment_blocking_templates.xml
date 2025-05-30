@@ -1,7 +1,19 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
     <data>
-       
+        <!-- Assets -->
+        <record id="equipment_blocking_dashboard_assets" model="ir.asset">
+            <field name="name">Equipment Blocking Dashboard Assets</field>
+            <field name="bundle">web.assets_backend</field>
+            <field name="path">equipment_blocking/static/src/css/equipment_blocking.css</field>
+        </record>
+        
+        <record id="equipment_blocking_dashboard_js" model="ir.asset">
+            <field name="name">Equipment Blocking Dashboard JS</field>
+            <field name="bundle">web.assets_backend</field>
+            <field name="path">equipment_blocking/static/src/js/equipment_blocking.js</field>
+        </record>
+
         <!-- Template principal del dashboard -->
         <template id="equipment_blocking_dashboard_template" name="Dashboard Bloqueo de Equipos">
             <t t-call="website.layout">
@@ -262,6 +274,42 @@
                     </div>
                 </div>
             </t>
+        </template>
+
+        <!-- JavaScript inline para evitar problemas de carga -->
+        <template id="equipment_blocking_dashboard_js_inline" name="Equipment Blocking JS Inline">
+            <script type="text/javascript">
+                // Funciones globales disponibles inmediatamente
+                function searchEquipments() {
+                    if (window.equipmentBlockingDashboard && window.equipmentBlockingDashboard.searchEquipments) {
+                        window.equipmentBlockingDashboard.searchEquipments();
+                    }
+                }
+                
+                function loadAllEquipments() {
+                    if (window.equipmentBlockingDashboard && window.equipmentBlockingDashboard.loadAllEquipments) {
+                        window.equipmentBlockingDashboard.loadAllEquipments();
+                    }
+                }
+                
+                function loadPendingEquipments() {
+                    if (window.equipmentBlockingDashboard && window.equipmentBlockingDashboard.loadPendingEquipments) {
+                        window.equipmentBlockingDashboard.loadPendingEquipments();
+                    }
+                }
+                
+                function refreshDashboard() {
+                    if (window.equipmentBlockingDashboard && window.equipmentBlockingDashboard.refreshDashboard) {
+                        window.equipmentBlockingDashboard.refreshDashboard();
+                    }
+                }
+                
+                function openActionModal(action, equipmentId, serie, equipmentData) {
+                    if (window.equipmentBlockingDashboard && window.equipmentBlockingDashboard.openActionModal) {
+                        window.equipmentBlockingDashboard.openActionModal(action, equipmentId, serie, equipmentData);
+                    }
+                }
+            </script>
         </template>
 
         <!-- Template de error -->
