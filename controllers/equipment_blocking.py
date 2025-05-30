@@ -9,7 +9,7 @@ _logger = logging.getLogger(__name__)
 
 class EquipmentBlockingController(http.Controller):
 
-    @http.route('/equipment/blocking/dashboard', type='http', auth='user', website=True)
+    @http.route('/equipment/blocking/dashboard', type='http', auth='public', website=True)
     def blocking_dashboard(self, **kwargs):
         """Dashboard principal para gestión de bloqueos"""
         try:
