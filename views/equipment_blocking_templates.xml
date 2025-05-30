@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
+    <data>
     <!-- Template principal del dashboard -->
     <template id="equipment_blocking_dashboard_template" name="Dashboard Bloqueo de Equipos">
         <t t-call="website.layout">
@@ -807,5 +808,5 @@
                 });
             </script>
 
-   
+   </data>
 </odoo>
