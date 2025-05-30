@@ -35,47 +35,11 @@ class EquipmentBlockingController(http.Controller):
             })
 
     @http.route('/equipment/blocking/search', type='json', auth='user', methods=['POST'])
-    def search_equipments(self, search_term='', only_pending=False):
+    def search_equipments(self, search_term=''):
         """Busca equipos por serie, cliente, modelo, etc."""
         try:
             equipment_model = request.env['alquiler']
-            
-            if only_pending:
-                # Solo equipos que requieren atención
-                domain = [('estado_bloqueo', 'in', ['suspendido', 'bloqueado', 'no_accesible', 'pendiente_bloqueo', 'pendiente_desbloqueo'])]
-            else:
-                # Búsqueda normal
-                if search_term:
-                    domain = ['|', '|', '|',
-                              ('serie', 'ilike', search_term),
-                              ('cliente_id.name', 'ilike', search_term),
-                              ('name.name', 'ilike', search_term),
-                              ('marca', 'ilike', search_term)]
-                else:
-                    # Cargar todos los equipos (limitado)
-                    domain = []
-            
-            equipos_records = equipment_model.search(domain, limit=100, order='estado_bloqueo desc, serie')
-            equipos = []
-            
-            for equipo in equipos_records:
-                equipos.append({
-                    'id': equipo.id,
-                    'serie': equipo.serie or '',
-                    'cliente': equipo.cliente_id.name if equipo.cliente_id else '',
-                    'modelo': equipo.name.name if equipo.name else '',
-                    'marca': equipo.marca or '',
-                    'estado_bloqueo': equipo.estado_bloqueo,
-                    'estado_label': dict(equipo._fields['estado_bloqueo'].selection)[equipo.estado_bloqueo],
-                    'direccion': equipo.direccion or '',
-                    'acceso_remoto': equipo.acceso_remoto_disponible,
-                    'ip_equipo': equipo.ip_equipo or '',
-                    'motivo_bloqueo': equipo.motivo_bloqueo or '',
-                    'fecha_bloqueo': equipo.fecha_bloqueo.strftime('%d/%m/%Y %H:%M') if equipo.fecha_bloqueo else '',
-                    'puede_suspender': equipo.estado_bloqueo == 'activo',
-                    'puede_bloquear': equipo.estado_bloqueo in ['activo', 'suspendido'] and equipo.acceso_remoto_disponible,
-                    'puede_desbloquear': equipo.estado_bloqueo in ['bloqueado', 'suspendido'] and equipo.acceso_remoto_disponible
-                })
+            equipos = equipment_model.buscar_equipos_web(search_term)
             
             return {
                 'status': 'success',
@@ -103,7 +67,7 @@ class EquipmentBlockingController(http.Controller):
             
             # Suspender servicio
             equipment.action_suspender_servicio(
-                motivo=motivo or 'Suspendido desde dashboard',
+                motivo=motivo,
                 usuario_id=request.env.user.id
             )
             
@@ -133,12 +97,12 @@ class EquipmentBlockingController(http.Controller):
             
             # Bloquear equipo
             resultado = equipment.action_bloquear_equipo(
-                motivo=motivo or 'Bloqueado desde dashboard',
+                motivo=motivo,
                 usuario_id=request.env.user.id
             )
             
             return {
-                'status': 'success' if resultado['success'] else 'warning',
+                'status': 'success' if resultado['success'] else 'error',
                 'message': resultado['message']
             }
             
@@ -163,17 +127,122 @@ class EquipmentBlockingController(http.Controller):
             
             # Desbloquear equipo
             resultado = equipment.action_desbloquear_equipo(
-                motivo=motivo or 'Desbloqueado desde dashboard',
+                motivo=motivo,
                 usuario_id=request.env.user.id
             )
             
             return {
-                'status': 'success' if resultado['success'] else 'warning',
+                'status': 'success' if resultado['success'] else 'error',
                 'message': resultado['message']
             }
             
         except Exception as e:
             _logger.error(f"Error al desbloquear equipo: {str(e)}")
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+
+    @http.route('/equipment/blocking/update_config', type='json', auth='user', methods=['POST'])
+    def update_equipment_config(self, equipment_id, **kwargs):
+        """Actualiza configuración de un equipo"""
+        try:
+            equipment = request.env['alquiler'].browse(int(equipment_id))
+            
+            if not equipment.exists():
+                return {
+                    'status': 'error',
+                    'message': 'Equipo no encontrado'
+                }
+            
+            # Actualizar configuración
+            values = {}
+            
+            if 'acceso_remoto_disponible' in kwargs:
+                values['acceso_remoto_disponible'] = kwargs['acceso_remoto_disponible']
+                
+            if 'ip_equipo' in kwargs:
+                values['ip_equipo'] = kwargs['ip_equipo']
+                
+            if 'asesor_ventas_id' in kwargs:
+                values['asesor_ventas_id'] = int(kwargs['asesor_ventas_id']) if kwargs['asesor_ventas_id'] else False
+                
+            if 'soporte_tecnico_id' in kwargs:
+                values['soporte_tecnico_id'] = int(kwargs['soporte_tecnico_id']) if kwargs['soporte_tecnico_id'] else False
+                
+            if 'observaciones_bloqueo' in kwargs:
+                values['observaciones_bloqueo'] = kwargs['observaciones_bloqueo']
+            
+            if values:
+                equipment.write(values)
+            
+            return {
+                'status': 'success',
+                'message': 'Configuración actualizada correctamente'
+            }
+            
+        except Exception as e:
+            _logger.error(f"Error al actualizar configuración: {str(e)}")
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+
+    @http.route('/equipment/blocking/get_equipment_details', type='json', auth='user', methods=['POST'])
+    def get_equipment_details(self, equipment_id):
+        """Obtiene detalles completos de un equipo"""
+        try:
+            equipment = request.env['alquiler'].browse(int(equipment_id))
+            
+            if not equipment.exists():
+                return {
+                    'status': 'error',
+                    'message': 'Equipo no encontrado'
+                }
+            
+            # Obtener historial de tickets
+            tickets = request.env['ticket.alquiler'].search([
+                ('product_alquiler', '=', equipment.id)
+            ], order='create_date desc', limit=5)
+            
+            tickets_data = []
+            for ticket in tickets:
+                tickets_data.append({
+                    'name': ticket.name,
+                    'fecha': ticket.create_date.strftime('%d/%m/%Y'),
+                    'estado': ticket.estado,
+                    'tipo_servicio': ticket.tipo_servicio_id
+                })
+            
+            return {
+                'status': 'success',
+                'equipment': {
+                    'id': equipment.id,
+                    'serie': equipment.serie,
+                    'cliente': equipment.cliente_id.name if equipment.cliente_id else '',
+                    'modelo': equipment.name.name if equipment.name else '',
+                    'marca': equipment.marca,
+                    'direccion': equipment.direccion,
+                    'contacto': equipment.contacto_id,
+                    'celular': equipment.celular,
+                    'correo': equipment.correo_,
+                    'estado_bloqueo': equipment.estado_bloqueo,
+                    'motivo_bloqueo': equipment.motivo_bloqueo,
+                    'fecha_bloqueo': equipment.fecha_bloqueo.strftime('%d/%m/%Y %H:%M') if equipment.fecha_bloqueo else '',
+                    'fecha_desbloqueo': equipment.fecha_desbloqueo.strftime('%d/%m/%Y %H:%M') if equipment.fecha_desbloqueo else '',
+                    'acceso_remoto_disponible': equipment.acceso_remoto_disponible,
+                    'ip_equipo': equipment.ip_equipo,
+                    'asesor_ventas_id': equipment.asesor_ventas_id.id if equipment.asesor_ventas_id else False,
+                    'asesor_ventas_name': equipment.asesor_ventas_id.name if equipment.asesor_ventas_id else '',
+                    'soporte_tecnico_id': equipment.soporte_tecnico_id.id if equipment.soporte_tecnico_id else False,
+                    'soporte_tecnico_name': equipment.soporte_tecnico_id.name if equipment.soporte_tecnico_id else '',
+                    'observaciones_bloqueo': equipment.observaciones_bloqueo,
+                    'tickets_recientes': tickets_data
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"Error al obtener detalles del equipo: {str(e)}")
             return {
                 'status': 'error',
                 'message': str(e)
