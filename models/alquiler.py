@@ -1,3 +1,13 @@
+import calendar
+import uuid
+from urllib.parse import urlencode
+from odoo.exceptions import UserError, ValidationError
+import io
+import qrcode
+import re
+import base64
+from io import BytesIO
+import xlwt
 from odoo import _, models, fields, api
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
@@ -5,17 +15,6 @@ from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 import logging
 _logger = logging.getLogger(__name__)
-import xlwt
-from io import BytesIO
-import base64
-import re
-import qrcode
-import io
-from odoo.exceptions import UserError, ValidationError
-from urllib.parse import urlencode
-import uuid
-import calendar
-
 
 
 class UnidadAlquiler(models.Model):
@@ -28,7 +27,7 @@ class UnidadAlquiler(models.Model):
     name = fields.Many2one('modelo.maquina', string='Modelo',
                            required=True
                            )
-    
+
     tipo_maquina = fields.Char(related='name.tipo_maquina_id.name', readonly=True, store=True,
                                string='Tipo de maquina')
     tipo_maquina_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')],
@@ -52,10 +51,11 @@ class UnidadAlquiler(models.Model):
     contometro_venta = fields.Integer(
         string='Contometro de venta', tracking=True)
 
-    control_mantenimiento = fields.Boolean(string="Mantenimiento mensual", default=True)
-    
+    control_mantenimiento = fields.Boolean(
+        string="Mantenimiento mensual", default=True)
 
-    marca = fields.Char(related='name.marca_id.name', readonly=True, store=True, string='Marca')
+    marca = fields.Char(related='name.marca_id.name',
+                        readonly=True, store=True, string='Marca')
 
     serie = fields.Char(string='Serie', required=True, tracking=True)
 
@@ -67,14 +67,15 @@ class UnidadAlquiler(models.Model):
                 [('serie', '=', item.serie), ('id', '!=', item.id)]
             )
             if items:  # Si encuentra al menos un registro duplicado
-                raise ValidationError("La serie ingresada ya está en uso. Por favor, ingrese una serie única.")
+                raise ValidationError(
+                    "La serie ingresada ya está en uso. Por favor, ingrese una serie única.")
 
     contacto_id = fields.Char(string='Contacto', tracking=True)
     celular = fields.Char(string='Celular', tracking=True)
-    correo_ = fields.Char(string='Correo', tracking=True)    
+    correo_ = fields.Char(string='Correo', tracking=True)
     cargo = fields.Char(string='Cargo', tracking=True)
-    ubicacion_instalacion  = fields.Char(string="Área de instalacion")
-    observaciones  = fields.Html(string="Observaciones")
+    ubicacion_instalacion = fields.Char(string="Área de instalacion")
+    observaciones = fields.Html(string="Observaciones")
     direccion = fields.Text(string='Dirección y Distrito', tracking=True)
     ubicacion_id = fields.Selection([('primer_piso', 'Primer piso'), ('tercer_piso', 'Tercer piso'), ('segundo_local', 'Segundo local'), ('covida', 'Covida')],
                                     default='primer_piso', tracking=True,
@@ -86,7 +87,8 @@ class UnidadAlquiler(models.Model):
     cliente_id = fields.Many2one(
         'res.partner', string='Cliente', required=False, tracking=True)
 
-    ticket_count = fields.Integer(string='Ticket Count', compute='_compute_counts')
+    ticket_count = fields.Integer(
+        string='Ticket Count', compute='_compute_counts')
 
     @api.depends()
     def _compute_counts(self):
@@ -96,7 +98,7 @@ class UnidadAlquiler(models.Model):
             record.ticket_count = self.env['ticket.alquiler'].search_count([
                 ('product_alquiler', '=', record.id)
             ])
-            
+
             # Pedidos count
             pedidos = self.env['sale.order'].search_count([
                 ('equipo_id', '=', record.id),
@@ -104,7 +106,7 @@ class UnidadAlquiler(models.Model):
             ])
             record.pedidos_count = pedidos
             record.has_pending_orders = bool(pedidos)
-            
+
             # Repuestos count
             record.repuestos_count = self.env['repuestos.alquiler'].search_count([
                 ('modelo_id', '=', record.id)
@@ -122,7 +124,8 @@ class UnidadAlquiler(models.Model):
         }
     pedidos_count = fields.Integer(compute='compute_count_pedidos')
 
-    has_pending_orders = fields.Boolean(compute='compute_count_pedidos', store=False)
+    has_pending_orders = fields.Boolean(
+        compute='compute_count_pedidos', store=False)
 
     def compute_count_pedidos(self):
         for record in self:
@@ -183,8 +186,6 @@ class UnidadAlquiler(models.Model):
 
         }
 
-    
-
     repuestos_count = fields.Integer(compute='compute_count_repuestos')
 
     def compute_count_repuestos(self):
@@ -208,7 +209,8 @@ class UnidadAlquiler(models.Model):
         """Envía recordatorios de mantenimiento a los clientes con equipos programados."""
         today = fields.Date.today()
         target_date = today + timedelta(days=3)
-        _logger.info(f"Buscando registros con fecha_recurrente entre {target_date} y {target_date + timedelta(days=1)}")
+        _logger.info(
+            f"Buscando registros con fecha_recurrente entre {target_date} y {target_date + timedelta(days=1)}")
 
         # Buscar registros con fecha_recurrente dentro del rango
         records = self.search([
@@ -216,10 +218,12 @@ class UnidadAlquiler(models.Model):
             ('fecha_recurrente', '<', target_date + timedelta(days=1)),
             ('control_mantenimiento', '=', True)
         ])
-        _logger.info(f"Registros encontrados para enviar recordatorios: {len(records)}")
+        _logger.info(
+            f"Registros encontrados para enviar recordatorios: {len(records)}")
 
         if not records:
-            _logger.warning("No se encontraron registros para enviar recordatorios.")
+            _logger.warning(
+                "No se encontraron registros para enviar recordatorios.")
             return
 
         # Agrupar registros por cliente
@@ -236,11 +240,13 @@ class UnidadAlquiler(models.Model):
                 grouped_records[cliente_id]['equipos'].append(record)
 
         # Enviar correos agrupados por cliente
-        mail_template = self.env.ref('sat.mail_template_maintenance_notification')
+        mail_template = self.env.ref(
+            'sat.mail_template_maintenance_notification')
         for client_data in grouped_records.values():
             correo = client_data['correo']
             if not correo:
-                _logger.warning(f"Cliente {client_data['cliente'].name} no tiene correo. Saltando...")
+                _logger.warning(
+                    f"Cliente {client_data['cliente'].name} no tiene correo. Saltando...")
                 continue
 
             primer_equipo = client_data['equipos'][0]
@@ -249,9 +255,11 @@ class UnidadAlquiler(models.Model):
                     equipos=client_data['equipos'],
                     fecha_mantenimiento=target_date
                 ).send_mail(primer_equipo.id, force_send=True)
-                _logger.info(f"Correo enviado a {correo} para cliente {client_data['cliente'].name}")
+                _logger.info(
+                    f"Correo enviado a {correo} para cliente {client_data['cliente'].name}")
             except Exception as e:
-                _logger.error(f"Error al enviar correo a {correo} para cliente {client_data['cliente'].name}: {e}")
+                _logger.error(
+                    f"Error al enviar correo a {correo} para cliente {client_data['cliente'].name}: {e}")
 
     def button_send_test_mail(self):
         """Función para probar el envío de correo desde la interfaz"""
@@ -261,19 +269,22 @@ class UnidadAlquiler(models.Model):
             ('cliente_id', '=', self.cliente_id.id),
             ('control_mantenimiento', '=', True)
         ])
-        
-        mail_template = self.env.ref('sat.mail_template_maintenance_notification')
+
+        mail_template = self.env.ref(
+            'sat.mail_template_maintenance_notification')
         mail_template.with_context(
             equipos=equipos_cliente,
             fecha_mantenimiento=self.fecha_recurrente
         ).send_mail(self.id, force_send=True)
-    
+
     qr_image = fields.Binary("Código QR", attachment=True)
 
     def generate_qr_code(self):
         # Obtener la URL base de la configuración de Odoo
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        qr_url = f"{base_url}/api/escanear_qr?id_registro={self.id}"  # Construir la URL completa
+        base_url = self.env['ir.config_parameter'].sudo(
+        ).get_param('web.base.url')
+        # Construir la URL completa
+        qr_url = f"{base_url}/api/escanear_qr?id_registro={self.id}"
 
         qr = qrcode.QRCode(
             version=1,
@@ -290,12 +301,9 @@ class UnidadAlquiler(models.Model):
         qr_img = base64.b64encode(temp.getvalue())
         self.write({'qr_image': qr_img})
 
-
-
-
      # Campos originales de fechas
     fecha_inicio = fields.Date(
-        string='Fecha de mantenimiento inicial', 
+        string='Fecha de mantenimiento inicial',
         required=True,
         tracking=True,
         help="Fecha inicial del mantenimiento"
@@ -307,20 +315,20 @@ class UnidadAlquiler(models.Model):
         ('3', 'Cada 3 meses'),
         ('6', 'Cada 6 meses'),
         ('12', 'Anual')
-    ], string='Intervalo de mantenimiento', 
-       default='1', 
-       required=True,
-       tracking=True,
-       help="Frecuencia de mantenimiento"
+    ], string='Intervalo de mantenimiento',
+        default='1',
+        required=True,
+        tracking=True,
+        help="Frecuencia de mantenimiento"
     )
     patron_recurrencia = fields.Selection([
         ('fecha_exacta', 'Día específico del mes'),
         ('semana_dia', 'Día específico de la semana')
-    ], string='Patrón de recurrencia', 
-       default='fecha_exacta',
-       required=True,
-       tracking=True,
-       help="Determina cómo se calculará la próxima fecha de mantenimiento"
+    ], string='Patrón de recurrencia',
+        default='fecha_exacta',
+        required=True,
+        tracking=True,
+        help="Determina cómo se calculará la próxima fecha de mantenimiento"
     )
 
     semana_mes = fields.Selection([
@@ -332,10 +340,10 @@ class UnidadAlquiler(models.Model):
         ('-2', 'Penúltima'),
         ('-3', 'Antepenúltima')
     ], string='Posición en el mes',
-    tracking=True,
-    help="Posición específica del día de la semana en el mes (ej. primer lunes, último viernes, etc.)"
+        tracking=True,
+        help="Posición específica del día de la semana en el mes (ej. primer lunes, último viernes, etc.)"
     )
-    
+
     dia_semana = fields.Selection([
         ('0', 'Lunes'),
         ('1', 'Martes'),
@@ -345,8 +353,8 @@ class UnidadAlquiler(models.Model):
         ('5', 'Sábado'),
         ('6', 'Domingo')
     ], string='Día de la semana',
-       tracking=True,
-       help="Qué día de la semana debe programarse el mantenimiento"
+        tracking=True,
+        help="Qué día de la semana debe programarse el mantenimiento"
     )
 
     fecha_recurrente = fields.Date(
@@ -362,10 +370,10 @@ class UnidadAlquiler(models.Model):
         ('pendiente', 'Pendiente'),
         ('confirmado', 'Confirmado'),
         ('reprogramado', 'Por Reprogramar')
-    ], string='Estado de Programación', 
-       default='pendiente', 
-       tracking=True,
-       help="Estado actual de la programación del mantenimiento"
+    ], string='Estado de Programación',
+        default='pendiente',
+        tracking=True,
+        help="Estado actual de la programación del mantenimiento"
     )
 
     # Campos adicionales para tracking
@@ -386,7 +394,7 @@ class UnidadAlquiler(models.Model):
         default=False,
         help="Si está activado, usará la fecha recurrente como base para calcular la próxima fecha. Si no, usará la fecha inicial."
     )
-    
+
     @api.onchange('fecha_inicio', 'patron_recurrencia')
     def _onchange_fecha_inicio(self):
         """
@@ -398,47 +406,47 @@ class UnidadAlquiler(models.Model):
             # Detectar día de la semana (0-6 donde 0 es lunes)
             dia_semana = self.fecha_inicio.weekday()
             self.dia_semana = str(dia_semana)
-            
+
             # Obtener todas las ocurrencias de este día de la semana en el mes
             ocurrencias = []
             year, month = self.fecha_inicio.year, self.fecha_inicio.month
             ultimo_dia = calendar.monthrange(year, month)[1]
-            
+
             for dia in range(1, ultimo_dia + 1):
                 fecha = datetime(year, month, dia).date()
                 if fecha.weekday() == dia_semana:
                     ocurrencias.append(dia)
-            
+
             # Encontrar la posición de la fecha actual en las ocurrencias
             posicion = None
             for i, dia in enumerate(ocurrencias):
                 if dia == self.fecha_inicio.day:
                     posicion = i
                     break
-            
+
             if posicion is not None:
                 total_ocurrencias = len(ocurrencias)
-                
+
                 # Determinar si es mejor expresar desde el inicio o desde el final
                 posicion_desde_final = -1 * (total_ocurrencias - posicion)
-                
+
                 # Si es una de las últimas 3 posiciones, usar expresión desde el final
                 if posicion_desde_final >= -3:  # Última, penúltima o antepenúltima
                     self.semana_mes = str(posicion_desde_final)  # -1, -2 o -3
                 else:
                     # Es mejor expresarlo desde el inicio
-                    self.semana_mes = str(posicion + 1)  # +1 porque la posición empieza en 0
-                
+                    # +1 porque la posición empieza en 0
+                    self.semana_mes = str(posicion + 1)
+
                 # Loguear para depuración
                 _logger.info(
                     f"DETECCIÓN DE PATRÓN: Fecha={self.fecha_inicio}, "
-                    f"Día semana={dia_semana} ({['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][dia_semana]}), "
+                    f"Día semana={dia_semana} ({['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][dia_semana]}), "
                     f"Ocurrencias en mes={ocurrencias}, "
                     f"Posición={posicion+1} de {total_ocurrencias}, "
                     f"Posición asignada={self.semana_mes}"
                 )
 
-    
     @api.depends('fecha_inicio', 'intervalo_meses', 'patron_recurrencia', 'semana_mes', 'dia_semana', 'usar_fecha_recurrente_como_base')
     def _compute_fecha_recurrente(self):
         """
@@ -449,26 +457,26 @@ class UnidadAlquiler(models.Model):
             if not record.fecha_inicio:
                 record.fecha_recurrente = False
                 continue
-                
+
             # Guardar fecha anterior para comparación
             fecha_anterior = record.fecha_recurrente
-            
+
             # DETECCIÓN DE PROBLEMAS: Imprimir valores involucrados en el cálculo
             _logger.info(f"VALORES DE ENTRADA: fecha_inicio={record.fecha_inicio}, "
-                    f"fecha_recurrente={record.fecha_recurrente}, "
-                    f"intervalo_meses={record.intervalo_meses}, "
-                    f"patron_recurrencia={record.patron_recurrencia}, "
-                    f"semana_mes={record.semana_mes}, "
-                    f"dia_semana={record.dia_semana}, "
-                    f"usar_fecha_recurrente_como_base={record.usar_fecha_recurrente_como_base}")
-            
+                         f"fecha_recurrente={record.fecha_recurrente}, "
+                         f"intervalo_meses={record.intervalo_meses}, "
+                         f"patron_recurrencia={record.patron_recurrencia}, "
+                         f"semana_mes={record.semana_mes}, "
+                         f"dia_semana={record.dia_semana}, "
+                         f"usar_fecha_recurrente_como_base={record.usar_fecha_recurrente_como_base}")
+
             # Determinar la fecha base para el cálculo - MODIFICADO
             # Solo usar fecha_recurrente si el campo usar_fecha_recurrente_como_base está activado
             if record.usar_fecha_recurrente_como_base and record.fecha_recurrente and record.fecha_recurrente > fields.Date.today():
                 base_date = record.fecha_recurrente
             else:
                 base_date = record.fecha_inicio
-            
+
             # Asegurarse que intervalo_meses sea un valor válido - IMPORTANTE
             intervalo_str = record.intervalo_meses or '1'
             try:
@@ -476,83 +484,96 @@ class UnidadAlquiler(models.Model):
                 # Verificación adicional para valores no válidos
                 if meses <= 0 or meses > 12:
                     meses = 1  # Valor predeterminado seguro
-                    _logger.warning(f"Valor de intervalo no válido: {intervalo_str}, usando predeterminado: 1")
+                    _logger.warning(
+                        f"Valor de intervalo no válido: {intervalo_str}, usando predeterminado: 1")
             except (ValueError, TypeError):
                 meses = 1  # Valor predeterminado si hay error de conversión
-                _logger.warning(f"Error al convertir intervalo: {intervalo_str}, usando predeterminado: 1")
-            
+                _logger.warning(
+                    f"Error al convertir intervalo: {intervalo_str}, usando predeterminado: 1")
+
             # Determinar el mes objetivo sumando exactamente el número de meses del intervalo
             target_date = base_date + relativedelta(months=meses)
             target_year = target_date.year
             target_month = target_date.month
-            
+
             # Calcular la nueva fecha según el patrón elegido
             if record.patron_recurrencia == 'fecha_exacta' or not record.patron_recurrencia:
                 # Mantener el mismo día del mes
                 day_of_month = base_date.day
-                
+
                 # Ajustar si el día no existe en el mes destino
                 last_day = calendar.monthrange(target_year, target_month)[1]
                 if day_of_month > last_day:
                     day_of_month = last_day
-                    
-                siguiente_fecha = datetime(target_year, target_month, day_of_month).date()
+
+                siguiente_fecha = datetime(
+                    target_year, target_month, day_of_month).date()
                 record.fecha_recurrente = siguiente_fecha
-                
+
             elif record.patron_recurrencia == 'semana_dia' and record.semana_mes and record.dia_semana:
                 try:
                     weekday = int(record.dia_semana)  # 0=Lunes, 6=Domingo
-                    position_str = record.semana_mes  # Posición (puede ser desde inicio o final)
-                    
+                    # Posición (puede ser desde inicio o final)
+                    position_str = record.semana_mes
+
                     # Encontrar todas las ocurrencias del día de la semana en el mes objetivo
                     ocurrencias = []
-                    last_day = calendar.monthrange(target_year, target_month)[1]
-                    
+                    last_day = calendar.monthrange(
+                        target_year, target_month)[1]
+
                     for dia in range(1, last_day + 1):
                         fecha = datetime(target_year, target_month, dia).date()
                         if fecha.weekday() == weekday:
                             ocurrencias.append(fecha)
-                    
+
                     # No hay ocurrencias de este día de la semana (raro, pero posible en teoría)
                     if not ocurrencias:
-                        record.fecha_recurrente = base_date + relativedelta(months=meses)
-                        _logger.warning(f"No se encontraron ocurrencias de día {weekday} en {target_month}/{target_year}")
+                        record.fecha_recurrente = base_date + \
+                            relativedelta(months=meses)
+                        _logger.warning(
+                            f"No se encontraron ocurrencias de día {weekday} en {target_month}/{target_year}")
                         continue
-                    
+
                     # Determinar qué ocurrencia usar según la posición
                     position = int(position_str)
                     if position < 0:  # Posición desde el final (-1, -2, -3)
                         # Asegurarnos de que el índice esté dentro del rango
                         index = position
                         if abs(position) > len(ocurrencias):
-                            index = -len(ocurrencias)  # Usar la primera ocurrencia si no hay suficientes
+                            # Usar la primera ocurrencia si no hay suficientes
+                            index = -len(ocurrencias)
                         siguiente_fecha = ocurrencias[index]
                     else:  # Posición desde el inicio (1, 2, 3, 4)
                         # Ajustar el índice (position es 1-based, el índice es 0-based)
                         index = position - 1
                         if index >= len(ocurrencias):
-                            index = len(ocurrencias) - 1  # Usar la última si no hay suficientes
+                            # Usar la última si no hay suficientes
+                            index = len(ocurrencias) - 1
                         siguiente_fecha = ocurrencias[index]
-                    
+
                     record.fecha_recurrente = siguiente_fecha
-                    
+
                 except Exception as e:
                     # Si hay cualquier error en el cálculo, usar un método simple como fallback
-                    _logger.error(f"Error en cálculo de fecha recurrente: {str(e)}")
-                    record.fecha_recurrente = base_date + relativedelta(months=meses)
+                    _logger.error(
+                        f"Error en cálculo de fecha recurrente: {str(e)}")
+                    record.fecha_recurrente = base_date + \
+                        relativedelta(months=meses)
             else:
                 # Fallback simple
-                record.fecha_recurrente = base_date + relativedelta(months=meses)
-            
+                record.fecha_recurrente = base_date + \
+                    relativedelta(months=meses)
+
             # Log para depuración detallada
-            dia_nombre = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+            dia_nombre = ['Lunes', 'Martes', 'Miércoles',
+                          'Jueves', 'Viernes', 'Sábado', 'Domingo']
             dia_semana_nombre = ""
             if record.dia_semana:
                 try:
                     dia_semana_nombre = dia_nombre[int(record.dia_semana)]
                 except (IndexError, ValueError):
                     dia_semana_nombre = f"Día {record.dia_semana}"
-                
+
             _logger.info(
                 f"CÁLCULO FECHA: Base={base_date}, "
                 f"Intervalo={meses} meses, "
@@ -562,15 +583,16 @@ class UnidadAlquiler(models.Model):
                 f"Día={dia_semana_nombre}, "
                 f"Resultado={record.fecha_recurrente}"
             )
-            
+
             # Verificación adicional del resultado
-            diferencia_meses = (record.fecha_recurrente.year - base_date.year) * 12 + (record.fecha_recurrente.month - base_date.month)
+            diferencia_meses = (record.fecha_recurrente.year - base_date.year) * \
+                12 + (record.fecha_recurrente.month - base_date.month)
             if diferencia_meses != meses:
                 _logger.warning(
                     f"ALERTA: La diferencia de meses ({diferencia_meses}) no coincide con el intervalo ({meses}). "
                     f"Base={base_date}, Resultado={record.fecha_recurrente}"
                 )
-            
+
             # Actualizar estado si la fecha cambió
             if fecha_anterior and record.fecha_recurrente != fecha_anterior:
                 if record.estado_programacion in ['confirmado', 'reprogramado']:
@@ -583,7 +605,7 @@ class UnidadAlquiler(models.Model):
     # Agregar este nuevo método para activar el cálculo recurrente
     def iniciar_calculo_recurrente(self):
         """
-        Activa el cálculo recurrente para calcular fechas futuras 
+        Activa el cálculo recurrente para calcular fechas futuras
         a partir de la fecha recurrente actual en vez de la fecha de inicio.
         """
         self.ensure_one()
@@ -608,7 +630,7 @@ class UnidadAlquiler(models.Model):
             message_type='notification'
         )
         return True
-                        
+
     # Corrección para update_fecha_recurrente
 
     @api.model
@@ -622,46 +644,50 @@ class UnidadAlquiler(models.Model):
             ('estado_programacion', 'in', ['confirmado', 'pendiente']),
             ('control_mantenimiento', '=', True)
         ])
-        
+
         for record in records:
             # Simplemente activar el cálculo del compute
             record.write({
                 'estado_programacion': 'pendiente',
                 'fecha_confirmacion': False
             })
-            
+
             # Forzar recálculo de la fecha recurrente
             record._compute_fecha_recurrente()
-            
+
             record.message_post(
                 body=f"🔄 Mantenimiento actualizado para: {record.fecha_recurrente.strftime('%d/%m/%Y')}",
                 message_type='notification'
             )
+
     def aplicar_configuracion_a_todos(self):
         """
-        Aplica la configuración de mantenimiento del registro actual a todos 
+        Aplica la configuración de mantenimiento del registro actual a todos
         los otros equipos del mismo cliente.
         """
         self.ensure_one()
-        
+
         # Verificar que haya un cliente asignado
         if not self.cliente_id:
-            raise UserError(_("Debe seleccionar un cliente antes de aplicar la configuración a todos los equipos."))
-        
+            raise UserError(
+                _("Debe seleccionar un cliente antes de aplicar la configuración a todos los equipos."))
+
         # Verificar que la configuración de mantenimiento esté completa
         if not self.fecha_inicio or not self.intervalo_meses:
-            raise UserError(_("Complete la configuración de mantenimiento antes de aplicarla a otros equipos."))
-        
+            raise UserError(
+                _("Complete la configuración de mantenimiento antes de aplicarla a otros equipos."))
+
         # Buscar todos los otros equipos del mismo cliente que tienen mantenimiento activado
         otros_equipos = self.search([
             ('id', '!=', self.id),
             ('cliente_id', '=', self.cliente_id.id),
             ('control_mantenimiento', '=', True)
         ])
-        
+
         if not otros_equipos:
-            raise UserError(_("No se encontraron otros equipos con mantenimiento activado para este cliente."))
-        
+            raise UserError(
+                _("No se encontraron otros equipos con mantenimiento activado para este cliente."))
+
         # Valores a copiar
         valores = {
             'fecha_inicio': self.fecha_inicio,
@@ -669,30 +695,31 @@ class UnidadAlquiler(models.Model):
             'patron_recurrencia': self.patron_recurrencia,
             'usar_fecha_recurrente_como_base': self.usar_fecha_recurrente_como_base
         }
-        
+
         # Si el patrón es "día específico de la semana", también copiar estos campos
         if self.patron_recurrencia == 'semana_dia':
             valores.update({
                 'semana_mes': self.semana_mes,
                 'dia_semana': self.dia_semana
             })
-        
+
         # Aplicar la configuración a todos los otros equipos
         otros_equipos.write(valores)
-        
+
         # Forzar el recálculo de la fecha recurrente en todos los equipos actualizados
         for equipo in otros_equipos:
             equipo._compute_fecha_recurrente()
-        
+
         # Mostrar mensaje de confirmación
-        message = _(f"Configuración de mantenimiento aplicada a {len(otros_equipos)} equipo(s) del cliente {self.cliente_id.name}.")
-        
+        message = _(
+            f"Configuración de mantenimiento aplicada a {len(otros_equipos)} equipo(s) del cliente {self.cliente_id.name}.")
+
         # Registrar la acción en el historial
         self.message_post(
             body=f"✅ {message}",
             message_type='notification'
         )
-        
+
         # Mostrar mensaje al usuario
         return {
             'type': 'ir.actions.client',
@@ -704,6 +731,7 @@ class UnidadAlquiler(models.Model):
                 'type': 'success',
             }
         }
+
     def _create_maintenance_tickets(self):
         """Crear tickets de mantenimiento para todos los equipos del cliente"""
         try:
@@ -712,7 +740,7 @@ class UnidadAlquiler(models.Model):
                 ('fecha_recurrente', '=', self.fecha_recurrente),
                 ('control_mantenimiento', '=', True)
             ])
-            
+
             for equipo in equipos:
                 self.env['ticket.alquiler'].create({
                     'partner_id': equipo.cliente_id.id,
@@ -725,7 +753,7 @@ class UnidadAlquiler(models.Model):
                     'celular_id_r': equipo.celular,
                     'corre_id_r': equipo.correo_,
                 })
-            
+
             # ✅ CORREGIDO: Actualizar TODOS los equipos
             equipos.write({
                 'estado_programacion': 'confirmado',
@@ -733,7 +761,8 @@ class UnidadAlquiler(models.Model):
             })
 
             # ✅ Opcional: enviar email solo una vez
-            template = self.env.ref('sat.mail_template_maintenance_confirmation')
+            template = self.env.ref(
+                'sat.mail_template_maintenance_confirmation')
             template.send_mail(self.id, force_send=True)
 
             # ✅ Opcional: log solo en el primer equipo
@@ -741,12 +770,12 @@ class UnidadAlquiler(models.Model):
                 body=f"✅ Mantenimiento confirmado para {self.fecha_recurrente.strftime('%d/%m/%Y')}",
                 message_type='notification'
             )
-            
+
             return True
         except Exception as e:
-            _logger.error("Error al crear tickets de mantenimiento: %s", str(e))
+            _logger.error(
+                "Error al crear tickets de mantenimiento: %s", str(e))
             return False
-
 
     def _send_reschedule_request(self):
         """Enviar solicitud de reprogramación"""
@@ -757,15 +786,16 @@ class UnidadAlquiler(models.Model):
             })
             template = self.env.ref('sat.mail_template_maintenance_reschedule')
             template.send_mail(self.id, force_send=True)
-            
+
             self.message_post(
                 body="🔄 Solicitud de reprogramación recibida",
                 message_type='notification'
             )
-            
+
             return True
         except Exception as e:
-            _logger.error("Error al enviar solicitud de reprogramación: %s", str(e))
+            _logger.error(
+                "Error al enviar solicitud de reprogramación: %s", str(e))
             return False
 
     def process_maintenance_response(self, response_type):
@@ -775,7 +805,8 @@ class UnidadAlquiler(models.Model):
         if self.estado_programacion == 'confirmado' and response_type == 'confirm':
             raise ValidationError(_("Este mantenimiento ya está confirmado"))
         if self.estado_programacion == 'reprogramado' and response_type == 'confirm':
-            raise ValidationError(_("Este mantenimiento está pendiente de reprogramación"))
+            raise ValidationError(
+                _("Este mantenimiento está pendiente de reprogramación"))
 
         if response_type == 'confirm':
             return self._create_maintenance_tickets()
@@ -784,18 +815,20 @@ class UnidadAlquiler(models.Model):
         return False
 
     resultado_inspeccion = fields.One2many(
-        'inspeccion.resultado', 
-        'alquiler_id', 
+        'inspeccion.resultado',
+        'alquiler_id',
         string='Resultados de inspección'
     )
 
-    token = fields.Char('Token de inspección', readonly=True, copy=False, store=True)
+    token = fields.Char('Token de inspección',
+                        readonly=True, copy=False, store=True)
 
     def _generar_url_inspeccion(self):
         self.ensure_one()
         if not self.token:
             self.token = str(uuid.uuid4())
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        base_url = self.env['ir.config_parameter'].sudo(
+        ).get_param('web.base.url')
         return f"{base_url}/inspeccion/{self.token}"
     apto_instalacion = fields.Boolean(
         'Apto para instalación',
@@ -830,13 +863,15 @@ class UnidadAlquiler(models.Model):
                 continue
 
             # Usar la inspección más reciente
-            resultado = rec.resultado_inspeccion.sorted('fecha', reverse=True)[0]
+            resultado = rec.resultado_inspeccion.sorted(
+                'fecha', reverse=True)[0]
             notas = []
 
             # Validar espacio físico
             espacio_ok = resultado.espacio >= 2.0 and resultado.ancho_pasillo >= 1.0
             if not espacio_ok:
-                notas.append("- Espacio insuficiente: requiere mínimo 2m² y pasillo de 1m de ancho.")
+                notas.append(
+                    "- Espacio insuficiente: requiere mínimo 2m² y pasillo de 1m de ancho.")
 
             # Validar instalación eléctrica
             if resultado.punto_corriente == 'pendiente':
@@ -848,12 +883,15 @@ class UnidadAlquiler(models.Model):
             if resultado.punto_red == 'pendiente':
                 notas.append("- Requiere instalación de punto de red.")
             elif resultado.punto_red == 'no' and resultado.wifi == 'no':
-                notas.append("- No cuenta con punto de red ni señal WiFi disponible.")
+                notas.append(
+                    "- No cuenta con punto de red ni señal WiFi disponible.")
 
             # Validar entorno de PCs
-            total_pcs = resultado.cantidad_windows + resultado.cantidad_mac + resultado.cantidad_linux
+            total_pcs = resultado.cantidad_windows + \
+                resultado.cantidad_mac + resultado.cantidad_linux
             if total_pcs <= 0:
-                notas.append("- Debe haber al menos una computadora conectada (Windows, Mac o Linux).")
+                notas.append(
+                    "- Debe haber al menos una computadora conectada (Windows, Mac o Linux).")
 
             # Determinar estado final
             if not notas:
@@ -867,7 +905,6 @@ class UnidadAlquiler(models.Model):
             rec.requiere_adecuacion = rec.estado_instalacion == 'requiere_adecuacion'
             rec.notas_adecuacion = '\n'.join(notas) if notas else False
 
-
     def action_enviar_inspeccion(self):
         self.ensure_one()
         return {
@@ -880,7 +917,7 @@ class UnidadAlquiler(models.Model):
         }
      # Añadir contador de partes solicitadas
     partes_solicitadas_count = fields.Integer(
-        string='Partes Solicitadas', 
+        string='Partes Solicitadas',
         compute='_compute_partes_count'
     )
 
@@ -920,6 +957,7 @@ class UnidadAlquiler(models.Model):
                 'default_maquina_origen_id': self.id,
             }
         }
+
     def action_solicitar_partes(self):
         self.ensure_one()
         return {
@@ -935,31 +973,350 @@ class UnidadAlquiler(models.Model):
         }
 
 
+    # CAMPOS PARA SISTEMA DE BLOQUEO
+    estado_bloqueo = fields.Selection([
+        ('activo', 'Activo'),
+        ('suspendido', 'Suspendido por Mora'),
+        ('bloqueado', 'Bloqueado Remotamente'),
+        ('no_accesible', 'No Accesible para Bloqueo'),
+        ('pendiente_bloqueo', 'Pendiente de Bloqueo'),
+        ('pendiente_desbloqueo', 'Pendiente de Desbloqueo')
+    ], string='Estado de Servicio', default='activo', tracking=True)
+
+    motivo_bloqueo = fields.Text(string='Motivo del Bloqueo/Suspensión', tracking=True)
+    fecha_bloqueo = fields.Datetime(string='Fecha de Bloqueo', readonly=True, tracking=True)
+    fecha_desbloqueo = fields.Datetime(string='Fecha de Desbloqueo', readonly=True, tracking=True)
+    usuario_bloqueo = fields.Many2one('res.users', string='Usuario que Bloqueó', readonly=True)
+
+    acceso_remoto_disponible = fields.Boolean(
+        string='Acceso Remoto Disponible', 
+        default=True,
+        help="Indica si el equipo puede ser bloqueado/desbloqueado remotamente"
+    )
+
+    ip_equipo = fields.Char(string='IP del Equipo', tracking=True)
+
+    notificado_bloqueo = fields.Boolean(string='Notificado Bloqueo', default=False)
+    notificado_desbloqueo = fields.Boolean(string='Notificado Desbloqueo', default=False)
+
+    asesor_ventas_id = fields.Many2one('res.users', string='Asesor de Ventas', tracking=True)
+    soporte_tecnico_id = fields.Many2one('res.users', string='Soporte Técnico Asignado', tracking=True)
+
+    observaciones_bloqueo = fields.Text(string='Observaciones de Bloqueo')
+
+    def action_suspender_servicio(self, motivo=None, usuario_id=None):
+        self.ensure_one()
+        if self.estado_bloqueo == 'suspendido':
+            raise UserError("El servicio ya está suspendido")
+        self.write({
+            'estado_bloqueo': 'suspendido',
+            'motivo_bloqueo': motivo or 'Suspendido por mora de pagos',
+            'fecha_bloqueo': fields.Datetime.now(),
+            'usuario_bloqueo': usuario_id or self.env.user.id,
+            'notificado_bloqueo': False
+        })
+        self._enviar_notificacion_suspension()
+        self.message_post(
+            body=f"⚠️ Servicio suspendido: {motivo or 'Mora de pagos'}",
+            message_type='notification'
+        )
+        return True
+
+    def action_bloquear_equipo(self, motivo=None, usuario_id=None):
+        self.ensure_one()
+        if not self.acceso_remoto_disponible:
+            self.write({
+                'estado_bloqueo': 'no_accesible',
+                'motivo_bloqueo': 'Equipo no accesible para bloqueo remoto',
+                'usuario_bloqueo': usuario_id or self.env.user.id
+            })
+            self._enviar_notificacion_no_accesible()
+            raise UserError("Este equipo no puede ser bloqueado remotamente")
+        if self.estado_bloqueo == 'bloqueado':
+            raise UserError("El equipo ya está bloqueado")
+        resultado_bloqueo = self._ejecutar_bloqueo_remoto()
+        if resultado_bloqueo['success']:
+            self.write({
+                'estado_bloqueo': 'bloqueado',
+                'fecha_bloqueo': fields.Datetime.now(),
+                'motivo_bloqueo': motivo or 'Bloqueo remoto por suspensión de servicio',
+                'usuario_bloqueo': usuario_id or self.env.user.id,
+                'notificado_bloqueo': False
+            })
+            self._enviar_notificacion_bloqueo_exitoso()
+            return {'success': True, 'message': 'Equipo bloqueado exitosamente'}
+        else:
+            self.write({
+                'estado_bloqueo': 'pendiente_bloqueo',
+                'motivo_bloqueo': resultado_bloqueo.get('error', 'Error en bloqueo remoto'),
+                'usuario_bloqueo': usuario_id or self.env.user.id
+            })
+            self._enviar_notificacion_bloqueo_fallido()
+            return {'success': False, 'message': resultado_bloqueo.get('error', 'Error en bloqueo remoto')}
+
+    def action_desbloquear_equipo(self, motivo=None, usuario_id=None):
+        self.ensure_one()
+        if self.estado_bloqueo not in ['bloqueado', 'suspendido']:
+            raise UserError("El equipo no está bloqueado")
+        if not self.acceso_remoto_disponible:
+            raise UserError("Este equipo no puede ser desbloqueado remotamente")
+        resultado_desbloqueo = self._ejecutar_desbloqueo_remoto()
+        if resultado_desbloqueo['success']:
+            self.write({
+                'estado_bloqueo': 'activo',
+                'fecha_desbloqueo': fields.Datetime.now(),
+                'motivo_bloqueo': False,
+                'observaciones_bloqueo': False,
+                'usuario_bloqueo': usuario_id or self.env.user.id,
+                'notificado_desbloqueo': False
+            })
+            self._enviar_notificacion_desbloqueo_exitoso()
+            return {'success': True, 'message': 'Equipo desbloqueado exitosamente'}
+        else:
+            self.write({
+                'estado_bloqueo': 'pendiente_desbloqueo',
+                'motivo_bloqueo': resultado_desbloqueo.get('error', 'Error en desbloqueo remoto'),
+                'usuario_bloqueo': usuario_id or self.env.user.id
+            })
+            self._enviar_notificacion_desbloqueo_fallido()
+            return {'success': False, 'message': resultado_desbloqueo.get('error', 'Error en desbloqueo remoto')}
+
+    def _ejecutar_bloqueo_remoto(self):
+        try:
+            if not self.ip_equipo:
+                return {'success': False, 'error': 'IP del equipo no configurada'}
+            url = f"http://{self.ip_equipo}/api/block"
+            response = requests.post(url, timeout=30, json={
+                'action': 'block',
+                'reason': self.motivo_bloqueo
+            })
+            if response.status_code == 200:
+                return {'success': True}
+            else:
+                return {'success': False, 'error': f'Error HTTP: {response.status_code}'}
+        except Exception as e:
+            _logger.error(f"Error al bloquear equipo {self.serie}: {str(e)}")
+            return {'success': False, 'error': str(e)}
+
+    def _ejecutar_desbloqueo_remoto(self):
+        try:
+            if not self.ip_equipo:
+                return {'success': False, 'error': 'IP del equipo no configurada'}
+            url = f"http://{self.ip_equipo}/api/unblock"
+            response = requests.post(url, timeout=30, json={'action': 'unblock'})
+            if response.status_code == 200:
+                return {'success': True}
+            else:
+                return {'success': False, 'error': f'Error HTTP: {response.status_code}'}
+        except Exception as e:
+            _logger.error(f"Error al desbloquear equipo {self.serie}: {str(e)}")
+            return {'success': False, 'error': str(e)}
+
+    def _enviar_notificacion_suspension(self):
+        if self.asesor_ventas_id and self.asesor_ventas_id.mobile_phone:
+            mensaje_asesor = f"""
+⚠️ *SERVICIO SUSPENDIDO*
+
+Cliente: *{self.cliente_id.name}*
+Equipo: {self.name.name} - Serie: {self.serie}
+Motivo: {self.motivo_bloqueo}
+Dirección: {self.direccion}
+
+Se ha suspendido el servicio técnico.
+"""
+            phone_asesor = self._clean_phone_number(self.asesor_ventas_id.mobile_phone)
+            self._send_whatsapp_notification(phone_asesor, mensaje_asesor)
+
+        soporte_users = self.env['res.users'].search([
+            ('groups_id', 'in', self.env.ref('sat.group_soporte_tecnico').id)
+        ])
+
+        mensaje_soporte = f"""
+🚫 *NO BRINDAR SOPORTE TÉCNICO*
+
+Cliente: *{self.cliente_id.name}*
+Equipo: {self.name.name} - Serie: {self.serie}
+Estado: SUSPENDIDO
+Motivo: {self.motivo_bloqueo}
+
+No proporcionar soporte técnico hasta nuevo aviso.
+"""
+        for user in soporte_users:
+            if user.mobile_phone:
+                phone_soporte = self._clean_phone_number(user.mobile_phone)
+                self._send_whatsapp_notification(phone_soporte, mensaje_soporte)
+
+    def _enviar_notificacion_bloqueo_exitoso(self):
+        mensaje = f"""
+🔒 *EQUIPO BLOQUEADO EXITOSAMENTE*
+
+Cliente: *{self.cliente_id.name}*
+Equipo: {self.name.name} - Serie: {self.serie}
+Fecha: {fields.Datetime.now().strftime('%d/%m/%Y %H:%M')}
+IP: {self.ip_equipo}
+
+El equipo ha sido bloqueado remotamente.
+"""
+        self._enviar_a_contactos_responsables(mensaje)
+
+    def _enviar_notificacion_bloqueo_fallido(self):
+        mensaje = f"""
+❌ *ERROR AL BLOQUEAR EQUIPO*
+
+Cliente: *{self.cliente_id.name}*
+Equipo: {self.name.name} - Serie: {self.serie}
+Error: {self.motivo_bloqueo}
+
+Se requiere bloqueo manual del equipo.
+"""
+        self._enviar_a_contactos_responsables(mensaje)
+
+    def _enviar_notificacion_desbloqueo_exitoso(self):
+        mensaje = f"""
+🔓 *EQUIPO DESBLOQUEADO EXITOSAMENTE*
+
+Cliente: *{self.cliente_id.name}*
+Equipo: {self.name.name} - Serie: {self.serie}
+Fecha: {fields.Datetime.now().strftime('%d/%m/%Y %H:%M')}
+
+El equipo ha sido desbloqueado. Se puede brindar soporte normal.
+"""
+        self._enviar_a_contactos_responsables(mensaje)
+
+    def _enviar_notificacion_no_accesible(self):
+        mensaje = f"""
+⚠️ *EQUIPO NO ACCESIBLE PARA BLOQUEO*
+
+Cliente: *{self.cliente_id.name}*
+Equipo: {self.name.name} - Serie: {self.serie}
+Estado: NO ACCESIBLE
+
+Se requiere intervención manual para suspender el servicio.
+"""
+        self._enviar_a_contactos_responsables(mensaje)
+
+    def _enviar_a_contactos_responsables(self, mensaje):
+        contactos = []
+        if self.asesor_ventas_id and self.asesor_ventas_id.mobile_phone:
+            contactos.append(self.asesor_ventas_id.mobile_phone)
+        soporte_users = self.env['res.users'].search([
+            ('groups_id', 'in', self.env.ref('sat.group_soporte_tecnico').id)
+        ])
+        for user in soporte_users:
+            if user.mobile_phone:
+                contactos.append(user.mobile_phone)
+        for phone in contactos:
+            clean_phone = self._clean_phone_number(phone)
+            self._send_whatsapp_notification(clean_phone, mensaje)
+
+    def _clean_phone_number(self, phone):
+        if not phone:
+            return None
+        phone = phone.replace('+', '').replace(' ', '').replace('-', '')
+        if not phone.startswith('51'):
+            phone = '51' + phone
+        return phone
+
+    def _send_whatsapp_notification(self, phone, message):
+        try:
+            url = 'https://whatsapp.andessolutioncopiers.com/api/message'
+            data = {
+                'phone': phone,
+                'message': message
+            }
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(url, headers=headers, json=data)
+            if response.status_code == 200:
+                _logger.info(f"Notificación enviada exitosamente a {phone}")
+                return True
+            else:
+                _logger.error(f"Error al enviar notificación a {phone}: {response.status_code}")
+                return False
+        except Exception as e:
+            _logger.error(f"Error al enviar notificación WhatsApp: {str(e)}")
+            return False
+
+    @api.model
+    def get_dashboard_data(self):
+        data = {
+            'equipos_activos': self.search_count([('estado_bloqueo', '=', 'activo')]),
+            'equipos_suspendidos': self.search_count([('estado_bloqueo', '=', 'suspendido')]),
+            'equipos_bloqueados': self.search_count([('estado_bloqueo', '=', 'bloqueado')]),
+            'equipos_no_accesibles': self.search_count([('estado_bloqueo', '=', 'no_accesible')]),
+            'pendientes_bloqueo': self.search_count([('estado_bloqueo', '=', 'pendiente_bloqueo')]),
+            'pendientes_desbloqueo': self.search_count([('estado_bloqueo', '=', 'pendiente_desbloqueo')])
+        }
+        equipos_atencion = self.search([
+            ('estado_bloqueo', 'in', ['pendiente_bloqueo', 'pendiente_desbloqueo', 'no_accesible'])
+        ], limit=10)
+        data['equipos_atencion'] = [{
+            'id': eq.id,
+            'cliente': eq.cliente_id.name,
+            'serie': eq.serie,
+            'modelo': eq.name.name,
+            'estado': eq.estado_bloqueo,
+            'motivo': eq.motivo_bloqueo
+        } for eq in equipos_atencion]
+        return data
+
+    @api.model
+    def buscar_equipos_web(self, busqueda):
+        domain = ['|', '|', '|',
+                  ('serie', 'ilike', busqueda),
+                  ('cliente_id.name', 'ilike', busqueda),
+                  ('name.name', 'ilike', busqueda),
+                  ('marca', 'ilike', busqueda)]
+        equipos = self.search(domain, limit=50)
+        resultado = []
+        for equipo in equipos:
+            resultado.append({
+                'id': equipo.id,
+                'serie': equipo.serie,
+                'cliente': equipo.cliente_id.name if equipo.cliente_id else '',
+                'modelo': equipo.name.name if equipo.name else '',
+                'marca': equipo.marca,
+                'estado_bloqueo': equipo.estado_bloqueo,
+                'estado_label': dict(equipo._fields['estado_bloqueo'].selection)[equipo.estado_bloqueo],
+                'direccion': equipo.direccion,
+                'acceso_remoto': equipo.acceso_remoto_disponible,
+                'ip_equipo': equipo.ip_equipo,
+                'motivo_bloqueo': equipo.motivo_bloqueo,
+                'fecha_bloqueo': equipo.fecha_bloqueo.strftime('%d/%m/%Y %H:%M') if equipo.fecha_bloqueo else '',
+                'puede_suspender': equipo.estado_bloqueo == 'activo',
+                'puede_bloquear': equipo.estado_bloqueo in ['activo', 'suspendido'],
+                'puede_desbloquear': equipo.estado_bloqueo in ['bloqueado', 'suspendido']
+            })
+        return resultado
+
+
 class SolicitudPartes(models.Model):
     _name = 'solicitud.partes'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _description = 'Solicitud de Partes'
     _order = 'fecha_solicitud desc, id desc'
 
-    name = fields.Char(string='Número de Solicitud', readonly=True, copy=False, default='Nuevo')
-    
+    name = fields.Char(string='Número de Solicitud',
+                       readonly=True, copy=False, default='Nuevo')
+
     maquina_origen_id = fields.Many2one(
-        'alquiler', 
-        string='Máquina Origen', 
-        required=True, 
+        'alquiler',
+        string='Máquina Origen',
+        required=True,
         tracking=True,
         domain="[('estado_alquiler_id', 'not in', ['vendida', 'partes'])]"
     )
     maquina_destino_id = fields.Many2one(
-        'alquiler', 
-        string='Máquina Destino', 
+        'alquiler',
+        string='Máquina Destino',
         tracking=True,
         domain="[('id', '!=', maquina_origen_id), ('estado_alquiler_id', 'not in', ['vendida'])]"
     )
-    
-    fecha_solicitud = fields.Datetime(string='Fecha de Solicitud', default=fields.Datetime.now, tracking=True, readonly=True)
-    solicitante_id = fields.Many2one('res.users', string='Solicitante', default=lambda self: self.env.user, tracking=True, readonly=True)
-    
+
+    fecha_solicitud = fields.Datetime(
+        string='Fecha de Solicitud', default=fields.Datetime.now, tracking=True, readonly=True)
+    solicitante_id = fields.Many2one('res.users', string='Solicitante',
+                                     default=lambda self: self.env.user, tracking=True, readonly=True)
+
     state = fields.Selection([
         ('draft', 'Borrador'),
         ('submitted', 'Enviado'),
@@ -968,33 +1325,42 @@ class SolicitudPartes(models.Model):
         ('replaced', 'Reemplazado'),
         ('rejected', 'Rechazado')
     ], string='Estado', default='draft', tracking=True)
-    
+
     # Campos de autorización
-    autorizado_por = fields.Many2one('res.users', string='Autorizado por', tracking=True, readonly=False)
-    fecha_autorizacion = fields.Datetime(string='Fecha de Autorización', tracking=True, readonly=False)
-    
+    autorizado_por = fields.Many2one(
+        'res.users', string='Autorizado por', tracking=True, readonly=False)
+    fecha_autorizacion = fields.Datetime(
+        string='Fecha de Autorización', tracking=True, readonly=False)
+
     # Campos de retiro
-    retirado_por = fields.Many2one('res.users', string='Retirado por', tracking=True, readonly=False)
-    fecha_retiro = fields.Datetime(string='Fecha de Retiro', tracking=True, readonly=False)
+    retirado_por = fields.Many2one(
+        'res.users', string='Retirado por', tracking=True, readonly=False)
+    fecha_retiro = fields.Datetime(
+        string='Fecha de Retiro', tracking=True, readonly=False)
 
     # Campos de reemplazo
-    reemplazado_por = fields.Many2one('res.users', string='Reemplazado por', tracking=True, readonly=False)
-    fecha_reemplazo = fields.Datetime(string='Fecha de Reemplazo', tracking=True, readonly=False)
-    
-    parte_ids = fields.One2many('solicitud.partes.linea', 'solicitud_id', string='Partes Solicitadas')
+    reemplazado_por = fields.Many2one(
+        'res.users', string='Reemplazado por', tracking=True, readonly=False)
+    fecha_reemplazo = fields.Datetime(
+        string='Fecha de Reemplazo', tracking=True, readonly=False)
+
+    parte_ids = fields.One2many(
+        'solicitud.partes.linea', 'solicitud_id', string='Partes Solicitadas')
     access_token = fields.Char('Token de Acceso', copy=False, readonly=True)
 
     @api.model
     def create(self, vals):
         if vals.get('name', 'Nuevo') == 'Nuevo':
-            vals['name'] = self.env['ir.sequence'].next_by_code('solicitud.partes') or 'Nuevo'
+            vals['name'] = self.env['ir.sequence'].next_by_code(
+                'solicitud.partes') or 'Nuevo'
         vals['access_token'] = uuid.uuid4().hex
         return super().create(vals)
 
     def action_submit(self):
         self.ensure_one()
         if not self.parte_ids:
-            raise UserError(_('Debe agregar al menos una parte antes de enviar la solicitud.'))
+            raise UserError(
+                _('Debe agregar al menos una parte antes de enviar la solicitud.'))
         self.write({'state': 'submitted'})
         template = self.env.ref('sat.email_template_solicitud_partes_alquiler')
         template.send_mail(self.id, force_send=True)
@@ -1010,7 +1376,8 @@ class SolicitudPartes(models.Model):
     def action_complete(self):
         self.ensure_one()
         if not all(line.estado in ['retirado', 'reemplazado'] for line in self.parte_ids):
-            raise UserError(_('Todas las partes deben estar retiradas o reemplazadas.'))
+            raise UserError(
+                _('Todas las partes deben estar retiradas o reemplazadas.'))
         self.write({
             'state': 'completed',
             'retirado_por': self.env.user.id,
@@ -1040,7 +1407,7 @@ class SolicitudPartes(models.Model):
             ('access_token', '=', token),
             ('state', '=', 'submitted')
         ], limit=1)
-        
+
         if solicitud:
             try:
                 solicitud.action_approve()
@@ -1049,10 +1416,11 @@ class SolicitudPartes(models.Model):
                 return {'error': str(e)}
         return {'error': 'Token inválido o solicitud no encontrada'}
 
+
 class SolicitudPartesLinea(models.Model):
     _name = 'solicitud.partes.linea'
     _description = 'Línea de Solicitud de Partes'
-    
+
     solicitud_id = fields.Many2one('solicitud.partes', string='Solicitud')
     parte = fields.Char(string='Parte/Unidad', required=True)
     descripcion = fields.Text(string='Descripción')
@@ -1061,7 +1429,7 @@ class SolicitudPartesLinea(models.Model):
         ('retirado', 'Retirado'),
         ('reemplazado', 'Reemplazado')
     ], string='Estado', default='pendiente')
-    
+
     # Campos de reemplazo
     fecha_reemplazo = fields.Datetime(string='Fecha Reemplazo')
     reemplazado_por = fields.Many2one('res.users', string='Reemplazado por')
@@ -1069,7 +1437,7 @@ class SolicitudPartesLinea(models.Model):
         ('bueno', 'Buen Estado'),
         ('defectuoso', 'Defectuoso')
     ], string='Condición')
-    
+
     # Relación con máquina origen a través de solicitud
     maquina_origen_id = fields.Many2one(
         'alquiler',
@@ -1080,7 +1448,7 @@ class SolicitudPartesLinea(models.Model):
 
     def action_retirar(self):
         self.write({'estado': 'retirado'})
-        
+
     def action_reemplazar(self):
         self.write({
             'estado': 'reemplazado',
@@ -1097,6 +1465,8 @@ class SolicitudPartesLinea(models.Model):
             'target': 'new',
             'context': {'default_parte_id': self.id}
         }
+
+
 class WizardEnviarInspeccion(models.TransientModel):
     _name = 'wizard.enviar.inspeccion'
     _description = 'Asistente para enviar inspección'
@@ -1115,11 +1485,11 @@ class WizardEnviarInspeccion(models.TransientModel):
         )
         return {'type': 'ir.actions.act_window_close'}
 
+
 class InspeccionResultado(models.Model):
     _name = 'inspeccion.resultado'
     _description = 'Resultado de inspección de sitio'
-    _inherit = ['mail.thread', 'mail.activity.mixin'] 
-
+    _inherit = ['mail.thread', 'mail.activity.mixin']
 
     name = fields.Char('Número', readonly=True, copy=False, default='Nuevo')
 
@@ -1127,7 +1497,8 @@ class InspeccionResultado(models.Model):
     def create(self, vals_list):
         for vals in vals_list:
             if vals.get('name', 'Nuevo') == 'Nuevo':
-                vals['name'] = self.env['ir.sequence'].next_by_code('inspeccion.resultado') or 'Nuevo'
+                vals['name'] = self.env['ir.sequence'].next_by_code(
+                    'inspeccion.resultado') or 'Nuevo'
         records = super().create(vals_list)
         for record in records:
             record._update_estado()
@@ -1145,7 +1516,7 @@ class InspeccionResultado(models.Model):
         return res
     alquiler_id = fields.Many2one('alquiler', required=True)
     fecha = fields.Datetime('Fecha de inspección', default=fields.Datetime.now)
-    
+
     # Instalación Eléctrica
     punto_corriente = fields.Selection([
         ('si', 'Sí'),
@@ -1153,7 +1524,7 @@ class InspeccionResultado(models.Model):
         ('pendiente', 'Requiere instalación')
     ], string='Punto eléctrico', required=True)
     voltaje = fields.Float('Voltaje medido (V)')
-    
+
     # Infraestructura de Red
     punto_red = fields.Selection([
         ('si', 'Sí'),
@@ -1166,7 +1537,7 @@ class InspeccionResultado(models.Model):
     ], string='Señal WiFi')
     area_sistemas = fields.Boolean('¿Cuenta con área de sistemas?')
     contacto_sistemas = fields.Char('Contacto del área de sistemas')
-    
+
     # Control de Impresión
     control_impresion = fields.Boolean('¿Requiere control de impresión?')
     tipo_control = fields.Selection([
@@ -1181,12 +1552,12 @@ class InspeccionResultado(models.Model):
         ('semanal', 'Semanal'),
         ('mensual', 'Mensual')
     ], string='Frecuencia de reportes')
-    
+
     # Entorno de PCs
     cantidad_windows = fields.Integer('Cantidad de PCs Windows')
     cantidad_mac = fields.Integer('Cantidad de PCs Mac')
     cantidad_linux = fields.Integer('Cantidad de PCs Linux')
-    
+
     # Configuración de Escaneo
     usar_smb = fields.Boolean('¿Usará escaneo a carpeta compartida (SMB)?')
     usar_ftp = fields.Boolean('¿Usará escaneo a FTP?')
@@ -1195,16 +1566,19 @@ class InspeccionResultado(models.Model):
         ('propio', 'Servidor de correo propio'),
         ('proveedor', 'Servidor del proveedor')
     ], string='Tipo de servidor email')
-    servidor_email_propio = fields.Char('Servidor SMTP propio', help='Solo si usará su propio servidor de correo')
-    
+    servidor_email_propio = fields.Char(
+        'Servidor SMTP propio', help='Solo si usará su propio servidor de correo')
+
     # Espacio Físico y Acceso
     piso = fields.Integer('Número de piso')
     ascensor = fields.Boolean('Tiene ascensor')
     espacio = fields.Float('Espacio disponible (m²)')
     ancho_pasillo = fields.Float('Ancho de pasillo (m)')
-    tiene_estacionamiento = fields.Boolean('¿Tiene estacionamiento para camión?')
-    observaciones_estacionamiento = fields.Text('Observaciones de estacionamiento')
-    
+    tiene_estacionamiento = fields.Boolean(
+        '¿Tiene estacionamiento para camión?')
+    observaciones_estacionamiento = fields.Text(
+        'Observaciones de estacionamiento')
+
     # Estado y Observaciones
     estado = fields.Selection([
         ('pendiente', 'Pendiente de revisión'),
@@ -1242,7 +1616,6 @@ class InspeccionResultado(models.Model):
             self.requiere_reportes = False
             self.frecuencia_reportes = False
 
-
     def action_view_alquiler(self):
         self.ensure_one()
         return {
@@ -1259,7 +1632,9 @@ class InspeccionResultado(models.Model):
         for rec in self:
             total_pcs = rec.cantidad_windows + rec.cantidad_mac + rec.cantidad_linux
             if total_pcs <= 0:
-                raise ValidationError("Debe haber al menos una computadora conectada (Windows, Mac o Linux).")
+                raise ValidationError(
+                    "Debe haber al menos una computadora conectada (Windows, Mac o Linux).")
+
     def _update_estado(self):
         for record in self:
             problemas = []
@@ -1274,13 +1649,15 @@ class InspeccionResultado(models.Model):
                 problemas.append("Requiere instalación de punto de red.")
 
             if record.espacio < 2.0 or record.ancho_pasillo < 1.0:
-                problemas.append("Espacio insuficiente: mínimo 2m² y pasillo de 1m de ancho.")
+                problemas.append(
+                    "Espacio insuficiente: mínimo 2m² y pasillo de 1m de ancho.")
 
             total_pcs = record.cantidad_windows + record.cantidad_mac + record.cantidad_linux
             if total_pcs <= 0:
                 problemas.append("No hay computadoras conectadas.")
 
-            nuevo_estado = 'aprobado' if not problemas else 'rechazado' if any("Requiere" in p or "No tiene" in p for p in problemas) else 'requiere_cambios'
+            nuevo_estado = 'aprobado' if not problemas else 'rechazado' if any(
+                "Requiere" in p or "No tiene" in p for p in problemas) else 'requiere_cambios'
             nuevo_requisitos = '\n'.join(problemas) if problemas else False
 
             self.env.cr.execute("""
@@ -1292,5 +1669,3 @@ class InspeccionResultado(models.Model):
     @api.onchange('punto_corriente', 'punto_red', 'wifi', 'espacio', 'ancho_pasillo', 'cantidad_windows', 'cantidad_mac', 'cantidad_linux')
     def _onchange_estado(self):
         self._update_estado()
-
-   
