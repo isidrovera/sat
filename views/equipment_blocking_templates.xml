@@ -8,7 +8,6 @@
                 
                 <!-- CSS Inline -->
                 <style>
-                    /* Dashboard Cards */
                     .dashboard-card {
                         transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
                     }
@@ -17,7 +16,6 @@
                         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
                     }
                     
-                    /* Equipment Cards */
                     .equipment-card {
                         background: #fff;
                         border: 1px solid #e9ecef;
@@ -31,7 +29,6 @@
                         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
                     }
                     
-                    /* Status Badges */
                     .status-badge {
                         padding: 0.375rem 0.75rem;
                         border-radius: 0.25rem;
@@ -47,7 +44,6 @@
                     .status-pendiente_bloqueo { background-color: #cff4fc; color: #055160; }
                     .status-pendiente_desbloqueo { background-color: #cfe2ff; color: #084298; }
                     
-                    /* Detail Grid */
                     .detail-grid {
                         display: grid;
                         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -332,489 +328,507 @@
                     </div>
                 </div>
 
-                <!-- JavaScript inline para garantizar la carga -->
+                <!-- JavaScript usando CDATA para evitar problemas de escape -->
                 <script type="text/javascript">
-                    // Equipment Blocking Dashboard - JavaScript inline
-                    (function() {
-                        'use strict';
+                //<![CDATA[
+                // Equipment Blocking Dashboard - JavaScript
+                (function() {
+                    'use strict';
+                    
+                    console.log('Initializing Equipment Blocking Dashboard...');
+                    
+                    // Variables globales
+                    let currentAction = null;
+                    let currentEquipmentId = null;
+                    let actionModal = null;
+
+                    // Funciones principales
+                    function getCsrfToken() {
+                        const metaToken = document.querySelector('meta[name="csrf-token"]');
+                        return metaToken ? metaToken.getAttribute('content') : '';
+                    }
+
+                    function makeJsonRpcCall(url, params) {
+                        return fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCsrfToken()
+                            },
+                            body: JSON.stringify({
+                                jsonrpc: '2.0',
+                                method: 'call',
+                                params: params
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => data.result)
+                        .catch(error => {
+                            console.error('JSON-RPC Error:', error);
+                            throw error;
+                        });
+                    }
+
+                    function updateElement(id, value) {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.textContent = value;
+                        }
+                    }
+
+                    function escapeHtml(text) {
+                        if (!text) return '';
+                        const map = {
+                            '&': '&amp;',
+                            '<': '&lt;',
+                            '>': '&gt;',
+                            '"': '&quot;',
+                            "'": '&#039;'
+                        };
+                        return String(text).replace(/[&<>"']/g, m => map[m]);
+                    }
+
+                    function showAlert(type, message) {
+                        let alertContainer = document.getElementById('general-alerts');
+                        if (!alertContainer) {
+                            alertContainer = document.createElement('div');
+                            alertContainer.id = 'general-alerts';
+                            alertContainer.className = 'position-fixed top-0 end-0 p-3';
+                            alertContainer.style.zIndex = '1055';
+                            document.body.appendChild(alertContainer);
+                        }
                         
-                        console.log('Initializing Equipment Blocking Dashboard...');
+                        const alertId = 'alert-' + Date.now();
+                        const alertClass = type === 'success' ? 'alert-success' : 
+                                       type === 'warning' ? 'alert-warning' : 'alert-danger';
+                        const icon = type === 'success' ? 'check-circle' : 
+                                  type === 'warning' ? 'exclamation-triangle' : 'times-circle';
                         
-                        // Variables globales
-                        let currentAction = null;
-                        let currentEquipmentId = null;
-                        let actionModal = null;
-
-                        // Funciones principales
-                        function getCsrfToken() {
-                            const metaToken = document.querySelector('meta[name="csrf-token"]');
-                            return metaToken ? metaToken.getAttribute('content') : '';
-                        }
-
-                        function makeJsonRpcCall(url, params) {
-                            return fetch(url, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': getCsrfToken()
-                                },
-                                body: JSON.stringify({
-                                    jsonrpc: '2.0',
-                                    method: 'call',
-                                    params: params
-                                })
-                            })
-                            .then(response => response.json())
-                            .then(data => data.result)
-                            .catch(error => {
-                                console.error('JSON-RPC Error:', error);
-                                throw error;
-                            });
-                        }
-
-                        function updateElement(id, value) {
-                            const element = document.getElementById(id);
-                            if (element) {
-                                element.textContent = value;
+                        const alertHtml = 
+                            '<div id="' + alertId + '" class="alert ' + alertClass + ' alert-dismissible fade show" role="alert">' +
+                                '<i class="fas fa-' + icon + ' me-2"></i>' +
+                                escapeHtml(message) +
+                                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                            '</div>';
+                        
+                        alertContainer.insertAdjacentHTML('beforeend', alertHtml);
+                        
+                        setTimeout(() => {
+                            const alert = document.getElementById(alertId);
+                            if (alert && typeof bootstrap !== 'undefined') {
+                                const bsAlert = new bootstrap.Alert(alert);
+                                bsAlert.close();
                             }
+                        }, 5000);
+                    }
+
+                    function searchEquipments() {
+                        console.log('Searching equipments...');
+                        const searchInput = document.getElementById('search-input');
+                        const searchTerm = searchInput ? searchInput.value : '';
+                        const resultsContainer = document.getElementById('equipment-results');
+                        
+                        if (resultsContainer) {
+                            resultsContainer.innerHTML = 
+                                '<div class="text-center py-5">' +
+                                    '<div class="spinner-border text-primary mb-3" role="status"></div>' +
+                                    '<p class="text-muted">Buscando equipos...</p>' +
+                                '</div>';
                         }
 
-                        function escapeHtml(text) {
-                            if (!text) return '';
-                            const map = {
-                                '&amp;': '&amp;amp;',
-                                '&lt;': '&amp;lt;',
-                                '&gt;': '&amp;gt;',
-                                '&quot;': '&amp;quot;',
-                                '&#039;': '&amp;#039;'
-                            };
-                            return String(text).replace(/[&amp;&lt;&gt;"']/g, m =&lt; map[m]);
-                        }
-
-                        function showAlert(type, message) {
-                            let alertContainer = document.getElementById('general-alerts');
-                            if (!alertContainer) {
-                                alertContainer = document.createElement('div');
-                                alertContainer.id = 'general-alerts';
-                                alertContainer.className = 'position-fixed top-0 end-0 p-3';
-                                alertContainer.style.zIndex = '1055';
-                                document.body.appendChild(alertContainer);
+                        return makeJsonRpcCall('/equipment/blocking/search', {
+                            search_term: searchTerm
+                        })
+                        .then(result => {
+                            if (result.status === 'success') {
+                                displayEquipments(result.equipos);
+                            } else {
+                                showAlert('danger', 'Error al buscar equipos: ' + result.message);
                             }
-                            
-                            const alertId = 'alert-' + Date.now();
-                            const alertClass = type === 'success' ? 'alert-success' : 
-                                           type === 'warning' ? 'alert-warning' : 'alert-danger';
-                            const icon = type === 'success' ? 'check-circle' : 
-                                      type === 'warning' ? 'exclamation-triangle' : 'times-circle';
-                            
-                            const alertHtml = 
-                                '&lt;div id="' + alertId + '" class="alert ' + alertClass + ' alert-dismissible fade show" role="alert"&gt;' +
-                                    '&lt;i class="fas fa-' + icon + ' me-2"&gt;&lt;/i&gt;' +
-                                    escapeHtml(message) +
-                                    '&lt;button type="button" class="btn-close" data-bs-dismiss="alert"&gt;&lt;/button&gt;' +
-                                '&lt;/div&gt;';
-                            
-                            alertContainer.insertAdjacentHTML('beforeend', alertHtml);
-                            
-                            setTimeout(() =&lt; {
-                                const alert = document.getElementById(alertId);
-                                if (alert &amp;&amp; typeof bootstrap !== 'undefined') {
-                                    const bsAlert = new bootstrap.Alert(alert);
-                                    bsAlert.close();
-                                }
-                            }, 5000);
+                        })
+                        .catch(error => {
+                            showAlert('danger', 'Error de conexión');
+                            console.error('Error:', error);
+                        });
+                    }
+
+                    function loadPendingEquipments() {
+                        console.log('Loading pending equipments...');
+                        const searchInput = document.getElementById('search-input');
+                        if (searchInput) {
+                            searchInput.value = '';
+                        }
+                        
+                        const resultsContainer = document.getElementById('equipment-results');
+                        if (resultsContainer) {
+                            resultsContainer.innerHTML = 
+                                '<div class="text-center py-5">' +
+                                    '<div class="spinner-border text-warning mb-3" role="status"></div>' +
+                                    '<p class="text-muted">Cargando equipos pendientes...</p>' +
+                                '</div>';
                         }
 
-                        function searchEquipments() {
-                            console.log('Searching equipments...');
-                            const searchInput = document.getElementById('search-input');
-                            const searchTerm = searchInput ? searchInput.value : '';
-                            const resultsContainer = document.getElementById('equipment-results');
-                            
-                            if (resultsContainer) {
-                                resultsContainer.innerHTML = 
-                                    '&lt;div class="text-center py-5"&gt;' +
-                                        '&lt;div class="spinner-border text-primary mb-3" role="status"&gt;&lt;/div&gt;' +
-                                        '&lt;p class="text-muted"&gt;Buscando equipos...&lt;/p&gt;' +
-                                    '&lt;/div&gt;';
-                            }
-
-                            return makeJsonRpcCall('/equipment/blocking/search', {
-                                search_term: searchTerm
-                            })
-                            .then(result =&lt; {
-                                if (result.status === 'success') {
-                                    displayEquipments(result.equipos);
-                                } else {
-                                    showAlert('danger', 'Error al buscar equipos: ' + result.message);
-                                }
-                            })
-                            .catch(error =&lt; {
-                                showAlert('danger', 'Error de conexión');
-                                console.error('Error:', error);
-                            });
-                        }
-
-                        function loadPendingEquipments() {
-                            console.log('Loading pending equipments...');
-                            const searchInput = document.getElementById('search-input');
-                            if (searchInput) {
-                                searchInput.value = '';
-                            }
-                            
-                            const resultsContainer = document.getElementById('equipment-results');
-                            if (resultsContainer) {
-                                resultsContainer.innerHTML = 
-                                    '&lt;div class="text-center py-5"&gt;' +
-                                        '&lt;div class="spinner-border text-warning mb-3" role="status"&gt;&lt;/div&gt;' +
-                                        '&lt;p class="text-muted"&gt;Cargando equipos pendientes...&lt;/p&gt;' +
-                                    '&lt;/div&gt;';
-                            }
-
-                            return makeJsonRpcCall('/equipment/blocking/search', {
-                                search_term: '',
-                                only_pending: true
-                            })
-                            .then(result =&lt; {
-                                if (result.status === 'success') {
-                                    const pendingEquipments = result.equipos.filter(eq =&lt;
-                                        ['suspendido', 'bloqueado', 'no_accesible', 'pendiente_bloqueo', 'pendiente_desbloqueo'].includes(eq.estado_bloqueo)
-                                    );
-                                    displayEquipments(pendingEquipments);
-                                } else {
-                                    showAlert('danger', 'Error al cargar equipos: ' + result.message);
-                                }
-                            })
-                            .catch(error =&lt; {
-                                showAlert('danger', 'Error de conexión');
-                                console.error('Error:', error);
-                            });
-                        }
-
-                        function refreshDashboard() {
-                            console.log('Refreshing dashboard...');
-                            return makeJsonRpcCall('/equipment/blocking/dashboard_data', {})
-                                .then(result =&lt; {
-                                    if (result.status === 'success') {
-                                        const data = result.data;
-                                        updateElement('equipos-activos', data.equipos_activos);
-                                        updateElement('equipos-suspendidos', data.equipos_suspendidos);
-                                        updateElement('equipos-bloqueados', data.equipos_bloqueados);
-                                        updateElement('equipos-no-accesibles', data.equipos_no_accesibles);
-                                        updateElement('pendientes-bloqueo', data.pendientes_bloqueo);
-                                        updateElement('pendientes-desbloqueo', data.pendientes_desbloqueo);
-                                        
-                                        showAlert('success', 'Dashboard actualizado correctamente');
-                                    }
-                                })
-                                .catch(error =&lt; {
-                                    console.error('Error al actualizar dashboard:', error);
-                                    showAlert('danger', 'Error al actualizar el dashboard');
-                                });
-                        }
-
-                        function displayEquipments(equipos) {
-                            const resultsContainer = document.getElementById('equipment-results');
-                            if (!resultsContainer) return;
-                            
-                            if (equipos.length === 0) {
-                                resultsContainer.innerHTML = 
-                                    '&lt;div class="text-center py-5"&gt;' +
-                                        '&lt;i class="fas fa-inbox fa-3x text-muted mb-3"&gt;&lt;/i&gt;' +
-                                        '&lt;p class="text-muted"&gt;No se encontraron equipos con los criterios especificados.&lt;/p&gt;' +
-                                    '&lt;/div&gt;';
-                                return;
-                            }
-
-                            const equipmentCards = equipos.map(equipo =&lt; {
-                                const motivoSection = equipo.motivo_bloqueo ? 
-                                    '&lt;div class="alert alert-info py-2 mb-3"&gt;' +
-                                        '&lt;strong&gt;Motivo:&lt;/strong&gt; ' + escapeHtml(equipo.motivo_bloqueo) +
-                                    '&lt;/div&gt;' : '';
-                                
-                                const fechaSection = equipo.fecha_bloqueo ? 
-                                    '&lt;div class="text-muted small mb-3"&gt;' +
-                                        '&lt;i class="fas fa-clock"&gt;&lt;/i&gt; ' + escapeHtml(equipo.fecha_bloqueo) +
-                                    '&lt;/div&gt;' : '';
-
-                                const buttons = [];
-                                if (equipo.puede_suspender) {
-                                    buttons.push(
-                                        `&lt;button class="btn btn-warning btn-sm" onclick="openActionModal('suspend', ${equipo.id}, '${escapeHtml(equipo.serie)}', ${JSON.stringify(equipo).replace(/"/g, '&amp;quot;')})"&gt;` +
-                                            '&lt;i class="fas fa-pause me-1"&gt;&lt;/i&gt; Suspender' +
-                                        '&lt;/button&gt;'
-                                    );
-                                }
-                                if (equipo.puede_bloquear) {
-                                    buttons.push(
-                                        `&lt;button class="btn btn-danger btn-sm" onclick="openActionModal('block', ${equipo.id}, '${escapeHtml(equipo.serie)}', ${JSON.stringify(equipo).replace(/"/g, '&amp;quot;')})"&gt;` +
-                                            '&lt;i class="fas fa-lock me-1"&gt;&lt;/i&gt; Bloquear' +
-                                        '&lt;/button&gt;'
-                                    );
-                                }
-                                if (equipo.puede_desbloquear) {
-                                    buttons.push(
-                                        `&lt;button class="btn btn-success btn-sm" onclick="openActionModal('unblock', ${equipo.id}, '${escapeHtml(equipo.serie)}', ${JSON.stringify(equipo).replace(/"/g, '&amp;quot;')})"&gt;` +
-                                            '&lt;i class="fas fa-unlock me-1"&gt;&lt;/i&gt; Desbloquear' +
-                                        '&lt;/button&gt;'
-                                    );
-                                }
-
-                                return (
-                                    '&lt;div class="equipment-card"&gt;' +
-                                        '&lt;div class="d-flex justify-content-between align-items-start mb-3"&gt;' +
-                                            '&lt;div&gt;' +
-                                                '&lt;h5 class="mb-1 fw-bold"&gt;Serie: ' + escapeHtml(equipo.serie) + '&lt;/h5&gt;' +
-                                                '&lt;p class="text-muted mb-0"&gt;' + escapeHtml(equipo.cliente) + ' - ' + escapeHtml(equipo.modelo) + '&lt;/p&gt;' +
-                                            '&lt;/div&gt;' +
-                                            '&lt;span class="status-badge status-' + equipo.estado_bloqueo + '"&gt;' +
-                                                escapeHtml(equipo.estado_label) +
-                                            '&lt;/span&gt;' +
-                                        '&lt;/div&gt;' +
-                                        
-                                        '&lt;div class="detail-grid"&gt;' +
-                                            '&lt;div class="detail-item"&gt;' +
-                                                '&lt;i class="fas fa-industry"&gt;&lt;/i&gt;' +
-                                                '&lt;span&gt;Marca: ' + escapeHtml(equipo.marca) + '&lt;/span&gt;' +
-                                            '&lt;/div&gt;' +
-                                            '&lt;div class="detail-item"&gt;' +
-                                                '&lt;i class="fas fa-map-marker-alt"&gt;&lt;/i&gt;' +
-                                                '&lt;span&gt;Dirección: ' + escapeHtml(equipo.direccion) + '&lt;/span&gt;' +
-                                            '&lt;/div&gt;' +
-                                            '&lt;div class="detail-item"&gt;' +
-                                                '&lt;i class="fas fa-network-wired"&gt;&lt;/i&gt;' +
-                                                '&lt;span&gt;IP: ' + escapeHtml(equipo.ip_equipo || 'No configurada') + '&lt;/span&gt;' +
-                                            '&lt;/div&gt;' +
-                                            '&lt;div class="detail-item"&gt;' +
-                                                '&lt;i class="fas fa-wifi"&gt;&lt;/i&gt;' +
-                                                '&lt;span&gt;Acceso remoto: ' + (equipo.acceso_remoto ? 'Disponible' : 'No disponible') + '&lt;/span&gt;' +
-                                            '&lt;/div&gt;' +
-                                        '&lt;/div&gt;' +
-                                        
-                                        motivoSection +
-                                        fechaSection +
-                                        
-                                        '&lt;div class="d-flex gap-2 justify-content-end flex-wrap"&gt;' +
-                                            buttons.join('') +
-                                        '&lt;/div&gt;' +
-                                    '&lt;/div&gt;'
+                        return makeJsonRpcCall('/equipment/blocking/search', {
+                            search_term: '',
+                            only_pending: true
+                        })
+                        .then(result => {
+                            if (result.status === 'success') {
+                                const pendingEquipments = result.equipos.filter(eq => 
+                                    ['suspendido', 'bloqueado', 'no_accesible', 'pendiente_bloqueo', 'pendiente_desbloqueo'].includes(eq.estado_bloqueo)
                                 );
-                            }).join('');
-
-                            resultsContainer.innerHTML = equipmentCards;
-                        }
-
-                        function openActionModal(action, equipmentId, serie, equipmentData) {
-                            console.log('Opening action modal:', action, equipmentId);
-                            currentAction = action;
-                            currentEquipmentId = equipmentId;
-                            
-                            const equipment = typeof equipmentData === 'string' ? JSON.parse(equipmentData) : equipmentData;
-                            
-                            const modalTitle = document.getElementById('modalTitle');
-                            const motivoInput = document.getElementById('motivoInput');
-                            const confirmBtn = document.getElementById('confirmActionBtn');
-                            const equipmentDetails = document.getElementById('equipmentDetails');
-                            
-                            // Mostrar detalles del equipo
-                            updateElement('detailCliente', equipment.cliente);
-                            updateElement('detailModelo', equipment.modelo);
-                            updateElement('detailIP', equipment.ip_equipo || 'No configurada');
-                            
-                            const estadoElement = document.getElementById('detailEstado');
-                            if (estadoElement) {
-                                estadoElement.innerHTML = '&lt;span class="status-badge status-' + equipment.estado_bloqueo + '"&gt;' + equipment.estado_label + '&lt;/span&gt;';
+                                displayEquipments(pendingEquipments);
+                            } else {
+                                showAlert('danger', 'Error al cargar equipos: ' + result.message);
                             }
-                            
-                            if (equipmentDetails) {
-                                equipmentDetails.style.display = 'block';
-                            }
-                            
-                            // Configurar según la acción
-                            switch(action) {
-                                case 'suspend':
-                                    if (modalTitle) modalTitle.textContent = 'Suspender Servicio - Serie: ' + serie;
-                                    if (motivoInput) motivoInput.setAttribute('placeholder', 'Motivo de la suspensión (ej: Mora de pagos, incumplimiento contractual...)');
-                                    if (confirmBtn) confirmBtn.className = 'btn btn-warning';
-                                    break;
-                                case 'block':
-                                    if (modalTitle) modalTitle.textContent = 'Bloquear Equipo - Serie: ' + serie;
-                                    if (motivoInput) motivoInput.setAttribute('placeholder', 'Motivo del bloqueo remoto...');
-                                    if (confirmBtn) confirmBtn.className = 'btn btn-danger';
-                                    break;
-                                case 'unblock':
-                                    if (modalTitle) modalTitle.textContent = 'Desbloquear Equipo - Serie: ' + serie;
-                                    if (motivoInput) motivoInput.setAttribute('placeholder', 'Observaciones del desbloqueo...');
-                                    if (confirmBtn) confirmBtn.className = 'btn btn-success';
-                                    break;
-                            }
-                            
-                            // Limpiar modal y mostrar
-                            if (motivoInput) motivoInput.value = '';
-                            
-                            const modalAlert = document.getElementById('modalAlert');
-                            if (modalAlert) modalAlert.innerHTML = '';
-                            
-                            if (actionModal) {
-                                actionModal.show();
-                            }
-                        }
+                        })
+                        .catch(error => {
+                            showAlert('danger', 'Error de conexión');
+                            console.error('Error:', error);
+                        });
+                    }
 
-                        function executeAction() {
-                            console.log('Executing action:', currentAction);
-                            const motivoInput = document.getElementById('motivoInput');
-                            const motivo = motivoInput ? motivoInput.value : '';
-                            const btnLoading = document.getElementById('btnLoading');
-                            const btnText = document.getElementById('btnText');
-                            const confirmBtn = document.getElementById('confirmActionBtn');
-                            
-                            // Mostrar loading
-                            if (btnLoading) btnLoading.classList.remove('d-none');
-                            if (btnText) btnText.classList.add('d-none');
-                            if (confirmBtn) confirmBtn.disabled = true;
-
-                            const endpoints = {
-                                'suspend': '/equipment/blocking/suspend',
-                                'block': '/equipment/blocking/block',
-                                'unblock': '/equipment/blocking/unblock'
-                            };
-
-                            return makeJsonRpcCall(endpoints[currentAction], {
-                                equipment_id: currentEquipmentId,
-                                motivo: motivo
-                            })
+                    function refreshDashboard() {
+                        console.log('Refreshing dashboard...');
+                        return makeJsonRpcCall('/equipment/blocking/dashboard_data', {})
                             .then(result => {
                                 if (result.status === 'success') {
-                                    showModalAlert('success', result.message);
+                                    const data = result.data;
+                                    updateElement('equipos-activos', data.equipos_activos);
+                                    updateElement('equipos-suspendidos', data.equipos_suspendidos);
+                                    updateElement('equipos-bloqueados', data.equipos_bloqueados);
+                                    updateElement('equipos-no-accesibles', data.equipos_no_accesibles);
+                                    updateElement('pendientes-bloqueo', data.pendientes_bloqueo);
+                                    updateElement('pendientes-desbloqueo', data.pendientes_desbloqueo);
                                     
-                                    // Cerrar modal después de 2 segundos y actualizar
-                                    setTimeout(() => {
-                                        if (actionModal) {
-                                            actionModal.hide();
-                                        }
-                                        refreshDashboard();
-                                        searchEquipments();
-                                    }, 2000);
-                                } else {
-                                    showModalAlert('danger', result.message);
+                                    showAlert('success', 'Dashboard actualizado correctamente');
                                 }
                             })
-                            .catch(error =&lt; {
-                                showModalAlert('danger', 'Error de conexión');
-                                console.error('Error:', error);
-                            })
-                            .finally(() =&lt; {
-                                // Ocultar loading
-                                if (btnLoading) btnLoading.classList.add('d-none');
-                                if (btnText) btnText.classList.remove('d-none');
-                                if (confirmBtn) confirmBtn.disabled = false;
+                            .catch(error => {
+                                console.error('Error al actualizar dashboard:', error);
+                                showAlert('danger', 'Error al actualizar el dashboard');
                             });
+                    }
+
+                    function displayEquipments(equipos) {
+                        const resultsContainer = document.getElementById('equipment-results');
+                        if (!resultsContainer) return;
+                        
+                        if (equipos.length === 0) {
+                            resultsContainer.innerHTML = 
+                                '<div class="text-center py-5">' +
+                                    '<i class="fas fa-inbox fa-3x text-muted mb-3"></i>' +
+                                    '<p class="text-muted">No se encontraron equipos con los criterios especificados.</p>' +
+                                '</div>';
+                            return;
                         }
 
-                        function showModalAlert(type, message) {
-                            const alertContainer = document.getElementById('modalAlert');
-                            if (!alertContainer) return;
+                        const equipmentCards = equipos.map(equipo => {
+                            const motivoSection = equipo.motivo_bloqueo ? 
+                                '<div class="alert alert-info py-2 mb-3">' +
+                                    '<strong>Motivo:</strong> ' + escapeHtml(equipo.motivo_bloqueo) +
+                                '</div>' : '';
                             
-                            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-                            const icon = type === 'success' ? 'check-circle' : 'exclamation-triangle';
+                            const fechaSection = equipo.fecha_bloqueo ? 
+                                '<div class="text-muted small mb-3">' +
+                                    '<i class="fas fa-clock"></i> ' + escapeHtml(equipo.fecha_bloqueo) +
+                                '</div>' : '';
+
+                            const buttons = [];
+                            const equipoJsonStr = JSON.stringify(equipo).replace(/"/g, "&quot;");
                             
-                            alertContainer.innerHTML = 
-                                '&lt;div class="alert ' + alertClass + ' d-flex align-items-center" role="alert"&gt;' +
-                                    '&lt;i class="fas fa-' + icon + ' me-2"&gt;&lt;/i&gt;' +
-                                    '&lt;div&gt;' + escapeHtml(message) + '&lt;/div&gt;' +
-                                '&lt;/div&gt;';
-                        }
-
-                        // Exponer funciones globalmente para onclick
-                        window.searchEquipments = searchEquipments;
-                        window.loadPendingEquipments = loadPendingEquipments;
-                        window.refreshDashboard = refreshDashboard;
-                        window.openActionModal = openActionModal;
-
-                        // Event Listeners para botones
-                        function setupEventListeners() {
-                            // Enter en búsqueda
-                            const searchInput = document.getElementById('search-input');
-                            if (searchInput) {
-                                searchInput.addEventListener('keypress', (e) =&lt; {
-                                    if (e.which === 13) {
-                                        searchEquipments();
-                                    }
-                                });
+                            if (equipo.puede_suspender) {
+                                buttons.push(
+                                    '<button class="btn btn-warning btn-sm" onclick="openActionModal(\'suspend\', ' + 
+                                    equipo.id + ', \'' + escapeHtml(equipo.serie) + '\', \'' + equipoJsonStr + '\')">' +
+                                        '<i class="fas fa-pause me-1"></i> Suspender' +
+                                    '</button>'
+                                );
+                            }
+                            if (equipo.puede_bloquear) {
+                                buttons.push(
+                                    '<button class="btn btn-danger btn-sm" onclick="openActionModal(\'block\', ' + 
+                                    equipo.id + ', \'' + escapeHtml(equipo.serie) + '\', \'' + equipoJsonStr + '\')">' +
+                                        '<i class="fas fa-lock me-1"></i> Bloquear' +
+                                    '</button>'
+                                );
+                            }
+                            if (equipo.puede_desbloquear) {
+                                buttons.push(
+                                    '<button class="btn btn-success btn-sm" onclick="openActionModal(\'unblock\', ' + 
+                                    equipo.id + ', \'' + escapeHtml(equipo.serie) + '\', \'' + equipoJsonStr + '\')">' +
+                                        '<i class="fas fa-unlock me-1"></i> Desbloquear' +
+                                    '</button>'
+                                );
                             }
 
-                            // Botones principales
-                            const searchBtn = document.getElementById('searchBtn');
-                            const pendingBtn = document.getElementById('pendingBtn');
-                            const refreshBtn = document.getElementById('refreshBtn');
-                            const confirmBtn = document.getElementById('confirmActionBtn');
+                            return (
+                                '<div class="equipment-card">' +
+                                    '<div class="d-flex justify-content-between align-items-start mb-3">' +
+                                        '<div>' +
+                                            '<h5 class="mb-1 fw-bold">Serie: ' + escapeHtml(equipo.serie) + '</h5>' +
+                                            '<p class="text-muted mb-0">' + escapeHtml(equipo.cliente) + ' - ' + escapeHtml(equipo.modelo) + '</p>' +
+                                        '</div>' +
+                                        '<span class="status-badge status-' + equipo.estado_bloqueo + '">' +
+                                            escapeHtml(equipo.estado_label) +
+                                        '</span>' +
+                                    '</div>' +
+                                    
+                                    '<div class="detail-grid">' +
+                                        '<div class="detail-item">' +
+                                            '<i class="fas fa-industry"></i>' +
+                                            '<span>Marca: ' + escapeHtml(equipo.marca) + '</span>' +
+                                        '</div>' +
+                                        '<div class="detail-item">' +
+                                            '<i class="fas fa-map-marker-alt"></i>' +
+                                            '<span>Dirección: ' + escapeHtml(equipo.direccion) + '</span>' +
+                                        '</div>' +
+                                        '<div class="detail-item">' +
+                                            '<i class="fas fa-network-wired"></i>' +
+                                            '<span>IP: ' + escapeHtml(equipo.ip_equipo || 'No configurada') + '</span>' +
+                                        '</div>' +
+                                        '<div class="detail-item">' +
+                                            '<i class="fas fa-wifi"></i>' +
+                                            '<span>Acceso remoto: ' + (equipo.acceso_remoto ? 'Disponible' : 'No disponible') + '</span>' +
+                                        '</div>' +
+                                    '</div>' +
+                                    
+                                    motivoSection +
+                                    fechaSection +
+                                    
+                                    '<div class="d-flex gap-2 justify-content-end flex-wrap">' +
+                                        buttons.join('') +
+                                    '</div>' +
+                                '</div>'
+                            );
+                        }).join('');
 
-                            if (searchBtn) {
-                                searchBtn.addEventListener('click', searchEquipments);
-                            }
-                            if (pendingBtn) {
-                                pendingBtn.addEventListener('click', loadPendingEquipments);
-                            }
-                            if (refreshBtn) {
-                                refreshBtn.addEventListener('click', refreshDashboard);
-                            }
-                            if (confirmBtn) {
-                                confirmBtn.addEventListener('click', executeAction);
-                            }
-                            
-                            // Shortcuts de teclado
-                            document.addEventListener('keydown', (e) =&lt; {
-                                // Ctrl/Cmd + K para buscar
-                                if ((e.ctrlKey || e.metaKey) &amp;&amp; e.key === 'k') {
-                                    e.preventDefault();
-                                    if (searchInput) searchInput.focus();
-                                }
-                                
-                                // Escape para cerrar modal
-                                if (e.key === 'Escape' &amp;&amp; actionModal) {
-                                    actionModal.hide();
-                                }
-                            });
+                        resultsContainer.innerHTML = equipmentCards;
+                    }
 
-                            console.log('Event listeners configured');
-                        }
-
-                        // Inicializar modal de Bootstrap
-                        function initializeModal() {
-                            const modalEl = document.getElementById('actionModal');
-                            if (modalEl &amp;&amp; typeof bootstrap !== 'undefined') {
-                                actionModal = new bootstrap.Modal(modalEl);
-                                console.log('Bootstrap modal initialized');
+                    function openActionModal(action, equipmentId, serie, equipmentDataStr) {
+                        console.log('Opening action modal:', action, equipmentId);
+                        currentAction = action;
+                        currentEquipmentId = equipmentId;
+                        
+                        // Parsear los datos del equipo
+                        let equipment;
+                        try {
+                            if (typeof equipmentDataStr === 'string') {
+                                equipment = JSON.parse(equipmentDataStr.replace(/&quot;/g, '"'));
                             } else {
-                                console.warn('Bootstrap not found or modal element missing');
+                                equipment = equipmentDataStr;
                             }
+                        } catch (e) {
+                            console.error('Error parsing equipment data:', e);
+                            equipment = {};
+                        }
+                        
+                        const modalTitle = document.getElementById('modalTitle');
+                        const motivoInput = document.getElementById('motivoInput');
+                        const confirmBtn = document.getElementById('confirmActionBtn');
+                        const equipmentDetails = document.getElementById('equipmentDetails');
+                        
+                        // Mostrar detalles del equipo
+                        updateElement('detailCliente', equipment.cliente || '');
+                        updateElement('detailModelo', equipment.modelo || '');
+                        updateElement('detailIP', equipment.ip_equipo || 'No configurada');
+                        
+                        const estadoElement = document.getElementById('detailEstado');
+                        if (estadoElement && equipment.estado_bloqueo) {
+                            estadoElement.innerHTML = '<span class="status-badge status-' + equipment.estado_bloqueo + '">' + (equipment.estado_label || '') + '</span>';
+                        }
+                        
+                        if (equipmentDetails) {
+                            equipmentDetails.style.display = 'block';
+                        }
+                        
+                        // Configurar según la acción
+                        switch(action) {
+                            case 'suspend':
+                                if (modalTitle) modalTitle.textContent = 'Suspender Servicio - Serie: ' + serie;
+                                if (motivoInput) motivoInput.setAttribute('placeholder', 'Motivo de la suspensión (ej: Mora de pagos, incumplimiento contractual...)');
+                                if (confirmBtn) confirmBtn.className = 'btn btn-warning';
+                                break;
+                            case 'block':
+                                if (modalTitle) modalTitle.textContent = 'Bloquear Equipo - Serie: ' + serie;
+                                if (motivoInput) motivoInput.setAttribute('placeholder', 'Motivo del bloqueo remoto...');
+                                if (confirmBtn) confirmBtn.className = 'btn btn-danger';
+                                break;
+                            case 'unblock':
+                                if (modalTitle) modalTitle.textContent = 'Desbloquear Equipo - Serie: ' + serie;
+                                if (motivoInput) motivoInput.setAttribute('placeholder', 'Observaciones del desbloqueo...');
+                                if (confirmBtn) confirmBtn.className = 'btn btn-success';
+                                break;
+                        }
+                        
+                        // Limpiar modal y mostrar
+                        if (motivoInput) motivoInput.value = '';
+                        
+                        const modalAlert = document.getElementById('modalAlert');
+                        if (modalAlert) modalAlert.innerHTML = '';
+                        
+                        if (actionModal) {
+                            actionModal.show();
+                        }
+                    }
+
+                    function executeAction() {
+                        console.log('Executing action:', currentAction);
+                        const motivoInput = document.getElementById('motivoInput');
+                        const motivo = motivoInput ? motivoInput.value : '';
+                        const btnLoading = document.getElementById('btnLoading');
+                        const btnText = document.getElementById('btnText');
+                        const confirmBtn = document.getElementById('confirmActionBtn');
+                        
+                        // Mostrar loading
+                        if (btnLoading) btnLoading.classList.remove('d-none');
+                        if (btnText) btnText.classList.add('d-none');
+                        if (confirmBtn) confirmBtn.disabled = true;
+
+                        const endpoints = {
+                            'suspend': '/equipment/blocking/suspend',
+                            'block': '/equipment/blocking/block',
+                            'unblock': '/equipment/blocking/unblock'
+                        };
+
+                        return makeJsonRpcCall(endpoints[currentAction], {
+                            equipment_id: currentEquipmentId,
+                            motivo: motivo
+                        })
+                        .then(result => {
+                            if (result.status === 'success') {
+                                showModalAlert('success', result.message);
+                                
+                                // Cerrar modal después de 2 segundos y actualizar
+                                setTimeout(() => {
+                                    if (actionModal) {
+                                        actionModal.hide();
+                                    }
+                                    refreshDashboard();
+                                    searchEquipments();
+                                }, 2000);
+                            } else {
+                                showModalAlert('danger', result.message);
+                            }
+                        })
+                        .catch(error => {
+                            showModalAlert('danger', 'Error de conexión');
+                            console.error('Error:', error);
+                        })
+                        .finally(() => {
+                            // Ocultar loading
+                            if (btnLoading) btnLoading.classList.add('d-none');
+                            if (btnText) btnText.classList.remove('d-none');
+                            if (confirmBtn) confirmBtn.disabled = false;
+                        });
+                    }
+
+                    function showModalAlert(type, message) {
+                        const alertContainer = document.getElementById('modalAlert');
+                        if (!alertContainer) return;
+                        
+                        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+                        const icon = type === 'success' ? 'check-circle' : 'exclamation-triangle';
+                        
+                        alertContainer.innerHTML = 
+                            '<div class="alert ' + alertClass + ' d-flex align-items-center" role="alert">' +
+                                '<i class="fas fa-' + icon + ' me-2"></i>' +
+                                '<div>' + escapeHtml(message) + '</div>' +
+                            '</div>';
+                    }
+
+                    // Exponer funciones globalmente para onclick
+                    window.searchEquipments = searchEquipments;
+                    window.loadPendingEquipments = loadPendingEquipments;
+                    window.refreshDashboard = refreshDashboard;
+                    window.openActionModal = openActionModal;
+
+                    // Event Listeners para botones
+                    function setupEventListeners() {
+                        // Enter en búsqueda
+                        const searchInput = document.getElementById('search-input');
+                        if (searchInput) {
+                            searchInput.addEventListener('keypress', (e) => {
+                                if (e.which === 13) {
+                                    searchEquipments();
+                                }
+                            });
                         }
 
-                        // Función de inicialización principal
-                        function initialize() {
-                            console.log('DOM Content Loaded - Initializing dashboard');
-                            initializeModal();
-                            setupEventListeners();
-                            console.log('Equipment Blocking Dashboard initialized successfully');
-                        }
+                        // Botones principales
+                        const searchBtn = document.getElementById('searchBtn');
+                        const pendingBtn = document.getElementById('pendingBtn');
+                        const refreshBtn = document.getElementById('refreshBtn');
+                        const confirmBtn = document.getElementById('confirmActionBtn');
 
-                        // Inicializar cuando el DOM esté listo
-                        if (document.readyState === 'loading') {
-                            document.addEventListener('DOMContentLoaded', initialize);
-                        } else {
-                            initialize();
+                        if (searchBtn) {
+                            searchBtn.addEventListener('click', searchEquipments);
                         }
-
-                        // Debug info
-                        console.log('Equipment Blocking script loaded. Available functions:', {
-                            searchEquipments: typeof searchEquipments,
-                            loadPendingEquipments: typeof loadPendingEquipments,
-                            refreshDashboard: typeof refreshDashboard,
-                            openActionModal: typeof openActionModal,
-                            bootstrap: typeof bootstrap
+                        if (pendingBtn) {
+                            pendingBtn.addEventListener('click', loadPendingEquipments);
+                        }
+                        if (refreshBtn) {
+                            refreshBtn.addEventListener('click', refreshDashboard);
+                        }
+                        if (confirmBtn) {
+                            confirmBtn.addEventListener('click', executeAction);
+                        }
+                        
+                        // Shortcuts de teclado
+                        document.addEventListener('keydown', (e) => {
+                            // Ctrl/Cmd + K para buscar
+                            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                                e.preventDefault();
+                                if (searchInput) searchInput.focus();
+                            }
+                            
+                            // Escape para cerrar modal
+                            if (e.key === 'Escape' && actionModal) {
+                                actionModal.hide();
+                            }
                         });
 
-                    })();
+                        console.log('Event listeners configured');
+                    }
+
+                    // Inicializar modal de Bootstrap
+                    function initializeModal() {
+                        const modalEl = document.getElementById('actionModal');
+                        if (modalEl && typeof bootstrap !== 'undefined') {
+                            actionModal = new bootstrap.Modal(modalEl);
+                            console.log('Bootstrap modal initialized');
+                        } else {
+                            console.warn('Bootstrap not found or modal element missing');
+                        }
+                    }
+
+                    // Función de inicialización principal
+                    function initialize() {
+                        console.log('DOM Content Loaded - Initializing dashboard');
+                        initializeModal();
+                        setupEventListeners();
+                        console.log('Equipment Blocking Dashboard initialized successfully');
+                    }
+
+                    // Inicializar cuando el DOM esté listo
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', initialize);
+                    } else {
+                        initialize();
+                    }
+
+                    // Debug info
+                    console.log('Equipment Blocking script loaded. Available functions:', {
+                        searchEquipments: typeof searchEquipments,
+                        loadPendingEquipments: typeof loadPendingEquipments,
+                        refreshDashboard: typeof refreshDashboard,
+                        openActionModal: typeof openActionModal,
+                        bootstrap: typeof bootstrap
+                    });
+
+                })();
+                //]]>
                 </script>
             </t>
         </template>
