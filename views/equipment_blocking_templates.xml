@@ -1,19 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
     <data>
-        <!-- Assets -->
-        <record id="equipment_blocking_dashboard_assets" model="ir.asset">
-            <field name="name">Equipment Blocking Dashboard Assets</field>
-            <field name="bundle">web.assets_backend</field>
-            <field name="path">sat/static/src/css/equipment_blocking.css</field>
-        </record>
-        
-        <record id="equipment_blocking_dashboard_js" model="ir.asset">
-            <field name="name">Equipment Blocking Dashboard JS</field>
-            <field name="bundle">web.assets_backend</field>
-            <field name="path">sat/static/src/js/equipment_blocking.js</field>
-        </record>
-
+       
         <!-- Template principal del dashboard -->
         <template id="equipment_blocking_dashboard_template" name="Dashboard Bloqueo de Equipos">
             <t t-call="website.layout">
