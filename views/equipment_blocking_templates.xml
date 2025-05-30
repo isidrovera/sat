@@ -807,15 +807,5 @@
                 });
             </script>
 
-    <!-- Menú en el website (opcional) -->
-    <template id="equipment_blocking_menu" inherit_id="website.layout" name="Equipment Blocking Menu">
-        <xpath expr="//nav[@id='top_menu']//ul[@id='top_menu_nav']" position="inside">
-            <li class="nav-item" groups="base.group_user">
-                <a class="nav-link" href="/equipment/blocking/dashboard">
-                    <i class="fas fa-shield-alt me-1"></i>
-                    Bloqueo de Equipos
-                </a>
-            </li>
-        </xpath>
-    </template>
+   
 </odoo>
