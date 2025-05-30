@@ -2,7 +2,7 @@
 <odoo>
     <data>
 
-      <record id="Alquiler_form_view" model="ir.ui.view">
+    <record id="Alquiler_form_view" model="ir.ui.view">
     <field name="name">Alquiler.form</field>
     <field name="model">alquiler</field>
     <field name="arch" type="xml">
@@ -152,18 +152,18 @@
                                     <div class="card-body">
                                         <div class="row g-3">
                                             <div class="col-12 col-md-6">
-                                                <label class="form-label">
+                                                <div class="o_form_label">
                                                     <i class="fa fa-info-circle text-primary me-1"></i>
                                                     Estado Actual del Servicio
-                                                </label>
-                                                <field name="estado_bloqueo" widget="selection" class="form-select"/>
+                                                </div>
+                                                <field name="estado_bloqueo" widget="selection"/>
                                             </div>
                                             
                                             <div class="col-12 col-md-6">
-                                                <label class="form-label">
+                                                <div class="o_form_label">
                                                     <i class="fa fa-wifi text-success me-1"></i>
                                                     Acceso Remoto
-                                                </label>
+                                                </div>
                                                 <div class="d-flex align-items-center">
                                                     <field name="acceso_remoto_disponible" widget="toggle"/>
                                                     <span class="text-muted ms-2">Disponible para bloqueo remoto</span>
@@ -171,56 +171,55 @@
                                             </div>
                                             
                                             <div class="col-12 col-md-6">
-                                                <label class="form-label">
+                                                <div class="o_form_label">
                                                     <i class="fa fa-globe text-info me-1"></i>
                                                     Dirección IP del Equipo
-                                                </label>
-                                                <field name="ip_equipo" placeholder="192.168.1.100" class="form-control"/>
+                                                </div>
+                                                <field name="ip_equipo" placeholder="192.168.1.100"/>
                                             </div>
                                             
                                             <div class="col-12 col-md-6" invisible="not fecha_bloqueo">
-                                                <label class="form-label">
+                                                <div class="o_form_label">
                                                     <i class="fa fa-calendar text-warning me-1"></i>
                                                     Fecha de Bloqueo
-                                                </label>
-                                                <field name="fecha_bloqueo" readonly="1" class="form-control"/>
+                                                </div>
+                                                <field name="fecha_bloqueo" readonly="1"/>
                                             </div>
                                             
                                             <div class="col-12 col-md-6" invisible="not fecha_desbloqueo">
-                                                <label class="form-label">
+                                                <div class="o_form_label">
                                                     <i class="fa fa-calendar text-success me-1"></i>
                                                     Fecha de Desbloqueo
-                                                </label>
-                                                <field name="fecha_desbloqueo" readonly="1" class="form-control"/>
+                                                </div>
+                                                <field name="fecha_desbloqueo" readonly="1"/>
                                             </div>
                                             
                                             <div class="col-12 col-md-6" invisible="not usuario_bloqueo">
-                                                <label class="form-label">
+                                                <div class="o_form_label">
                                                     <i class="fa fa-user text-secondary me-1"></i>
                                                     Usuario Responsable
-                                                </label>
-                                                <field name="usuario_bloqueo" readonly="1" class="form-control"/>
+                                                </div>
+                                                <field name="usuario_bloqueo" readonly="1"/>
                                             </div>
                                         </div>
                                         
                                         <!-- Motivo del bloqueo -->
                                         <div class="mt-3" invisible="not motivo_bloqueo">
-                                            <label class="form-label">
+                                            <div class="o_form_label">
                                                 <i class="fa fa-comment text-warning me-1"></i>
                                                 Motivo del Bloqueo/Suspensión
-                                            </label>
-                                            <field name="motivo_bloqueo" widget="text" class="form-control"/>
+                                            </div>
+                                            <field name="motivo_bloqueo" widget="text"/>
                                         </div>
                                         
                                         <!-- Observaciones -->
                                         <div class="mt-3">
-                                            <label class="form-label">
+                                            <div class="o_form_label">
                                                 <i class="fa fa-sticky-note text-info me-1"></i>
                                                 Observaciones Adicionales
-                                            </label>
+                                            </div>
                                             <field name="observaciones_bloqueo" widget="text" 
-                                                   placeholder="Ingrese observaciones sobre el estado del equipo..."
-                                                   class="form-control"/>
+                                                   placeholder="Ingrese observaciones sobre el estado del equipo..."/>
                                         </div>
                                     </div>
                                 </div>
@@ -237,23 +236,21 @@
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-3">
-                                            <label class="form-label">
+                                            <div class="o_form_label">
                                                 <i class="fa fa-handshake-o text-primary me-1"></i>
                                                 Asesor de Ventas
-                                            </label>
+                                            </div>
                                             <field name="asesor_ventas_id" 
-                                                   options="{'no_create': True}" 
-                                                   class="form-control"/>
+                                                   options="{'no_create': True}"/>
                                         </div>
                                         
                                         <div class="mb-3">
-                                            <label class="form-label">
+                                            <div class="o_form_label">
                                                 <i class="fa fa-wrench text-success me-1"></i>
                                                 Soporte Técnico
-                                            </label>
+                                            </div>
                                             <field name="soporte_tecnico_id" 
-                                                   options="{'no_create': True}" 
-                                                   class="form-control"/>
+                                                   options="{'no_create': True}"/>
                                         </div>
                                         
                                         <!-- Indicadores de notificación -->
