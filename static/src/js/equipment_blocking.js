@@ -268,61 +268,218 @@ window.EquipmentBlocking = window.EquipmentBlocking || {};
             resultsContainer.innerHTML = equipmentCards;
         },
 
-        openActionModal: function(action, equipmentId, serie, equipmentData) {
-            currentAction = action;
-            currentEquipmentId = equipmentId;
-            
-            const equipment = typeof equipmentData === 'string' ? JSON.parse(equipmentData) : equipmentData;
-            
-            const modalTitle = document.getElementById('modalTitle');
-            const motivoInput = document.getElementById('motivoInput');
-            const confirmBtn = document.getElementById('confirmActionBtn');
-            const equipmentDetails = document.getElementById('equipmentDetails');
-            
-            // Mostrar detalles del equipo
-            this.updateElement('detailCliente', equipment.cliente);
-            this.updateElement('detailModelo', equipment.modelo);
-            this.updateElement('detailIP', equipment.ip_equipo || 'No configurada');
-            
-            const estadoElement = document.getElementById('detailEstado');
-            if (estadoElement) {
-                estadoElement.innerHTML = '<span class="status-badge status-' + equipment.estado_bloqueo + '">' + equipment.estado_label + '</span>';
+        function openActionModal(action, equipmentId, serie, equipmentIdRef) {
+    console.log('Opening action modal:', action, equipmentId);
+    currentAction = action;
+    currentEquipmentId = equipmentId;
+    
+    // Obtener datos del equipo desde el DOM
+    let equipment = {};
+    
+    // Buscar la tarjeta del equipo en el DOM usando la serie
+    const equipmentCards = document.querySelectorAll('.equipment-card');
+    let equipmentCard = null;
+    
+    for (let card of equipmentCards) {
+        const serieElement = card.querySelector('h5');
+        if (serieElement && serieElement.textContent.includes(serie)) {
+            equipmentCard = card;
+            break;
+        }
+    }
+    
+    if (equipmentCard) {
+        // Extraer información del DOM
+        const serieText = equipmentCard.querySelector('h5')?.textContent || '';
+        const clienteModeloText = equipmentCard.querySelector('p.text-muted')?.textContent || '';
+        const [cliente, modelo] = clienteModeloText.split(' - ');
+        
+        // Extraer marca de los detail-items
+        const detailItems = equipmentCard.querySelectorAll('.detail-item span');
+        let marca = '';
+        let direccion = '';
+        let ip = '';
+        let accesoRemoto = false;
+        
+        detailItems.forEach(item => {
+            const text = item.textContent;
+            if (text.startsWith('Marca:')) {
+                marca = text.replace('Marca:', '').trim();
+            } else if (text.startsWith('Dirección:')) {
+                direccion = text.replace('Dirección:', '').trim();
+            } else if (text.startsWith('IP:')) {
+                ip = text.replace('IP:', '').trim();
+            } else if (text.startsWith('Acceso remoto:')) {
+                accesoRemoto = text.includes('Disponible');
             }
-            
-            if (equipmentDetails) {
-                equipmentDetails.style.display = 'block';
+        });
+        
+        // Extraer estado actual
+        const statusBadge = equipmentCard.querySelector('.status-badge');
+        const estadoClasses = statusBadge?.className || '';
+        let estadoBloqueo = '';
+        let estadoLabel = statusBadge?.textContent?.trim() || '';
+        
+        if (estadoClasses.includes('status-activo')) estadoBloqueo = 'activo';
+        else if (estadoClasses.includes('status-suspendido')) estadoBloqueo = 'suspendido';
+        else if (estadoClasses.includes('status-bloqueado')) estadoBloqueo = 'bloqueado';
+        else if (estadoClasses.includes('status-no_accesible')) estadoBloqueo = 'no_accesible';
+        else if (estadoClasses.includes('status-pendiente_bloqueo')) estadoBloqueo = 'pendiente_bloqueo';
+        else if (estadoClasses.includes('status-pendiente_desbloqueo')) estadoBloqueo = 'pendiente_desbloqueo';
+        
+        // Construir objeto equipment
+        equipment = {
+            id: equipmentId,
+            serie: serie,
+            cliente: cliente?.trim() || '',
+            modelo: modelo?.trim() || '',
+            marca: marca,
+            direccion: direccion,
+            ip_equipo: ip === 'No configurada' ? '' : ip,
+            acceso_remoto: accesoRemoto,
+            estado_bloqueo: estadoBloqueo,
+            estado_label: estadoLabel
+        };
+    } else {
+        // Datos básicos si no se encuentra la tarjeta
+        equipment = {
+            id: equipmentId,
+            serie: serie,
+            cliente: '',
+            modelo: '',
+            marca: '',
+            direccion: '',
+            ip_equipo: '',
+            acceso_remoto: false,
+            estado_bloqueo: '',
+            estado_label: ''
+        };
+    }
+    
+    // Configurar elementos del modal
+    const modalTitle = document.getElementById('modalTitle');
+    const motivoInput = document.getElementById('motivoInput');
+    const confirmBtn = document.getElementById('confirmActionBtn');
+    const equipmentDetails = document.getElementById('equipmentDetails');
+    
+    // Mostrar detalles del equipo
+    updateElement('detailCliente', equipment.cliente || 'No especificado');
+    updateElement('detailModelo', equipment.modelo || 'No especificado');
+    updateElement('detailIP', equipment.ip_equipo || 'No configurada');
+    
+    const estadoElement = document.getElementById('detailEstado');
+    if (estadoElement && equipment.estado_bloqueo) {
+        estadoElement.innerHTML = '<span class="status-badge status-' + equipment.estado_bloqueo + '">' + 
+                                 escapeHtml(equipment.estado_label || equipment.estado_bloqueo) + '</span>';
+    } else if (estadoElement) {
+        estadoElement.textContent = 'No determinado';
+    }
+    
+    // Mostrar sección de detalles
+    if (equipmentDetails) {
+        equipmentDetails.style.display = 'block';
+    }
+    
+    // Configurar modal según la acción
+    switch(action) {
+        case 'suspend':
+            if (modalTitle) modalTitle.textContent = 'Suspender Servicio - Serie: ' + serie;
+            if (motivoInput) {
+                motivoInput.setAttribute('placeholder', 'Motivo de la suspensión (ej: Mora de pagos, incumplimiento contractual...)');
+                motivoInput.focus();
             }
-            
-            // Configurar según la acción
-            switch(action) {
-                case 'suspend':
-                    if (modalTitle) modalTitle.textContent = 'Suspender Servicio - Serie: ' + serie;
-                    if (motivoInput) motivoInput.setAttribute('placeholder', 'Motivo de la suspensión (ej: Mora de pagos, incumplimiento contractual...)');
-                    if (confirmBtn) confirmBtn.className = 'btn btn-warning';
-                    break;
-                case 'block':
-                    if (modalTitle) modalTitle.textContent = 'Bloquear Equipo - Serie: ' + serie;
-                    if (motivoInput) motivoInput.setAttribute('placeholder', 'Motivo del bloqueo remoto...');
-                    if (confirmBtn) confirmBtn.className = 'btn btn-danger';
-                    break;
-                case 'unblock':
-                    if (modalTitle) modalTitle.textContent = 'Desbloquear Equipo - Serie: ' + serie;
-                    if (motivoInput) motivoInput.setAttribute('placeholder', 'Observaciones del desbloqueo...');
-                    if (confirmBtn) confirmBtn.className = 'btn btn-success';
-                    break;
+            if (confirmBtn) {
+                confirmBtn.className = 'btn btn-warning';
+                confirmBtn.innerHTML = 
+                    '<span id="btnLoading" class="d-none">' +
+                        '<span class="spinner-border spinner-border-sm me-2" role="status"></span>' +
+                        'Procesando...' +
+                    '</span>' +
+                    '<span id="btnText">' +
+                        '<i class="fas fa-pause me-2"></i>Suspender Servicio' +
+                    '</span>';
             }
+            break;
             
-            // Limpiar modal y mostrar
-            if (motivoInput) motivoInput.value = '';
-            
-            const modalAlert = document.getElementById('modalAlert');
-            if (modalAlert) modalAlert.innerHTML = '';
-            
-            if (actionModal) {
-                actionModal.show();
+        case 'block':
+            if (modalTitle) modalTitle.textContent = 'Bloquear Equipo - Serie: ' + serie;
+            if (motivoInput) {
+                motivoInput.setAttribute('placeholder', 'Motivo del bloqueo remoto (ej: Mantenimiento, violación de términos...)');
+                motivoInput.focus();
             }
-        },
-
+            if (confirmBtn) {
+                confirmBtn.className = 'btn btn-danger';
+                confirmBtn.innerHTML = 
+                    '<span id="btnLoading" class="d-none">' +
+                        '<span class="spinner-border spinner-border-sm me-2" role="status"></span>' +
+                        'Procesando...' +
+                    '</span>' +
+                    '<span id="btnText">' +
+                        '<i class="fas fa-lock me-2"></i>Bloquear Equipo' +
+                    '</span>';
+            }
+            break;
+            
+        case 'unblock':
+            if (modalTitle) modalTitle.textContent = 'Desbloquear Equipo - Serie: ' + serie;
+            if (motivoInput) {
+                motivoInput.setAttribute('placeholder', 'Observaciones del desbloqueo (ej: Pago realizado, problema resuelto...)');
+                motivoInput.focus();
+            }
+            if (confirmBtn) {
+                confirmBtn.className = 'btn btn-success';
+                confirmBtn.innerHTML = 
+                    '<span id="btnLoading" class="d-none">' +
+                        '<span class="spinner-border spinner-border-sm me-2" role="status"></span>' +
+                        'Procesando...' +
+                    '</span>' +
+                    '<span id="btnText">' +
+                        '<i class="fas fa-unlock me-2"></i>Desbloquear Equipo' +
+                    '</span>';
+            }
+            break;
+            
+        default:
+            console.error('Acción no reconocida:', action);
+            return;
+    }
+    
+    // Limpiar campos del modal
+    if (motivoInput) {
+        motivoInput.value = '';
+    }
+    
+    // Limpiar alertas previas del modal
+    const modalAlert = document.getElementById('modalAlert');
+    if (modalAlert) {
+        modalAlert.innerHTML = '';
+    }
+    
+    // Habilitar botón de confirmación
+    if (confirmBtn) {
+        confirmBtn.disabled = false;
+    }
+    
+    // Mostrar modal
+    if (actionModal) {
+        actionModal.show();
+    } else {
+        console.error('Modal no inicializado');
+        // Intentar inicializar el modal si no existe
+        const modalElement = document.getElementById('actionModal');
+        if (modalElement && typeof bootstrap !== 'undefined') {
+            actionModal = new bootstrap.Modal(modalElement, {
+                backdrop: 'static',
+                keyboard: false
+            });
+            actionModal.show();
+        } else {
+            showAlert('danger', 'Error: No se pudo abrir el modal de acciones');
+        }
+    }
+    
+    console.log('Modal configurado para:', action, 'con equipo:', equipment);
+},
         executeAction: function() {
             const motivoInput = document.getElementById('motivoInput');
             const motivo = motivoInput ? motivoInput.value : '';

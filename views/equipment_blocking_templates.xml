@@ -1162,19 +1162,19 @@
                     <div class="d-flex gap-2 justify-content-end flex-wrap">
                         <t t-if="equipo.get('puede_suspender')">
                             <button class="btn btn-warning btn-sm" 
-                                    t-attf-onclick="openActionModal('suspend', #{equipo.get('id')}, '#{equipo.get('serie')}', '#{json.dumps(equipo).replace('&quot;', '\&quot;').replace('&#x27;', '\&#x27;')}')">
+                                    t-attf-onclick="openActionModal('suspend', #{equipo.get('id')}, '#{equipo.get('serie')}', #{equipo.get('id')})">
                                 <i class="fas fa-pause me-1"></i> Suspender
                             </button>
                         </t>
                         <t t-if="equipo.get('puede_bloquear')">
                             <button class="btn btn-danger btn-sm" 
-                                    t-attf-onclick="openActionModal('block', #{equipo.get('id')}, '#{equipo.get('serie')}', '#{json.dumps(equipo).replace('&quot;', '\&quot;').replace('&#x27;', '\&#x27;')}')">
+                                    t-attf-onclick="openActionModal('block', #{equipo.get('id')}, '#{equipo.get('serie')}', #{equipo.get('id')})">
                                 <i class="fas fa-lock me-1"></i> Bloquear
                             </button>
                         </t>
                         <t t-if="equipo.get('puede_desbloquear')">
                             <button class="btn btn-success btn-sm" 
-                                    t-attf-onclick="openActionModal('unblock', #{equipo.get('id')}, '#{equipo.get('serie')}', '#{json.dumps(equipo).replace('&quot;', '\&quot;').replace('&#x27;', '\&#x27;')}')">
+                                    t-attf-onclick="openActionModal('unblock', #{equipo.get('id')}, '#{equipo.get('serie')}', #{equipo.get('id')})">
                                 <i class="fas fa-unlock me-1"></i> Desbloquear
                             </button>
                         </t>
