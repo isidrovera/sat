@@ -121,6 +121,7 @@
         'web.assets_backend': [
             
             'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
             # CSS Files
             'sat/static/src/css/dashboard.css',
             'sat/static/src/css/style.css',
@@ -177,6 +178,7 @@
         
         'web.assets_frontend': [
             'sat/static/src/js/searchFilter.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
         ],
         
         'web.assets_qweb': [
