@@ -1285,7 +1285,154 @@ class UnidadAlquiler(models.Model):
                 'puede_desbloquear': equipo.estado_bloqueo in ['bloqueado', 'suspendido']
             })
         return resultado
+    # Agregar estos métodos al modelo UnidadAlquiler en tu archivo principal
 
+    @api.model
+    def get_dashboard_data_alquilados(self):
+        """Obtiene datos del dashboard solo para equipos alquilados"""
+        base_domain = [('estado_alquiler_id', '=', 'alquilada')]
+        
+        data = {
+            'equipos_activos': self.search_count(base_domain + [('estado_bloqueo', '=', 'activo')]),
+            'equipos_suspendidos': self.search_count(base_domain + [('estado_bloqueo', '=', 'suspendido')]),
+            'equipos_bloqueados': self.search_count(base_domain + [('estado_bloqueo', '=', 'bloqueado')]),
+            'equipos_no_accesibles': self.search_count(base_domain + [('estado_bloqueo', '=', 'no_accesible')]),
+            'pendientes_bloqueo': self.search_count(base_domain + [('estado_bloqueo', '=', 'pendiente_bloqueo')]),
+            'pendientes_desbloqueo': self.search_count(base_domain + [('estado_bloqueo', '=', 'pendiente_desbloqueo')]),
+            'total_alquilados': self.search_count(base_domain)
+        }
+        
+        # Obtener equipos que requieren atención (solo alquilados)
+        equipos_atencion = self.search(
+            base_domain + [('estado_bloqueo', 'in', ['pendiente_bloqueo', 'pendiente_desbloqueo', 'no_accesible'])],
+            limit=10,
+            order='fecha_bloqueo desc'
+        )
+        
+        data['equipos_atencion'] = [{
+            'id': eq.id,
+            'cliente': eq.cliente_id.name,
+            'serie': eq.serie,
+            'modelo': eq.name.name,
+            'estado': eq.estado_bloqueo,
+            'estado_label': dict(eq._fields['estado_bloqueo'].selection)[eq.estado_bloqueo],
+            'motivo': eq.motivo_bloqueo,
+            'fecha_bloqueo': eq.fecha_bloqueo.strftime('%d/%m/%Y %H:%M') if eq.fecha_bloqueo else ''
+        } for eq in equipos_atencion]
+        
+        return data
+
+    @api.model
+    def get_equipos_alquilados_inicial(self, limit=50):
+        """Obtiene lista inicial de equipos alquilados para mostrar al cargar la página"""
+        equipos = self.search([
+            ('estado_alquiler_id', '=', 'alquilada')
+        ], limit=limit, order='serie asc')
+        
+        resultado = []
+        for equipo in equipos:
+            resultado.append({
+                'id': equipo.id,
+                'serie': equipo.serie,
+                'cliente': equipo.cliente_id.name if equipo.cliente_id else '',
+                'modelo': equipo.name.name if equipo.name else '',
+                'marca': equipo.marca,
+                'estado_bloqueo': equipo.estado_bloqueo,
+                'estado_label': dict(equipo._fields['estado_bloqueo'].selection)[equipo.estado_bloqueo],
+                'direccion': equipo.direccion,
+                'acceso_remoto': equipo.acceso_remoto_disponible,
+                'ip_equipo': equipo.ip_equipo,
+                'motivo_bloqueo': equipo.motivo_bloqueo,
+                'fecha_bloqueo': equipo.fecha_bloqueo.strftime('%d/%m/%Y %H:%M') if equipo.fecha_bloqueo else '',
+                'puede_suspender': equipo.estado_bloqueo == 'activo',
+                'puede_bloquear': equipo.estado_bloqueo in ['activo', 'suspendido'],
+                'puede_desbloquear': equipo.estado_bloqueo in ['bloqueado', 'suspendido'],
+                'contacto': equipo.contacto_id,
+                'celular': equipo.celular,
+                'correo': equipo.correo_
+            })
+        
+        return resultado
+
+    @api.model
+    def buscar_equipos_alquilados_web(self, busqueda, estado_filtro=''):
+        """Busca equipos solo en estado alquilada"""
+        base_domain = [('estado_alquiler_id', '=', 'alquilada')]
+        
+        # Agregar filtro de búsqueda por texto
+        if busqueda:
+            search_domain = ['|', '|', '|',
+                            ('serie', 'ilike', busqueda),
+                            ('cliente_id.name', 'ilike', busqueda),
+                            ('name.name', 'ilike', busqueda),
+                            ('marca', 'ilike', busqueda)]
+            base_domain = base_domain + search_domain
+        
+        # Agregar filtro por estado de bloqueo
+        if estado_filtro:
+            base_domain.append(('estado_bloqueo', '=', estado_filtro))
+        
+        equipos = self.search(base_domain, limit=100, order='serie asc')
+        
+        resultado = []
+        for equipo in equipos:
+            resultado.append({
+                'id': equipo.id,
+                'serie': equipo.serie,
+                'cliente': equipo.cliente_id.name if equipo.cliente_id else '',
+                'modelo': equipo.name.name if equipo.name else '',
+                'marca': equipo.marca,
+                'estado_bloqueo': equipo.estado_bloqueo,
+                'estado_label': dict(equipo._fields['estado_bloqueo'].selection)[equipo.estado_bloqueo],
+                'direccion': equipo.direccion,
+                'acceso_remoto': equipo.acceso_remoto_disponible,
+                'ip_equipo': equipo.ip_equipo,
+                'motivo_bloqueo': equipo.motivo_bloqueo,
+                'fecha_bloqueo': equipo.fecha_bloqueo.strftime('%d/%m/%Y %H:%M') if equipo.fecha_bloqueo else '',
+                'puede_suspender': equipo.estado_bloqueo == 'activo',
+                'puede_bloquear': equipo.estado_bloqueo in ['activo', 'suspendido'],
+                'puede_desbloquear': equipo.estado_bloqueo in ['bloqueado', 'suspendido'],
+                'contacto': equipo.contacto_id,
+                'celular': equipo.celular,
+                'correo': equipo.correo_
+            })
+        
+        return resultado
+
+    @api.model
+    def filtrar_equipos_por_estado_bloqueo(self, estado_bloqueo):
+        """Filtra equipos alquilados por estado de bloqueo específico"""
+        domain = [
+            ('estado_alquiler_id', '=', 'alquilada'),
+            ('estado_bloqueo', '=', estado_bloqueo)
+        ]
+        
+        equipos = self.search(domain, limit=100, order='serie asc')
+        
+        resultado = []
+        for equipo in equipos:
+            resultado.append({
+                'id': equipo.id,
+                'serie': equipo.serie,
+                'cliente': equipo.cliente_id.name if equipo.cliente_id else '',
+                'modelo': equipo.name.name if equipo.name else '',
+                'marca': equipo.marca,
+                'estado_bloqueo': equipo.estado_bloqueo,
+                'estado_label': dict(equipo._fields['estado_bloqueo'].selection)[equipo.estado_bloqueo],
+                'direccion': equipo.direccion,
+                'acceso_remoto': equipo.acceso_remoto_disponible,
+                'ip_equipo': equipo.ip_equipo,
+                'motivo_bloqueo': equipo.motivo_bloqueo,
+                'fecha_bloqueo': equipo.fecha_bloqueo.strftime('%d/%m/%Y %H:%M') if equipo.fecha_bloqueo else '',
+                'puede_suspender': equipo.estado_bloqueo == 'activo',
+                'puede_bloquear': equipo.estado_bloqueo in ['activo', 'suspendido'],
+                'puede_desbloquear': equipo.estado_bloqueo in ['bloqueado', 'suspendido'],
+                'contacto': equipo.contacto_id,
+                'celular': equipo.celular,
+                'correo': equipo.correo_
+            })
+        
+        return resultado
 class SolicitudPartes(models.Model):
     _name = 'solicitud.partes'
     _inherit = ['mail.thread', 'mail.activity.mixin']

@@ -5,11 +5,14 @@
         <template id="equipment_blocking_dashboard_template" name="Dashboard Bloqueo de Equipos">
             <t t-call="website.layout">
                 <t t-set="additional_title">Sistema de Bloqueo de Equipos</t>
+                <!-- Importar json para usar en templates -->
+                <t t-set="json" t-value="json"/>
                 
                 <!-- CSS Inline -->
                 <style>
                     .dashboard-card {
                         transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+                        cursor: pointer;
                     }
                     .dashboard-card:hover {
                         transform: translateY(-2px);
@@ -85,7 +88,7 @@
                                             <i class="fas fa-shield-alt fa-2x text-primary me-3"></i>
                                             <div>
                                                 <h1 class="h2 mb-1 fw-bold">Sistema de Bloqueo de Equipos</h1>
-                                                <p class="text-muted mb-0">Gestión centralizada de estados de servicio y bloqueos remotos</p>
+                                                <p class="text-muted mb-0">Gestión centralizada de estados de servicio y bloqueos remotos - Solo equipos alquilados</p>
                                             </div>
                                         </div>
                                     </div>
@@ -94,7 +97,7 @@
                                 <!-- Dashboard Cards -->
                                 <div class="row g-3 mb-4">
                                     <div class="col-xl-2 col-lg-4 col-md-6">
-                                        <div class="card border-0 shadow-sm h-100 dashboard-card">
+                                        <div class="card border-0 shadow-sm h-100 dashboard-card" onclick="filterByStatus('activo')">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-start">
                                                     <div>
@@ -116,7 +119,7 @@
                                     </div>
 
                                     <div class="col-xl-2 col-lg-4 col-md-6">
-                                        <div class="card border-0 shadow-sm h-100 dashboard-card">
+                                        <div class="card border-0 shadow-sm h-100 dashboard-card" onclick="filterByStatus('suspendido')">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-start">
                                                     <div>
@@ -138,7 +141,7 @@
                                     </div>
 
                                     <div class="col-xl-2 col-lg-4 col-md-6">
-                                        <div class="card border-0 shadow-sm h-100 dashboard-card">
+                                        <div class="card border-0 shadow-sm h-100 dashboard-card" onclick="filterByStatus('bloqueado')">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-start">
                                                     <div>
@@ -160,7 +163,7 @@
                                     </div>
 
                                     <div class="col-xl-2 col-lg-4 col-md-6">
-                                        <div class="card border-0 shadow-sm h-100 dashboard-card">
+                                        <div class="card border-0 shadow-sm h-100 dashboard-card" onclick="filterByStatus('no_accesible')">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-start">
                                                     <div>
@@ -182,7 +185,7 @@
                                     </div>
 
                                     <div class="col-xl-2 col-lg-4 col-md-6">
-                                        <div class="card border-0 shadow-sm h-100 dashboard-card">
+                                        <div class="card border-0 shadow-sm h-100 dashboard-card" onclick="filterByStatus('pendiente_bloqueo')">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-start">
                                                     <div>
@@ -204,7 +207,7 @@
                                     </div>
 
                                     <div class="col-xl-2 col-lg-4 col-md-6">
-                                        <div class="card border-0 shadow-sm h-100 dashboard-card">
+                                        <div class="card border-0 shadow-sm h-100 dashboard-card" onclick="filterByStatus('pendiente_desbloqueo')">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-start">
                                                     <div>
@@ -232,7 +235,7 @@
                                         <div class="row g-3 align-items-end">
                                             <div class="col-lg-6">
                                                 <label for="search-input" class="form-label fw-bold">
-                                                    <i class="fas fa-search me-2"></i>Buscar Equipos
+                                                    <i class="fas fa-search me-2"></i>Buscar Equipos Alquilados
                                                 </label>
                                                 <input type="text" id="search-input" class="form-control form-control-lg" 
                                                        placeholder="Buscar por serie, cliente, modelo o marca..." />
@@ -244,6 +247,9 @@
                                                     </button>
                                                     <button type="button" class="btn btn-warning btn-lg" id="pendingBtn">
                                                         <i class="fas fa-exclamation-circle me-2"></i>Ver Pendientes
+                                                    </button>
+                                                    <button type="button" class="btn btn-success btn-lg" onclick="showAllEquipments()">
+                                                        <i class="fas fa-list me-2"></i>Ver Todos
                                                     </button>
                                                     <button type="button" class="btn btn-info btn-lg" id="refreshBtn">
                                                         <i class="fas fa-sync-alt me-2"></i>Actualizar
@@ -257,15 +263,31 @@
                                 <!-- Results Section -->
                                 <div class="card border-0 shadow-sm">
                                     <div class="card-header bg-light">
-                                        <h4 class="mb-0">
-                                            <i class="fas fa-list me-2"></i>Resultados de Búsqueda
-                                        </h4>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h4 class="mb-0">
+                                                <i class="fas fa-list me-2"></i>Equipos Alquilados
+                                            </h4>
+                                            <span id="results-count" class="badge bg-primary">
+                                                <t t-esc="len(equipos_iniciales or [])"/>
+                                            </span>
+                                        </div>
                                     </div>
                                     <div class="card-body" id="equipment-results">
-                                        <div class="text-center py-5">
-                                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
-                                            <p class="text-muted">Utiliza el buscador para encontrar equipos o haz clic en "Ver Pendientes" para equipos que requieren atención.</p>
-                                        </div>
+                                        <!-- Mostrar equipos iniciales -->
+                                        <t t-if="equipos_iniciales and len(equipos_iniciales) > 0">
+                                            <t t-call="sat.equipment_cards_template">
+                                                <t t-set="equipos" t-value="equipos_iniciales"/>
+                                            </t>
+                                        </t>
+                                        <t t-else="">
+                                            <div class="text-center py-5">
+                                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                                <p class="text-muted">No hay equipos alquilados disponibles.</p>
+                                                <button type="button" class="btn btn-primary" onclick="searchEquipments()">
+                                                    <i class="fas fa-refresh me-2"></i>Cargar Equipos
+                                                </button>
+                                            </div>
+                                        </t>
                                     </div>
                                 </div>
                             </div>
@@ -332,6 +354,7 @@
                 <script type="text/javascript">
                 //<![CDATA[
                 // Equipment Blocking Dashboard - JavaScript
+                // Equipment Blocking Dashboard - JavaScript Completo
                 (function() {
                     'use strict';
                     
@@ -341,6 +364,7 @@
                     let currentAction = null;
                     let currentEquipmentId = null;
                     let actionModal = null;
+                    let currentFilter = 'todos'; // Para tracking del filtro actual
 
                     // Funciones principales
                     function getCsrfToken() {
@@ -400,9 +424,9 @@
                         
                         const alertId = 'alert-' + Date.now();
                         const alertClass = type === 'success' ? 'alert-success' : 
-                                       type === 'warning' ? 'alert-warning' : 'alert-danger';
+                                    type === 'warning' ? 'alert-warning' : 'alert-danger';
                         const icon = type === 'success' ? 'check-circle' : 
-                                  type === 'warning' ? 'exclamation-triangle' : 'times-circle';
+                                type === 'warning' ? 'exclamation-triangle' : 'times-circle';
                         
                         const alertHtml = 
                             '<div id="' + alertId + '" class="alert ' + alertClass + ' alert-dismissible fade show" role="alert">' +
@@ -422,19 +446,107 @@
                         }, 5000);
                     }
 
-                    function searchEquipments() {
-                        console.log('Searching equipments...');
-                        const searchInput = document.getElementById('search-input');
-                        const searchTerm = searchInput ? searchInput.value : '';
-                        const resultsContainer = document.getElementById('equipment-results');
-                        
-                        if (resultsContainer) {
-                            resultsContainer.innerHTML = 
+                    function updateResultsCount(count) {
+                        const countElement = document.getElementById('results-count');
+                        if (countElement) {
+                            countElement.textContent = count;
+                        }
+                    }
+
+                    function setLoadingState(container, message = 'Cargando...') {
+                        if (container) {
+                            container.innerHTML = 
                                 '<div class="text-center py-5">' +
                                     '<div class="spinner-border text-primary mb-3" role="status"></div>' +
-                                    '<p class="text-muted">Buscando equipos...</p>' +
+                                    '<p class="text-muted">' + escapeHtml(message) + '</p>' +
                                 '</div>';
                         }
+                    }
+
+                    // Nueva función para filtrar por estado del dashboard
+                    function filterByStatus(estado) {
+                        console.log('Filtering by status:', estado);
+                        currentFilter = estado;
+                        
+                        // Limpiar búsqueda
+                        const searchInput = document.getElementById('search-input');
+                        if (searchInput) {
+                            searchInput.value = '';
+                        }
+                        
+                        const resultsContainer = document.getElementById('equipment-results');
+                        setLoadingState(resultsContainer, 'Filtrando equipos por estado...');
+
+                        return makeJsonRpcCall('/equipment/blocking/filter_by_status', {
+                            estado_bloqueo: estado
+                        })
+                        .then(result => {
+                            if (result.status === 'success') {
+                                displayEquipments(result.equipos);
+                                
+                                // Mostrar mensaje personalizado según filtro
+                                const estadoLabels = {
+                                    'activo': 'equipos activos',
+                                    'suspendido': 'equipos suspendidos',
+                                    'bloqueado': 'equipos bloqueados',
+                                    'no_accesible': 'equipos no accesibles',
+                                    'pendiente_bloqueo': 'equipos pendientes de bloqueo',
+                                    'pendiente_desbloqueo': 'equipos pendientes de desbloqueo'
+                                };
+                                
+                                const estadoLabel = estadoLabels[estado] || 'equipos';
+                                showAlert('success', `Mostrando ${result.equipos.length} ${estadoLabel}`);
+                            } else {
+                                showAlert('danger', 'Error al filtrar equipos: ' + result.message);
+                            }
+                        })
+                        .catch(error => {
+                            showAlert('danger', 'Error de conexión al filtrar equipos');
+                            console.error('Error:', error);
+                        });
+                    }
+
+                    // Nueva función para mostrar todos los equipos
+                    function showAllEquipments() {
+                        console.log('Showing all equipments...');
+                        currentFilter = 'todos';
+                        
+                        // Limpiar búsqueda
+                        const searchInput = document.getElementById('search-input');
+                        if (searchInput) {
+                            searchInput.value = '';
+                        }
+                        
+                        const resultsContainer = document.getElementById('equipment-results');
+                        setLoadingState(resultsContainer, 'Cargando todos los equipos alquilados...');
+
+                        return makeJsonRpcCall('/equipment/blocking/search', {
+                            search_term: '',
+                            show_all: true
+                        })
+                        .then(result => {
+                            if (result.status === 'success') {
+                                displayEquipments(result.equipos);
+                                showAlert('success', `Mostrando ${result.equipos.length} equipos alquilados`);
+                            } else {
+                                showAlert('danger', 'Error al cargar equipos: ' + result.message);
+                            }
+                        })
+                        .catch(error => {
+                            showAlert('danger', 'Error de conexión');
+                            console.error('Error:', error);
+                        });
+                    }
+
+                    function searchEquipments() {
+                        console.log('Searching equipments...');
+                        currentFilter = 'busqueda';
+                        
+                        const searchInput = document.getElementById('search-input');
+                        const searchTerm = searchInput ? searchInput.value.trim() : '';
+                        const resultsContainer = document.getElementById('equipment-results');
+                        
+                        setLoadingState(resultsContainer, 'Buscando equipos...');
 
                         return makeJsonRpcCall('/equipment/blocking/search', {
                             search_term: searchTerm
@@ -442,6 +554,12 @@
                         .then(result => {
                             if (result.status === 'success') {
                                 displayEquipments(result.equipos);
+                                
+                                if (searchTerm) {
+                                    showAlert('success', `Encontrados ${result.equipos.length} equipos para "${searchTerm}"`);
+                                } else {
+                                    showAlert('success', `Mostrando ${result.equipos.length} equipos alquilados`);
+                                }
                             } else {
                                 showAlert('danger', 'Error al buscar equipos: ' + result.message);
                             }
@@ -454,19 +572,15 @@
 
                     function loadPendingEquipments() {
                         console.log('Loading pending equipments...');
+                        currentFilter = 'pendientes';
+                        
                         const searchInput = document.getElementById('search-input');
                         if (searchInput) {
                             searchInput.value = '';
                         }
                         
                         const resultsContainer = document.getElementById('equipment-results');
-                        if (resultsContainer) {
-                            resultsContainer.innerHTML = 
-                                '<div class="text-center py-5">' +
-                                    '<div class="spinner-border text-warning mb-3" role="status"></div>' +
-                                    '<p class="text-muted">Cargando equipos pendientes...</p>' +
-                                '</div>';
-                        }
+                        setLoadingState(resultsContainer, 'Cargando equipos pendientes...');
 
                         return makeJsonRpcCall('/equipment/blocking/search', {
                             search_term: '',
@@ -478,6 +592,7 @@
                                     ['suspendido', 'bloqueado', 'no_accesible', 'pendiente_bloqueo', 'pendiente_desbloqueo'].includes(eq.estado_bloqueo)
                                 );
                                 displayEquipments(pendingEquipments);
+                                showAlert('warning', `${pendingEquipments.length} equipos requieren atención`);
                             } else {
                                 showAlert('danger', 'Error al cargar equipos: ' + result.message);
                             }
@@ -490,6 +605,15 @@
 
                     function refreshDashboard() {
                         console.log('Refreshing dashboard...');
+                        
+                        // Mostrar indicador de actualización
+                        const refreshBtn = document.getElementById('refreshBtn');
+                        const originalHtml = refreshBtn ? refreshBtn.innerHTML : '';
+                        if (refreshBtn) {
+                            refreshBtn.disabled = true;
+                            refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Actualizando...';
+                        }
+                        
                         return makeJsonRpcCall('/equipment/blocking/dashboard_data', {})
                             .then(result => {
                                 if (result.status === 'success') {
@@ -502,11 +626,38 @@
                                     updateElement('pendientes-desbloqueo', data.pendientes_desbloqueo);
                                     
                                     showAlert('success', 'Dashboard actualizado correctamente');
+                                    
+                                    // Recargar vista actual según el filtro
+                                    if (currentFilter !== 'busqueda') {
+                                        setTimeout(() => {
+                                            switch(currentFilter) {
+                                                case 'todos':
+                                                    showAllEquipments();
+                                                    break;
+                                                case 'pendientes':
+                                                    loadPendingEquipments();
+                                                    break;
+                                                default:
+                                                    if (['activo', 'suspendido', 'bloqueado', 'no_accesible', 'pendiente_bloqueo', 'pendiente_desbloqueo'].includes(currentFilter)) {
+                                                        filterByStatus(currentFilter);
+                                                    } else {
+                                                        showAllEquipments();
+                                                    }
+                                            }
+                                        }, 500);
+                                    }
                                 }
                             })
                             .catch(error => {
                                 console.error('Error al actualizar dashboard:', error);
                                 showAlert('danger', 'Error al actualizar el dashboard');
+                            })
+                            .finally(() => {
+                                // Restaurar botón
+                                if (refreshBtn) {
+                                    refreshBtn.disabled = false;
+                                    refreshBtn.innerHTML = originalHtml;
+                                }
                             });
                     }
 
@@ -514,11 +665,43 @@
                         const resultsContainer = document.getElementById('equipment-results');
                         if (!resultsContainer) return;
                         
+                        updateResultsCount(equipos.length);
+                        
                         if (equipos.length === 0) {
+                            let emptyMessage = 'No se encontraron equipos con los criterios especificados.';
+                            let emptyIcon = 'fas fa-inbox';
+                            
+                            // Mensaje personalizado según el filtro actual
+                            switch(currentFilter) {
+                                case 'activo':
+                                    emptyMessage = 'No hay equipos activos en este momento.';
+                                    emptyIcon = 'fas fa-check-circle';
+                                    break;
+                                case 'suspendido':
+                                    emptyMessage = 'No hay equipos suspendidos.';
+                                    emptyIcon = 'fas fa-pause-circle';
+                                    break;
+                                case 'bloqueado':
+                                    emptyMessage = 'No hay equipos bloqueados.';
+                                    emptyIcon = 'fas fa-lock';
+                                    break;
+                                case 'pendientes':
+                                    emptyMessage = 'No hay equipos pendientes de atención.';
+                                    emptyIcon = 'fas fa-check-circle';
+                                    break;
+                                case 'busqueda':
+                                    emptyMessage = 'No se encontraron equipos que coincidan con la búsqueda.';
+                                    emptyIcon = 'fas fa-search';
+                                    break;
+                            }
+                            
                             resultsContainer.innerHTML = 
                                 '<div class="text-center py-5">' +
-                                    '<i class="fas fa-inbox fa-3x text-muted mb-3"></i>' +
-                                    '<p class="text-muted">No se encontraron equipos con los criterios especificados.</p>' +
+                                    '<i class="' + emptyIcon + ' fa-3x text-muted mb-3"></i>' +
+                                    '<p class="text-muted">' + emptyMessage + '</p>' +
+                                    '<button type="button" class="btn btn-primary" onclick="showAllEquipments()">' +
+                                        '<i class="fas fa-list me-2"></i>Ver Todos los Equipos' +
+                                    '</button>' +
                                 '</div>';
                             return;
                         }
@@ -535,7 +718,7 @@
                                 '</div>' : '';
 
                             const buttons = [];
-                            const equipoJsonStr = JSON.stringify(equipo).replace(/"/g, "&quot;");
+                            const equipoJsonStr = JSON.stringify(equipo).replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
                             
                             if (equipo.puede_suspender) {
                                 buttons.push(
@@ -615,7 +798,7 @@
                         let equipment;
                         try {
                             if (typeof equipmentDataStr === 'string') {
-                                equipment = JSON.parse(equipmentDataStr.replace(/&quot;/g, '"'));
+                                equipment = JSON.parse(equipmentDataStr.replace(/&quot;/g, '"').replace(/&#x27;/g, "'"));
                             } else {
                                 equipment = equipmentDataStr;
                             }
@@ -648,17 +831,26 @@
                             case 'suspend':
                                 if (modalTitle) modalTitle.textContent = 'Suspender Servicio - Serie: ' + serie;
                                 if (motivoInput) motivoInput.setAttribute('placeholder', 'Motivo de la suspensión (ej: Mora de pagos, incumplimiento contractual...)');
-                                if (confirmBtn) confirmBtn.className = 'btn btn-warning';
+                                if (confirmBtn) {
+                                    confirmBtn.className = 'btn btn-warning';
+                                    confirmBtn.innerHTML = '<span id="btnLoading" class="d-none"><span class="spinner-border spinner-border-sm me-2"></span>Procesando...</span><span id="btnText"><i class="fas fa-pause me-2"></i>Suspender Servicio</span>';
+                                }
                                 break;
                             case 'block':
                                 if (modalTitle) modalTitle.textContent = 'Bloquear Equipo - Serie: ' + serie;
                                 if (motivoInput) motivoInput.setAttribute('placeholder', 'Motivo del bloqueo remoto...');
-                                if (confirmBtn) confirmBtn.className = 'btn btn-danger';
+                                if (confirmBtn) {
+                                    confirmBtn.className = 'btn btn-danger';
+                                    confirmBtn.innerHTML = '<span id="btnLoading" class="d-none"><span class="spinner-border spinner-border-sm me-2"></span>Procesando...</span><span id="btnText"><i class="fas fa-lock me-2"></i>Bloquear Equipo</span>';
+                                }
                                 break;
                             case 'unblock':
                                 if (modalTitle) modalTitle.textContent = 'Desbloquear Equipo - Serie: ' + serie;
                                 if (motivoInput) motivoInput.setAttribute('placeholder', 'Observaciones del desbloqueo...');
-                                if (confirmBtn) confirmBtn.className = 'btn btn-success';
+                                if (confirmBtn) {
+                                    confirmBtn.className = 'btn btn-success';
+                                    confirmBtn.innerHTML = '<span id="btnLoading" class="d-none"><span class="spinner-border spinner-border-sm me-2"></span>Procesando...</span><span id="btnText"><i class="fas fa-unlock me-2"></i>Desbloquear Equipo</span>';
+                                }
                                 break;
                         }
                         
@@ -676,10 +868,16 @@
                     function executeAction() {
                         console.log('Executing action:', currentAction);
                         const motivoInput = document.getElementById('motivoInput');
-                        const motivo = motivoInput ? motivoInput.value : '';
+                        const motivo = motivoInput ? motivoInput.value.trim() : '';
                         const btnLoading = document.getElementById('btnLoading');
                         const btnText = document.getElementById('btnText');
                         const confirmBtn = document.getElementById('confirmActionBtn');
+                        
+                        // Validar motivo para acciones críticas
+                        if ((currentAction === 'suspend' || currentAction === 'block') && !motivo) {
+                            showModalAlert('warning', 'Por favor, proporciona un motivo para esta acción.');
+                            return;
+                        }
                         
                         // Mostrar loading
                         if (btnLoading) btnLoading.classList.remove('d-none');
@@ -706,7 +904,6 @@
                                         actionModal.hide();
                                     }
                                     refreshDashboard();
-                                    searchEquipments();
                                 }, 2000);
                             } else {
                                 showModalAlert('danger', result.message);
@@ -728,8 +925,10 @@
                         const alertContainer = document.getElementById('modalAlert');
                         if (!alertContainer) return;
                         
-                        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-                        const icon = type === 'success' ? 'check-circle' : 'exclamation-triangle';
+                        const alertClass = type === 'success' ? 'alert-success' : 
+                                        type === 'warning' ? 'alert-warning' : 'alert-danger';
+                        const icon = type === 'success' ? 'check-circle' : 
+                                type === 'warning' ? 'exclamation-triangle' : 'exclamation-triangle';
                         
                         alertContainer.innerHTML = 
                             '<div class="alert ' + alertClass + ' d-flex align-items-center" role="alert">' +
@@ -743,6 +942,8 @@
                     window.loadPendingEquipments = loadPendingEquipments;
                     window.refreshDashboard = refreshDashboard;
                     window.openActionModal = openActionModal;
+                    window.filterByStatus = filterByStatus;
+                    window.showAllEquipments = showAllEquipments;
 
                     // Event Listeners para botones
                     function setupEventListeners() {
@@ -754,6 +955,16 @@
                                     searchEquipments();
                                 }
                             });
+                            
+                            // Búsqueda en tiempo real (opcional)
+                            searchInput.addEventListener('input', debounce((e) => {
+                                const value = e.target.value.trim();
+                                if (value.length >= 3) {
+                                    searchEquipments();
+                                } else if (value.length === 0) {
+                                    showAllEquipments();
+                                }
+                            }, 500));
                         }
 
                         // Botones principales
@@ -783,6 +994,12 @@
                                 if (searchInput) searchInput.focus();
                             }
                             
+                            // F5 para actualizar dashboard
+                            if (e.key === 'F5') {
+                                e.preventDefault();
+                                refreshDashboard();
+                            }
+                            
                             // Escape para cerrar modal
                             if (e.key === 'Escape' && actionModal) {
                                 actionModal.hide();
@@ -792,15 +1009,39 @@
                         console.log('Event listeners configured');
                     }
 
+                    // Función utilitaria para debounce
+                    function debounce(func, wait) {
+                        let timeout;
+                        return function executedFunction(...args) {
+                            const later = () => {
+                                clearTimeout(timeout);
+                                func(...args);
+                            };
+                            clearTimeout(timeout);
+                            timeout = setTimeout(later, wait);
+                        };
+                    }
+
                     // Inicializar modal de Bootstrap
                     function initializeModal() {
                         const modalEl = document.getElementById('actionModal');
                         if (modalEl && typeof bootstrap !== 'undefined') {
-                            actionModal = new bootstrap.Modal(modalEl);
+                            actionModal = new bootstrap.Modal(modalEl, {
+                                backdrop: 'static',
+                                keyboard: false
+                            });
                             console.log('Bootstrap modal initialized');
                         } else {
                             console.warn('Bootstrap not found or modal element missing');
                         }
+                    }
+
+                    // Función para detectar si hay equipos pre-cargados
+                    function hasInitialEquipments() {
+                        const resultsContainer = document.getElementById('equipment-results');
+                        if (!resultsContainer) return false;
+                        
+                        return resultsContainer.querySelector('.equipment-card') !== null;
                     }
 
                     // Función de inicialización principal
@@ -808,6 +1049,19 @@
                         console.log('DOM Content Loaded - Initializing dashboard');
                         initializeModal();
                         setupEventListeners();
+                        
+                        // Cargar equipos automáticamente si no hay contenido inicial
+                        if (!hasInitialEquipments()) {
+                            console.log('No initial equipments found, loading all equipments...');
+                            showAllEquipments();
+                        } else {
+                            console.log('Initial equipments found, dashboard ready');
+                            // Actualizar contador basado en equipos existentes
+                            const existingCards = document.querySelectorAll('.equipment-card');
+                            updateResultsCount(existingCards.length);
+                            currentFilter = 'todos';
+                        }
+                        
                         console.log('Equipment Blocking Dashboard initialized successfully');
                     }
 
@@ -818,18 +1072,114 @@
                         initialize();
                     }
 
+                    // Auto-refresh cada 5 minutos (opcional)
+                    setInterval(() => {
+                        console.log('Auto-refreshing dashboard data...');
+                        makeJsonRpcCall('/equipment/blocking/dashboard_data', {})
+                            .then(result => {
+                                if (result.status === 'success') {
+                                    const data = result.data;
+                                    updateElement('equipos-activos', data.equipos_activos);
+                                    updateElement('equipos-suspendidos', data.equipos_suspendidos);
+                                    updateElement('equipos-bloqueados', data.equipos_bloqueados);
+                                    updateElement('equipos-no-accesibles', data.equipos_no_accesibles);
+                                    updateElement('pendientes-bloqueo', data.pendientes_bloqueo);
+                                    updateElement('pendientes-desbloqueo', data.pendientes_desbloqueo);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Auto-refresh error:', error);
+                            });
+                    }, 300000); // 5 minutos
+
                     // Debug info
                     console.log('Equipment Blocking script loaded. Available functions:', {
                         searchEquipments: typeof searchEquipments,
                         loadPendingEquipments: typeof loadPendingEquipments,
                         refreshDashboard: typeof refreshDashboard,
                         openActionModal: typeof openActionModal,
+                        filterByStatus: typeof filterByStatus,
+                        showAllEquipments: typeof showAllEquipments,
                         bootstrap: typeof bootstrap
                     });
 
                 })();
                 //]]>
                 </script>
+            </t>
+        </template>
+
+        <!-- Template para tarjetas de equipos -->
+        <template id="equipment_cards_template" name="Equipment Cards">
+            <t t-foreach="equipos" t-as="equipo">
+                <div class="equipment-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="mb-1 fw-bold">Serie: <t t-esc="equipo.get('serie', '')"/></h5>
+                            <p class="text-muted mb-0">
+                                <t t-esc="equipo.get('cliente', '')"/> - <t t-esc="equipo.get('modelo', '')"/>
+                            </p>
+                        </div>
+                        <span t-attf-class="status-badge status-#{equipo.get('estado_bloqueo', '')}">
+                            <t t-esc="equipo.get('estado_label', '')"/>
+                        </span>
+                    </div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <i class="fas fa-industry"></i>
+                            <span>Marca: <t t-esc="equipo.get('marca', '')"/></span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>Dirección: <t t-esc="equipo.get('direccion', '')"/></span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-network-wired"></i>
+                            <span>IP: <t t-esc="equipo.get('ip_equipo') or 'No configurada'"/></span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-wifi"></i>
+                            <span>Acceso remoto: 
+                                <t t-if="equipo.get('acceso_remoto')">Disponible</t>
+                                <t t-else="">No disponible</t>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <t t-if="equipo.get('motivo_bloqueo')">
+                        <div class="alert alert-info py-2 mb-3">
+                            <strong>Motivo:</strong> <t t-esc="equipo.get('motivo_bloqueo', '')"/>
+                        </div>
+                    </t>
+                    
+                    <t t-if="equipo.get('fecha_bloqueo')">
+                        <div class="text-muted small mb-3">
+                            <i class="fas fa-clock"></i> <t t-esc="equipo.get('fecha_bloqueo', '')"/>
+                        </div>
+                    </t>
+                    
+                    <div class="d-flex gap-2 justify-content-end flex-wrap">
+                        <t t-if="equipo.get('puede_suspender')">
+                            <button class="btn btn-warning btn-sm" 
+                                    t-attf-onclick="openActionModal('suspend', #{equipo.get('id')}, '#{equipo.get('serie')}', '#{json.dumps(equipo).replace('&quot;', '\&quot;').replace('&#x27;', '\&#x27;')}')">
+                                <i class="fas fa-pause me-1"></i> Suspender
+                            </button>
+                        </t>
+                        <t t-if="equipo.get('puede_bloquear')">
+                            <button class="btn btn-danger btn-sm" 
+                                    t-attf-onclick="openActionModal('block', #{equipo.get('id')}, '#{equipo.get('serie')}', '#{json.dumps(equipo).replace('&quot;', '\&quot;').replace('&#x27;', '\&#x27;')}')">
+                                <i class="fas fa-lock me-1"></i> Bloquear
+                            </button>
+                        </t>
+                        <t t-if="equipo.get('puede_desbloquear')">
+                            <button class="btn btn-success btn-sm" 
+                                    t-attf-onclick="openActionModal('unblock', #{equipo.get('id')}, '#{equipo.get('serie')}', '#{json.dumps(equipo).replace('&quot;', '\&quot;').replace('&#x27;', '\&#x27;')}')">
+                                <i class="fas fa-unlock me-1"></i> Desbloquear
+                            </button>
+                        </t>
+                    </div>
+                </div>
             </t>
         </template>
 

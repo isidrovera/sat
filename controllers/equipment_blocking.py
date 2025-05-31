@@ -11,11 +11,14 @@ class EquipmentBlockingController(http.Controller):
 
     @http.route('/equipment/blocking/dashboard', type='http', auth='public', website=True)
     def blocking_dashboard(self, **kwargs):
-        """Dashboard principal para gestión de bloqueos - ACCESO PÚBLICO"""
+        """Dashboard principal para gestión de bloqueos - Solo equipos alquilados"""
         try:
             # Usar sudo() para acceso sin restricciones de permisos
             equipment_model = request.env['alquiler'].sudo()
-            dashboard_data = equipment_model.get_dashboard_data()
+            dashboard_data = equipment_model.get_dashboard_data_alquilados()
+            
+            # Obtener equipos alquilados automáticamente al cargar la página
+            equipos_alquilados = equipment_model.get_equipos_alquilados_inicial()
             
             # Obtener lista de usuarios para asignación (también con sudo)
             users = request.env['res.users'].sudo().search([
@@ -25,6 +28,7 @@ class EquipmentBlockingController(http.Controller):
             
             return request.render('sat.equipment_blocking_dashboard_template', {
                 'dashboard_data': dashboard_data,
+                'equipos_iniciales': equipos_alquilados,
                 'users': users
             })
             
@@ -67,12 +71,11 @@ class EquipmentBlockingController(http.Controller):
             return request.make_response(error_html, status=500)
 
     @http.route('/equipment/blocking/search', type='json', auth='public', methods=['POST'])
-    def search_equipments(self, search_term=''):
-        """Busca equipos por serie, cliente, modelo, etc. - ACCESO PÚBLICO"""
+    def search_equipments(self, search_term='', estado_filtro=''):
+        """Busca equipos alquilados por serie, cliente, modelo, etc."""
         try:
-            # Usar sudo() para permitir búsquedas sin autenticación
             equipment_model = request.env['alquiler'].sudo()
-            equipos = equipment_model.buscar_equipos_web(search_term)
+            equipos = equipment_model.buscar_equipos_alquilados_web(search_term, estado_filtro)
             
             return {
                 'status': 'success',
@@ -86,11 +89,29 @@ class EquipmentBlockingController(http.Controller):
                 'message': str(e)
             }
 
+    @http.route('/equipment/blocking/filter_by_status', type='json', auth='public', methods=['POST'])
+    def filter_by_status(self, estado_bloqueo=''):
+        """Filtra equipos por estado de bloqueo específico"""
+        try:
+            equipment_model = request.env['alquiler'].sudo()
+            equipos = equipment_model.filtrar_equipos_por_estado_bloqueo(estado_bloqueo)
+            
+            return {
+                'status': 'success',
+                'equipos': equipos
+            }
+            
+        except Exception as e:
+            _logger.error(f"Error al filtrar por estado: {str(e)}")
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+
     @http.route('/equipment/blocking/suspend', type='json', auth='public', methods=['POST'])
     def suspend_service(self, equipment_id, motivo=''):
-        """Suspende el servicio de un equipo - ACCESO PÚBLICO"""
+        """Suspende el servicio de un equipo - Solo equipos alquilados"""
         try:
-            # Usar sudo() para operaciones sin autenticación
             equipment = request.env['alquiler'].sudo().browse(int(equipment_id))
             
             if not equipment.exists():
@@ -99,7 +120,14 @@ class EquipmentBlockingController(http.Controller):
                     'message': 'Equipo no encontrado'
                 }
             
-            # Suspender servicio - usar ID genérico para usuario público
+            # Verificar que el equipo esté alquilado
+            if equipment.estado_alquiler_id != 'alquilada':
+                return {
+                    'status': 'error',
+                    'message': 'Solo se pueden suspender equipos en estado "Alquilada"'
+                }
+            
+            # Suspender servicio
             equipment.action_suspender_servicio(
                 motivo=motivo,
                 usuario_id=1  # Usuario administrador como fallback
@@ -107,7 +135,8 @@ class EquipmentBlockingController(http.Controller):
             
             return {
                 'status': 'success',
-                'message': f'Servicio suspendido para equipo {equipment.serie}'
+                'message': f'Servicio suspendido para equipo {equipment.serie}',
+                'nuevo_estado': equipment.estado_bloqueo
             }
             
         except Exception as e:
@@ -119,7 +148,7 @@ class EquipmentBlockingController(http.Controller):
 
     @http.route('/equipment/blocking/block', type='json', auth='public', methods=['POST'])
     def block_equipment(self, equipment_id, motivo=''):
-        """Bloquea un equipo remotamente - ACCESO PÚBLICO"""
+        """Bloquea un equipo remotamente - Solo equipos alquilados"""
         try:
             equipment = request.env['alquiler'].sudo().browse(int(equipment_id))
             
@@ -129,15 +158,23 @@ class EquipmentBlockingController(http.Controller):
                     'message': 'Equipo no encontrado'
                 }
             
+            # Verificar que el equipo esté alquilado
+            if equipment.estado_alquiler_id != 'alquilada':
+                return {
+                    'status': 'error',
+                    'message': 'Solo se pueden bloquear equipos en estado "Alquilada"'
+                }
+            
             # Bloquear equipo
             resultado = equipment.action_bloquear_equipo(
                 motivo=motivo,
-                usuario_id=1  # Usuario administrador como fallback
+                usuario_id=1
             )
             
             return {
                 'status': 'success' if resultado['success'] else 'error',
-                'message': resultado['message']
+                'message': resultado['message'],
+                'nuevo_estado': equipment.estado_bloqueo if resultado['success'] else None
             }
             
         except Exception as e:
@@ -149,7 +186,7 @@ class EquipmentBlockingController(http.Controller):
 
     @http.route('/equipment/blocking/unblock', type='json', auth='public', methods=['POST'])
     def unblock_equipment(self, equipment_id, motivo=''):
-        """Desbloquea un equipo - ACCESO PÚBLICO"""
+        """Desbloquea un equipo - Solo equipos alquilados"""
         try:
             equipment = request.env['alquiler'].sudo().browse(int(equipment_id))
             
@@ -159,15 +196,23 @@ class EquipmentBlockingController(http.Controller):
                     'message': 'Equipo no encontrado'
                 }
             
+            # Verificar que el equipo esté alquilado
+            if equipment.estado_alquiler_id != 'alquilada':
+                return {
+                    'status': 'error',
+                    'message': 'Solo se pueden desbloquear equipos en estado "Alquilada"'
+                }
+            
             # Desbloquear equipo
             resultado = equipment.action_desbloquear_equipo(
                 motivo=motivo,
-                usuario_id=1  # Usuario administrador como fallback
+                usuario_id=1
             )
             
             return {
                 'status': 'success' if resultado['success'] else 'error',
-                'message': resultado['message']
+                'message': resultado['message'],
+                'nuevo_estado': equipment.estado_bloqueo if resultado['success'] else None
             }
             
         except Exception as e:
@@ -179,7 +224,7 @@ class EquipmentBlockingController(http.Controller):
 
     @http.route('/equipment/blocking/update_config', type='json', auth='public', methods=['POST'])
     def update_equipment_config(self, equipment_id, **kwargs):
-        """Actualiza configuración de un equipo - ACCESO PÚBLICO"""
+        """Actualiza configuración de un equipo - Solo equipos alquilados"""
         try:
             equipment = request.env['alquiler'].sudo().browse(int(equipment_id))
             
@@ -187,6 +232,13 @@ class EquipmentBlockingController(http.Controller):
                 return {
                     'status': 'error',
                     'message': 'Equipo no encontrado'
+                }
+            
+            # Verificar que el equipo esté alquilado
+            if equipment.estado_alquiler_id != 'alquilada':
+                return {
+                    'status': 'error',
+                    'message': 'Solo se pueden configurar equipos en estado "Alquilada"'
                 }
             
             # Actualizar configuración
@@ -224,7 +276,7 @@ class EquipmentBlockingController(http.Controller):
 
     @http.route('/equipment/blocking/get_equipment_details', type='json', auth='public', methods=['POST'])
     def get_equipment_details(self, equipment_id):
-        """Obtiene detalles completos de un equipo - ACCESO PÚBLICO"""
+        """Obtiene detalles completos de un equipo alquilado"""
         try:
             equipment = request.env['alquiler'].sudo().browse(int(equipment_id))
             
@@ -232,6 +284,13 @@ class EquipmentBlockingController(http.Controller):
                 return {
                     'status': 'error',
                     'message': 'Equipo no encontrado'
+                }
+            
+            # Verificar que el equipo esté alquilado
+            if equipment.estado_alquiler_id != 'alquilada':
+                return {
+                    'status': 'error',
+                    'message': 'Solo se pueden ver detalles de equipos en estado "Alquilada"'
                 }
             
             # Obtener historial de tickets con sudo()
@@ -257,9 +316,10 @@ class EquipmentBlockingController(http.Controller):
                     'modelo': equipment.name.name if equipment.name else '',
                     'marca': equipment.marca,
                     'direccion': equipment.direccion,
-                    'contacto': equipment.contacto_id.name if equipment.contacto_id else '',
+                    'contacto': equipment.contacto_id,
                     'celular': equipment.celular,
                     'correo': equipment.correo_,
+                    'estado_alquiler': equipment.estado_alquiler_id,
                     'estado_bloqueo': equipment.estado_bloqueo,
                     'motivo_bloqueo': equipment.motivo_bloqueo,
                     'fecha_bloqueo': equipment.fecha_bloqueo.strftime('%d/%m/%Y %H:%M') if equipment.fecha_bloqueo else '',
@@ -284,10 +344,10 @@ class EquipmentBlockingController(http.Controller):
 
     @http.route('/equipment/blocking/dashboard_data', type='json', auth='public', methods=['POST'])
     def get_dashboard_data(self):
-        """Obtiene datos actualizados del dashboard - ACCESO PÚBLICO"""
+        """Obtiene datos actualizados del dashboard - Solo equipos alquilados"""
         try:
             equipment_model = request.env['alquiler'].sudo()
-            dashboard_data = equipment_model.get_dashboard_data()
+            dashboard_data = equipment_model.get_dashboard_data_alquilados()
             
             return {
                 'status': 'success',
