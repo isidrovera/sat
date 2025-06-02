@@ -387,7 +387,7 @@
                    optional="hide"
                    class="advisor-modern"/>
                    
-            <!-- Botones modernizados con efectos hover -->
+            <!-- Botones modernizados con efectos hover 
             <button name="action_primer" 
                     type="object" 
                     string="Primer Piso" 
@@ -410,7 +410,7 @@
                     class="btn-modern btn btn-outline-warning btn-sm rounded-pill me-2 shadow-hover transition-all" 
                     icon="fa-truck" 
                     groups="base.group_system" 
-                    title="Segundo Local"/>
+                    title="Segundo Local"/> -->
                     
             <button name="view_reparaciones_ids" 
                     type="object" 

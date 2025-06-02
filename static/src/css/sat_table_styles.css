@@ -16,9 +16,9 @@
     color: white;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-size: 0.85rem;
-    padding: 15px 12px;
+    letter-spacing: 0.3px;
+    font-size: 0.7rem;
+    padding: 8px 6px;
     border: none;
     position: sticky;
     top: 0;
@@ -39,66 +39,78 @@
 
 /* Celdas de la tabla */
 .modern-sat-table tbody td {
-    padding: 12px;
+    padding: 6px 4px;
     vertical-align: middle;
     border: none;
+    font-size: 0.75rem;
 }
 
 /* Estilos específicos para campos */
 .client-info {
-    font-weight: 600;
-    color: #2d3436;
+    font-weight: 500;
+    color: #000000;
     background: linear-gradient(135deg, #a8e6cf 0%, #dcedc1 100%);
-    border-radius: 8px;
-    padding: 8px 12px;
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 0.7rem;
 }
 
 .machine-type-modern {
     background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
-    color: #2d3436;
-    border-radius: 20px;
-    padding: 6px 12px;
-    font-size: 0.85rem;
+    color: #000000;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 0.65rem;
     font-weight: 500;
     text-align: center;
 }
 
 .brand-modern {
     background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-    color: white;
-    border-radius: 15px;
-    padding: 5px 10px;
-    font-size: 0.8rem;
+    color: #000000;
+    border-radius: 8px;
+    padding: 2px 5px;
+    font-size: 0.65rem;
     font-weight: 500;
     text-align: center;
 }
 
 .machine-name-modern {
     background: linear-gradient(135deg, #e17055 0%, #d63031 100%) !important;
-    color: white !important;
+    color: #000000 !important;
     border: none !important;
-    box-shadow: 0 3px 10px rgba(209, 48, 49, 0.3);
+    box-shadow: 0 1px 4px rgba(209, 48, 49, 0.2);
+    padding: 2px 6px !important;
+    font-size: 0.7rem !important;
+    border-radius: 6px !important;
 }
 
 .serial-modern {
     background: linear-gradient(135deg, #2d3436 0%, #636e72 100%) !important;
-    color: #00cec9 !important;
+    color: #000000 !important;
     font-family: 'Courier New', monospace;
-    font-size: 0.9rem;
-    letter-spacing: 1px;
+    font-size: 0.65rem;
+    letter-spacing: 0.5px;
+    padding: 2px 4px !important;
+    border-radius: 4px !important;
 }
 
 .counter-modern {
     background: linear-gradient(135deg, #00cec9, #55a3ff) !important;
-    color: white !important;
-    font-weight: 700;
-    font-size: 1.1rem;
-    box-shadow: 0 2px 8px rgba(0, 206, 201, 0.3);
+    color: #000000 !important;
+    font-weight: 600;
+    font-size: 0.7rem;
+    box-shadow: 0 1px 4px rgba(0, 206, 201, 0.2);
+    padding: 2px 6px !important;
+    border-radius: 6px !important;
 }
 
 .location-modern {
     background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%) !important;
-    color: white !important;
+    color: #000000 !important;
+    padding: 2px 6px !important;
+    border-radius: 10px !important;
+    font-size: 0.65rem;
 }
 
 /* Badges modernos */
@@ -107,6 +119,10 @@
     overflow: hidden;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 2px 8px !important;
+    font-size: 0.65rem !important;
+    border-radius: 12px !important;
+    font-weight: 500 !important;
 }
 
 .availability-badge-modern::before {
@@ -127,27 +143,35 @@
 .sales-status-modern {
     backdrop-filter: blur(5px);
     border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 2px 8px !important;
+    font-size: 0.65rem !important;
+    border-radius: 12px !important;
+    font-weight: 500 !important;
 }
 
 /* Efectos de alerta */
 .alert-modern {
     position: relative;
-    filter: drop-shadow(0 0 8px rgba(231, 76, 60, 0.6));
+    filter: drop-shadow(0 0 4px rgba(231, 76, 60, 0.6));
+    font-size: 1rem;
 }
 
 .filter-glow {
-    filter: drop-shadow(0 0 10px currentColor);
+    filter: drop-shadow(0 0 5px currentColor);
 }
 
 /* Campos de fecha */
 .date-modern, .separation-date-modern, .review-date-modern {
-    font-size: 0.85rem;
+    font-size: 0.65rem;
     font-family: monospace;
+    padding: 1px 4px;
 }
 
 .price-modern {
-    box-shadow: 0 2px 8px rgba(0, 184, 148, 0.2);
-    border-left: 4px solid #00b894;
+    box-shadow: 0 1px 4px rgba(0, 184, 148, 0.2);
+    border-left: 2px solid #00b894;
+    padding: 2px 6px !important;
+    font-size: 0.7rem !important;
 }
 
 /* Botones modernos */
@@ -155,13 +179,16 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
-    font-weight: 500;
-    letter-spacing: 0.5px;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+    padding: 3px 8px !important;
+    font-size: 0.65rem !important;
+    margin: 1px !important;
 }
 
 .shadow-hover:hover {
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
 }
 
 .transition-all {
@@ -173,6 +200,9 @@
     border: none;
     position: relative;
     overflow: hidden;
+    color: #000000 !important;
+    padding: 3px 8px !important;
+    font-size: 0.65rem !important;
 }
 
 .btn-repair-modern::before {
@@ -225,42 +255,47 @@
 /* Responsividad */
 @media (max-width: 768px) {
     .modern-sat-table tbody td {
-        padding: 8px 6px;
-        font-size: 0.85rem;
+        padding: 4px 3px;
+        font-size: 0.7rem;
     }
     
     .btn-modern {
-        padding: 4px 8px;
-        font-size: 0.75rem;
+        padding: 2px 4px !important;
+        font-size: 0.6rem !important;
     }
     
     .machine-name-modern {
-        font-size: 0.9rem;
+        font-size: 0.65rem !important;
+    }
+    
+    .availability-badge-modern, .sales-status-modern {
+        padding: 1px 4px !important;
+        font-size: 0.6rem !important;
     }
 }
 
 /* Estados de decoración mejorados */
 .decoration-success {
     background: linear-gradient(135deg, #00b894 0%, #00a085 100%) !important;
-    color: white !important;
+    color: #000000 !important;
 }
 
 .decoration-warning {
     background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%) !important;
-    color: white !important;
+    color: #000000 !important;
 }
 
 .decoration-danger {
     background: linear-gradient(135deg, #e84393 0%, #d63031 100%) !important;
-    color: white !important;
+    color: #000000 !important;
 }
 
 .decoration-info {
     background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%) !important;
-    color: white !important;
+    color: #000000 !important;
 }
 
 .decoration-muted {
     background: linear-gradient(135deg, #b2bec3 0%, #636e72 100%) !important;
-    color: white !important;
+    color: #000000 !important;
 }
