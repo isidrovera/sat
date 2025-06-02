@@ -394,7 +394,7 @@
                     class="btn-modern btn btn-outline-primary btn-sm rounded-pill me-2 shadow-hover transition-all" 
                     icon="fa-building-o" 
                     groups="base.group_system" 
-                    title="Primer Piso"/>
+                    title="Primer Piso" optional="hide"/>
                     
             <button name="action_tercero" 
                     type="object" 
@@ -402,7 +402,7 @@
                     class="btn-modern btn btn-outline-info btn-sm rounded-pill me-2 shadow-hover transition-all" 
                     icon="fa-building" 
                     groups="base.group_system" 
-                    title="Tercer Piso"/>
+                    title="Tercer Piso" optional="hide"/>
                     
             <button name="action_segundo" 
                     type="object" 
@@ -410,7 +410,7 @@
                     class="btn-modern btn btn-outline-warning btn-sm rounded-pill me-2 shadow-hover transition-all" 
                     icon="fa-truck" 
                     groups="base.group_system" 
-                    title="Segundo Local"/>
+                    title="Segundo Local" optional="hide"/>
                     
             <button name="view_reparaciones_ids" 
                     type="object" 
@@ -418,7 +418,7 @@
                     class="btn-repair-modern btn btn-primary btn-sm rounded-pill shadow-lg position-relative overflow-hidden" 
                     icon="fa-wrench" 
                     invisible="estado_ventas_id != 'finalizado'"
-                    title="Ver Reparaciones"/>
+                    title=" "/>
         </list>
     </field>
 </record>
