@@ -112,38 +112,61 @@
         'views/envio_masivo_evaluaciones.xml',
         'views/equipment_visit_report_views.xml',
         'report/equipment_visit_report.xml',
-        
-        
     ],
     
     'assets': {
         'web.assets_backend': [
-            
+            # Chart.js y Font Awesome existentes
             'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-            # CSS Files
+            
+            # ========== NUEVAS LIBRERÍAS MODERNAS ==========
+            # Bootstrap 5 (última versión)
+            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
+            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js',
+            
+            # Animate.css para animaciones
+            'https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css',
+            
+            # AOS (Animate On Scroll)
+            'https://unpkg.com/aos@2.3.1/dist/aos.css',
+            'https://unpkg.com/aos@2.3.1/dist/aos.js',
+            
+            # Tailwind CSS
+            'https://cdn.tailwindcss.com',
+            
+            # Lucide Icons (iconos modernos)
+            'https://unpkg.com/lucide@latest/dist/umd/lucide.js',
+            
+            # Particles.js para efectos de partículas
+            'https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js',
+            
+            # Typed.js para efectos de escritura
+            'https://cdn.jsdelivr.net/npm/typed.js@2.0.12',
+            
+            # CSS Files existentes
             'sat/static/src/css/dashboard.css',
             'sat/static/src/css/style.css',
             'sat/static/src/css/tree_dashboard.css',
             'sat/static/src/css/evaluation_form.css',
             'sat/static/src/css/parts_request_message.css',
-            'sat/static/src/css/image-viewer.css',            
+            'sat/static/src/css/image-viewer.css',
             
+            # ========== NUEVOS ARCHIVOS CSS MODERNOS ==========
+            'sat/static/src/css/sat_modern_table.css',
+            'sat/static/src/css/sat_animations.css',
+            'sat/static/src/css/sat_modern_themes.css',
+            'sat/static/src/css/sat_responsive.css',
             
-            
-            
-
-            #SCSS
+            # SCSS existente
             '/sat/static/src/scss/list_dashboard.scss',
             
-            #XML
+            # XML existente
             'sat/static/src/xml/dashboard.xml',
             'sat/static/src/xml/photo_gallery_template.xml',
             'sat/static/src/xml/list_view.xml',
             
-            
-            
-            # JS Files
+            # JS Files existentes
             'sat/static/src/js/dashboard.js',
             'sat/static/src/js/estilo_dashboard.js',
             'sat/static/src/js/gallery_widget.js',
@@ -153,27 +176,18 @@
             'sat/static/src/js/image-viewer.js',
             'sat/static/src/js/equipment_visit_report.js',
             
+            # ========== NUEVOS ARCHIVOS JS MODERNOS ==========
+            'sat/static/src/js/sat_modern_table.js',
+            'sat/static/src/js/sat_modern_animations.js',
+            'sat/static/src/js/sat_modern_filters.js',
             
-            
-            
-            
-
-            
-            
-            # External Libraries
+            # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css',
-             # Opción 1: Lottie
             'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js',
-            
-            # Opción 2: RemixIcon
             'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css',
-            
-            # Opción 3: IconScout
             'https://unicons.iconscout.com/release/v4.0.8/css/line.css',
             'https://cdn.lordicon.com/lordicon.js'
-            
-
         ],
         
         'web.assets_frontend': [

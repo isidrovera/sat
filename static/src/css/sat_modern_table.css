@@ -1,0 +1,442 @@
+/* ========== TABLA MODERNA SAT ========== */
+
+/* Variables CSS modernas */
+:root {
+    --sat-primary: #667eea;
+    --sat-secondary: #764ba2;
+    --sat-success: #10b981;
+    --sat-warning: #f59e0b;
+    --sat-danger: #ef4444;
+    --sat-info: #3b82f6;
+    --sat-light: #f8fafc;
+    --sat-dark: #1e293b;
+    
+    --sat-gradient-primary: linear-gradient(135deg, var(--sat-primary) 0%, var(--sat-secondary) 100%);
+    --sat-gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --sat-gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    --sat-gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    
+    --sat-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --sat-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --sat-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --sat-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    --sat-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --sat-border-radius: 0.75rem;
+}
+
+/* Tabla principal */
+.modern-sat-table {
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: var(--sat-border-radius);
+    box-shadow: var(--sat-shadow-lg);
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.modern-sat-table .o_list_view {
+    border: none;
+    border-radius: var(--sat-border-radius);
+}
+
+/* Headers modernos */
+.modern-sat-table thead th {
+    background: var(--sat-gradient-primary);
+    color: white;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+    border: none;
+    padding: 1rem 0.75rem;
+    position: relative;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.modern-sat-table thead th::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 40%;
+    height: 2px;
+    background: rgba(255,255,255,0.4);
+    transform: translateX(-50%);
+    border-radius: 1px;
+}
+
+/* Filas con efectos hover modernos */
+.modern-sat-table tbody tr {
+    transition: var(--sat-transition);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    position: relative;
+}
+
+.modern-sat-table tbody tr::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 0;
+    background: var(--sat-gradient-primary);
+    opacity: 0.1;
+    transition: width 0.3s ease;
+    z-index: 0;
+}
+
+.modern-sat-table tbody tr:hover::before {
+    width: 100%;
+}
+
+.modern-sat-table tbody tr:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sat-shadow-lg);
+    z-index: 10;
+    position: relative;
+}
+
+/* Estilos específicos para campos */
+
+/* Cliente */
+.client-info {
+    background: linear-gradient(90deg, #dbeafe 0%, #e0e7ff 100%);
+    padding: 0.5rem 0.75rem;
+    border-radius: 1.5rem;
+    border-left: 4px solid var(--sat-info);
+    font-weight: 600;
+    color: #1e40af;
+    position: relative;
+    overflow: hidden;
+}
+
+.client-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: left 0.6s;
+}
+
+.client-info:hover::before {
+    left: 100%;
+}
+
+/* Tipo de máquina */
+.machine-type-modern {
+    background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid #c4b5fd;
+    color: #6b46c1;
+    font-weight: 500;
+}
+
+/* Marca */
+.brand-modern {
+    background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid #86efac;
+    color: #059669;
+    font-weight: 500;
+}
+
+/* Nombre de máquina */
+.machine-name-modern {
+    background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%) !important;
+    border: 2px solid #fbbf24 !important;
+    transition: var(--sat-transition) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.machine-name-modern:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 20px rgba(251, 191, 36, 0.3);
+}
+
+/* Serie */
+.serial-modern {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+    color: #38bdf8 !important;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+    letter-spacing: 0.05em !important;
+    border: 1px solid #334155 !important;
+    position: relative;
+}
+
+.serial-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(56, 189, 248, 0.1) 50%, transparent 70%);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Contador */
+.counter-modern {
+    position: relative;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    border: 1px solid #60a5fa !important;
+    font-family: 'Courier New', monospace;
+    font-size: 1.125rem !important;
+}
+
+.counter-modern::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+/* Ubicación */
+.location-modern {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+    position: relative;
+}
+
+/* Badges de disponibilidad modernos */
+.availability-badge-modern {
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+    border: 2px solid rgba(255,255,255,0.3) !important;
+    backdrop-filter: blur(10px) !important;
+    position: relative !important;
+}
+
+.availability-badge-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+}
+
+.availability-badge-modern:hover::before {
+    left: 100%;
+}
+
+/* Badge de estado de ventas */
+.sales-status-modern {
+    backdrop-filter: blur(15px) !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+/* Alerta moderna */
+.alert-modern {
+    filter: drop-shadow(0 0 10px currentColor) !important;
+    transition: var(--sat-transition) !important;
+}
+
+.alert-modern:hover {
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 15px currentColor);
+}
+
+/* Precio moderno */
+.price-modern {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+    border: 2px solid #16a34a !important;
+    font-family: 'Courier New', monospace !important;
+    font-size: 1rem !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+}
+
+/* Botones modernos */
+.btn-modern {
+    position: relative;
+    overflow: hidden;
+    transition: var(--sat-transition) !important;
+    border-width: 2px !important;
+    backdrop-filter: blur(10px);
+}
+
+.btn-modern::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transition: width 0.6s, height 0.6s;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+}
+
+.btn-modern:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-modern:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: var(--sat-shadow-xl);
+}
+
+/* Botón de reparaciones especial */
+.btn-repair-modern {
+    background: var(--sat-gradient-primary) !important;
+    border: none !important;
+    color: white !important;
+    animation: glow-pulse 2s infinite;
+}
+
+@keyframes glow-pulse {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(102, 126, 234, 0.8);
+    }
+}
+
+/* Utilidades adicionales */
+.shadow-hover {
+    transition: box-shadow 0.3s ease;
+}
+
+.shadow-hover:hover {
+    box-shadow: var(--sat-shadow-lg);
+}
+
+.transition-all {
+    transition: var(--sat-transition);
+}
+
+.filter-glow {
+    filter: drop-shadow(0 0 8px currentColor);
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.letter-spacing-wide {
+    letter-spacing: 0.1em;
+}
+
+.backdrop-blur {
+    backdrop-filter: blur(10px);
+}
+
+.border-modern {
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Gradientes de fondo */
+.bg-gradient-light {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .modern-sat-table {
+        font-size: 0.875rem;
+    }
+    
+    .btn-modern {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
+    .machine-name-modern {
+        font-size: 0.875rem;
+    }
+    
+    .counter-modern {
+        font-size: 1rem !important;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --sat-light: #1e293b;
+        --sat-dark: #f8fafc;
+    }
+    
+    .modern-sat-table {
+        background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+        color: #f1f5f9;
+    }
+    
+    .client-info {
+        background: linear-gradient(90deg, #1e3a8a 0%, #312e81 100%);
+        color: #dbeafe;
+    }
+    
+    .machine-type-modern {
+        background: linear-gradient(135deg, #581c87 0%, #6b21a8 100%);
+        color: #e9d5ff;
+    }
+    
+    .brand-modern {
+        background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+        color: #a7f3d0;
+    }
+}
+
+/* Animaciones de entrada */
+.animate-fade-in {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Efectos de hover para toda la fila */
+.modern-sat-table tbody tr:hover .client-info,
+.modern-sat-table tbody tr:hover .machine-type-modern,
+.modern-sat-table tbody tr:hover .brand-modern {
+    transform: scale(1.02);
+}
+
+/* Tooltip personalizado */
+.tooltip {
+    font-size: 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--sat-shadow-lg);
+}
+
+.tooltip-inner {
+    background: var(--sat-gradient-primary);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+}
