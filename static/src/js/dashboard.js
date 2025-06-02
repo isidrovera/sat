@@ -377,7 +377,7 @@ class SatDashboard extends Component {
             };
         }
     }
-
+    
     
     async _openFilteredView(action_id, res_model, domain, search_view_id = null) {
         console.log(`Ejecutando _openFilteredView`);
@@ -587,6 +587,136 @@ class SatDashboard extends Component {
                     estadoChart.resize();
                 });
             }
+
+            // Gráfico de Estados de Bloqueo - Agregar después del gráfico de estado
+const estadosBloqueoElement = this._getChartElement("estadosBloqueoChart");
+if (estadosBloqueoElement) {
+    console.log('Renderizando gráfico de estados de bloqueo...');
+    const estadosBloqueoChart = echarts.init(estadosBloqueoElement);
+
+    // Datos para el gráfico de estados de bloqueo
+    const estadosBloqueoData = [
+        { 
+            value: this.dashboardData.equipos_activos || 0, 
+            name: 'Activos', 
+            itemStyle: { color: '#27ae60' } // Verde
+        },
+        { 
+            value: this.dashboardData.equipos_suspendidos || 0, 
+            name: 'Suspendidos', 
+            itemStyle: { color: '#f39c12' } // Naranja
+        },
+        { 
+            value: this.dashboardData.equipos_bloqueados || 0, 
+            name: 'Bloqueados', 
+            itemStyle: { color: '#e74c3c' } // Rojo
+        },
+        { 
+            value: this.dashboardData.equipos_no_accesibles || 0, 
+            name: 'No Accesibles', 
+            itemStyle: { color: '#95a5a6' } // Gris
+        },
+        { 
+            value: this.dashboardData.equipos_pendiente_bloqueo || 0, 
+            name: 'Pend. Bloqueo', 
+            itemStyle: { color: '#3498db' } // Azul
+        },
+        { 
+            value: this.dashboardData.equipos_pendiente_desbloqueo || 0, 
+            name: 'Pend. Desbloqueo', 
+            itemStyle: { color: '#5dade2' } // Azul claro
+        }
+    ];
+
+    const estadosBloqueoOption = {
+        backgroundColor: '#fff',
+        tooltip: {
+            trigger: 'item',
+            formatter: function(params) {
+                return `<strong>${params.name}</strong><br/>
+                        Cantidad: ${params.value}<br/>
+                        Porcentaje: ${params.percent}%`;
+            }
+        },
+        legend: {
+            orient: 'vertical',
+            left: 'left',
+            top: 'middle',
+            textStyle: {
+                fontSize: 12
+            },
+            formatter: function(name) {
+                // Limitar la longitud del texto en la leyenda
+                return name.length > 12 ? name.substring(0, 12) + '...' : name;
+            }
+        },
+        series: [{
+            name: 'Estados de Equipos',
+            type: 'pie',
+            radius: ['40%', '70%'], // Donut chart
+            center: ['60%', '50%'], // Mover el gráfico a la derecha para dar espacio a la leyenda
+            avoidLabelOverlap: false,
+            itemStyle: {
+                borderRadius: 6,
+                borderColor: '#fff',
+                borderWidth: 2
+            },
+            label: {
+                show: false, // Ocultar etiquetas en el gráfico para evitar saturación
+                position: 'center'
+            },
+            emphasis: {
+                label: {
+                    show: true,
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                    formatter: function(params) {
+                        return `${params.name}\n${params.value}`;
+                    }
+                },
+                itemStyle: {
+                    shadowBlur: 10,
+                    shadowOffsetX: 0,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+            },
+            labelLine: {
+                show: false
+            },
+            data: estadosBloqueoData,
+            animationType: 'scale',
+            animationEasing: 'elasticOut',
+            animationDelay: function (idx) {
+                return Math.random() * 200;
+            }
+        }]
+    };
+
+    // Configurar el gráfico
+    estadosBloqueoChart.setOption(estadosBloqueoOption);
+    
+    // Hacer el gráfico responsive
+    const handleEstadosBloqueoResize = () => {
+        const parentElement = estadosBloqueoElement.parentElement;
+        if (parentElement) {
+            estadosBloqueoChart.resize({
+                width: parentElement.offsetWidth,
+                height: parentElement.offsetHeight
+            });
+        }
+    };
+
+    window.addEventListener('resize', handleEstadosBloqueoResize);
+    
+    // Forzar un resize inicial
+    setTimeout(() => {
+        handleEstadosBloqueoResize();
+    }, 300);
+
+    console.log('Gráfico de estados de bloqueo renderizado exitosamente');
+} else {
+    console.error('Elemento estadosBloqueoChart no encontrado');
+}
 
             // Gráfico de técnicos            
             const tecnicosElement = this._getChartElement("tecnicosChart");
