@@ -152,11 +152,7 @@
             'sat/static/src/css/parts_request_message.css',
             'sat/static/src/css/image-viewer.css',
             
-            # ========== NUEVOS ARCHIVOS CSS MODERNOS ==========
-            'sat/static/src/css/sat_modern_table.css',
-            'sat/static/src/css/sat_animations.css',
-            'sat/static/src/css/sat_modern_themes.css',
-            'sat/static/src/css/sat_responsive.css',
+           
             
             # SCSS existente
             '/sat/static/src/scss/list_dashboard.scss',
@@ -176,10 +172,6 @@
             'sat/static/src/js/image-viewer.js',
             'sat/static/src/js/equipment_visit_report.js',
             
-            # ========== NUEVOS ARCHIVOS JS MODERNOS ==========
-            'sat/static/src/js/sat_modern_table.js',
-            'sat/static/src/js/sat_modern_animations.js',
-            'sat/static/src/js/sat_modern_filters.js',
             
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
