@@ -1,4 +1,5 @@
 /* Archivo: static/src/css/dashboard.css */
+/* CSS ESPECÍFICO SOLO PARA EL DASHBOARD SAT */
 
 /* ========================================
    CONFIGURACIÓN GENERAL DEL DASHBOARD
@@ -13,7 +14,7 @@
     min-height: 100vh;
 }
 
-.content-scroll {
+.dashboard-container .content-scroll {
     overflow-y: auto;
     flex: 1;
     width: 100%;
@@ -23,7 +24,7 @@
 /* ========================================
    HEADER DEL DASHBOARD
 ======================================== */
-.dashboard-header {
+.dashboard-container .dashboard-header {
     background: white;
     border-radius: 16px;
     padding: 24px;
@@ -32,7 +33,7 @@
     border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
-.dashboard-title {
+.dashboard-container .dashboard-title {
     font-size: 32px;
     font-weight: 800;
     color: #2c3e50;
@@ -42,13 +43,13 @@
     gap: 16px;
 }
 
-.dashboard-title i {
+.dashboard-container .dashboard-title i {
     color: #3498db;
     font-size: 36px;
     filter: drop-shadow(0 2px 4px rgba(52, 152, 219, 0.3));
 }
 
-.dashboard-actions {
+.dashboard-container .dashboard-actions {
     display: flex;
     gap: 12px;
     align-items: center;
@@ -57,11 +58,11 @@
 /* ========================================
    SECCIONES DEL DASHBOARD
 ======================================== */
-.dashboard-section {
+.dashboard-container .dashboard-section {
     margin-bottom: 32px;
 }
 
-.section-title {
+.dashboard-container .section-title {
     font-size: 22px;
     font-weight: 700;
     color: #2c3e50;
@@ -77,7 +78,7 @@
     backdrop-filter: blur(10px);
 }
 
-.section-title i {
+.dashboard-container .section-title i {
     color: #e74c3c;
     font-size: 26px;
     filter: drop-shadow(0 2px 4px rgba(231, 76, 60, 0.3));
@@ -86,7 +87,7 @@
 /* ========================================
    TILES DEL DASHBOARD
 ======================================== */
-.dashboard-tiles {
+.dashboard-container .dashboard-tiles {
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
@@ -100,7 +101,7 @@
     border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
-.tot_tasks {
+.dashboard-container .tot_tasks {
     flex: 0 0 auto;
     width: 200px;
     min-width: 200px;
@@ -111,7 +112,7 @@
 /* ========================================
    CARDS MODERNAS
 ======================================== */
-.oh-card {
+.dashboard-container .oh-card {
     padding: 0;
     border-radius: 20px;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -129,7 +130,7 @@
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-.oh-card:hover {
+.dashboard-container .oh-card:hover {
     transform: translateY(-8px) scale(1.03);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
@@ -139,116 +140,116 @@
 ======================================== */
 
 /* Sección Máquinas - Azul */
-.maquinas-tiles .modern-card {
+.dashboard-container .maquinas-tiles .modern-card {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     color: white;
     box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
 }
 
-.maquinas-tiles .modern-card:hover {
+.dashboard-container .maquinas-tiles .modern-card:hover {
     box-shadow: 0 20px 40px rgba(52, 152, 219, 0.3);
 }
 
 /* Sección Reparaciones - Rojo */
-.reparaciones-tiles .modern-card {
+.dashboard-container .reparaciones-tiles .modern-card {
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
     color: white;
     box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
 }
 
-.reparaciones-tiles .modern-card:hover {
+.dashboard-container .reparaciones-tiles .modern-card:hover {
     box-shadow: 0 20px 40px rgba(231, 76, 60, 0.3);
 }
 
 /* Sección Tickets - Morado */
-.tickets-tiles .modern-card {
+.dashboard-container .tickets-tiles .modern-card {
     background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
     color: white;
     box-shadow: 0 8px 25px rgba(155, 89, 182, 0.2);
 }
 
-.tickets-tiles .modern-card:hover {
+.dashboard-container .tickets-tiles .modern-card:hover {
     box-shadow: 0 20px 40px rgba(155, 89, 182, 0.3);
 }
 
 /* Sección Alquiler - Gris Oscuro */
-.alquiler-tiles .modern-card {
+.dashboard-container .alquiler-tiles .modern-card {
     background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
     color: white;
     box-shadow: 0 8px 25px rgba(52, 73, 94, 0.2);
 }
 
-.alquiler-tiles .modern-card:hover {
+.dashboard-container .alquiler-tiles .modern-card:hover {
     box-shadow: 0 20px 40px rgba(52, 73, 94, 0.3);
 }
 
 /* ========================================
    CARDS ESPECÍFICAS SISTEMA DE BLOQUEO
 ======================================== */
-.success-card {
+.dashboard-container .success-card {
     background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
     color: white !important;
     box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
 }
 
-.success-card:hover {
+.dashboard-container .success-card:hover {
     box-shadow: 0 20px 40px rgba(39, 174, 96, 0.3);
 }
 
-.warning-card {
+.dashboard-container .warning-card {
     background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
     color: white !important;
     box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
 }
 
-.warning-card:hover {
+.dashboard-container .warning-card:hover {
     box-shadow: 0 20px 40px rgba(243, 156, 18, 0.3);
 }
 
-.danger-card {
+.dashboard-container .danger-card {
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
     color: white !important;
     box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
 }
 
-.danger-card:hover {
+.dashboard-container .danger-card:hover {
     box-shadow: 0 20px 40px rgba(231, 76, 60, 0.3);
 }
 
-.info-card {
+.dashboard-container .info-card {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
     color: white !important;
     box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
 }
 
-.info-card:hover {
+.dashboard-container .info-card:hover {
     box-shadow: 0 20px 40px rgba(52, 152, 219, 0.3);
 }
 
-.secondary-card {
+.dashboard-container .secondary-card {
     background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important;
     color: white !important;
     box-shadow: 0 8px 25px rgba(149, 165, 166, 0.2);
 }
 
-.secondary-card:hover {
+.dashboard-container .secondary-card:hover {
     box-shadow: 0 20px 40px rgba(149, 165, 166, 0.3);
 }
 
-.primary-card {
+.dashboard-container .primary-card {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
     color: white !important;
     box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
 }
 
-.primary-card:hover {
+.dashboard-container .primary-card:hover {
     box-shadow: 0 20px 40px rgba(52, 152, 219, 0.3);
 }
 
 /* ========================================
    CONTENIDO DE LAS CARDS
 ======================================== */
-.oh-card-body {
+.dashboard-container .oh-card-body {
     padding: 20px;
     text-align: center;
     display: flex;
@@ -261,7 +262,7 @@
 }
 
 /* Iconos principales */
-.oh-card-body i {
+.dashboard-container .oh-card-body i {
     font-size: 42px !important;
     color: white !important;
     margin-bottom: 12px;
@@ -270,13 +271,13 @@
     transition: all 0.3s ease;
 }
 
-.oh-card:hover .oh-card-body i {
+.dashboard-container .oh-card:hover .oh-card-body i {
     transform: scale(1.1);
     filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
 }
 
 /* Títulos de las cards */
-.oh-card-body h3 {
+.dashboard-container .oh-card-body h3 {
     font-size: 18px !important;
     margin: 12px 0 8px 0;
     white-space: nowrap;
@@ -292,7 +293,7 @@
 }
 
 /* Valores numéricos */
-.metric-value {
+.dashboard-container .metric-value {
     font-size: 32px !important;
     font-weight: 900 !important;
     color: white !important;
@@ -302,7 +303,7 @@
     transition: all 0.3s ease;
 }
 
-.oh-card:hover .metric-value {
+.dashboard-container .oh-card:hover .metric-value {
     transform: scale(1.1);
     text-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
 }
@@ -310,7 +311,7 @@
 /* ========================================
    PANEL DE ALERTAS
 ======================================== */
-.alert-panel {
+.dashboard-container .alert-panel {
     background: white;
     border-radius: 16px;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
@@ -318,13 +319,13 @@
     border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
-.alert-header {
+.dashboard-container .alert-header {
     background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
     color: white;
     padding: 18px 24px;
 }
 
-.alert-header h4 {
+.dashboard-container .alert-header h4 {
     margin: 0;
     font-size: 20px;
     font-weight: 700;
@@ -334,18 +335,18 @@
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.alert-header i {
+.dashboard-container .alert-header i {
     font-size: 24px;
     filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.3));
 }
 
-.alert-body {
+.dashboard-container .alert-body {
     padding: 24px;
     max-height: 350px;
     overflow-y: auto;
 }
 
-.alert-body .alert {
+.dashboard-container .alert-body .alert {
     border-radius: 12px;
     border: none;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -355,7 +356,7 @@
 /* ========================================
    SECCIÓN DE GRÁFICOS
 ======================================== */
-.dashboard-charts {
+.dashboard-container .dashboard-charts {
     padding: 0 12px;
     width: 100%;
     display: flex;
@@ -363,12 +364,12 @@
     gap: 24px;
 }
 
-.dashboard-charts > div {
+.dashboard-container .dashboard-charts > div {
     flex: 1 1 calc(50% - 24px);
     min-width: 350px;
 }
 
-.chart-wrapper {
+.dashboard-container .chart-wrapper {
     background: white;
     border-radius: 20px;
     padding: 24px;
@@ -380,12 +381,12 @@
     border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
-.modern-chart:hover {
+.dashboard-container .modern-chart:hover {
     transform: translateY(-6px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
 }
 
-.chart-header {
+.dashboard-container .chart-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -394,7 +395,7 @@
     border-bottom: 2px solid #ecf0f1;
 }
 
-.chart-header h4 {
+.dashboard-container .chart-header h4 {
     margin: 0;
     font-size: 18px;
     font-weight: 700;
@@ -404,13 +405,13 @@
     gap: 10px;
 }
 
-.chart-header h4 i {
+.dashboard-container .chart-header h4 i {
     color: #3498db;
     font-size: 20px;
     filter: drop-shadow(0 2px 4px rgba(52, 152, 219, 0.3));
 }
 
-.chart-container {
+.dashboard-container .chart-container {
     flex: 1;
     min-height: 350px;
     position: relative;
@@ -420,7 +421,7 @@
 /* ========================================
    FILTROS
 ======================================== */
-.filter-section {
+.dashboard-container .filter-section {
     margin: 12px 0;
     padding: 18px;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -433,7 +434,7 @@
     border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
-.filter-section label {
+.dashboard-container .filter-section label {
     font-size: 14px;
     font-weight: 600;
     color: #495057;
@@ -444,12 +445,12 @@
     gap: 6px;
 }
 
-.filter-section label i {
+.dashboard-container .filter-section label i {
     color: #3498db;
     font-size: 16px;
 }
 
-.filter-section input[type="date"] {
+.dashboard-container .filter-section input[type="date"] {
     padding: 10px 14px;
     border: 2px solid #e9ecef;
     border-radius: 10px;
@@ -460,14 +461,14 @@
     font-weight: 500;
 }
 
-.filter-section input[type="date"]:focus {
+.dashboard-container .filter-section input[type="date"]:focus {
     border-color: #3498db;
     box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
     outline: none;
     transform: translateY(-1px);
 }
 
-.filter-section button {
+.dashboard-container .filter-section button {
     padding: 10px 20px;
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     color: white;
@@ -485,20 +486,20 @@
     letter-spacing: 0.5px;
 }
 
-.filter-section button:hover {
+.dashboard-container .filter-section button:hover {
     background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%);
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
 }
 
-.filter-section button i {
+.dashboard-container .filter-section button i {
     font-size: 16px;
 }
 
 /* ========================================
    BOTONES
 ======================================== */
-.btn {
+.dashboard-container .btn {
     padding: 12px 24px;
     border-radius: 12px;
     font-weight: 700;
@@ -514,19 +515,19 @@
     font-size: 14px;
 }
 
-.btn-primary {
+.dashboard-container .btn-primary {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     color: white;
     box-shadow: 0 6px 15px rgba(52, 152, 219, 0.2);
 }
 
-.btn-primary:hover {
+.dashboard-container .btn-primary:hover {
     background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%);
     transform: translateY(-3px);
     box-shadow: 0 10px 25px rgba(52, 152, 219, 0.3);
 }
 
-.expand-button {
+.dashboard-container .expand-button {
     background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
     border: none;
     color: white;
@@ -539,7 +540,7 @@
     justify-content: center;
 }
 
-.expand-button:hover {
+.dashboard-container .expand-button:hover {
     background: linear-gradient(135deg, #7f8c8d 0%, #2c3e50 100%);
     transform: scale(1.1);
 }
@@ -547,33 +548,33 @@
 /* ========================================
    SCROLLBARS PERSONALIZADAS
 ======================================== */
-.dashboard-tiles::-webkit-scrollbar,
-.alert-body::-webkit-scrollbar {
+.dashboard-container .dashboard-tiles::-webkit-scrollbar,
+.dashboard-container .alert-body::-webkit-scrollbar {
     height: 8px;
     width: 8px;
 }
 
-.dashboard-tiles::-webkit-scrollbar-track,
-.alert-body::-webkit-scrollbar-track {
+.dashboard-container .dashboard-tiles::-webkit-scrollbar-track,
+.dashboard-container .alert-body::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.3);
     border-radius: 4px;
 }
 
-.dashboard-tiles::-webkit-scrollbar-thumb,
-.alert-body::-webkit-scrollbar-thumb {
+.dashboard-container .dashboard-tiles::-webkit-scrollbar-thumb,
+.dashboard-container .alert-body::-webkit-scrollbar-thumb {
     background: rgba(108, 117, 125, 0.5);
     border-radius: 4px;
 }
 
-.dashboard-tiles::-webkit-scrollbar-thumb:hover,
-.alert-body::-webkit-scrollbar-thumb:hover {
+.dashboard-container .dashboard-tiles::-webkit-scrollbar-thumb:hover,
+.dashboard-container .alert-body::-webkit-scrollbar-thumb:hover {
     background: rgba(108, 117, 125, 0.7);
 }
 
 /* ========================================
    FOOTER
 ======================================== */
-.footer-section {
+.dashboard-container .footer-section {
     background: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
     padding: 20px;
@@ -583,7 +584,7 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.footer-section p {
+.dashboard-container .footer-section p {
     margin: 0;
     font-size: 14px;
     font-weight: 500;
@@ -593,7 +594,7 @@
     gap: 8px;
 }
 
-.footer-section i {
+.dashboard-container .footer-section i {
     color: #3498db;
 }
 
@@ -603,12 +604,12 @@
 
 /* Tablets grandes */
 @media (min-width: 1200px) and (max-width: 1399px) {
-    .tot_tasks {
+    .dashboard-container .tot_tasks {
         width: 180px;
         min-width: 180px;
     }
     
-    .oh-card {
+    .dashboard-container .oh-card {
         height: 130px;
         min-height: 130px;
     }
@@ -616,33 +617,33 @@
 
 /* Tablets */
 @media (min-width: 992px) and (max-width: 1199px) {
-    .tot_tasks {
+    .dashboard-container .tot_tasks {
         width: 170px;
         min-width: 170px;
     }
     
-    .oh-card {
+    .dashboard-container .oh-card {
         height: 120px;
         min-height: 120px;
     }
     
-    .oh-card-body i {
+    .dashboard-container .oh-card-body i {
         font-size: 36px !important;
     }
     
-    .oh-card-body h3 {
+    .dashboard-container .oh-card-body h3 {
         font-size: 16px !important;
     }
     
-    .metric-value {
+    .dashboard-container .metric-value {
         font-size: 28px !important;
     }
     
-    .chart-container {
+    .dashboard-container .chart-container {
         min-height: 300px;
     }
     
-    .dashboard-charts > div {
+    .dashboard-container .dashboard-charts > div {
         flex: 1 1 100%;
     }
 }
@@ -653,57 +654,57 @@
         padding: 8px;
     }
     
-    .tot_tasks {
+    .dashboard-container .tot_tasks {
         width: 160px;
         min-width: 160px;
     }
     
-    .oh-card {
+    .dashboard-container .oh-card {
         height: 110px;
         min-height: 110px;
     }
     
-    .oh-card-body {
+    .dashboard-container .oh-card-body {
         padding: 16px;
     }
     
-    .oh-card-body i {
+    .dashboard-container .oh-card-body i {
         font-size: 32px !important;
     }
     
-    .oh-card-body h3 {
+    .dashboard-container .oh-card-body h3 {
         font-size: 14px !important;
     }
     
-    .metric-value {
+    .dashboard-container .metric-value {
         font-size: 24px !important;
     }
     
-    .dashboard-title {
+    .dashboard-container .dashboard-title {
         font-size: 26px;
         flex-direction: column;
         text-align: center;
         gap: 12px;
     }
     
-    .section-title {
+    .dashboard-container .section-title {
         font-size: 20px;
     }
     
-    .chart-container {
+    .dashboard-container .chart-container {
         min-height: 280px;
     }
     
-    .dashboard-charts > div {
+    .dashboard-container .dashboard-charts > div {
         flex: 1 1 100%;
     }
     
-    .filter-section {
+    .dashboard-container .filter-section {
         flex-direction: column;
         align-items: stretch;
     }
     
-    .filter-section input[type="date"] {
+    .dashboard-container .filter-section input[type="date"] {
         width: 100%;
         max-width: none;
     }
@@ -715,85 +716,85 @@
         padding: 6px;
     }
     
-    .tot_tasks {
+    .dashboard-container .tot_tasks {
         width: 140px;
         min-width: 140px;
     }
     
-    .oh-card {
+    .dashboard-container .oh-card {
         height: 100px;
         min-height: 100px;
         border-radius: 16px;
     }
     
-    .oh-card-body {
+    .dashboard-container .oh-card-body {
         padding: 12px;
     }
     
-    .oh-card-body i {
+    .dashboard-container .oh-card-body i {
         font-size: 28px !important;
         margin-bottom: 8px;
     }
     
-    .oh-card-body h3 {
+    .dashboard-container .oh-card-body h3 {
         font-size: 12px !important;
         margin: 8px 0 4px 0;
     }
     
-    .metric-value {
+    .dashboard-container .metric-value {
         font-size: 20px !important;
     }
     
-    .dashboard-header {
+    .dashboard-container .dashboard-header {
         padding: 16px;
     }
     
-    .dashboard-title {
+    .dashboard-container .dashboard-title {
         font-size: 22px;
         flex-direction: column;
         text-align: center;
         gap: 10px;
     }
     
-    .dashboard-title i {
+    .dashboard-container .dashboard-title i {
         font-size: 28px;
     }
     
-    .section-title {
+    .dashboard-container .section-title {
         font-size: 18px;
         padding-left: 12px;
     }
     
-    .chart-container {
+    .dashboard-container .chart-container {
         min-height: 250px;
     }
     
-    .dashboard-tiles {
+    .dashboard-container .dashboard-tiles {
         padding: 12px;
         gap: 12px;
     }
     
-    .chart-wrapper {
+    .dashboard-container .chart-wrapper {
         padding: 16px;
     }
     
-    .chart-header h4 {
+    .dashboard-container .chart-header h4 {
         font-size: 16px;
     }
     
-    .filter-section {
+    .dashboard-container .filter-section {
         padding: 12px;
         flex-direction: column;
         align-items: stretch;
     }
     
-    .filter-section input[type="date"] {
+    .dashboard-container .filter-section input[type="date"] {
         width: 100%;
         max-width: none;
         margin-bottom: 8px;
     }
     
-    .filter-section button {
+    .dashboard-container .filter-section button {
         width: 100%;
         justify-content: center;
     }
