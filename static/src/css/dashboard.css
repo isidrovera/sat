@@ -137,114 +137,186 @@
 }
 
 /* ========================================
-   COLORES POR SECCIÓN
+   COLORES ESPECÍFICOS POR CARD
 ======================================== */
 
-/* Sección Máquinas - Azul */
-.dashboard-container .maquinas-tiles .modern-card {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-    color: white;
+/* Sección Máquinas */
+.dashboard-container #tile_total_maquinas {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
     box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
 }
 
-.dashboard-container .maquinas-tiles .modern-card:hover {
-    box-shadow: 0 20px 40px rgba(52, 152, 219, 0.3);
-}
-
-/* Sección Reparaciones - Rojo */
-.dashboard-container .reparaciones-tiles .modern-card {
-    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-    color: white;
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
-}
-
-.dashboard-container .reparaciones-tiles .modern-card:hover {
-    box-shadow: 0 20px 40px rgba(231, 76, 60, 0.3);
-}
-
-/* Sección Tickets - Morado */
-.dashboard-container .tickets-tiles .modern-card {
-    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-    color: white;
-    box-shadow: 0 8px 25px rgba(155, 89, 182, 0.2);
-}
-
-.dashboard-container .tickets-tiles .modern-card:hover {
-    box-shadow: 0 20px 40px rgba(155, 89, 182, 0.3);
-}
-
-/* Sección Alquiler - Gris Oscuro */
-.dashboard-container .alquiler-tiles .modern-card {
-    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-    color: white;
-    box-shadow: 0 8px 25px rgba(52, 73, 94, 0.2);
-}
-
-.dashboard-container .alquiler-tiles .modern-card:hover {
-    box-shadow: 0 20px 40px rgba(52, 73, 94, 0.3);
-}
-
-/* ========================================
-   CARDS ESPECÍFICAS SISTEMA DE BLOQUEO
-======================================== */
-.dashboard-container .success-card {
+.dashboard-container #tile_maquinas_disponibles {
     background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
-    color: white !important;
     box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
 }
 
-.dashboard-container .success-card:hover {
-    box-shadow: 0 20px 40px rgba(39, 174, 96, 0.3);
-}
-
-.dashboard-container .warning-card {
+.dashboard-container #tile_maquinas_separadas {
     background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
-    color: white !important;
     box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
 }
 
-.dashboard-container .warning-card:hover {
-    box-shadow: 0 20px 40px rgba(243, 156, 18, 0.3);
-}
-
-.dashboard-container .danger-card {
+.dashboard-container #tile_maquinas_con_problemas {
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
-    color: white !important;
     box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
 }
 
-.dashboard-container .danger-card:hover {
-    box-shadow: 0 20px 40px rgba(231, 76, 60, 0.3);
-}
-
-.dashboard-container .info-card {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
-    color: white !important;
-    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
-}
-
-.dashboard-container .info-card:hover {
-    box-shadow: 0 20px 40px rgba(52, 152, 219, 0.3);
-}
-
-.dashboard-container .secondary-card {
+.dashboard-container #tile_maquinas_de_partes {
     background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important;
-    color: white !important;
     box-shadow: 0 8px 25px rgba(149, 165, 166, 0.2);
 }
 
-.dashboard-container .secondary-card:hover {
-    box-shadow: 0 20px 40px rgba(149, 165, 166, 0.3);
+/* Sección Reparaciones */
+.dashboard-container #tile_total_reparaciones {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
 }
 
-.dashboard-container .primary-card {
+.dashboard-container #tile_maquinas_sin_revisar {
+    background: linear-gradient(135deg, #c0392b 0%, #922b21 100%) !important;
+    box-shadow: 0 8px 25px rgba(192, 57, 43, 0.2);
+}
+
+.dashboard-container #tile_maquinas_para_revision {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
-    color: white !important;
     box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
 }
 
-.dashboard-container .primary-card:hover {
+.dashboard-container #tile_reparaciones_en_revision {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
+}
+
+.dashboard-container #tile_reparaciones_finalizado {
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
+}
+
+/* Sección Tickets */
+.dashboard-container #tile_total_tickets {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%) !important;
+    box-shadow: 0 8px 25px rgba(155, 89, 182, 0.2);
+}
+
+.dashboard-container #tile_tickets_nuevos {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
+}
+
+.dashboard-container #tile_tickets_proceso {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
+}
+
+.dashboard-container #tile_tickets_finalizado {
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
+}
+
+/* Sección Alquiler */
+.dashboard-container #tile_total_maquinas_alquiler {
+    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%) !important;
+    box-shadow: 0 8px 25px rgba(52, 73, 94, 0.2);
+}
+
+.dashboard-container #tile_alquiler_sin_revisar {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
+}
+
+.dashboard-container #tile_alquiler_revisada {
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
+}
+
+.dashboard-container #tile_alquiler_lista {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
+}
+
+.dashboard-container #tile_alquiler_con_problemas {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
+}
+
+/* Sistema de Bloqueo - Colores específicos como en la imagen */
+.dashboard-container #tile_equipos_activos {
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
+}
+
+.dashboard-container #tile_equipos_suspendidos {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
+}
+
+.dashboard-container #tile_equipos_bloqueados {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
+}
+
+.dashboard-container #tile_equipos_no_accesibles {
+    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important;
+    box-shadow: 0 8px 25px rgba(149, 165, 166, 0.2);
+}
+
+.dashboard-container #tile_equipos_pendiente_bloqueo {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
+}
+
+.dashboard-container #tile_equipos_pendiente_desbloqueo {
+    background: linear-gradient(135deg, #5dade2 0%, #3498db 100%) !important;
+    box-shadow: 0 8px 25px rgba(93, 173, 226, 0.2);
+}
+
+/* Hover effects específicos por color */
+.dashboard-container #tile_total_maquinas:hover,
+.dashboard-container #tile_maquinas_para_revision:hover,
+.dashboard-container #tile_tickets_nuevos:hover,
+.dashboard-container #tile_alquiler_lista:hover,
+.dashboard-container #tile_equipos_pendiente_bloqueo:hover {
     box-shadow: 0 20px 40px rgba(52, 152, 219, 0.3);
+}
+
+.dashboard-container #tile_maquinas_disponibles:hover,
+.dashboard-container #tile_reparaciones_finalizado:hover,
+.dashboard-container #tile_tickets_finalizado:hover,
+.dashboard-container #tile_alquiler_revisada:hover,
+.dashboard-container #tile_equipos_activos:hover {
+    box-shadow: 0 20px 40px rgba(39, 174, 96, 0.3);
+}
+
+.dashboard-container #tile_maquinas_separadas:hover,
+.dashboard-container #tile_reparaciones_en_revision:hover,
+.dashboard-container #tile_tickets_proceso:hover,
+.dashboard-container #tile_alquiler_con_problemas:hover,
+.dashboard-container #tile_equipos_suspendidos:hover {
+    box-shadow: 0 20px 40px rgba(243, 156, 18, 0.3);
+}
+
+.dashboard-container #tile_maquinas_con_problemas:hover,
+.dashboard-container #tile_maquinas_sin_revisar:hover,
+.dashboard-container #tile_alquiler_sin_revisar:hover,
+.dashboard-container #tile_equipos_bloqueados:hover {
+    box-shadow: 0 20px 40px rgba(231, 76, 60, 0.3);
+}
+
+.dashboard-container #tile_maquinas_de_partes:hover,
+.dashboard-container #tile_equipos_no_accesibles:hover {
+    box-shadow: 0 20px 40px rgba(149, 165, 166, 0.3);
+}
+
+.dashboard-container #tile_total_tickets:hover {
+    box-shadow: 0 20px 40px rgba(155, 89, 182, 0.3);
+}
+
+.dashboard-container #tile_total_maquinas_alquiler:hover {
+    box-shadow: 0 20px 40px rgba(52, 73, 94, 0.3);
+}
+
+.dashboard-container #tile_equipos_pendiente_desbloqueo:hover {
+    box-shadow: 0 20px 40px rgba(93, 173, 226, 0.3);
 }
 
 /* ========================================
@@ -790,7 +862,7 @@
     }
 }
 
-/* Responsive para móviles - Ajustar textos */
+/* Responsive para móviles - Mejor ajuste */
 @media (max-width: 767px) {
     .dashboard-container {
         padding: 6px;
@@ -808,27 +880,28 @@
     }
     
     .dashboard-container .oh-card-body {
-        padding: 10px;
+        padding: 8px;
     }
     
     .dashboard-container .oh-card-body i {
-        font-size: 24px !important;
-        margin-bottom: 6px;
-        width: 40px;
-        height: 40px;
-        padding: 6px;
+        font-size: 20px !important;
+        margin-bottom: 3px;
+        width: 32px;
+        height: 32px;
+        padding: 4px;
     }
     
     .dashboard-container .oh-card-body h3 {
-        font-size: 11px !important;
-        margin: 6px 0 3px 0;
-        padding: 2px 4px;
-        line-height: 1.1 !important;
+        font-size: 10px !important;
+        margin: 3px 0 !important;
+        padding: 1px 4px;
+        line-height: 1.0 !important;
     }
     
     .dashboard-container .metric-value {
-        font-size: 18px !important;
+        font-size: 16px !important;
         padding: 1px 4px;
+        letter-spacing: 0.5px;
     }
     
     .dashboard-container .dashboard-header {
@@ -883,5 +956,14 @@
     .dashboard-container .filter-section button {
         width: 100%;
         justify-content: center;
+    }
+    
+    /* Animaciones más suaves en móvil */
+    .dashboard-container .oh-card-body i {
+        animation-duration: 4s;
+    }
+    
+    .dashboard-container .metric-value {
+        animation-duration: 6s;
     }
 }
