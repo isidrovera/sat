@@ -258,8 +258,57 @@ class SatDashboard extends Component {
                 action_id: 'sat.action_soporte_window', 
                 domain: [['estado', '=', 'finalizado']], 
                 search_view_id: 'ticket_search' 
+            },
+            { 
+                id: 'equipos_activos', 
+                value: this.dashboardData.equipos_activos, 
+                res_model: 'alquiler', 
+                action_id: 'sat.action_alquiler_window', 
+                domain: [['estado_alquiler_id', '=', 'alquilada'], ['estado_bloqueo', '=', 'activo']], 
+                search_view_id: 'alquiler_andes_search_view' 
+            },
+            { 
+                id: 'equipos_suspendidos', 
+                value: this.dashboardData.equipos_suspendidos, 
+                res_model: 'alquiler', 
+                action_id: 'sat.action_alquiler_window', 
+                domain: [['estado_alquiler_id', '=', 'alquilada'], ['estado_bloqueo', '=', 'suspendido']], 
+                search_view_id: 'alquiler_andes_search_view' 
+            },
+            { 
+                id: 'equipos_bloqueados', 
+                value: this.dashboardData.equipos_bloqueados, 
+                res_model: 'alquiler', 
+                action_id: 'sat.action_alquiler_window', 
+                domain: [['estado_alquiler_id', '=', 'alquilada'], ['estado_bloqueo', '=', 'bloqueado']], 
+                search_view_id: 'alquiler_andes_search_view' 
+            },
+            { 
+                id: 'equipos_no_accesibles', 
+                value: this.dashboardData.equipos_no_accesibles, 
+                res_model: 'alquiler', 
+                action_id: 'sat.action_alquiler_window', 
+                domain: [['estado_alquiler_id', '=', 'alquilada'], ['estado_bloqueo', '=', 'no_accesible']], 
+                search_view_id: 'alquiler_andes_search_view' 
+            },
+            { 
+                id: 'equipos_pendiente_bloqueo', 
+                value: this.dashboardData.equipos_pendiente_bloqueo, 
+                res_model: 'alquiler', 
+                action_id: 'sat.action_alquiler_window', 
+                domain: [['estado_alquiler_id', '=', 'alquilada'], ['estado_bloqueo', '=', 'pendiente_bloqueo']], 
+                search_view_id: 'alquiler_andes_search_view' 
+            },
+            { 
+                id: 'equipos_pendiente_desbloqueo', 
+                value: this.dashboardData.equipos_pendiente_desbloqueo, 
+                res_model: 'alquiler', 
+                action_id: 'sat.action_alquiler_window', 
+                domain: [['estado_alquiler_id', '=', 'alquilada'], ['estado_bloqueo', '=', 'pendiente_desbloqueo']], 
+                search_view_id: 'alquiler_andes_search_view' 
             }
         ];
+
     
         elements.forEach(({ id, value, res_model, action_id, domain, search_view_id }) => {
             console.log(`Configurando tile: ${id}`);
@@ -281,7 +330,54 @@ class SatDashboard extends Component {
                 console.warn(`Elemento no encontrado para tile: ${id}`);
             }
         });
+        this._renderEquiposAtencion();
+        this._setupSistemaBloqueoButton();
     }
+    // NUEVOS MÉTODOS - AGREGAR DESPUÉS DE _render_tiles()
+    _renderEquiposAtencion() {
+        const equiposAtencionContainer = document.getElementById('equiposAtencionList');
+        if (!equiposAtencionContainer || !this.dashboardData.equipos_atencion) return;
+
+        if (this.dashboardData.equipos_atencion.length === 0) {
+            equiposAtencionContainer.innerHTML = '<p class="text-success">✅ No hay equipos que requieran atención</p>';
+            return;
+        }
+
+        let html = '';
+        this.dashboardData.equipos_atencion.forEach(equipo => {
+            const badgeClass = this._getEstadoBadgeClass(equipo.estado_bloqueo);
+            html += `
+                <div class="alert alert-warning alert-sm mb-2" role="alert">
+                    <strong>${equipo.serie}</strong> - ${equipo.cliente}<br>
+                    <small class="text-muted">${equipo.modelo}</small><br>
+                    <span class="badge ${badgeClass}">${equipo.estado_label}</span>
+                    ${equipo.motivo ? `<br><small>${equipo.motivo}</small>` : ''}
+                    ${equipo.fecha_bloqueo ? `<br><small class="text-muted">${equipo.fecha_bloqueo}</small>` : ''}
+                </div>
+            `;
+        });
+        equiposAtencionContainer.innerHTML = html;
+    }
+
+    _getEstadoBadgeClass(estado) {
+        const classes = {
+            'pendiente_bloqueo': 'badge-info',
+            'pendiente_desbloqueo': 'badge-primary', 
+            'no_accesible': 'badge-secondary'
+        };
+        return classes[estado] || 'badge-warning';
+    }
+
+    _setupSistemaBloqueoButton() {
+        const btnSistemaBloqueo = document.getElementById('btnSistemaBloqueo');
+        if (btnSistemaBloqueo) {
+            btnSistemaBloqueo.onclick = () => {
+                // Abrir vista de alquileres filtrada
+                this._openFilteredView('sat.action_alquiler_window', 'alquiler', [['estado_alquiler_id', '=', 'alquilada']], 'alquiler_andes_search_view');
+            };
+        }
+    }
+
     
     async _openFilteredView(action_id, res_model, domain, search_view_id = null) {
         console.log(`Ejecutando _openFilteredView`);

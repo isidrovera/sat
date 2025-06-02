@@ -1433,6 +1433,8 @@ class UnidadAlquiler(models.Model):
             })
         
         return resultado
+
+    
 class SolicitudPartes(models.Model):
     _name = 'solicitud.partes'
     _inherit = ['mail.thread', 'mail.activity.mixin']

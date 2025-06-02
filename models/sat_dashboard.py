@@ -52,7 +52,7 @@ class SatDashboard(models.Model):
                 ['cliente_id']
             )
             
-            # Procesamiento de datos por cliente
+        # Procesamiento de datos por cliente
         clientes_totales_alquiler = {}
         for grupo in alquiler_por_cliente:
                 if grupo.get('cliente_id') and grupo['cliente_id']:
@@ -61,14 +61,6 @@ class SatDashboard(models.Model):
                     clientes_totales_alquiler[nombre_cliente] = cantidad
 
         _logger.info("Datos por cliente procesados: %s", clientes_totales_alquiler)
-
-
-        # Máquinas por disponibilidad
-        maquinas_disponibles = self.env['sat.sat'].search_count([('disponibilidad_id', '=', 'disponible')])
-        maquinas_separadas = self.env['sat.sat'].search_count([('disponibilidad_id', '=', 'separada')])
-        maquinas_no_disponibles = self.env['sat.sat'].search_count([('disponibilidad_id', '=', 'no_disponible')])
-        
-        _logger.info("Máquinas - Disponibles: %s, Separadas: %s, No Disponibles: %s", maquinas_disponibles, maquinas_separadas, maquinas_no_disponibles)
 
         # Máquinas por asesora
         asesora_data = self.env['sat.sat'].read_group([('asesora_id', '!=', False)], ['asesora_id'], ['asesora_id'])
@@ -106,7 +98,6 @@ class SatDashboard(models.Model):
         tickets_finalizado = self.env['ticket.alquiler'].search_count([('estado', '=', 'finalizado')])
         
         _logger.info("Total de tickets: %s", total_tickets)
-        
 
         # Tickets por mes, año y día usando 'agenda'
         tickets_dia = self.env['ticket.alquiler'].search_count([('agenda', '>=', today)])
@@ -191,6 +182,7 @@ class SatDashboard(models.Model):
         except Exception as e:
             _logger.error("Error al procesar tickets por fecha: %s", str(e))
             tickets_por_fecha = {}
+
         # Reparaciones por fecha
         try:
             reparaciones_por_fecha = {}
@@ -214,6 +206,75 @@ class SatDashboard(models.Model):
             _logger.error("Error al procesar reparaciones por fecha: %s", str(e))
             reparaciones_por_fecha = {}
 
+        # DATOS DEL SISTEMA DE BLOQUEO
+        equipos_activos = self.env['alquiler'].search_count([
+            ('estado_alquiler_id', '=', 'alquilada'),
+            ('estado_bloqueo', '=', 'activo'),
+        ])
+
+        equipos_suspendidos = self.env['alquiler'].search_count([
+            ('estado_alquiler_id', '=', 'alquilada'),
+            ('estado_bloqueo', '=', 'suspendido'),
+        ])
+
+        equipos_bloqueados = self.env['alquiler'].search_count([
+            ('estado_alquiler_id', '=', 'alquilada'),
+            ('estado_bloqueo', '=', 'bloqueado'),
+        ])
+
+        equipos_no_accesibles = self.env['alquiler'].search_count([
+            ('estado_alquiler_id', '=', 'alquilada'),
+            ('estado_bloqueo', '=', 'no_accesible'),
+        ])
+
+        equipos_pendiente_bloqueo = self.env['alquiler'].search_count([
+            ('estado_alquiler_id', '=', 'alquilada'),
+            ('estado_bloqueo', '=', 'pendiente_bloqueo'),
+        ])
+
+        equipos_pendiente_desbloqueo = self.env['alquiler'].search_count([
+            ('estado_alquiler_id', '=', 'alquilada'),
+            ('estado_bloqueo', '=', 'pendiente_desbloqueo'),
+        ])
+
+        # Equipos que requieren atención inmediata
+        equipos_atencion = self.env['alquiler'].search([
+            ('estado_alquiler_id', '=', 'alquilada'),
+            ('estado_bloqueo', 'in', ['pendiente_bloqueo', 'pendiente_desbloqueo', 'no_accesible']),
+        ], limit=10, order='fecha_bloqueo desc')
+
+        equipos_atencion_data = []
+        for equipo in equipos_atencion:
+            equipos_atencion_data.append({
+                'id': equipo.id,
+                'serie': equipo.serie,
+                'cliente': equipo.cliente_id.name if equipo.cliente_id else '',
+                'modelo': equipo.name.name if equipo.name else '',
+                'estado_bloqueo': equipo.estado_bloqueo,
+                'estado_label': dict(equipo._fields['estado_bloqueo'].selection)[equipo.estado_bloqueo],
+                'motivo': equipo.motivo_bloqueo or '',
+                'fecha_bloqueo': equipo.fecha_bloqueo.strftime('%d/%m/%Y %H:%M') if equipo.fecha_bloqueo else '',
+                'direccion': equipo.direccion or '',
+                'contacto': equipo.contacto_id or '',
+                'celular': equipo.celular or '',
+            })
+
+        # Estados de bloqueo por porcentaje (para gráficos)
+        total_alquilados = self.env['alquiler'].search_count([
+            ('estado_alquiler_id', '=', 'alquilada'),
+        ])
+
+        bloqueo_stats = {
+            'activos': equipos_activos,
+            'suspendidos': equipos_suspendidos,
+            'bloqueados': equipos_bloqueados,
+            'no_accesibles': equipos_no_accesibles,
+            'pendiente_bloqueo': equipos_pendiente_bloqueo,
+            'pendiente_desbloqueo': equipos_pendiente_desbloqueo,
+            'total': total_alquilados,
+        }
+
+        _logger.info("Datos de bloqueo calculados: %s", bloqueo_stats)
 
         # Crear el diccionario de retorno
         data = {
@@ -250,19 +311,142 @@ class SatDashboard(models.Model):
             'tickets_por_mes': tickets_por_mes,
             'tickets_por_año': tickets_por_año,
             'total_maquinas_alquiler': total_maquinas_alquiler,
-            'clientes_totales_alquiler':clientes_totales_alquiler,
-            'alquiler_por_cliente':alquiler_por_cliente,
+            'clientes_totales_alquiler': clientes_totales_alquiler,
+            'alquiler_por_cliente': alquiler_por_cliente,
             'alquiler_sin_revisar': alquiler_sin_revisar, 
             'alquiler_alquilada': alquiler_alquilada,
-            'alquiler_revisada' : alquiler_revisada,
+            'alquiler_revisada': alquiler_revisada,
             'alquiler_lista': alquiler_lista,
             'alquiler_con_problemas': alquiler_con_problemas,
-           
-            
-            # Añadido para el gráfico anual
+            # NUEVOS DATOS DE BLOQUEO
+            'equipos_activos': equipos_activos,
+            'equipos_suspendidos': equipos_suspendidos,
+            'equipos_bloqueados': equipos_bloqueados,
+            'equipos_no_accesibles': equipos_no_accesibles,
+            'equipos_pendiente_bloqueo': equipos_pendiente_bloqueo,
+            'equipos_pendiente_desbloqueo': equipos_pendiente_desbloqueo,
+            'total_equipos_alquilados_activos': total_alquilados,
+            'equipos_atencion': equipos_atencion_data,
+            'bloqueo_stats': bloqueo_stats,
         }
 
         # Imprimir el diccionario completo para verificar que contiene todos los datos
         _logger.info("Datos del dashboard: %s", data)
 
         return data
+
+    @api.model
+    def get_bloqueo_data(self):
+        """
+        Método específico para obtener datos del sistema de bloqueo
+        Útil para actualizaciones independientes del dashboard principal
+        """
+        try:
+            # Obtener datos del modelo alquiler usando los métodos ya existentes
+            dashboard_data = self.env['alquiler'].get_dashboard_data_alquilados()
+            
+            # Equipos que requieren atención
+            equipos_criticos = self.env['alquiler'].search([
+                ('estado_alquiler_id', '=', 'alquilada'),
+                ('estado_bloqueo', 'in', ['pendiente_bloqueo', 'pendiente_desbloqueo', 'no_accesible'])
+            ], limit=20, order='fecha_bloqueo desc')
+            
+            equipos_criticos_data = []
+            for equipo in equipos_criticos:
+                equipos_criticos_data.append({
+                    'id': equipo.id,
+                    'serie': equipo.serie,
+                    'cliente': equipo.cliente_id.name if equipo.cliente_id else 'Sin cliente',
+                    'modelo': equipo.name.name if equipo.name else 'Sin modelo',
+                    'estado_bloqueo': equipo.estado_bloqueo,
+                    'estado_label': dict(equipo._fields['estado_bloqueo'].selection)[equipo.estado_bloqueo],
+                    'motivo': equipo.motivo_bloqueo or 'Sin motivo especificado',
+                    'fecha_bloqueo': equipo.fecha_bloqueo.strftime('%d/%m/%Y %H:%M') if equipo.fecha_bloqueo else '',
+                    'direccion': equipo.direccion or 'Sin dirección',
+                    'contacto': equipo.contacto_id or 'Sin contacto',
+                    'celular': equipo.celular or 'Sin teléfono',
+                    'ip_equipo': equipo.ip_equipo or 'No configurada',
+                    'acceso_remoto': equipo.acceso_remoto_disponible,
+                    'puede_suspender': equipo.estado_bloqueo == 'activo',
+                    'puede_bloquear': equipo.estado_bloqueo in ['activo', 'suspendido'],
+                    'puede_desbloquear': equipo.estado_bloqueo in ['bloqueado', 'suspendido']
+                })
+
+            # Resumen ejecutivo
+            total_equipos = dashboard_data.get('total_alquilados', 0)
+            equipos_problemas = dashboard_data.get('equipos_suspendidos', 0) + \
+                              dashboard_data.get('equipos_bloqueados', 0) + \
+                              dashboard_data.get('equipos_no_accesibles', 0) + \
+                              dashboard_data.get('pendientes_bloqueo', 0) + \
+                              dashboard_data.get('pendientes_desbloqueo', 0)
+
+            porcentaje_problemas = (equipos_problemas / total_equipos * 100) if total_equipos > 0 else 0
+
+            result = {
+                'success': True,
+                'dashboard_data': dashboard_data,
+                'equipos_criticos': equipos_criticos_data,
+                'resumen': {
+                    'total_equipos': total_equipos,
+                    'equipos_con_problemas': equipos_problemas,
+                    'porcentaje_problemas': round(porcentaje_problemas, 1),
+                    'equipos_operativos': dashboard_data.get('equipos_activos', 0)
+                },
+                'timestamp': fields.Datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            }
+
+            _logger.info("Datos de bloqueo obtenidos exitosamente: %s equipos críticos", len(equipos_criticos_data))
+            return result
+
+        except Exception as e:
+            _logger.error("Error al obtener datos de bloqueo: %s", str(e))
+            return {
+                'success': False,
+                'error': str(e),
+                'dashboard_data': {},
+                'equipos_criticos': [],
+                'timestamp': fields.Datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            }
+
+    @api.model
+    def accion_bloqueo_rapida(self, equipo_id, accion, motivo=None):
+        """
+        Método para ejecutar acciones de bloqueo rápidas desde el dashboard
+        
+        Args:
+            equipo_id (int): ID del equipo
+            accion (str): 'suspender', 'bloquear', 'desbloquear'
+            motivo (str): Motivo de la acción
+        
+        Returns:
+            dict: Resultado de la operación
+        """
+        try:
+            equipo = self.env['alquiler'].browse(equipo_id)
+            if not equipo.exists():
+                return {'success': False, 'error': 'Equipo no encontrado'}
+
+            usuario_id = self.env.user.id
+            
+            if accion == 'suspender':
+                result = equipo.action_suspender_servicio(motivo, usuario_id)
+            elif accion == 'bloquear':
+                result = equipo.action_bloquear_equipo(motivo, usuario_id)
+            elif accion == 'desbloquear':
+                result = equipo.action_desbloquear_equipo(motivo, usuario_id)
+            else:
+                return {'success': False, 'error': 'Acción no válida'}
+
+            if result:
+                _logger.info(f"Acción {accion} ejecutada en equipo {equipo.serie} por usuario {self.env.user.name}")
+                return {
+                    'success': True, 
+                    'message': f'Acción {accion} ejecutada exitosamente',
+                    'nuevo_estado': equipo.estado_bloqueo
+                }
+            else:
+                return {'success': False, 'error': 'Error al ejecutar la acción'}
+
+        except Exception as e:
+            _logger.error(f"Error en accion_bloqueo_rapida: {str(e)}")
+            return {'success': False, 'error': str(e)}
