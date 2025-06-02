@@ -251,34 +251,81 @@
    CONTENIDO DE LAS CARDS
 ======================================== */
 .dashboard-container .oh-card-body {
-    padding: 20px;
+    padding: 16px;
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     width: 100%;
     height: 100%;
     position: relative;
+    box-sizing: border-box;
 }
 
-/* Iconos principales */
+/* Iconos principales - Controlados y animados */
 .dashboard-container .oh-card-body i {
-    font-size: 36px !important;
+    font-size: 28px !important;
     color: white !important;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.6);
-    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
     transition: all 0.3s ease;
-    background: rgba(255, 255, 255, 0.15);
-    padding: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 6px;
     border-radius: 50%;
-    width: 60px;
-    height: 60px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+    animation: iconFloat 3s ease-in-out infinite;
+}
+
+/* Animación de flotación para iconos */
+@keyframes iconFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-3px); }
+}
+
+/* Animación de rotación para iconos específicos */
+.dashboard-container .oh-card-body .ri-loader-4-fill {
+    animation: iconRotate 2s linear infinite;
+}
+
+.dashboard-container .oh-card-body .ri-settings-5-fill {
+    animation: iconRotate 4s linear infinite;
+}
+
+@keyframes iconRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Animación de pulso para iconos de alerta */
+.dashboard-container .oh-card-body .ri-alert-fill,
+.dashboard-container .oh-card-body .ri-error-warning-fill,
+.dashboard-container .oh-card-body .ri-error-warning-line {
+    animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Animación de rebote para iconos de éxito */
+.dashboard-container .oh-card-body .ri-checkbox-circle-fill,
+.dashboard-container .oh-card-body .ri-check-double-fill,
+.dashboard-container .oh-card-body .ri-check-double-line {
+    animation: iconBounce 3s ease-in-out infinite;
+}
+
+@keyframes iconBounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-4px); }
+    60% { transform: translateY(-2px); }
 }
 
 .dashboard-container .oh-card:hover .oh-card-body i {
@@ -286,10 +333,10 @@
     filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
 }
 
-/* Títulos de las cards */
+/* Títulos de las cards - Mejor distribución */
 .dashboard-container .oh-card-body h3 {
-    font-size: 16px !important;
-    margin: 10px 0 6px 0;
+    font-size: 13px !important;
+    margin: 4px 0 !important;
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: clip !important;
@@ -297,30 +344,43 @@
     font-weight: 900 !important;
     color: white !important;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8) !important;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     text-transform: none;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.2 !important;
+    line-height: 1.1 !important;
     text-align: center !important;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 4px 8px;
-    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 2px 6px;
+    border-radius: 4px;
     backdrop-filter: blur(5px);
+    flex-shrink: 0;
 }
 
-/* Valores numéricos */
+/* Valores numéricos - Ajustados */
 .dashboard-container .metric-value {
-    font-size: 28px !important;
+    font-size: 24px !important;
     font-weight: 900 !important;
     color: white !important;
     text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8) !important;
     letter-spacing: 1px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     transition: all 0.3s ease;
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.3);
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: 6px;
     backdrop-filter: blur(3px);
+    flex-shrink: 0;
+    animation: numberGlow 4s ease-in-out infinite;
+}
+
+/* Animación de brillo para números */
+@keyframes numberGlow {
+    0%, 100% { 
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+    }
+    50% { 
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+    }
 }
 
 .dashboard-container .oh-card:hover .metric-value {
