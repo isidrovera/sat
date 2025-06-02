@@ -103,74 +103,74 @@
     border: none;
     position: relative;
     overflow: hidden;
+    cursor: pointer;
 }
 
-.modern-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.oh-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
+
+/* Diferentes colores para cada sección */
+.maquinas-tiles .modern-card {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     color: white;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.15);
 }
 
-.modern-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.25);
+.reparaciones-tiles .modern-card {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.15);
 }
 
-/* Variaciones de colores para cards */
+.tickets-tiles .modern-card {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: white;
+    box-shadow: 0 8px 25px rgba(155, 89, 182, 0.15);
+}
+
+.alquiler-tiles .modern-card {
+    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    color: white;
+    box-shadow: 0 8px 25px rgba(52, 73, 94, 0.15);
+}
+
+/* Cards específicas para el sistema de bloqueo */
 .success-card {
-    background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-    box-shadow: 0 8px 25px rgba(78, 205, 196, 0.15);
-}
-
-.success-card:hover {
-    box-shadow: 0 15px 35px rgba(78, 205, 196, 0.25);
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+    color: white !important;
+    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.15);
 }
 
 .warning-card {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    box-shadow: 0 8px 25px rgba(240, 147, 251, 0.15);
-}
-
-.warning-card:hover {
-    box-shadow: 0 15px 35px rgba(240, 147, 251, 0.25);
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
+    color: white !important;
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.15);
 }
 
 .danger-card {
-    background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
-    box-shadow: 0 8px 25px rgba(252, 70, 107, 0.15);
-}
-
-.danger-card:hover {
-    box-shadow: 0 15px 35px rgba(252, 70, 107, 0.25);
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+    color: white !important;
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.15);
 }
 
 .info-card {
-    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-    color: #2c3e50;
-    box-shadow: 0 8px 25px rgba(168, 237, 234, 0.15);
-}
-
-.info-card:hover {
-    box-shadow: 0 15px 35px rgba(168, 237, 234, 0.25);
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+    color: white !important;
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.15);
 }
 
 .secondary-card {
-    background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);
-    color: #2c3e50;
-    box-shadow: 0 8px 25px rgba(210, 153, 194, 0.15);
-}
-
-.secondary-card:hover {
-    box-shadow: 0 15px 35px rgba(210, 153, 194, 0.25);
+    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important;
+    color: white !important;
+    box-shadow: 0 8px 25px rgba(149, 165, 166, 0.15);
 }
 
 .primary-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
-}
-
-.primary-card:hover {
-    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.25);
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+    color: white !important;
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.15);
 }
 
 .oh-card-body {
@@ -187,28 +187,32 @@
 
 /* Iconos en Cards */
 .card-icon {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 8px;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .card-icon i {
-    font-size: 24px;
-    color: white;
+    font-size: 28px;
+    color: white !important;
+    font-weight: 700;
 }
 
-.card-icon.primary i { color: #3498db; }
-.card-icon.success i { color: #27ae60; }
-.card-icon.warning i { color: #f39c12; }
-.card-icon.danger i { color: #e74c3c; }
-.card-icon.info i { color: #3498db; }
-.card-icon.secondary i { color: #95a5a6; }
+/* Iconos específicos más visibles */
+.oh-card-body i {
+    font-size: 32px !important;
+    color: white !important;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+}
 
 .oh-card-body h3 {
     font-size: 14px;
@@ -218,14 +222,16 @@
     text-overflow: ellipsis;
     width: 100%;
     font-weight: 600;
-    color: inherit;
+    color: white !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .metric-value {
-    font-size: 20px;
-    font-weight: 800;
-    color: inherit;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 24px;
+    font-weight: 900;
+    color: white !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: 1px;
 }
 
 /* Colores para iconos RemixIcon */
