@@ -1,10 +1,13 @@
 /* Archivo: static/src/css/dashboard.css */
 
+/* ========================================
+   CONFIGURACIÓN GENERAL DEL DASHBOARD
+======================================== */
 .dashboard-container {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: 8px;
+    padding: 12px;
     width: 100%;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     min-height: 100vh;
@@ -17,164 +20,236 @@
     padding: 10px;
 }
 
-/* Header del Dashboard */
+/* ========================================
+   HEADER DEL DASHBOARD
+======================================== */
 .dashboard-header {
     background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    margin-bottom: 20px;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    margin-bottom: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .dashboard-title {
-    font-size: 28px;
-    font-weight: 700;
+    font-size: 32px;
+    font-weight: 800;
     color: #2c3e50;
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
 }
 
 .dashboard-title i {
     color: #3498db;
-    font-size: 32px;
+    font-size: 36px;
+    filter: drop-shadow(0 2px 4px rgba(52, 152, 219, 0.3));
 }
 
 .dashboard-actions {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
 }
 
-/* Secciones del Dashboard */
+/* ========================================
+   SECCIONES DEL DASHBOARD
+======================================== */
 .dashboard-section {
-    margin-bottom: 30px;
+    margin-bottom: 32px;
 }
 
 .section-title {
-    font-size: 20px;
-    font-weight: 600;
+    font-size: 22px;
+    font-weight: 700;
     color: #2c3e50;
-    margin-bottom: 15px;
-    padding: 10px 0;
-    border-bottom: 2px solid #e74c3c;
+    margin-bottom: 18px;
+    padding: 12px 0;
+    border-bottom: 3px solid #e74c3c;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    padding-left: 16px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
 }
 
 .section-title i {
     color: #e74c3c;
-    font-size: 24px;
+    font-size: 26px;
+    filter: drop-shadow(0 2px 4px rgba(231, 76, 60, 0.3));
 }
 
-/* Tiles del Dashboard */
+/* ========================================
+   TILES DEL DASHBOARD
+======================================== */
 .dashboard-tiles {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 16px;
     justify-content: flex-start;
     width: 100%;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 .tot_tasks {
     flex: 0 0 auto;
-    width: 180px;
-    min-width: 180px;
+    width: 200px;
+    min-width: 200px;
     padding: 0;
     margin: 0;
 }
 
-/* Cards Modernas */
+/* ========================================
+   CARDS MODERNAS
+======================================== */
 .oh-card {
     padding: 0;
-    border-radius: 16px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 20px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 120px;
-    min-height: 120px;
-    background: white;
+    height: 140px;
+    min-height: 140px;
     width: 100%;
     border: none;
     position: relative;
     overflow: hidden;
     cursor: pointer;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .oh-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
-/* Diferentes colores para cada sección */
+/* ========================================
+   COLORES POR SECCIÓN
+======================================== */
+
+/* Sección Máquinas - Azul */
 .maquinas-tiles .modern-card {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     color: white;
-    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.15);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
 }
 
+.maquinas-tiles .modern-card:hover {
+    box-shadow: 0 20px 40px rgba(52, 152, 219, 0.3);
+}
+
+/* Sección Reparaciones - Rojo */
 .reparaciones-tiles .modern-card {
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
     color: white;
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.15);
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
 }
 
+.reparaciones-tiles .modern-card:hover {
+    box-shadow: 0 20px 40px rgba(231, 76, 60, 0.3);
+}
+
+/* Sección Tickets - Morado */
 .tickets-tiles .modern-card {
     background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
     color: white;
-    box-shadow: 0 8px 25px rgba(155, 89, 182, 0.15);
+    box-shadow: 0 8px 25px rgba(155, 89, 182, 0.2);
 }
 
+.tickets-tiles .modern-card:hover {
+    box-shadow: 0 20px 40px rgba(155, 89, 182, 0.3);
+}
+
+/* Sección Alquiler - Gris Oscuro */
 .alquiler-tiles .modern-card {
     background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
     color: white;
-    box-shadow: 0 8px 25px rgba(52, 73, 94, 0.15);
+    box-shadow: 0 8px 25px rgba(52, 73, 94, 0.2);
 }
 
-/* Cards específicas para el sistema de bloqueo */
+.alquiler-tiles .modern-card:hover {
+    box-shadow: 0 20px 40px rgba(52, 73, 94, 0.3);
+}
+
+/* ========================================
+   CARDS ESPECÍFICAS SISTEMA DE BLOQUEO
+======================================== */
 .success-card {
     background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
     color: white !important;
-    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.15);
+    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
+}
+
+.success-card:hover {
+    box-shadow: 0 20px 40px rgba(39, 174, 96, 0.3);
 }
 
 .warning-card {
     background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
     color: white !important;
-    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.15);
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
+}
+
+.warning-card:hover {
+    box-shadow: 0 20px 40px rgba(243, 156, 18, 0.3);
 }
 
 .danger-card {
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
     color: white !important;
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.15);
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
+}
+
+.danger-card:hover {
+    box-shadow: 0 20px 40px rgba(231, 76, 60, 0.3);
 }
 
 .info-card {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
     color: white !important;
-    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.15);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
+}
+
+.info-card:hover {
+    box-shadow: 0 20px 40px rgba(52, 152, 219, 0.3);
 }
 
 .secondary-card {
     background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important;
     color: white !important;
-    box-shadow: 0 8px 25px rgba(149, 165, 166, 0.15);
+    box-shadow: 0 8px 25px rgba(149, 165, 166, 0.2);
+}
+
+.secondary-card:hover {
+    box-shadow: 0 20px 40px rgba(149, 165, 166, 0.3);
 }
 
 .primary-card {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
     color: white !important;
-    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.15);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
 }
 
+.primary-card:hover {
+    box-shadow: 0 20px 40px rgba(52, 152, 219, 0.3);
+}
+
+/* ========================================
+   CONTENIDO DE LAS CARDS
+======================================== */
 .oh-card-body {
-    padding: 15px;
+    padding: 20px;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -185,303 +260,279 @@
     position: relative;
 }
 
-/* Iconos en Cards */
-.card-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 8px;
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.card-icon i {
-    font-size: 28px;
-    color: white !important;
-    font-weight: 700;
-}
-
-/* Iconos específicos más visibles */
+/* Iconos principales */
 .oh-card-body i {
-    font-size: 32px !important;
+    font-size: 42px !important;
     color: white !important;
-    margin-bottom: 8px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+    margin-bottom: 12px;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.4));
+    transition: all 0.3s ease;
 }
 
+.oh-card:hover .oh-card-body i {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+}
+
+/* Títulos de las cards */
 .oh-card-body h3 {
-    font-size: 14px;
-    margin: 8px 0 4px 0;
+    font-size: 18px !important;
+    margin: 12px 0 8px 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     width: 100%;
-    font-weight: 600;
+    font-weight: 800 !important;
     color: white !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Valores numéricos */
 .metric-value {
-    font-size: 24px;
-    font-weight: 900;
+    font-size: 32px !important;
+    font-weight: 900 !important;
     color: white !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    letter-spacing: 1px;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    letter-spacing: 2px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: all 0.3s ease;
 }
 
-/* Colores para iconos RemixIcon */
-.ri-printer-fill,
-.ri-printer-line { color: #3498db; }
+.oh-card:hover .metric-value {
+    transform: scale(1.1);
+    text-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+}
 
-.ri-checkbox-circle-fill,
-.ri-check-circle-line,
-.ri-check-double-fill { color: #27ae60; }
-
-.ri-pause-circle-fill,
-.ri-pause-line { color: #f39c12; }
-
-.ri-error-warning-fill,
-.ri-error-warning-line,
-.ri-alert-fill,
-.ri-alert-line { color: #e74c3c; }
-
-.ri-tools-fill,
-.ri-tools-line,
-.ri-hammer-fill { color: #8e44ad; }
-
-.ri-search-eye-fill { color: #3498db; }
-
-.ri-loader-4-fill { color: #f39c12; }
-
-.ri-ticket-2-fill { color: #9b59b6; }
-
-.ri-add-circle-fill { color: #3498db; }
-
-.ri-settings-5-fill { color: #f39c12; }
-
-.ri-archive-fill { color: #34495e; }
-
-.ri-shield-check-line,
-.ri-lock-line,
-.ri-unlock-line { color: #2c3e50; }
-
-.ri-wifi-off-line { color: #95a5a6; }
-
-.ri-time-line { color: #3498db; }
-
-/* Panel de Alertas */
+/* ========================================
+   PANEL DE ALERTAS
+======================================== */
 .alert-panel {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .alert-header {
     background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
     color: white;
-    padding: 15px 20px;
+    padding: 18px 24px;
 }
 
 .alert-header h4 {
     margin: 0;
-    font-size: 18px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.alert-header i {
+    font-size: 24px;
+    filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.3));
 }
 
 .alert-body {
-    padding: 20px;
-    max-height: 300px;
+    padding: 24px;
+    max-height: 350px;
     overflow-y: auto;
 }
 
 .alert-body .alert {
-    border-radius: 8px;
-    border: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Secciones de tiles específicas */
-.maquinas-tiles,
-.reparaciones-tiles,
-.tickets-tiles,
-.alquiler-tiles,
-.bloqueo-tiles {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 12px;
-    width: 100%;
-    margin-bottom: 20px;
-    overflow-x: auto;
-    padding: 10px;
-    -webkit-overflow-scrolling: touch;
-    background: rgba(255, 255, 255, 0.5);
     border-radius: 12px;
-    backdrop-filter: blur(10px);
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-bottom: 12px;
 }
 
-/* Estilos para la barra de scroll */
-.maquinas-tiles::-webkit-scrollbar,
-.reparaciones-tiles::-webkit-scrollbar,
-.tickets-tiles::-webkit-scrollbar,
-.alquiler-tiles::-webkit-scrollbar,
-.bloqueo-tiles::-webkit-scrollbar {
-    height: 8px;
-}
-
-.maquinas-tiles::-webkit-scrollbar-track,
-.reparaciones-tiles::-webkit-scrollbar-track,
-.tickets-tiles::-webkit-scrollbar-track,
-.alquiler-tiles::-webkit-scrollbar-track,
-.bloqueo-tiles::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-}
-
-.maquinas-tiles::-webkit-scrollbar-thumb,
-.reparaciones-tiles::-webkit-scrollbar-thumb,
-.tickets-tiles::-webkit-scrollbar-thumb,
-.alquiler-tiles::-webkit-scrollbar-thumb,
-.bloqueo-tiles::-webkit-scrollbar-thumb {
-    background: rgba(108, 117, 125, 0.5);
-    border-radius: 4px;
-}
-
-/* Sección de gráficos */
+/* ========================================
+   SECCIÓN DE GRÁFICOS
+======================================== */
 .dashboard-charts {
-    padding: 0 10px;
+    padding: 0 12px;
     width: 100%;
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 24px;
 }
 
 .dashboard-charts > div {
-    flex: 1 1 calc(50% - 20px);
-    min-width: 320px;
+    flex: 1 1 calc(50% - 24px);
+    min-width: 350px;
 }
 
 .chart-wrapper {
     background: white;
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
     height: 100%;
     display: flex;
     flex-direction: column;
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
+    border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .modern-chart:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
 }
 
 .chart-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    padding: 0 5px;
+    margin-bottom: 20px;
+    padding: 0 8px 16px 8px;
     border-bottom: 2px solid #ecf0f1;
-    padding-bottom: 10px;
 }
 
 .chart-header h4 {
     margin: 0;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 18px;
+    font-weight: 700;
     color: #2c3e50;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+}
+
+.chart-header h4 i {
+    color: #3498db;
+    font-size: 20px;
+    filter: drop-shadow(0 2px 4px rgba(52, 152, 219, 0.3));
 }
 
 .chart-container {
     flex: 1;
-    min-height: 320px;
+    min-height: 350px;
     position: relative;
     width: 100%;
 }
 
-/* Contenedor para filtros */
+/* ========================================
+   FILTROS
+======================================== */
 .filter-section {
-    margin: 10px 0;
-    padding: 15px;
+    margin: 12px 0;
+    padding: 18px;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 10px;
+    border-radius: 12px;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .filter-section label {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: #495057;
-    margin-right: 5px;
+    margin-right: 6px;
     white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
+}
+
+.filter-section label i {
+    color: #3498db;
+    font-size: 16px;
 }
 
 .filter-section input[type="date"] {
-    padding: 8px 12px;
+    padding: 10px 14px;
     border: 2px solid #e9ecef;
-    border-radius: 8px;
-    font-size: 13px;
-    max-width: 150px;
+    border-radius: 10px;
+    font-size: 14px;
+    max-width: 160px;
     transition: all 0.3s ease;
     background: white;
+    font-weight: 500;
 }
 
 .filter-section input[type="date"]:focus {
     border-color: #3498db;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
     outline: none;
+    transform: translateY(-1px);
 }
 
 .filter-section button {
-    padding: 8px 16px;
+    padding: 10px 20px;
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 5px;
-    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+    gap: 8px;
+    box-shadow: 0 6px 15px rgba(52, 152, 219, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .filter-section button:hover {
     background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
 }
 
-/* Botón expandir */
+.filter-section button i {
+    font-size: 16px;
+}
+
+/* ========================================
+   BOTONES
+======================================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    box-shadow: 0 6px 15px rgba(52, 152, 219, 0.2);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(52, 152, 219, 0.3);
+}
+
 .expand-button {
     background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
     border: none;
     color: white;
     cursor: pointer;
-    padding: 8px;
-    border-radius: 6px;
+    padding: 10px;
+    border-radius: 8px;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
@@ -493,125 +544,158 @@
     transform: scale(1.1);
 }
 
-/* Botones del sistema */
-.btn {
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
+/* ========================================
+   SCROLLBARS PERSONALIZADAS
+======================================== */
+.dashboard-tiles::-webkit-scrollbar,
+.alert-body::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+.dashboard-tiles::-webkit-scrollbar-track,
+.alert-body::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
 }
 
-.btn-primary:hover {
-    background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(52, 152, 219, 0.3);
+.dashboard-tiles::-webkit-scrollbar-thumb,
+.alert-body::-webkit-scrollbar-thumb {
+    background: rgba(108, 117, 125, 0.5);
+    border-radius: 4px;
 }
 
-/* Footer */
+.dashboard-tiles::-webkit-scrollbar-thumb:hover,
+.alert-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(108, 117, 125, 0.7);
+}
+
+/* ========================================
+   FOOTER
+======================================== */
 .footer-section {
     background: rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
-    padding: 15px;
-    margin-top: 20px;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 24px;
     backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-/* Responsive breakpoints */
-@media (min-width: 1400px) {
-    .tot_tasks {
-        flex: 1 1 10%;
-        max-width: 10%;
-    }
+.footer-section p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
+.footer-section i {
+    color: #3498db;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+======================================== */
+
+/* Tablets grandes */
 @media (min-width: 1200px) and (max-width: 1399px) {
     .tot_tasks {
-        flex: 1 1 12%;
-        max-width: 12%;
+        width: 180px;
+        min-width: 180px;
+    }
+    
+    .oh-card {
+        height: 130px;
+        min-height: 130px;
     }
 }
 
+/* Tablets */
 @media (min-width: 992px) and (max-width: 1199px) {
     .tot_tasks {
-        flex: 1 1 16%;
-        max-width: 16%;
+        width: 170px;
+        min-width: 170px;
+    }
+    
+    .oh-card {
+        height: 120px;
+        min-height: 120px;
+    }
+    
+    .oh-card-body i {
+        font-size: 36px !important;
+    }
+    
+    .oh-card-body h3 {
+        font-size: 16px !important;
+    }
+    
+    .metric-value {
+        font-size: 28px !important;
     }
     
     .chart-container {
-        min-height: 280px;
-    }
-}
-
-@media (min-width: 768px) and (max-width: 991px) {
-    .tot_tasks {
-        flex: 1 1 20%;
-        max-width: 20%;
+        min-height: 300px;
     }
     
     .dashboard-charts > div {
         flex: 1 1 100%;
     }
-    
-    .chart-container {
-        min-height: 250px;
-    }
 }
 
-@media (max-width: 767px) {
+/* Móviles grandes */
+@media (min-width: 768px) and (max-width: 991px) {
     .dashboard-container {
-        padding: 5px;
+        padding: 8px;
     }
     
     .tot_tasks {
-        width: 150px;
-        min-width: 150px;
-        max-width: 150px;
+        width: 160px;
+        min-width: 160px;
     }
     
     .oh-card {
-        height: 100px;
-        min-height: 100px;
+        height: 110px;
+        min-height: 110px;
     }
     
-    .card-icon {
-        width: 40px;
-        height: 40px;
+    .oh-card-body {
+        padding: 16px;
     }
     
-    .card-icon i {
-        font-size: 20px;
+    .oh-card-body i {
+        font-size: 32px !important;
     }
     
     .oh-card-body h3 {
-        font-size: 12px;
+        font-size: 14px !important;
     }
     
     .metric-value {
-        font-size: 16px;
+        font-size: 24px !important;
     }
     
     .dashboard-title {
-        font-size: 22px;
+        font-size: 26px;
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
     }
     
     .section-title {
-        font-size: 18px;
+        font-size: 20px;
     }
     
     .chart-container {
-        min-height: 200px;
+        min-height: 280px;
+    }
+    
+    .dashboard-charts > div {
+        flex: 1 1 100%;
     }
     
     .filter-section {
@@ -625,48 +709,92 @@
     }
 }
 
-@media (max-width: 576px) {
+/* Móviles */
+@media (max-width: 767px) {
+    .dashboard-container {
+        padding: 6px;
+    }
+    
     .tot_tasks {
-        width: 130px;
-        min-width: 130px;
-        max-width: 130px;
+        width: 140px;
+        min-width: 140px;
     }
     
     .oh-card {
-        height: 90px;
-        min-height: 90px;
-        border-radius: 12px;
+        height: 100px;
+        min-height: 100px;
+        border-radius: 16px;
     }
     
-    .card-icon {
-        width: 35px;
-        height: 35px;
+    .oh-card-body {
+        padding: 12px;
     }
     
-    .card-icon i {
-        font-size: 18px;
+    .oh-card-body i {
+        font-size: 28px !important;
+        margin-bottom: 8px;
     }
     
     .oh-card-body h3 {
-        font-size: 11px;
+        font-size: 12px !important;
+        margin: 8px 0 4px 0;
     }
     
     .metric-value {
-        font-size: 14px;
-    }
-    
-    .chart-container {
-        min-height: 180px;
+        font-size: 20px !important;
     }
     
     .dashboard-header {
-        padding: 15px;
+        padding: 16px;
     }
     
     .dashboard-title {
-        font-size: 20px;
+        font-size: 22px;
         flex-direction: column;
         text-align: center;
-        gap: 8px;
+        gap: 10px;
+    }
+    
+    .dashboard-title i {
+        font-size: 28px;
+    }
+    
+    .section-title {
+        font-size: 18px;
+        padding-left: 12px;
+    }
+    
+    .chart-container {
+        min-height: 250px;
+    }
+    
+    .dashboard-tiles {
+        padding: 12px;
+        gap: 12px;
+    }
+    
+    .chart-wrapper {
+        padding: 16px;
+    }
+    
+    .chart-header h4 {
+        font-size: 16px;
+    }
+    
+    .filter-section {
+        padding: 12px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-section input[type="date"] {
+        width: 100%;
+        max-width: none;
+        margin-bottom: 8px;
+    }
+    
+    .filter-section button {
+        width: 100%;
+        justify-content: center;
     }
 }

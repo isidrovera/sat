@@ -35,9 +35,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_total_maquinas">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon primary">
-                                        <i class="ri-printer-fill"></i>
-                                    </div>
+                                    <i class="ri-printer-fill"></i>
                                     <h3>Total Máquinas</h3>
                                     <span class="metric-value" id="total_maquinas">0</span>
                                 </div>
@@ -47,9 +45,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_maquinas_disponibles">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon success">
-                                        <i class="ri-checkbox-circle-fill"></i>
-                                    </div>
+                                    <i class="ri-checkbox-circle-fill"></i>
                                     <h3>Disponibles</h3>
                                     <span class="metric-value" id="maquinas_disponibles">0</span>
                                 </div>
@@ -59,9 +55,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_maquinas_separadas">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon warning">
-                                        <i class="ri-pause-circle-fill"></i>
-                                    </div>
+                                    <i class="ri-pause-circle-fill"></i>
                                     <h3>Separadas</h3>
                                     <span class="metric-value" id="maquinas_separadas">0</span>
                                 </div>
@@ -71,9 +65,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_maquinas_con_problemas">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon danger">
-                                        <i class="ri-error-warning-fill"></i>
-                                    </div>
+                                    <i class="ri-error-warning-fill"></i>
                                     <h3>Con Problemas</h3>
                                     <span class="metric-value" id="maquinas_con_problemas">0</span>
                                 </div>
@@ -83,9 +75,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_maquinas_de_partes">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon secondary">
-                                        <i class="ri-tools-fill"></i>
-                                    </div>
+                                    <i class="ri-tools-fill"></i>
                                     <h3>Para Partes</h3>
                                     <span class="metric-value" id="maquinas_de_partes">0</span>
                                 </div>
@@ -104,31 +94,27 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_total_reparaciones">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon primary">
-                                        <i class="ri-hammer-fill"></i>
-                                    </div>
+                                    <i class="ri-hammer-fill"></i>
                                     <h3>Total Reparaciones</h3>
                                     <span class="metric-value" id="total_reparaciones">0</span>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_maquinas_sin_revisar">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon danger">
-                                        <i class="ri-alert-fill"></i>
-                                    </div>
+                                    <i class="ri-alert-fill"></i>
                                     <h3>Sin Revisar</h3>
                                     <span class="metric-value" id="maquinas_sin_revisar">0</span>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_maquinas_para_revision">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon info">
-                                        <i class="ri-search-eye-fill"></i>
-                                    </div>
+                                    <i class="ri-search-eye-fill"></i>
                                     <h3>Para Revisión</h3>
                                     <span class="metric-value" id="maquinas_para_revision">0</span>
                                 </div>
@@ -138,9 +124,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_reparaciones_en_revision">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon warning">
-                                        <i class="ri-loader-4-fill"></i>
-                                    </div>
+                                    <i class="ri-loader-4-fill"></i>
                                     <h3>En Revisión</h3>
                                     <span class="metric-value" id="reparaciones_en_revision">0</span>
                                 </div>
@@ -150,9 +134,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_reparaciones_finalizado">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon success">
-                                        <i class="ri-check-double-fill"></i>
-                                    </div>
+                                    <i class="ri-check-double-fill"></i>
                                     <h3>Finalizadas</h3>
                                     <span class="metric-value" id="reparaciones_finalizado">0</span>
                                 </div>
@@ -171,9 +153,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_total_tickets">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon primary">
-                                        <i class="ri-ticket-2-fill"></i>
-                                    </div>
+                                    <i class="ri-ticket-2-fill"></i>
                                     <h3>Total Tickets</h3>
                                     <span class="metric-value" id="total_tickets">0</span>
                                 </div>
@@ -183,9 +163,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_tickets_nuevos">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon info">
-                                        <i class="ri-add-circle-fill"></i>
-                                    </div>
+                                    <i class="ri-add-circle-fill"></i>
                                     <h3>Nuevos</h3>
                                     <span class="metric-value" id="tickets_nuevos">0</span>
                                 </div>
@@ -195,9 +173,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_tickets_proceso">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon warning">
-                                        <i class="ri-settings-5-fill"></i>
-                                    </div>
+                                    <i class="ri-settings-5-fill"></i>
                                     <h3>En Proceso</h3>
                                     <span class="metric-value" id="tickets_proceso">0</span>
                                 </div>
@@ -207,9 +183,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_tickets_finalizado">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon success">
-                                        <i class="ri-check-line"></i>
-                                    </div>
+                                    <i class="ri-check-line"></i>
                                     <h3>Finalizados</h3>
                                     <span class="metric-value" id="tickets_finalizado">0</span>
                                 </div>
@@ -228,9 +202,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_total_maquinas_alquiler">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon primary">
-                                        <i class="ri-archive-fill"></i>
-                                    </div>
+                                    <i class="ri-archive-fill"></i>
                                     <h3>Total Alquileres</h3>
                                     <span class="metric-value" id="total_maquinas_alquiler">0</span>
                                 </div>
@@ -240,20 +212,17 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_alquiler_sin_revisar">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon danger">
-                                        <i class="ri-error-warning-line"></i>
-                                    </div>
+                                    <i class="ri-error-warning-line"></i>
                                     <h3>Sin Revisar</h3>
                                     <span class="metric-value" id="alquiler_sin_revisar">0</span>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_alquiler_revisada">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon success">
-                                        <i class="ri-check-circle-line"></i>
-                                    </div>
+                                    <i class="ri-check-circle-line"></i>
                                     <h3>Revisada</h3>
                                     <span class="metric-value" id="alquiler_revisada">0</span>
                                 </div>
@@ -263,9 +232,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_alquiler_lista">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon info">
-                                        <i class="ri-checkbox-line"></i>
-                                    </div>
+                                    <i class="ri-checkbox-line"></i>
                                     <h3>Lista</h3>
                                     <span class="metric-value" id="alquiler_lista">0</span>
                                 </div>
@@ -275,9 +242,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_alquiler_con_problemas">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon warning">
-                                        <i class="ri-alert-line"></i>
-                                    </div>
+                                    <i class="ri-alert-line"></i>
                                     <h3>Con Problemas</h3>
                                     <span class="metric-value" id="alquiler_con_problemas">0</span>
                                 </div>
@@ -298,9 +263,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card success-card" id="tile_equipos_activos">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon success">
-                                        <i class="ri-check-double-line"></i>
-                                    </div>
+                                    <i class="ri-check-double-line"></i>
                                     <h3>Equipos Activos</h3>
                                     <span class="metric-value" id="equipos_activos">0</span>
                                 </div>
@@ -310,9 +273,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card warning-card" id="tile_equipos_suspendidos">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon warning">
-                                        <i class="ri-pause-line"></i>
-                                    </div>
+                                    <i class="ri-pause-line"></i>
                                     <h3>Suspendidos</h3>
                                     <span class="metric-value" id="equipos_suspendidos">0</span>
                                 </div>
@@ -322,9 +283,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card danger-card" id="tile_equipos_bloqueados">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon danger">
-                                        <i class="ri-lock-line"></i>
-                                    </div>
+                                    <i class="ri-lock-line"></i>
                                     <h3>Bloqueados</h3>
                                     <span class="metric-value" id="equipos_bloqueados">0</span>
                                 </div>
@@ -334,9 +293,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card secondary-card" id="tile_equipos_no_accesibles">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon secondary">
-                                        <i class="ri-wifi-off-line"></i>
-                                    </div>
+                                    <i class="ri-wifi-off-line"></i>
                                     <h3>No Accesibles</h3>
                                     <span class="metric-value" id="equipos_no_accesibles">0</span>
                                 </div>
@@ -346,9 +303,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card info-card" id="tile_equipos_pendiente_bloqueo">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon info">
-                                        <i class="ri-time-line"></i>
-                                    </div>
+                                    <i class="ri-time-line"></i>
                                     <h3>Pend. Bloqueo</h3>
                                     <span class="metric-value" id="equipos_pendiente_bloqueo">0</span>
                                 </div>
@@ -358,9 +313,7 @@
                         <div class="tot_tasks">
                             <div class="oh-card modern-card primary-card" id="tile_equipos_pendiente_desbloqueo">
                                 <div class="oh-card-body text-center">
-                                    <div class="card-icon primary">
-                                        <i class="ri-unlock-line"></i>
-                                    </div>
+                                    <i class="ri-unlock-line"></i>
                                     <h3>Pend. Desbloqueo</h3>
                                     <span class="metric-value" id="equipos_pendiente_desbloqueo">0</span>
                                 </div>
