@@ -153,7 +153,7 @@
             'sat/static/src/js/parts_request_message.js',
             'sat/static/src/js/image-viewer.js',
             'sat/static/src/js/equipment_visit_report.js',
-            'sat/static/src/js/equipment_blocking_dashboard.js',
+            
             
             
             

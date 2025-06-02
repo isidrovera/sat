@@ -1,8 +1,604 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
     <data>
-        <!-- Template QWeb para el dashboard del backend -->
-        <template id="equipment_blocking_dashboard" name="Equipment Blocking Dashboard">
+        <template id="equipment_blocking_dashboard_template" name="Equipment Blocking Dashboard">
+            <script type="text/javascript">
+                odoo.define('sat.equipment_blocking_dashboard', function (require) {
+                    "use strict";
+
+                    var AbstractAction = require('web.AbstractAction');
+                    var core = require('web.core');
+                    var rpc = require('web.rpc');
+                    var _t = core._t;
+
+                    var EquipmentBlockingDashboard = AbstractAction.extend({
+                        template: 'EquipmentBlockingDashboardTemplate',
+                        
+                        init: function(parent, action) {
+                            this._super(parent, action);
+                            this.dashboardData = {
+                                equipos_activos: 0,
+                                equipos_suspendidos: 0,
+                                equipos_bloqueados: 0,
+                                equipos_no_accesibles: 0,
+                                pendientes_bloqueo: 0,
+                                pendientes_desbloqueo: 0
+                            };
+                            this.equipments = [];
+                            this.loading = false;
+                            this.currentFilter = 'todos';
+                            this.searchTerm = '';
+                        },
+
+                        start: function() {
+                            var self = this;
+                            return this._super().then(function() {
+                                self.loadDashboardData();
+                                self.loadAllEquipments();
+                                self.bindEvents();
+                            });
+                        },
+
+                        bindEvents: function() {
+                            var self = this;
+                            
+                            // Eventos de filtrado por cards
+                            this.$('.dashboard-card[data-filter]').on('click', function() {
+                                var filter = $(this).data('filter');
+                                self.filterByStatus(filter);
+                            });
+
+                            // Eventos de búsqueda
+                            this.$('#search-input').on('keydown', function(e) {
+                                if (e.which === 13) {
+                                    self.searchEquipments();
+                                }
+                            });
+
+                            this.$('#searchBtn').on('click', function() {
+                                self.searchEquipments();
+                            });
+
+                            this.$('#pendingBtn').on('click', function() {
+                                self.loadPendingEquipments();
+                            });
+
+                            this.$('#showAllBtn').on('click', function() {
+                                self.loadAllEquipments();
+                            });
+
+                            this.$('#refreshBtn').on('click', function() {
+                                self.refreshDashboard();
+                            });
+                        },
+
+                        loadDashboardData: function() {
+                            var self = this;
+                            return rpc.query({
+                                model: 'alquiler',
+                                method: 'get_dashboard_data',
+                                args: []
+                            }).then(function(result) {
+                                self.dashboardData = result;
+                                self.updateDashboardStats();
+                            }).catch(function(error) {
+                                console.error('Error loading dashboard data:', error);
+                                self.displayNotification({
+                                    title: _t('Error'),
+                                    message: _t('Error al cargar datos del dashboard'),
+                                    type: 'danger'
+                                });
+                            });
+                        },
+
+                        updateDashboardStats: function() {
+                            this.$('#equipos-activos').text(this.dashboardData.equipos_activos || 0);
+                            this.$('#equipos-suspendidos').text(this.dashboardData.equipos_suspendidos || 0);
+                            this.$('#equipos-bloqueados').text(this.dashboardData.equipos_bloqueados || 0);
+                            this.$('#equipos-no-accesibles').text(this.dashboardData.equipos_no_accesibles || 0);
+                            this.$('#pendientes-bloqueo').text(this.dashboardData.pendientes_bloqueo || 0);
+                            this.$('#pendientes-desbloqueo').text(this.dashboardData.pendientes_desbloqueo || 0);
+                        },
+                        loadAllEquipments: function() {
+                            var self = this;
+                            this.loading = true;
+                            this.currentFilter = 'todos';
+                            this.showLoading();
+
+                            return rpc.query({
+                                model: 'alquiler',
+                                method: 'search_read',
+                                args: [[['estado_alquiler_id', '=', 'alquilada']]],
+                                kwargs: {
+                                    fields: ['id', 'serie', 'cliente_id', 'name', 'marca', 'direccion',
+                                            'ip_equipo', 'estado_bloqueo', 'acceso_remoto_disponible',
+                                            'motivo_bloqueo', 'fecha_bloqueo']
+                                }
+                            }).then(function(equipments) {
+                                self.equipments = self.processEquipments(equipments);
+                                self.renderEquipments();
+                                self.loading = false;
+                                self.hideLoading();
+                            }).catch(function(error) {
+                                console.error('Error loading equipments:', error);
+                                self.displayNotification({
+                                    title: _t('Error'),
+                                    message: _t('Error al cargar equipos'),
+                                    type: 'danger'
+                                });
+                                self.loading = false;
+                                self.hideLoading();
+                            });
+                        },
+
+                        searchEquipments: function() {
+                            var self = this;
+                            var searchTerm = this.$('#search-input').val().trim();
+                            this.loading = true;
+                            this.currentFilter = 'busqueda';
+                            this.showLoading();
+
+                            var domain = [['estado_alquiler_id', '=', 'alquilada']];
+                            
+                            if (searchTerm) {
+                                domain.push([
+                                    '|', '|', '|',
+                                    ['serie', 'ilike', searchTerm],
+                                    ['cliente_id', 'ilike', searchTerm],
+                                    ['name', 'ilike', searchTerm],
+                                    ['marca', 'ilike', searchTerm]
+                                ]);
+                            }
+
+                            return rpc.query({
+                                model: 'alquiler',
+                                method: 'search_read',
+                                args: [domain],
+                                kwargs: {
+                                    fields: ['id', 'serie', 'cliente_id', 'name', 'marca', 'direccion',
+                                            'ip_equipo', 'estado_bloqueo', 'acceso_remoto_disponible',
+                                            'motivo_bloqueo', 'fecha_bloqueo']
+                                }
+                            }).then(function(equipments) {
+                                self.equipments = self.processEquipments(equipments);
+                                self.renderEquipments();
+                                
+                                var message = searchTerm 
+                                    ? _t('Encontrados ' + equipments.length + ' equipos para "' + searchTerm + '"')
+                                    : _t('Mostrando ' + equipments.length + ' equipos alquilados');
+                                
+                                self.displayNotification({
+                                    title: _t('Búsqueda'),
+                                    message: message,
+                                    type: 'success'
+                                });
+                                
+                                self.loading = false;
+                                self.hideLoading();
+                            }).catch(function(error) {
+                                console.error('Error searching equipments:', error);
+                                self.displayNotification({
+                                    title: _t('Error'),
+                                    message: _t('Error al buscar equipos'),
+                                    type: 'danger'
+                                });
+                                self.loading = false;
+                                self.hideLoading();
+                            });
+                        },
+
+                        filterByStatus: function(estado) {
+                            var self = this;
+                            this.loading = true;
+                            this.currentFilter = estado;
+                            this.$('#search-input').val('');
+                            this.showLoading();
+
+                            return rpc.query({
+                                model: 'alquiler',
+                                method: 'search_read',
+                                args: [[
+                                    ['estado_alquiler_id', '=', 'alquilada'],
+                                    ['estado_bloqueo', '=', estado]
+                                ]],
+                                kwargs: {
+                                    fields: ['id', 'serie', 'cliente_id', 'name', 'marca', 'direccion',
+                                            'ip_equipo', 'estado_bloqueo', 'acceso_remoto_disponible',
+                                            'motivo_bloqueo', 'fecha_bloqueo']
+                                }
+                            }).then(function(equipments) {
+                                self.equipments = self.processEquipments(equipments);
+                                self.renderEquipments();
+                                
+                                var estadoLabels = {
+                                    'activo': 'equipos activos',
+                                    'suspendido': 'equipos suspendidos',
+                                    'bloqueado': 'equipos bloqueados',
+                                    'no_accesible': 'equipos no accesibles',
+                                    'pendiente_bloqueo': 'equipos pendientes de bloqueo',
+                                    'pendiente_desbloqueo': 'equipos pendientes de desbloqueo'
+                                };
+                                
+                                var estadoLabel = estadoLabels[estado] || 'equipos';
+                                self.displayNotification({
+                                    title: _t('Filtro'),
+                                    message: _t('Mostrando ' + equipments.length + ' ' + estadoLabel),
+                                    type: 'success'
+                                });
+                                
+                                self.loading = false;
+                                self.hideLoading();
+                            }).catch(function(error) {
+                                console.error('Error filtering equipments:', error);
+                                self.displayNotification({
+                                    title: _t('Error'),
+                                    message: _t('Error al filtrar equipos'),
+                                    type: 'danger'
+                                });
+                                self.loading = false;
+                                self.hideLoading();
+                            });
+                        },
+
+                        loadPendingEquipments: function() {
+                            var self = this;
+                            this.loading = true;
+                            this.currentFilter = 'pendientes';
+                            this.$('#search-input').val('');
+                            this.showLoading();
+
+                            return rpc.query({
+                                model: 'alquiler',
+                                method: 'search_read',
+                                args: [[
+                                    ['estado_alquiler_id', '=', 'alquilada'],
+                                    ['estado_bloqueo', 'in', ['suspendido', 'bloqueado', 'no_accesible', 'pendiente_bloqueo', 'pendiente_desbloqueo']]
+                                ]],
+                                kwargs: {
+                                    fields: ['id', 'serie', 'cliente_id', 'name', 'marca', 'direccion',
+                                            'ip_equipo', 'estado_bloqueo', 'acceso_remoto_disponible',
+                                            'motivo_bloqueo', 'fecha_bloqueo']
+                                }
+                            }).then(function(equipments) {
+                                self.equipments = self.processEquipments(equipments);
+                                self.renderEquipments();
+                                
+                                self.displayNotification({
+                                    title: _t('Pendientes'),
+                                    message: _t(equipments.length + ' equipos requieren atención'),
+                                    type: 'warning'
+                                });
+                                
+                                self.loading = false;
+                                self.hideLoading();
+                            }).catch(function(error) {
+                                console.error('Error loading pending equipments:', error);
+                                self.displayNotification({
+                                    title: _t('Error'),
+                                    message: _t('Error al cargar equipos pendientes'),
+                                    type: 'danger'
+                                });
+                                self.loading = false;
+                                self.hideLoading();
+                            });
+                        },
+
+                        refreshDashboard: function() {
+                            var self = this;
+                            this.loading = true;
+                            this.showLoading();
+
+                            return this.loadDashboardData().then(function() {
+                                switch(self.currentFilter) {
+                                    case 'todos':
+                                        return self.loadAllEquipments();
+                                    case 'pendientes':
+                                        return self.loadPendingEquipments();
+                                    case 'busqueda':
+                                        return self.searchEquipments();
+                                    default:
+                                        if (['activo', 'suspendido', 'bloqueado', 'no_accesible', 'pendiente_bloqueo', 'pendiente_desbloqueo'].includes(self.currentFilter)) {
+                                            return self.filterByStatus(self.currentFilter);
+                                        } else {
+                                            return self.loadAllEquipments();
+                                        }
+                                }
+                            }).then(function() {
+                                self.displayNotification({
+                                    title: _t('Actualizado'),
+                                    message: _t('Dashboard actualizado correctamente'),
+                                    type: 'success'
+                                });
+                                self.loading = false;
+                                self.hideLoading();
+                            }).catch(function(error) {
+                                console.error('Error refreshing dashboard:', error);
+                                self.displayNotification({
+                                    title: _t('Error'),
+                                    message: _t('Error al actualizar el dashboard'),
+                                    type: 'danger'
+                                });
+                                self.loading = false;
+                                self.hideLoading();
+                            });
+                        },
+                        processEquipments: function(equipments) {
+                            var estadoLabels = {
+                                'activo': 'Activo',
+                                'suspendido': 'Suspendido',
+                                'bloqueado': 'Bloqueado',
+                                'no_accesible': 'No Accesible',
+                                'pendiente_bloqueo': 'Pend. Bloqueo',
+                                'pendiente_desbloqueo': 'Pend. Desbloqueo'
+                            };
+                            
+                            return equipments.map(function(equipment) {
+                                return {
+                                    id: equipment.id,
+                                    serie: equipment.serie || '',
+                                    cliente: equipment.cliente_id ? equipment.cliente_id[1] : '',
+                                    modelo: equipment.name ? equipment.name[1] : '',
+                                    marca: equipment.marca || '',
+                                    direccion: equipment.direccion || '',
+                                    ip_equipo: equipment.ip_equipo || '',
+                                    estado_bloqueo: equipment.estado_bloqueo || 'activo',
+                                    estado_label: estadoLabels[equipment.estado_bloqueo] || equipment.estado_bloqueo,
+                                    acceso_remoto: equipment.acceso_remoto_disponible || false,
+                                    motivo_bloqueo: equipment.motivo_bloqueo || '',
+                                    fecha_bloqueo: equipment.fecha_bloqueo || '',
+                                    puede_suspender: equipment.estado_bloqueo === 'activo',
+                                    puede_bloquear: ['activo', 'suspendido'].includes(equipment.estado_bloqueo) &amp;&amp; equipment.acceso_remoto_disponible,
+                                    puede_desbloquear: ['bloqueado', 'suspendido'].includes(equipment.estado_bloqueo)
+                                };
+                            });
+                        },
+
+                        renderEquipments: function() {
+                            var self = this;
+                            var $container = this.$('#equipment-results');
+                            
+                            this.$('#results-count').text(this.equipments.length);
+                            
+                            if (this.equipments.length === 0) {
+                                $container.html(`
+                                    <div class="text-center py-5">
+                                        <i class="fa fa-inbox fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">No se encontraron equipos.</p>
+                                        <button type="button" class="btn btn-primary" id="showAllBtn2">
+                                            <i class="fa fa-list me-2"></i>Ver Todos los Equipos
+                                        </button>
+                                    </div>
+                                `);
+                                
+                                this.$('#showAllBtn2').on('click', function() {
+                                    self.loadAllEquipments();
+                                });
+                                return;
+                            }
+                            
+                            var html = '';
+                            this.equipments.forEach(function(equipment) {
+                                html += self.renderEquipmentCard(equipment);
+                            });
+                            
+                            $container.html(html);
+                            this.bindEquipmentEvents();
+                        },
+
+                        renderEquipmentCard: function(equipment) {
+                            var statusClass = 'status-' + equipment.estado_bloqueo.replace('_', '_');
+                            
+                            var html = `
+                                <div class="equipment-card" data-equipment-id="${equipment.id}">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h5 class="mb-1 fw-bold">Serie: ${equipment.serie}</h5>
+                                            <p class="text-muted mb-0">${equipment.cliente} - ${equipment.modelo}</p>
+                                        </div>
+                                        <span class="status-badge ${statusClass}">
+                                            ${equipment.estado_label}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="detail-grid">
+                                        <div class="detail-item">
+                                            <i class="fa fa-industry"></i>
+                                            <span>Marca: ${equipment.marca}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <i class="fa fa-map-marker-alt"></i>
+                                            <span>Dirección: ${equipment.direccion}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <i class="fa fa-network-wired"></i>
+                                            <span>IP: ${equipment.ip_equipo || 'No configurada'}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <i class="fa fa-wifi"></i>
+                                            <span>Acceso remoto: ${equipment.acceso_remoto ? 'Disponible' : 'No disponible'}</span>
+                                        </div>
+                                    </div>
+                            `;
+                            
+                            if (equipment.motivo_bloqueo) {
+                                html += `
+                                    <div class="alert alert-info py-2 mb-3">
+                                        <strong>Motivo:</strong> ${equipment.motivo_bloqueo}
+                                    </div>
+                                `;
+                            }
+                            
+                            if (equipment.fecha_bloqueo) {
+                                html += `
+                                    <div class="text-muted small mb-3">
+                                        <i class="fa fa-clock"></i> ${equipment.fecha_bloqueo}
+                                    </div>
+                                `;
+                            }
+                            
+                            html += '<div class="d-flex gap-2 justify-content-end flex-wrap">';
+                            
+                            if (equipment.puede_suspender) {
+                                html += `
+                                    <button class="btn btn-warning btn-sm equipment-action" 
+                                            data-action="suspend" data-equipment-id="${equipment.id}" data-serie="${equipment.serie}">
+                                        <i class="fa fa-pause me-1"></i> Suspender
+                                    </button>
+                                `;
+                            }
+                            
+                            if (equipment.puede_bloquear) {
+                                html += `
+                                    <button class="btn btn-danger btn-sm equipment-action" 
+                                            data-action="block" data-equipment-id="${equipment.id}" data-serie="${equipment.serie}">
+                                        <i class="fa fa-lock me-1"></i> Bloquear
+                                    </button>
+                                `;
+                            }
+                            
+                            if (equipment.puede_desbloquear) {
+                                html += `
+                                    <button class="btn btn-success btn-sm equipment-action" 
+                                            data-action="unblock" data-equipment-id="${equipment.id}" data-serie="${equipment.serie}">
+                                        <i class="fa fa-unlock me-1"></i> Desbloquear
+                                    </button>
+                                `;
+                            }
+                            
+                            html += '</div></div>';
+                            
+                            return html;
+                        },
+
+                        bindEquipmentEvents: function() {
+                            var self = this;
+                            
+                            this.$('.equipment-action').on('click', function() {
+                                var $btn = $(this);
+                                var action = $btn.data('action');
+                                var equipmentId = $btn.data('equipment-id');
+                                var serie = $btn.data('serie');
+                                
+                                self.openActionModal(action, equipmentId, serie);
+                            });
+                        },
+
+                        openActionModal: function(action, equipmentId, serie) {
+                            var self = this;
+                            
+                            var actionLabels = {
+                                'suspend': 'Suspender Servicio',
+                                'block': 'Bloquear Equipo',
+                                'unblock': 'Desbloquear Equipo'
+                            };
+
+                            var actionMessages = {
+                                'suspend': 'Ingrese el motivo de la suspensión:',
+                                'block': 'Ingrese el motivo del bloqueo:',
+                                'unblock': 'Ingrese observaciones del desbloqueo (opcional):'
+                            };
+
+                            var motivo = prompt(actionLabels[action] + ' - Serie: ' + serie + '\n\n' + actionMessages[action]);
+                            
+                            if (motivo !== null) {
+                                this.executeAction(action, equipmentId, motivo);
+                            }
+                        },
+
+                        executeAction: function(action, equipmentId, motivo) {
+                            var self = this;
+                            
+                            var methodMap = {
+                                'suspend': 'action_suspender_servicio',
+                                'block': 'action_bloquear_equipo',
+                                'unblock': 'action_desbloquear_equipo'
+                            };
+                            
+                            var method = methodMap[action];
+                            if (!method) {
+                                this.displayNotification({
+                                    title: _t('Error'),
+                                    message: _t('Acción no válida'),
+                                    type: 'danger'
+                                });
+                                return;
+                            }
+                            
+                            return rpc.query({
+                                model: 'alquiler',
+                                method: method,
+                                args: [equipmentId],
+                                kwargs: { motivo: motivo }
+                            }).then(function(result) {
+                                if (result &amp;&amp; result.success !== false) {
+                                    var actionMessages = {
+                                        'suspend': 'Servicio suspendido correctamente',
+                                        'block': 'Equipo bloqueado correctamente',
+                                        'unblock': 'Equipo desbloqueado correctamente'
+                                    };
+                                    
+                                    self.displayNotification({
+                                        title: _t('Éxito'),
+                                        message: _t(actionMessages[action] || 'Acción ejecutada correctamente'),
+                                        type: 'success'
+                                    });
+                                    
+                                    self.refreshDashboard();
+                                } else {
+                                    var errorMessage = result &amp;&amp; result.error ? result.error : 'Error al ejecutar la acción';
+                                    self.displayNotification({
+                                        title: _t('Error'),
+                                        message: _t(errorMessage),
+                                        type: 'danger'
+                                    });
+                                }
+                            }).catch(function(error) {
+                                console.error('Error executing action:', error);
+                                var errorMessage = 'Error al ejecutar la acción';
+                                if (error.message) {
+                                    errorMessage += ': ' + error.message;
+                                }
+                                
+                                self.displayNotification({
+                                    title: _t('Error'),
+                                    message: _t(errorMessage),
+                                    type: 'danger'
+                                });
+                            });
+                        },
+
+                        showLoading: function() {
+                            this.$('#equipment-results').html(`
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-primary mb-3"></div>
+                                    <p class="text-muted">Cargando equipos...</p>
+                                </div>
+                            `);
+                        },
+
+                        hideLoading: function() {
+                            // El loading se oculta al renderizar los equipos
+                        },
+
+                        displayNotification: function(options) {
+                            // Implementación básica de notificación
+                            if (options.type === 'danger') {
+                                console.error(options.title + ': ' + options.message);
+                            } else {
+                                console.log(options.title + ': ' + options.message);
+                            }
+                        }
+                        });
+
+                    core.action_registry.add('equipment_blocking_dashboard', EquipmentBlockingDashboard);
+
+                    return EquipmentBlockingDashboard;
+                });
+            </script>
+        </template>
+
+        <!-- Template HTML del Dashboard -->
+        <template id="EquipmentBlockingDashboardTemplate" name="Equipment Blocking Dashboard Template">
             <div class="o_dashboard_view">
                 <!-- Header del Dashboard -->
                 <div class="o_dashboard_header mb-4">
@@ -183,59 +779,6 @@
                         <div class="text-center py-5">
                             <i class="fa fa-inbox fa-3x text-muted mb-3"></i>
                             <p class="text-muted">Cargando equipos...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal para acciones -->
-            <div class="modal fade" id="actionModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="modalTitle">Acción en Equipo</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div id="modalAlert"></div>
-                            <div class="mb-3">
-                                <label for="motivoInput" class="form-label fw-bold">Motivo / Observaciones:</label>
-                                <textarea class="form-control" id="motivoInput" rows="3" 
-                                          placeholder="Describe el motivo de esta acción..."></textarea>
-                            </div>
-                            <div class="mb-3" id="equipmentDetails" style="display: none;">
-                                <div class="border rounded p-3 bg-light">
-                                    <h6 class="fw-bold mb-2">Detalles del Equipo:</h6>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <small class="text-muted">Cliente:</small>
-                                            <div id="detailCliente" class="fw-bold"></div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <small class="text-muted">Modelo:</small>
-                                            <div id="detailModelo" class="fw-bold"></div>
-                                        </div>
-                                        <div class="col-md-6 mt-2">
-                                            <small class="text-muted">IP:</small>
-                                            <div id="detailIP"></div>
-                                        </div>
-                                        <div class="col-md-6 mt-2">
-                                            <small class="text-muted">Estado Actual:</small>
-                                            <div id="detailEstado"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="button" class="btn btn-primary" id="confirmActionBtn">
-                                <span id="btnLoading" class="d-none">
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                    Procesando...
-                                </span>
-                                <span id="btnText">Confirmar</span>
-                            </button>
                         </div>
                     </div>
                 </div>
