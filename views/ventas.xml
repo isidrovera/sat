@@ -418,7 +418,7 @@
                     class="btn-repair-modern btn btn-primary btn-sm rounded-pill shadow-lg position-relative overflow-hidden" 
                     icon="fa-wrench" 
                     invisible="estado_ventas_id != 'finalizado'"
-                    title=" "/>
+                    title="Reparaciones"/>
         </list>
     </field>
 </record>
