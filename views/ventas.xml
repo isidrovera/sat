@@ -286,151 +286,142 @@
     
 
     <record id="maquinas_tree_sat" model="ir.ui.view">
-    <field name="name">sat.tree</field>
-    <field name="model">sat.sat</field>
-    <field name="type">list</field>    
-    <field name="arch" type="xml">
-        
-        <list default_order="id desc" class="modern-sat-table animate__animated animate__fadeIn">
-            <field name="importacion" optional="hide"/>
-            <field name="proveedor_id" optional="hide"/>
-            <field name="descripcion" optional="hide"/>
-            
-            <!-- Información del Cliente -->
-            <field name="cliente_nombre" 
-                   string="👤 Cliente"
-                   class="client-info animate__animated animate__slideInLeft"/>
-            
-            <field name="tipo_maquina" 
-                   string="🏭 Tipo Máquina"
-                   class="machine-type-modern"/>
-            
-            <field name="marca" 
-                   string="🏷️ Marca"
-                   class="brand-modern"/>
-            
-            <!-- Información Principal -->
-            <field name="name" 
-                   class="machine-name-modern h6 fw-bold text-primary bg-gradient-light rounded-3 px-3 py-2 shadow-sm"
-                   data-aos="fade-up"/>
-            
-            <field name="serie_id" 
-                   class="serial-modern font-monospace bg-dark text-info rounded px-2 py-1"
-                   data-aos="fade-up" 
-                   data-aos-delay="100"/>
-            
-            <!-- Datos Operativos -->
-            <field name="contometro" 
-                   class="counter-modern text-end bg-info bg-opacity-10 rounded-3 px-3 py-2 fw-bold position-relative"
-                   data-aos="zoom-in" 
-                   data-aos-delay="200"/>
-            
-            <field name="ubicacion_id" 
-                   class="location-modern fst-italic text-muted bg-light rounded-pill px-3 py-1"
-                   data-aos="slide-right"/>
-            
-            <!-- Estados y Alertas con efectos modernos -->
-            <field name="disponibilidad_id" 
-                   widget="badge"
-                   class="availability-badge-modern rounded-pill px-4 py-2 fw-bold text-uppercase letter-spacing-wide shadow-modern position-relative overflow-hidden" 
-                   decoration-success="disponibilidad_id == 'disponible'" 
-                   decoration-warning="disponibilidad_id == 'separada'" 
-                   decoration-danger="disponibilidad_id == 'no_disponible'"
-                   data-aos="flip-left"
-                   data-aos-delay="300"/>
-                   
-            <field name="estado_ventas_id" 
-                   widget="badge"
-                   class="sales-status-modern rounded-pill px-4 py-2 fw-semibold backdrop-blur border-modern" 
-                   decoration-muted="estado_ventas_id == 'sin_revisar'" 
-                   decoration-info="estado_ventas_id == 'en_revision'" 
-                   decoration-success="estado_ventas_id == 'finalizado'" 
-                   decoration-danger="estado_ventas_id not in ('sin_revisar', 'en_revision', 'finalizado', 'entregada')" 
-                   decoration-warning="estado_ventas_id == 'entregada'"
-                   data-aos="flip-right"
-                   data-aos-delay="400"/>
-            
-            <field name="icono_rojo" 
-                   widget="html" 
-                   string=" " 
-                   invisible="activador == 'no'"
-                   class="alert-modern text-danger fs-4 animate__animated animate__heartBeat animate__infinite filter-glow cursor-pointer"
-                   data-bs-toggle="tooltip"
-                   data-bs-title="⚠️ Requiere atención inmediata"/>
-            
-            <!-- Campos Opcionales con estilos modernos -->
-            <field name="create_date" 
-                   string="📅 Ingreso" 
-                   widget="remaining_days" 
-                   optional="hide"
-                   class="date-modern text-muted small bg-light rounded px-2 py-1"/>
-            
-            <field name="fecha_separacion" 
-                   string="🔒 Separada" 
-                   widget="remaining_days" 
-                   invisible="disponibilidad_id != 'separada'" 
-                   optional="hide"
-                   class="separation-date-modern text-warning bg-warning bg-opacity-10 rounded px-2 py-1 animate__animated animate__pulse"/>
-            
-            <field name="fecha_para_revision" 
-                   string="🔍 Fecha Revisión" 
-                   optional="hide"
-                   class="review-date-modern"/>
-            
-            <field name="activador" optional="hide"/>
-            <field name="currency_id" string="💰 Moneda" optional="hide"/>
-            
-            <field name="precio_compra" 
-                   widget="monetary" 
-                   options="{'currency_field': 'currency_id'}" 
-                   optional="hide" 
-                   groups="base.group_system, sat_jefes_group_user"
-                   class="price-modern fw-bold text-success bg-success bg-opacity-10 rounded-3 px-3 py-2 font-monospace"/>
-            
-            <field name="asesora_id" 
-                   string="👩‍💼 Asesora" 
-                   optional="hide"
-                   class="advisor-modern"/>
-                   
-            <!-- Botones modernizados con efectos hover -->
-            <button name="action_primer" 
-                    type="object" 
-                    class="btn-modern btn btn-outline-primary btn-sm rounded-pill me-2 shadow-hover transition-all" 
-                    icon="fa-building-o" 
-                    groups="base.group_system" 
-                    title="🏢 Primer Piso"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"/>
+            <field name="name">sat.tree</field>
+            <field name="model">sat.sat</field>
+            <field name="type">list</field>    
+            <field name="arch" type="xml">
+                <list default_order="id desc" class="modern-sat-table animate__animated animate__fadeIn">
+                    <!-- Campos ocultos -->
+                    <field name="importacion" optional="hide"/>
+                    <field name="proveedor_id" optional="hide"/>
+                    <field name="descripcion" optional="hide"/>
                     
-            <button name="action_tercero" 
-                    type="object" 
-                    class="btn-modern btn btn-outline-info btn-sm rounded-pill me-2 shadow-hover transition-all" 
-                    icon="fa-building" 
-                    groups="base.group_system" 
-                    title="🏗️ Tercer Piso"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"/>
+                    <!-- Información del Cliente con emoji -->
+                    <field name="cliente_nombre" 
+                           string="👤 Cliente"
+                           class="client-info animate__animated animate__slideInLeft"/>
                     
-            <button name="action_segundo" 
-                    type="object" 
-                    class="btn-modern btn btn-outline-warning btn-sm rounded-pill me-2 shadow-hover transition-all" 
-                    icon="fa-truck" 
-                    groups="base.group_system" 
-                    title="🚚 Segundo Local"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"/>
+                    <field name="tipo_maquina" 
+                           string="🏭 Tipo Máquina"
+                           class="machine-type-modern"/>
                     
-            <button name="view_reparaciones_ids" 
-                    type="object" 
-                    class="btn-repair-modern btn btn-primary btn-sm rounded-pill shadow-lg position-relative overflow-hidden" 
-                    icon="fa-wrench" 
-                    invisible="estado_ventas_id != 'finalizado'"
-                    title="🔧 Ver Reparaciones"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"/>
-        </list>
-    </field>
-</record>
+                    <field name="marca" 
+                           string="🏷️ Marca"
+                           class="brand-modern"/>
+                    
+                    <!-- Información Principal -->
+                    <field name="name" 
+                           string="📋 Nombre"
+                           class="machine-name-modern h6 fw-bold text-primary bg-gradient-light rounded-3 px-3 py-2 shadow-sm"/>
+                    
+                    <field name="serie_id" 
+                           string="🔢 Serie"
+                           class="serial-modern font-monospace bg-dark text-info rounded px-2 py-1"/>
+                    
+                    <!-- Datos Operativos -->
+                    <field name="contometro" 
+                           string="⏱️ Contador"
+                           class="counter-modern text-end bg-info bg-opacity-10 rounded-3 px-3 py-2 fw-bold position-relative"/>
+                    
+                    <field name="ubicacion_id" 
+                           string="📍 Ubicación"
+                           class="location-modern fst-italic text-muted bg-light rounded-pill px-3 py-1"/>
+                    
+                    <!-- Estados y Alertas con efectos modernos -->
+                    <field name="disponibilidad_id" 
+                           string="🟢 Disponibilidad"
+                           widget="badge"
+                           class="availability-badge-modern rounded-pill px-4 py-2 fw-bold text-uppercase letter-spacing-wide shadow-modern position-relative overflow-hidden" 
+                           decoration-success="disponibilidad_id == 'disponible'" 
+                           decoration-warning="disponibilidad_id == 'separada'" 
+                           decoration-danger="disponibilidad_id == 'no_disponible'"/>
+                           
+                    <field name="estado_ventas_id" 
+                           string="💼 Estado Ventas"
+                           widget="badge"
+                           class="sales-status-modern rounded-pill px-4 py-2 fw-semibold backdrop-blur border-modern" 
+                           decoration-muted="estado_ventas_id == 'sin_revisar'" 
+                           decoration-info="estado_ventas_id == 'en_revision'" 
+                           decoration-success="estado_ventas_id == 'finalizado'" 
+                           decoration-danger="estado_ventas_id not in ('sin_revisar', 'en_revision', 'finalizado', 'entregada')" 
+                           decoration-warning="estado_ventas_id == 'entregada'"/>
+                    
+                    <field name="icono_rojo" 
+                           widget="html" 
+                           string="🚨" 
+                           invisible="activador == 'no'"
+                           class="alert-modern text-danger fs-4 animate__animated animate__heartBeat animate__infinite filter-glow cursor-pointer"/>
+                    
+                    <!-- Campos Opcionales con estilos modernos -->
+                    <field name="create_date" 
+                           string="📅 Ingreso" 
+                           widget="remaining_days" 
+                           optional="hide"
+                           class="date-modern text-muted small bg-light rounded px-2 py-1"/>
+                    
+                    <field name="fecha_separacion" 
+                           string="🔒 Separada" 
+                           widget="remaining_days" 
+                           invisible="disponibilidad_id != 'separada'" 
+                           optional="hide"
+                           class="separation-date-modern text-warning bg-warning bg-opacity-10 rounded px-2 py-1 animate__animated animate__pulse"/>
+                    
+                    <field name="fecha_para_revision" 
+                           string="🔍 Fecha Revisión" 
+                           optional="hide"
+                           class="review-date-modern"/>
+                    
+                    <field name="activador" optional="hide"/>
+                    <field name="currency_id" string="💰 Moneda" optional="hide"/>
+                    
+                    <field name="precio_compra" 
+                           string="💵 Precio Compra"
+                           widget="monetary" 
+                           options="{'currency_field': 'currency_id'}" 
+                           optional="hide" 
+                           groups="base.group_system, sat_jefes_group_user"
+                           class="price-modern fw-bold text-success bg-success bg-opacity-10 rounded-3 px-3 py-2 font-monospace"/>
+                    
+                    <field name="asesora_id" 
+                           string="👩‍💼 Asesora" 
+                           optional="hide"
+                           class="advisor-modern"/>
+                           
+                    <!-- Botones modernizados con efectos hover -->
+                    <button name="action_primer" 
+                            type="object" 
+                            string="" 
+                            class="btn-modern btn btn-outline-primary btn-sm rounded-pill me-2 shadow-hover transition-all" 
+                            icon="fa-building-o" 
+                            groups="base.group_system" 
+                            title="🏢 Primer Piso"/>
+                            
+                    <button name="action_tercero" 
+                            type="object" 
+                            string="" 
+                            class="btn-modern btn btn-outline-info btn-sm rounded-pill me-2 shadow-hover transition-all" 
+                            icon="fa-building" 
+                            groups="base.group_system" 
+                            title="🏗️ Tercer Piso"/>
+                            
+                    <button name="action_segundo" 
+                            type="object" 
+                            string="" 
+                            class="btn-modern btn btn-outline-warning btn-sm rounded-pill me-2 shadow-hover transition-all" 
+                            icon="fa-truck" 
+                            groups="base.group_system" 
+                            title="🚚 Segundo Local"/>
+                            
+                    <button name="view_reparaciones_ids" 
+                            type="object" 
+                            string="" 
+                            class="btn-repair-modern btn btn-primary btn-sm rounded-pill shadow-lg position-relative overflow-hidden" 
+                            icon="fa-wrench" 
+                            invisible="estado_ventas_id != 'finalizado'"
+                            title="🔧 Ver Reparaciones"/>
+                </list>
+            </field>
+        </record>
 
     <!-- Búsqueda -->
     <record id="Sat_search_view" model="ir.ui.view">
