@@ -171,7 +171,8 @@
             'sat/static/src/js/parts_request_message.js',
             'sat/static/src/js/image-viewer.js',
             'sat/static/src/js/equipment_visit_report.js',
-            
+            'sat/static/src/css/sat_table_styles.css',
+            'sat/static/src/js/sat_table_enhancements.js',
             
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
