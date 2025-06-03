@@ -1,10 +1,17 @@
 // Archivo: /sat/static/src/js/image-viewer.js
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando visor de imágenes - VERSIÓN OPTIMIZADA');
+    console.log('Inicializando visor de imágenes - VERSIÓN MÓVIL OPTIMIZADA');
     
     // Variables para seguimiento de imágenes
     let currentIndex = 0;
     let galleryImages = [];
+    
+    // Detectar si es dispositivo móvil
+    function isMobileDevice() {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        console.log('Detección de dispositivo móvil:', isMobile);
+        return isMobile;
+    }
     
     // Función principal de inicialización
     function init() {
@@ -93,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const styleEl = document.createElement('style');
         styleEl.id = styleId;
         
-        // Estilos adicionales para ajuste automático según dimensiones originales
+        // Estilos adicionales con mejoras para móviles
         styleEl.textContent = `
             /* Contenedor principal del visor */
             .slideshow-container {
@@ -108,6 +115,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 margin: 0 auto !important;
             }
             
+            /* Modal con mejor soporte para móviles */
+            .slideshow-modal {
+                display: none !important;
+                position: fixed !important;
+                z-index: 10000 !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                overflow: hidden !important;
+                background-color: rgba(0, 0, 0, 0.9) !important;
+                -webkit-user-select: none !important;
+                user-select: none !important;
+                touch-action: manipulation !important;
+            }
+            
+            /* Contenido del modal */
+            .slideshow-content {
+                margin: auto !important;
+                display: block !important;
+                width: 100% !important;
+                height: 100% !important;
+                max-width: none !important;
+                position: relative !important;
+            }
+            
             /* Contenedor de la imagen */
             .slideshow-image-container {
                 width: 100% !important;
@@ -120,6 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 border-radius: 5px !important;
                 padding: 10px !important;
                 box-sizing: border-box !important;
+                touch-action: manipulation !important;
             }
             
             /* Imagen en el visor */
@@ -136,6 +170,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 transition: all 0.3s ease !important;
                 margin: 0 auto !important;
                 box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
+                touch-action: manipulation !important;
+                -webkit-user-select: none !important;
+                user-select: none !important;
             }
             
             /* Estilos para imágenes verticales */
@@ -150,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 max-height: 90% !important;
             }
             
-            /* Estilos mejorados para navegación */
+            /* Botones de navegación adaptados para móviles */
             .slideshow-prev, .slideshow-next {
                 cursor: pointer !important;
                 position: absolute !important;
@@ -163,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 transition: 0.3s ease !important;
                 user-select: none !important;
                 -webkit-user-select: none !important;
-                background-color: rgba(0, 0, 0, 0.3) !important;
+                background-color: rgba(0, 0, 0, 0.5) !important;
                 border-radius: 50% !important;
                 height: 50px !important;
                 width: 50px !important;
@@ -171,6 +208,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 align-items: center !important;
                 justify-content: center !important;
                 z-index: 10 !important;
+                touch-action: manipulation !important;
+                -webkit-tap-highlight-color: transparent !important;
+            }
+            
+            /* Botones más grandes en móviles */
+            @media (max-width: 768px) {
+                .slideshow-prev, .slideshow-next {
+                    height: 60px !important;
+                    width: 60px !important;
+                    font-size: 28px !important;
+                    padding: 20px !important;
+                }
             }
             
             .slideshow-next {
@@ -181,8 +230,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 left: 15px !important;
             }
             
-            .slideshow-prev:hover, .slideshow-next:hover {
-                background-color: rgba(0, 0, 0, 0.7) !important;
+            .slideshow-prev:hover, .slideshow-next:hover,
+            .slideshow-prev:active, .slideshow-next:active {
+                background-color: rgba(0, 0, 0, 0.8) !important;
             }
             
             /* Contador mejorado */
@@ -196,9 +246,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 border-radius: 20px !important;
                 z-index: 5 !important;
                 font-weight: bold !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
             }
             
-            /* Botón de cierre mejorado */
+            /* Botón de cierre mejorado para móviles */
             .slideshow-close {
                 position: absolute !important;
                 top: 15px !important;
@@ -209,28 +261,75 @@ document.addEventListener('DOMContentLoaded', function() {
                 transition: 0.3s !important;
                 z-index: 20 !important;
                 cursor: pointer !important;
-                width: 40px !important;
-                height: 40px !important;
+                width: 50px !important;
+                height: 50px !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
                 border-radius: 50% !important;
-                background-color: rgba(0, 0, 0, 0.3) !important;
+                background-color: rgba(0, 0, 0, 0.5) !important;
                 line-height: 1 !important;
+                touch-action: manipulation !important;
+                -webkit-tap-highlight-color: transparent !important;
             }
             
-            .slideshow-close:hover {
-                background-color: rgba(0, 0, 0, 0.7) !important;
+            /* Botón de cierre más grande en móviles */
+            @media (max-width: 768px) {
+                .slideshow-close {
+                    width: 60px !important;
+                    height: 60px !important;
+                    font-size: 45px !important;
+                    top: 20px !important;
+                    right: 20px !important;
+                }
             }
             
-            /* Efecto de zoom al pasar el mouse */
-            #slideshowImage:hover {
-                transform: scale(1.02) !important;
+            .slideshow-close:hover,
+            .slideshow-close:active {
+                background-color: rgba(0, 0, 0, 0.8) !important;
+            }
+            
+            /* Título/caption responsive */
+            .slideshow-caption {
+                color: white !important;
+                text-align: center !important;
+                margin: 10px 0 !important;
+                font-size: 16px !important;
+                padding: 0 20px !important;
+                max-height: 10% !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            
+            @media (max-width: 768px) {
+                .slideshow-caption {
+                    font-size: 14px !important;
+                    padding: 0 15px !important;
+                }
+            }
+            
+            /* Efecto de zoom reducido en móviles */
+            @media (min-width: 769px) {
+                #slideshowImage:hover {
+                    transform: scale(1.02) !important;
+                }
+            }
+            
+            /* Mejorar áreas táctiles para móviles */
+            .photo-container {
+                touch-action: manipulation !important;
+                -webkit-tap-highlight-color: transparent !important;
+            }
+            
+            .photo-container img {
+                touch-action: manipulation !important;
+                -webkit-user-select: none !important;
+                user-select: none !important;
             }
         `;
         
         document.head.appendChild(styleEl);
-        console.log('Estilos adicionales inyectados');
+        console.log('Estilos adicionales inyectados (optimizados para móviles)');
     }
     
     // Aplicar estilos críticos directamente al DOM
@@ -242,6 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (slideshowModal) {
             // Estilos para el modal
             slideshowModal.style.zIndex = '10000';
+            slideshowModal.style.touchAction = 'manipulation';
         }
         
         if (slideshowImageContainer) {
@@ -252,7 +352,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                touchAction: 'manipulation'
             });
         }
         
@@ -270,14 +371,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 transform: 'none',
                 transition: 'opacity 0.3s ease',
                 opacity: '1',
-                margin: '0 auto'
+                margin: '0 auto',
+                touchAction: 'manipulation'
             });
         }
         
         console.log('Estilos críticos aplicados directamente a los elementos del visor');
     }
     
-    // Configurar los eventos del visor
+    // Configurar los eventos del visor con soporte para móviles
     function setupViewerEvents() {
         const modal = document.getElementById('slideshowModal');
         const closeBtn = document.querySelector('.slideshow-close');
@@ -289,31 +391,57 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Cerrar al hacer clic en X
-        closeBtn.addEventListener('click', function() {
+        // Función para cerrar el modal
+        function closeModal() {
             modal.style.display = 'none';
             document.body.style.overflow = '';
-        });
+            console.log('Modal cerrado');
+        }
+        
+        // Cerrar al hacer clic/tocar en X
+        closeBtn.addEventListener('click', closeModal);
+        if (isMobileDevice()) {
+            closeBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                closeModal();
+            });
+        }
         
         // Cerrar al hacer clic fuera de la imagen
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = '';
+                closeModal();
             }
         });
         
         // Navegación: anterior
-        prevBtn.addEventListener('click', function(e) {
+        function prevImage(e) {
             e.stopPropagation();
+            e.preventDefault();
             navigateViewer(-1);
-        });
+        }
         
-        // Navegación: siguiente
-        nextBtn.addEventListener('click', function(e) {
+        function nextImage(e) {
             e.stopPropagation();
+            e.preventDefault();
             navigateViewer(1);
-        });
+        }
+        
+        prevBtn.addEventListener('click', prevImage);
+        nextBtn.addEventListener('click', nextImage);
+        
+        // Eventos táctiles para móviles
+        if (isMobileDevice()) {
+            prevBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                prevImage(e);
+            });
+            
+            nextBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                nextImage(e);
+            });
+        }
         
         // Navegación con teclado
         document.addEventListener('keydown', function(e) {
@@ -323,13 +451,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (e.key === 'ArrowRight') {
                     navigateViewer(1);
                 } else if (e.key === 'Escape') {
-                    modal.style.display = 'none';
-                    document.body.style.overflow = '';
+                    closeModal();
                 }
             }
         });
         
-        console.log('Eventos del visor configurados');
+        console.log('Eventos del visor configurados (con soporte móvil)');
     }
     
     // Actualizar la imagen en el visor con ajuste automático según sus dimensiones
@@ -380,7 +507,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Calcular proporciones
             const imageRatio = newImage.width / newImage.height;
-            const containerRatio = containerWidth / containerHeight;
             
             // Aplicar dimensiones específicas para aprovechar mejor el espacio
             if (isVertical) {
@@ -427,7 +553,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 objectFit: 'contain',
                 transform: 'none',
                 margin: '0 auto',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                touchAction: 'manipulation'
             });
             
             // Aplicar estilos de visualización mejorados
@@ -537,7 +664,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateViewerImage();
     }
     
-    // Configurar eventos de clic en las imágenes de la galería
+    // Configurar eventos de clic en las imágenes de la galería (optimizado para móviles)
     function setupGalleryClicks() {
         const photoCards = document.querySelectorAll('.photo-card');
         console.log(`Configurando eventos de clic para ${photoCards.length} tarjetas de fotos`);
@@ -546,18 +673,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // Solo configurar evento en la parte de la imagen
             const photoContainer = card.querySelector('.photo-container');
             if (photoContainer) {
-                // Eliminar cualquier controlador de eventos existente (para evitar duplicados)
-                const newPhotoContainer = photoContainer.cloneNode(true);
-                if (photoContainer.parentNode) {
-                    photoContainer.parentNode.replaceChild(newPhotoContainer, photoContainer);
-                }
-                
-                // Agregar nuevo controlador de eventos
-                newPhotoContainer.addEventListener('click', function(e) {
+                // Función para manejar el clic/toque
+                function handleImageClick(e) {
+                    console.log('Evento detectado:', e.type);
+                    
                     // Verificar si el clic fue en un botón o enlace
-                    const isActionClick = e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || 
-                                        e.target.closest('button') || e.target.closest('a') || 
-                                        e.target.closest('.actions-bar');
+                    const isActionClick = e.target.tagName === 'BUTTON' || 
+                                        e.target.tagName === 'A' || 
+                                        e.target.closest('button') || 
+                                        e.target.closest('a') || 
+                                        e.target.closest('.actions-bar') ||
+                                        e.target.closest('.download-photo') ||
+                                        e.target.closest('.delete-photo');
                     
                     // Si el clic fue en un botón o enlace, no hacer nada
                     if (isActionClick) {
@@ -570,13 +697,43 @@ document.addEventListener('DOMContentLoaded', function() {
                     e.stopPropagation();
                     
                     const photoId = card.dataset.photoId;
-                    console.log(`Clic en contenedor de foto ${photoId}`);
+                    console.log(`${e.type} en contenedor de foto ${photoId}`);
                     openImageViewer(photoId);
-                });
+                }
+                
+                // Eliminar cualquier controlador de eventos existente (para evitar duplicados)
+                const newPhotoContainer = photoContainer.cloneNode(true);
+                if (photoContainer.parentNode) {
+                    photoContainer.parentNode.replaceChild(newPhotoContainer, photoContainer);
+                }
+                
+                // Agregar eventos tanto para móviles como para escritorio
+                if (isMobileDevice()) {
+                    console.log('Configurando eventos táctiles para móvil');
+                    
+                    // Para móviles, usar touchend que es más confiable
+                    newPhotoContainer.addEventListener('touchend', function(e) {
+                        // Solo procesar si es un toque simple (no un gesto de scroll/zoom)
+                        if (e.touches.length === 0 && e.changedTouches.length === 1) {
+                            handleImageClick(e);
+                        }
+                    }, { passive: false });
+                    
+                    // También mantener click como respaldo
+                    newPhotoContainer.addEventListener('click', handleImageClick);
+                } else {
+                    console.log('Configurando eventos de clic para escritorio');
+                    // Para escritorio, solo usar click
+                    newPhotoContainer.addEventListener('click', handleImageClick);
+                }
+                
+                // Mejorar la experiencia táctil
+                newPhotoContainer.style.touchAction = 'manipulation';
+                newPhotoContainer.style.webkitTapHighlightColor = 'transparent';
             }
         });
         
-        console.log('Configuración de clics en galería completada');
+        console.log('Configuración de clics en galería completada (optimizada para móviles)');
     }
     
     // Iniciar la inicialización
