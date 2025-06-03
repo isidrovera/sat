@@ -3,11 +3,15 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Cargado. Iniciando script de galería...');
     
     const gallery = {
+        // Nueva propiedad para acumular fotos
+        capturedPhotos: [],
+        
         init() {
             console.log('Iniciando galería...');
             this.initializeElements();
             this.bindEvents();
             this.initializeImagePreviews();
+            this.initializeCameraSession();
             
             console.log('Inicialización completa de galería');
         },
@@ -15,11 +19,11 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeElements() {
             console.log('Inicializando elementos DOM...');
             this.fileInput = document.getElementById('fileUpload');
-            this.cameraInput = document.getElementById('cameraCapture'); // Nuevo input para cámara
+            this.cameraInput = document.getElementById('cameraCapture');
             this.photoGrid = document.querySelector('#photoGrid');
             this.syncButton = document.getElementById('syncButton');
             this.shareGalleryBtn = document.getElementById('shareGalleryBtn');
-            this.cameraBtn = document.getElementById('cameraBtn'); // Nuevo botón para cámara
+            this.cameraBtn = document.getElementById('cameraBtn');
             this.loadingOverlay = document.getElementById('loadingOverlay');
             this.reparacionId = window.location.pathname.split('/').pop();
             
@@ -50,6 +54,12 @@ document.addEventListener('DOMContentLoaded', function() {
             this.setupFileInputs();
         },
 
+        initializeCameraSession() {
+            console.log('Inicializando sesión de cámara...');
+            this.capturedPhotos = [];
+            this.updateCameraButton();
+        },
+
         setupFileInputs() {
             console.log('Configurando inputs para fotos y cámara...');
             
@@ -77,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (this.cameraInput) {
                 console.log('Configurando input para captura de cámara...');
                 this.cameraInput.setAttribute('accept', 'image/*');
-                this.cameraInput.setAttribute('capture', 'camera'); // Solo cámara trasera
+                this.cameraInput.setAttribute('capture', 'camera');
                 
                 if (this.isMobile()) {
                     console.log('Configuración específica para dispositivos móviles - cámara');
@@ -115,15 +125,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Evento para botón de cámara
             if (this.cameraBtn) {
                 console.log('Vinculando evento para botón de cámara');
-                this.cameraBtn.addEventListener('click', () => this.triggerCamera());
+                this.cameraBtn.addEventListener('click', () => this.handleCameraButtonClick());
             } else {
                 console.log('No se encontró cameraBtn - buscando alternativas...');
-                // Buscar el botón por texto o clase como respaldo
                 const alternativeCameraBtn = document.querySelector('button[id*="camera"], .btn-camera, button:has(i.fa-camera)');
                 if (alternativeCameraBtn) {
                     console.log('Botón de cámara encontrado por selector alternativo');
                     this.cameraBtn = alternativeCameraBtn;
-                    this.cameraBtn.addEventListener('click', () => this.triggerCamera());
+                    this.cameraBtn.addEventListener('click', () => this.handleCameraButtonClick());
                 } else {
                     console.warn('No se pudo encontrar botón de cámara por ningún método');
                 }
@@ -158,31 +167,77 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Eventos vinculados correctamente');
         },
 
+        handleCameraButtonClick() {
+            console.log(`Estado actual: ${this.capturedPhotos.length} fotos capturadas`);
+            
+            if (this.capturedPhotos.length === 0) {
+                // Primera vez: iniciar sesión de cámara
+                console.log('Iniciando nueva sesión de cámara');
+                this.triggerCamera();
+            } else {
+                // Ya hay fotos: mostrar opciones
+                console.log('Mostrando opciones de cámara');
+                this.showCameraOptions();
+            }
+        },
+
+        showCameraOptions() {
+            console.log(`Mostrando opciones con ${this.capturedPhotos.length} fotos`);
+            
+            Swal.fire({
+                title: `${this.capturedPhotos.length} Fotos Capturadas`,
+                text: '¿Qué deseas hacer?',
+                icon: 'question',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: `📸 Tomar Otra (${this.capturedPhotos.length + 1})`,
+                denyButtonText: `💾 Subir Todas (${this.capturedPhotos.length})`,
+                cancelButtonText: '❌ Cancelar',
+                confirmButtonColor: '#3085d6',
+                denyButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    console.log('Usuario eligió tomar otra foto');
+                    this.triggerCamera();
+                } else if (result.isDenied) {
+                    console.log('Usuario eligió subir todas las fotos');
+                    this.uploadAllCapturedPhotos();
+                } else {
+                    console.log('Usuario canceló la operación');
+                }
+            });
+        },
+
         triggerCamera() {
             console.log('Activando captura de cámara...');
             
             // Verificar que el input de cámara existe
             if (!this.cameraInput) {
                 console.error('Input de cámara no disponible, intentando crear uno temporal...');
-                // Crear input temporal si no existe
-                const tempInput = document.createElement('input');
-                tempInput.type = 'file';
-                tempInput.accept = 'image/*';
-                tempInput.setAttribute('capture', 'camera');
-                tempInput.style.display = 'none';
-                tempInput.addEventListener('change', (e) => {
-                    console.log('Evento change en input temporal de cámara');
-                    this.handleCameraCapture(e);
-                    document.body.removeChild(tempInput);
-                });
-                document.body.appendChild(tempInput);
-                console.log('Disparando click en input temporal de cámara');
-                tempInput.click();
+                this.createTemporaryCameraInput();
                 return;
             }
             
             console.log('Disparando click en input de cámara');
             this.cameraInput.click();
+        },
+
+        createTemporaryCameraInput() {
+            console.log('Creando input temporal de cámara');
+            const tempInput = document.createElement('input');
+            tempInput.type = 'file';
+            tempInput.accept = 'image/*';
+            tempInput.setAttribute('capture', 'camera');
+            tempInput.style.display = 'none';
+            tempInput.addEventListener('change', (e) => {
+                console.log('Evento change en input temporal de cámara');
+                this.handleCameraCapture(e);
+                document.body.removeChild(tempInput);
+            });
+            document.body.appendChild(tempInput);
+            console.log('Disparando click en input temporal de cámara');
+            tempInput.click();
         },
 
         handleCameraCapture(event) {
@@ -195,7 +250,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Las fotos de cámara generalmente son una sola, pero manejamos como array
             const validFiles = files.filter(file => this.validateFile(file));
             console.log(`Fotos válidas capturadas: ${validFiles.length} de ${files.length}`);
             
@@ -204,29 +258,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            console.log('Procesando fotos capturadas con cámara');
-            this.showUploadProgress(validFiles.length);
-            this.uploadCameraPhotos(validFiles);
-        },
-
-        uploadCameraPhotos(files) {
-            console.log(`Subiendo ${files.length} fotos capturadas con cámara`);
-            
-            const formData = new FormData();
-            files.forEach((file, index) => {
-                // Renombrar archivo con timestamp para identificar que viene de cámara
+            // Agregar fotos a la colección en lugar de subirlas inmediatamente
+            validFiles.forEach(file => {
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                const newName = `camera_${timestamp}_${index + 1}.jpg`;
-                console.log(`Renombrando archivo de cámara: ${file.name} -> ${newName}`);
+                const newName = `camera_${timestamp}_${this.capturedPhotos.length + 1}.jpg`;
+                console.log(`Agregando foto a la sesión: ${newName}`);
                 
-                // Crear nuevo archivo con nombre personalizado
                 const renamedFile = new File([file], newName, { type: file.type });
-                formData.append('files[]', renamedFile);
-                
-                console.log(`Agregando foto de cámara al FormData: ${newName}, tamaño: ${file.size} bytes`);
+                this.capturedPhotos.push(renamedFile);
             });
 
-            console.log(`Enviando fotos de cámara al servidor: /gallery/upload/${this.reparacionId}`);
+            console.log(`Total de fotos en sesión: ${this.capturedPhotos.length}`);
+            this.updateCameraButton();
+            
+            // Preguntar inmediatamente qué hacer
+            setTimeout(() => {
+                this.showCameraOptions();
+            }, 500);
+
+            // Limpiar el input para permitir capturar la misma foto nuevamente
+            event.target.value = '';
+        },
+
+        updateCameraButton() {
+            if (!this.cameraBtn) return;
+            
+            const count = this.capturedPhotos.length;
+            console.log(`Actualizando botón de cámara: ${count} fotos`);
+            
+            if (count === 0) {
+                this.cameraBtn.innerHTML = '<i class="fa fa-camera"></i> Tomar Foto';
+                this.cameraBtn.className = 'btn btn-primary';
+            } else {
+                this.cameraBtn.innerHTML = `<i class="fa fa-camera"></i> Cámara (${count})`;
+                this.cameraBtn.className = 'btn btn-warning';
+            }
+        },
+
+        uploadAllCapturedPhotos() {
+            console.log(`Subiendo ${this.capturedPhotos.length} fotos capturadas`);
+            
+            if (this.capturedPhotos.length === 0) {
+                this.showError('Sin fotos', 'No hay fotos para subir');
+                return;
+            }
+
+            this.showUploadProgress(this.capturedPhotos.length);
+            
+            const formData = new FormData();
+            this.capturedPhotos.forEach((file, index) => {
+                console.log(`Agregando foto ${index + 1} al FormData: ${file.name}, tamaño: ${file.size} bytes`);
+                formData.append('files[]', file);
+            });
+
+            console.log(`Enviando ${this.capturedPhotos.length} fotos al servidor: /gallery/upload/${this.reparacionId}`);
             fetch(`/gallery/upload/${this.reparacionId}`, {
                 method: 'POST',
                 body: formData
@@ -242,7 +327,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Respuesta procesada:', data);
                 if (data.success) {
                     console.log('Fotos de cámara subidas exitosamente');
-                    this.showSuccess('Fotos Capturadas', `Se subieron ${files.length} fotos de cámara correctamente`);
+                    this.showSuccess('Fotos Subidas', `Se subieron ${this.capturedPhotos.length} fotos correctamente`);
+                    // Limpiar sesión de cámara
+                    this.capturedPhotos = [];
+                    this.updateCameraButton();
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
                     console.error(`Error reportado por el servidor: ${data.error || 'Error desconocido'}`);
@@ -390,7 +478,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const photoId = button.dataset.photoId;
             console.log(`Solicitando descarga para la foto con ID: ${photoId}`);
         
-            // Hacer una solicitud para obtener el contenido binario desde el servidor
             fetch(`/gallery/download/${photoId}`)
                 .then(response => {
                     if (!response.ok) {
@@ -406,17 +493,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     const link = document.createElement('a');
                     link.href = url;
                     
-                    // Obtener nombre de archivo para descargar
                     const filename = button.getAttribute('data-filename') || 'foto.jpg';
                     console.log(`Descargando como: ${filename}`);
                     link.setAttribute('download', filename);
                     
-                    // Añadir link al DOM, hacer clic y luego remover
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
                     
-                    // Liberar URL
                     window.URL.revokeObjectURL(url);
                     console.log('Archivo descargado exitosamente');
                 })
@@ -437,7 +521,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
         
-            // Intento de copiar URL al portapapeles usando Clipboard API
             if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
                 console.log('Usando Clipboard API para copiar URL');
                 navigator.clipboard.writeText(currentUrl)
@@ -481,32 +564,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
         
-        getCurrentPageUrl() {
-            console.log('Obteniendo URL canónica o limpia...');
-            // Obtener la URL canónica si existe, si no, usar la URL actual
-            const canonicalElement = document.querySelector("link[rel='canonical']");
-            if (canonicalElement) {
-                console.log(`URL canónica encontrada: ${canonicalElement.href}`);
-                return canonicalElement.href;
-            }
-            
-            // Si no hay URL canónica, usar la URL actual limpia
-            const url = new URL(window.location.href);
-            console.log(`URL original: ${url.toString()}`);
-            
-            // Eliminar parámetros UTM y otros parámetros de tracking si existen
-            const paramsToRemove = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
-            paramsToRemove.forEach(param => {
-                if (url.searchParams.has(param)) {
-                    console.log(`Eliminando parámetro: ${param}`);
-                    url.searchParams.delete(param);
-                }
-            });
-            
-            console.log(`URL limpia: ${url.toString()}`);
-            return url.toString();
-        },
-        
         fallbackCopyText(text) {
             console.log('Usando método fallback para copiar texto');
             const tempInput = document.createElement('textarea');
@@ -517,17 +574,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
             try {
                 console.log('Configurando textarea para selección');
-                // Para dispositivos móviles
                 tempInput.contentEditable = true;
                 tempInput.readOnly = false;
                 
-                // Seleccionar y copiar
                 const range = document.createRange();
                 range.selectNodeContents(tempInput);
                 const selection = window.getSelection();
                 selection.removeAllRanges();
                 selection.addRange(range);
-                tempInput.setSelectionRange(0, text.length); // Para dispositivos móviles
+                tempInput.setSelectionRange(0, text.length);
                 
                 console.log('Ejecutando comando de copia');
                 const successful = document.execCommand('copy');
@@ -635,12 +690,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     const element = document.querySelector(`.photo-card[data-photo-id="${photoId}"]`);
                     if (element) {
                         console.log('Eliminando tarjeta de foto del DOM');
-                        element.remove();  // Elimina la tarjeta de la galería sin recargar
+                        element.remove();
                         console.log('Foto eliminada correctamente:', photoId);
                         this.showSuccess('Éxito', 'Foto eliminada correctamente');
                     } else {
                         console.warn(`No se encontró elemento DOM para foto ID: ${photoId}`);
-                        // Recargar página si no se encuentra el elemento
                         setTimeout(() => window.location.reload(), 1500);
                     }
                 } else {
@@ -697,11 +751,9 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeImagePreviews() {
             console.log('Inicializando vistas previas de imágenes');
             
-            // Obtenemos todas las imágenes de las tarjetas de fotos
             const photoCards = document.querySelectorAll('.photo-card');
             console.log(`Se encontraron ${photoCards.length} tarjetas de fotos`);
             
-            // Usar IntersectionObserver para cargar imágenes de forma eficiente
             if ('IntersectionObserver' in window) {
                 console.log('Usando IntersectionObserver para carga eficiente');
                 
@@ -717,7 +769,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 });
 
-                // Observar todas las imágenes en las tarjetas
                 photoCards.forEach(card => {
                     const img = card.querySelector('img');
                     if (img && !img.classList.contains('loaded')) {
@@ -726,7 +777,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             } else {
                 console.log('IntersectionObserver no disponible, cargando todas las imágenes directamente');
-                // Fallback para navegadores que no soporten IntersectionObserver
                 photoCards.forEach(card => {
                     const img = card.querySelector('img');
                     if (img && !img.classList.contains('loaded')) {
