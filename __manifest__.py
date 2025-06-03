@@ -166,7 +166,7 @@
             'sat/static/src/js/dashboard.js',
             'sat/static/src/js/estilo_dashboard.js',
             'sat/static/src/js/gallery_widget.js',
-            'sat/static/src/js/gallery.js',
+            #'sat/static/src/js/gallery.js',
             'sat/static/src/js/list_dashboard.js',
             'sat/static/src/js/parts_request_message.js',
             'sat/static/src/js/image-viewer.js',
