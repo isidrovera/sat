@@ -9,49 +9,72 @@ document.addEventListener('DOMContentLoaded', function() {
             this.bindEvents();
             this.initializeImagePreviews();
             
-            
             console.log('Inicialización completa de galería');
         },
 
         initializeElements() {
             console.log('Inicializando elementos DOM...');
             this.fileInput = document.getElementById('fileUpload');
+            this.cameraInput = document.getElementById('cameraCapture'); // Nuevo input para cámara
             this.photoGrid = document.querySelector('#photoGrid');
             this.syncButton = document.getElementById('syncButton');
             this.shareGalleryBtn = document.getElementById('shareGalleryBtn');
+            this.cameraBtn = document.getElementById('cameraBtn'); // Nuevo botón para cámara
             this.loadingOverlay = document.getElementById('loadingOverlay');
             this.reparacionId = window.location.pathname.split('/').pop();
             
             console.log('Elementos inicializados:', {
                 fileInput: this.fileInput ? 'Encontrado' : 'No encontrado',
+                cameraInput: this.cameraInput ? 'Encontrado' : 'No encontrado',
                 photoGrid: this.photoGrid ? 'Encontrado' : 'No encontrado',
                 syncButton: this.syncButton ? 'Encontrado' : 'No encontrado',
                 shareGalleryBtn: this.shareGalleryBtn ? 'Encontrado' : 'No encontrado',
+                cameraBtn: this.cameraBtn ? 'Encontrado' : 'No encontrado',
                 loadingOverlay: this.loadingOverlay ? 'Encontrado' : 'No encontrado',
                 reparacionId: this.reparacionId,
             });
             
-            this.setupFileInput();
+            this.setupFileInputs();
         },
 
-        setupFileInput() {
+        setupFileInputs() {
+            console.log('Configurando inputs para fotos y cámara...');
+            
+            // Configurar input para seleccionar fotos de galería
             if (this.fileInput) {
-                console.log('Configurando input para múltiples fotos...');
+                console.log('Configurando input para múltiples fotos de galería...');
                 this.fileInput.setAttribute('multiple', 'multiple');
                 this.fileInput.setAttribute('accept', 'image/*');
 
                 if (this.isMobile()) {
-                    console.log('Configuración específica para dispositivos móviles');
+                    console.log('Configuración específica para dispositivos móviles - galería');
                     this.fileInput.addEventListener('click', function() {
                         this.setAttribute('multiple', 'multiple');
                     });
                     this.fileInput.addEventListener('change', (e) => {
-                        console.log('Evento change en input de archivos (móvil)');
+                        console.log('Evento change en input de archivos de galería (móvil)');
                         this.handleMassiveUpload(e);
                     });
                 }
             } else {
                 console.warn('No se encontró el elemento fileInput');
+            }
+
+            // Configurar input para captura de cámara
+            if (this.cameraInput) {
+                console.log('Configurando input para captura de cámara...');
+                this.cameraInput.setAttribute('accept', 'image/*');
+                this.cameraInput.setAttribute('capture', 'camera'); // Solo cámara trasera
+                
+                if (this.isMobile()) {
+                    console.log('Configuración específica para dispositivos móviles - cámara');
+                    this.cameraInput.addEventListener('change', (e) => {
+                        console.log('Evento change en input de cámara (móvil)');
+                        this.handleCameraCapture(e);
+                    });
+                }
+            } else {
+                console.warn('No se encontró el elemento cameraInput');
             }
         },
 
@@ -64,10 +87,24 @@ document.addEventListener('DOMContentLoaded', function() {
         bindEvents() {
             console.log('Iniciando bindEvents...');
             
-            
+            // Eventos para input de galería (escritorio)
             if (this.fileInput && !this.isMobile()) {
-                console.log('Vinculando evento change para subida de archivos (escritorio)');
+                console.log('Vinculando evento change para subida de archivos de galería (escritorio)');
                 this.fileInput.addEventListener('change', (e) => this.handleMassiveUpload(e));
+            }
+
+            // Eventos para input de cámara (escritorio)
+            if (this.cameraInput && !this.isMobile()) {
+                console.log('Vinculando evento change para captura de cámara (escritorio)');
+                this.cameraInput.addEventListener('change', (e) => this.handleCameraCapture(e));
+            }
+
+            // Evento para botón de cámara
+            if (this.cameraBtn) {
+                console.log('Vinculando evento para botón de cámara');
+                this.cameraBtn.addEventListener('click', () => this.triggerCamera());
+            } else {
+                console.log('No se encontró cameraBtn');
             }
         
             if (this.syncButton) {
@@ -98,9 +135,217 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log('Eventos vinculados correctamente');
         },
-        
+
+        triggerCamera() {
+            console.log('Activando captura de cámara...');
+            if (this.cameraInput) {
+                console.log('Disparando click en input de cámara');
+                this.cameraInput.click();
+            } else {
+                console.error('Input de cámara no encontrado');
+                this.showError('Error', 'No se pudo acceder a la cámara');
+            }
+        },
+
+        handleCameraCapture(event) {
+            console.log('Iniciando proceso de captura de cámara');
+            const files = Array.from(event.target.files);
+            console.log(`Total de fotos capturadas: ${files.length}`);
+            
+            if (!files.length) {
+                console.log('No se capturaron fotos');
+                return;
+            }
+
+            // Las fotos de cámara generalmente son una sola, pero manejamos como array
+            const validFiles = files.filter(file => this.validateFile(file));
+            console.log(`Fotos válidas capturadas: ${validFiles.length} de ${files.length}`);
+            
+            if (!validFiles.length) {
+                this.showError('Foto no válida', 'La foto capturada no es válida');
+                return;
+            }
+
+            console.log('Procesando fotos capturadas con cámara');
+            this.showUploadProgress(validFiles.length);
+            this.uploadCameraPhotos(validFiles);
+        },
+
+        uploadCameraPhotos(files) {
+            console.log(`Subiendo ${files.length} fotos capturadas con cámara`);
+            
+            const formData = new FormData();
+            files.forEach((file, index) => {
+                // Renombrar archivo con timestamp para identificar que viene de cámara
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const newName = `camera_${timestamp}_${index + 1}.jpg`;
+                console.log(`Renombrando archivo de cámara: ${file.name} -> ${newName}`);
+                
+                // Crear nuevo archivo con nombre personalizado
+                const renamedFile = new File([file], newName, { type: file.type });
+                formData.append('files[]', renamedFile);
+                
+                console.log(`Agregando foto de cámara al FormData: ${newName}, tamaño: ${file.size} bytes`);
+            });
+
+            console.log(`Enviando fotos de cámara al servidor: /gallery/upload/${this.reparacionId}`);
+            fetch(`/gallery/upload/${this.reparacionId}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log(`Respuesta recibida del servidor: ${response.status} ${response.statusText}`);
+                if (!response.ok) {
+                    throw new Error(`Error de servidor: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Respuesta procesada:', data);
+                if (data.success) {
+                    console.log('Fotos de cámara subidas exitosamente');
+                    this.showSuccess('Fotos Capturadas', `Se subieron ${files.length} fotos de cámara correctamente`);
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    console.error(`Error reportado por el servidor: ${data.error || 'Error desconocido'}`);
+                    throw new Error(data.error || 'Error en la subida de fotos de cámara');
+                }
+            })
+            .catch(error => {
+                console.error('Error en subida de fotos de cámara:', error);
+                this.showError('Error', error.message || 'Ocurrió un error durante la subida de fotos de cámara');
+            });
+        },
+
+        handleMassiveUpload(event) {
+            console.log('Iniciando proceso de subida masiva de archivos de galería');
+            const files = Array.from(event.target.files);
+            console.log(`Total de archivos seleccionados de galería: ${files.length}`);
+            
+            if (!files.length) {
+                console.log('No se seleccionaron archivos para subir');
+                return;
+            }
+
+            const validFiles = files.filter(file => this.validateFile(file));
+            console.log(`Archivos válidos para subir: ${validFiles.length} de ${files.length}`);
+            
+            if (!validFiles.length) {
+                this.showError('No hay archivos válidos', 'Por favor seleccione imágenes válidas');
+                return;
+            }
+
+            this.showUploadProgress(validFiles.length);
+
+            // Dividir archivos en lotes para evitar problemas de tamaño
+            const batchSize = 5;
+            const batches = [];
+            for (let i = 0; i < validFiles.length; i += batchSize) {
+                batches.push(validFiles.slice(i, i + batchSize));
+            }
+            console.log(`Lotes de archivos para subir: ${batches.length}`);
+
+            this.processBatches(batches, 0, validFiles.length);
+        },
+
+        processBatches(batches, uploadedCount, totalFiles) {
+            console.log(`Procesando lotes: ${batches.length} lotes pendientes, ${uploadedCount}/${totalFiles} archivos subidos`);
+            
+            if (batches.length === 0) {
+                console.log('Todos los lotes procesados. Subida completa.');
+                this.showSuccess('Subida Completada', `Se subieron ${uploadedCount} fotos correctamente`);
+                setTimeout(() => window.location.reload(), 1500);
+                return;
+            }
+
+            const currentBatch = batches.shift();
+            console.log(`Procesando lote con ${currentBatch.length} archivos`);
+            
+            const formData = new FormData();
+            currentBatch.forEach(file => {
+                console.log(`Agregando archivo al FormData: ${file.name}, tamaño: ${file.size} bytes`);
+                formData.append('files[]', file);
+            });
+
+            console.log(`Enviando lote al servidor: /gallery/upload/${this.reparacionId}`);
+            fetch(`/gallery/upload/${this.reparacionId}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log(`Respuesta recibida del servidor: ${response.status} ${response.statusText}`);
+                if (!response.ok) {
+                    throw new Error(`Error de servidor: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Respuesta procesada:', data);
+                if (data.success) {
+                    const newUploadedCount = uploadedCount + currentBatch.length;
+                    const progress = (newUploadedCount / totalFiles) * 100;
+                    console.log(`Subida en progreso: ${newUploadedCount}/${totalFiles} (${progress.toFixed(1)}%)`);
+                    this.updateUploadProgress(progress, newUploadedCount, totalFiles);
+                    this.processBatches(batches, newUploadedCount, totalFiles);
+                } else {
+                    console.error(`Error reportado por el servidor: ${data.error || 'Error desconocido'}`);
+                    throw new Error(data.error || 'Error en la subida');
+                }
+            })
+            .catch(error => {
+                console.error('Error en proceso de subida:', error);
+                this.showError('Error', error.message || 'Ocurrió un error durante la subida');
+            });
+        },
+
+        validateFile(file) {
+            console.log(`Validando archivo: ${file.name}, tipo: ${file.type}, tamaño: ${file.size} bytes`);
+            
+            if (!file.type.startsWith('image/')) {
+                console.warn(`Archivo rechazado (no es una imagen): ${file.name}`);
+                return false;
+            }
+
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSize) {
+                console.warn(`Archivo rechazado (excede tamaño máximo): ${file.name} (${file.size} bytes, máximo: ${maxSize} bytes)`);
+                return false;
+            }
+
+            console.log(`Archivo validado correctamente: ${file.name}`);
+            return true;
+        },
+
+        showUploadProgress(totalFiles) {
+            console.log(`Mostrando UI de progreso para ${totalFiles} archivos`);
+            Swal.fire({
+                title: 'Subiendo Fotos',
+                html: `
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%" 
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div id="uploadStatus">Iniciando subida de ${totalFiles} fotos...</div>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+        },
+
+        updateUploadProgress(progress, uploadedCount, totalFiles) {
+            console.log(`Actualizando UI de progreso: ${uploadedCount}/${totalFiles} (${progress.toFixed(1)}%)`);
+            const progressBar = document.querySelector('.progress-bar');
+            const statusText = document.getElementById('uploadStatus');
+            
+            if (progressBar && statusText) {
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+                statusText.textContent = `Subiendo: ${uploadedCount} de ${totalFiles} fotos`;
+            } else {
+                console.warn('No se encontraron elementos de UI para actualizar el progreso');
+            }
+        },
               
-        
         handleDownload(event) {
             event.preventDefault();
             const button = event.currentTarget;
@@ -261,134 +506,6 @@ document.addEventListener('DOMContentLoaded', function() {
             } finally {
                 console.log('Limpiando elementos temporales');
                 document.body.removeChild(tempInput);
-            }
-        },
-        handleMassiveUpload(event) {
-            console.log('Iniciando proceso de subida masiva de archivos');
-            const files = Array.from(event.target.files);
-            console.log(`Total de archivos seleccionados: ${files.length}`);
-            
-            if (!files.length) {
-                console.log('No se seleccionaron archivos para subir');
-                return;
-            }
-
-            const validFiles = files.filter(file => this.validateFile(file));
-            console.log(`Archivos válidos para subir: ${validFiles.length} de ${files.length}`);
-            
-            if (!validFiles.length) {
-                this.showError('No hay archivos válidos', 'Por favor seleccione imágenes válidas');
-                return;
-            }
-
-            this.showUploadProgress(validFiles.length);
-
-            // Dividir archivos en lotes para evitar problemas de tamaño
-            const batchSize = 5;
-            const batches = [];
-            for (let i = 0; i < validFiles.length; i += batchSize) {
-                batches.push(validFiles.slice(i, i + batchSize));
-            }
-            console.log(`Lotes de archivos para subir: ${batches.length}`);
-
-            this.processBatches(batches, 0, validFiles.length);
-        },
-
-        processBatches(batches, uploadedCount, totalFiles) {
-            console.log(`Procesando lotes: ${batches.length} lotes pendientes, ${uploadedCount}/${totalFiles} archivos subidos`);
-            
-            if (batches.length === 0) {
-                console.log('Todos los lotes procesados. Subida completa.');
-                this.showSuccess('Subida Completada', `Se subieron ${uploadedCount} fotos correctamente`);
-                setTimeout(() => window.location.reload(), 1500);
-                return;
-            }
-
-            const currentBatch = batches.shift();
-            console.log(`Procesando lote con ${currentBatch.length} archivos`);
-            
-            const formData = new FormData();
-            currentBatch.forEach(file => {
-                console.log(`Agregando archivo al FormData: ${file.name}, tamaño: ${file.size} bytes`);
-                formData.append('files[]', file);
-            });
-
-            console.log(`Enviando lote al servidor: /gallery/upload/${this.reparacionId}`);
-            fetch(`/gallery/upload/${this.reparacionId}`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                console.log(`Respuesta recibida del servidor: ${response.status} ${response.statusText}`);
-                if (!response.ok) {
-                    throw new Error(`Error de servidor: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Respuesta procesada:', data);
-                if (data.success) {
-                    const newUploadedCount = uploadedCount + currentBatch.length;
-                    const progress = (newUploadedCount / totalFiles) * 100;
-                    console.log(`Subida en progreso: ${newUploadedCount}/${totalFiles} (${progress.toFixed(1)}%)`);
-                    this.updateUploadProgress(progress, newUploadedCount, totalFiles);
-                    this.processBatches(batches, newUploadedCount, totalFiles);
-                } else {
-                    console.error(`Error reportado por el servidor: ${data.error || 'Error desconocido'}`);
-                    throw new Error(data.error || 'Error en la subida');
-                }
-            })
-            .catch(error => {
-                console.error('Error en proceso de subida:', error);
-                this.showError('Error', error.message || 'Ocurrió un error durante la subida');
-            });
-        },
-
-        validateFile(file) {
-            console.log(`Validando archivo: ${file.name}, tipo: ${file.type}, tamaño: ${file.size} bytes`);
-            
-            if (!file.type.startsWith('image/')) {
-                console.warn(`Archivo rechazado (no es una imagen): ${file.name}`);
-                return false;
-            }
-
-            const maxSize = 10 * 1024 * 1024; // 10MB
-            if (file.size > maxSize) {
-                console.warn(`Archivo rechazado (excede tamaño máximo): ${file.name} (${file.size} bytes, máximo: ${maxSize} bytes)`);
-                return false;
-            }
-
-            console.log(`Archivo validado correctamente: ${file.name}`);
-            return true;
-        },
-
-        showUploadProgress(totalFiles) {
-            console.log(`Mostrando UI de progreso para ${totalFiles} archivos`);
-            Swal.fire({
-                title: 'Subiendo Fotos',
-                html: `
-                    <div class="progress mb-3">
-                        <div class="progress-bar" role="progressbar" style="width: 0%" 
-                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div id="uploadStatus">Iniciando subida de ${totalFiles} fotos...</div>
-                `,
-                allowOutsideClick: false,
-                showConfirmButton: false
-            });
-        },
-
-        updateUploadProgress(progress, uploadedCount, totalFiles) {
-            console.log(`Actualizando UI de progreso: ${uploadedCount}/${totalFiles} (${progress.toFixed(1)}%)`);
-            const progressBar = document.querySelector('.progress-bar');
-            const statusText = document.getElementById('uploadStatus');
-            
-            if (progressBar && statusText) {
-                progressBar.style.width = `${progress}%`;
-                progressBar.setAttribute('aria-valuenow', progress);
-                statusText.textContent = `Subiendo: ${uploadedCount} de ${totalFiles} fotos`;
-            } else {
-                console.warn('No se encontraron elementos de UI para actualizar el progreso');
             }
         },
 
