@@ -34,6 +34,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 reparacionId: this.reparacionId,
             });
             
+            // Si no existe el input de cámara, crearlo dinámicamente
+            if (!this.cameraInput) {
+                console.log('Input de cámara no encontrado, creándolo dinámicamente...');
+                this.cameraInput = document.createElement('input');
+                this.cameraInput.type = 'file';
+                this.cameraInput.id = 'cameraCapture';
+                this.cameraInput.style.display = 'none';
+                this.cameraInput.accept = 'image/*';
+                this.cameraInput.setAttribute('capture', 'camera');
+                document.body.appendChild(this.cameraInput);
+                console.log('Input de cámara creado dinámicamente');
+            }
+            
             this.setupFileInputs();
         },
 
@@ -104,7 +117,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Vinculando evento para botón de cámara');
                 this.cameraBtn.addEventListener('click', () => this.triggerCamera());
             } else {
-                console.log('No se encontró cameraBtn');
+                console.log('No se encontró cameraBtn - buscando alternativas...');
+                // Buscar el botón por texto o clase como respaldo
+                const alternativeCameraBtn = document.querySelector('button[id*="camera"], .btn-camera, button:has(i.fa-camera)');
+                if (alternativeCameraBtn) {
+                    console.log('Botón de cámara encontrado por selector alternativo');
+                    this.cameraBtn = alternativeCameraBtn;
+                    this.cameraBtn.addEventListener('click', () => this.triggerCamera());
+                } else {
+                    console.warn('No se pudo encontrar botón de cámara por ningún método');
+                }
             }
         
             if (this.syncButton) {
@@ -138,13 +160,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
         triggerCamera() {
             console.log('Activando captura de cámara...');
-            if (this.cameraInput) {
-                console.log('Disparando click en input de cámara');
-                this.cameraInput.click();
-            } else {
-                console.error('Input de cámara no encontrado');
-                this.showError('Error', 'No se pudo acceder a la cámara');
+            
+            // Verificar que el input de cámara existe
+            if (!this.cameraInput) {
+                console.error('Input de cámara no disponible, intentando crear uno temporal...');
+                // Crear input temporal si no existe
+                const tempInput = document.createElement('input');
+                tempInput.type = 'file';
+                tempInput.accept = 'image/*';
+                tempInput.setAttribute('capture', 'camera');
+                tempInput.style.display = 'none';
+                tempInput.addEventListener('change', (e) => {
+                    console.log('Evento change en input temporal de cámara');
+                    this.handleCameraCapture(e);
+                    document.body.removeChild(tempInput);
+                });
+                document.body.appendChild(tempInput);
+                console.log('Disparando click en input temporal de cámara');
+                tempInput.click();
+                return;
             }
+            
+            console.log('Disparando click en input de cámara');
+            this.cameraInput.click();
         },
 
         handleCameraCapture(event) {
