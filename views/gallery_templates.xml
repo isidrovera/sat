@@ -232,6 +232,75 @@
                     .photo-badge.gallery {
                         background: var(--success-color);
                     }
+                    /* AGREGAR ESTOS ESTILOS AL <style> DEL TEMPLATE HTML */
+
+                    /* Modal del visor de imágenes */
+                    .slideshow-modal {
+                        display: none !important;
+                        position: fixed !important;
+                        z-index: 10000 !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        background-color: rgba(0, 0, 0, 0.9) !important;
+                        overflow: hidden !important;
+                    }
+
+                    .slideshow-content {
+                        position: relative !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                    }
+
+                    .slideshow-image-container {
+                        width: 90% !important;
+                        height: 80% !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                    }
+
+                    #slideshowImage {
+                        max-width: 100% !important;
+                        max-height: 100% !important;
+                        object-fit: contain !important;
+                    }
+
+                    .slideshow-close {
+                        position: absolute !important;
+                        top: 20px !important;
+                        right: 30px !important;
+                        color: white !important;
+                        font-size: 40px !important;
+                        font-weight: bold !important;
+                        cursor: pointer !important;
+                        z-index: 10001 !important;
+                    }
+
+                    .slideshow-prev, .slideshow-next {
+                        position: absolute !important;
+                        top: 50% !important;
+                        transform: translateY(-50%) !important;
+                        color: white !important;
+                        font-size: 30px !important;
+                        cursor: pointer !important;
+                        padding: 10px !important;
+                        background: rgba(0,0,0,0.5) !important;
+                        border-radius: 5px !important;
+                    }
+
+                    .slideshow-prev {
+                        left: 20px !important;
+                    }
+
+                    .slideshow-next {
+                        right: 20px !important;
+                    }
                 </style>
                 <link rel="stylesheet" type="text/css" href="/sat/static/src/css/image-viewer.css" />
             </head>
