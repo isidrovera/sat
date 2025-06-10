@@ -1,6 +1,5 @@
-
 /** @odoo-module **/
-import { registry } from "@web/core/registry";
+import { registry } from "@web/core/registry/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component, useState, onWillStart } from "@odoo/owl";
 import { Dialog } from "@web/core/dialog/dialog";
