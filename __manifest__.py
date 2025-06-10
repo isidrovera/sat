@@ -169,7 +169,7 @@
             'sat/static/src/js/gallery_v3.js',
             'sat/static/src/js/list_dashboard.js',
             'sat/static/src/js/parts_request_message.js',
-            'sat/static/src/js/image-viewer.js',
+            'sat/static/src/js/image-viewer_v1.js',
             'sat/static/src/js/equipment_visit_report.js',
             'sat/static/src/css/sat_table_styles.css',
             'sat/static/src/js/sat_table_enhancements.js',
