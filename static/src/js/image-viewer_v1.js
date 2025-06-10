@@ -391,11 +391,24 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Función para cerrar el modal
+        // Función para cerrar el modal con animaciones
         function closeModal() {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-            console.log('Modal cerrado');
+            console.log('Cerrando modal con animaciones');
+            
+            // Agregar clase de cierre
+            modal.classList.add('closing');
+            modal.classList.remove('show');
+            
+            // Remover clase del body
+            document.body.classList.remove('modal-open');
+            
+            // Después de la animación, ocultar completamente
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modal.classList.remove('closing');
+                document.body.style.overflow = '';
+                console.log('Modal cerrado completamente');
+            }, 400);
         }
         
         // Cerrar al hacer clic/tocar en X
@@ -445,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Navegación con teclado
         document.addEventListener('keydown', function(e) {
-            if (modal.style.display === 'block') {
+            if (modal.classList.contains('show')) {
                 if (e.key === 'ArrowLeft') {
                     navigateViewer(-1);
                 } else if (e.key === 'ArrowRight') {
@@ -464,6 +477,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const viewerImage = document.getElementById('slideshowImage');
         const caption = document.getElementById('slideshowCaption');
         const currentCounter = document.getElementById('slideshowCurrent');
+        const imageContainer = document.querySelector('.slideshow-image-container');
         
         if (!viewerImage || !caption || !currentCounter) {
             console.error('No se encontraron elementos necesarios para actualizar la imagen');
@@ -472,6 +486,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Indicar carga en progreso
         viewerImage.style.opacity = '0.2';
+        viewerImage.classList.remove('loaded');
+        
+        if (imageContainer) {
+            imageContainer.classList.remove('loaded');
+        }
         
         // Asegurarnos de usar la URL de la imagen completa, no la miniatura
         let fullUrl = galleryImages[currentIndex].fullUrl;
@@ -498,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
             viewerImage.alt = galleryImages[currentIndex].name || '';
             
             // Aplicar clase según orientación
-            viewerImage.className = isVertical ? 'visor-full vertical' : 'visor-full horizontal';
+            viewerImage.className = isVertical ? 'visor-full vertical loaded' : 'visor-full horizontal loaded';
             
             // Calcular dimensiones óptimas
             const container = document.querySelector('.slideshow-image-container');
@@ -561,6 +580,11 @@ document.addEventListener('DOMContentLoaded', function() {
             viewerImage.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.2)';
             viewerImage.style.borderRadius = '4px';
             
+            // Marcar como cargado
+            if (imageContainer) {
+                imageContainer.classList.add('loaded');
+            }
+            
             // Mostrar la imagen con transición
             setTimeout(() => {
                 viewerImage.style.opacity = '1';
@@ -571,6 +595,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error(`Error al cargar la imagen desde: ${fullUrl}`);
             viewerImage.src = '/sat/static/src/img/placeholder.png';
             viewerImage.style.opacity = '1';
+            if (imageContainer) {
+                imageContainer.classList.add('loaded');
+            }
         };
         
         // Iniciar la carga de la imagen
@@ -594,7 +621,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateViewerImage();
     }
     
-    // Abrir el visor con una imagen específica
+    // Abrir el visor con una imagen específica - FUNCIÓN CORREGIDA
     function openImageViewer(imageId) {
         console.log(`Abriendo visor optimizado para imagen ID: ${imageId}`);
         
@@ -657,11 +684,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // Asegurar que los estilos se aplican correctamente
         applyImageViewerStyles();
         
-        modal.style.display = 'block';
-        document.body.style.overflow = 'hidden';  // Prevenir scroll
+        // CORRECCIÓN: Mostrar el modal con las clases CSS correctas
+        modal.style.display = 'flex';  // Cambiar a flex
+        modal.classList.add('show');   // Agregar clase show para animaciones
+        modal.classList.add('opening'); // Agregar clase de apertura
+        
+        // Prevenir scroll del body
+        document.body.classList.add('modal-open');
+        document.body.style.overflow = 'hidden';
+        
+        // Remover clase de apertura después de la animación
+        setTimeout(() => {
+            modal.classList.remove('opening');
+        }, 500);
         
         // Actualizar la imagen mostrada
         updateViewerImage();
+        
+        console.log('Modal mostrado con animaciones CSS');
     }
     
     // Configurar eventos de clic en las imágenes de la galería (optimizado para móviles)
