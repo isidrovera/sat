@@ -1248,6 +1248,272 @@ class UnidadAlquiler(models.Model):
         except Exception as e:
             _logger.error(f"Error al enviar notificación WhatsApp: {str(e)}")
             return False
+     # Reemplazar los campos Char por estos:
+
+    grupo_notificaciones_id = fields.Selection(
+        selection='_get_grupos_whatsapp',
+        string='Grupo de Notificaciones',
+        help="Grupo de WhatsApp para notificaciones de bloqueo/desbloqueo"
+    )
+
+    grupo_asesor_ventas_id = fields.Selection(
+        selection='_get_grupos_whatsapp', 
+        string='Grupo Asesor de Ventas',
+        help="Grupo de WhatsApp del asesor de ventas"
+    )
+    @api.model
+    def _get_grupos_whatsapp(self):
+        """Obtiene la lista de grupos de WhatsApp desde la API"""
+        try:
+            url = 'http://149.56.117.184:3005/api/groups'
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success') and data.get('data'):
+                    grupos = []
+                    for grupo in data['data']:
+                        # CLAVE: (ID, NOMBRE) - Guarda ID pero muestra NOMBRE
+                        grupos.append((grupo['id'], grupo['name']))
+                    return grupos
+            
+            _logger.warning("No se pudieron obtener los grupos de WhatsApp")
+            return [('', 'No hay grupos disponibles')]
+            
+        except Exception as e:
+            _logger.error(f"Error al obtener grupos de WhatsApp: {str(e)}")
+            return [('', 'Error al cargar grupos')]
+    def action_refresh_grupos(self):
+        """Refresca la lista de grupos disponibles"""
+        # Forzar recálculo del selection
+        self._fields['grupo_notificaciones_id'].selection = self._get_grupos_whatsapp()
+        self._fields['grupo_asesor_ventas_id'].selection = self._get_grupos_whatsapp()
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Grupos actualizados',
+                'message': 'Lista de grupos de WhatsApp actualizada',
+                'type': 'success',
+            }
+        }
+
+    # ============================================
+    # MÉTODOS PARA AGREGAR AL MODELO EXISTENTE
+    # ============================================
+
+    def action_marcar_pendiente_bloqueo(self):
+        """Marca el equipo como pendiente de bloqueo"""
+        self.ensure_one()
+        if self.estado_bloqueo == 'pendiente_bloqueo':
+            raise UserError("El equipo ya está marcado como pendiente de bloqueo")
+        
+        self.write({
+            'estado_bloqueo': 'pendiente_bloqueo',
+            'motivo_bloqueo': self.motivo_bloqueo or 'Pendiente de bloqueo - Requiere acción',
+            'fecha_bloqueo': fields.Datetime.now(),
+            'usuario_bloqueo': self.env.user.id,
+            'notificado_bloqueo': False
+        })
+        
+        # Llamar notificación
+        self._enviar_notificacion_pendiente_bloqueo()
+        
+        self.message_post(
+            body="⏳ Equipo marcado como pendiente de bloqueo",
+            message_type='notification'
+        )
+        return True
+
+    def action_marcar_pendiente_desbloqueo(self):
+        """Marca el equipo como pendiente de desbloqueo"""
+        self.ensure_one()
+        if self.estado_bloqueo != 'bloqueado':
+            raise UserError("Solo se puede marcar como pendiente de desbloqueo un equipo bloqueado")
+        
+        self.write({
+            'estado_bloqueo': 'pendiente_desbloqueo',
+            'observaciones_bloqueo': self.observaciones_bloqueo or 'Pendiente de desbloqueo - Pago procesándose',
+            'usuario_bloqueo': self.env.user.id,
+            'notificado_desbloqueo': False
+        })
+        
+        # Llamar notificación
+        self._enviar_notificacion_pendiente_desbloqueo()
+        
+        self.message_post(
+            body="⏳ Equipo marcado como pendiente de desbloqueo",
+            message_type='notification'
+        )
+        return True
+
+    def action_marcar_no_accesible(self):
+        """Marca el equipo como no accesible para bloqueo remoto"""
+        self.ensure_one()
+        
+        self.write({
+            'estado_bloqueo': 'no_accesible',
+            'acceso_remoto_disponible': False,
+            'motivo_bloqueo': 'Equipo no accesible para bloqueo remoto',
+            'fecha_bloqueo': fields.Datetime.now(),
+            'usuario_bloqueo': self.env.user.id,
+            'notificado_bloqueo': False
+        })
+        
+        # Ya tienes esta notificación
+        self._enviar_notificacion_no_accesible()
+        
+        self.message_post(
+            body="❌ Equipo marcado como NO ACCESIBLE para bloqueo remoto",
+            message_type='notification'
+        )
+        return True
+
+    def action_reactivar_servicio(self):
+        """Reactiva el servicio desde cualquier estado"""
+        self.ensure_one()
+        if self.estado_bloqueo == 'activo':
+            raise UserError("El servicio ya está activo")
+        
+        estado_anterior = self.estado_bloqueo
+        
+        self.write({
+            'estado_bloqueo': 'activo',
+            'fecha_desbloqueo': fields.Datetime.now(),
+            'motivo_bloqueo': False,
+            'observaciones_bloqueo': False,
+            'acceso_remoto_disponible': True,
+            'usuario_bloqueo': self.env.user.id,
+            'notificado_bloqueo': False,
+            'notificado_desbloqueo': False
+        })
+        
+        # Llamar notificación de reactivación
+        self._enviar_notificacion_reactivacion(estado_anterior)
+        
+        self.message_post(
+            body=f"✅ Servicio reactivado (estado anterior: {estado_anterior})",
+            message_type='notification'
+        )
+        return True
+
+    def action_verificar_acceso_remoto(self):
+        """Verifica si el equipo tiene acceso remoto disponible"""
+        self.ensure_one()
+        
+        if not self.ip_equipo:
+            raise UserError("No hay IP configurada para este equipo")
+        
+        try:
+            # Intentar conexión de prueba
+            url = f"http://{self.ip_equipo}/api/status"
+            response = requests.get(url, timeout=5)
+            
+            if response.status_code == 200:
+                self.write({
+                    'acceso_remoto_disponible': True
+                })
+                mensaje = "✅ Acceso remoto verificado exitosamente"
+            else:
+                self.write({
+                    'acceso_remoto_disponible': False
+                })
+                mensaje = "❌ No se pudo verificar el acceso remoto"
+                
+        except:
+            self.write({
+                'acceso_remoto_disponible': False
+            })
+            mensaje = "❌ Error al verificar acceso remoto"
+        
+        self.message_post(body=mensaje, message_type='notification')
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Verificación completada',
+                'message': mensaje,
+                'type': 'success' if self.acceso_remoto_disponible else 'warning',
+            }
+        }
+
+    # ============================================
+    # NOTIFICACIONES FALTANTES
+    # ============================================
+
+    def _enviar_notificacion_pendiente_bloqueo(self):
+        """Notificación para estado pendiente_bloqueo"""
+        mensaje = """⏳ *EQUIPO PENDIENTE DE BLOQUEO*
+
+    Cliente: *{}*
+    Equipo: {} - Serie: {}
+    Estado: PENDIENTE DE BLOQUEO
+    Motivo: {}
+    Fecha: {}
+
+    ⚠️ Se requiere acción para proceder con el bloqueo remoto.""".format(
+            self.cliente_id.name,
+            self.name.name,
+            self.serie,
+            self.motivo_bloqueo or 'Pendiente de bloqueo por mora',
+            fields.Datetime.now().strftime('%d/%m/%Y %H:%M')
+        )
+        
+        # Enviar a grupo de notificaciones
+        if self.grupo_notificaciones_id:
+            self._send_whatsapp_notification(self.grupo_notificaciones_id, mensaje)
+        
+        # Enviar a contactos responsables
+        self._enviar_a_contactos_responsables(mensaje)
+
+    def _enviar_notificacion_pendiente_desbloqueo(self):
+        """Notificación para estado pendiente_desbloqueo"""
+        mensaje = """⏳ *EQUIPO PENDIENTE DE DESBLOQUEO*
+
+    Cliente: *{}*
+    Equipo: {} - Serie: {}
+    Estado: PENDIENTE DE DESBLOQUEO
+    Observaciones: {}
+    Fecha: {}
+
+    💰 Pago en proceso de verificación. Se desbloqueará una vez confirmado.""".format(
+            self.cliente_id.name,
+            self.name.name,
+            self.serie,
+            self.observaciones_bloqueo or 'Pago pendiente de confirmación',
+            fields.Datetime.now().strftime('%d/%m/%Y %H:%M')
+        )
+        
+        if self.grupo_notificaciones_id:
+            self._send_whatsapp_notification(self.grupo_notificaciones_id, mensaje)
+        
+        self._enviar_a_contactos_responsables(mensaje)
+
+    def _enviar_notificacion_reactivacion(self, estado_anterior):
+        """Notificación cuando se reactiva el servicio desde cualquier estado"""
+        mensaje = """✅ *SERVICIO REACTIVADO*
+
+    Cliente: *{}*
+    Equipo: {} - Serie: {}
+    Estado anterior: {}
+    Estado actual: ACTIVO
+    Fecha: {}
+
+    ✔️ El servicio ha sido reactivado completamente.
+    El equipo está operativo.""".format(
+            self.cliente_id.name,
+            self.name.name,
+            self.serie,
+            dict(self._fields['estado_bloqueo'].selection).get(estado_anterior, estado_anterior).upper(),
+            fields.Datetime.now().strftime('%d/%m/%Y %H:%M')
+        )
+        
+        if self.grupo_notificaciones_id:
+            self._send_whatsapp_notification(self.grupo_notificaciones_id, mensaje)
+        
+        self._enviar_a_contactos_responsables(mensaje)
 
     @api.model
     def get_dashboard_data(self):
@@ -1450,56 +1716,7 @@ class UnidadAlquiler(models.Model):
         return resultado
 
 
-    # Reemplazar los campos Char por estos:
-
-    grupo_notificaciones_id = fields.Selection(
-        selection='_get_grupos_whatsapp',
-        string='Grupo de Notificaciones',
-        help="Grupo de WhatsApp para notificaciones de bloqueo/desbloqueo"
-    )
-
-    grupo_asesor_ventas_id = fields.Selection(
-        selection='_get_grupos_whatsapp', 
-        string='Grupo Asesor de Ventas',
-        help="Grupo de WhatsApp del asesor de ventas"
-    )
-    @api.model
-    def _get_grupos_whatsapp(self):
-        """Obtiene la lista de grupos de WhatsApp desde la API"""
-        try:
-            url = 'http://149.56.117.184:3005/api/groups'
-            response = requests.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('success') and data.get('data'):
-                    grupos = []
-                    for grupo in data['data']:
-                        # CLAVE: (ID, NOMBRE) - Guarda ID pero muestra NOMBRE
-                        grupos.append((grupo['id'], grupo['name']))
-                    return grupos
-            
-            _logger.warning("No se pudieron obtener los grupos de WhatsApp")
-            return [('', 'No hay grupos disponibles')]
-            
-        except Exception as e:
-            _logger.error(f"Error al obtener grupos de WhatsApp: {str(e)}")
-            return [('', 'Error al cargar grupos')]
-    def action_refresh_grupos(self):
-        """Refresca la lista de grupos disponibles"""
-        # Forzar recálculo del selection
-        self._fields['grupo_notificaciones_id'].selection = self._get_grupos_whatsapp()
-        self._fields['grupo_asesor_ventas_id'].selection = self._get_grupos_whatsapp()
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Grupos actualizados',
-                'message': 'Lista de grupos de WhatsApp actualizada',
-                'type': 'success',
-            }
-        }
+   
 class SolicitudPartes(models.Model):
     _name = 'solicitud.partes'
     _inherit = ['mail.thread', 'mail.activity.mixin']

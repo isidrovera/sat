@@ -139,195 +139,369 @@
                 <notebook>
                     <!-- Nueva página para Sistema de Bloqueo -->
                     <page string="🔒 Sistema de Bloqueo" name="bloqueo_page">
-                        <div class="row">
-                            <!-- Panel de Control Principal -->
-                            <div class="col-12 col-lg-8">
-                                <div class="card border-primary">
-                                    <div class="card-header bg-primary text-white">
-                                        <h5 class="mb-0">
-                                            <i class="fa fa-shield me-2"></i>
-                                            Control de Acceso y Bloqueo
-                                        </h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row g-3">
-                                            <div class="col-12 col-md-6">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-info-circle text-primary me-1"></i>
-                                                    Estado Actual del Servicio
-                                                </div>
-                                                <field name="estado_bloqueo" widget="selection"/>
-                                            </div>
-                                            
-                                            <div class="col-12 col-md-6">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-wifi text-success me-1"></i>
-                                                    Acceso Remoto
-                                                </div>
-                                                <div class="d-flex align-items-center">
-                                                    <field name="acceso_remoto_disponible" widget="toggle"/>
-                                                    <span class="text-muted ms-2">Disponible para bloqueo remoto</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-12 col-md-6">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-globe text-info me-1"></i>
-                                                    Dirección IP del Equipo
-                                                </div>
-                                                <field name="ip_equipo" placeholder="192.168.1.100"/>
-                                            </div>
-                                            
-                                            <div class="col-12 col-md-6" invisible="not fecha_bloqueo">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-calendar text-warning me-1"></i>
-                                                    Fecha de Bloqueo
-                                                </div>
-                                                <field name="fecha_bloqueo" readonly="1"/>
-                                            </div>
-                                            
-                                            <div class="col-12 col-md-6" invisible="not fecha_desbloqueo">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-calendar text-success me-1"></i>
-                                                    Fecha de Desbloqueo
-                                                </div>
-                                                <field name="fecha_desbloqueo" readonly="1"/>
-                                            </div>
-                                            
-                                            <div class="col-12 col-md-6" invisible="not usuario_bloqueo">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-user text-secondary me-1"></i>
-                                                    Usuario Responsable
-                                                </div>
-                                                <field name="usuario_bloqueo" readonly="1"/>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Motivo del bloqueo -->
-                                        <div class="mt-3" invisible="not motivo_bloqueo">
-                                            <div class="o_form_label">
-                                                <i class="fa fa-comment text-warning me-1"></i>
-                                                Motivo del Bloqueo/Suspensión
-                                            </div>
-                                            <field name="motivo_bloqueo" widget="text"/>
-                                        </div>
-                                        
-                                        <!-- Observaciones -->
-                                        <div class="mt-3">
-                                            <div class="o_form_label">
-                                                <i class="fa fa-sticky-note text-info me-1"></i>
-                                                Observaciones Adicionales
-                                            </div>
-                                            <field name="observaciones_bloqueo" widget="text" 
-                                                   placeholder="Ingrese observaciones sobre el estado del equipo..."/>
-                                        </div>
-                                    </div>
-                                </div>
+    <div class="row">
+        <!-- Panel de Control Principal -->
+        <div class="col-12 col-lg-8">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fa fa-shield me-2"></i>
+                        Control de Acceso y Bloqueo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="o_form_label">
+                                <i class="fa fa-info-circle text-primary me-1"></i>
+                                Estado Actual del Servicio
                             </div>
-                            
-                            <!-- Panel de Contactos Responsables -->
-                            <div class="col-12 col-lg-4">
-                                <div class="card border-info">
-                                    <div class="card-header bg-info text-white">
-                                        <h6 class="mb-0">
-                                            <i class="fa fa-users me-2"></i>
-                                            Contactos Responsables
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="mb-3">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-handshake-o text-primary me-1"></i>
-                                                    Asesor de Ventas
-                                                </div>
-                                                <field name="asesor_ventas_id" 
-                                                    options="{'no_create': True}"/>
-                                            </div>
-
-                                            <div class="mb-3">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-wrench text-success me-1"></i>
-                                                    Soporte Técnico
-                                                </div>
-                                                <field name="soporte_tecnico_id" 
-                                                    options="{'no_create': True}"/>
-                                            </div>
-
-                                            <!-- ✅ NUEVOS CAMPOS DE GRUPOS WHATSAPP -->
-                                            <div class="mb-3">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-whatsapp text-success me-1"></i>
-                                                    Grupo de Notificaciones
-                                                </div>
-                                                <field name="grupo_notificaciones_id" 
-                                                    options="{'no_create': True}"/>
-                                                <button name="action_refresh_grupos" 
-                                                        type="object" 
-                                                        string="🔄 Actualizar" 
-                                                        class="btn btn-sm btn-secondary ms-2"/>
-                                            </div>
-
-                                            <div class="mb-3">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-users text-info me-1"></i>
-                                                    Grupo Asesor de Ventas
-                                                </div>
-                                                <field name="grupo_asesor_ventas_id" 
-                                                    options="{'no_create': True}"/>
-                                            </div>
-                                        
-                                        <!-- Indicadores de notificación -->
-                                        <div class="mt-4">
-                                            <h6 class="text-muted">Estado de Notificaciones</h6>
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <span class="small">Bloqueo notificado:</span>
-                                                <field name="notificado_bloqueo" widget="boolean_toggle"/>
-                                            </div>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="small">Desbloqueo notificado:</span>
-                                                <field name="notificado_desbloqueo" widget="boolean_toggle"/>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Panel de instrucciones -->
-                                <div class="card border-warning mt-3">
-                                    <div class="card-header bg-warning text-dark">
-                                        <h6 class="mb-0">
-                                            <i class="fa fa-lightbulb-o me-2"></i>
-                                            Instrucciones de Uso
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <ul class="list-unstyled small mb-0">
-                                            <li class="mb-2">
-                                                <i class="fa fa-check-circle text-success me-1"></i>
-                                                Configure la IP del equipo para habilitar bloqueo remoto
-                                            </li>
-                                            <li class="mb-2">
-                                                <i class="fa fa-pause text-warning me-1"></i>
-                                                Use "Suspender" para corte por mora de pagos
-                                            </li>
-                                            <li class="mb-2">
-                                                <i class="fa fa-lock text-danger me-1"></i>
-                                                Use "Bloquear" para bloqueo técnico remoto
-                                            </li>
-                                            <li class="mb-2">
-                                                <i class="fa fa-whatsapp text-success me-1"></i>
-                                                Las notificaciones se envían automáticamente por WhatsApp
-                                            </li>
-                                            <li>
-                                                <i class="fa fa-user-plus text-info me-1"></i>
-                                                Asigne responsables para recibir notificaciones
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
+                            <field name="estado_bloqueo" widget="selection"/>
+                        </div>
+                        
+                        <div class="col-12 col-md-6">
+                            <div class="o_form_label">
+                                <i class="fa fa-wifi text-success me-1"></i>
+                                Acceso Remoto
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <field name="acceso_remoto_disponible" widget="toggle"/>
+                                <span class="text-muted ms-2">Disponible para bloqueo remoto</span>
                             </div>
                         </div>
-                    </page>
+                        
+                        <div class="col-12 col-md-6">
+                            <div class="o_form_label">
+                                <i class="fa fa-globe text-info me-1"></i>
+                                Dirección IP del Equipo
+                            </div>
+                            <field name="ip_equipo" placeholder="192.168.1.100"/>
+                        </div>
+                        
+                        <div class="col-12 col-md-6" invisible="not fecha_bloqueo">
+                            <div class="o_form_label">
+                                <i class="fa fa-calendar text-warning me-1"></i>
+                                Fecha de Bloqueo
+                            </div>
+                            <field name="fecha_bloqueo" readonly="1"/>
+                        </div>
+                        
+                        <div class="col-12 col-md-6" invisible="not fecha_desbloqueo">
+                            <div class="o_form_label">
+                                <i class="fa fa-calendar text-success me-1"></i>
+                                Fecha de Desbloqueo
+                            </div>
+                            <field name="fecha_desbloqueo" readonly="1"/>
+                        </div>
+                        
+                        <div class="col-12 col-md-6" invisible="not usuario_bloqueo">
+                            <div class="o_form_label">
+                                <i class="fa fa-user text-secondary me-1"></i>
+                                Usuario Responsable
+                            </div>
+                            <field name="usuario_bloqueo" readonly="1"/>
+                        </div>
+                    </div>
+                    
+                    <!-- Motivo del bloqueo -->
+                    <div class="mt-3" invisible="not motivo_bloqueo">
+                        <div class="o_form_label">
+                            <i class="fa fa-comment text-warning me-1"></i>
+                            Motivo del Bloqueo/Suspensión
+                        </div>
+                        <field name="motivo_bloqueo" widget="text"/>
+                    </div>
+                    
+                    <!-- Observaciones -->
+                    <div class="mt-3">
+                        <div class="o_form_label">
+                            <i class="fa fa-sticky-note text-info me-1"></i>
+                            Observaciones Adicionales
+                        </div>
+                        <field name="observaciones_bloqueo" widget="text" 
+                               placeholder="Ingrese observaciones sobre el estado del equipo..."/>
+                    </div>
+                </div>
+                
+                <!-- Panel de Acciones de Bloqueo -->
+                <div class="card-footer bg-light">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-3">
+                                <i class="fa fa-cogs me-2"></i>
+                                Acciones de Control
+                            </h6>
+                        </div>
+                        
+                        <!-- Botones principales de bloqueo/desbloqueo -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <button name="action_suspender_servicio" 
+                                    string="⚠️ Suspender Servicio" 
+                                    type="object" 
+                                    class="btn btn-warning btn-block w-100"
+                                    invisible="estado_bloqueo in ['suspendido', 'bloqueado']"
+                                    confirm="¿Está seguro de suspender el servicio por mora?"/>
+                        </div>
+                        
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <button name="action_bloquear_equipo" 
+                                    string="🔒 Bloquear Equipo" 
+                                    type="object" 
+                                    class="btn btn-danger btn-block w-100"
+                                    invisible="estado_bloqueo in ['bloqueado', 'no_accesible']"
+                                    confirm="¿Está seguro de bloquear el equipo remotamente?"/>
+                        </div>
+                        
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <button name="action_desbloquear_equipo" 
+                                    string="🔓 Desbloquear Equipo" 
+                                    type="object" 
+                                    class="btn btn-success btn-block w-100"
+                                    invisible="estado_bloqueo not in ['bloqueado', 'suspendido', 'pendiente_desbloqueo']"
+                                    confirm="¿Está seguro de desbloquear el equipo?"/>
+                        </div>
+                        
+                        <!-- Botones de estados pendientes -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <button name="action_marcar_pendiente_bloqueo" 
+                                    string="⏳ Pendiente Bloqueo" 
+                                    type="object" 
+                                    class="btn btn-outline-warning btn-block w-100"
+                                    invisible="estado_bloqueo in ['bloqueado', 'pendiente_bloqueo']"
+                                    groups="base.group_user"/>
+                        </div>
+                        
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <button name="action_marcar_pendiente_desbloqueo" 
+                                    string="⏳ Pendiente Desbloqueo" 
+                                    type="object" 
+                                    class="btn btn-outline-info btn-block w-100"
+                                    invisible="estado_bloqueo != 'bloqueado'"
+                                    groups="base.group_user"/>
+                        </div>
+                        
+                        <!-- Botones especiales -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <button name="action_marcar_no_accesible" 
+                                    string="❌ No Accesible" 
+                                    type="object" 
+                                    class="btn btn-outline-secondary btn-block w-100"
+                                    invisible="estado_bloqueo in ['bloqueado', 'no_accesible']"
+                                    confirm="¿Marcar este equipo como no accesible para bloqueo remoto?"/>
+                        </div>
+                        
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <button name="action_reactivar_servicio" 
+                                    string="✅ Reactivar Servicio" 
+                                    type="object" 
+                                    class="btn btn-primary btn-block w-100"
+                                    invisible="estado_bloqueo == 'activo'"
+                                    confirm="¿Está seguro de reactivar el servicio completamente?"/>
+                        </div>
+                        
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <button name="action_verificar_acceso_remoto" 
+                                    string="🔍 Verificar Acceso" 
+                                    type="object" 
+                                    class="btn btn-outline-info btn-block w-100"
+                                    invisible="not ip_equipo"
+                                    icon="fa-wifi"/>
+                        </div>
+                    </div>
+                    
+                    <!-- Indicador de estado actual con colores -->
+                    <div class="mt-3">
+                        <div class="alert mb-0" 
+                             invisible="estado_bloqueo != 'activo'"
+                             style="background-color: #d4edda; border-color: #c3e6cb;">
+                            <i class="fa fa-check-circle text-success me-2"></i>
+                            <strong>Estado:</strong> Servicio Activo - Equipo operativo
+                        </div>
+                        
+                        <div class="alert mb-0" 
+                             invisible="estado_bloqueo != 'suspendido'"
+                             style="background-color: #fff3cd; border-color: #ffeeba;">
+                            <i class="fa fa-exclamation-triangle text-warning me-2"></i>
+                            <strong>Estado:</strong> Servicio Suspendido por Mora
+                        </div>
+                        
+                        <div class="alert mb-0" 
+                             invisible="estado_bloqueo != 'bloqueado'"
+                             style="background-color: #f8d7da; border-color: #f5c6cb;">
+                            <i class="fa fa-lock text-danger me-2"></i>
+                            <strong>Estado:</strong> Equipo Bloqueado Remotamente
+                        </div>
+                        
+                        <div class="alert mb-0" 
+                             invisible="estado_bloqueo != 'no_accesible'"
+                             style="background-color: #e2e3e5; border-color: #d6d8db;">
+                            <i class="fa fa-times-circle text-secondary me-2"></i>
+                            <strong>Estado:</strong> Equipo No Accesible para Bloqueo Remoto
+                        </div>
+                        
+                        <div class="alert mb-0" 
+                             invisible="estado_bloqueo != 'pendiente_bloqueo'"
+                             style="background-color: #fff3cd; border-color: #ffeeba;">
+                            <i class="fa fa-clock-o text-warning me-2"></i>
+                            <strong>Estado:</strong> Pendiente de Bloqueo
+                        </div>
+                        
+                        <div class="alert mb-0" 
+                             invisible="estado_bloqueo != 'pendiente_desbloqueo'"
+                             style="background-color: #d1ecf1; border-color: #bee5eb;">
+                            <i class="fa fa-clock-o text-info me-2"></i>
+                            <strong>Estado:</strong> Pendiente de Desbloqueo - Pago en proceso
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel de Contactos Responsables -->
+        <div class="col-12 col-lg-4">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fa fa-users me-2"></i>
+                        Contactos Responsables
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="o_form_label">
+                            <i class="fa fa-handshake-o text-primary me-1"></i>
+                            Asesor de Ventas
+                        </div>
+                        <field name="asesor_ventas_id" 
+                            options="{'no_create': True}"/>
+                    </div>
 
+                    <div class="mb-3">
+                        <div class="o_form_label">
+                            <i class="fa fa-wrench text-success me-1"></i>
+                            Soporte Técnico
+                        </div>
+                        <field name="soporte_tecnico_id" 
+                            options="{'no_create': True}"/>
+                    </div>
+
+                    <!-- Campos de grupos WhatsApp -->
+                    <div class="mb-3">
+                        <div class="o_form_label">
+                            <i class="fa fa-whatsapp text-success me-1"></i>
+                            Grupo de Notificaciones
+                        </div>
+                        <field name="grupo_notificaciones_id" 
+                            options="{'no_create': True}"/>
+                        <button name="action_refresh_grupos" 
+                                type="object" 
+                                string="🔄 Actualizar" 
+                                class="btn btn-sm btn-secondary ms-2"/>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="o_form_label">
+                            <i class="fa fa-users text-info me-1"></i>
+                            Grupo Asesor de Ventas
+                        </div>
+                        <field name="grupo_asesor_ventas_id" 
+                            options="{'no_create': True}"/>
+                    </div>
+                    
+                    <!-- Indicadores de notificación -->
+                    <div class="mt-4">
+                        <h6 class="text-muted">Estado de Notificaciones</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small">Bloqueo notificado:</span>
+                            <field name="notificado_bloqueo" widget="boolean_toggle"/>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small">Desbloqueo notificado:</span>
+                            <field name="notificado_desbloqueo" widget="boolean_toggle"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panel de instrucciones actualizado -->
+            <div class="card border-warning mt-3">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fa fa-lightbulb-o me-2"></i>
+                        Instrucciones de Uso
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled small mb-0">
+                        <li class="mb-2">
+                            <i class="fa fa-check-circle text-success me-1"></i>
+                            <strong>Configurar IP:</strong> Configure la IP del equipo para habilitar bloqueo remoto
+                        </li>
+                        <li class="mb-2">
+                            <i class="fa fa-pause text-warning me-1"></i>
+                            <strong>Suspender:</strong> Use para corte por mora de pagos (solo suspende servicio técnico)
+                        </li>
+                        <li class="mb-2">
+                            <i class="fa fa-lock text-danger me-1"></i>
+                            <strong>Bloquear:</strong> Bloqueo técnico remoto del equipo (requiere IP configurada)
+                        </li>
+                        <li class="mb-2">
+                            <i class="fa fa-clock-o text-warning me-1"></i>
+                            <strong>Pendiente Bloqueo:</strong> Marca equipos que requieren bloqueo posterior
+                        </li>
+                        <li class="mb-2">
+                            <i class="fa fa-clock-o text-info me-1"></i>
+                            <strong>Pendiente Desbloqueo:</strong> Para equipos con pago en proceso de verificación
+                        </li>
+                        <li class="mb-2">
+                            <i class="fa fa-times-circle text-secondary me-1"></i>
+                            <strong>No Accesible:</strong> Equipos sin posibilidad de bloqueo remoto
+                        </li>
+                        <li class="mb-2">
+                            <i class="fa fa-check text-primary me-1"></i>
+                            <strong>Reactivar:</strong> Restaura el servicio completamente desde cualquier estado
+                        </li>
+                        <li class="mb-2">
+                            <i class="fa fa-whatsapp text-success me-1"></i>
+                            <strong>Notificaciones:</strong> Se envían automáticamente por WhatsApp a los grupos configurados
+                        </li>
+                        <li>
+                            <i class="fa fa-user-plus text-info me-1"></i>
+                            <strong>Responsables:</strong> Asigne asesor y soporte técnico para recibir notificaciones
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Panel de flujo de trabajo -->
+            <div class="card border-primary mt-3">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fa fa-sitemap me-2"></i>
+                        Flujo de Estados
+                    </h6>
+                </div>
+                <div class="card-body small">
+                    <div class="text-center">
+                        <span class="badge bg-success">Activo</span>
+                        <i class="fa fa-arrow-down d-block my-2"></i>
+                        <span class="badge bg-warning">Suspendido</span>
+                        <i class="fa fa-arrow-down d-block my-2"></i>
+                        <span class="badge bg-danger">Bloqueado</span>
+                        <i class="fa fa-arrow-down d-block my-2"></i>
+                        <span class="badge bg-info">Pendiente Desbloqueo</span>
+                        <i class="fa fa-arrow-down d-block my-2"></i>
+                        <span class="badge bg-success">Activo</span>
+                    </div>
+                    <hr/>
+                    <p class="text-muted mb-0">
+                        <small>Los estados especiales (No Accesible, Pendiente Bloqueo) pueden aplicarse en cualquier momento según la situación del equipo.</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</page>
                     <!-- Página de Mantenimiento Preventivo (mantenida) -->
                     <page string="🔧 Mantenimiento Preventivo" name="maintenance_page">
                         <div class="py-2">
