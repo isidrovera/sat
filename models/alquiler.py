@@ -1199,13 +1199,96 @@ class UnidadAlquiler(models.Model):
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_a_contactos_responsables(self, mensaje):
-        contactos = []
-        if self.asesor_ventas_id and self.asesor_ventas_id.mobile_phone:
-            contactos.append(self.asesor_ventas_id.mobile_phone)
+        """Envía mensaje a grupos y contactos responsables con logging detallado"""
+        _logger.info(f"========== INICIO ENVÍO NOTIFICACIONES - Equipo: {self.serie} ==========")
+        _logger.info(f"Grupo Notificaciones ID: {self.grupo_notificaciones_id}")
+        _logger.info(f"Grupo Asesor ID: {self.grupo_asesor_ventas_id}")
+        _logger.info(f"Asesor Ventas: {self.asesor_ventas_id.name if self.asesor_ventas_id else 'No asignado'}")
         
-        for phone in contactos:
-            clean_phone = self._clean_phone_number(phone)
-            self._send_whatsapp_notification(clean_phone, mensaje)
+        enviados = []
+        errores = []
+        
+        # 1. Enviar a grupo de notificaciones principal
+        if self.grupo_notificaciones_id:
+            _logger.info(f"Intentando enviar a grupo notificaciones: {self.grupo_notificaciones_id}")
+            try:
+                resultado = self._send_whatsapp_notification(self.grupo_notificaciones_id, mensaje)
+                if resultado:
+                    enviados.append(f"Grupo Notificaciones: {self.grupo_notificaciones_id}")
+                    _logger.info(f"✅ ÉXITO: Enviado a grupo notificaciones {self.grupo_notificaciones_id}")
+                else:
+                    errores.append(f"Grupo Notificaciones: {self.grupo_notificaciones_id}")
+                    _logger.error(f"❌ ERROR: No se pudo enviar a grupo notificaciones {self.grupo_notificaciones_id}")
+            except Exception as e:
+                errores.append(f"Grupo Notificaciones: {self.grupo_notificaciones_id} - Error: {str(e)}")
+                _logger.error(f"❌ EXCEPCIÓN al enviar a grupo notificaciones: {str(e)}")
+        else:
+            _logger.warning("⚠️ No hay grupo de notificaciones configurado")
+        
+        # 2. Enviar a grupo del asesor de ventas
+        if self.grupo_asesor_ventas_id:
+            _logger.info(f"Intentando enviar a grupo asesor: {self.grupo_asesor_ventas_id}")
+            try:
+                resultado = self._send_whatsapp_notification(self.grupo_asesor_ventas_id, mensaje)
+                if resultado:
+                    enviados.append(f"Grupo Asesor: {self.grupo_asesor_ventas_id}")
+                    _logger.info(f"✅ ÉXITO: Enviado a grupo asesor {self.grupo_asesor_ventas_id}")
+                else:
+                    errores.append(f"Grupo Asesor: {self.grupo_asesor_ventas_id}")
+                    _logger.error(f"❌ ERROR: No se pudo enviar a grupo asesor {self.grupo_asesor_ventas_id}")
+            except Exception as e:
+                errores.append(f"Grupo Asesor: {self.grupo_asesor_ventas_id} - Error: {str(e)}")
+                _logger.error(f"❌ EXCEPCIÓN al enviar a grupo asesor: {str(e)}")
+        else:
+            _logger.warning("⚠️ No hay grupo de asesor configurado")
+        
+        # 3. Enviar al número del asesor (solo si no hay grupos configurados)
+        if not self.grupo_notificaciones_id and not self.grupo_asesor_ventas_id:
+            _logger.info("No hay grupos configurados, intentando enviar directamente al asesor")
+            if self.asesor_ventas_id and self.asesor_ventas_id.mobile_phone:
+                phone_asesor = self._clean_phone_number(self.asesor_ventas_id.mobile_phone)
+                _logger.info(f"Teléfono asesor limpio: {phone_asesor}")
+                try:
+                    resultado = self._send_whatsapp_notification(phone_asesor, mensaje)
+                    if resultado:
+                        enviados.append(f"Asesor directo: {self.asesor_ventas_id.name} ({phone_asesor})")
+                        _logger.info(f"✅ ÉXITO: Enviado a asesor {self.asesor_ventas_id.name}")
+                    else:
+                        errores.append(f"Asesor directo: {self.asesor_ventas_id.name}")
+                        _logger.error(f"❌ ERROR: No se pudo enviar a asesor {self.asesor_ventas_id.name}")
+                except Exception as e:
+                    errores.append(f"Asesor directo: {self.asesor_ventas_id.name} - Error: {str(e)}")
+                    _logger.error(f"❌ EXCEPCIÓN al enviar a asesor: {str(e)}")
+            else:
+                _logger.warning("⚠️ No hay asesor con teléfono configurado")
+        else:
+            _logger.info("Hay grupos configurados, no se envía al asesor directamente")
+        
+        # Resumen final
+        _logger.info("========== RESUMEN DE ENVÍOS ==========")
+        if enviados:
+            _logger.info(f"✅ Enviados exitosamente: {len(enviados)}")
+            for enviado in enviados:
+                _logger.info(f"  - {enviado}")
+        else:
+            _logger.error("❌ No se enviaron notificaciones exitosamente")
+        
+        if errores:
+            _logger.error(f"❌ Errores en envíos: {len(errores)}")
+            for error in errores:
+                _logger.error(f"  - {error}")
+        
+        _logger.info(f"========== FIN ENVÍO NOTIFICACIONES ==========\n")
+        
+        # Registrar en el chatter del equipo
+        if enviados or errores:
+            resumen = "📤 <b>Notificaciones enviadas:</b><br/>"
+            if enviados:
+                resumen += "✅ Exitosos:<br/>" + "<br/>".join([f"• {e}" for e in enviados])
+            if errores:
+                resumen += "<br/>❌ Fallidos:<br/>" + "<br/>".join([f"• {e}" for e in errores])
+            
+            self.message_post(body=resumen, message_type='notification')
 
     def _clean_phone_number(self, phone):
         if not phone:
@@ -1566,6 +1649,10 @@ class UnidadAlquiler(models.Model):
                 'puede_desbloquear': equipo.estado_bloqueo in ['bloqueado', 'suspendido']
             })
         return resultado
+
+
+
+
     # Agregar estos métodos al modelo UnidadAlquiler en tu archivo principal
 
     @api.model
