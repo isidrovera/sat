@@ -1216,20 +1216,35 @@ class UnidadAlquiler(models.Model):
         return phone
 
     def _send_whatsapp_notification(self, phone, message):
+        """Envía notificación a WhatsApp (grupos o números individuales)"""
+        if not phone:
+            _logger.warning("Teléfono/grupo no especificado")
+            return False
+            
         try:
             url = 'https://whatsapp.andessolutioncopiers.com/api/message'
             data = {
-                'phone': phone,
-                'message': message
+                'phone': phone,  # Funciona para ambos: "51999999999" o "51990649502-1484267115@g.us"
+                'message': message,
+                'type': 'text'  # ✅ AGREGAR este campo
             }
             headers = {'Content-Type': 'application/json'}
-            response = requests.post(url, headers=headers, json=data)
+            
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            
             if response.status_code == 200:
-                _logger.info(f"Notificación enviada exitosamente a {phone}")
-                return True
+                response_data = response.json()
+                # ✅ VERIFICAR respuesta de tu API
+                if response_data.get('success'):
+                    _logger.info(f"Notificación enviada exitosamente a {phone}")
+                    return True
+                else:
+                    _logger.error(f"Error en API: {response_data.get('message')} para {phone}")
+                    return False
             else:
-                _logger.error(f"Error al enviar notificación a {phone}: {response.status_code}")
+                _logger.error(f"Error HTTP al enviar a {phone}: {response.status_code}")
                 return False
+                
         except Exception as e:
             _logger.error(f"Error al enviar notificación WhatsApp: {str(e)}")
             return False
@@ -1434,7 +1449,57 @@ class UnidadAlquiler(models.Model):
         
         return resultado
 
-    
+
+    # Reemplazar los campos Char por estos:
+
+    grupo_notificaciones_id = fields.Selection(
+        selection='_get_grupos_whatsapp',
+        string='Grupo de Notificaciones',
+        help="Grupo de WhatsApp para notificaciones de bloqueo/desbloqueo"
+    )
+
+    grupo_asesor_ventas_id = fields.Selection(
+        selection='_get_grupos_whatsapp', 
+        string='Grupo Asesor de Ventas',
+        help="Grupo de WhatsApp del asesor de ventas"
+    )
+    @api.model
+    def _get_grupos_whatsapp(self):
+        """Obtiene la lista de grupos de WhatsApp desde la API"""
+        try:
+            url = 'http://149.56.117.184:3005/api/groups'
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success') and data.get('data'):
+                    grupos = []
+                    for grupo in data['data']:
+                        # CLAVE: (ID, NOMBRE) - Guarda ID pero muestra NOMBRE
+                        grupos.append((grupo['id'], grupo['name']))
+                    return grupos
+            
+            _logger.warning("No se pudieron obtener los grupos de WhatsApp")
+            return [('', 'No hay grupos disponibles')]
+            
+        except Exception as e:
+            _logger.error(f"Error al obtener grupos de WhatsApp: {str(e)}")
+            return [('', 'Error al cargar grupos')]
+    def action_refresh_grupos(self):
+        """Refresca la lista de grupos disponibles"""
+        # Forzar recálculo del selection
+        self._fields['grupo_notificaciones_id'].selection = self._get_grupos_whatsapp()
+        self._fields['grupo_asesor_ventas_id'].selection = self._get_grupos_whatsapp()
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Grupos actualizados',
+                'message': 'Lista de grupos de WhatsApp actualizada',
+                'type': 'success',
+            }
+        }
 class SolicitudPartes(models.Model):
     _name = 'solicitud.partes'
     _inherit = ['mail.thread', 'mail.activity.mixin']

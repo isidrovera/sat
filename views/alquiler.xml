@@ -236,22 +236,45 @@
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-3">
-                                            <div class="o_form_label">
-                                                <i class="fa fa-handshake-o text-primary me-1"></i>
-                                                Asesor de Ventas
+                                                <div class="o_form_label">
+                                                    <i class="fa fa-handshake-o text-primary me-1"></i>
+                                                    Asesor de Ventas
+                                                </div>
+                                                <field name="asesor_ventas_id" 
+                                                    options="{'no_create': True}"/>
                                             </div>
-                                            <field name="asesor_ventas_id" 
-                                                   options="{'no_create': True}"/>
-                                        </div>
-                                        
-                                        <div class="mb-3">
-                                            <div class="o_form_label">
-                                                <i class="fa fa-wrench text-success me-1"></i>
-                                                Soporte Técnico
+
+                                            <div class="mb-3">
+                                                <div class="o_form_label">
+                                                    <i class="fa fa-wrench text-success me-1"></i>
+                                                    Soporte Técnico
+                                                </div>
+                                                <field name="soporte_tecnico_id" 
+                                                    options="{'no_create': True}"/>
                                             </div>
-                                            <field name="soporte_tecnico_id" 
-                                                   options="{'no_create': True}"/>
-                                        </div>
+
+                                            <!-- ✅ NUEVOS CAMPOS DE GRUPOS WHATSAPP -->
+                                            <div class="mb-3">
+                                                <div class="o_form_label">
+                                                    <i class="fa fa-whatsapp text-success me-1"></i>
+                                                    Grupo de Notificaciones
+                                                </div>
+                                                <field name="grupo_notificaciones_id" 
+                                                    options="{'no_create': True}"/>
+                                                <button name="action_refresh_grupos" 
+                                                        type="object" 
+                                                        string="🔄 Actualizar" 
+                                                        class="btn btn-sm btn-secondary ms-2"/>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <div class="o_form_label">
+                                                    <i class="fa fa-users text-info me-1"></i>
+                                                    Grupo Asesor de Ventas
+                                                </div>
+                                                <field name="grupo_asesor_ventas_id" 
+                                                    options="{'no_create': True}"/>
+                                            </div>
                                         
                                         <!-- Indicadores de notificación -->
                                         <div class="mt-4">
