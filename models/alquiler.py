@@ -1104,8 +1104,8 @@ class UnidadAlquiler(models.Model):
             return {'success': False, 'error': str(e)}
 
     def _enviar_notificacion_suspension(self):
-        if self.asesor_ventas_id and self.asesor_ventas_id.mobile_phone:
-            mensaje_asesor = """⚠️ *SERVICIO SUSPENDIDO*
+        """Envía notificación de suspensión a grupos y contactos"""
+        mensaje = """⚠️ *SERVICIO SUSPENDIDO*
 
     Cliente: *{}*
     Equipo: {} - Serie: {}
@@ -1113,15 +1113,15 @@ class UnidadAlquiler(models.Model):
     Dirección: {}
 
     Se ha suspendido el servicio técnico.""".format(
-                self.cliente_id.name,
-                self.name.name,
-                self.serie,
-                self.motivo_bloqueo,
-                self.direccion
-            )
-            phone_asesor = self._clean_phone_number(self.asesor_ventas_id.mobile_phone)
-            self._send_whatsapp_notification(phone_asesor, mensaje_asesor)
-
+            self.cliente_id.name,
+            self.name.name,
+            self.serie,
+            self.motivo_bloqueo,
+            self.direccion
+        )
+        
+        # Usar el método que maneja grupos Y usuarios
+        self._enviar_a_contactos_responsables(mensaje)
     def _enviar_notificacion_bloqueo_exitoso(self):
         mensaje = """🔒 *EQUIPO BLOQUEADO EXITOSAMENTE*
 
@@ -1544,11 +1544,7 @@ class UnidadAlquiler(models.Model):
             fields.Datetime.now().strftime('%d/%m/%Y %H:%M')
         )
         
-        # Enviar a grupo de notificaciones
-        if self.grupo_notificaciones_id:
-            self._send_whatsapp_notification(self.grupo_notificaciones_id, mensaje)
-        
-        # Enviar a contactos responsables
+        # Solo enviar usando _enviar_a_contactos_responsables
         self._enviar_a_contactos_responsables(mensaje)
 
     def _enviar_notificacion_pendiente_desbloqueo(self):
@@ -1569,10 +1565,9 @@ class UnidadAlquiler(models.Model):
             fields.Datetime.now().strftime('%d/%m/%Y %H:%M')
         )
         
-        if self.grupo_notificaciones_id:
-            self._send_whatsapp_notification(self.grupo_notificaciones_id, mensaje)
-        
+        # Solo enviar usando _enviar_a_contactos_responsables
         self._enviar_a_contactos_responsables(mensaje)
+
 
     def _enviar_notificacion_reactivacion(self, estado_anterior):
         """Notificación cuando se reactiva el servicio desde cualquier estado"""
@@ -1593,11 +1588,8 @@ class UnidadAlquiler(models.Model):
             fields.Datetime.now().strftime('%d/%m/%Y %H:%M')
         )
         
-        if self.grupo_notificaciones_id:
-            self._send_whatsapp_notification(self.grupo_notificaciones_id, mensaje)
-        
+        # Solo enviar usando _enviar_a_contactos_responsables
         self._enviar_a_contactos_responsables(mensaje)
-
     @api.model
     def get_dashboard_data(self):
         data = {
