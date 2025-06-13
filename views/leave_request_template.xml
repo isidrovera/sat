@@ -371,7 +371,142 @@ document.addEventListener('DOMContentLoaded', function() {
             
             periodCards.forEach(function(c) {
                 c.classList.remove('active');
-            });
+            }
+
+    // Función para convertir errores técnicos a mensajes amigables
+    function getFriendlyErrorMessage(technicalError) {
+        console.log(`🔄 Procesando error: ${technicalError}`);
+        
+        const error = technicalError.toLowerCase();
+        
+        if (error.includes('suficientes horas') || error.includes('sufficient hours')) {
+            return {
+                title: '❌ Saldo Insuficiente',
+                message: 'No tienes suficientes horas disponibles para este tipo de permiso.',
+                suggestion: 'Contacta a Recursos Humanos para verificar tu saldo disponible.',
+                icon: '⏰'
+            };
+        }
+        
+        if (error.includes('asignación') || error.includes('allocation')) {
+            return {
+                title: '📋 Sin Asignación',
+                message: 'No tienes una asignación válida para este tipo de permiso.',
+                suggestion: 'Solicita a Recursos Humanos que te asigne días para este tipo de permiso.',
+                icon: '📝'
+            };
+        }
+        
+        if (error.includes('solapamiento') || error.includes('conflicto')) {
+            return {
+                title: '⚠️ Conflicto de Fechas',
+                message: 'Ya tienes una solicitud de permiso en el período seleccionado.',
+                suggestion: 'Selecciona fechas diferentes o cancela las solicitudes existentes.',
+                icon: '📅'
+            };
+        }
+        
+        if (error.includes('saldo') || error.includes('balance')) {
+            return {
+                title: '💰 Saldo Insuficiente',
+                message: 'No tienes suficiente saldo disponible para este tipo de permiso.',
+                suggestion: 'Verifica tu saldo disponible o solicita una asignación adicional.',
+                icon: '📊'
+            };
+        }
+        
+        // Error genérico
+        return {
+            title: '❌ Error en la Solicitud',
+            message: 'No se pudo procesar tu solicitud en este momento.',
+            suggestion: 'Verifica los datos ingresados o contacta a Recursos Humanos.',
+            icon: '🚨'
+        };
+    }
+
+    // Modal de error bonito
+    function showErrorModal(errorInfo, technicalError) {
+        console.log('🎨 Mostrando modal de error bonito');
+        
+        // Crear overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        overlay.style.zIndex = '9999';
+        
+        // Crear modal
+        const modal = document.createElement('div');
+        modal.className = 'bg-white rounded-2xl shadow-2xl max-w-md mx-4 transform transition-all duration-300 scale-95';
+        
+        modal.innerHTML = `
+            &lt;div class="p-6"&gt;
+                &lt;div class="flex items-center mb-4"&gt;
+                    &lt;div class="text-4xl mr-3"&gt;${errorInfo.icon}&lt;/div&gt;
+                    &lt;h3 class="text-xl font-bold text-gray-800"&gt;${errorInfo.title}&lt;/h3&gt;
+                &lt;/div&gt;
+                
+                &lt;div class="mb-6"&gt;
+                    &lt;p class="text-gray-600 mb-3"&gt;${errorInfo.message}&lt;/p&gt;
+                    &lt;div class="bg-blue-50 border-l-4 border-blue-400 p-3 rounded"&gt;
+                        &lt;p class="text-blue-800 text-sm"&gt;
+                            &lt;strong&gt;💡 Sugerencia:&lt;/strong&gt; ${errorInfo.suggestion}
+                        &lt;/p&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+                
+                &lt;div class="flex space-x-3"&gt;
+                    &lt;button id="closeErrorModal" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"&gt;
+                        Cerrar
+                    &lt;/button&gt;
+                    &lt;button id="showTechnicalError" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"&gt;
+                        Ver Detalles
+                    &lt;/button&gt;
+                &lt;/div&gt;
+                
+                &lt;div id="technicalErrorDiv" class="hidden mt-4 p-3 bg-gray-100 rounded-lg"&gt;
+                    &lt;p class="text-xs text-gray-600 font-mono"&gt;${technicalError}&lt;/p&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        // Animar entrada
+        setTimeout(function() {
+            modal.style.transform = 'scale(1)';
+        }, 10);
+        
+        // Event listeners
+        document.getElementById('closeErrorModal').onclick = function() {
+            console.log('🗑️ Cerrando modal de error');
+            overlay.style.opacity = '0';
+            modal.style.transform = 'scale(0.95)';
+            setTimeout(function() {
+                document.body.removeChild(overlay);
+            }, 300);
+        };
+        
+        document.getElementById('showTechnicalError').onclick = function() {
+            console.log('🔧 Mostrando error técnico');
+            const techDiv = document.getElementById('technicalErrorDiv');
+            if (techDiv.classList.contains('hidden')) {
+                techDiv.classList.remove('hidden');
+                this.textContent = 'Ocultar Detalles';
+            } else {
+                techDiv.classList.add('hidden');
+                this.textContent = 'Ver Detalles';
+            }
+        };
+        
+        // Cerrar con ESC
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                document.getElementById('closeErrorModal').click();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+    });
             this.classList.add('active');
             
             // Add touch feedback
@@ -770,7 +905,10 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.log('❌ ERROR: Solicitud fallida');
                 console.log(`   - Mensaje: ${data.error}`);
-                showToast(data.error || 'Error al enviar la solicitud', 'error');
+                
+                // Mejorar el mensaje de error para el usuario
+                const friendlyError = getFriendlyErrorMessage(data.error);
+                showErrorModal(friendlyError, data.error);
                 resetSubmitButton();
             }
         })

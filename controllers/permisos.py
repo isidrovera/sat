@@ -165,6 +165,17 @@ class LeaveRequestController(http.Controller):
 
             _logger.info("✅ No se detectaron conflictos de fechas")
 
+            # Validar disponibilidad de días/horas ANTES de crear
+            _logger.info("⏱️ Verificando disponibilidad de horas/días...")
+            availability_result = self._validate_leave_availability(employee, leave_type, post)
+            if not availability_result['valid']:
+                _logger.error("❌ DISPONIBILIDAD INSUFICIENTE")
+                _logger.error(f"   - Mensaje: {availability_result['message']}")
+                
+                return self._return_error_response(availability_result['message'])
+
+            _logger.info("✅ Disponibilidad verificada correctamente")
+
             # Preparar valores para crear la solicitud
             _logger.info("⚙️ Preparando valores para la solicitud...")
             vals = self._prepare_leave_values(post, employee, leave_type)
@@ -176,16 +187,33 @@ class LeaveRequestController(http.Controller):
             else:
                 _logger.info("ℹ️ No se encontraron archivos adjuntos")
 
-            # Crear la solicitud
+            # Crear la solicitud CON MANEJO DE ERRORES
             _logger.info("💾 Creando solicitud de permiso...")
             _logger.info(f"   - Valores finales: {vals}")
             
-            leave = request.env['hr.leave'].sudo().create(vals)
-            _logger.info(f"✅ Solicitud creada exitosamente")
-            _logger.info(f"   - ID de solicitud: {leave.id}")
-            _logger.info(f"   - Nombre: {leave.display_name}")
-            _logger.info(f"   - Estado: {leave.state}")
-            _logger.info(f"   - Duración: {leave.number_of_days} días")
+            try:
+                leave = request.env['hr.leave'].sudo().create(vals)
+                _logger.info(f"✅ Solicitud creada exitosamente")
+                _logger.info(f"   - ID de solicitud: {leave.id}")
+                _logger.info(f"   - Nombre: {leave.display_name}")
+                _logger.info(f"   - Estado: {leave.state}")
+                _logger.info(f"   - Duración: {leave.number_of_days} días")
+                
+            except ValidationError as create_error:
+                _logger.error("❌ ERROR AL CREAR SOLICITUD (ValidationError)")
+                _logger.error(f"   - Error: {str(create_error)}")
+                
+                # Convertir errores técnicos a mensajes amigables
+                friendly_message = self._get_friendly_error_message(str(create_error))
+                return self._return_error_response(friendly_message)
+                
+            except Exception as create_error:
+                _logger.error("❌ ERROR AL CREAR SOLICITUD (Exception)")
+                _logger.error(f"   - Error: {str(create_error)}")
+                _logger.error(f"   - Tipo: {type(create_error).__name__}")
+                
+                friendly_message = self._get_friendly_error_message(str(create_error))
+                return self._return_error_response(friendly_message)
 
             # Asociar adjuntos a la solicitud creada
             if attachment_ids:
