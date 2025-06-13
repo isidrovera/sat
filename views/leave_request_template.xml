@@ -336,260 +336,501 @@
 
                 <!-- JavaScript -->
                 <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        // Elements
-                        const periodCards = document.querySelectorAll('.period-card');
-                        const hoursContainer = document.getElementById('hoursContainer');
-                        const dateToContainer = document.getElementById('dateToContainer');
-                        const attachmentContainer = document.getElementById('attachmentContainer');
-                        const holidayStatusSelect = document.getElementById('holiday_status_id');
-                        const fileInput = document.getElementById('file_input');
-                        const fileList = document.getElementById('file_list');
-                        const form = document.getElementById('leaveRequestForm');
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Elements
+                    const periodCards = document.querySelectorAll('.period-card');
+                    const hoursContainer = document.getElementById('hoursContainer');
+                    const dateToContainer = document.getElementById('dateToContainer');
+                    const attachmentContainer = document.getElementById('attachmentContainer');
+                    const holidayStatusSelect = document.getElementById('holiday_status_id');
+                    const fileInput = document.getElementById('file_input');
+                    const fileList = document.getElementById('file_list');
+                    const form = document.getElementById('leaveRequestForm');
 
-                        // Period selection
-                        periodCards.forEach(function(card) {
-                            card.addEventListener('click', function() {
-                                periodCards.forEach(function(c) {
-                                    c.classList.remove('active');
-                                });
-                                this.classList.add('active');
-                                
-                                // Add touch feedback
-                                this.style.transform = 'scale(0.95)';
-                                const self = this;
-                                setTimeout(function() {
-                                    self.style.transform = '';
-                                }, 150);
-                                
-                                const period = this.dataset.period;
-                                handlePeriodChange(period);
+                    // Period selection
+                    periodCards.forEach(function(card) {
+                        card.addEventListener('click', function() {
+                            periodCards.forEach(function(c) {
+                                c.classList.remove('active');
                             });
+                            this.classList.add('active');
+                            
+                            // Add touch feedback
+                            this.style.transform = 'scale(0.95)';
+                            const self = this;
+                            setTimeout(function() {
+                                self.style.transform = '';
+                            }, 150);
+                            
+                            const period = this.dataset.period;
+                            handlePeriodChange(period);
                         });
+                    });
 
-                        function handlePeriodChange(period) {
-                            // Reset all hidden inputs
-                            document.getElementById('request_unit_half').value = '';
-                            document.getElementById('request_unit_hours').value = '';
-                            document.getElementById('request_date_from_period').value = '';
+                    function handlePeriodChange(period) {
+                        // Reset all hidden inputs
+                        document.getElementById('request_unit_half').value = '';
+                        document.getElementById('request_unit_hours').value = '';
+                        document.getElementById('request_date_from_period').value = '';
 
-                            switch(period) {
-                                case 'full_day':
-                                    dateToContainer.classList.remove('hidden');
-                                    hoursContainer.classList.add('hidden');
-                                    break;
-                                    
-                                case 'morning':
-                                    document.getElementById('request_unit_half').value = 'true';
-                                    document.getElementById('request_date_from_period').value = 'am';
-                                    dateToContainer.classList.add('hidden');
-                                    hoursContainer.classList.add('hidden');
-                                    updateDateTo();
-                                    break;
-                                    
-                                case 'afternoon':
-                                    document.getElementById('request_unit_half').value = 'true';
-                                    document.getElementById('request_date_from_period').value = 'pm';
-                                    dateToContainer.classList.add('hidden');
-                                    hoursContainer.classList.add('hidden');
-                                    updateDateTo();
-                                    break;
-                                    
-                                case 'custom_hours':
-                                    document.getElementById('request_unit_hours').value = 'true';
-                                    dateToContainer.classList.add('hidden');
-                                    hoursContainer.classList.remove('hidden');
-                                    updateDateTo();
-                                    break;
-                            }
-                        }
-
-                        function updateDateTo() {
-                            const dateFrom = document.getElementById('request_date_from').value;
-                            if (dateFrom) {
-                                document.getElementById('request_date_to').value = dateFrom;
-                            }
-                        }
-
-                        // Auto-update date_to when date_from changes
-                        document.getElementById('request_date_from').addEventListener('change', function() {
-                            const activeCard = document.querySelector('.period-card.active');
-                            if (activeCard &amp;&amp; ['morning', 'afternoon', 'custom_hours'].includes(activeCard.dataset.period)) {
+                        switch(period) {
+                            case 'full_day':
+                                dateToContainer.classList.remove('hidden');
+                                hoursContainer.classList.add('hidden');
+                                break;
+                                
+                            case 'morning':
+                                document.getElementById('request_unit_half').value = 'true';
+                                document.getElementById('request_date_from_period').value = 'am';
+                                dateToContainer.classList.add('hidden');
+                                hoursContainer.classList.add('hidden');
                                 updateDateTo();
-                            }
-                        });
+                                break;
+                                
+                            case 'afternoon':
+                                document.getElementById('request_unit_half').value = 'true';
+                                document.getElementById('request_date_from_period').value = 'pm';
+                                dateToContainer.classList.add('hidden');
+                                hoursContainer.classList.add('hidden');
+                                updateDateTo();
+                                break;
+                                
+                            case 'custom_hours':
+                                document.getElementById('request_unit_hours').value = 'true';
+                                dateToContainer.classList.add('hidden');
+                                hoursContainer.classList.remove('hidden');
+                                updateDateTo();
+                                break;
+                        }
+                    }
 
-                        // Handle leave type change
-                        holidayStatusSelect.addEventListener('change', function() {
-                            const selectedOption = this.options[this.selectedIndex];
-                            const supportDocument = selectedOption.dataset.supportDocument === 'true';
-                            
-                            if (supportDocument) {
-                                attachmentContainer.classList.remove('hidden');
-                                attachmentContainer.classList.add('slide-up');
-                            } else {
-                                attachmentContainer.classList.add('hidden');
-                            }
-                        });
+                    function updateDateTo() {
+                        const dateFrom = document.getElementById('request_date_from').value;
+                        if (dateFrom) {
+                            document.getElementById('request_date_to').value = dateFrom;
+                        }
+                    }
 
-                        // File handling
-                        fileInput.addEventListener('change', function() {
-                            fileList.innerHTML = '';
-                            
-                            for (let i = 0; i &lt; this.files.length; i++) {
-                                const file = this.files[i];
-                                const fileSizeNum = (file.size / 1024 / 1024).toFixed(2);
-                                
-                                const fileItem = document.createElement('div');
-                                fileItem.className = 'flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg slide-up';
-                                
-                                const fileContent = document.createElement('div');
-                                fileContent.className = 'flex items-center space-x-3';
-                                
-                                const fileIcon = document.createElement('i');
-                                fileIcon.className = 'fas fa-file text-blue-500';
-                                
-                                const fileInfo = document.createElement('div');
-                                const fileName = document.createElement('p');
-                                fileName.className = 'font-medium text-gray-800 truncate max-w-[200px]';
-                                fileName.textContent = file.name;
-                                
-                                const fileSize = document.createElement('p');
-                                fileSize.className = 'text-sm text-gray-500';
-                                fileSize.textContent = fileSizeNum + ' MB';
-                                
-                                const checkIcon = document.createElement('i');
-                                checkIcon.className = 'fas fa-check text-green-500';
-                                
-                                fileInfo.appendChild(fileName);
-                                fileInfo.appendChild(fileSize);
-                                fileContent.appendChild(fileIcon);
-                                fileContent.appendChild(fileInfo);
-                                fileItem.appendChild(fileContent);
-                                fileItem.appendChild(checkIcon);
-                                
-                                fileList.appendChild(fileItem);
-                            }
-                        });
+                    // Auto-update date_to when date_from changes
+                    document.getElementById('request_date_from').addEventListener('change', function() {
+                        const activeCard = document.querySelector('.period-card.active');
+                        if (activeCard &amp;&amp; ['morning', 'afternoon', 'custom_hours'].includes(activeCard.dataset.period)) {
+                            updateDateTo();
+                        }
+                        
+                        // Check for overlap when date changes
+                        checkOverlapOnDateChange();
+                    });
 
-                        // Form submission
-                        form.addEventListener('submit', function(e) {
-                            e.preventDefault();
-                            
-                            const submitBtn = form.querySelector('button[type="submit"]');
-                            const loadingSpinner = submitBtn.querySelector('.loading-spinner');
-                            const submitText = submitBtn.querySelector('.submit-text');
-                            
-                            // Show loading state
-                            loadingSpinner.classList.remove('hidden');
-                            submitText.innerHTML = '&lt;i class="fas fa-spinner loading-spinner mr-2"&gt;&lt;/i&gt;Enviando...';
-                            submitBtn.disabled = true;
+                    // Check overlap when date_to changes
+                    document.getElementById('request_date_to').addEventListener('change', function() {
+                        checkOverlapOnDateChange();
+                    });
 
-                            // Submit form
-                            const formData = new FormData(form);
-
-                            fetch('/leave/request/submit', {
-                                method: 'POST',
-                                body: formData
-                            })
-                            .then(function(response) {
-                                return response.json();
-                            })
-                            .then(function(data) {
-                                if (data.success) {
-                                    showToast('¡Solicitud enviada correctamente!', 'success');
-                                    setTimeout(function() {
-                                        if (data.redirect_url) {
-                                            window.location.href = data.redirect_url;
-                                        } else {
-                                            window.location.href = '/web';
-                                        }
-                                    }, 2000);
+                    // Function to check overlap when dates change
+                    function checkOverlapOnDateChange() {
+                        const dateFrom = document.getElementById('request_date_from').value;
+                        const dateTo = document.getElementById('request_date_to').value || dateFrom;
+                        
+                        if (dateFrom) {
+                            checkDateOverlap(dateFrom, dateTo)
+                            .then(function(result) {
+                                if (result &amp;&amp; result.has_overlap) {
+                                    showOverlapWarning(result.overlapping_leaves);
                                 } else {
-                                    showToast(data.error || 'Error al enviar la solicitud', 'error');
-                                    resetSubmitButton();
+                                    hideOverlapWarning();
                                 }
                             })
                             .catch(function(error) {
-                                showToast('Error de conexión. Verifica tu internet.', 'error');
-                                resetSubmitButton();
+                                console.error('Error checking overlap:', error);
                             });
+                        }
+                    }
 
-                            function resetSubmitButton() {
-                                loadingSpinner.classList.add('hidden');
-                                submitText.innerHTML = '&lt;i class="fas fa-paper-plane mr-2"&gt;&lt;/i&gt;Enviar Solicitud';
-                                submitBtn.disabled = false;
+                    // Function to check date overlap via API
+                    function checkDateOverlap(dateFrom, dateTo) {
+                        return fetch('/leave/request/check_overlap', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                jsonrpc: '2.0',
+                                method: 'call',
+                                params: {
+                                    date_from: dateFrom,
+                                    date_to: dateTo
+                                }
+                            })
+                        })
+                        .then(function(response) { 
+                            return response.json(); 
+                        })
+                        .then(function(data) { 
+                            return data.result; 
+                        });
+                    }
+
+                    // Show overlap warning
+                    function showOverlapWarning(overlappingLeaves) {
+                        // Remove existing warning
+                        hideOverlapWarning();
+                        
+                        const warningDiv = document.createElement('div');
+                        warningDiv.id = 'overlapWarning';
+                        warningDiv.className = 'glass-effect rounded-2xl p-4 mb-4 border-2 border-red-300 bg-red-50 slide-up';
+                        
+                        let warningHTML = `
+                            &lt;div class="flex items-start space-x-3"&gt;
+                                &lt;i class="fas fa-exclamation-triangle text-red-500 text-xl mt-1"&gt;&lt;/i&gt;
+                                &lt;div class="flex-1"&gt;
+                                    &lt;h4 class="font-bold text-red-800 mb-2"&gt;⚠️ Conflicto de Fechas Detectado&lt;/h4&gt;
+                                    &lt;p class="text-red-700 mb-3"&gt;Ya tiene solicitudes de permiso en este período:&lt;/p&gt;
+                                    &lt;div class="space-y-2"&gt;
+                        `;
+                        
+                        overlappingLeaves.forEach(function(leave) {
+                            const stateText = {
+                                'confirm': 'Pendiente de Aprobación',
+                                'validate1': 'Primera Aprobación',
+                                'validate': 'Aprobado'
+                            }[leave.state] || leave.state;
+                            
+                            warningHTML += `
+                                &lt;div class="bg-white/70 border border-red-200 rounded-lg p-3"&gt;
+                                    &lt;div class="flex justify-between items-start"&gt;
+                                        &lt;div&gt;
+                                            &lt;p class="font-medium text-gray-800"&gt;${leave.type}&lt;/p&gt;
+                                            &lt;p class="text-sm text-gray-600"&gt;Del ${leave.date_from} al ${leave.date_to}&lt;/p&gt;
+                                        &lt;/div&gt;
+                                        &lt;span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full"&gt;${stateText}&lt;/span&gt;
+                                    &lt;/div&gt;
+                                &lt;/div&gt;
+                            `;
+                        });
+                        
+                        warningHTML += `
+                                    &lt;/div&gt;
+                                    &lt;p class="text-sm text-red-600 mt-3"&gt;
+                                        &lt;i class="fas fa-info-circle mr-1"&gt;&lt;/i&gt;
+                                        Por favor, seleccione fechas diferentes o cancele las solicitudes existentes.
+                                    &lt;/p&gt;
+                                &lt;/div&gt;
+                            &lt;/div&gt;
+                        `;
+                        
+                        warningDiv.innerHTML = warningHTML;
+                        
+                        // Insert after the date selection section
+                        const dateSection = document.querySelector('.glass-effect:has(#request_date_from)').parentElement;
+                        if (dateSection &amp;&amp; dateSection.nextElementSibling) {
+                            dateSection.parentElement.insertBefore(warningDiv, dateSection.nextElementSibling);
+                        }
+                    }
+
+                    // Hide overlap warning
+                    function hideOverlapWarning() {
+                        const existingWarning = document.getElementById('overlapWarning');
+                        if (existingWarning) {
+                            existingWarning.remove();
+                        }
+                    }
+
+                    // Handle leave type change
+                    holidayStatusSelect.addEventListener('change', function() {
+                        const selectedOption = this.options[this.selectedIndex];
+                        const supportDocument = selectedOption.dataset.supportDocument === 'true';
+                        
+                        if (supportDocument) {
+                            attachmentContainer.classList.remove('hidden');
+                            attachmentContainer.classList.add('slide-up');
+                        } else {
+                            attachmentContainer.classList.add('hidden');
+                        }
+                    });
+
+                    // File handling
+                    fileInput.addEventListener('change', function() {
+                        fileList.innerHTML = '';
+                        
+                        for (let i = 0; i &lt; this.files.length; i++) {
+                            const file = this.files[i];
+                            const fileSizeNum = (file.size / 1024 / 1024).toFixed(2);
+                            
+                            const fileItem = document.createElement('div');
+                            fileItem.className = 'flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg slide-up';
+                            
+                            const fileContent = document.createElement('div');
+                            fileContent.className = 'flex items-center space-x-3';
+                            
+                            const fileIcon = document.createElement('i');
+                            fileIcon.className = 'fas fa-file text-blue-500';
+                            
+                            const fileInfo = document.createElement('div');
+                            const fileName = document.createElement('p');
+                            fileName.className = 'font-medium text-gray-800 truncate max-w-[200px]';
+                            fileName.textContent = file.name;
+                            
+                            const fileSize = document.createElement('p');
+                            fileSize.className = 'text-sm text-gray-500';
+                            fileSize.textContent = fileSizeNum + ' MB';
+                            
+                            const checkIcon = document.createElement('i');
+                            checkIcon.className = 'fas fa-check text-green-500';
+                            
+                            fileInfo.appendChild(fileName);
+                            fileInfo.appendChild(fileSize);
+                            fileContent.appendChild(fileIcon);
+                            fileContent.appendChild(fileInfo);
+                            fileItem.appendChild(fileContent);
+                            fileItem.appendChild(checkIcon);
+                            
+                            fileList.appendChild(fileItem);
+                        }
+                    });
+
+                    // Submit form function
+                    function submitFormData() {
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        const loadingSpinner = submitBtn.querySelector('.loading-spinner');
+                        const submitText = submitBtn.querySelector('.submit-text');
+                        
+                        // Show loading state
+                        loadingSpinner.classList.remove('hidden');
+                        submitText.innerHTML = '&lt;i class="fas fa-spinner loading-spinner mr-2"&gt;&lt;/i&gt;Enviando...';
+                        submitBtn.disabled = true;
+
+                        // Submit form
+                        const formData = new FormData(form);
+
+                        fetch('/leave/request/submit', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(function(response) {
+                            return response.json();
+                        })
+                        .then(function(data) {
+                            if (data.success) {
+                                showToast('¡Solicitud enviada correctamente! 🎉', 'success');
+                                setTimeout(function() {
+                                    if (data.redirect_url) {
+                                        window.location.href = data.redirect_url;
+                                    } else {
+                                        window.location.href = '/web';
+                                    }
+                                }, 2000);
+                            } else {
+                                showToast(data.error || 'Error al enviar la solicitud', 'error');
+                                resetSubmitButton();
                             }
+                        })
+                        .catch(function(error) {
+                            showToast('Error de conexión. Verifica tu internet.', 'error');
+                            resetSubmitButton();
+                            console.error('Fetch error:', error);
                         });
 
-                        // Toast notification system
-                        function showToast(message, type) {
-                            type = type || 'info';
-                            const toast = document.createElement('div');
-                            let bgColor = '';
-                            let iconClass = '';
-                            
-                            if (type === 'success') {
-                                bgColor = 'bg-green-500';
-                                iconClass = 'fa-check-circle';
-                            } else if (type === 'error') {
-                                bgColor = 'bg-red-500';
-                                iconClass = 'fa-exclamation-triangle';
-                            } else {
-                                bgColor = 'bg-blue-500';
-                                iconClass = 'fa-info-circle';
-                            }
-                            
-                            toast.className = bgColor + ' text-white px-6 py-4 rounded-lg shadow-lg max-w-sm slide-up';
-                            
-                            const toastContent = document.createElement('div');
-                            toastContent.className = 'flex items-center space-x-3';
-                            
-                            const icon = document.createElement('i');
-                            icon.className = 'fas ' + iconClass;
-                            
-                            const messageP = document.createElement('p');
-                            messageP.className = 'flex-1';
-                            messageP.textContent = message;
-                            
-                            const closeBtn = document.createElement('button');
-                            closeBtn.className = 'text-white/80 hover:text-white';
-                            closeBtn.innerHTML = '&lt;i class="fas fa-times"&gt;&lt;/i&gt;';
-                            closeBtn.onclick = function() {
-                                if (toast.parentElement) {
-                                    toast.remove();
-                                }
-                            };
-                            
-                            toastContent.appendChild(icon);
-                            toastContent.appendChild(messageP);
-                            toastContent.appendChild(closeBtn);
-                            toast.appendChild(toastContent);
-                            
-                            document.getElementById('toastContainer').appendChild(toast);
-                            
-                            // Auto remove after 5 seconds
-                            setTimeout(function() {
-                                if (toast.parentElement) {
-                                    toast.remove();
-                                }
-                            }, 5000);
+                        function resetSubmitButton() {
+                            loadingSpinner.classList.add('hidden');
+                            submitText.innerHTML = '&lt;i class="fas fa-paper-plane mr-2"&gt;&lt;/i&gt;Enviar Solicitud';
+                            submitBtn.disabled = false;
+                        }
+                    }
+
+                    // Form submission with comprehensive validation
+                    form.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        
+                        // Get form data
+                        const dateFrom = document.getElementById('request_date_from').value;
+                        const dateTo = document.getElementById('request_date_to').value || dateFrom;
+                        const leaveType = document.getElementById('holiday_status_id').value;
+                        const description = document.getElementById('private_name').value.trim();
+
+                        // Basic validation
+                        if (!leaveType) {
+                            showToast('Por favor selecciona un tipo de permiso', 'error');
+                            document.getElementById('holiday_status_id').focus();
+                            return;
                         }
 
-                        // Smooth scrolling for better mobile experience
-                        const formElements = document.querySelectorAll('input, textarea, select');
-                        formElements.forEach(function(element) {
-                            element.addEventListener('focus', function() {
-                                const self = this;
-                                setTimeout(function() {
-                                    self.scrollIntoView({ 
-                                        behavior: 'smooth', 
-                                        block: 'center' 
-                                    });
-                                }, 300);
-                            });
+                        if (!dateFrom) {
+                            showToast('Por favor selecciona la fecha de inicio', 'error');
+                            document.getElementById('request_date_from').focus();
+                            return;
+                        }
+
+                        if (!description) {
+                            showToast('Por favor agrega una descripción', 'error');
+                            document.getElementById('private_name').focus();
+                            return;
+                        }
+
+                        // Show checking overlay
+                        showToast('Verificando disponibilidad de fechas...', 'info');
+
+                        // Check for overlapping dates
+                        checkDateOverlap(dateFrom, dateTo)
+                        .then(function(result) {
+                            if (result &amp;&amp; result.has_overlap) {
+                                // Show detailed overlap alert
+                                let alertMessage = '❌ No se puede enviar la solicitud.\n\n';
+                                alertMessage += 'Ya tiene solicitudes de permiso en este período:\n\n';
+                                
+                                result.overlapping_leaves.forEach(function(leave, index) {
+                                    const stateText = {
+                                        'confirm': 'Pendiente',
+                                        'validate1': '1ra Aprobación',
+                                        'validate': 'Aprobado'
+                                    }[leave.state] || leave.state;
+                                    
+                                    alertMessage += `${index + 1}. ${leave.type}\n`;
+                                    alertMessage += `   📅 ${leave.date_from} - ${leave.date_to}\n`;
+                                    alertMessage += `   📋 Estado: ${stateText}\n\n`;
+                                });
+                                
+                                alertMessage += 'Por favor:\n';
+                                alertMessage += '• Selecciona fechas diferentes, o\n';
+                                alertMessage += '• Cancela las solicitudes existentes';
+                                
+                                alert(alertMessage);
+                                
+                                // Also show toast
+                                showToast(`Conflicto: Ya tiene ${result.overlapping_leaves.length} solicitud(es) en este período`, 'error');
+                                return;
+                            }
+                            
+                            // No overlap, proceed with submission
+                            showToast('Fechas disponibles. Enviando solicitud...', 'success');
+                            setTimeout(function() {
+                                submitFormData();
+                            }, 500);
+                        })
+                        .catch(function(error) {
+                            console.error('Error checking overlap:', error);
+                            
+                            // Show error but allow submission
+                            if (confirm('Error al verificar conflictos de fechas.\n¿Desea continuar con el envío?')) {
+                                submitFormData();
+                            } else {
+                                showToast('Envío cancelado', 'info');
+                            }
                         });
                     });
+
+                    // Enhanced Toast notification system
+                    function showToast(message, type) {
+                        type = type || 'info';
+                        const toast = document.createElement('div');
+                        let bgColor = '';
+                        let iconClass = '';
+                        
+                        if (type === 'success') {
+                            bgColor = 'bg-green-500';
+                            iconClass = 'fa-check-circle';
+                        } else if (type === 'error') {
+                            bgColor = 'bg-red-500';
+                            iconClass = 'fa-exclamation-triangle';
+                        } else if (type === 'warning') {
+                            bgColor = 'bg-yellow-500';
+                            iconClass = 'fa-exclamation-circle';
+                        } else {
+                            bgColor = 'bg-blue-500';
+                            iconClass = 'fa-info-circle';
+                        }
+                        
+                        toast.className = bgColor + ' text-white px-6 py-4 rounded-lg shadow-lg max-w-sm slide-up transform transition-all duration-300';
+                        
+                        const toastContent = document.createElement('div');
+                        toastContent.className = 'flex items-center space-x-3';
+                        
+                        const icon = document.createElement('i');
+                        icon.className = 'fas ' + iconClass;
+                        
+                        const messageP = document.createElement('p');
+                        messageP.className = 'flex-1 text-sm';
+                        messageP.textContent = message;
+                        
+                        const closeBtn = document.createElement('button');
+                        closeBtn.className = 'text-white/80 hover:text-white transition-colors';
+                        closeBtn.innerHTML = '&lt;i class="fas fa-times"&gt;&lt;/i&gt;';
+                        closeBtn.onclick = function() {
+                            if (toast.parentElement) {
+                                toast.style.transform = 'translateX(400px)';
+                                setTimeout(function() {
+                                    if (toast.parentElement) {
+                                        toast.remove();
+                                    }
+                                }, 300);
+                            }
+                        };
+                        
+                        toastContent.appendChild(icon);
+                        toastContent.appendChild(messageP);
+                        toastContent.appendChild(closeBtn);
+                        toast.appendChild(toastContent);
+                        
+                        document.getElementById('toastContainer').appendChild(toast);
+                        
+                        // Auto remove after duration based on type
+                        const duration = type === 'error' ? 8000 : type === 'warning' ? 6000 : 5000;
+                        setTimeout(function() {
+                            if (toast.parentElement) {
+                                toast.style.transform = 'translateX(400px)';
+                                setTimeout(function() {
+                                    if (toast.parentElement) {
+                                        toast.remove();
+                                    }
+                                }, 300);
+                            }
+                        }, duration);
+                    }
+
+                    // Smooth scrolling for better mobile experience
+                    const formElements = document.querySelectorAll('input, textarea, select');
+                    formElements.forEach(function(element) {
+                        element.addEventListener('focus', function() {
+                            const self = this;
+                            setTimeout(function() {
+                                self.scrollIntoView({ 
+                                    behavior: 'smooth', 
+                                    block: 'center' 
+                                });
+                            }, 300);
+                        });
+                    });
+
+                    // Add visual feedback for validation
+                    const requiredFields = ['holiday_status_id', 'request_date_from', 'private_name'];
+                    requiredFields.forEach(function(fieldId) {
+                        const field = document.getElementById(fieldId);
+                        if (field) {
+                            field.addEventListener('blur', function() {
+                                if (!this.value.trim()) {
+                                    this.classList.add('border-red-300', 'bg-red-50');
+                                    this.classList.remove('border-gray-200');
+                                } else {
+                                    this.classList.remove('border-red-300', 'bg-red-50');
+                                    this.classList.add('border-gray-200');
+                                }
+                            });
+                            
+                            field.addEventListener('input', function() {
+                                if (this.value.trim()) {
+                                    this.classList.remove('border-red-300', 'bg-red-50');
+                                    this.classList.add('border-green-300', 'bg-green-50');
+                                    setTimeout(() =&gt; {
+                                        this.classList.remove('border-green-300', 'bg-green-50');
+                                        this.classList.add('border-gray-200');
+                                    }, 2000);
+                                }
+                            });
+                        }
+                    });
+
+                    console.log('🚀 Leave Request Form initialized successfully!');
+                });
                 </script>
             </t>
         </template>

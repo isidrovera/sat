@@ -485,3 +485,47 @@ class LeaveRequestController(http.Controller):
         except Exception as e:
             _logger.error(f"Error al validar fechas: {str(e)}")
             return {'error': str(e)}
+
+    @http.route('/leave/request/check_overlap', type='json', auth='user')
+    def check_leave_overlap(self, date_from, date_to=None):
+        """Verificar si hay solapamiento con solicitudes existentes"""
+        
+        try:
+            employee = request.env.user.employee_id
+            if not employee:
+                return {'error': 'No employee found'}
+
+            if not date_to:
+                date_to = date_from
+
+            # Buscar solicitudes que se solapan
+            overlapping_leaves = request.env['hr.leave'].search([
+                ('employee_id', '=', employee.id),
+                ('state', 'in', ['confirm', 'validate1', 'validate']),  # Estados activos
+                ('request_date_from', '&lt;=', date_to),
+                ('request_date_to', '&gt;=', date_from),
+            ])
+
+            if overlapping_leaves:
+                overlap_info = []
+                for leave in overlapping_leaves:
+                    overlap_info.append({
+                        'id': leave.id,
+                        'name': leave.display_name,
+                        'date_from': leave.request_date_from.strftime('%d/%m/%Y'),
+                        'date_to': leave.request_date_to.strftime('%d/%m/%Y'),
+                        'state': leave.state,
+                        'type': leave.holiday_status_id.name
+                    })
+                
+                return {
+                    'has_overlap': True,
+                    'overlapping_leaves': overlap_info,
+                    'message': f'Ya tiene {len(overlapping_leaves)} solicitud(es) en este período'
+                }
+            
+            return {'has_overlap': False}
+
+        except Exception as e:
+            _logger.error(f"Error al verificar solapamiento: {str(e)}")
+            return {'error': str(e)}
