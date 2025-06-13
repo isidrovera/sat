@@ -23,7 +23,7 @@ class LeaveRequestController(http.Controller):
             employee = request.env.user.employee_id
             if not employee:
                 _logger.error(f"Usuario {request.env.user.name} no tiene empleado asociado")
-                return request.render('hr_holidays.no_employee_error')
+                return request.render('website.404')
             
             _logger.info(f"Empleado accediendo al formulario: {employee.name} (ID: {employee.id})")
             
@@ -49,36 +49,50 @@ class LeaveRequestController(http.Controller):
             return request.render('sat.leave_request_template', values)
             
         except Exception as e:
-            _logger.error(f"Error al cargar formulario de permiso: {str(e)}")
+            _logger.error(f"Error al cargar formulario de permiso: {str(e)}", exc_info=True)
             return request.render('website.500')
 
-    @http.route('/leave/request/submit', type='http', auth='user', website=True, methods=['POST'], csrf=False)
+    @http.route('/leave/request/submit', type='http', auth='user', website=True, methods=['POST'], csrf=True)
     def submit_leave_request(self, **post):
         """Procesar la solicitud de permiso enviada"""
         
         _logger.info("=== INICIO PROCESAMIENTO SOLICITUD ===")
         _logger.info(f"Datos recibidos: {post}")
+        _logger.info(f"Headers: {dict(request.httprequest.headers)}")
         
         try:
+            # Verificar empleado
             employee = request.env.user.employee_id
             if not employee:
                 _logger.error("No se encontró empleado asociado al usuario")
-                return self._return_json_error('No se encontró empleado asociado al usuario')
+                return request.render('website.500', {
+                    'message': 'No se encontró empleado asociado al usuario'
+                })
 
             _logger.info(f"Procesando solicitud para empleado: {employee.name} (ID: {employee.id})")
 
             # Validar datos requeridos
             required_fields = ['holiday_status_id', 'request_date_from']
+            missing_fields = []
+            
             for field in required_fields:
                 if not post.get(field):
+                    missing_fields.append(field)
                     _logger.error(f"Campo requerido faltante: {field}")
-                    return self._return_json_error(f'Campo requerido: {field}')
+            
+            if missing_fields:
+                return self._return_error_response(f'Campos requeridos faltantes: {", ".join(missing_fields)}')
 
             # Obtener tipo de permiso
-            leave_type = request.env['hr.leave.type'].browse(int(post.get('holiday_status_id')))
-            if not leave_type.exists():
-                _logger.error(f"Tipo de permiso no encontrado: {post.get('holiday_status_id')}")
-                return self._return_json_error('Tipo de permiso no válido')
+            try:
+                leave_type_id = int(post.get('holiday_status_id'))
+                leave_type = request.env['hr.leave.type'].browse(leave_type_id)
+                if not leave_type.exists():
+                    _logger.error(f"Tipo de permiso no encontrado: {leave_type_id}")
+                    return self._return_error_response('Tipo de permiso no válido')
+            except (ValueError, TypeError) as e:
+                _logger.error(f"Error al convertir holiday_status_id: {e}")
+                return self._return_error_response('Tipo de permiso inválido')
 
             _logger.info(f"Tipo de permiso seleccionado: {leave_type.name}")
 
@@ -108,43 +122,79 @@ class LeaveRequestController(http.Controller):
 
             _logger.info("=== SOLICITUD PROCESADA EXITOSAMENTE ===")
             
-            return json.dumps({
-                'success': True,
-                'message': 'Solicitud de permiso enviada correctamente',
-                'leave_id': leave.id,
-                'redirect_url': f'/web#id={leave.id}&model=hr.leave&view_type=form'
-            })
+            # Respuesta JSON exitosa
+            return request.make_response(
+                json.dumps({
+                    'success': True,
+                    'message': 'Solicitud de permiso enviada correctamente',
+                    'leave_id': leave.id,
+                    'redirect_url': f'/web#id={leave.id}&model=hr.leave&view_type=form'
+                }),
+                headers={'Content-Type': 'application/json'}
+            )
 
         except ValidationError as e:
             _logger.error(f"Error de validación: {str(e)}")
-            return self._return_json_error(str(e))
+            return self._return_error_response(str(e))
         except Exception as e:
             _logger.error(f"Error interno al procesar solicitud: {str(e)}", exc_info=True)
-            return self._return_json_error(f'Error interno: {str(e)}')
+            return self._return_error_response(f'Error interno: {str(e)}')
 
     def _prepare_leave_values(self, post, employee, leave_type):
         """Preparar valores para crear la solicitud de permiso"""
         
+        _logger.info("=== PREPARANDO VALORES PARA SOLICITUD ===")
+        
+        # Valores base
         vals = {
             'employee_id': employee.id,
             'holiday_status_id': leave_type.id,
             'request_date_from': post.get('request_date_from'),
             'request_date_to': post.get('request_date_to', post.get('request_date_from')),
-            'private_name': post.get('description', f"{employee.name} - {leave_type.name}"),
+            'private_name': post.get('private_name') or f"{employee.name} - {leave_type.name}",
             'notes': post.get('notes', ''),
         }
+        
+        _logger.info(f"Valores base: {vals}")
+        _logger.info(f"request_unit_half recibido: '{post.get('request_unit_half')}'")
+        _logger.info(f"request_unit_hours recibido: '{post.get('request_unit_hours')}'")
 
         # Configurar según el tipo de unidad
-        if post.get('request_unit_half'):
+        if post.get('request_unit_half') == 'true':
             vals['request_unit_half'] = True
             vals['request_date_from_period'] = post.get('request_date_from_period', 'am')
             vals['request_date_to'] = vals['request_date_from']
             _logger.info(f"Configurado como medio día: {vals['request_date_from_period']}")
             
-        elif post.get('request_unit_hours'):
+        elif post.get('request_unit_hours') == 'true':
             vals['request_unit_hours'] = True
-            vals['request_hour_from'] = float(post.get('request_hour_from', 8.0))
-            vals['request_hour_to'] = float(post.get('request_hour_to', 17.0))
+            
+            # Convertir horas "08:00" a float 8.0
+            hour_from = post.get('request_hour_from', '8:00')
+            hour_to = post.get('request_hour_to', '17:00')
+            
+            _logger.info(f"Horas recibidas - Desde: '{hour_from}', Hasta: '{hour_to}'")
+            
+            try:
+                # Convertir hora de inicio
+                if ':' in str(hour_from):
+                    h, m = str(hour_from).split(':')
+                    vals['request_hour_from'] = float(h) + float(m)/60
+                else:
+                    vals['request_hour_from'] = float(hour_from)
+                    
+                # Convertir hora de fin
+                if ':' in str(hour_to):
+                    h, m = str(hour_to).split(':')
+                    vals['request_hour_to'] = float(h) + float(m)/60
+                else:
+                    vals['request_hour_to'] = float(hour_to)
+                    
+            except (ValueError, TypeError) as e:
+                _logger.error(f"Error al convertir horas: {e}")
+                vals['request_hour_from'] = 8.0
+                vals['request_hour_to'] = 17.0
+                
             vals['request_date_to'] = vals['request_date_from']
             _logger.info(f"Configurado como horas: {vals['request_hour_from']} - {vals['request_hour_to']}")
             
@@ -154,34 +204,59 @@ class LeaveRequestController(http.Controller):
             vals['request_unit_hours'] = False
             _logger.info("Configurado como día completo")
 
+        # Validar fechas
+        if not vals['request_date_from']:
+            raise ValidationError("La fecha de inicio es requerida")
+            
+        if not vals['request_date_to']:
+            vals['request_date_to'] = vals['request_date_from']
+
+        _logger.info(f"Valores finales preparados: {vals}")
         return vals
 
     def _handle_attachments(self, post):
         """Manejar archivos adjuntos"""
         attachment_ids = []
         
+        _logger.info("=== PROCESANDO ARCHIVOS ADJUNTOS ===")
+        
         try:
+            # Buscar archivos en el post
+            file_fields = [key for key in post.keys() if key.startswith('attachment_') or key == 'file_input']
+            _logger.info(f"Campos de archivo encontrados: {file_fields}")
+            
             for key in post:
-                if key.startswith('attachment_') and hasattr(post[key], 'read'):
-                    file_content = post[key].read()
-                    file_name = post[key].filename
-                    
-                    _logger.info(f"Procesando archivo: {file_name}")
-                    
-                    attachment = request.env['ir.attachment'].sudo().create({
-                        'name': file_name,
-                        'datas': base64.b64encode(file_content),
-                        'res_model': 'hr.leave',
-                        'res_id': 0,  # Se actualizará después de crear el leave
-                        'type': 'binary',
-                        'mimetype': post[key].content_type if hasattr(post[key], 'content_type') else 'application/octet-stream'
-                    })
-                    attachment_ids.append(attachment.id)
-                    _logger.info(f"Archivo {file_name} guardado con ID: {attachment.id}")
+                file_obj = post[key]
+                
+                # Verificar si es un archivo
+                if hasattr(file_obj, 'read') and hasattr(file_obj, 'filename'):
+                    if file_obj.filename:  # Asegurar que tenga nombre
+                        try:
+                            file_content = file_obj.read()
+                            file_name = file_obj.filename
+                            
+                            _logger.info(f"Procesando archivo: {file_name} ({len(file_content)} bytes)")
+                            
+                            # Crear adjunto
+                            attachment = request.env['ir.attachment'].sudo().create({
+                                'name': file_name,
+                                'datas': base64.b64encode(file_content),
+                                'res_model': 'hr.leave',
+                                'res_id': 0,  # Se actualizará después de crear el leave
+                                'type': 'binary',
+                                'mimetype': getattr(file_obj, 'content_type', 'application/octet-stream')
+                            })
+                            attachment_ids.append(attachment.id)
+                            _logger.info(f"Archivo {file_name} guardado con ID: {attachment.id}")
+                            
+                        except Exception as file_error:
+                            _logger.error(f"Error procesando archivo {file_obj.filename}: {str(file_error)}")
+                            continue
                     
         except Exception as e:
-            _logger.error(f"Error al procesar adjuntos: {str(e)}")
+            _logger.error(f"Error general al procesar adjuntos: {str(e)}")
             
+        _logger.info(f"Total de archivos procesados: {len(attachment_ids)}")
         return attachment_ids
 
     def _send_notification_email(self, leave, employee, leave_type):
@@ -252,7 +327,6 @@ class LeaveRequestController(http.Controller):
         except Exception as e:
             _logger.error(f"Error al enviar correo de notificación: {str(e)}", exc_info=True)
             # No fallar la solicitud por problemas de correo
-            pass
 
     def _create_email_template(self, data):
         """Crear template HTML para el correo"""
@@ -343,12 +417,17 @@ class LeaveRequestController(http.Controller):
         </html>
         """
 
-    def _return_json_error(self, message):
-        """Retornar error en formato JSON"""
-        return json.dumps({
-            'success': False,
-            'error': message
-        })
+    def _return_error_response(self, message):
+        """Retornar respuesta de error"""
+        _logger.error(f"Retornando error: {message}")
+        return request.make_response(
+            json.dumps({
+                'success': False,
+                'error': message
+            }),
+            headers={'Content-Type': 'application/json'},
+            status=400
+        )
 
     @http.route('/leave/request/get_leave_types', type='json', auth='user')
     def get_available_leave_types(self):
