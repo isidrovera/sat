@@ -227,7 +227,7 @@ class LeaveRequestController(http.Controller):
                 })
                 _logger.info(f"✅ {len(attachment_ids)} archivos asociados a la solicitud {leave.id}")
 
-            # Enviar correo de notificación
+            # Enviar correo de notificación usando plantillas XML
             _logger.info("📧 Enviando notificación por correo...")
             self._send_notification_email(leave, employee, leave_type)
 
@@ -665,327 +665,216 @@ class LeaveRequestController(http.Controller):
         return attachment_ids
 
     def _send_notification_email(self, leave, employee, leave_type):
-        """Enviar correo de notificación usando servidor configurado"""
+        """Enviar correo de notificación usando plantillas XML"""
         
-        _logger.info("📧 === ENVIANDO CORREO DE NOTIFICACIÓN ===")
+        _logger.info("📧 === ENVIANDO CORREOS CON PLANTILLAS XML ===")
         
         try:
-            # CORRECCIÓN 1: Buscar servidor de correo específico
+            # Verificar que las plantillas existan antes de enviar
+            self._verify_email_templates()
+            
+            # 1. Enviar correo a administradores/supervisores
+            admin_sent = self._send_admin_notification(leave, employee, leave_type)
+            
+            # 2. Enviar confirmación al empleado
+            employee_sent = self._send_employee_confirmation(leave, employee, leave_type)
+            
+            if admin_sent or employee_sent:
+                _logger.info("✅ Al menos un correo enviado exitosamente")
+                return True
+            else:
+                _logger.warning("⚠️ No se pudo enviar ningún correo")
+                return False
+            
+        except Exception as e:
+            _logger.error(f"💥 Error general enviando correos: {str(e)}", exc_info=True)
+            return False
+
+    def _verify_email_templates(self):
+        """Verificar que las plantillas de correo estén disponibles"""
+        
+        _logger.info("🔍 === VERIFICANDO PLANTILLAS DE CORREO ===")
+        
+        try:
+            # Verificar plantilla para administradores
+            admin_template = request.env.ref('sat.email_template_leave_request', raise_if_not_found=False)
+            if admin_template:
+                _logger.info(f"✅ Plantilla admin encontrada: {admin_template.name}")
+            else:
+                _logger.error("❌ Plantilla 'sat.email_template_leave_request' no encontrada")
+            
+            # Verificar plantilla para empleados
+            employee_template = request.env.ref('sat.email_template_leave_request_employee', raise_if_not_found=False)
+            if employee_template:
+                _logger.info(f"✅ Plantilla empleado encontrada: {employee_template.name}")
+            else:
+                _logger.error("❌ Plantilla 'sat.email_template_leave_request_employee' no encontrada")
+            
+            return admin_template and employee_template
+            
+        except Exception as e:
+            _logger.error(f"💥 Error verificando plantillas: {str(e)}")
+            return False
+
+    def _send_admin_notification(self, leave, employee, leave_type):
+        """Enviar notificación a administradores usando plantilla XML"""
+        
+        _logger.info("📧 Enviando notificación a administradores...")
+        
+        try:
+            # Buscar plantilla para administradores
+            template = request.env.ref('sat.email_template_leave_request', raise_if_not_found=False)
+            
+            if not template:
+                _logger.error("❌ Plantilla 'sat.email_template_leave_request' no encontrada")
+                return False
+            
+            _logger.info(f"✅ Plantilla admin encontrada: {template.name} (ID: {template.id})")
+            
+            # Verificar/configurar servidor de correo
+            mail_server = self._ensure_mail_server(template)
+            
+            # Preparar contexto para envío
+            email_context = {
+                'default_mail_server_id': mail_server.id if mail_server else False,
+                'mail_server_id': mail_server.id if mail_server else False,
+                'force_send': True,
+                'mail_notify_author': False,
+                'mail_create_nosubscribe': True,
+                'mail_auto_delete': True,
+            }
+            
+            _logger.info(f"📤 Enviando correo administrativo:")
+            _logger.info(f"   - Leave ID: {leave.id}")
+            _logger.info(f"   - Template: {template.name}")
+            _logger.info(f"   - Servidor: {mail_server.name if mail_server else 'Default'}")
+            
+            # Enviar correo
+            mail_id = template.with_context(**email_context).send_mail(
+                leave.id,
+                force_send=True,
+                raise_exception=False  # No romper si falla
+            )
+            
+            if mail_id:
+                mail_record = request.env['mail.mail'].browse(mail_id)
+                _logger.info(f"✅ Correo administrativo enviado:")
+                _logger.info(f"   - Mail ID: {mail_id}")
+                _logger.info(f"   - Estado: {mail_record.state}")
+                _logger.info(f"   - Para: {mail_record.email_to}")
+                _logger.info(f"   - Desde: {mail_record.email_from}")
+                return True
+            else:
+                _logger.error("❌ No se generó mail_id para correo administrativo")
+                return False
+                
+        except Exception as e:
+            _logger.error(f"💥 Error enviando correo administrativo: {str(e)}", exc_info=True)
+            return False
+
+    def _send_employee_confirmation(self, leave, employee, leave_type):
+        """Enviar confirmación al empleado usando plantilla XML"""
+        
+        _logger.info("📧 Enviando confirmación al empleado...")
+        
+        try:
+            # Verificar que el empleado tenga email
+            employee_email = employee.work_email or (employee.user_id.email if employee.user_id else None)
+            if not employee_email:
+                _logger.warning(f"⚠️ Empleado {employee.name} no tiene email configurado")
+                return False
+            
+            _logger.info(f"📬 Email del empleado: {employee_email}")
+            
+            # Buscar plantilla para empleados
+            template = request.env.ref('sat.email_template_leave_request_employee', raise_if_not_found=False)
+            
+            if not template:
+                _logger.error("❌ Plantilla 'sat.email_template_leave_request_employee' no encontrada")
+                return False
+            
+            _logger.info(f"✅ Plantilla empleado encontrada: {template.name} (ID: {template.id})")
+            
+            # Verificar/configurar servidor de correo
+            mail_server = self._ensure_mail_server(template)
+            
+            # Preparar contexto para envío
+            email_context = {
+                'default_mail_server_id': mail_server.id if mail_server else False,
+                'mail_server_id': mail_server.id if mail_server else False,
+                'force_send': True,
+                'mail_notify_author': False,
+                'mail_create_nosubscribe': True,
+                'mail_auto_delete': True,
+            }
+            
+            _logger.info(f"📤 Enviando confirmación al empleado:")
+            _logger.info(f"   - Leave ID: {leave.id}")
+            _logger.info(f"   - Template: {template.name}")
+            _logger.info(f"   - Para: {employee_email}")
+            _logger.info(f"   - Servidor: {mail_server.name if mail_server else 'Default'}")
+            
+            # Enviar correo
+            mail_id = template.with_context(**email_context).send_mail(
+                leave.id,
+                force_send=True,
+                raise_exception=False  # No romper si falla
+            )
+            
+            if mail_id:
+                mail_record = request.env['mail.mail'].browse(mail_id)
+                _logger.info(f"✅ Confirmación enviada al empleado:")
+                _logger.info(f"   - Mail ID: {mail_id}")
+                _logger.info(f"   - Estado: {mail_record.state}")
+                _logger.info(f"   - Para: {mail_record.email_to}")
+                _logger.info(f"   - Desde: {mail_record.email_from}")
+                return True
+            else:
+                _logger.error("❌ No se generó mail_id para confirmación de empleado")
+                return False
+                
+        except Exception as e:
+            _logger.error(f"💥 Error enviando confirmación al empleado: {str(e)}", exc_info=True)
+            return False
+
+    def _ensure_mail_server(self, template):
+        """Asegurar que la plantilla tenga servidor de correo configurado"""
+        
+        _logger.info("🔧 === CONFIGURANDO SERVIDOR DE CORREO ===")
+        
+        try:
+            # Si la plantilla ya tiene servidor, usarlo
+            if template.mail_server_id:
+                _logger.info(f"✅ Plantilla ya tiene servidor: {template.mail_server_id.name}")
+                return template.mail_server_id
+            
+            # Buscar servidor específico para soporte@andescopiers.com.pe
             mail_server = request.env['ir.mail_server'].search([
                 ('smtp_user', '=', 'soporte@andescopiers.com.pe'),
                 ('active', '=', True)
             ], limit=1)
             
             if not mail_server:
-                _logger.warning("⚠️ No se encontró servidor específico para soporte@andescopiers.com.pe")
-                # Fallback: buscar cualquier servidor activo
+                _logger.warning("⚠️ No se encontró servidor específico, buscando cualquier servidor activo...")
                 mail_server = request.env['ir.mail_server'].search([
                     ('active', '=', True)
-                ], limit=1)
+                ], limit=1, order='sequence asc')
             
             if mail_server:
-                _logger.info(f"📬 Usando servidor de correo:")
-                _logger.info(f"   - Nombre: {mail_server.name}")
+                _logger.info(f"🔧 Asignando servidor a plantilla:")
+                _logger.info(f"   - Servidor: {mail_server.name}")
                 _logger.info(f"   - Host: {mail_server.smtp_host}")
-                _logger.info(f"   - Puerto: {mail_server.smtp_port}")
                 _logger.info(f"   - Usuario: {mail_server.smtp_user}")
-                _logger.info(f"   - Cifrado: {mail_server.smtp_encryption}")
+                
+                # Asignar servidor a la plantilla
+                template.sudo().write({'mail_server_id': mail_server.id})
+                return mail_server
             else:
-                _logger.error("❌ No hay servidores de correo configurados")
-                return
-
-            # CORRECCIÓN 2: Usar email del servidor, no del usuario
-            email_from = 'soporte@andescopiers.com.pe'  # ← FIJO, no dinámico
-            
-            # Destinatarios
-            recipients = ['verapolo@icloud.com']
-            cc_recipients = ['soporte@andescopiers.com.pe']
-            
-            _logger.info(f"📬 Configuración de correo CORREGIDA:")
-            _logger.info(f"   - De: {email_from} (FIJO)")  # ← Ya no usa request.env.user.email
-            _logger.info(f"   - Para: {recipients}")
-            _logger.info(f"   - CC: {cc_recipients}")
-            _logger.info(f"   - Servidor ID: {mail_server.id}")
-
-            # Preparar datos para el template
-            email_data = {
-                'employee_name': employee.name,
-                'employee_code': employee.barcode or 'No asignado',
-                'department': employee.department_id.name if employee.department_id else 'No asignado',
-                'leave_type': leave_type.name,
-                'date_from': leave.request_date_from.strftime('%d/%m/%Y'),
-                'date_to': leave.request_date_to.strftime('%d/%m/%Y'),
-                'duration': leave.number_of_days,
-                'request_date': datetime.now().strftime('%d/%m/%Y %H:%M'),
-                'notes': leave.notes or 'Sin observaciones',
-                'leave_id': leave.id,
-            }
-
-            # Determinar tipo de período
-            if leave.request_unit_half:
-                period_type = "Medio día - " + ("Mañana" if leave.request_date_from_period == 'am' else "Tarde")
-            elif leave.request_unit_hours:
-                period_type = f"Horas específicas ({leave.request_hour_from:.1f} - {leave.request_hour_to:.1f})"
-            else:
-                period_type = "Día completo"
-            
-            email_data['period_type'] = period_type
-            
-            _logger.info(f"📋 Datos del correo:")
-            for key, value in email_data.items():
-                _logger.info(f"   - {key}: {value}")
-
-            # Crear el cuerpo del correo
-            _logger.info("🎨 Generando template HTML...")
-            email_body = self._create_email_template(email_data)
-            _logger.info(f"   - Template generado: {len(email_body)} caracteres")
-
-            # CORRECCIÓN 3: Especificar servidor explícitamente
-            mail_values = {
-                'subject': f'Solicitud de Permiso - {employee.name} - {leave_type.name}',
-                'body_html': email_body,
-                'email_to': ', '.join(recipients),
-                'email_cc': ', '.join(cc_recipients),
-                'auto_delete': False,
-                'email_from': email_from,  # ← Email fijo del servidor
-                'mail_server_id': mail_server.id,  # ← CLAVE: Especificar servidor
-            }
-
-            # Adjuntar archivos si existen
-            attachments = request.env['ir.attachment'].search([
-                ('res_model', '=', 'hr.leave'),
-                ('res_id', '=', leave.id)
-            ])
-            
-            if attachments:
-                mail_values['attachment_ids'] = [(6, 0, attachments.ids)]
-                _logger.info(f"📎 Adjuntando archivos al correo:")
-                for att in attachments:
-                    _logger.info(f"   - {att.name} (ID: {att.id})")
-            else:
-                _logger.info("ℹ️ No hay archivos para adjuntar")
-
-            _logger.info("📤 Creando y enviando correo...")
-            _logger.info(f"   - Valores del mail: {mail_values}")
-            
-            # CORRECCIÓN 4: Usar contexto para forzar servidor
-            mail = request.env['mail.mail'].sudo().with_context(
-                mail_server_id=mail_server.id,  # ← Forzar servidor en contexto
-                default_mail_server_id=mail_server.id
-            ).create(mail_values)
-            
-            # CORRECCIÓN 5: Enviar con contexto específico
-            mail.with_context(
-                mail_server_id=mail_server.id
-            ).send()
-            
-            _logger.info(f"✅ Correo enviado exitosamente:")
-            _logger.info(f"   - Mail ID: {mail.id}")
-            _logger.info(f"   - Asunto: {mail.subject}")
-            _logger.info(f"   - Estado: {mail.state}")
-            _logger.info(f"   - Servidor usado: {mail.mail_server_id.name if mail.mail_server_id else 'Default'}")
-            _logger.info(f"   - Email desde: {mail.email_from}")
-
-        except Exception as e:
-            _logger.error("💥 ERROR AL ENVIAR CORREO:")
-            _logger.error(f"   - Error: {str(e)}", exc_info=True)
-            _logger.error(f"   - Tipo: {type(e).__name__}")
-            _logger.warning("⚠️ Continuando sin correo (no crítico)")
-
-    def _get_mail_server_config(self):
-        """Obtener configuración específica del servidor de correo"""
-        
-        _logger.info("🔧 === OBTENIENDO CONFIGURACIÓN DE SERVIDOR ===")
-        
-        try:
-            # Buscar servidor específico para soporte@andescopiers.com.pe
-            preferred_server = request.env['ir.mail_server'].search([
-                ('smtp_user', '=', 'soporte@andescopiers.com.pe'),
-                ('active', '=', True)
-            ], limit=1)
-            
-            if preferred_server:
-                _logger.info(f"✅ Servidor preferido encontrado:")
-                _logger.info(f"   - Nombre: {preferred_server.name}")
-                _logger.info(f"   - Host: {preferred_server.smtp_host}")
-                _logger.info(f"   - Puerto: {preferred_server.smtp_port}")
-                _logger.info(f"   - Usuario: {preferred_server.smtp_user}")
-                _logger.info(f"   - Cifrado: {preferred_server.smtp_encryption}")
-                _logger.info(f"   - Autenticación: {preferred_server.smtp_authentication}")
-                return preferred_server
-            
-            # Fallback: buscar cualquier servidor activo
-            fallback_server = request.env['ir.mail_server'].search([
-                ('active', '=', True)
-            ], limit=1, order='sequence asc')
-            
-            if fallback_server:
-                _logger.warning(f"⚠️ Usando servidor fallback:")
-                _logger.warning(f"   - Nombre: {fallback_server.name}")
-                _logger.warning(f"   - Host: {fallback_server.smtp_host}")
-                _logger.warning(f"   - Usuario: {fallback_server.smtp_user}")
-                return fallback_server
-            
-            _logger.error("❌ No se encontraron servidores de correo activos")
-            return False
-            
-        except Exception as e:
-            _logger.error(f"💥 Error obteniendo configuración de servidor: {str(e)}")
-            return False
-
-    def _send_notification_using_template(self, leave, employee, leave_type):
-        """Alternativa: Enviar correo usando plantilla de correo"""
-        
-        _logger.info("📧 === ENVIANDO CORREO CON PLANTILLA ===")
-        
-        try:
-            # Buscar o crear plantilla
-            template = request.env['mail.template'].search([
-                ('name', '=', 'Solicitud de Permiso - CORAPSAC'),
-                ('model_id.model', '=', 'hr.leave')
-            ], limit=1)
-            
-            if not template:
-                _logger.info("📝 Creando plantilla de correo...")
-                template = self._create_leave_email_template()
-            
-            if not template:
-                _logger.error("❌ No se pudo crear/obtener plantilla")
+                _logger.error("❌ No se encontraron servidores de correo activos")
                 return False
-            
-            _logger.info(f"✅ Usando plantilla: {template.name} (ID: {template.id})")
-            
-            # Obtener servidor de correo
-            mail_server = self._get_mail_server_config()
-            
-            # Configurar contexto con servidor específico
-            context = {
-                'default_mail_server_id': mail_server.id if mail_server else False,
-                'mail_server_id': mail_server.id if mail_server else False,
-                'force_send': True,
-                'mail_notify_author': False,
-            }
-            
-            _logger.info(f"📤 Enviando correo con template:")
-            _logger.info(f"   - Template ID: {template.id}")
-            _logger.info(f"   - Servidor: {mail_server.name if mail_server else 'Default'}")
-            _logger.info(f"   - Leave ID: {leave.id}")
-            _logger.info(f"   - Contexto: {context}")
-            
-            # Enviar correo usando la plantilla
-            result = template.with_context(**context).send_mail(
-                leave.id, 
-                force_send=True,
-                raise_exception=True
-            )
-            
-            _logger.info(f"✅ Correo enviado exitosamente usando plantilla")
-            _logger.info(f"   - Resultado: {result}")
-            return True
-            
+                
         except Exception as e:
-            _logger.error(f"💥 Error enviando correo con plantilla: {str(e)}", exc_info=True)
-            return False
-
-    def _create_leave_email_template(self):
-        """Crear plantilla de correo dinámicamente"""
-        
-        _logger.info("📧 === CREANDO PLANTILLA DE CORREO ===")
-        
-        try:
-            # Obtener model_id para hr.leave
-            model_id = request.env['ir.model'].search([
-                ('model', '=', 'hr.leave')
-            ], limit=1)
-            
-            if not model_id:
-                _logger.error("❌ No se encontró modelo hr.leave")
-                return False
-            
-            # Configurar servidor de correo específico
-            mail_server = self._get_mail_server_config()
-            
-            # Crear plantilla
-            template_vals = {
-                'name': 'Solicitud de Permiso - CORAPSAC',
-                'model_id': model_id.id,
-                'subject': 'Solicitud de Permiso - ${object.employee_id.name} - ${object.holiday_status_id.name}',
-                'email_from': 'soporte@andescopiers.com.pe',  # ← Email fijo
-                'email_to': 'verapolo@icloud.com',
-                'email_cc': 'soporte@andescopiers.com.pe',
-                'mail_server_id': mail_server.id if mail_server else False,  # ← Servidor específico
-                'body_html': '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; }
-            .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            .info-table th, .info-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            .info-table th { background-color: #f2f2f2; font-weight: bold; }
-            .footer { background: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; }
-            .important { background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 15px 0; }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h2>📋 Nueva Solicitud de Permiso</h2>
-            <p>Sistema de Gestión - CORAPSAC</p>
-        </div>
-        
-        <div class="content">
-            <div class="important">
-                <strong>⚠️ Atención:</strong> Se ha recibido una nueva solicitud de permiso.
-            </div>
-            
-            <h3>📊 Detalles de la Solicitud</h3>
-            <table class="info-table">
-                <tr><th>👤 Trabajador</th><td>${object.employee_id.name}</td></tr>
-                <tr><th>🆔 Código</th><td>${object.employee_id.barcode or 'No asignado'}</td></tr>
-                <tr><th>🏢 Departamento</th><td>${object.employee_id.department_id.name if object.employee_id.department_id else 'No asignado'}</td></tr>
-                <tr><th>📝 Tipo</th><td>${object.holiday_status_id.name}</td></tr>
-                <tr><th>📅 Desde</th><td>${object.request_date_from.strftime('%d/%m/%Y')}</td></tr>
-                <tr><th>📅 Hasta</th><td>${object.request_date_to.strftime('%d/%m/%Y')}</td></tr>
-                <tr><th>📊 Duración</th><td>${object.number_of_days} día(s)</td></tr>
-                <tr><th>📋 Descripción</th><td>${object.private_name or 'Sin descripción'}</td></tr>
-                % if object.notes:
-                <tr><th>📋 Observaciones</th><td>${object.notes}</td></tr>
-                % endif
-            </table>
-            
-            <div style="margin: 30px 0; padding: 20px; background: #e8f4fd; border-left: 4px solid #3498db;">
-                <h4>🔗 Ver en el Sistema</h4>
-                <p><a href="https://andessolutioncopiers.com/odoo/web#id=${object.id}&model=hr.leave&view_type=form">Abrir Solicitud</a></p>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p>Correo automático del Sistema de RRHH - CORAPSAC</p>
-            <p>No responder a este correo</p>
-        </div>
-    </body>
-    </html>
-                ''',
-                'auto_delete': True,
-                'use_default_to': False,
-            }
-            
-            # Crear la plantilla
-            _logger.info("💾 Creando plantilla en base de datos...")
-            template = request.env['mail.template'].sudo().create(template_vals)
-            
-            _logger.info(f"✅ Plantilla creada exitosamente:")
-            _logger.info(f"   - ID: {template.id}")
-            _logger.info(f"   - Nombre: {template.name}")
-            _logger.info(f"   - Servidor: {template.mail_server_id.name if template.mail_server_id else 'Default'}")
-            
-            return template
-            
-        except Exception as e:
-            _logger.error(f"💥 Error creando plantilla: {str(e)}", exc_info=True)
+            _logger.error(f"💥 Error configurando servidor: {str(e)}")
             return False
 
     def _get_friendly_error_message(self, technical_error):
@@ -1200,7 +1089,7 @@ class LeaveRequestController(http.Controller):
                         'date_from': leave.request_date_from.strftime('%d/%m/%Y'),
                         'date_to': leave.request_date_to.strftime('%d/%m/%Y'),
                         'state': leave.state,
-                        'type': leave.holiday_status_id.name
+                'type': leave.holiday_status_id.name
                     })
                 
                 result = {
