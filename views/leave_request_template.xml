@@ -964,7 +964,7 @@
                     const contentType = response.headers.get('content-type');
                     console.log(` - Content-Type: ${contentType}`);
 
-                    if (contentType && contentType.includes('application/json')) {
+                    if (contentType &amp;&amp; contentType.includes('application/json')) {
                     return response.json();
                     } else {
                     // Si no es JSON, leer como texto y mostrar error
