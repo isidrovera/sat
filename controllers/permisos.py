@@ -665,132 +665,132 @@ class LeaveRequestController(http.Controller):
         return attachment_ids
 
     def _send_notification_email(self, leave, employee, leave_type):
-    """Enviar correo de notificación usando servidor configurado"""
-    
-    _logger.info("📧 === ENVIANDO CORREO DE NOTIFICACIÓN ===")
-    
-    try:
-        # CORRECCIÓN 1: Buscar servidor de correo específico
-        mail_server = request.env['ir.mail_server'].search([
-            ('smtp_user', '=', 'soporte@andescopiers.com.pe'),
-            ('active', '=', True)
-        ], limit=1)
+        """Enviar correo de notificación usando servidor configurado"""
         
-        if not mail_server:
-            _logger.warning("⚠️ No se encontró servidor específico para soporte@andescopiers.com.pe")
-            # Fallback: buscar cualquier servidor activo
+        _logger.info("📧 === ENVIANDO CORREO DE NOTIFICACIÓN ===")
+        
+        try:
+            # CORRECCIÓN 1: Buscar servidor de correo específico
             mail_server = request.env['ir.mail_server'].search([
+                ('smtp_user', '=', 'soporte@andescopiers.com.pe'),
                 ('active', '=', True)
             ], limit=1)
-        
-        if mail_server:
-            _logger.info(f"📬 Usando servidor de correo:")
-            _logger.info(f"   - Nombre: {mail_server.name}")
-            _logger.info(f"   - Host: {mail_server.smtp_host}")
-            _logger.info(f"   - Puerto: {mail_server.smtp_port}")
-            _logger.info(f"   - Usuario: {mail_server.smtp_user}")
-            _logger.info(f"   - Cifrado: {mail_server.smtp_encryption}")
-        else:
-            _logger.error("❌ No hay servidores de correo configurados")
-            return
+            
+            if not mail_server:
+                _logger.warning("⚠️ No se encontró servidor específico para soporte@andescopiers.com.pe")
+                # Fallback: buscar cualquier servidor activo
+                mail_server = request.env['ir.mail_server'].search([
+                    ('active', '=', True)
+                ], limit=1)
+            
+            if mail_server:
+                _logger.info(f"📬 Usando servidor de correo:")
+                _logger.info(f"   - Nombre: {mail_server.name}")
+                _logger.info(f"   - Host: {mail_server.smtp_host}")
+                _logger.info(f"   - Puerto: {mail_server.smtp_port}")
+                _logger.info(f"   - Usuario: {mail_server.smtp_user}")
+                _logger.info(f"   - Cifrado: {mail_server.smtp_encryption}")
+            else:
+                _logger.error("❌ No hay servidores de correo configurados")
+                return
 
-        # CORRECCIÓN 2: Usar email del servidor, no del usuario
-        email_from = 'soporte@andescopiers.com.pe'  # ← FIJO, no dinámico
-        
-        # Destinatarios
-        recipients = ['verapolo@icloud.com']
-        cc_recipients = ['soporte@andescopiers.com.pe']
-        
-        _logger.info(f"📬 Configuración de correo CORREGIDA:")
-        _logger.info(f"   - De: {email_from} (FIJO)")  # ← Ya no usa request.env.user.email
-        _logger.info(f"   - Para: {recipients}")
-        _logger.info(f"   - CC: {cc_recipients}")
-        _logger.info(f"   - Servidor ID: {mail_server.id}")
+            # CORRECCIÓN 2: Usar email del servidor, no del usuario
+            email_from = 'soporte@andescopiers.com.pe'  # ← FIJO, no dinámico
+            
+            # Destinatarios
+            recipients = ['verapolo@icloud.com']
+            cc_recipients = ['soporte@andescopiers.com.pe']
+            
+            _logger.info(f"📬 Configuración de correo CORREGIDA:")
+            _logger.info(f"   - De: {email_from} (FIJO)")  # ← Ya no usa request.env.user.email
+            _logger.info(f"   - Para: {recipients}")
+            _logger.info(f"   - CC: {cc_recipients}")
+            _logger.info(f"   - Servidor ID: {mail_server.id}")
 
-        # Preparar datos para el template
-        email_data = {
-            'employee_name': employee.name,
-            'employee_code': employee.barcode or 'No asignado',
-            'department': employee.department_id.name if employee.department_id else 'No asignado',
-            'leave_type': leave_type.name,
-            'date_from': leave.request_date_from.strftime('%d/%m/%Y'),
-            'date_to': leave.request_date_to.strftime('%d/%m/%Y'),
-            'duration': leave.number_of_days,
-            'request_date': datetime.now().strftime('%d/%m/%Y %H:%M'),
-            'notes': leave.notes or 'Sin observaciones',
-            'leave_id': leave.id,
-        }
+            # Preparar datos para el template
+            email_data = {
+                'employee_name': employee.name,
+                'employee_code': employee.barcode or 'No asignado',
+                'department': employee.department_id.name if employee.department_id else 'No asignado',
+                'leave_type': leave_type.name,
+                'date_from': leave.request_date_from.strftime('%d/%m/%Y'),
+                'date_to': leave.request_date_to.strftime('%d/%m/%Y'),
+                'duration': leave.number_of_days,
+                'request_date': datetime.now().strftime('%d/%m/%Y %H:%M'),
+                'notes': leave.notes or 'Sin observaciones',
+                'leave_id': leave.id,
+            }
 
-        # Determinar tipo de período
-        if leave.request_unit_half:
-            period_type = "Medio día - " + ("Mañana" if leave.request_date_from_period == 'am' else "Tarde")
-        elif leave.request_unit_hours:
-            period_type = f"Horas específicas ({leave.request_hour_from:.1f} - {leave.request_hour_to:.1f})"
-        else:
-            period_type = "Día completo"
-        
-        email_data['period_type'] = period_type
-        
-        _logger.info(f"📋 Datos del correo:")
-        for key, value in email_data.items():
-            _logger.info(f"   - {key}: {value}")
+            # Determinar tipo de período
+            if leave.request_unit_half:
+                period_type = "Medio día - " + ("Mañana" if leave.request_date_from_period == 'am' else "Tarde")
+            elif leave.request_unit_hours:
+                period_type = f"Horas específicas ({leave.request_hour_from:.1f} - {leave.request_hour_to:.1f})"
+            else:
+                period_type = "Día completo"
+            
+            email_data['period_type'] = period_type
+            
+            _logger.info(f"📋 Datos del correo:")
+            for key, value in email_data.items():
+                _logger.info(f"   - {key}: {value}")
 
-        # Crear el cuerpo del correo
-        _logger.info("🎨 Generando template HTML...")
-        email_body = self._create_email_template(email_data)
-        _logger.info(f"   - Template generado: {len(email_body)} caracteres")
+            # Crear el cuerpo del correo
+            _logger.info("🎨 Generando template HTML...")
+            email_body = self._create_email_template(email_data)
+            _logger.info(f"   - Template generado: {len(email_body)} caracteres")
 
-        # CORRECCIÓN 3: Especificar servidor explícitamente
-        mail_values = {
-            'subject': f'Solicitud de Permiso - {employee.name} - {leave_type.name}',
-            'body_html': email_body,
-            'email_to': ', '.join(recipients),
-            'email_cc': ', '.join(cc_recipients),
-            'auto_delete': False,
-            'email_from': email_from,  # ← Email fijo del servidor
-            'mail_server_id': mail_server.id,  # ← CLAVE: Especificar servidor
-        }
+            # CORRECCIÓN 3: Especificar servidor explícitamente
+            mail_values = {
+                'subject': f'Solicitud de Permiso - {employee.name} - {leave_type.name}',
+                'body_html': email_body,
+                'email_to': ', '.join(recipients),
+                'email_cc': ', '.join(cc_recipients),
+                'auto_delete': False,
+                'email_from': email_from,  # ← Email fijo del servidor
+                'mail_server_id': mail_server.id,  # ← CLAVE: Especificar servidor
+            }
 
-        # Adjuntar archivos si existen
-        attachments = request.env['ir.attachment'].search([
-            ('res_model', '=', 'hr.leave'),
-            ('res_id', '=', leave.id)
-        ])
-        
-        if attachments:
-            mail_values['attachment_ids'] = [(6, 0, attachments.ids)]
-            _logger.info(f"📎 Adjuntando archivos al correo:")
-            for att in attachments:
-                _logger.info(f"   - {att.name} (ID: {att.id})")
-        else:
-            _logger.info("ℹ️ No hay archivos para adjuntar")
+            # Adjuntar archivos si existen
+            attachments = request.env['ir.attachment'].search([
+                ('res_model', '=', 'hr.leave'),
+                ('res_id', '=', leave.id)
+            ])
+            
+            if attachments:
+                mail_values['attachment_ids'] = [(6, 0, attachments.ids)]
+                _logger.info(f"📎 Adjuntando archivos al correo:")
+                for att in attachments:
+                    _logger.info(f"   - {att.name} (ID: {att.id})")
+            else:
+                _logger.info("ℹ️ No hay archivos para adjuntar")
 
-        _logger.info("📤 Creando y enviando correo...")
-        _logger.info(f"   - Valores del mail: {mail_values}")
-        
-        # CORRECCIÓN 4: Usar contexto para forzar servidor
-        mail = request.env['mail.mail'].sudo().with_context(
-            mail_server_id=mail_server.id,  # ← Forzar servidor en contexto
-            default_mail_server_id=mail_server.id
-        ).create(mail_values)
-        
-        # CORRECCIÓN 5: Enviar con contexto específico
-        mail.with_context(
-            mail_server_id=mail_server.id
-        ).send()
-        
-        _logger.info(f"✅ Correo enviado exitosamente:")
-        _logger.info(f"   - Mail ID: {mail.id}")
-        _logger.info(f"   - Asunto: {mail.subject}")
-        _logger.info(f"   - Estado: {mail.state}")
-        _logger.info(f"   - Servidor usado: {mail.mail_server_id.name if mail.mail_server_id else 'Default'}")
-        _logger.info(f"   - Email desde: {mail.email_from}")
+            _logger.info("📤 Creando y enviando correo...")
+            _logger.info(f"   - Valores del mail: {mail_values}")
+            
+            # CORRECCIÓN 4: Usar contexto para forzar servidor
+            mail = request.env['mail.mail'].sudo().with_context(
+                mail_server_id=mail_server.id,  # ← Forzar servidor en contexto
+                default_mail_server_id=mail_server.id
+            ).create(mail_values)
+            
+            # CORRECCIÓN 5: Enviar con contexto específico
+            mail.with_context(
+                mail_server_id=mail_server.id
+            ).send()
+            
+            _logger.info(f"✅ Correo enviado exitosamente:")
+            _logger.info(f"   - Mail ID: {mail.id}")
+            _logger.info(f"   - Asunto: {mail.subject}")
+            _logger.info(f"   - Estado: {mail.state}")
+            _logger.info(f"   - Servidor usado: {mail.mail_server_id.name if mail.mail_server_id else 'Default'}")
+            _logger.info(f"   - Email desde: {mail.email_from}")
 
-    except Exception as e:
-        _logger.error("💥 ERROR AL ENVIAR CORREO:")
-        _logger.error(f"   - Error: {str(e)}", exc_info=True)
-        _logger.error(f"   - Tipo: {type(e).__name__}")
-        _logger.warning("⚠️ Continuando sin correo (no crítico)")
+        except Exception as e:
+            _logger.error("💥 ERROR AL ENVIAR CORREO:")
+            _logger.error(f"   - Error: {str(e)}", exc_info=True)
+            _logger.error(f"   - Tipo: {type(e).__name__}")
+            _logger.warning("⚠️ Continuando sin correo (no crítico)")
 
     def _get_mail_server_config(self):
         """Obtener configuración específica del servidor de correo"""
