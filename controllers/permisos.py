@@ -330,6 +330,156 @@ class LeaveRequestController(http.Controller):
             _logger.error(f"💥 Error verificando solapamiento: {str(e)}", exc_info=True)
             return {'has_overlap': False, 'error': str(e)}
 
+    def _get_friendly_error_message(self, technical_error):
+        """Convertir errores técnicos a mensajes amigables para el usuario"""
+        
+        _logger.info(f"🔄 Convirtiendo error técnico: {technical_error}")
+        
+        error_lower = str(technical_error).lower()
+        
+        # Mapeo de errores comunes a mensajes amigables
+        if 'suficientes horas' in error_lower or 'sufficient hours' in error_lower:
+            return "No tiene suficientes horas disponibles para este tipo de permiso. Contacte a Recursos Humanos para verificar su saldo."
+            
+        elif 'asignación' in error_lower or 'allocation' in error_lower:
+            return "No tiene una asignación válida para este tipo de permiso. Contacte a Recursos Humanos."
+            
+        elif 'período' in error_lower or 'period' in error_lower:
+            return "Las fechas seleccionadas no son válidas para este tipo de permiso."
+            
+        elif 'solapamiento' in error_lower or 'overlap' in error_lower:
+            return "Ya tiene una solicitud de permiso en el período seleccionado. Por favor seleccione fechas diferentes."
+            
+        elif 'estado' in error_lower or 'state' in error_lower:
+            return "No se puede crear la solicitud en el estado actual. Contacte a su supervisor."
+            
+        elif 'empleado' in error_lower or 'employee' in error_lower:
+            return "Error con los datos del empleado. Contacte al administrador del sistema."
+            
+        elif 'fecha' in error_lower or 'date' in error_lower:
+            return "Las fechas ingresadas no son válidas. Verifique que la fecha de inicio sea anterior o igual a la fecha de fin."
+            
+        elif 'documento' in error_lower or 'document' in error_lower:
+            return "Este tipo de permiso requiere documentación de soporte. Por favor adjunte los documentos necesarios."
+            
+        elif 'balance' in error_lower or 'saldo' in error_lower:
+            return "No tiene suficiente saldo disponible para este tipo de permiso."
+            
+        elif 'aprobación' in error_lower or 'approval' in error_lower:
+            return "Error en el proceso de aprobación. Contacte a su supervisor."
+            
+        else:
+            # Error genérico pero amigable
+            return "No se pudo procesar su solicitud en este momento. Por favor verifique los datos ingresados o contacte a Recursos Humanos para asistencia."
+
+    def _validate_leave_availability(self, employee, leave_type, post):
+        """Validar disponibilidad de días/horas para el empleado"""
+        
+        _logger.info("⏱️ === VALIDANDO DISPONIBILIDAD ===")
+        
+        try:
+            # Si no requiere asignación, es válido
+            if not leave_type.requires_allocation:
+                _logger.info(f"✅ Tipo {leave_type.name} no requiere asignación")
+                return {'valid': True}
+            
+            _logger.info(f"🔍 Tipo {leave_type.name} requiere asignación, verificando...")
+            
+            # Calcular días solicitados
+            date_from = post.get('request_date_from')
+            date_to = post.get('request_date_to', date_from)
+            
+            _logger.info(f"📅 Período solicitado: {date_from} - {date_to}")
+            
+            # Crear un leave temporal para calcular duración
+            temp_vals = {
+                'employee_id': employee.id,
+                'holiday_status_id': leave_type.id,
+                'request_date_from': date_from,
+                'request_date_to': date_to,
+            }
+            
+            # Configurar tipo de unidad
+            if post.get('request_unit_half') == 'true':
+                temp_vals['request_unit_half'] = True
+                temp_vals['request_date_from_period'] = post.get('request_date_from_period', 'am')
+                _logger.info(f"⏰ Modo: Medio día ({temp_vals['request_date_from_period']})")
+                
+            elif post.get('request_unit_hours') == 'true':
+                temp_vals['request_unit_hours'] = True
+                hour_from = post.get('request_hour_from', '8:00')
+                hour_to = post.get('request_hour_to', '17:00')
+                
+                _logger.info(f"⏰ Modo: Horas específicas ({hour_from} - {hour_to})")
+                
+                if ':' in str(hour_from):
+                    h, m = str(hour_from).split(':')
+                    temp_vals['request_hour_from'] = float(h) + float(m)/60
+                else:
+                    temp_vals['request_hour_from'] = float(hour_from)
+                    
+                if ':' in str(hour_to):
+                    h, m = str(hour_to).split(':')
+                    temp_vals['request_hour_to'] = float(h) + float(m)/60
+                else:
+                    temp_vals['request_hour_to'] = float(hour_to)
+            else:
+                _logger.info("⏰ Modo: Día completo")
+            
+            # Crear leave temporal sin guardarlo para calcular duración
+            _logger.info("🧮 Calculando duración de la solicitud...")
+            temp_leave = request.env['hr.leave'].new(temp_vals)
+            requested_days = temp_leave.number_of_days
+            
+            _logger.info(f"📊 Días/horas solicitados: {requested_days}")
+            
+            # Buscar asignación disponible
+            _logger.info("🔍 Buscando asignaciones disponibles...")
+            allocation = request.env['hr.leave.allocation'].search([
+                ('employee_id', '=', employee.id),
+                ('holiday_status_id', '=', leave_type.id),
+                ('state', '=', 'validate'),
+                ('date_from', '<=', date_from),
+                ('date_to', '>=', date_to)
+            ], limit=1)
+            
+            if not allocation:
+                _logger.error(f"❌ No se encontró asignación válida para {leave_type.name}")
+                return {
+                    'valid': False,
+                    'message': f'No tiene una asignación válida para {leave_type.name}. Contacte a Recursos Humanos para solicitar una asignación.'
+                }
+            
+            _logger.info(f"✅ Asignación encontrada: {allocation.display_name}")
+            _logger.info(f"   - Días asignados: {allocation.number_of_days}")
+            _logger.info(f"   - Días tomados: {allocation.leaves_taken}")
+            
+            # Verificar días disponibles
+            available_days = allocation.number_of_days - allocation.leaves_taken
+            _logger.info(f"📊 Días disponibles: {available_days}")
+            
+            if requested_days > available_days:
+                _logger.error(f"❌ Días insuficientes: solicita {requested_days}, disponible {available_days}")
+                return {
+                    'valid': False,
+                    'message': f'No tiene suficientes días disponibles. Solicita: {requested_days} días, Disponible: {available_days} días. Saldo insuficiente para {leave_type.name}.'
+                }
+            
+            _logger.info("✅ Validación de disponibilidad exitosa")
+            return {
+                'valid': True,
+                'requested_days': requested_days,
+                'available_days': available_days,
+                'allocation_id': allocation.id
+            }
+            
+        except Exception as e:
+            _logger.error(f"💥 Error validando disponibilidad: {str(e)}", exc_info=True)
+            return {
+                'valid': False,
+                'message': f'Error al verificar disponibilidad. Contacte al administrador del sistema.'
+            }
+
     def _prepare_leave_values(self, post, employee, leave_type):
         """Preparar valores para crear la solicitud de permiso"""
         
