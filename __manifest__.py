@@ -61,6 +61,7 @@
         'data/correos_informes.xml',
         'data/correos_maquinas.xml',
         'data/correos_alquiler.xml',
+        'data/mail_permisos.xml',
         'data/correos_evaluaciones_tecnicos.xml',
         'views/sat_dashboard_menu.xml',
         'views/ventas.xml',
