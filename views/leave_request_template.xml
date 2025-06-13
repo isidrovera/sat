@@ -8,107 +8,139 @@
 
                 <!-- CSS y JS específicos -->
                 <t t-set="head">
-                    <meta name="viewport"
-                        content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
                     <!-- Tailwind CSS -->
                     <script src="https://cdn.tailwindcss.com"></script>
                     <!-- Font Awesome -->
-                    <link
-                        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-                        rel="stylesheet" />
+                    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+                    <!-- SweetAlert2 para modales bonitos -->
+                    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
                     <style>
                         .gradient-bg {
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                         }
 
                         .glass-effect {
-                        background: rgba(255, 255, 255, 0.95);
-                        backdrop-filter: blur(20px);
-                        border: 1px solid rgba(255, 255, 255, 0.2);
+                            background: rgba(255, 255, 255, 0.95);
+                            backdrop-filter: blur(20px);
+                            border: 1px solid rgba(255, 255, 255, 0.2);
                         }
 
                         .card-hover {
-                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                         }
 
                         .card-hover:hover {
-                        transform: translateY(-4px);
-                        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+                            transform: translateY(-4px);
+                            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
                         }
 
                         .input-focus {
-                        transition: all 0.3s ease;
+                            transition: all 0.3s ease;
                         }
 
                         .input-focus:focus {
-                        transform: scale(1.02);
-                        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                            transform: scale(1.02);
+                            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
                         }
 
                         .btn-primary {
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        transition: all 0.3s ease;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            transition: all 0.3s ease;
                         }
 
                         .btn-primary:hover {
-                        transform: translateY(-2px);
-                        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+                            transform: translateY(-2px);
+                            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
                         }
 
                         .period-card {
-                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                        cursor: pointer;
+                            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                            cursor: pointer;
                         }
 
                         .period-card:hover {
-                        transform: scale(1.02);
+                            transform: scale(1.02);
                         }
 
                         .period-card.active {
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: white;
-                        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
                         }
 
                         .loading-spinner {
-                        animation: spin 1s linear infinite;
+                            animation: spin 1s linear infinite;
                         }
 
                         @keyframes spin {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
+                            from { transform: rotate(0deg); }
+                            to { transform: rotate(360deg); }
                         }
 
                         .slide-up {
-                        animation: slideUp 0.3s ease-out;
+                            animation: slideUp 0.3s ease-out;
                         }
 
                         @keyframes slideUp {
-                        from {
-                        opacity: 0;
-                        transform: translateY(20px);
-                        }
-                        to {
-                        opacity: 1;
-                        transform: translateY(0);
-                        }
+                            from {
+                                opacity: 0;
+                                transform: translateY(20px);
+                            }
+                            to {
+                                opacity: 1;
+                                transform: translateY(0);
+                            }
                         }
 
                         body {
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        min-height: 100vh;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            min-height: 100vh;
                         }
 
                         /* Mobile optimizations */
                         @media (max-width: 768px) {
-                        .container {
-                        padding: 0 1rem;
+                            .container {
+                                padding: 0 1rem;
+                            }
+
+                            .glass-effect {
+                                margin: 0.5rem 0;
+                            }
                         }
 
-                        .glass-effect {
-                        margin: 0.5rem 0;
+                        /* Custom Alert Styles */
+                        .custom-alert {
+                            border-radius: 16px;
+                            border: none;
+                            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
                         }
+
+                        .custom-alert .swal2-title {
+                            font-size: 1.5rem;
+                            font-weight: 700;
+                        }
+
+                        .custom-alert .swal2-content {
+                            font-size: 1rem;
+                            line-height: 1.6;
+                        }
+
+                        .custom-alert .swal2-confirm {
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            border: none;
+                            border-radius: 12px;
+                            padding: 12px 24px;
+                            font-weight: 600;
+                        }
+
+                        .custom-alert .swal2-cancel {
+                            background: #6b7280;
+                            border: none;
+                            border-radius: 12px;
+                            padding: 12px 24px;
+                            font-weight: 600;
                         }
                     </style>
                 </t>
@@ -117,8 +149,7 @@
                     <!-- Mobile-first navigation bar -->
                     <nav class="glass-effect sticky top-0 z-50 px-4 py-3 mb-6">
                         <div class="flex items-center justify-between">
-                            <a href="/web"
-                                class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                            <a href="/web" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
                                 <i class="fas fa-arrow-left text-white text-xl"></i>
                             </a>
                             <h1 class="text-white font-bold text-lg">Solicitar Permiso</h1>
@@ -130,8 +161,7 @@
                         <!-- Employee info card -->
                         <div class="glass-effect rounded-2xl p-6 mb-6 card-hover slide-up">
                             <div class="flex items-center space-x-4">
-                                <div
-                                    class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                                <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
                                     <t t-if="employee.name">
                                         <t t-esc="employee.name[0]" />
                                     </t>
@@ -142,12 +172,10 @@
                                         <t t-esc="employee.name" />
                                     </h2>
                                     <p class="text-gray-600">
-                                        <t
-                                            t-esc="employee.department_id.name if employee.department_id else 'Sin departamento'" />
+                                        <t t-esc="employee.department_id.name if employee.department_id else 'Sin departamento'" />
                                     </p>
                                     <p class="text-sm text-gray-500">
-                                        <t
-                                            t-esc="employee.job_id.name if employee.job_id else 'Sin cargo'" />
+                                        <t t-esc="employee.job_id.name if employee.job_id else 'Sin cargo'" />
                                     </p>
                                 </div>
                                 <i class="fas fa-user-check text-green-500 text-2xl"></i>
@@ -155,19 +183,15 @@
                         </div>
 
                         <!-- Main form -->
-                        <form id="leaveRequestForm" class="space-y-6" enctype="multipart/form-data"
-                            method="POST" action="/leave/request/submit">
-                            <input type="hidden" name="csrf_token"
-                                t-att-value="request.csrf_token()" />
+                        <form id="leaveRequestForm" class="space-y-6" enctype="multipart/form-data" method="POST" action="/leave/request/submit">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()" />
 
                             <!-- Leave type selection -->
                             <div class="glass-effect rounded-2xl p-6 card-hover slide-up">
-                                <label
-                                    class="flex items-center text-lg font-semibold text-gray-800 mb-4">
-                                    <i class="fas fa-tags text-purple-500 mr-3"></i> Tipo de Permiso
-                                    * </label>
-                                <select id="holiday_status_id" name="holiday_status_id"
-                                    required="required"
+                                <label class="flex items-center text-lg font-semibold text-gray-800 mb-4">
+                                    <i class="fas fa-tags text-purple-500 mr-3"></i> Tipo de Permiso *
+                                </label>
+                                <select id="holiday_status_id" name="holiday_status_id" required="required"
                                     class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all input-focus bg-white">
                                     <option value="">Selecciona un tipo...</option>
                                     <t t-foreach="leave_types" t-as="leave_type">
@@ -182,28 +206,23 @@
 
                             <!-- Date selection -->
                             <div class="glass-effect rounded-2xl p-6 card-hover slide-up">
-                                <label
-                                    class="flex items-center text-lg font-semibold text-gray-800 mb-4">
-                                    <i class="fas fa-calendar-alt text-purple-500 mr-3"></i> Fechas
-                                    * </label>
+                                <label class="flex items-center text-lg font-semibold text-gray-800 mb-4">
+                                    <i class="fas fa-calendar-alt text-purple-500 mr-3"></i> Fechas *
+                                </label>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <!-- From date -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha
-                                            de inicio</label>
-                                        <input type="date" id="request_date_from"
-                                            name="request_date_from" required="required"
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de inicio</label>
+                                        <input type="date" id="request_date_from" name="request_date_from" required="required"
                                             t-att-min="today"
                                             class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all input-focus" />
                                     </div>
 
                                     <!-- To date -->
                                     <div id="dateToContainer">
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha
-                                            de fin</label>
-                                        <input type="date" id="request_date_to"
-                                            name="request_date_to"
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de fin</label>
+                                        <input type="date" id="request_date_to" name="request_date_to"
                                             t-att-min="today"
                                             class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all input-focus" />
                                     </div>
@@ -212,43 +231,34 @@
 
                             <!-- Period type selection -->
                             <div class="glass-effect rounded-2xl p-6 card-hover slide-up">
-                                <label
-                                    class="flex items-center text-lg font-semibold text-gray-800 mb-4">
-                                    <i class="fas fa-clock text-purple-500 mr-3"></i> Tipo de
-                                    período * </label>
+                                <label class="flex items-center text-lg font-semibold text-gray-800 mb-4">
+                                    <i class="fas fa-clock text-purple-500 mr-3"></i> Tipo de período *
+                                </label>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <!-- Full day -->
-                                    <div
-                                        class="period-card bg-white border-2 border-gray-200 rounded-xl p-4 text-center active"
-                                        data-period="full_day">
+                                    <div class="period-card bg-white border-2 border-gray-200 rounded-xl p-4 text-center active" data-period="full_day">
                                         <i class="fas fa-sun text-3xl mb-3 text-yellow-500"></i>
                                         <h4 class="font-semibold mb-1">Día Completo</h4>
                                         <p class="text-sm text-gray-600">Jornada completa</p>
                                     </div>
 
                                     <!-- Morning -->
-                                    <div
-                                        class="period-card bg-white border-2 border-gray-200 rounded-xl p-4 text-center"
-                                        data-period="morning">
+                                    <div class="period-card bg-white border-2 border-gray-200 rounded-xl p-4 text-center" data-period="morning">
                                         <i class="fas fa-sunrise text-3xl mb-3 text-orange-500"></i>
                                         <h4 class="font-semibold mb-1">Mañana</h4>
                                         <p class="text-sm text-gray-600">Solo mañana</p>
                                     </div>
 
                                     <!-- Afternoon -->
-                                    <div
-                                        class="period-card bg-white border-2 border-gray-200 rounded-xl p-4 text-center"
-                                        data-period="afternoon">
+                                    <div class="period-card bg-white border-2 border-gray-200 rounded-xl p-4 text-center" data-period="afternoon">
                                         <i class="fas fa-sunset text-3xl mb-3 text-red-500"></i>
                                         <h4 class="font-semibold mb-1">Tarde</h4>
                                         <p class="text-sm text-gray-600">Solo tarde</p>
                                     </div>
 
                                     <!-- Custom hours -->
-                                    <div
-                                        class="period-card bg-white border-2 border-gray-200 rounded-xl p-4 text-center"
-                                        data-period="custom_hours">
+                                    <div class="period-card bg-white border-2 border-gray-200 rounded-xl p-4 text-center" data-period="custom_hours">
                                         <i class="fas fa-clock text-3xl mb-3 text-blue-500"></i>
                                         <h4 class="font-semibold mb-1">Personalizado</h4>
                                         <p class="text-sm text-gray-600">Horas específicas</p>
@@ -256,35 +266,26 @@
                                 </div>
 
                                 <!-- Hidden inputs for period data -->
-                                <input type="hidden" id="request_unit_half" name="request_unit_half"
-                                    value="" />
-                                <input type="hidden" id="request_unit_hours"
-                                    name="request_unit_hours" value="" />
-                                <input type="hidden" id="request_date_from_period"
-                                    name="request_date_from_period" value="" />
+                                <input type="hidden" id="request_unit_half" name="request_unit_half" value="" />
+                                <input type="hidden" id="request_unit_hours" name="request_unit_hours" value="" />
+                                <input type="hidden" id="request_date_from_period" name="request_date_from_period" value="" />
                             </div>
 
                             <!-- Custom hours container (hidden by default) -->
-                            <div id="hoursContainer"
-                                class="glass-effect rounded-2xl p-6 card-hover slide-up hidden">
-                                <label
-                                    class="flex items-center text-lg font-semibold text-gray-800 mb-4">
-                                    <i class="fas fa-stopwatch text-purple-500 mr-3"></i> Horario
-                                    Específico </label>
+                            <div id="hoursContainer" class="glass-effect rounded-2xl p-6 card-hover slide-up hidden">
+                                <label class="flex items-center text-lg font-semibold text-gray-800 mb-4">
+                                    <i class="fas fa-stopwatch text-purple-500 mr-3"></i> Horario Específico
+                                </label>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Hora
-                                            de inicio</label>
-                                        <input type="time" id="request_hour_from"
-                                            name="request_hour_from" value="08:00"
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Hora de inicio</label>
+                                        <input type="time" id="request_hour_from" name="request_hour_from" value="08:00"
                                             class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all input-focus" />
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Hora
-                                            de fin</label>
-                                        <input type="time" id="request_hour_to"
-                                            name="request_hour_to" value="17:00"
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Hora de fin</label>
+                                        <input type="time" id="request_hour_to" name="request_hour_to" value="17:00"
                                             class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all input-focus" />
                                     </div>
                                 </div>
@@ -292,46 +293,39 @@
 
                             <!-- Description -->
                             <div class="glass-effect rounded-2xl p-6 card-hover slide-up">
-                                <label
-                                    class="flex items-center text-lg font-semibold text-gray-800 mb-4">
-                                    <i class="fas fa-edit text-purple-500 mr-3"></i> Descripción </label>
-                                <textarea id="private_name" name="private_name" rows="3"
+                                <label class="flex items-center text-lg font-semibold text-gray-800 mb-4">
+                                    <i class="fas fa-edit text-purple-500 mr-3"></i> Descripción *
+                                </label>
+                                <textarea id="private_name" name="private_name" rows="3" required="required"
                                     placeholder="Describe brevemente el motivo de tu solicitud..."
                                     class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all input-focus resize-none"></textarea>
                             </div>
 
                             <!-- Additional notes -->
                             <div class="glass-effect rounded-2xl p-6 card-hover slide-up">
-                                <label
-                                    class="flex items-center text-lg font-semibold text-gray-800 mb-4">
-                                    <i class="fas fa-sticky-note text-purple-500 mr-3"></i> Notas
-                                    Adicionales </label>
+                                <label class="flex items-center text-lg font-semibold text-gray-800 mb-4">
+                                    <i class="fas fa-sticky-note text-purple-500 mr-3"></i> Notas Adicionales
+                                </label>
                                 <textarea id="notes" name="notes" rows="2"
                                     placeholder="Información adicional (opcional)..."
                                     class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all input-focus resize-none"></textarea>
                             </div>
 
                             <!-- File attachments (conditional) -->
-                            <div id="attachmentContainer"
-                                class="glass-effect rounded-2xl p-6 card-hover slide-up hidden">
-                                <label
-                                    class="flex items-center text-lg font-semibold text-gray-800 mb-4">
-                                    <i class="fas fa-paperclip text-purple-500 mr-3"></i> Documentos
-                                    de Respaldo </label>
+                            <div id="attachmentContainer" class="glass-effect rounded-2xl p-6 card-hover slide-up hidden">
+                                <label class="flex items-center text-lg font-semibold text-gray-800 mb-4">
+                                    <i class="fas fa-paperclip text-purple-500 mr-3"></i> Documentos de Respaldo
+                                </label>
 
-                                <div
-                                    class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all"
+                                <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all"
                                     onclick="document.getElementById('file_input').click()">
                                     <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
                                     <p class="text-lg text-gray-600 mb-2">Toca para subir archivos</p>
-                                    <p class="text-sm text-gray-500">PDF, Word, imágenes (máx. 5MB
-                                        cada uno)</p>
+                                    <p class="text-sm text-gray-500">PDF, Word, imágenes (máx. 5MB cada uno)</p>
                                 </div>
 
-                                <input type="file" id="file_input" name="attachment_1"
-                                    multiple="multiple"
-                                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-                                    style="display: none;" />
+                                <input type="file" id="file_input" name="attachment_1" multiple="multiple"
+                                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif" style="display: none;" />
 
                                 <div id="file_list" class="mt-4 space-y-2"></div>
                             </div>
@@ -339,16 +333,16 @@
                             <!-- Submit buttons -->
                             <div class="sticky bottom-0 glass-effect rounded-t-2xl p-6 -mx-4">
                                 <div class="flex flex-col sm:flex-row gap-4">
-                                    <a href="/web"
-                                        class="flex-1 py-4 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all text-center">
-                                        <i class="fas fa-times mr-2"></i> Cancelar </a>
-                                    <button type="submit"
-                                        class="flex-1 py-4 px-6 btn-primary text-white font-semibold rounded-xl shadow-lg">
+                                    <a href="/web" class="flex-1 py-4 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all text-center">
+                                        <i class="fas fa-times mr-2"></i> Cancelar
+                                    </a>
+                                    <button type="submit" class="flex-1 py-4 px-6 btn-primary text-white font-semibold rounded-xl shadow-lg">
                                         <span class="loading-spinner hidden">
                                             <i class="fas fa-spinner mr-2"></i>
                                         </span>
                                         <span class="submit-text">
-                                            <i class="fas fa-paper-plane mr-2"></i> Enviar Solicitud </span>
+                                            <i class="fas fa-paper-plane mr-2"></i> Enviar Solicitud
+                                        </span>
                                     </button>
                                 </div>
                             </div>
@@ -358,14 +352,30 @@
                     <!-- Toast notification container -->
                     <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
                 </div>
-
-                <!-- JavaScript -->
+                <!-- JavaScript completo -->
                 <script>
-                    &lt;script&gt;
-                    document.addEventListener('DOMContentLoaded', function() {
+                //<![CDATA[
+                document.addEventListener('DOMContentLoaded', function() {
                     console.log('🚀 === INICIANDO SISTEMA DE PERMISOS ===');
-                    console.log('📅 Fecha actual:', new Date().toLocaleString());
-                    console.log('🌐 URL actual:', window.location.href);
+                    
+                    // Configurar SweetAlert2 con estilos personalizados
+                    const swalConfig = {
+                        customClass: {
+                            container: 'custom-alert',
+                            popup: 'custom-alert',
+                            title: 'custom-alert',
+                            content: 'custom-alert',
+                            confirmButton: 'custom-alert',
+                            cancelButton: 'custom-alert'
+                        },
+                        buttonsStyling: false,
+                        showClass: {
+                            popup: 'animate__animated animate__fadeInDown animate__faster'
+                        },
+                        hideClass: {
+                            popup: 'animate__animated animate__fadeOutUp animate__faster'
+                        }
+                    };
 
                     // Elements
                     const periodCards = document.querySelectorAll('.period-card');
@@ -377,1101 +387,495 @@
                     const fileList = document.getElementById('file_list');
                     const form = document.getElementById('leaveRequestForm');
 
-                    console.log('🔍 Elementos encontrados:');
-                    console.log(' 📋 Cards de período:', periodCards.length);
-                    console.log(' ⏰ Contenedor horas:', hoursContainer ? 'Sí' : 'No');
-                    console.log(' 📅 Contenedor fecha hasta:', dateToContainer ? 'Sí' : 'No');
-                    console.log(' 📎 Contenedor adjuntos:', attachmentContainer ? 'Sí' : 'No');
-                    console.log(' 📝 Select tipo permiso:', holidayStatusSelect ? 'Sí' : 'No');
-                    console.log(' 📁 Input archivos:', fileInput ? 'Sí' : 'No');
-                    console.log(' 📋 Formulario:', form ? 'Sí' : 'No');
+                    // Función para convertir errores técnicos a mensajes amigables
+                    function getFriendlyErrorMessage(errorData) {
+                        console.log('🔄 Procesando error:', errorData);
+                        
+                        const errorCode = errorData.error_code || 'UNKNOWN';
+                        const message = errorData.error || errorData.message || 'Error desconocido';
+                        const suggestion = errorData.suggestion || 'Contacta al administrador del sistema.';
+                        
+                        const errorMappings = {
+                            'EMPLOYEE_NOT_FOUND': {
+                                title: '👤 Perfil Incompleto',
+                                icon: '👤',
+                                message: 'Tu perfil de empleado no está configurado correctamente.',
+                                suggestion: 'Contacta al administrador del sistema para configurar tu perfil de empleado.'
+                            },
+                            'VALIDATION_ERROR': {
+                                title: '📋 Datos Incompletos',
+                                icon: '📋',
+                                message: message,
+                                suggestion: 'Verifica que todos los campos requeridos estén completados correctamente.'
+                            },
+                            'INVALID_LEAVE_TYPE': {
+                                title: '📝 Tipo de Permiso Inválido',
+                                icon: '📝',
+                                message: 'El tipo de permiso seleccionado no es válido.',
+                                suggestion: 'Selecciona un tipo de permiso válido de la lista disponible.'
+                            },
+                            'DATE_OVERLAP': {
+                                title: '📅 Conflicto de Fechas',
+                                icon: '⚠️',
+                                message: message,
+                                suggestion: 'Selecciona fechas diferentes o cancela las solicitudes existentes.',
+                                showDetails: true,
+                                details: errorData.details
+                            },
+                            'INSUFFICIENT_BALANCE': {
+                                title: '💰 Saldo Insuficiente',
+                                icon: '💰',
+                                message: message,
+                                suggestion: 'Contacta a Recursos Humanos para verificar tu saldo de permisos o solicitar una asignación adicional.'
+                            },
+                            'INTERNAL_ERROR': {
+                                title: '🔧 Error del Sistema',
+                                icon: '🔧',
+                                message: 'Ocurrió un error interno en el sistema.',
+                                suggestion: 'Por favor intenta nuevamente. Si el problema persiste, contacta al administrador del sistema.'
+                            }
+                        };
+                        
+                        return errorMappings[errorCode] || {
+                            title: '❌ Error Inesperado',
+                            icon: '❌',
+                            message: message,
+                            suggestion: suggestion
+                        };
+                    }
+
+                    // Función mejorada para mostrar errores con SweetAlert2
+                    function showErrorModal(errorData, technicalError) {
+                        console.log('🎨 Mostrando modal de error mejorado');
+                        
+                        const friendlyError = getFriendlyErrorMessage(errorData);
+                        
+                        let htmlContent = `
+                            <div class="text-left">
+                                <div class="flex items-center mb-6">
+                                    <div class="flex-shrink-0 w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                                        <span class="text-3xl">${friendlyError.icon}</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xl font-bold text-gray-900">${friendlyError.title}</h3>
+                                        <p class="text-sm text-gray-500">Solicitud de permiso</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                    <p class="text-red-800 font-medium">${friendlyError.message}</p>
+                                </div>
+                                
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <div class="flex items-start">
+                                        <div class="flex-shrink-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                                            <span class="text-white text-sm">💡</span>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-semibold text-blue-900 mb-1">¿Qué puedes hacer?</h4>
+                                            <p class="text-blue-800 text-sm">${friendlyError.suggestion}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                        `;
+                        
+                        // Agregar detalles específicos para conflictos de fechas
+                        if (friendlyError.showDetails && friendlyError.details) {
+                            htmlContent += `
+                                <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                    <h4 class="font-semibold text-yellow-900 mb-3">📋 Solicitudes en conflicto:</h4>
+                                    <div class="space-y-2">
+                            `;
+                            
+                            friendlyError.details.forEach(function(leave, index) {
+                                const stateText = {
+                                    'confirm': 'Pendiente de Aprobación',
+                                    'validate1': 'Primera Aprobación',
+                                    'validate': 'Aprobado'
+                                }[leave.state] || leave.state;
+                                
+                                htmlContent += `
+                                    <div class="bg-white border border-yellow-300 rounded p-3">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <p class="font-medium text-gray-800">${leave.type}</p>
+                                                <p class="text-sm text-gray-600">Del ${leave.date_from} al ${leave.date_to}</p>
+                                            </div>
+                                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${stateText}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            
+                            htmlContent += `
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Agregar información técnica si está disponible
+                        if (technicalError) {
+                            htmlContent += `
+                                <details class="mt-4">
+                                    <summary class="cursor-pointer text-gray-600 font-medium">🔧 Información técnica</summary>
+                                    <div class="mt-2 p-3 bg-gray-800 rounded text-gray-300 text-xs font-mono break-all">
+                                        ${technicalError}
+                                    </div>
+                                </details>
+                            `;
+                        }
+                        
+                        htmlContent += '</div>';
+                        
+                        Swal.fire({
+                            ...swalConfig,
+                            icon: 'error',
+                            title: false, // No mostrar título por defecto
+                            html: htmlContent,
+                            confirmButtonText: 'Entendido',
+                            allowOutsideClick: false,
+                            allowEscapeKey: true,
+                            customClass: {
+                                ...swalConfig.customClass,
+                                htmlContainer: 'text-left'
+                            }
+                        });
+                    }
 
                     // Period selection
-                    periodCards.forEach(function(card, index) {
-                    console.log(`📋 Configurando card ${index + 1}: ${card.dataset.period}`);
-                    card.addEventListener('click', function() {
-                    console.log('🖱️ === SELECCIÓN DE PERÍODO ===');
-                    console.log(` - Período seleccionado: ${this.dataset.period}`);
-                    periodCards.forEach(function(c) {
-                    c.classList.remove('active');
-                    }
+                    periodCards.forEach(function(card) {
+                        card.addEventListener('click', function() {
+                            console.log('🖱️ Período seleccionado:', this.dataset.period);
+                            
+                            periodCards.forEach(function(c) {
+                                c.classList.remove('active');
+                            });
+                            this.classList.add('active');
 
-                    // Función para convertir errores técnicos a mensajes amigables
-                    function getFriendlyErrorMessage(technicalError) {
-                    console.log(`🔄 Procesando error: ${technicalError}`);
+                            // Add touch feedback
+                            this.style.transform = 'scale(0.95)';
+                            const self = this;
+                            setTimeout(function() {
+                                self.style.transform = '';
+                            }, 150);
 
-                    const error = technicalError.toLowerCase();
-
-                    if (error.includes('suficientes horas') || error.includes('sufficient hours')) {
-                    return {
-                    title: '❌ Saldo Insuficiente',
-                    message: 'No tienes suficientes horas disponibles para este tipo de permiso.',
-                    suggestion: 'Contacta a Recursos Humanos para verificar tu saldo disponible.',
-                    icon: '⏰'
-                    };
-                    }
-
-                    if (error.includes('asignación') || error.includes('allocation')) {
-                    return {
-                    title: '📋 Sin Asignación',
-                    message: 'No tienes una asignación válida para este tipo de permiso.',
-                    suggestion: 'Solicita a Recursos Humanos que te asigne días para este tipo de
-                    permiso.',
-                    icon: '📝'
-                    };
-                    }
-
-                    if (error.includes('solapamiento') || error.includes('conflicto')) {
-                    return {
-                    title: '⚠️ Conflicto de Fechas',
-                    message: 'Ya tienes una solicitud de permiso en el período seleccionado.',
-                    suggestion: 'Selecciona fechas diferentes o cancela las solicitudes
-                    existentes.',
-                    icon: '📅'
-                    };
-                    }
-
-                    if (error.includes('saldo') || error.includes('balance')) {
-                    return {
-                    title: '💰 Saldo Insuficiente',
-                    message: 'No tienes suficiente saldo disponible para este tipo de permiso.',
-                    suggestion: 'Verifica tu saldo disponible o solicita una asignación adicional.',
-                    icon: '📊'
-                    };
-                    }
-
-                    // Error genérico
-                    return {
-                    title: '❌ Error en la Solicitud',
-                    message: 'No se pudo procesar tu solicitud en este momento.',
-                    suggestion: 'Verifica los datos ingresados o contacta a Recursos Humanos.',
-                    icon: '🚨'
-                    };
-                    }
-
-                    // Modal de error bonito
-                    function showErrorModal(errorInfo, technicalError) {
-                    console.log('🎨 Mostrando modal de error bonito');
-
-                    // Crear overlay
-                    const overlay = document.createElement('div');
-                    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center
-                    justify-center z-50';
-                    overlay.style.zIndex = '9999';
-
-                    // Crear modal
-                    const modal = document.createElement('div');
-                    modal.className = 'bg-white rounded-2xl shadow-2xl max-w-md mx-4 transform
-                    transition-all duration-300 scale-95';
-
-                    modal.innerHTML = `
-                    &lt;div class="relative p-8 bg-gradient-to-br from-white to-gray-50"&gt;
-                    &lt;!-- Header con icono --&gt;
-                    &lt;div class="flex items-center mb-6"&gt;
-                    &lt;div class="flex-shrink-0 w-16 h-16 bg-red-100 rounded-full flex items-center
-                    justify-center mr-4"&gt;
-                    &lt;span class="text-3xl"&gt;${errorInfo.icon}&lt;/span&gt;
-                    &lt;/div&gt;
-                    &lt;div&gt;
-                    &lt;h3 class="text-2xl font-bold text-gray-900
-                    mb-1"&gt;${errorInfo.title}&lt;/h3&gt;
-                    &lt;p class="text-sm text-gray-500"&gt;Solicitud de permiso&lt;/p&gt;
-                    &lt;/div&gt;
-                    &lt;/div&gt;
-
-                    &lt;!-- Mensaje principal --&gt;
-                    &lt;div class="mb-6"&gt;
-                    &lt;div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4"&gt;
-                    &lt;p class="text-red-800 font-medium mb-2"&gt;${errorInfo.message}&lt;/p&gt;
-                    &lt;/div&gt;
-
-                    &lt;!-- Sugerencia --&gt;
-                    &lt;div class="bg-blue-50 border border-blue-200 rounded-xl p-4"&gt;
-                    &lt;div class="flex items-start"&gt;
-                    &lt;div class="flex-shrink-0 w-6 h-6 bg-blue-500 rounded-full flex items-center
-                    justify-center mr-3 mt-0.5"&gt;
-                    &lt;span class="text-white text-sm font-bold"&gt;💡&lt;/span&gt;
-                    &lt;/div&gt;
-                    &lt;div&gt;
-                    &lt;h4 class="font-semibold text-blue-900 mb-1"&gt;¿Qué puedes hacer?&lt;/h4&gt;
-                    &lt;p class="text-blue-800 text-sm"&gt;${errorInfo.suggestion}&lt;/p&gt;
-                    &lt;/div&gt;
-                    &lt;/div&gt;
-                    &lt;/div&gt;
-                    &lt;/div&gt;
-
-                    &lt;!-- Botones --&gt;
-                    &lt;div class="flex space-x-3"&gt;
-                    &lt;button id="closeErrorModal" class="flex-1 bg-gray-600 hover:bg-gray-700
-                    text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200
-                    transform hover:scale-105"&gt;
-                    ✕ Cerrar
-                    &lt;/button&gt;
-                    &lt;button id="showTechnicalError" class="flex-1 bg-blue-600 hover:bg-blue-700
-                    text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200
-                    transform hover:scale-105"&gt;
-                    🔧 Ver Detalles
-                    &lt;/button&gt;
-                    &lt;/div&gt;
-
-                    &lt;!-- Error técnico (inicialmente oculto) --&gt;
-                    &lt;div id="technicalErrorDiv" class="hidden mt-6 p-4 bg-gray-800
-                    rounded-xl"&gt;
-                    &lt;h5 class="text-white font-semibold mb-2"&gt;🔧 Información
-                    Técnica:&lt;/h5&gt;
-                    &lt;p class="text-gray-300 text-xs font-mono
-                    break-all"&gt;${technicalError}&lt;/p&gt;
-                    &lt;/div&gt;
-
-                    &lt;!-- Botón cerrar (X) --&gt;
-                    &lt;button class="absolute top-4 right-4 text-gray-400 hover:text-gray-600
-                    text-2xl font-bold"
-                    onclick="document.getElementById('closeErrorModal').click()"&gt;
-                    ×
-                    &lt;/button&gt;
-                    &lt;/div&gt;
-                    `;
-
-                    overlay.appendChild(modal);
-                    document.body.appendChild(overlay);
-
-                    // Animar entrada
-                    setTimeout(function() {
-                    modal.style.transform = 'scale(1)';
-                    }, 10);
-
-                    // Event listeners
-                    document.getElementById('closeErrorModal').onclick = function() {
-                    console.log('🗑️ Cerrando modal de error');
-                    overlay.style.opacity = '0';
-                    modal.style.transform = 'scale(0.95)';
-                    setTimeout(function() {
-                    document.body.removeChild(overlay);
-                    }, 300);
-                    };
-
-                    document.getElementById('showTechnicalError').onclick = function() {
-                    console.log('🔧 Mostrando error técnico');
-                    const techDiv = document.getElementById('technicalErrorDiv');
-                    if (techDiv.classList.contains('hidden')) {
-                    techDiv.classList.remove('hidden');
-                    this.textContent = 'Ocultar Detalles';
-                    } else {
-                    techDiv.classList.add('hidden');
-                    this.textContent = 'Ver Detalles';
-                    }
-                    };
-
-                    // Cerrar con ESC
-                    const escapeHandler = function(e) {
-                    if (e.key === 'Escape') {
-                    document.getElementById('closeErrorModal').click();
-                    document.removeEventListener('keydown', escapeHandler);
-                    }
-                    };
-                    document.addEventListener('keydown', escapeHandler);
-                    });
-                    this.classList.add('active');
-
-                    // Add touch feedback
-                    this.style.transform = 'scale(0.95)';
-                    const self = this;
-                    setTimeout(function() {
-                    self.style.transform = '';
-                    }, 150);
-
-                    const period = this.dataset.period;
-                    console.log(` - Llamando handlePeriodChange con: ${period}`);
-                    handlePeriodChange(period);
-                    });
+                            handlePeriodChange(this.dataset.period);
+                        });
                     });
 
                     function handlePeriodChange(period) {
-                    console.log('⚙️ === MANEJANDO CAMBIO DE PERÍODO ===');
-                    console.log(` - Período: ${period}`);
+                        console.log('⚙️ Manejando cambio de período:', period);
 
-                    // Reset all hidden inputs
-                    document.getElementById('request_unit_half').value = '';
-                    document.getElementById('request_unit_hours').value = '';
-                    document.getElementById('request_date_from_period').value = '';
+                        // Reset all hidden inputs
+                        document.getElementById('request_unit_half').value = '';
+                        document.getElementById('request_unit_hours').value = '';
+                        document.getElementById('request_date_from_period').value = '';
 
-                    console.log(' - Inputs ocultos reseteados');
+                        switch(period) {
+                            case 'full_day':
+                                dateToContainer.classList.remove('hidden');
+                                hoursContainer.classList.add('hidden');
+                                break;
 
-                    switch(period) {
-                    case 'full_day':
-                    console.log(' 📅 Configurando: DÍA COMPLETO');
-                    dateToContainer.classList.remove('hidden');
-                    hoursContainer.classList.add('hidden');
-                    console.log(' - Mostrando contenedor fecha hasta');
-                    console.log(' - Ocultando contenedor horas');
-                    break;
+                            case 'morning':
+                                document.getElementById('request_unit_half').value = 'true';
+                                document.getElementById('request_date_from_period').value = 'am';
+                                dateToContainer.classList.add('hidden');
+                                hoursContainer.classList.add('hidden');
+                                updateDateTo();
+                                break;
 
-                    case 'morning':
-                    console.log(' 🌅 Configurando: MAÑANA');
-                    document.getElementById('request_unit_half').value = 'true';
-                    document.getElementById('request_date_from_period').value = 'am';
-                    dateToContainer.classList.add('hidden');
-                    hoursContainer.classList.add('hidden');
-                    updateDateTo();
-                    console.log(' - request_unit_half = true');
-                    console.log(' - request_date_from_period = am');
-                    break;
+                            case 'afternoon':
+                                document.getElementById('request_unit_half').value = 'true';
+                                document.getElementById('request_date_from_period').value = 'pm';
+                                dateToContainer.classList.add('hidden');
+                                hoursContainer.classList.add('hidden');
+                                updateDateTo();
+                                break;
 
-                    case 'afternoon':
-                    console.log(' 🌆 Configurando: TARDE');
-                    document.getElementById('request_unit_half').value = 'true';
-                    document.getElementById('request_date_from_period').value = 'pm';
-                    dateToContainer.classList.add('hidden');
-                    hoursContainer.classList.add('hidden');
-                    updateDateTo();
-                    console.log(' - request_unit_half = true');
-                    console.log(' - request_date_from_period = pm');
-                    break;
-
-                    case 'custom_hours':
-                    console.log(' ⏰ Configurando: HORAS PERSONALIZADAS');
-                    document.getElementById('request_unit_hours').value = 'true';
-                    dateToContainer.classList.add('hidden');
-                    hoursContainer.classList.remove('hidden');
-                    updateDateTo();
-                    console.log(' - request_unit_hours = true');
-                    console.log(' - Mostrando contenedor horas');
-                    break;
-                    }
-
-                    console.log('✅ Cambio de período completado');
+                            case 'custom_hours':
+                                document.getElementById('request_unit_hours').value = 'true';
+                                dateToContainer.classList.add('hidden');
+                                hoursContainer.classList.remove('hidden');
+                                updateDateTo();
+                                break;
+                        }
                     }
 
                     function updateDateTo() {
-                    console.log('📅 === ACTUALIZANDO FECHA HASTA ===');
-                    const dateFrom = document.getElementById('request_date_from').value;
-                    console.log(` - Fecha desde: ${dateFrom}`);
-
-                    if (dateFrom) {
-                    document.getElementById('request_date_to').value = dateFrom;
-                    console.log(` - Fecha hasta actualizada a: ${dateFrom}`);
-                    } else {
-                    console.log(' - No hay fecha desde, sin actualizar');
-                    }
-                    }
-
-                    // Auto-update date_to when date_from changes
-                    document.getElementById('request_date_from').addEventListener('change',
-                    function() {
-                    console.log('📅 === CAMBIO EN FECHA DESDE ===');
-                    console.log(` - Nueva fecha: ${this.value}`);
-
-                    const activeCard = document.querySelector('.period-card.active');
-                    if (activeCard &amp;&amp; ['morning', 'afternoon',
-                    'custom_hours'].includes(activeCard.dataset.period)) {
-                    console.log(` - Card activo: ${activeCard.dataset.period}, actualizando fecha
-                    hasta`);
-                    updateDateTo();
-                    }
-
-                    // Check for overlap when date changes
-                    console.log(' - Verificando solapamiento...');
-                    checkOverlapOnDateChange();
-                    });
-
-                    // Check overlap when date_to changes
-                    document.getElementById('request_date_to').addEventListener('change', function()
-                    {
-                    console.log('📅 === CAMBIO EN FECHA HASTA ===');
-                    console.log(` - Nueva fecha hasta: ${this.value}`);
-                    console.log(' - Verificando solapamiento...');
-                    checkOverlapOnDateChange();
-                    });
-
-                    // Function to check overlap when dates change
-                    function checkOverlapOnDateChange() {
-                    console.log('🔍 === VERIFICANDO SOLAPAMIENTO EN CAMBIO DE FECHA ===');
-
-                    const dateFrom = document.getElementById('request_date_from').value;
-                    const dateTo = document.getElementById('request_date_to').value || dateFrom;
-                    console.log(` - Fecha desde: ${dateFrom}`);
-                    console.log(` - Fecha hasta: ${dateTo}`);
-
-                    if (dateFrom) {
-                    console.log(' - Llamando API para verificar solapamiento...');
-                    checkDateOverlap(dateFrom, dateTo)
-                    .then(function(result) {
-                    console.log('📊 Resultado de verificación:', result);
-
-                    if (result &amp;&amp; result.has_overlap) {
-                    console.log('⚠️ SOLAPAMIENTO DETECTADO:');
-                    console.log(` - Número de conflictos: ${result.overlapping_leaves.length}`);
-                    result.overlapping_leaves.forEach(function(leave, index) {
-                    console.log(` ${index + 1}. ${leave.type}: ${leave.date_from} - ${leave.date_to}
-                    (${leave.state})`);
-                    });
-                    showOverlapWarning(result.overlapping_leaves);
-                    } else {
-                    console.log('✅ No hay solapamientos');
-                    hideOverlapWarning();
-                    }
-                    })
-                    .catch(function(error) {
-                    console.error('💥 Error verificando solapamiento:', error);
-                    });
-                    } else {
-                    console.log(' - No hay fecha desde, omitiendo verificación');
-                    }
-                    }
-
-                    // Function to check date overlap via API
-                    function checkDateOverlap(dateFrom, dateTo) {
-                    console.log('🔌 === LLAMADA API: VERIFICAR SOLAPAMIENTO ===');
-                    console.log(` - Endpoint: /leave/request/check_overlap`);
-                    console.log(` - Parámetros: ${dateFrom} - ${dateTo}`);
-
-                    return fetch('/leave/request/check_overlap', {
-                    method: 'POST',
-                    headers: {
-                    'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                    jsonrpc: '2.0',
-                    method: 'call',
-                    params: {
-                    date_from: dateFrom,
-                    date_to: dateTo
-                    }
-                    })
-                    })
-                    .then(function(response) {
-                    console.log(` - Status HTTP: ${response.status}`);
-                    console.log(` - Status OK: ${response.ok}`);
-                    return response.json();
-                    })
-                    .then(function(data) {
-                    console.log(' - Respuesta completa:', data);
-                    return data.result;
-                    })
-                    .catch(function(error) {
-                    console.error(' - Error en fetch:', error);
-                    throw error;
-                    });
-                    }
-
-                    // Show overlap warning
-                    function showOverlapWarning(overlappingLeaves) {
-                    console.log('⚠️ === MOSTRANDO ADVERTENCIA DE SOLAPAMIENTO ===');
-                    console.log(` - Conflictos a mostrar: ${overlappingLeaves.length}`);
-
-                    // Remove existing warning
-                    hideOverlapWarning();
-
-                    const warningDiv = document.createElement('div');
-                    warningDiv.id = 'overlapWarning';
-                    warningDiv.className = 'glass-effect rounded-2xl p-4 mb-4 border-2
-                    border-red-300 bg-red-50 slide-up';
-
-                    let warningHTML = `
-                    &lt;div class="flex items-start space-x-3"&gt;
-                    &lt;i class="fas fa-exclamation-triangle text-red-500 text-xl
-                    mt-1"&gt;&lt;/i&gt;
-                    &lt;div class="flex-1"&gt;
-                    &lt;h4 class="font-bold text-red-800 mb-2"&gt;⚠️ Conflicto de Fechas
-                    Detectado&lt;/h4&gt;
-                    &lt;p class="text-red-700 mb-3"&gt;Ya tiene solicitudes de permiso en este
-                    período:&lt;/p&gt;
-                    &lt;div class="space-y-2"&gt;
-                    `;
-
-                    overlappingLeaves.forEach(function(leave, index) {
-                    console.log(` ${index + 1}. Procesando conflicto: ${leave.type}`);
-
-                    const stateText = {
-                    'confirm': 'Pendiente de Aprobación',
-                    'validate1': 'Primera Aprobación',
-                    'validate': 'Aprobado'
-                    }[leave.state] || leave.state;
-
-                    warningHTML += `
-                    &lt;div class="bg-white/70 border border-red-200 rounded-lg p-3"&gt;
-                    &lt;div class="flex justify-between items-start"&gt;
-                    &lt;div&gt;
-                    &lt;p class="font-medium text-gray-800"&gt;${leave.type}&lt;/p&gt;
-                    &lt;p class="text-sm text-gray-600"&gt;Del ${leave.date_from} al
-                    ${leave.date_to}&lt;/p&gt;
-                    &lt;/div&gt;
-                    &lt;span class="px-2 py-1 bg-red-100 text-red-800 text-xs
-                    rounded-full"&gt;${stateText}&lt;/span&gt;
-                    &lt;/div&gt;
-                    &lt;/div&gt;
-                    `;
-                    });
-
-                    warningHTML += `
-                    &lt;/div&gt;
-                    &lt;p class="text-sm text-red-600 mt-3"&gt;
-                    &lt;i class="fas fa-info-circle mr-1"&gt;&lt;/i&gt;
-                    Por favor, seleccione fechas diferentes o cancele las solicitudes existentes.
-                    &lt;/p&gt;
-                    &lt;/div&gt;
-                    &lt;/div&gt;
-                    `;
-
-                    warningDiv.innerHTML = warningHTML;
-
-                    // Insert after the date selection section
-                    const dateSection =
-                    document.querySelector('.glass-effect:has(#request_date_from)');
-                    if (dateSection &amp;&amp; dateSection.parentElement) {
-                    // Buscar el siguiente elemento hermano del contenedor padre
-                    const parentContainer = dateSection.parentElement;
-                    const nextSibling = parentContainer.nextElementSibling;
-
-                    if (nextSibling) {
-                    parentContainer.parentElement.insertBefore(warningDiv, nextSibling);
-                    console.log(' - Advertencia insertada después de la sección de fechas');
-                    } else {
-                    // Si no hay siguiente hermano, insertar al final del contenedor padre del padre
-                    parentContainer.parentElement.appendChild(warningDiv);
-                    console.log(' - Advertencia insertada al final del contenedor (fallback 1)');
-                    }
-                    } else {
-                    // Fallback: insertar al principio del formulario
-                    if (form) {
-                    form.insertBefore(warningDiv, form.firstChild);
-                    console.log(' - Advertencia insertada al inicio del formulario (fallback 2)');
-                    } else {
-                    console.error(' - No se pudo insertar la advertencia: formulario no
-                    encontrado');
-                    }
-                    }
-
-                    console.log('✅ Advertencia de solapamiento mostrada');
-                    }
-
-                    // Hide overlap warning
-                    function hideOverlapWarning() {
-                    const existingWarning = document.getElementById('overlapWarning');
-                    if (existingWarning) {
-                    console.log('🗑️ Ocultando advertencia de solapamiento existente');
-                    existingWarning.remove();
-                    }
+                        const dateFrom = document.getElementById('request_date_from').value;
+                        if (dateFrom) {
+                            document.getElementById('request_date_to').value = dateFrom;
+                        }
                     }
 
                     // Handle leave type change
                     holidayStatusSelect.addEventListener('change', function() {
-                    console.log('📝 === CAMBIO DE TIPO DE PERMISO ===');
-                    console.log(` - Nuevo tipo ID: ${this.value}`);
+                        console.log('📝 Cambio de tipo de permiso:', this.value);
+                        
+                        const selectedOption = this.options[this.selectedIndex];
+                        const supportDocument = selectedOption.dataset.supportDocument === 'true';
 
-                    const selectedOption = this.options[this.selectedIndex];
-                    const supportDocument = selectedOption.dataset.supportDocument === 'true';
-                    console.log(` - Nombre: ${selectedOption.text}`);
-                    console.log(` - Requiere documento: ${supportDocument}`);
-
-                    if (supportDocument) {
-                    attachmentContainer.classList.remove('hidden');
-                    attachmentContainer.classList.add('slide-up');
-                    console.log(' - Mostrando contenedor de adjuntos');
-                    } else {
-                    attachmentContainer.classList.add('hidden');
-                    console.log(' - Ocultando contenedor de adjuntos');
-                    }
+                        if (supportDocument) {
+                            attachmentContainer.classList.remove('hidden');
+                            attachmentContainer.classList.add('slide-up');
+                        } else {
+                            attachmentContainer.classList.add('hidden');
+                        }
                     });
 
                     // File handling
                     fileInput.addEventListener('change', function() {
-                    console.log('📁 === CAMBIO EN ARCHIVOS ===');
-                    console.log(` - Archivos seleccionados: ${this.files.length}`);
-                    fileList.innerHTML = '';
+                        console.log('📁 Archivos seleccionados:', this.files.length);
+                        fileList.innerHTML = '';
 
-                    for (let i = 0; i &lt; this.files.length; i++) {
-                    const file = this.files[i];
-                    const fileSizeNum = (file.size / 1024 / 1024).toFixed(2);
+                        for (let i = 0; i < this.files.length; i++) {
+                            const file = this.files[i];
+                            const fileSizeNum = (file.size / 1024 / 1024).toFixed(2);
 
-                    console.log(` ${i + 1}. ${file.name}`);
-                    console.log(` - Tamaño: ${fileSizeNum} MB`);
-                    console.log(` - Tipo: ${file.type}`);
+                            const fileItem = document.createElement('div');
+                            fileItem.className = 'flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg slide-up';
 
-                    const fileItem = document.createElement('div');
-                    fileItem.className = 'flex items-center justify-between p-3 bg-blue-50 border
-                    border-blue-200 rounded-lg slide-up';
+                            fileItem.innerHTML = `
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-file text-blue-500"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-800 truncate max-w-[200px]">${file.name}</p>
+                                        <p class="text-sm text-gray-500">${fileSizeNum} MB</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-check text-green-500"></i>
+                            `;
 
-                    const fileContent = document.createElement('div');
-                    fileContent.className = 'flex items-center space-x-3';
-
-                    const fileIcon = document.createElement('i');
-                    fileIcon.className = 'fas fa-file text-blue-500';
-
-                    const fileInfo = document.createElement('div');
-                    const fileName = document.createElement('p');
-                    fileName.className = 'font-medium text-gray-800 truncate max-w-[200px]';
-                    fileName.textContent = file.name;
-
-                    const fileSize = document.createElement('p');
-                    fileSize.className = 'text-sm text-gray-500';
-                    fileSize.textContent = fileSizeNum + ' MB';
-
-                    const checkIcon = document.createElement('i');
-                    checkIcon.className = 'fas fa-check text-green-500';
-                    fileInfo.appendChild(fileName);
-                    fileInfo.appendChild(fileSize);
-                    fileContent.appendChild(fileIcon);
-                    fileContent.appendChild(fileInfo);
-                    fileItem.appendChild(fileContent);
-                    fileItem.appendChild(checkIcon);
-
-                    fileList.appendChild(fileItem);
-                    }
-
-                    console.log('✅ Archivos procesados y mostrados en UI');
+                            fileList.appendChild(fileItem);
+                        }
                     });
 
-                    // Submit form function
-                    function submitFormData() {
-                    console.log('📤 === ENVIANDO DATOS DEL FORMULARIO ===');
+                    // Enhanced Toast notification
+                    function showToast(message, type) {
+                        console.log('📢 Toast:', message, type);
+                        
+                        const toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 4000,
+                            timerProgressBar: true,
+                            didOpen: (toast) => {
+                                toast.addEventListener('mouseenter', Swal.stopTimer)
+                                toast.addEventListener('mouseleave', Swal.resumeTimer)
+                            }
+                        });
 
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    const loadingSpinner = submitBtn.querySelector('.loading-spinner');
-                    const submitText = submitBtn.querySelector('.submit-text');
+                        let icon = 'info';
+                        if (type === 'success') icon = 'success';
+                        else if (type === 'error') icon = 'error';
+                        else if (type === 'warning') icon = 'warning';
 
-                    // Show loading state
-                    loadingSpinner.classList.remove('hidden');
-                    submitText.innerHTML = '&lt;i class="fas fa-spinner loading-spinner
-                    mr-2"&gt;&lt;/i&gt;Enviando...';
-                    submitBtn.disabled = true;
-
-                    console.log(' - Estado de carga activado');
-                    console.log(' - Botón deshabilitado');
-
-                    // Submit form
-                    const formData = new FormData(form);
-
-                    console.log(' - FormData creado');
-                    console.log(' - Campos en formulario:');
-                    for (let [key, value] of formData.entries()) {
-                    if (value instanceof File) {
-                    console.log(` 📎 ${key}: ${value.name} (${value.size} bytes)`);
-                    } else {
-                    console.log(` 📋 ${key}: ${value}`);
-                    }
-                    }
-
-                    fetch('/leave/request/submit', {
-                    method: 'POST',
-                    body: formData
-                    })
-                    .then(function(response) {
-                    console.log(` - Respuesta HTTP: ${response.status}`);
-                    console.log(` - Respuesta OK: ${response.ok}`);
-
-                    // Importante: Verificar si la respuesta es JSON
-                    const contentType = response.headers.get('content-type');
-                    console.log(` - Content-Type: ${contentType}`);
-
-                    if (contentType &amp;&amp; contentType.includes('application/json')) {
-                    return response.json();
-                    } else {
-                    // Si no es JSON, leer como texto y mostrar error
-                    return response.text().then(function(text) {
-                    console.log(' - Respuesta no-JSON recibida:', text);
-                    throw new Error('Respuesta del servidor no es JSON válido');
-                    });
-                    }
-                    })
-                    .then(function(data) {
-                    console.log(' - Datos de respuesta:', data);
-
-                    if (data.success) {
-                    console.log('🎉 ÉXITO: Solicitud enviada correctamente');
-                    showToast('¡Solicitud enviada correctamente! 🎉', 'success');
-                    setTimeout(function() {
-                    if (data.redirect_url) {
-                    console.log(` - Redirigiendo a: ${data.redirect_url}`);
-                    window.location.href = data.redirect_url;
-                    } else {
-                    console.log(' - Redirigiendo a /web');
-                    window.location.href = '/web';
-                    }
-                    }, 2000);
-                    } else {
-                    console.log('❌ ERROR: Solicitud fallida');
-                    console.log(` - Mensaje: ${data.error}`);
-
-                    // Mejorar el mensaje de error para el usuario
-                    const friendlyError = getFriendlyErrorMessage(data.error);
-                    showErrorModal(friendlyError, data.error);
-                    resetSubmitButton();
-                    }
-                    })
-                    .catch(function(error) {
-                    console.error('💥 ERROR DE RED O PARSING:', error);
-
-                    // Mejorar manejo de errores
-                    if (error.message.includes('JSON')) {
-                    showErrorModal({
-                    title: '🔧 Error de Comunicación',
-                    message: 'Hubo un problema procesando la respuesta del servidor.',
-                    suggestion: 'Por favor intenta nuevamente. Si el problema persiste, contacta al
-                    administrador.',
-                    icon: '🚨'
-                    }, error.message);
-                    } else {
-                    showErrorModal({
-                    title: '🌐 Error de Conexión',
-                    message: 'No se pudo conectar con el servidor.',
-                    suggestion: 'Verifica tu conexión a internet e intenta nuevamente.',
-                    icon: '📡'
-                    }, error.message);
-                    }
-
-                    resetSubmitButton();
-                    });
-
-                    function resetSubmitButton() {
-                    console.log('🔄 Reseteando botón de envío');
-                    loadingSpinner.classList.add('hidden');
-                    submitText.innerHTML = '&lt;i class="fas fa-paper-plane
-                    mr-2"&gt;&lt;/i&gt;Enviar Solicitud';
-                    submitBtn.disabled = false;
-                    }
+                        toast.fire({
+                            icon: icon,
+                            title: message
+                        });
                     }
 
                     // Form submission with comprehensive validation
                     form.addEventListener('submit', function(e) {
-                    // CRÍTICO: Siempre prevenir el envío HTML tradicional
-                    e.preventDefault();
-                    e.stopPropagation();
+                        e.preventDefault();
+                        e.stopPropagation();
 
-                    console.log('📋 === PROCESANDO ENVÍO DE FORMULARIO ===');
-                    console.log(' - Evento preventDefault aplicado');
-                    console.log(' - Evento stopPropagation aplicado');
+                        console.log('📋 Procesando envío de formulario');
 
-                    // Verificar que no haya otro envío en progreso
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn.disabled) {
-                    console.log('⚠️ Envío ya en progreso, ignorando');
-                    return false;
-                    }
+                        // Verificar que no haya otro envío en progreso
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        if (submitBtn.disabled) {
+                            console.log('⚠️ Envío ya en progreso, ignorando');
+                            return false;
+                        }
 
-                    // Get form data
-                    const dateFrom = document.getElementById('request_date_from').value;
-                    const dateTo = document.getElementById('request_date_to').value || dateFrom;
-                    const leaveType = document.getElementById('holiday_status_id').value;
-                    const description = document.getElementById('private_name').value.trim();
-                    console.log('📊 Datos del formulario:');
-                    console.log(` - Fecha desde: ${dateFrom}`);
-                    console.log(` - Fecha hasta: ${dateTo}`);
-                    console.log(` - Tipo de permiso: ${leaveType}`);
-                    console.log(` - Descripción: ${description}`);
+                        // Get form data
+                        const dateFrom = document.getElementById('request_date_from').value;
+                        const dateTo = document.getElementById('request_date_to').value || dateFrom;
+                        const leaveType = document.getElementById('holiday_status_id').value;
+                        const description = document.getElementById('private_name').value.trim();
 
-                    // Basic validation
-                    if (!leaveType) {
-                    console.log('❌ Validación fallida: Sin tipo de permiso');
-                    showToast('Por favor selecciona un tipo de permiso', 'error');
-                    document.getElementById('holiday_status_id').focus();
-                    return;
-                    }
+                        // Basic validation
+                        if (!leaveType) {
+                            showToast('Por favor selecciona un tipo de permiso', 'error');
+                            document.getElementById('holiday_status_id').focus();
+                            return;
+                        }
 
-                    if (!dateFrom) {
-                    console.log('❌ Validación fallida: Sin fecha de inicio');
-                    showToast('Por favor selecciona la fecha de inicio', 'error');
-                    document.getElementById('request_date_from').focus();
-                    return;
-                    }
+                        if (!dateFrom) {
+                            showToast('Por favor selecciona la fecha de inicio', 'error');
+                            document.getElementById('request_date_from').focus();
+                            return;
+                        }
 
-                    if (!description) {
-                    console.log('❌ Validación fallida: Sin descripción');
-                    showToast('Por favor agrega una descripción', 'error');
-                    document.getElementById('private_name').focus();
-                    return;
-                    }
+                        if (!description) {
+                            showToast('Por favor agrega una descripción', 'error');
+                            document.getElementById('private_name').focus();
+                            return;
+                        }
 
-                    console.log('✅ Validación básica completada');
+                        console.log('✅ Validación básica completada');
 
-                    // Show checking overlay
-                    showToast('Verificando disponibilidad de fechas...', 'info');
-                    console.log('🔍 Iniciando verificación final de solapamiento...');
+                        // Show loading state
+                        const loadingSpinner = submitBtn.querySelector('.loading-spinner');
+                        const submitText = submitBtn.querySelector('.submit-text');
+                        
+                        loadingSpinner.classList.remove('hidden');
+                        submitText.innerHTML = '<i class="fas fa-spinner loading-spinner mr-2"></i>Enviando...';
+                        submitBtn.disabled = true;
 
-                    // Check for overlapping dates
-                    checkDateOverlap(dateFrom, dateTo)
-                    .then(function(result) {
-                    console.log('📊 Resultado de verificación final:', result);
+                        // Submit form
+                        const formData = new FormData(form);
 
-                    if (result &amp;&amp; result.has_overlap) {
-                    console.log('❌ SOLAPAMIENTO DETECTADO EN ENVÍO FINAL');
-                    console.log(` - Conflictos: ${result.overlapping_leaves.length}`);
+                        fetch('/leave/request/submit', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(function(response) {
+                            console.log('Respuesta HTTP:', response.status);
 
-                    // Show detailed overlap alert
-                    let alertMessage = '❌ No se puede enviar la solicitud.\\n\\n';
-                    alertMessage += 'Ya tiene solicitudes de permiso en este período:\\n\\n';
-                    result.overlapping_leaves.forEach(function(leave, index) {
-                    const stateText = {
-                    'confirm': 'Pendiente',
-                    'validate1': '1ra Aprobación',
-                    'validate': 'Aprobado'
-                    }[leave.state] || leave.state;
+                            const contentType = response.headers.get('content-type');
+                            if (contentType && contentType.includes('application/json')) {
+                                return response.json();
+                            } else {
+                                return response.text().then(function(text) {
+                                    console.log('Respuesta no-JSON:', text);
+                                    throw new Error('Respuesta del servidor no es JSON válido');
+                                });
+                            }
+                        })
+                        .then(function(data) {
+                            console.log('Datos de respuesta:', data);
 
-                    alertMessage += `${index + 1}. ${leave.type}\\n`;
-                    alertMessage += ` 📅 ${leave.date_from} - ${leave.date_to}\\n`;
-                    alertMessage += ` 📋 Estado: ${stateText}\\n\\n`;
+                            if (data.success) {
+                                console.log('🎉 ÉXITO: Solicitud enviada');
+                                
+                                Swal.fire({
+                                    ...swalConfig,
+                                    icon: 'success',
+                                    title: '¡Solicitud Enviada!',
+                                    html: `
+                                        <div class="text-center">
+                                            <div class="text-6xl mb-4">🎉</div>
+                                            <p class="text-lg mb-4">Tu solicitud de permiso ha sido enviada exitosamente.</p>
+                                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                                <p class="text-green-800 font-medium">¿Qué sigue?</p>
+                                                <ul class="text-green-700 text-sm mt-2 list-disc list-inside text-left">
+                                                    <li>Recibirás una notificación cuando sea revisada</li>
+                                                    <li>Puedes ver el estado en tu panel de empleado</li>
+                                                    <li>El proceso de aprobación ha comenzado</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    `,
+                                    confirmButtonText: 'Ir al Panel',
+                                    allowOutsideClick: false,
+                                    timer: 5000,
+                                    timerProgressBar: true
+                                }).then((result) => {
+                                    if (data.redirect_url) {
+                                        window.location.href = data.redirect_url;
+                                    } else {
+                                        window.location.href = '/web';
+                                    }
+                                });
+                            } else {
+                                console.log('❌ ERROR: Solicitud fallida:', data);
+                                
+                                // Usar el nuevo sistema de manejo de errores
+                                showErrorModal(data, data.error);
+                                resetSubmitButton();
+                            }
+                        })
+                        .catch(function(error) {
+                            console.error('💥 ERROR:', error);
 
-                    console.log(` ${index + 1}. ${leave.type}: ${leave.date_from} - ${leave.date_to}
-                    (${leave.state})`);
+                            let errorData;
+                            if (error.message.includes('JSON')) {
+                                errorData = {
+                                    error_code: 'COMMUNICATION_ERROR',
+                                    error: 'Hubo un problema procesando la respuesta del servidor.',
+                                    suggestion: 'Por favor intenta nuevamente. Si el problema persiste, contacta al administrador.'
+                                };
+                            } else {
+                                errorData = {
+                                    error_code: 'CONNECTION_ERROR',
+                                    error: 'No se pudo conectar con el servidor.',
+                                    suggestion: 'Verifica tu conexión a internet e intenta nuevamente.'
+                                };
+                            }
+
+                            showErrorModal(errorData, error.message);
+                            resetSubmitButton();
+                        });
+
+                        function resetSubmitButton() {
+                            console.log('🔄 Reseteando botón de envío');
+                            loadingSpinner.classList.add('hidden');
+                            submitText.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Enviar Solicitud';
+                            submitBtn.disabled = false;
+                        }
                     });
 
-                    alertMessage += 'Por favor:\\n';
-                    alertMessage += '• Selecciona fechas diferentes, o\\n';
-                    alertMessage += '• Cancela las solicitudes existentes';
-
-                    alert(alertMessage);
-
-                    // Also show toast
-                    showToast(`Conflicto: Ya tiene ${result.overlapping_leaves.length} solicitud(es)
-                    en este período`, 'error');
-                    return;
-                    }
-
-                    console.log('✅ No hay conflictos, procediendo con envío');
-                    // No overlap, proceed with submission
-                    showToast('Fechas disponibles. Enviando solicitud...', 'success');
-                    setTimeout(function() {
-                    submitFormData();
-                    }, 500);
-                    })
-                    .catch(function(error) {
-                    console.error('💥 Error en verificación final:', error);
-
-                    // Show error but allow submission
-                    if (confirm('Error al verificar conflictos de fechas.\\n¿Desea continuar con el
-                    envío?')) {
-                    console.log('👤 Usuario decidió continuar a pesar del error');
-                    submitFormData();
-                    } else {
-                    console.log('👤 Usuario canceló el envío');
-                    showToast('Envío cancelado', 'info');
-                    }
+                    // Auto-update date_to when date_from changes
+                    document.getElementById('request_date_from').addEventListener('change', function() {
+                        console.log('📅 Cambio en fecha desde:', this.value);
+                        
+                        const activeCard = document.querySelector('.period-card.active');
+                        if (activeCard && ['morning', 'afternoon', 'custom_hours'].includes(activeCard.dataset.period)) {
+                            updateDateTo();
+                        }
                     });
-                    });
-
-                    // Enhanced Toast notification system
-                    function showToast(message, type) {
-                    console.log(`📢 === MOSTRANDO TOAST ===`);
-                    console.log(` - Mensaje: ${message}`);
-                    console.log(` - Tipo: ${type}`);
-
-                    type = type || 'info';
-                    const toast = document.createElement('div');
-                    let bgColor = '';
-                    let iconClass = '';
-
-                    if (type === 'success') {
-                    bgColor = 'bg-green-500';
-                    iconClass = 'fa-check-circle';
-                    } else if (type === 'error') {
-                    bgColor = 'bg-red-500';
-                    iconClass = 'fa-exclamation-triangle';
-                    } else if (type === 'warning') {
-                    bgColor = 'bg-yellow-500';
-                    iconClass = 'fa-exclamation-circle';
-                    } else {
-                    bgColor = 'bg-blue-500';
-                    iconClass = 'fa-info-circle';
-                    }
-
-                    toast.className = bgColor + ' text-white px-6 py-4 rounded-lg shadow-lg max-w-sm
-                    slide-up transform transition-all duration-300';
-
-                    const toastContent = document.createElement('div');
-                    toastContent.className = 'flex items-center space-x-3';
-
-                    const icon = document.createElement('i');
-                    icon.className = 'fas ' + iconClass;
-
-                    const messageP = document.createElement('p');
-                    messageP.className = 'flex-1 text-sm';
-                    messageP.textContent = message;
-
-                    const closeBtn = document.createElement('button');
-                    closeBtn.className = 'text-white/80 hover:text-white transition-colors';
-                    closeBtn.innerHTML = '&lt;i class="fas fa-times"&gt;&lt;/i&gt;';
-                    closeBtn.onclick = function() {
-                    console.log('🗑️ Cerrando toast manualmente');
-                    if (toast.parentElement) {
-                    toast.style.transform = 'translateX(400px)';
-                    setTimeout(function() {
-                    if (toast.parentElement) {
-                    toast.remove();
-                    }
-                    }, 300);
-                    }
-                    };
-
-                    toastContent.appendChild(icon);
-                    toastContent.appendChild(messageP);
-                    toastContent.appendChild(closeBtn);
-                    toast.appendChild(toastContent);
-
-                    const toastContainer = document.getElementById('toastContainer');
-                    if (toastContainer) {
-                    toastContainer.appendChild(toast);
-                    console.log(' - Toast agregado al contenedor');
-                    } else {
-                    console.log(' - No se encontró contenedor de toasts, agregando al body');
-                    document.body.appendChild(toast);
-                    }
-
-                    // Auto remove after duration based on type
-                    const duration = type === 'error' ? 8000 : type === 'warning' ? 6000 : 5000;
-                    console.log(` - Auto-eliminación en ${duration}ms`);
-
-                    setTimeout(function() {
-                    if (toast.parentElement) {
-                    console.log('⏰ Eliminando toast automáticamente');
-                    toast.style.transform = 'translateX(400px)';
-                    setTimeout(function() {
-                    if (toast.parentElement) {
-                    toast.remove();
-                    }
-                    }, 300);
-                    }
-                    }, duration);
-                    }
 
                     // Smooth scrolling for better mobile experience
                     const formElements = document.querySelectorAll('input, textarea, select');
-                    console.log(`📱 Configurando scroll suave para ${formElements.length}
-                    elementos`);
-
-                    formElements.forEach(function(element, index) {
-                    element.addEventListener('focus', function() {
-                    console.log(`📱 Elemento ${index + 1} enfocado: ${this.id || this.name || 'sin
-                    ID'}`);
-                    const self = this;
-                    setTimeout(function() {
-                    self.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                    });
-                    console.log(' - Scroll aplicado');
-                    }, 300);
-                    });
+                    formElements.forEach(function(element) {
+                        element.addEventListener('focus', function() {
+                            const self = this;
+                            setTimeout(function() {
+                                self.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center'
+                                });
+                            }, 300);
+                        });
                     });
 
                     // Add visual feedback for validation
-                    const requiredFields = ['holiday_status_id', 'request_date_from',
-                    'private_name'];
-                    console.log(`🎯 Configurando validación visual para campos:
-                    ${requiredFields.join(', ')}`);
-
+                    const requiredFields = ['holiday_status_id', 'request_date_from', 'private_name'];
                     requiredFields.forEach(function(fieldId) {
-                    const field = document.getElementById(fieldId);
-                    if (field) {
-                    console.log(` ✅ Campo ${fieldId} encontrado`);
+                        const field = document.getElementById(fieldId);
+                        if (field) {
+                            field.addEventListener('blur', function() {
+                                if (!this.value.trim()) {
+                                    this.classList.add('border-red-300', 'bg-red-50');
+                                    this.classList.remove('border-gray-200');
+                                } else {
+                                    this.classList.remove('border-red-300', 'bg-red-50');
+                                    this.classList.add('border-gray-200');
+                                }
+                            });
 
-                    field.addEventListener('blur', function() {
-                    if (!this.value.trim()) {
-                    console.log(`❌ Campo ${fieldId} vacío al perder foco`);
-                    this.classList.add('border-red-300', 'bg-red-50');
-                    this.classList.remove('border-gray-200');
-                    } else {
-                    console.log(`✅ Campo ${fieldId} completado`);
-                    this.classList.remove('border-red-300', 'bg-red-50');
-                    this.classList.add('border-gray-200');
-                    }
+                            field.addEventListener('input', function() {
+                                if (this.value.trim()) {
+                                    this.classList.remove('border-red-300', 'bg-red-50');
+                                    this.classList.add('border-green-300', 'bg-green-50');
+                                    const self = this;
+                                    setTimeout(function() {
+                                        self.classList.remove('border-green-300', 'bg-green-50');
+                                        self.classList.add('border-gray-200');
+                                    }, 2000);
+                                }
+                            });
+                        }
                     });
 
-                    field.addEventListener('input', function() {
-                    if (this.value.trim()) {
-                    console.log(`✨ Campo ${fieldId} siendo completado`);
-                    this.classList.remove('border-red-300', 'bg-red-50');
-                    this.classList.add('border-green-300', 'bg-green-50');
-                    const self = this;
-                    setTimeout(function() {
-                    self.classList.remove('border-green-300', 'bg-green-50');
-                    self.classList.add('border-gray-200');
-                    }, 2000);
-                    }
-                    });
-                    } else {
-                    console.log(` ❌ Campo ${fieldId} NO encontrado`);
-                    }
-                    });
-
-                    // Funciones de utilidad para debugging
-                    window.debugLeaveForm = {
-                    // Ver estado actual del formulario
-                    getFormState: function() {
-                    console.log('🔍 === ESTADO ACTUAL DEL FORMULARIO ===');
-
-                    const activeCard = document.querySelector('.period-card.active');
-                    const state = {
-                    activeCard: activeCard ? activeCard.dataset.period : null,
-                    dateFrom: document.getElementById('request_date_from').value,
-                    dateTo: document.getElementById('request_date_to').value,
-                    leaveType: document.getElementById('holiday_status_id').value,
-                    description: document.getElementById('private_name').value,
-                    unitHalf: document.getElementById('request_unit_half').value,
-                    unitHours: document.getElementById('request_unit_hours').value,
-                    period: document.getElementById('request_date_from_period').value,
-                    files: document.getElementById('file_input').files.length,
-                    hasWarning: document.getElementById('overlapWarning') !== null
-                    };
-
-                    console.log(' 📊 Estado completo:', state);
-                    return state;
-                    },
-
-                    // Probar verificación de solapamiento
-                    testOverlap: function(dateFrom, dateTo) {
-                    console.log('🧪 === TEST MANUAL DE SOLAPAMIENTO ===');
-                    console.log(` - Probando: ${dateFrom} - ${dateTo || dateFrom}`);
-                    checkDateOverlap(dateFrom, dateTo || dateFrom)
-                    .then(function(result) {
-                    console.log('📊 Resultado del test:', result);
-                    if (result &amp;&amp; result.has_overlap) {
-                    console.log('⚠️ CONFLICTOS ENCONTRADOS:');
-                    result.overlapping_leaves.forEach(function(leave, index) {
-                    console.log(` ${index + 1}. ${leave.type}: ${leave.date_from} -
-                    ${leave.date_to}`);
-                    });
-                    } else {
-                    console.log('✅ No hay conflictos');
-                    }
-                    })
-                    .catch(function(error) {
-                    console.error('💥 Error en test:', error);
-                    });
-                    },
-
-                    // Validar formulario completo
-                    validateComplete: function() {
-                    console.log('🔍 === VALIDACIÓN COMPLETA ===');
-
-                    const errors = [];
-
-                    const leaveType = document.getElementById('holiday_status_id').value;
-                    if (!leaveType) errors.push('Tipo de permiso no seleccionado');
-
-                    const dateFrom = document.getElementById('request_date_from').value;
-                    if (!dateFrom) errors.push('Fecha de inicio no seleccionada');
-
-                    const description = document.getElementById('private_name').value.trim();
-                    if (!description) errors.push('Descripción vacía');
-
-                    const activeCard = document.querySelector('.period-card.active');
-                    if (!activeCard) errors.push('Período no seleccionado');
-
-                    if (errors.length === 0) {
-                    console.log('✅ VALIDACIÓN: TODOS LOS CAMPOS OK');
-                    return true;
-                    } else {
-                    console.log('❌ ERRORES DE VALIDACIÓN:');
-                    errors.forEach(function(error, index) {
-                    console.log(` ${index + 1}. ${error}`);
-                    });
-                    return false;
-                    }
-                    },
-
-                    // Mostrar/ocultar advertencia manualmente
-                    toggleWarning: function(show) {
-                    if (show) {
-                    // Simular conflicto para testing
-                    const fakeConflict = [{
-                    type: 'Vacaciones (TEST)',
-                    date_from: '15/06/2025',
-                    date_to: '15/06/2025',
-                    state: 'confirm'
-                    }];
-                    showOverlapWarning(fakeConflict);
-                    console.log('⚠️ Advertencia de prueba mostrada');
-                    } else {
-                    hideOverlapWarning();
-                    console.log('🗑️ Advertencia ocultada');
-                    }
-                    }
-                    };
-
-                    // Monitor de errores específico para el formulario
-                    window.addEventListener('error', function(event) {
-                    if (event.target &amp;&amp; event.target.closest &amp;&amp;
-                    event.target.closest('#leaveRequestForm')) {
-                    console.error('💥 ERROR EN FORMULARIO:');
-                    console.error(' - Mensaje:', event.message);
-                    console.error(' - Archivo:', event.filename);
-                    console.error(' - Línea:', event.lineno);
-                    console.error(' - Elemento:', event.target);
-
-                    // Mostrar toast de error si es crítico
-                    showToast('Error técnico detectado. Revise la consola.', 'error');
-                    }
-                    });
-
-                    // Performance monitoring
-                    const initStartTime = performance.now();
-
-                    // Logging final de inicialización
-                    console.log('🎉 === SISTEMA DE PERMISOS INICIADO COMPLETAMENTE ===');
-                    console.log('📋 Resumen de configuración:');
-                    console.log(` - Cards de período: ${periodCards.length} configurados`);
-                    console.log(` - Elementos de formulario: ${formElements.length} con scroll`);
-                    console.log(` - Campos requeridos: ${requiredFields.length} con validación`);
-                    console.log(` - Eventos configurados: ✅`);
-                    console.log(` - API endpoints: ✅`);
-                    console.log(` - Funciones debug: ✅`);
-
-                    const initTime = (performance.now() - initStartTime).toFixed(2);
-                    console.log(`⚡ Tiempo de inicialización: ${initTime}ms`);
-
-                    console.log('');
-                    console.log('🛠️ === HERRAMIENTAS DE DEBUG DISPONIBLES ===');
-                    console.log(' - debugLeaveForm.getFormState() - Ver estado actual');
-                    console.log(' - debugLeaveForm.testOverlap(fecha1, fecha2) - Probar
-                    solapamiento');
-                    console.log(' - debugLeaveForm.validateComplete() - Validación completa');
-                    console.log(' - debugLeaveForm.toggleWarning(true/false) - Mostrar/ocultar
-                    advertencia');
-                    console.log('');
-                    console.log('🚀 ¡Sistema listo para usar!');
-
-                    // Verificar si hay parámetros de debug en la URL
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.get('debug') === 'true') {
-                    console.log('🔧 MODO DEBUG ACTIVADO POR URL');
-
-                    // Mostrar estado inicial
-                    setTimeout(function() {
-                    debugLeaveForm.getFormState();
-                    }, 1000);
-
-                    // Observer para cambios en el DOM
-                    const observer = new MutationObserver(function(mutations) {
-                    mutations.forEach(function(mutation) {
-                    if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach(function(node) {
-                    if (node.nodeType === 1 &amp;&amp; node.id === 'overlapWarning') {
-                    console.log('👁️ Advertencia agregada al DOM');
-                    }
-                    });
-
-                    mutation.removedNodes.forEach(function(node) {
-                    if (node.nodeType === 1 &amp;&amp; node.id === 'overlapWarning') {
-                    console.log('👁️ Advertencia removida del DOM');
-                    }
-                    });
-                    }
-                    });
-                    });
-
-                    observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                    });
-
-                    console.log('👁️ Observer de DOM activado para debug');
-                    }
-
-                    // Mensaje final
-                    console.log('🔥 Leave Request Form initialized successfully with full
-                    logging!');
-                    });
-                    &lt;/script&gt;
+                    console.log('🚀 Sistema de permisos iniciado completamente');
+                });
+                //]]>
                 </script>
             </t>
         </template>
