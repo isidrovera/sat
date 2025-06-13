@@ -285,61 +285,40 @@
     </record>
     
 
-  <record id="maquinas_tree_sat" model="ir.ui.view">
+    <record id="maquinas_tree_sat" model="ir.ui.view">
     <field name="name">sat.tree</field>
     <field name="model">sat.sat</field>
     <field name="type">list</field>    
     <field name="arch" type="xml">
-        <list default_order="id desc" class="modern-sat-table animate__animated animate__fadeIn">
-            <!-- Campos ocultos -->
+        
+        <list default_order="id desc" >
             <field name="importacion" optional="hide"/>
             <field name="proveedor_id" optional="hide"/>
             <field name="descripcion" optional="hide"/>
-            
             <!-- Información del Cliente -->
-            <field name="cliente_nombre" 
-                   string="Cliente"
-                   class="client-info animate__animated animate__slideInLeft"/>
-            
-            <field name="tipo_maquina" 
-                   string="Tipo Máquina"
-                   class="machine-type-modern"/>
-            
-            <field name="marca" 
-                   string="Marca"
-                   class="brand-modern"/>
-            
+            <field name="cliente_nombre" string="Cliente"/>
+            <field name="tipo_maquina"/>
+            <field name="marca"/>
             <!-- Información Principal -->
-            <field name="name" 
-                   string="Nombre"
-                   class="machine-name-modern h6 fw-bold text-primary bg-gradient-light rounded-3 px-3 py-2 shadow-sm"/>
-            
-            <field name="serie_id" 
-                   string="Serie"
-                   class="serial-modern font-monospace bg-dark text-info rounded px-2 py-1"/>
+            <field name="name" class="h6 fw-bold text-primary"/>
+            <field name="serie_id"/>
             
             <!-- Datos Operativos -->
-            <field name="contometro" 
-                   string="Contador"
-                   class="counter-modern text-end bg-info bg-opacity-10 rounded-3 px-3 py-2 fw-bold position-relative"/>
+            <field name="contometro" class="text-end"/>
+            <field name="ubicacion_id" class="fst-italic"/>
             
-            <field name="ubicacion_id" 
-                   string="Ubicación"
-                   class="location-modern fst-italic text-muted bg-light rounded-pill px-3 py-1"/>
             
-            <!-- Estados y Alertas con efectos modernos -->
+            <!-- Estados y Alertas -->
             <field name="disponibilidad_id" 
-                   string="Disponibilidad"
                    widget="badge"
-                   class="availability-badge-modern rounded-pill px-4 py-2 fw-bold text-uppercase letter-spacing-wide shadow-modern position-relative overflow-hidden" 
+                   class="rounded-pill px-3" 
                    decoration-success="disponibilidad_id == 'disponible'" 
                    decoration-warning="disponibilidad_id == 'separada'" 
                    decoration-danger="disponibilidad_id == 'no_disponible'"/>
                    
             <field name="estado_ventas_id" 
-                   string="Estado Ventas"
                    widget="badge"
-                   class="sales-status-modern rounded-pill px-4 py-2 fw-semibold backdrop-blur border-modern" 
+                   class="rounded-pill px-3" 
                    decoration-muted="estado_ventas_id == 'sin_revisar'" 
                    decoration-info="estado_ventas_id == 'en_revision'" 
                    decoration-success="estado_ventas_id == 'finalizado'" 
@@ -348,80 +327,53 @@
             
             <field name="icono_rojo" 
                    widget="html" 
-                   string="Alerta" 
+                   string=" " 
                    invisible="activador == 'no'"
-                   class="alert-modern text-danger fs-4 animate__animated animate__heartBeat animate__infinite filter-glow cursor-pointer"/>
+                   class="text-danger fs-5"/>
             
-            <!-- Campos Opcionales con estilos modernos -->
-            <field name="create_date" 
-                   string="Fecha Ingreso" 
-                   widget="remaining_days" 
-                   optional="hide"
-                   class="date-modern text-muted small bg-light rounded px-2 py-1"/>
             
-            <field name="fecha_separacion" 
-                   string="Fecha Separada" 
-                   widget="remaining_days" 
-                   invisible="disponibilidad_id != 'separada'" 
-                   optional="hide"
-                   class="separation-date-modern text-warning bg-warning bg-opacity-10 rounded px-2 py-1 animate__animated animate__pulse"/>
-            
-            <field name="fecha_para_revision" 
-                   string="Fecha Revisión" 
-                   optional="hide"
-                   class="review-date-modern"/>
-            
+            <!-- Campos Opcionales -->
+            <field name="create_date" string="Ingreso" widget="remaining_days" optional="hide"/>
+            <field name="fecha_separacion" string="Separada" widget="remaining_days" invisible="disponibilidad_id != 'separada'" optional="hide"/>
+            <field name="fecha_para_revision" string="Fecha para revisión" optional="hide"/>            
             <field name="activador" optional="hide"/>
-            <field name="currency_id" string="Moneda" optional="hide"/>
+            <field name="currency_id" string="Tipo de moneda" optional="hide"/>
+            <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" optional="hide" groups="base.group_system, sat_jefes_group_user"/>
+            <field name="asesora_id" optional="hide"/>
             
-            <field name="precio_compra" 
-                   string="Precio Compra"
-                   widget="monetary" 
-                   options="{'currency_field': 'currency_id'}" 
-                   optional="hide" 
-                   groups="base.group_system, sat_jefes_group_user"
-                   class="price-modern fw-bold text-success bg-success bg-opacity-10 rounded-3 px-3 py-2 font-monospace"/>
-            
-            <field name="asesora_id" 
-                   string="Asesora" 
-                   optional="hide"
-                   class="advisor-modern"/>
                    
-            <!-- Botones modernizados con efectos hover 
+            <!-- Botones de Acción -->
             <button name="action_primer" 
                     type="object" 
-                    string="Primer Piso" 
-                    class="btn-modern btn btn-outline-primary btn-sm rounded-pill me-2 shadow-hover transition-all" 
+                    class="btn btn-light rounded me-1" 
                     icon="fa-building-o" 
                     groups="base.group_system" 
-                    title="Primer Piso" />
+                    title="Primer piso"/>
                     
             <button name="action_tercero" 
                     type="object" 
-                    string="Tercer Piso" 
-                    class="btn-modern btn btn-outline-info btn-sm rounded-pill me-2 shadow-hover transition-all" 
+                    class="btn btn-light rounded me-1" 
                     icon="fa-building" 
                     groups="base.group_system" 
-                    title="Tercer Piso"/>
+                    title="Tercer piso"/>
                     
             <button name="action_segundo" 
                     type="object" 
-                    string="Segundo Local" 
-                    class="btn-modern btn btn-outline-warning btn-sm rounded-pill me-2 shadow-hover transition-all" 
+                    class="btn btn-light rounded me-1" 
                     icon="fa-truck" 
                     groups="base.group_system" 
-                    title="Segundo Local"/> -->
+                    title="Segundo local"/>
                     
             <button name="view_reparaciones_ids" 
                     type="object" 
-                    string="Reparaciones" 
-                    class="btn-repair-modern btn btn-primary btn-sm rounded-pill shadow-lg position-relative overflow-hidden" 
+                    class="btn btn-primary rounded" 
                     icon="fa-wrench" 
                     invisible="estado_ventas_id != 'finalizado'"
-                    title="Reparaciones"/>
+                    title="Ver Reparaciones"/>
         </list>
     </field>
 </record>
+
 
     <!-- Búsqueda -->
     <record id="Sat_search_view" model="ir.ui.view">
