@@ -25,6 +25,38 @@ class HrAttendance(models.Model):
         help='When the GPS location was captured'
     )
 
+    def init(self):
+        """
+        Forzar la creación de las columnas GPS si no existen
+        """
+        super().init()
+        # Verificar y crear columnas GPS para hr_attendance
+        gps_columns = [
+            ('gps_accuracy', 'NUMERIC'),
+            ('location_source', 'VARCHAR'),
+            ('gps_timestamp', 'TIMESTAMP')
+        ]
+        
+        for column_name, column_type in gps_columns:
+            self._cr.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'hr_attendance' 
+                AND column_name = %s
+            """, (column_name,))
+            if not self._cr.fetchone():
+                self._cr.execute(f"""
+                    ALTER TABLE hr_attendance 
+                    ADD COLUMN {column_name} {column_type}
+                """)
+        
+        # Actualizar registros existentes con location_source por defecto
+        self._cr.execute("""
+            UPDATE hr_attendance 
+            SET location_source = 'geoip' 
+            WHERE location_source IS NULL
+        """)
+
     def _attendance_action_change(self, geo_data=None):
         """
         OVERRIDE: Mejorar el procesamiento de datos de ubicación GPS
