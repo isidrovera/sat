@@ -25,6 +25,48 @@ class HrAttendance(models.Model):
         help='When the GPS location was captured'
     )
 
+    def _auto_init(self):
+        """
+        Hook llamado automáticamente por Odoo para inicializar el modelo
+        """
+        # Llamar al método padre primero
+        result = super()._auto_init()
+        
+        # Asegurar que las columnas GPS existen
+        self._create_gps_columns()
+        
+        return result
+
+    def _create_gps_columns(self):
+        """
+        Crear columnas GPS si no existen
+        """
+        gps_columns = {
+            'gps_accuracy': 'NUMERIC',
+            'location_source': 'VARCHAR DEFAULT \'geoip\'',
+            'gps_timestamp': 'TIMESTAMP'
+        }
+        
+        for column_name, column_type in gps_columns.items():
+            # Verificar si la columna existe
+            self._cr.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'hr_attendance' 
+                AND column_name = %s
+            """, (column_name,))
+            
+            if not self._cr.fetchone():
+                try:
+                    self._cr.execute(f"""
+                        ALTER TABLE hr_attendance 
+                        ADD COLUMN {column_name} {column_type}
+                    """)
+                    self._cr.commit()
+                except Exception as e:
+                    # Si hay error, hacer rollback y continuar
+                    self._cr.rollback()
+
     def _attendance_action_change(self):
         """
         OVERRIDE: Mantener compatibilidad con el método original
