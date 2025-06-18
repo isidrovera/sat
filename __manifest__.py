@@ -178,7 +178,7 @@
             'sat/static/src/css/sat_table_styles.css',
             'sat/static/src/js/sat_table_enhancements.js',
             'sat/static/src/js/systray_attendance_menu.js',
-            'sat/static/src/js/public_kiosk_app.js',
+            
             
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
@@ -191,6 +191,7 @@
         
         'web.assets_frontend': [
             'sat/static/src/js/searchFilter.js',
+            'sat/static/src/js/public_kiosk_app.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
         ],
         
