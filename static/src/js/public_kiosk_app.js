@@ -1,195 +1,159 @@
 /** @odoo-module **/
 
-import { patch } from "@web/core/utils/patch";
-import { _t } from "@web/core/l10n/translation";
-import { rpc } from "@web/core/network/rpc";
+// Versión ultra simple que no depende de módulos específicos de Odoo
+console.log("Loading GPS attendance enhancement...");
 
-// Función que aplica el patch cuando el módulo esté disponible
-function applyAttendancePatch() {
-    // Intentar importar el módulo de forma dinámica
-    import("@hr_attendance/components/systray_attendance/systray_attendance_menu")
-        .then((module) => {
-            const ActivityMenu = module.ActivityMenu;
-            
-            if (ActivityMenu && ActivityMenu.prototype) {
-                console.log("Applying GPS patch to ActivityMenu");
-                
-                patch(ActivityMenu.prototype, {
-                    setup() {
-                        super.setup();
-                        
-                        // Agregar estado para GPS
-                        Object.assign(this.state, {
-                            gpsLoading: false,
-                            gpsStatus: 'unknown' // unknown, granted, denied, unavailable
-                        });
-                        
-                        // Configuración GPS mejorada
-                        this.gpsOptions = {
-                            enableHighAccuracy: true,
-                            timeout: 10000, // 10 segundos
-                            maximumAge: 60000 // Cache por 1 minuto
-                        };
-                    },
-
-                    /**
-                     * Captura ubicación GPS con manejo mejorado de errores
-                     */
-                    async captureGpsLocation() {
-                        return new Promise((resolve) => {
-                            if (!navigator.geolocation) {
-                                console.warn("Geolocation not supported by this browser");
-                                this.state.gpsStatus = 'unavailable';
-                                resolve({ latitude: false, longitude: false });
-                                return;
-                            }
-
-                            // Mostrar indicador de carga
-                            this.state.gpsLoading = true;
-
-                            navigator.geolocation.getCurrentPosition(
-                                (position) => {
-                                    const { latitude, longitude, accuracy } = position.coords;
-                                    console.log(`GPS captured: lat=${latitude}, lon=${longitude}, accuracy=${accuracy}m`);
-                                    
-                                    this.state.gpsLoading = false;
-                                    this.state.gpsStatus = 'granted';
-                                    
-                                    resolve({ 
-                                        latitude, 
-                                        longitude, 
-                                        accuracy,
-                                        timestamp: position.timestamp 
-                                    });
-                                },
-                                (error) => {
-                                    this.state.gpsLoading = false;
-                                    
-                                    // Manejo mejorado de errores GPS
-                                    let errorMessage = "";
-                                    switch(error.code) {
-                                        case error.PERMISSION_DENIED:
-                                            this.state.gpsStatus = 'denied';
-                                            errorMessage = _t("GPS permission denied. Please enable location access in your browser.");
-                                            break;
-                                        case error.POSITION_UNAVAILABLE:
-                                            this.state.gpsStatus = 'unavailable';
-                                            errorMessage = _t("GPS position unavailable. Check your device's location settings.");
-                                            break;
-                                        case error.TIMEOUT:
-                                            this.state.gpsStatus = 'timeout';
-                                            errorMessage = _t("GPS timeout. Continuing with IP-based location.");
-                                            break;
-                                        default:
-                                            this.state.gpsStatus = 'error';
-                                            errorMessage = _t("GPS error occurred.");
-                                            break;
-                                    }
-                                    
-                                    console.warn(`GPS Error: ${errorMessage}`, error);
-                                    
-                                    // Mostrar notificación solo para errores críticos
-                                    if (error.code === error.PERMISSION_DENIED && this.notification) {
-                                        this.notification.add(errorMessage, { 
-                                            type: "warning",
-                                            title: _t("Location Access Required")
-                                        });
-                                    }
-                                    
-                                    // Continuar sin GPS
-                                    resolve({ latitude: false, longitude: false });
-                                },
-                                this.gpsOptions
-                            );
-                        });
-                    },
-
-                    /**
-                     * OVERRIDE: Método principal mejorado para manejar GPS
-                     */
-                    async signInOut() {
-                        if (this.dropdown && this.dropdown.close) {
-                            this.dropdown.close();
-                        }
-                        
-                        try {
-                            // Capturar ubicación GPS (funciona en la mayoría de navegadores/dispositivos)
-                            const gpsLocation = await this.captureGpsLocation();
-                            
-                            // Preparar datos para enviar
-                            const attendanceData = {
-                                latitude: gpsLocation.latitude,
-                                longitude: gpsLocation.longitude
-                            };
-                            
-                            // Agregar accuracy si está disponible
-                            if (gpsLocation.accuracy) {
-                                attendanceData.accuracy = gpsLocation.accuracy;
-                            }
-                            
-                            // Llamar al endpoint con coordenadas GPS
-                            const result = await rpc("/hr_attendance/systray_check_in_out", attendanceData);
-                            
-                            // Manejar errores del servidor
-                            if (result.error && this.notification) {
-                                this.notification.add(result.error, { 
-                                    type: "danger",
-                                    title: _t("Attendance Error") 
-                                });
-                                return;
-                            }
-                            
-                            // Actualizar datos del empleado
-                            if (this.searchReadEmployee) {
-                                await this.searchReadEmployee();
-                            }
-                            
-                            // Mostrar notificación de éxito mejorada
-                            if (this.notification) {
-                                const action = this.state.checkedIn ? _t("Check out") : _t("Check in");
-                                const locationInfo = gpsLocation.latitude ? 
-                                    _t("with GPS location (±%(accuracy)sm)", { accuracy: Math.round(gpsLocation.accuracy || 0) }) : 
-                                    _t("with IP-based location");
-                                    
-                                this.notification.add(
-                                    _t("%(action)s successful %(location)s", {
-                                        action: action,
-                                        location: locationInfo
-                                    }), 
-                                    { 
-                                        type: "success",
-                                        title: _t("Attendance Recorded") 
-                                    }
-                                );
-                            }
-                            
-                        } catch (error) {
-                            console.error("Attendance error:", error);
-                            if (this.notification) {
-                                this.notification.add(
-                                    error.data?.message || _t("Error processing attendance"), 
-                                    { 
-                                        type: "danger",
-                                        title: _t("Attendance Error") 
-                                    }
-                                );
-                            }
-                        }
-                    }
-                });
-            } else {
-                console.warn("ActivityMenu not found or no prototype available");
+// Funciones GPS básicas
+const GPS_ATTENDANCE = {
+    async getLocation() {
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+                resolve({ latitude: false, longitude: false });
+                return;
             }
-        })
-        .catch((error) => {
-            console.warn("ActivityMenu module not found, skipping patch:", error.message);
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude, accuracy } = position.coords;
+                    console.log(`GPS captured: ${latitude}, ${longitude}`);
+                    resolve({ latitude, longitude, accuracy });
+                },
+                (error) => {
+                    console.warn("GPS error:", error.message);
+                    resolve({ latitude: false, longitude: false });
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
         });
+    },
+
+    async sendAttendance(url, data = {}) {
+        const location = await this.getLocation();
+        
+        const payload = {
+            ...data,
+            latitude: location.latitude,
+            longitude: location.longitude
+        };
+        
+        if (location.accuracy) {
+            payload.accuracy = location.accuracy;
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            return await response.json();
+        } catch (error) {
+            console.error("Attendance request failed:", error);
+            throw error;
+        }
+    }
+};
+
+// Hacer disponible globalmente
+window.GPS_ATTENDANCE = GPS_ATTENDANCE;
+
+// Función para interceptar clicks en botones de attendance
+function setupAttendanceInterception() {
+    // Interceptar todos los clicks en el documento
+    document.addEventListener('click', async function(event) {
+        const target = event.target;
+        
+        // Buscar si el click es en un elemento relacionado con attendance
+        const isAttendanceButton = (
+            target.classList.contains('o_systray_attendance') ||
+            target.closest('.o_systray_attendance') ||
+            target.getAttribute('data-action') === 'attendance' ||
+            target.closest('[data-action="attendance"]') ||
+            target.textContent.toLowerCase().includes('check in') ||
+            target.textContent.toLowerCase().includes('check out')
+        );
+        
+        if (isAttendanceButton) {
+            console.log("Attendance button detected, enhancing with GPS");
+            
+            // Agregar un pequeño delay para permitir que se capture la ubicación
+            const location = await GPS_ATTENDANCE.getLocation();
+            
+            if (location.latitude) {
+                console.log("GPS location captured for attendance");
+                
+                // Agregar datos GPS al elemento para que puedan ser usados por Odoo
+                target.setAttribute('data-gps-lat', location.latitude);
+                target.setAttribute('data-gps-lon', location.longitude);
+                if (location.accuracy) {
+                    target.setAttribute('data-gps-accuracy', location.accuracy);
+                }
+            }
+        }
+    }, true); // true para capturar en fase de captura
 }
 
-// Aplicar el patch cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyAttendancePatch);
-} else {
-    // Si el DOM ya está listo, aplicar inmediatamente
-    setTimeout(applyAttendancePatch, 100);
+// Función para monitorear formularios de attendance
+function setupFormInterception() {
+    // Interceptar envíos de formularios
+    document.addEventListener('submit', async function(event) {
+        const form = event.target;
+        
+        // Verificar si es un formulario de attendance
+        if (form.action && form.action.includes('attendance')) {
+            console.log("Attendance form submission detected");
+            
+            const location = await GPS_ATTENDANCE.getLocation();
+            
+            if (location.latitude) {
+                // Agregar campos hidden con coordenadas GPS
+                const latInput = document.createElement('input');
+                latInput.type = 'hidden';
+                latInput.name = 'latitude';
+                latInput.value = location.latitude;
+                form.appendChild(latInput);
+                
+                const lonInput = document.createElement('input');
+                lonInput.type = 'hidden';
+                lonInput.name = 'longitude';
+                lonInput.value = location.longitude;
+                form.appendChild(lonInput);
+                
+                if (location.accuracy) {
+                    const accInput = document.createElement('input');
+                    accInput.type = 'hidden';
+                    accInput.name = 'accuracy';
+                    accInput.value = location.accuracy;
+                    form.appendChild(accInput);
+                }
+                
+                console.log("GPS data added to attendance form");
+            }
+        }
+    });
 }
+
+// Inicializar cuando el DOM esté listo
+function initializeGPS() {
+    console.log("Initializing GPS attendance enhancement");
+    setupAttendanceInterception();
+    setupFormInterception();
+}
+
+// Ejecutar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeGPS);
+} else {
+    initializeGPS();
+}
+
+// También ejecutar después de un delay para capturar contenido dinámico
+setTimeout(initializeGPS, 2000);
