@@ -40,46 +40,6 @@ class ResCompany(models.Model):
         help='Allow attendance from any location (disable geofencing restrictions)'
     )
 
-    def init(self):
-        """
-        Forzar la creación de las columnas GPS si no existen
-        """
-        super().init()
-        # Verificar y crear columnas si no existen
-        self._cr.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'res_company' 
-            AND column_name = 'attendance_gps_required'
-        """)
-        if not self._cr.fetchone():
-            self._cr.execute("""
-                ALTER TABLE res_company 
-                ADD COLUMN attendance_gps_required BOOLEAN DEFAULT FALSE
-            """)
-        
-        # Verificar otras columnas GPS
-        gps_columns = [
-            ('attendance_gps_timeout', 'INTEGER DEFAULT 10000'),
-            ('attendance_gps_accuracy', 'NUMERIC DEFAULT 100.0'),
-            ('attendance_gps_enable_geofencing', 'BOOLEAN DEFAULT FALSE'),
-            ('attendance_gps_office_locations', 'TEXT'),
-            ('attendance_gps_allow_home_office', 'BOOLEAN DEFAULT TRUE')
-        ]
-        
-        for column_name, column_type in gps_columns:
-            self._cr.execute("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'res_company' 
-                AND column_name = %s
-            """, (column_name,))
-            if not self._cr.fetchone():
-                self._cr.execute(f"""
-                    ALTER TABLE res_company 
-                    ADD COLUMN {column_name} {column_type}
-                """)
-
     @api.model
     def _get_gps_settings(self):
         """
