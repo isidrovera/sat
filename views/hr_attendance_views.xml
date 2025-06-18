@@ -147,32 +147,6 @@
         </field>
     </record>
 
-    <!-- Vista de búsqueda extendida para filtrar por ubicación -->
-    <record id="view_attendance_search_inherit_sat" model="ir.ui.view">
-        <field name="name">hr.attendance.search.inherit.sat</field>
-        <field name="model">hr.attendance</field>
-        <field name="inherit_id" ref="hr_attendance.hr_attendance_view_filter"/>
-        <field name="arch" type="xml">
-            <xpath expr="//filter[@name='auto_check']" position="after">
-                <separator/>
-                <filter string="Con Ubicación de Entrada" name="with_check_in_location" 
-                        domain="[('tiene_ubicacion_entrada', '=', True)]"/>
-                <filter string="Con Ubicación de Salida" name="with_check_out_location" 
-                        domain="[('tiene_ubicacion_salida', '=', True)]"/>
-                <filter string="Sin Ubicación" name="without_location" 
-                        domain="['&amp;', ('tiene_ubicacion_entrada', '=', False), ('tiene_ubicacion_salida', '=', False)]"/>
-            </xpath>
-            
-            <xpath expr="//field[@name='check_in']" position="after">
-                <field name="resumen_ubicacion_entrada"/>
-                <field name="resumen_ubicacion_salida"/>
-                <field name="in_city"/>
-                <field name="out_city"/>
-                <field name="in_country_name"/>
-                <field name="out_country_name"/>
-            </xpath>
-        </field>
-    </record>
 
     <!-- Acción para vista especializada de ubicaciones -->
     <record id="action_attendance_location_view" model="ir.actions.act_window">
