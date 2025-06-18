@@ -36,12 +36,7 @@
                                 <field name="resumen_ubicacion_entrada" readonly="1" nolabel="1"/>
                             </div>
                             <div class="col-md-4 text-end">
-                                <field name="url_mapa_entrada" invisible="1"/>
-                                <a t-attf-href="#{record.url_mapa_entrada.value}" 
-                                   target="_blank" 
-                                   class="btn btn-success btn-sm">
-                                    <i class="fa fa-external-link me-1"></i>Google Maps
-                                </a>
+                                <field name="url_mapa_entrada" widget="url" readonly="1" string="Ver en Google Maps"/>
                             </div>
                         </div>
                     </div>
@@ -62,12 +57,7 @@
                                 <field name="resumen_ubicacion_salida" readonly="1" nolabel="1"/>
                             </div>
                             <div class="col-md-4 text-end">
-                                <field name="url_mapa_salida" invisible="1"/>
-                                <a t-attf-href="#{record.url_mapa_salida.value}" 
-                                   target="_blank" 
-                                   class="btn btn-danger btn-sm">
-                                    <i class="fa fa-external-link me-1"></i>Google Maps
-                                </a>
+                                <field name="url_mapa_salida" widget="url" readonly="1" string="Ver en Google Maps"/>
                             </div>
                         </div>
                     </div>
