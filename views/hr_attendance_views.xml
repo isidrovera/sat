@@ -26,12 +26,22 @@
             <xpath expr="//div[@name='in_location_info']" position="after">
                 <div class="o_row" name="sat_location_summary_in">
                     <field name="tiene_ubicacion_entrada" invisible="1"/>
-                    <field name="resumen_ubicacion_entrada" readonly="1" invisible="not tiene_ubicacion_entrada"/>
-                    <button name="action_abrir_mapa_entrada" 
-                            string="Ver Mapa Detallado" 
-                            type="object" 
-                            class="btn btn-sm btn-outline-success"
-                            invisible="not tiene_ubicacion_entrada"/>
+                    <div class="col-12 mt-2" invisible="not tiene_ubicacion_entrada">
+                        <div class="alert alert-success" role="alert">
+                            <strong><i class="fa fa-map-marker me-2"></i>Resumen de Ubicación:</strong>
+                            <field name="resumen_ubicacion_entrada" readonly="1" nolabel="1"/>
+                        </div>
+                        <button name="action_abrir_mapa_entrada" 
+                                string="🗺️ Ver Mapa Detallado" 
+                                type="object" 
+                                class="btn btn-sm btn-outline-success me-2"/>
+                        <a class="btn btn-sm btn-success" 
+                           invisible="not tiene_ubicacion_entrada"
+                           target="_blank">
+                           <field name="url_mapa_entrada" widget="url" nolabel="1" readonly="1"/>
+                           <i class="fa fa-external-link me-1"></i>Google Maps
+                        </a>
+                    </div>
                 </div>
             </xpath>
 
@@ -39,12 +49,22 @@
             <xpath expr="//div[@name='out_location_info']" position="after">
                 <div class="o_row" name="sat_location_summary_out">
                     <field name="tiene_ubicacion_salida" invisible="1"/>
-                    <field name="resumen_ubicacion_salida" readonly="1" invisible="not tiene_ubicacion_salida"/>
-                    <button name="action_abrir_mapa_salida" 
-                            string="Ver Mapa Detallado" 
-                            type="object" 
-                            class="btn btn-sm btn-outline-danger"
-                            invisible="not tiene_ubicacion_salida"/>
+                    <div class="col-12 mt-2" invisible="not tiene_ubicacion_salida">
+                        <div class="alert alert-danger" role="alert">
+                            <strong><i class="fa fa-map-marker me-2"></i>Resumen de Ubicación:</strong>
+                            <field name="resumen_ubicacion_salida" readonly="1" nolabel="1"/>
+                        </div>
+                        <button name="action_abrir_mapa_salida" 
+                                string="🗺️ Ver Mapa Detallado" 
+                                type="object" 
+                                class="btn btn-sm btn-outline-danger me-2"/>
+                        <a class="btn btn-sm btn-danger" 
+                           invisible="not tiene_ubicacion_salida"
+                           target="_blank">
+                           <field name="url_mapa_salida" widget="url" nolabel="1" readonly="1"/>
+                           <i class="fa fa-external-link me-1"></i>Google Maps
+                        </a>
+                    </div>
                 </div>
             </xpath>
 
@@ -52,29 +72,33 @@
             <xpath expr="//chatter" position="before">
                 <notebook>
                     <!-- Página de Mapas de Ubicación -->
-                    <page string="Mapas de Ubicación" name="location_maps">
-                        <group>
-                            <group string="Mapa de Entrada" name="check_in_map">
+                    <page string="🗺️ Mapas de Ubicación" name="location_maps">
+                        <div class="row">
+                            <div class="col-md-6">
                                 <field name="mapa_entrada_html" widget="html" nolabel="1"/>
-                            </group>
-                            <group string="Mapa de Salida" name="check_out_map">
+                            </div>
+                            <div class="col-md-6">
                                 <field name="mapa_salida_html" widget="html" nolabel="1"/>
-                            </group>
-                        </group>
+                            </div>
+                        </div>
                     </page>
                     
                     <!-- Página de Detalles Técnicos -->
-                    <page string="Información Técnica" name="technical_info">
+                    <page string="🔧 Información Técnica" name="technical_info">
                         <group>
-                            <group string="Datos Técnicos de Entrada">
+                            <group string="📍 Datos Técnicos de Entrada">
                                 <field name="in_latitude" readonly="1"/>
                                 <field name="in_longitude" readonly="1"/>
+                                <field name="in_ip_address" readonly="1"/>
+                                <field name="in_browser" readonly="1"/>
                                 <field name="url_mapa_entrada" readonly="1" widget="url"/>
                                 <field name="mapa_estatico_entrada" readonly="1" widget="url"/>
                             </group>
-                            <group string="Datos Técnicos de Salida">
+                            <group string="📍 Datos Técnicos de Salida">
                                 <field name="out_latitude" readonly="1"/>
                                 <field name="out_longitude" readonly="1"/>
+                                <field name="out_ip_address" readonly="1"/>
+                                <field name="out_browser" readonly="1"/>
                                 <field name="url_mapa_salida" readonly="1" widget="url"/>
                                 <field name="mapa_estatico_salida" readonly="1" widget="url"/>
                             </group>
