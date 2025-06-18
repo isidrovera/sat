@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import http, _
 from odoo.http import request
-from odoo.addons.hr_attendance.controllers.hr_attendance import HrAttendance as BaseHrAttendance
+from odoo.addons.hr_attendance.controllers.main import HrAttendance as BaseHrAttendance
 import logging
 
 _logger = logging.getLogger(__name__)
