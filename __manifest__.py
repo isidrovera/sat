@@ -114,6 +114,8 @@
         'views/equipment_visit_report_views.xml',
         'views/leave_request_template.xml',
         'report/equipment_visit_report.xml',
+        'views/res_company_views.xml',
+        'views/hr_attendance_views.xml',
     ],
     
     'assets': {
@@ -175,6 +177,8 @@
             'sat/static/src/js/equipment_visit_report.js',
             'sat/static/src/css/sat_table_styles.css',
             'sat/static/src/js/sat_table_enhancements.js',
+            'sat/static/src/js/systray_attendance_menu.js',
+            'sat/static/src/js/public_kiosk_app.js',
             
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',

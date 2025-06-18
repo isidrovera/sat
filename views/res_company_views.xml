@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Heredar la vista de configuración de asistencias para agregar opciones GPS -->
+    <record id="res_config_settings_view_form_inherit_hr_attendance_gps" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.hr.attendance.gps</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="hr_attendance.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@title='Extra Hours']" position="after">
+                <block title="GPS Location Settings" name="gps_location_settings">
+                    <setting string="GPS Location Tracking" company_dependent="1" help="Configure GPS location capture for attendance records.">
+                        <field name="attendance_gps_required"/>
+                        <div class="content-group" invisible="not attendance_gps_required">
+                            <div class="mt16">
+                                <label for="attendance_gps_timeout" class="o_form_label">GPS Timeout</label>
+                                <div class="text-muted">Maximum time to wait for GPS location</div>
+                                <div class="d-flex align-items-center">
+                                    <field name="attendance_gps_timeout" class="text-center" style="width: 8ch;"/>
+                                    <span class="ms-2">milliseconds</span>
+                                </div>
+                            </div>
+                            <div class="mt16">
+                                <label for="attendance_gps_accuracy" class="o_form_label">GPS Accuracy Threshold</label>
+                                <div class="text-muted">Maximum acceptable GPS accuracy for attendance records</div>
+                                <div class="d-flex align-items-center">
+                                    <field name="attendance_gps_accuracy" class="text-center" style="width: 8ch;"/>
+                                    <span class="ms-2">meters</span>
+                                </div>
+                            </div>
+                        </div>
+                    </setting>
+                    <setting string="Geofencing" company_dependent="1" help="Restrict attendance to specific locations.">
+                        <field name="attendance_gps_enable_geofencing"/>
+                        <div class="content-group" invisible="not attendance_gps_enable_geofencing">
+                            <div class="mt16">
+                                <field name="attendance_gps_allow_home_office"/>
+                                <label for="attendance_gps_allow_home_office" class="ms-2">Allow Home Office</label>
+                            </div>
+                            <div class="mt16">
+                                <label for="attendance_gps_office_locations" class="o_form_label">Office Locations</label>
+                                <div class="text-muted">
+                                    Define office locations in JSON format:<br/>
+                                    [{"name": "Main Office", "lat": 40.7128, "lng": -74.0060, "radius": 200}]
+                                </div>
+                                <field name="attendance_gps_office_locations" widget="text" placeholder='[{"name": "Main Office", "lat": 40.7128, "lng": -74.0060, "radius": 200}]'/>
+                            </div>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Agregar campos GPS a la vista de formulario de la empresa -->
+    <record id="view_company_form_inherit_hr_attendance_gps" model="ir.ui.view">
+        <field name="name">res.company.form.inherit.hr.attendance.gps</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Attendance GPS" name="attendance_gps" groups="hr_attendance.group_hr_attendance_manager">
+                    <group>
+                        <group string="GPS Settings">
+                            <field name="attendance_gps_required"/>
+                            <field name="attendance_gps_timeout" invisible="not attendance_gps_required"/>
+                            <field name="attendance_gps_accuracy" invisible="not attendance_gps_required"/>
+                        </group>
+                        <group string="Geofencing">
+                            <field name="attendance_gps_enable_geofencing"/>
+                            <field name="attendance_gps_allow_home_office" invisible="not attendance_gps_enable_geofencing"/>
+                        </group>
+                    </group>
+                    <group string="Office Locations" invisible="not attendance_gps_enable_geofencing">
+                        <field name="attendance_gps_office_locations" widget="text" nolabel="1" placeholder='[{"name": "Main Office", "lat": 40.7128, "lng": -74.0060, "radius": 200}]'/>
+                        <div class="alert alert-info" role="alert">
+                            <strong>GPS Location Format:</strong><br/>
+                            Use JSON format to define office locations with coordinates and radius in meters.<br/>
+                            Example: [{"name": "Main Office", "lat": 40.7128, "lng": -74.0060, "radius": 200}]
+                        </div>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
