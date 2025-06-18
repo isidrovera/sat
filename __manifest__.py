@@ -114,8 +114,6 @@
         'views/equipment_visit_report_views.xml',
         'views/leave_request_template.xml',
         'report/equipment_visit_report.xml',
-        #'views/res_company_views.xml',
-        #'views/hr_attendance_views.xml',
     ],
     
     'assets': {
@@ -124,8 +122,7 @@
             'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
             
-            # ========== NUEVAS LIBRERÍAS MODERNAS ==========
-            # Bootstrap 5 (última versión)
+            # Bootstrap 5
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js',
             
@@ -139,13 +136,13 @@
             # Tailwind CSS
             'https://cdn.tailwindcss.com',
             
-            # Lucide Icons (iconos modernos)
+            # Lucide Icons
             'https://unpkg.com/lucide@latest/dist/umd/lucide.js',
             
-            # Particles.js para efectos de partículas
+            # Particles.js
             'https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js',
             
-            # Typed.js para efectos de escritura
+            # Typed.js
             'https://cdn.jsdelivr.net/npm/typed.js@2.0.12',
             
             # CSS Files existentes
@@ -155,8 +152,7 @@
             'sat/static/src/css/evaluation_form.css',
             'sat/static/src/css/parts_request_message.css',
             'sat/static/src/css/image-viewer.css',
-            
-           
+            'sat/static/src/css/sat_table_styles.css',
             
             # SCSS existente
             '/sat/static/src/scss/list_dashboard.scss',
@@ -169,16 +165,15 @@
             # JS Files existentes
             'sat/static/src/js/dashboard.js',
             'sat/static/src/js/estilo_dashboard.js',
-            #'sat/static/src/js/gallery_widget.js',
             'sat/static/src/js/gallery_widget_v3.js',
             'sat/static/src/js/list_dashboard.js',
             'sat/static/src/js/parts_request_message.js',
             'sat/static/src/js/image-viewer_v1.js',
             'sat/static/src/js/equipment_visit_report.js',
-            'sat/static/src/css/sat_table_styles.css',
             'sat/static/src/js/sat_table_enhancements.js',
-            'sat/static/src/js/systray_attendance_menu.js',
             
+            # NUEVO ARCHIVO GPS (SIN ERRORES)
+            'sat/static/src/js/gps_attendance_simple.js',
             
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
@@ -191,8 +186,9 @@
         
         'web.assets_frontend': [
             'sat/static/src/js/searchFilter.js',
-            'sat/static/src/js/public_kiosk_app.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+            # NUEVO ARCHIVO GPS PARA FRONTEND
+            'sat/static/src/js/gps_attendance_simple.js',
         ],
         
         'web.assets_qweb': [
