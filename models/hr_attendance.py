@@ -46,11 +46,13 @@ class HrAttendance(models.Model):
     tiene_ubicacion_entrada = fields.Boolean(
         string="Tiene Ubicación de Entrada",
         compute='_compute_tiene_datos_ubicacion',
+        store=True,
         help="Si la entrada tiene datos de ubicación"
     )
     tiene_ubicacion_salida = fields.Boolean(
         string="Tiene Ubicación de Salida", 
         compute='_compute_tiene_datos_ubicacion',
+        store=True,
         help="Si la salida tiene datos de ubicación"
     )
 
