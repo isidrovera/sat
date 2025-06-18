@@ -24,30 +24,6 @@
                     type="object" 
                     class="oe_highlight"/>
                 
-                <!-- Botones del sistema de bloqueo -->
-                <button string="Suspender Servicio" 
-                    name="action_suspender_servicio" 
-                    type="object" 
-                    class="btn btn-warning"
-                    icon="fa-pause"
-                    invisible="estado_bloqueo != 'activo'"
-                    confirm="¿Está seguro de suspender este servicio?"/>
-                
-                <button string="Bloquear Equipo" 
-                    name="action_bloquear_equipo" 
-                    type="object" 
-                    class="btn btn-danger"
-                    icon="fa-lock"
-                    invisible="estado_bloqueo not in ['activo', 'suspendido']"
-                    confirm="¿Está seguro de bloquear este equipo remotamente?"/>
-                
-                <button string="Desbloquear Equipo" 
-                    name="action_desbloquear_equipo" 
-                    type="object" 
-                    class="btn btn-success"
-                    icon="fa-unlock"
-                    invisible="estado_bloqueo not in ['bloqueado', 'suspendido']"
-                    confirm="¿Está seguro de desbloquear este equipo?"/>
                 
                 <field name="estado_alquiler_id" widget="statusbar"
                     options="{'clickable': '1'}" />
