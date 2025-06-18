@@ -172,8 +172,7 @@
             'sat/static/src/js/equipment_visit_report.js',
             'sat/static/src/js/sat_table_enhancements.js',
             
-            # NUEVO ARCHIVO GPS (SIN ERRORES)
-            'sat/static/src/js/gps_attendance_simple.js',
+          
             
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
@@ -187,8 +186,7 @@
         'web.assets_frontend': [
             'sat/static/src/js/searchFilter.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-            # NUEVO ARCHIVO GPS PARA FRONTEND
-            'sat/static/src/js/gps_attendance_simple.js',
+            
         ],
         
         'web.assets_qweb': [
