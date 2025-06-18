@@ -10,4 +10,3 @@ from . import maintenance_controller
 from . import evaluation_controller
 from . import levantamiento
 from . import permisos
-from . import hr_attendance_controller
