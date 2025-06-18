@@ -114,8 +114,8 @@
         'views/equipment_visit_report_views.xml',
         'views/leave_request_template.xml',
         'report/equipment_visit_report.xml',
-        'views/res_company_views.xml',
-        'views/hr_attendance_views.xml',
+        #'views/res_company_views.xml',
+        #'views/hr_attendance_views.xml',
     ],
     
     'assets': {
