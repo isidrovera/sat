@@ -24,46 +24,52 @@
         <field name="arch" type="xml">
             <!-- Agregar información de ubicación en la sección de Check In -->
             <xpath expr="//div[@name='in_location_info']" position="after">
-                <div class="o_row" name="sat_location_summary_in">
+                <div name="sat_location_summary_in" invisible="not tiene_ubicacion_entrada">
                     <field name="tiene_ubicacion_entrada" invisible="1"/>
-                    <div class="col-12 mt-2" invisible="not tiene_ubicacion_entrada">
-                        <div class="alert alert-success" role="alert">
-                            <strong><i class="fa fa-map-marker me-2"></i>Resumen de Ubicación:</strong>
-                            <field name="resumen_ubicacion_entrada" readonly="1" nolabel="1"/>
+                    <div class="alert alert-success mt-3" role="alert" style="border-left: 4px solid #28a745;">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="alert-heading mb-2">
+                                    <i class="fa fa-map-marker me-2" style="color: #28a745;"></i>
+                                    <strong>Resumen de Ubicación de Entrada</strong>
+                                </h6>
+                                <field name="resumen_ubicacion_entrada" readonly="1" nolabel="1"/>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <field name="url_mapa_entrada" invisible="1"/>
+                                <a t-attf-href="#{record.url_mapa_entrada.value}" 
+                                   target="_blank" 
+                                   class="btn btn-success btn-sm">
+                                    <i class="fa fa-external-link me-1"></i>Google Maps
+                                </a>
+                            </div>
                         </div>
-                        <button name="action_abrir_mapa_entrada" 
-                                string="🗺️ Ver Mapa Detallado" 
-                                type="object" 
-                                class="btn btn-sm btn-outline-success me-2"/>
-                        <a class="btn btn-sm btn-success" 
-                           invisible="not tiene_ubicacion_entrada"
-                           target="_blank">
-                           <field name="url_mapa_entrada" widget="url" nolabel="1" readonly="1"/>
-                           <i class="fa fa-external-link me-1"></i>Google Maps
-                        </a>
                     </div>
                 </div>
             </xpath>
 
             <!-- Agregar información de ubicación en la sección de Check Out -->
             <xpath expr="//div[@name='out_location_info']" position="after">
-                <div class="o_row" name="sat_location_summary_out">
+                <div name="sat_location_summary_out" invisible="not tiene_ubicacion_salida">
                     <field name="tiene_ubicacion_salida" invisible="1"/>
-                    <div class="col-12 mt-2" invisible="not tiene_ubicacion_salida">
-                        <div class="alert alert-danger" role="alert">
-                            <strong><i class="fa fa-map-marker me-2"></i>Resumen de Ubicación:</strong>
-                            <field name="resumen_ubicacion_salida" readonly="1" nolabel="1"/>
+                    <div class="alert alert-danger mt-3" role="alert" style="border-left: 4px solid #dc3545;">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="alert-heading mb-2">
+                                    <i class="fa fa-map-marker me-2" style="color: #dc3545;"></i>
+                                    <strong>Resumen de Ubicación de Salida</strong>
+                                </h6>
+                                <field name="resumen_ubicacion_salida" readonly="1" nolabel="1"/>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <field name="url_mapa_salida" invisible="1"/>
+                                <a t-attf-href="#{record.url_mapa_salida.value}" 
+                                   target="_blank" 
+                                   class="btn btn-danger btn-sm">
+                                    <i class="fa fa-external-link me-1"></i>Google Maps
+                                </a>
+                            </div>
                         </div>
-                        <button name="action_abrir_mapa_salida" 
-                                string="🗺️ Ver Mapa Detallado" 
-                                type="object" 
-                                class="btn btn-sm btn-outline-danger me-2"/>
-                        <a class="btn btn-sm btn-danger" 
-                           invisible="not tiene_ubicacion_salida"
-                           target="_blank">
-                           <field name="url_mapa_salida" widget="url" nolabel="1" readonly="1"/>
-                           <i class="fa fa-external-link me-1"></i>Google Maps
-                        </a>
                     </div>
                 </div>
             </xpath>
@@ -73,36 +79,40 @@
                 <notebook>
                     <!-- Página de Mapas de Ubicación -->
                     <page string="🗺️ Mapas de Ubicación" name="location_maps">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <field name="mapa_entrada_html" widget="html" nolabel="1"/>
-                            </div>
-                            <div class="col-md-6">
-                                <field name="mapa_salida_html" widget="html" nolabel="1"/>
+                        <div class="container-fluid">
+                            <div class="row">
+                                <div class="col-lg-6 mb-4">
+                                    <field name="mapa_entrada_html" widget="html" nolabel="1"/>
+                                </div>
+                                <div class="col-lg-6 mb-4">
+                                    <field name="mapa_salida_html" widget="html" nolabel="1"/>
+                                </div>
                             </div>
                         </div>
                     </page>
                     
                     <!-- Página de Detalles Técnicos -->
                     <page string="🔧 Información Técnica" name="technical_info">
-                        <group>
-                            <group string="📍 Datos Técnicos de Entrada">
-                                <field name="in_latitude" readonly="1"/>
-                                <field name="in_longitude" readonly="1"/>
-                                <field name="in_ip_address" readonly="1"/>
-                                <field name="in_browser" readonly="1"/>
-                                <field name="url_mapa_entrada" readonly="1" widget="url"/>
-                                <field name="mapa_estatico_entrada" readonly="1" widget="url"/>
-                            </group>
-                            <group string="📍 Datos Técnicos de Salida">
-                                <field name="out_latitude" readonly="1"/>
-                                <field name="out_longitude" readonly="1"/>
-                                <field name="out_ip_address" readonly="1"/>
-                                <field name="out_browser" readonly="1"/>
-                                <field name="url_mapa_salida" readonly="1" widget="url"/>
-                                <field name="mapa_estatico_salida" readonly="1" widget="url"/>
-                            </group>
-                        </group>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <group string="📍 Datos Técnicos de Entrada">
+                                    <field name="in_latitude" readonly="1"/>
+                                    <field name="in_longitude" readonly="1"/>
+                                    <field name="in_ip_address" readonly="1" string="Dirección IP"/>
+                                    <field name="in_browser" readonly="1" string="Navegador"/>
+                                    <field name="url_mapa_entrada" readonly="1" widget="url" string="Enlace Google Maps"/>
+                                </group>
+                            </div>
+                            <div class="col-md-6">
+                                <group string="📍 Datos Técnicos de Salida">
+                                    <field name="out_latitude" readonly="1"/>
+                                    <field name="out_longitude" readonly="1"/>
+                                    <field name="out_ip_address" readonly="1" string="Dirección IP"/>
+                                    <field name="out_browser" readonly="1" string="Navegador"/>
+                                    <field name="url_mapa_salida" readonly="1" widget="url" string="Enlace Google Maps"/>
+                                </group>
+                            </div>
+                        </div>
                     </page>
                 </notebook>
             </xpath>
