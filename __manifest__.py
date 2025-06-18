@@ -114,7 +114,7 @@
         'views/equipment_visit_report_views.xml',
         'views/leave_request_template.xml',
         'report/equipment_visit_report.xml',
-        'views/hr_attendance_views.xml',
+        
     ],
     
     'assets': {
