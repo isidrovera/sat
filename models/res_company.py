@@ -53,3 +53,19 @@ class ResCompany(models.Model):
             'geofencing_enabled': company.attendance_gps_enable_geofencing,
             'allow_home_office': company.attendance_gps_allow_home_office,
         }
+
+    @api.model
+    def _init_gps_fields(self):
+        """
+        Inicializar campos GPS para empresas existentes
+        """
+        companies = self.search([])
+        for company in companies:
+            if not hasattr(company, 'attendance_gps_required'):
+                company.write({
+                    'attendance_gps_required': False,
+                    'attendance_gps_timeout': 10000,
+                    'attendance_gps_accuracy': 100.0,
+                    'attendance_gps_enable_geofencing': False,
+                    'attendance_gps_allow_home_office': True,
+                })
