@@ -359,7 +359,23 @@ class UnidadAlquiler(models.Model):
             return f"qr_code_{self.serie}.png"
         else:
             return f"qr_code_{self.id}.png"
-
+    @api.model
+    def limpiar_attachments_qr_huerfanos(self):
+        """Limpia attachments de QR que puedan estar causando problemas"""
+        attachments_problematicos = self.env['ir.attachment'].search([
+            ('res_model', '=', 'alquiler'),
+            ('res_field', '=', 'qr_image'),
+            ('name', '=', False)  # Attachments sin nombre
+        ])
+        
+        for attachment in attachments_problematicos:
+            # Asignar un nombre válido
+            record = self.browse(attachment.res_id)
+            if record.exists():
+                attachment.name = f"qr_code_{record.serie or record.id}.png"
+            else:
+                # El registro ya no existe, eliminar attachment
+                attachment.unlink()
      # Campos originales de fechas
     fecha_inicio = fields.Date(
         string='Fecha de mantenimiento inicial',
