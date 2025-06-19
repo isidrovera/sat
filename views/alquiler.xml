@@ -987,7 +987,6 @@
                   color="estado_alquiler_id"
                   event_limit="10"
                   quick_add="True"
-                  all_day="fecha_todo_dia"
                   mode="month"
                   scales="day,week,month,year"
                   form_view_id="alquiler_view_form"
@@ -1004,7 +1003,8 @@
             <field name="estado_programacion" />
             <field name="celular" />
             <field name="contacto_id" />
-            <field name="fecha_todo_dia" invisible="1" />
+            <field name="marca" />
+            <field name="tipo_maquina" />
             
             <!-- Templates para personalizar la vista del evento -->
             <templates>
@@ -1051,6 +1051,10 @@
                             <div class="d-flex align-items-center mb-1" t-if="record.serie.value">
                                 <i class="fa fa-barcode me-2 text-muted" />
                                 <span><strong>Serie:</strong> <t t-esc="record.serie.value" /></span>
+                            </div>
+                            <div class="d-flex align-items-center mb-1" t-if="record.marca.value">
+                                <i class="fa fa-industry me-2 text-muted" />
+                                <span><strong>Marca:</strong> <t t-esc="record.marca.value" /></span>
                             </div>
                             <div class="d-flex align-items-center mb-1" t-if="record.direccion.value">
                                 <i class="fa fa-map-marker me-2 text-muted" />
