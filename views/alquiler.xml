@@ -942,7 +942,7 @@
 
                     <!-- Imagen QR -->
                     <field name="qr_image" widget="image" options="{'size': [40, 40]}" />
-
+                    <field name="qr_image_filename" invisible="1"/>
                     <!-- Contadores con suma -->
                     <field name="ticket_count"
                         string="Tickets"
