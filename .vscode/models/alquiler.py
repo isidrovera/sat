@@ -310,7 +310,11 @@ class UnidadAlquiler(models.Model):
             mail_template.send_mail(record.id, force_send=True, email_values={'body_html': record._prepare_mail_body(related_records)})
 
     
-    qr_image = fields.Binary("Código QR", attachment=True)
+    qr_image = fields.Binary(
+        "Código QR", 
+        attachment=True,
+        help="Código QR generado para el equipo"
+    )
     # Agregar este campo después de la línea donde tienes qr_image
     qr_image_filename = fields.Char("Nombre archivo QR", compute='_compute_qr_filename', store=True)
     @api.depends('serie', 'name')
@@ -323,32 +327,72 @@ class UnidadAlquiler(models.Model):
             else:
                 record.qr_image_filename = f"qr_code_{record.id}.png"
     def generate_qr_code(self):
-        # Obtener la URL base de la configuración de Odoo
+        """Genera código QR para el equipo"""
+        try:
+            # Obtener la URL base de la configuración de Odoo
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            # Construir la URL completa
+            qr_url = f"{base_url}/api/escanear_qr?id_registro={self.id}"
+
+            # Crear el código QR
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(qr_url)
+            qr.make(fit=True)
+
+            # Generar la imagen
+            img = qr.make_image(fill='black', back_color='white')
+            temp = BytesIO()
+            img.save(temp, format="PNG")
+            qr_img = base64.b64encode(temp.getvalue())
+
+            # Generar nombre de archivo único y válido
+            serie_clean = re.sub(r'[^\w\-_\.]', '_', self.serie or '') if self.serie else 'sin_serie'
+            filename = f"qr_code_{serie_clean}_{self.id}.png"
+
+            # Actualizar los campos - IMPORTANTE: usar write() para evitar problemas
+            self.write({
+                'qr_image': qr_img,
+                'qr_image_filename': filename
+            })
+
+            # Mensaje de éxito
+            self.message_post(
+                body=f"✅ Código QR generado exitosamente: {filename}",
+                message_type='notification'
+            )
+
+        except Exception as e:
+            # Log del error y mensaje al usuario
+            _logger.error(f"Error al generar QR para equipo {self.id}: {str(e)}")
+            self.message_post(
+                body=f"❌ Error al generar código QR: {str(e)}",
+                message_type='notification'
+            )
+            raise UserError(f"Error al generar código QR: {str(e)}")
+
+
+    def get_qr_image_url(self):
+        """Obtiene la URL segura para mostrar la imagen QR"""
+        self.ensure_one()
+        if not self.qr_image:
+            return False
+        
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        # Construir la URL completa
-        qr_url = f"{base_url}/api/escanear_qr?id_registro={self.id}"
-
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data(qr_url)  # Añade la URL completa al QR
-        qr.make(fit=True)
-
-        img = qr.make_image(fill='black', back_color='white')
-        temp = BytesIO()
-        img.save(temp, format="PNG")
-        qr_img = base64.b64encode(temp.getvalue())
-        
-        # IMPORTANTE: Asegurar que el filename se compute correctamente
-        self._compute_qr_filename()
-        
-        # Escribir tanto la imagen como asegurar que el filename sea string
-        self.write({
-            'qr_image': qr_img
-        })
+        return f"{base_url}/web/image/alquiler/{self.id}/qr_image/{self.qr_image_filename or 'qr_code.png'}"
 
 
-    
+    # Agregar este método a tu clase UnidadAlquiler
+    def _get_qr_download_name(self):
+        """Asegura que el nombre de descarga sea siempre una cadena"""
+        self.ensure_one()
+        if self.qr_image_filename:
+            return self.qr_image_filename
+        elif self.serie:
+            return f"qr_code_{self.serie}.png"
+        else:
+            return f"qr_code_{self.id}.png"
