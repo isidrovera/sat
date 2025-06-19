@@ -307,6 +307,7 @@ class UnidadAlquiler(models.Model):
         string='Fecha de mantenimiento inicial',
         required=True,
         tracking=True,
+        default=fields.Date.today,  # ← AGREGAR ESTA LÍNEA
         help="Fecha inicial del mantenimiento"
     )
 
