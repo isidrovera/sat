@@ -1011,7 +1011,7 @@
             <field name="motivo_reprogramacion" />
             <field name="fecha_confirmacion" />
             
-            <!-- Campo calculado para mostrar información adicional -->
+            <!-- Campos adicionales para información completa -->
             <field name="precio_venta" widget="monetary" />
             <field name="currency_id" invisible="1" />
             <field name="ubicacion_id" />
