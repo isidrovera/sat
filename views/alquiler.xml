@@ -980,45 +980,15 @@
 </record>
 
       <record id="alquiler_view_calendar" model="ir.ui.view">
-    <field name="name">alquiler.calendar</field>
-    <field name="model">alquiler</field>
-    <field name="arch" type="xml">
-        <calendar date_start="fecha_recurrente" 
-                  color="estado_alquiler_id"
-                  event_limit="15"
-                  quick_add="True"
-                  mode="month"
-                  scales="day,week,month,year"
-                  hide_time="True"
-                  create="True"
-                  edit="True"
-                  delete="True">
-            
-            <!-- Campos modernos disponibles para mostrar en eventos -->
-            <field name="cliente_id" widget="many2one_avatar" />
-            <field name="name" string="Modelo" />
-            <field name="serie" />
-            <field name="estado_alquiler_id" widget="badge" />
-            <field name="estado_programacion" widget="badge" />
-            <field name="direccion" />
-            <field name="marca" />
-            <field name="tipo_maquina" />
-            <field name="contacto_id" />
-            <field name="celular" widget="phone" />
-            <field name="control_mantenimiento" widget="boolean_toggle" />
-            <field name="fecha_inicio" />
-            <field name="intervalo_meses" />
-            <field name="motivo_reprogramacion" />
-            <field name="fecha_confirmacion" />
-            
-            <!-- Campos adicionales para información completa -->
-            <field name="precio_venta" widget="monetary" />
-            <field name="currency_id" invisible="1" />
-            <field name="ubicacion_id" />
-            <field name="observaciones" />
-        </calendar>
-    </field>
-</record>
+            <field name="name">alquiler.calendar</field>
+            <field name="model">alquiler</field>
+            <field name="arch" type="xml">
+                <calendar date_start="fecha_recurrente" color="cliente_id" event_limit="5">
+                    <field name="cliente_id" />
+                    <field name="direccion" />
+                </calendar>
+            </field>
+        </record>
         <record id="alquiler_view_graph" model="ir.ui.view">
             <field name="name">alquiler.graph</field>
             <field name="model">alquiler</field>
