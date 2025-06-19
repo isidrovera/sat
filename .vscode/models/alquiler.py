@@ -311,11 +311,22 @@ class UnidadAlquiler(models.Model):
 
     
     qr_image = fields.Binary("Código QR", attachment=True)
-
+    # Agregar este campo después de la línea donde tienes qr_image
+    qr_image_filename = fields.Char("Nombre archivo QR", compute='_compute_qr_filename', store=True)
+    @api.depends('serie', 'name')
+    def _compute_qr_filename(self):
+        for record in self:
+            if record.serie and record.name:
+                # Asegurar que el nombre sea una cadena válida
+                modelo_name = record.name.name if hasattr(record.name, 'name') else str(record.name)
+                record.qr_image_filename = f"qr_{record.serie}_{modelo_name}.png"
+            else:
+                record.qr_image_filename = f"qr_code_{record.id}.png"
     def generate_qr_code(self):
         # Obtener la URL base de la configuración de Odoo
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        qr_url = f"{base_url}/api/escanear_qr?id_registro={self.id}"  # Construir la URL completa
+        # Construir la URL completa
+        qr_url = f"{base_url}/api/escanear_qr?id_registro={self.id}"
 
         qr = qrcode.QRCode(
             version=1,
@@ -330,7 +341,14 @@ class UnidadAlquiler(models.Model):
         temp = BytesIO()
         img.save(temp, format="PNG")
         qr_img = base64.b64encode(temp.getvalue())
-        self.write({'qr_image': qr_img})
+        
+        # IMPORTANTE: Asegurar que el filename se compute correctamente
+        self._compute_qr_filename()
+        
+        # Escribir tanto la imagen como asegurar que el filename sea string
+        self.write({
+            'qr_image': qr_img
+        })
 
 
     
