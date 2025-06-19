@@ -979,16 +979,125 @@
     </field>
 </record>
 
-        <record id="alquiler_view_calendar" model="ir.ui.view">
-            <field name="name">alquiler.calendar</field>
-            <field name="model">alquiler</field>
-            <field name="arch" type="xml">
-                <calendar date_start="fecha_recurrente" color="cliente_id" event_limit="5">
-                    <field name="cliente_id" />
-                    <field name="direccion" />
-                </calendar>
-            </field>
-        </record>
+       <record id="alquiler_view_calendar" model="ir.ui.view">
+    <field name="name">alquiler.calendar</field>
+    <field name="model">alquiler</field>
+    <field name="arch" type="xml">
+        <calendar date_start="fecha_recurrente" 
+                  color="estado_alquiler_id"
+                  event_limit="10"
+                  quick_add="True"
+                  all_day="fecha_todo_dia"
+                  mode="month"
+                  scales="day,week,month,year"
+                  form_view_id="alquiler_view_form"
+                  event_open_popup="True"
+                  hide_time="True"
+                  show_unusual_days="True">
+            
+            <!-- Campos principales para mostrar en el evento -->
+            <field name="cliente_id" />
+            <field name="name" string="Modelo" />
+            <field name="serie" />
+            <field name="direccion" />
+            <field name="estado_alquiler_id" />
+            <field name="estado_programacion" />
+            <field name="celular" />
+            <field name="contacto_id" />
+            <field name="fecha_todo_dia" invisible="1" />
+            
+            <!-- Templates para personalizar la vista del evento -->
+            <templates>
+                <!-- Template principal del evento -->
+                <t t-name="calendar-box">
+                    <div class="o_calendar_event_details">
+                        <div class="o_event_title">
+                            <strong t-esc="record.cliente_id.value" />
+                        </div>
+                        <div class="o_event_subtitle">
+                            <i class="fa fa-cog me-1" />
+                            <span t-esc="record.name.value" />
+                            <t t-if="record.serie.value">
+                                - <span t-esc="record.serie.value" />
+                            </t>
+                        </div>
+                        <div class="o_event_location" t-if="record.direccion.value">
+                            <i class="fa fa-map-marker me-1" />
+                            <small t-esc="record.direccion.value" />
+                        </div>
+                        <div class="o_event_status">
+                            <span class="badge badge-sm" 
+                                  t-attf-class="badge-{{record.estado_alquiler_id.raw_value == 'lista' and 'success' or 
+                                                record.estado_alquiler_id.raw_value == 'alquilada' and 'info' or
+                                                record.estado_alquiler_id.raw_value == 'con_problemas' and 'danger' or
+                                                record.estado_alquiler_id.raw_value == 'sin_revisar' and 'warning' or 'secondary'}}">
+                                <t t-esc="record.estado_alquiler_id.value" />
+                            </span>
+                        </div>
+                    </div>
+                </t>
+
+                <!-- Template para el popover -->
+                <t t-name="calendar-popover">
+                    <div class="o_cw_popover">
+                        <div class="o_cw_popover_title">
+                            <strong t-esc="record.cliente_id.value" />
+                        </div>
+                        <div class="o_cw_popover_fields">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fa fa-cog me-2 text-muted" />
+                                <span><strong>Modelo:</strong> <t t-esc="record.name.value" /></span>
+                            </div>
+                            <div class="d-flex align-items-center mb-1" t-if="record.serie.value">
+                                <i class="fa fa-barcode me-2 text-muted" />
+                                <span><strong>Serie:</strong> <t t-esc="record.serie.value" /></span>
+                            </div>
+                            <div class="d-flex align-items-center mb-1" t-if="record.direccion.value">
+                                <i class="fa fa-map-marker me-2 text-muted" />
+                                <span><strong>Dirección:</strong> <t t-esc="record.direccion.value" /></span>
+                            </div>
+                            <div class="d-flex align-items-center mb-1" t-if="record.celular.value">
+                                <i class="fa fa-phone me-2 text-muted" />
+                                <span><strong>Teléfono:</strong> <t t-esc="record.celular.value" /></span>
+                            </div>
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fa fa-info-circle me-2 text-muted" />
+                                <span><strong>Estado:</strong> 
+                                    <span class="badge badge-sm ms-1"
+                                          t-attf-class="badge-{{record.estado_alquiler_id.raw_value == 'lista' and 'success' or 
+                                                        record.estado_alquiler_id.raw_value == 'alquilada' and 'info' or
+                                                        record.estado_alquiler_id.raw_value == 'con_problemas' and 'danger' or
+                                                        record.estado_alquiler_id.raw_value == 'sin_revisar' and 'warning' or 'secondary'}}">
+                                        <t t-esc="record.estado_alquiler_id.value" />
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="d-flex align-items-center" t-if="record.estado_programacion.value">
+                                <i class="fa fa-calendar-check me-2 text-muted" />
+                                <span><strong>Mantenimiento:</strong> <t t-esc="record.estado_programacion.value" /></span>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </templates>
+
+            <!-- Filtros rápidos -->
+            <filter string="Programados" name="programados" 
+                    domain="[('estado_programacion', '=', 'confirmado')]" />
+            <filter string="Pendientes" name="pendientes" 
+                    domain="[('estado_programacion', '=', 'pendiente')]" />
+            <filter string="Con Problemas" name="problemas" 
+                    domain="[('estado_alquiler_id', 'in', ['con_problemas', 'partes'])]" />
+            <separator />
+            <filter string="Este Mes" name="este_mes" 
+                    domain="[('fecha_recurrente', '>=', context_today().strftime('%Y-%m-01')),
+                            ('fecha_recurrente', '&lt;', (context_today() + relativedelta(months=1)).strftime('%Y-%m-01'))]" />
+            <filter string="Próximos 7 días" name="proximos_7_dias" 
+                    domain="[('fecha_recurrente', '>=', context_today()),
+                            ('fecha_recurrente', '&lt;=', (context_today() + relativedelta(days=7)))]" />
+        </calendar>
+    </field>
+</record>
         <record id="alquiler_view_graph" model="ir.ui.view">
             <field name="name">alquiler.graph</field>
             <field name="model">alquiler</field>
