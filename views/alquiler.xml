@@ -979,24 +979,43 @@
     </field>
 </record>
 
-       <record id="alquiler_view_calendar_simple" model="ir.ui.view">
-    <field name="name">alquiler.calendar.simple</field>
+      <record id="alquiler_view_calendar" model="ir.ui.view">
+    <field name="name">alquiler.calendar</field>
     <field name="model">alquiler</field>
     <field name="arch" type="xml">
         <calendar date_start="fecha_recurrente" 
                   color="estado_alquiler_id"
-                  event_limit="25"
+                  event_limit="15"
                   quick_add="True"
                   mode="month"
-                  scales="month,year"
-                  hide_time="True">
+                  scales="day,week,month,year"
+                  hide_time="True"
+                  create="True"
+                  edit="True"
+                  delete="True">
             
-            <!-- Solo campos esenciales para mejor rendimiento -->
-            <field name="cliente_id" />
-            <field name="name" />
+            <!-- Campos modernos disponibles para mostrar en eventos -->
+            <field name="cliente_id" widget="many2one_avatar" />
+            <field name="name" string="Modelo" />
             <field name="serie" />
-            <field name="estado_alquiler_id" />
+            <field name="estado_alquiler_id" widget="badge" />
+            <field name="estado_programacion" widget="badge" />
             <field name="direccion" />
+            <field name="marca" />
+            <field name="tipo_maquina" />
+            <field name="contacto_id" />
+            <field name="celular" widget="phone" />
+            <field name="control_mantenimiento" widget="boolean_toggle" />
+            <field name="fecha_inicio" />
+            <field name="intervalo_meses" />
+            <field name="motivo_reprogramacion" />
+            <field name="fecha_confirmacion" />
+            
+            <!-- Campo calculado para mostrar información adicional -->
+            <field name="precio_venta" widget="monetary" />
+            <field name="currency_id" invisible="1" />
+            <field name="ubicacion_id" />
+            <field name="observaciones" />
         </calendar>
     </field>
 </record>
