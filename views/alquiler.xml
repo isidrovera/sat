@@ -985,48 +985,137 @@
     <field name="arch" type="xml">
         <calendar date_start="fecha_recurrente" 
                   color="estado_alquiler_id"
-                  event_limit="10"
+                  event_limit="15"
                   quick_add="True"
                   mode="month"
                   scales="day,week,month,year"
-                  form_view_id="alquiler_view_form"
-                  event_open_popup="True"
                   hide_time="True"
-                  show_unusual_days="True">
+                  create="True"
+                  edit="True"
+                  delete="True"
+                  readonly_form_view_id="alquiler_readonly_form_view">
             
-            <!-- Campos principales para mostrar en el evento -->
+            <!-- Campos disponibles para mostrar en eventos -->
             <field name="cliente_id" />
             <field name="name" string="Modelo" />
             <field name="serie" />
-            <field name="direccion" />
             <field name="estado_alquiler_id" />
             <field name="estado_programacion" />
-            <field name="celular" />
-            <field name="contacto_id" />
+            <field name="direccion" />
             <field name="marca" />
             <field name="tipo_maquina" />
-
-            <!-- Filtros rápidos -->
-            <filter string="Programados" name="programados" 
+            <field name="contacto_id" />
+            <field name="celular" />
+            <field name="control_mantenimiento" />
+            <field name="fecha_inicio" />
+            <field name="intervalo_meses" />
+            
+            <!-- Filtros modernos y útiles -->
+            <filter string="🔧 Mantenimiento Confirmado" 
+                    name="filter_confirmado" 
                     domain="[('estado_programacion', '=', 'confirmado')]" />
-            <filter string="Pendientes" name="pendientes" 
+            
+            <filter string="⏳ Mantenimiento Pendiente" 
+                    name="filter_pendiente" 
                     domain="[('estado_programacion', '=', 'pendiente')]" />
-            <filter string="Con Problemas" name="problemas" 
-                    domain="[('estado_alquiler_id', 'in', ['con_problemas', 'partes'])]" />
+            
+            <filter string="🔄 Por Reprogramar" 
+                    name="filter_reprogramado" 
+                    domain="[('estado_programacion', '=', 'reprogramado')]" />
+            
             <separator />
-            <filter string="Alquiladas" name="alquiladas" 
+            
+            <filter string="🟢 Equipos Alquilados" 
+                    name="filter_alquilada" 
                     domain="[('estado_alquiler_id', '=', 'alquilada')]" />
-            <filter string="Lista para Alquilar" name="lista" 
+            
+            <filter string="📋 Listos para Alquilar" 
+                    name="filter_lista" 
                     domain="[('estado_alquiler_id', '=', 'lista')]" />
+            
+            <filter string="⚠️ Con Problemas" 
+                    name="filter_problemas" 
+                    domain="[('estado_alquiler_id', 'in', ['con_problemas', 'partes'])]" />
+            
+            <filter string="🔍 Sin Revisar" 
+                    name="filter_sin_revisar" 
+                    domain="[('estado_alquiler_id', '=', 'sin_revisar')]" />
+            
             <separator />
-            <filter string="Este Mes" name="este_mes" 
+            
+            <filter string="🔧 Con Mantenimiento Activo" 
+                    name="filter_con_mantenimiento" 
+                    domain="[('control_mantenimiento', '=', True)]" />
+            
+            <filter string="🚫 Sin Mantenimiento" 
+                    name="filter_sin_mantenimiento" 
+                    domain="[('control_mantenimiento', '=', False)]" />
+            
+            <separator />
+            
+            <filter string="📅 Hoy" 
+                    name="filter_hoy" 
+                    domain="[('fecha_recurrente', '=', context_today())]" />
+            
+            <filter string="📅 Esta Semana" 
+                    name="filter_esta_semana" 
+                    domain="[('fecha_recurrente', '>=', context_today()),
+                            ('fecha_recurrente', '&lt;=', (context_today() + relativedelta(days=6)))]" />
+            
+            <filter string="📅 Este Mes" 
+                    name="filter_este_mes" 
                     domain="[('fecha_recurrente', '>=', context_today().strftime('%Y-%m-01')),
                             ('fecha_recurrente', '&lt;', (context_today() + relativedelta(months=1)).strftime('%Y-%m-01'))]" />
-            <filter string="Próximos 7 días" name="proximos_7_dias" 
+            
+            <filter string="📅 Próximos 15 días" 
+                    name="filter_proximos_15_dias" 
                     domain="[('fecha_recurrente', '>=', context_today()),
-                            ('fecha_recurrente', '&lt;=', (context_today() + relativedelta(days=7)))]" />
-            <filter string="Vencidos" name="vencidos" 
+                            ('fecha_recurrente', '&lt;=', (context_today() + relativedelta(days=15)))]" />
+            
+            <filter string="⚠️ Vencidos" 
+                    name="filter_vencidos" 
                     domain="[('fecha_recurrente', '&lt;', context_today())]" />
+            
+            <separator />
+            
+            <filter string="🔧 Mantenimiento Mensual" 
+                    name="filter_mensual" 
+                    domain="[('intervalo_meses', '=', '1')]" />
+            
+            <filter string="🔧 Mantenimiento Trimestral" 
+                    name="filter_trimestral" 
+                    domain="[('intervalo_meses', '=', '3')]" />
+            
+            <filter string="🔧 Mantenimiento Semestral" 
+                    name="filter_semestral" 
+                    domain="[('intervalo_meses', '=', '6')]" />
+            
+            <filter string="🔧 Mantenimiento Anual" 
+                    name="filter_anual" 
+                    domain="[('intervalo_meses', '=', '12')]" />
+            
+            <!-- Agrupaciones modernas -->
+            <separator />
+            
+            <filter string="👥 Agrupar por Cliente" 
+                    name="group_cliente" 
+                    context="{'group_by': 'cliente_id'}" />
+            
+            <filter string="⚙️ Agrupar por Estado Alquiler" 
+                    name="group_estado_alquiler" 
+                    context="{'group_by': 'estado_alquiler_id'}" />
+            
+            <filter string="🔧 Agrupar por Estado Programación" 
+                    name="group_estado_programacion" 
+                    context="{'group_by': 'estado_programacion'}" />
+            
+            <filter string="🏭 Agrupar por Marca" 
+                    name="group_marca" 
+                    context="{'group_by': 'marca'}" />
+            
+            <filter string="⚡ Agrupar por Frecuencia" 
+                    name="group_intervalo" 
+                    context="{'group_by': 'intervalo_meses'}" />
         </calendar>
     </field>
 </record>
