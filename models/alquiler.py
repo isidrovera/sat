@@ -452,7 +452,7 @@ class UnidadAlquiler(models.Model):
      # Campos originales de fechas
     fecha_inicio = fields.Date(
         string='Fecha de mantenimiento inicial',
-        required=True,
+        required=False,
         tracking=True,
         default=fields.Date.today,  # ← AGREGAR ESTA LÍNEA
         help="Fecha inicial del mantenimiento"
