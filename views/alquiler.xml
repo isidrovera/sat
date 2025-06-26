@@ -955,7 +955,7 @@
        decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
        decoration-muted="estado_bloqueo == 'no_accesible'"
        decoration-success="estado_bloqueo == 'activo'" />
-                    <field name="qr_image" widget="b"/>
+                    <field name="qr_image" />
                     
                     <!-- Contadores con suma -->
                     <field name="ticket_count"
