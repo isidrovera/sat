@@ -948,10 +948,16 @@
                         decoration-success="estado_programacion == 'confirmado'"
                         decoration-warning="estado_programacion == 'pendiente'"
                         decoration-danger="estado_programacion == 'reprogramado'" />
-
+                    <field name="estado_bloqueo"
+                        string="Estado Servicio"
+                        widget="badge"
+                        decoration-danger="estado_bloqueo in ('suspendido', 'bloqueado')"
+                        decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
+                        decoration-secondary="estado_bloqueo == 'no_accesible'"
+                        decoration-success="estado_bloqueo == 'activo'" />
                     <!-- Imagen QR -->
-                    <field name="qr_image" widget="image" options="{'size': [40, 40]}" />
-                    <field name="qr_image_filename" invisible="1"/>
+                    <field name="qr_image" />
+                    
                     <!-- Contadores con suma -->
                     <field name="ticket_count"
                         string="Tickets"
