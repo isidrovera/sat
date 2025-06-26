@@ -900,114 +900,120 @@
             </field>
         </record>
 
-        <record id="alquiler_tree_view" model="ir.ui.view">
-            <field name="name">alquiler.tree</field>
-            <field name="model">alquiler</field>
-            <field name="arch" type="xml">
-                <list string="Lista de Alquileres"
-                    decoration-bf="fecha_recurrente and fecha_recurrente &lt;= context_today()"
-                    decoration-danger="estado_alquiler_id in ('con_problemas', 'partes')"
-                    decoration-warning="estado_alquiler_id == 'sin_revisar'"
-                    decoration-info="estado_alquiler_id == 'alquilada'"
-                    decoration-success="estado_alquiler_id == 'lista'"
-                    decoration-muted="estado_alquiler_id == 'vendida'"
-                    multi_edit="1"
-                    sample="1">
+       <record id="alquiler_tree_view" model="ir.ui.view">
+    <field name="name">alquiler.tree</field>
+    <field name="model">alquiler</field>
+    <field name="arch" type="xml">
+        <list string="Lista de Alquileres"
+            decoration-bf="fecha_recurrente and fecha_recurrente &lt;= context_today()"
+            decoration-danger="estado_alquiler_id in ('con_problemas', 'partes')"
+            decoration-warning="estado_alquiler_id == 'sin_revisar'"
+            decoration-info="estado_alquiler_id == 'alquilada'"
+            decoration-success="estado_alquiler_id == 'lista'"
+            decoration-muted="estado_alquiler_id == 'vendida'"
+            multi_edit="1"
+            sample="1">
 
-                    <!-- Campos principales -->
-                    <field name="cliente_id" widget="many2one_avatar_user" />
-                    <field name="tipo_maquina_id" column_invisible="1" />
-                    <field name="tipo_maquina" column_invisible="1" />
-                    <field name="marca" column_invisible="1" />
-                    <field name="name" string="Modelo" required="1" />
-                    <field name="serie" />
-                    <field name="direccion" column_invisible="1" />
-                    <field name="contacto_id" column_invisible="1" />
-                    <field name="celular" widget="phone" column_invisible="1" />
+            <!-- Campos principales -->
+            <field name="cliente_id" widget="many2one_avatar_user" />
+            <field name="tipo_maquina_id" column_invisible="1" />
+            <field name="tipo_maquina" column_invisible="1" />
+            <field name="marca" column_invisible="1" />
+            <field name="name" string="Modelo" required="1" />
+            <field name="serie" />
+            <field name="direccion" column_invisible="1" />
+            <field name="contacto_id" column_invisible="1" />
+            <field name="celular" widget="phone" column_invisible="1" />
 
-                    <!-- Fecha con widget mejorado -->
-                    <field name="fecha_recurrente"
-                        string="Fecha Mantenimiento"
-                        widget="remaining_days"
-                        decoration-danger="fecha_recurrente and fecha_recurrente &lt;= context_today()" />
+            <!-- Estado de bloqueo - NUEVO CAMPO -->
+            <field name="estado_bloqueo" invisible="1" />
 
-                    <!-- Estado con colores modernos -->
-                    <field name="estado_alquiler_id"
-                        string="Estado"
-                        widget="badge"
-                        decoration-muted="estado_alquiler_id == 'sin_revisar'"
-                        decoration-info="estado_alquiler_id == 'alquilada'"
-                        decoration-success="estado_alquiler_id == 'lista'"
-                        decoration-danger="estado_alquiler_id in ('con_problemas', 'partes')"
-                        decoration-warning="estado_alquiler_id == 'vendida'"
-                        decoration-primary="estado_alquiler_id == 'externo'" />
+            <!-- Fecha con widget mejorado -->
+            <field name="fecha_recurrente"
+                string="Fecha Mantenimiento"
+                widget="remaining_days"
+                decoration-danger="fecha_recurrente and fecha_recurrente &lt;= context_today()" />
 
-                    <!-- Estado programación -->
-                    <field name="estado_programacion"
-                        string="Mantenimiento"
-                        decoration-success="estado_programacion == 'confirmado'"
-                        decoration-warning="estado_programacion == 'pendiente'"
-                        decoration-danger="estado_programacion == 'reprogramado'" />
-                    <!-- Después del campo estado_alquiler_id -->
-                    <field name="estado_bloqueo"
-                        string="Estado Servicio"
-                        widget="badge"
-                        decoration-danger="estado_bloqueo in ('suspendido', 'bloqueado')"
-                        decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
-                        decoration-secondary="estado_bloqueo == 'no_accesible'"
-                        decoration-success="estado_bloqueo == 'activo'" />
-                    <!-- Imagen QR -->
-                    <field name="qr_image" widget="image" options="{'size': [40, 40]}" />
-                    <field name="qr_image_filename" invisible="1"/>
-                    <!-- Contadores con suma -->
-                    <field name="ticket_count"
-                        string="Tickets"
-                        sum="Total Tickets"
-                        column_invisible="0" />
-                    <field name="pedidos_count"
-                        string="Pedidos"
-                        sum="Total Pedidos"
-                        column_invisible="0" />
-                    <field name="repuestos_count"
-                        string="Repuestos"
-                        sum="Total Repuestos"
-                        column_invisible="0" />
+            <!-- Estado con colores modernos -->
+            <field name="estado_alquiler_id"
+                string="Estado"
+                widget="badge"
+                decoration-muted="estado_alquiler_id == 'sin_revisar'"
+                decoration-info="estado_alquiler_id == 'alquilada'"
+                decoration-success="estado_alquiler_id == 'lista'"
+                decoration-danger="estado_alquiler_id in ('con_problemas', 'partes')"
+                decoration-warning="estado_alquiler_id == 'vendida'"
+                decoration-primary="estado_alquiler_id == 'externo'" />
 
-                   <!-- Botones de acción modernizados -->
-                    <button string="Generar QR"
-                        type="object"
-                        name="generate_qr_code"
-                        icon="fa-qrcode"
-                        class="btn-link text-primary"
-                        title="Generar código QR"
-                        invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+            <!-- Estado de bloqueo visible - NUEVO CAMPO -->
+            <field name="estado_bloqueo"
+                string="Estado Servicio"
+                widget="badge"
+                decoration-danger="estado_bloqueo in ('suspendido', 'bloqueado')"
+                decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
+                decoration-secondary="estado_bloqueo == 'no_accesible'"
+                decoration-success="estado_bloqueo == 'activo'" />
 
-                    <button string="Tickets"
-                        type="object"
-                        name="get_ticket"
-                        icon="fa-wrench"
-                        class="btn-link text-info"
-                        title="Ver tickets relacionados"
-                        invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+            <!-- Estado programación -->
+            <field name="estado_programacion"
+                string="Mantenimiento"
+                decoration-success="estado_programacion == 'confirmado'"
+                decoration-warning="estado_programacion == 'pendiente'"
+                decoration-danger="estado_programacion == 'reprogramado'" />
 
-                    <button string="Pedidos"
-                        type="object"
-                        name="get_pedidos"
-                        icon="fa-shopping-cart"
-                        class="btn-link text-success"
-                        title="Ver pedidos relacionados"
-                        invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+            <!-- Imagen QR -->
+            <field name="qr_image" widget="image" options="{'size': [40, 40]}" />
+            <field name="qr_image_filename" column_invisible="1"/>
 
-                    <button string="Repuestos"
-                        type="object"
-                        name="get_repuestos"
-                        icon="fa-cogs"
-                        class="btn-link text-warning"
-                        title="Ver repuestos relacionados"
-                        invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
-                </list>
-            </field>
-        </record>
+            <!-- Contadores con suma -->
+            <field name="ticket_count"
+                string="Tickets"
+                sum="Total Tickets"
+                column_invisible="0" />
+            <field name="pedidos_count"
+                string="Pedidos"
+                sum="Total Pedidos"
+                column_invisible="0" />
+            <field name="repuestos_count"
+                string="Repuestos"
+                sum="Total Repuestos"
+                column_invisible="0" />
+
+            <!-- Botones de acción modernizados con condiciones de visibilidad -->
+            <button string="Generar QR"
+                type="object"
+                name="generate_qr_code"
+                icon="fa-qrcode"
+                class="btn-link text-primary"
+                title="Generar código QR"
+                invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+
+            <button string="Tickets"
+                type="object"
+                name="get_ticket"
+                icon="fa-wrench"
+                class="btn-link text-info"
+                title="Ver tickets relacionados"
+                invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+
+            <button string="Pedidos"
+                type="object"
+                name="get_pedidos"
+                icon="fa-shopping-cart"
+                class="btn-link text-success"
+                title="Ver pedidos relacionados"
+                invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+
+            <button string="Repuestos"
+                type="object"
+                name="get_repuestos"
+                icon="fa-cogs"
+                class="btn-link text-warning"
+                title="Ver repuestos relacionados"
+                invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+    </list>
+    </field>
+</record>
         <record id="alquiler_andes_search_view" model="ir.ui.view">
             <field name="name">alquiler_andes.search</field>
             <field name="model">alquiler</field>
