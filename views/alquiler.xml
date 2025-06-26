@@ -951,9 +951,10 @@
                     <field name="estado_bloqueo"
        string="Estado Servicio"
        widget="badge"
-       class="text-danger"
-       conditional_class="{'text-danger': estado_bloqueo in ('suspendido', 'bloqueado'), 'text-warning': estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo'), 'text-secondary': estado_bloqueo == 'no_accesible', 'text-success': estado_bloqueo == 'activo'}" />
-                    <!-- Imagen QR -->
+       decoration-danger="estado_bloqueo in ('suspendido', 'bloqueado')"
+       decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
+       decoration-muted="estado_bloqueo == 'no_accesible'"
+       decoration-success="estado_bloqueo == 'activo'" />
                     <field name="qr_image" />
                     
                     <!-- Contadores con suma -->
