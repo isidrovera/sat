@@ -10,19 +10,28 @@
                     <header>
                         <!-- Botones principales de acción -->
                         <button string="Crear Pedido" name="create_sale_order" type="object"
-                            icon="fa-cart-plus" class="btn btn-success" />
+                            icon="fa-cart-plus" class="btn btn-success" 
+                            invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+                        
                         <button string="Crear Ticket" name="create_ticket" type="object"
-                            icon="fa-wrench" class="btn btn-primary" />
+                            icon="fa-wrench" class="btn btn-primary" 
+                            invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+                        
                         <button string="Enviar Recordatorio" type="object" class="oe_highlight"
-                            name="button_send_test_mail" />
+                            name="button_send_test_mail" 
+                            invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+                        
                         <button name="action_enviar_inspeccion"
                             string="Enviar Inspección"
                             type="object"
-                            class="btn-primary" />
+                            class="btn-primary" 
+                            invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+                        
                         <button name="action_solicitar_partes"
                             string="Solicitar Partes"
                             type="object"
-                            class="oe_highlight" />
+                            class="oe_highlight" 
+                            invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
 
 
                         <field name="estado_alquiler_id" widget="statusbar"
@@ -939,7 +948,14 @@
                         decoration-success="estado_programacion == 'confirmado'"
                         decoration-warning="estado_programacion == 'pendiente'"
                         decoration-danger="estado_programacion == 'reprogramado'" />
-
+                    <!-- Después del campo estado_alquiler_id -->
+                    <field name="estado_bloqueo"
+                        string="Estado Servicio"
+                        widget="badge"
+                        decoration-danger="estado_bloqueo in ('suspendido', 'bloqueado')"
+                        decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
+                        decoration-secondary="estado_bloqueo == 'no_accesible'"
+                        decoration-success="estado_bloqueo == 'activo'" />
                     <!-- Imagen QR -->
                     <field name="qr_image" widget="image" options="{'size': [40, 40]}" />
                     <field name="qr_image_filename" invisible="1"/>
@@ -957,34 +973,38 @@
                         sum="Total Repuestos"
                         column_invisible="0" />
 
-                    <!-- Botones de acción modernizados -->
+                   <!-- Botones de acción modernizados -->
                     <button string="Generar QR"
                         type="object"
                         name="generate_qr_code"
                         icon="fa-qrcode"
                         class="btn-link text-primary"
-                        title="Generar código QR" />
+                        title="Generar código QR"
+                        invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
 
                     <button string="Tickets"
                         type="object"
                         name="get_ticket"
                         icon="fa-wrench"
                         class="btn-link text-info"
-                        title="Ver tickets relacionados" />
+                        title="Ver tickets relacionados"
+                        invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
 
                     <button string="Pedidos"
                         type="object"
                         name="get_pedidos"
                         icon="fa-shopping-cart"
                         class="btn-link text-success"
-                        title="Ver pedidos relacionados" />
+                        title="Ver pedidos relacionados"
+                        invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
 
                     <button string="Repuestos"
                         type="object"
                         name="get_repuestos"
                         icon="fa-cogs"
                         class="btn-link text-warning"
-                        title="Ver repuestos relacionados" />
+                        title="Ver repuestos relacionados"
+                        invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
                 </list>
             </field>
         </record>

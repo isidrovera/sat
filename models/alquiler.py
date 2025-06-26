@@ -2089,12 +2089,82 @@ class InspeccionResultado(models.Model):
         return records
 
     def write(self, vals):
+        """Sobrescribir write para manejar actualizaciones especiales y sincronizar estado de bloqueo"""
+        
+        # Mantener funcionalidad existente para inspección
         res = super(InspeccionResultado, self).write(vals)
         self._update_estado()
         if any(field in vals for field in ['punto_corriente', 'punto_red', 'espacio']):
             for record in self:
                 if record.alquiler_id:
                     record.alquiler_id._compute_apto()
+        
+        # NUEVA FUNCIONALIDAD: Sincronizar estado de bloqueo entre equipos del mismo cliente
+        if 'estado_bloqueo' in vals:
+            for record in self:
+                if record.cliente_id:
+                    # Buscar otros equipos del mismo cliente (excluyendo el actual)
+                    otros_equipos = self.search([
+                        ('id', '!=', record.id),
+                        ('cliente_id', '=', record.cliente_id.id),
+                        ('estado_alquiler_id', '=', 'alquilada')  # Solo equipos alquilados
+                    ])
+                    
+                    if otros_equipos:
+                        # Preparar valores para actualización
+                        update_vals = {
+                            'estado_bloqueo': vals.get('estado_bloqueo'),
+                            'notificado_bloqueo': False,
+                            'notificado_desbloqueo': False
+                        }
+                        
+                        # Agregar campos adicionales según el estado
+                        if vals.get('estado_bloqueo') in ['suspendido', 'bloqueado']:
+                            update_vals.update({
+                                'motivo_bloqueo': vals.get('motivo_bloqueo', record.motivo_bloqueo),
+                                'fecha_bloqueo': vals.get('fecha_bloqueo', record.fecha_bloqueo),
+                                'usuario_bloqueo': vals.get('usuario_bloqueo', record.usuario_bloqueo),
+                            })
+                        elif vals.get('estado_bloqueo') == 'activo':
+                            update_vals.update({
+                                'fecha_desbloqueo': vals.get('fecha_desbloqueo', record.fecha_desbloqueo),
+                                'motivo_bloqueo': False,
+                                'observaciones_bloqueo': False,
+                                'acceso_remoto_disponible': True,
+                            })
+                        
+                        # Actualizar usando SQL directo para evitar recursión infinita
+                        placeholders = ', '.join([f"{key} = %s" for key in update_vals.keys()])
+                        query = f"""
+                            UPDATE alquiler 
+                            SET {placeholders}
+                            WHERE id = ANY(%s)
+                        """
+                        
+                        self.env.cr.execute(query, list(update_vals.values()) + [list(otros_equipos.ids)])
+                        
+                        # Invalidar cache para reflejar cambios
+                        otros_equipos.invalidate_cache()
+                        
+                        # Log para auditoría en el equipo original
+                        estado_nombre = dict(self._fields['estado_bloqueo'].selection).get(vals.get('estado_bloqueo'))
+                        record.message_post(
+                            body=f"🔄 <b>Sincronización automática:</b><br/>"
+                                f"Estado '{estado_nombre}' aplicado automáticamente a {len(otros_equipos)} equipos adicionales del cliente <b>{record.cliente_id.name}</b><br/>"
+                                f"<small>Series afectadas: {', '.join(otros_equipos.mapped('serie'))}</small>",
+                            message_type='notification'
+                        )
+                        
+                        # Log en cada equipo sincronizado
+                        for equipo in otros_equipos:
+                            equipo.message_post(
+                                body=f"🔄 <b>Estado sincronizado automáticamente</b><br/>"
+                                    f"Nuevo estado: <span class='badge badge-info'>{estado_nombre}</span><br/>"
+                                    f"Origen: Equipo {record.serie} del mismo cliente<br/>"
+                                    f"Usuario: {self.env.user.name}",
+                                message_type='notification'
+                            )
+        
         return res
     alquiler_id = fields.Many2one('alquiler', required=True)
     fecha = fields.Datetime('Fecha de inspección', default=fields.Datetime.now)
