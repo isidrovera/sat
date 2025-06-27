@@ -107,8 +107,8 @@ class Reparaciones(models.Model):
             _logger.info("La carpeta '%s' ya existe en pCloud.", folder_name)
             return self.get_folder_id(folder_name)
         else:
-            _logger.error("Error al crear la carpeta: %s", result)
-            raise ValidationError(_("No se pudo crear la carpeta: %s") % result.get('error'))
+            _logger.error("Error al crear la carpeta en pCloud. Código %s - Respuesta: %s", response.status_code, result)
+            raise ValidationError(_("No se pudo crear la carpeta. Código %s - Respuesta: %s") % (response.status_code, json.dumps(result)))
 
     def get_or_create_folder_id(self, folder_name):
         """Obtiene el folderid de una carpeta existente en pCloud o la crea si no existe."""
