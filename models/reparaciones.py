@@ -89,93 +89,151 @@ class Reparaciones(models.Model):
             _logger.error("No se encontró ni se pudo crear la carpeta 'fotos_reparaciones' en pCloud.")
             raise ValidationError(_("No se encontró ni se pudo crear la carpeta 'fotos_reparaciones' en pCloud."))
 
+        # Nombre de la carpeta a crear
         folder_name = f"{self.maquina_id.name.name}_{self.serie_id or 'sin_serie'}"
+        
+        # Validar nombre (opcional)
+        if not re.match(r'^[\w\s.-]+$', folder_name):
+            raise ValidationError(_("El nombre de carpeta '%s' contiene caracteres no permitidos.") % folder_name)
+
         _logger.info("Intentando crear la carpeta '%s' en pCloud", folder_name)
+        
+        # Enviar petición a pCloud
         url = f"{pcloud_config.hostname}/createfolder"
         params = {
             'access_token': pcloud_config.access_token,
-            'folderid': fotos_reparaciones_id,  # ID de la carpeta 'fotos_reparaciones'
+            'folderid': fotos_reparaciones_id,
             'name': folder_name
         }
+        
         response = requests.get(url, params=params)
-
-        _logger.info("Respuesta de la creación de carpeta: %s", response.text)
         result = response.json()
+
+        _logger.info("Respuesta de la creación de carpeta: %s", json.dumps(result, indent=2))
+
         if response.status_code == 200 and 'metadata' in result:
             _logger.info("Carpeta '%s' creada exitosamente en pCloud.", folder_name)
             return result['metadata']['folderid']
-        elif response.status_code == 200 and result.get('result') == 2004:  # Código para carpeta existente
+        
+        elif response.status_code == 200 and result.get('result') == 2004:
             _logger.info("La carpeta '%s' ya existe en pCloud.", folder_name)
             return self.get_folder_id(folder_name)
+        
         else:
-            _logger.error("Error al crear la carpeta en pCloud. Código %s - Respuesta: %s", response.status_code, result)
-            raise ValidationError(_("No se pudo crear la carpeta. Código %s - Respuesta: %s") % (response.status_code, json.dumps(result)))
+            _logger.error("Error al crear la carpeta '%s'. Código HTTP: %s. Respuesta: %s",
+                        folder_name, response.status_code, json.dumps(result, indent=2))
+
+            raise ValidationError(_("No se pudo crear la carpeta '%s'. Código: %s. Detalles: %s") % (
+                folder_name,
+                result.get('result', response.status_code),
+                result.get('error', json.dumps(result))
+            ))
 
     def get_or_create_folder_id(self, folder_name):
         """Obtiene el folderid de una carpeta existente en pCloud o la crea si no existe."""
         folder_id = self.get_folder_id(folder_name)
         if folder_id:
+            _logger.info("La carpeta '%s' ya existe en pCloud con ID %s", folder_name, folder_id)
             return folder_id
 
         # Si no existe, intentamos crearla
         pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+        if not pcloud_config or not pcloud_config.access_token:
+            _logger.error("Configuración de pCloud no encontrada o falta el token de acceso.")
+            raise ValidationError(_("Configuración de pCloud no encontrada o falta el token de acceso."))
+
         url = f"{pcloud_config.hostname}/createfolder"
         params = {
             'access_token': pcloud_config.access_token,
-            'folderid': 0,  # ID raíz para crear en la raíz
+            'folderid': 0,  # Crear en raíz
             'name': folder_name
         }
-        response = requests.get(url, params=params)
 
-        result = response.json()
-        if response.status_code == 200 and 'metadata' in result:
-            _logger.info("Carpeta '%s' creada exitosamente en pCloud.", folder_name)
-            return result['metadata']['folderid']
-        else:
-            _logger.error("Error al crear la carpeta '%s'. Código HTTP: %s. Respuesta completa: %s",
-              folder_name, response.status_code, json.dumps(result, indent=2))
+        _logger.info("Creando carpeta '%s' en la raíz de pCloud", folder_name)
 
-            raise ValidationError(_("No se pudo crear la carpeta '%s'. Código: %s. Detalles: %s")
-                                % (folder_name, result.get('result'), result.get('error', json.dumps(result))))
-
-    def get_folder_id(self, folder_name):
-        """Obtiene el folderid de una carpeta existente en pCloud."""
-        pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-        url = f"{pcloud_config.hostname}/listfolder"
-        params = {
-            'access_token': pcloud_config.access_token,
-            'folderid': 0,  # Empezar desde la raíz
-            'recursive': 1  # Buscar en subcarpetas también
-        }
-        
         try:
             response = requests.get(url, params=params)
             result = response.json()
-            
-            if response.status_code == 200 and result.get('result') == 0:
-                # Primero buscar en fotos_reparaciones
-                fotos_reparaciones_id = None
-                for folder in result['metadata']['contents']:
-                    if folder['isfolder'] and folder['name'] == 'fotos_reparaciones':
-                        fotos_reparaciones_id = folder['folderid']
-                        break
-                
-                if not fotos_reparaciones_id:
-                    return None  # Si 'fotos_reparaciones' no existe, se retorna None
-                
-                # Ahora buscar la carpeta específica dentro de fotos_reparaciones
-                for folder in result['metadata']['contents']:
-                    if folder['isfolder'] and folder['name'] == folder_name:
-                        return folder['folderid']
-                
-                return None
+
+            _logger.info("Respuesta completa de creación de carpeta raíz: %s", json.dumps(result, indent=2))
+
+            if response.status_code == 200 and 'metadata' in result:
+                folder_id = result['metadata']['folderid']
+                _logger.info("Carpeta '%s' creada exitosamente con ID %s", folder_name, folder_id)
+                return folder_id
+
+            elif result.get('result') == 2004:  # Ya existe
+                _logger.warning("La carpeta '%s' ya existe (result=2004). Intentando obtener ID existente.", folder_name)
+                return self.get_folder_id(folder_name)
+
             else:
-                _logger.error(f"Error al listar carpetas: {result}")
-                raise ValidationError(_("Error al listar carpetas en pCloud: %s") % result.get('error'))
-                
+                _logger.error("Fallo al crear la carpeta '%s'. Código: %s. Mensaje: %s",
+                            folder_name, result.get('result'), result.get('error', result))
+                raise ValidationError(_("No se pudo crear la carpeta '%s'. Código: %s. Detalles: %s") % (
+                    folder_name, result.get('result'), result.get('error', json.dumps(result))))
+
         except requests.exceptions.RequestException as e:
-            _logger.error(f"Error de conexión con pCloud: {str(e)}")
-            raise ValidationError(_("Error de conexión con pCloud: %s") % str(e))
+            _logger.error("Error de red al crear la carpeta '%s': %s", folder_name, str(e))
+            raise ValidationError(_("Error de conexión con pCloud al crear '%s': %s") % (folder_name, str(e)))
+
+    def get_folder_id(self, folder_name):
+        """Obtiene el folderid de una carpeta por nombre, buscando recursivamente dentro de 'fotos_reparaciones'."""
+        pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+        if not pcloud_config or not pcloud_config.access_token:
+            _logger.error("Falta configuración válida de pCloud.")
+            raise ValidationError(_("Falta configuración válida de pCloud."))
+
+        url = f"{pcloud_config.hostname}/listfolder"
+        params = {
+            'access_token': pcloud_config.access_token,
+            'folderid': 0,  # Carpeta raíz
+            'recursive': 1  # Buscar en todos los niveles
+        }
+
+        try:
+            response = requests.get(url, params=params)
+            result = response.json()
+
+            _logger.info("Respuesta de listfolder: %s", json.dumps(result, indent=2))
+
+            if response.status_code == 200 and result.get('result') == 0:
+                # Buscar carpeta padre 'fotos_reparaciones'
+                fotos_reparaciones_id = None
+                for item in result['metadata'].get('contents', []):
+                    if item.get('isfolder') and item.get('name') == 'fotos_reparaciones':
+                        fotos_reparaciones_id = item['folderid']
+                        break
+
+                if not fotos_reparaciones_id:
+                    _logger.warning("No se encontró la carpeta 'fotos_reparaciones'.")
+                    return None
+
+                # Listar carpetas dentro de 'fotos_reparaciones'
+                sub_response = requests.get(url, params={
+                    'access_token': pcloud_config.access_token,
+                    'folderid': fotos_reparaciones_id
+                })
+                sub_result = sub_response.json()
+
+                _logger.info("Subcarpetas dentro de fotos_reparaciones: %s", json.dumps(sub_result, indent=2))
+
+                if sub_response.status_code == 200 and sub_result.get('result') == 0:
+                    for item in sub_result['metadata'].get('contents', []):
+                        if item.get('isfolder') and item.get('name') == folder_name:
+                            _logger.info("Carpeta '%s' encontrada con ID %s", folder_name, item['folderid'])
+                            return item['folderid']
+                    _logger.warning("La carpeta '%s' no se encontró dentro de 'fotos_reparaciones'.", folder_name)
+                    return None
+                else:
+                    raise ValidationError(_("Error al obtener subcarpetas: %s") % sub_result.get('error'))
+
+            else:
+                raise ValidationError(_("Error al listar carpetas raíz: %s") % result.get('error'))
+
+        except requests.exceptions.RequestException as e:
+            _logger.error("Error de red al listar carpetas: %s", str(e))
+            raise ValidationError(_("Error de conexión con pCloud al buscar carpeta '%s': %s") % (folder_name, str(e)))
+
     def action_open_gallery(self):
         """Abre la galería de fotos asociada a esta reparación."""
         self.ensure_one()
