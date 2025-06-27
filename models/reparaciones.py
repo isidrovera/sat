@@ -97,7 +97,8 @@ class Reparaciones(models.Model):
             'folderid': fotos_reparaciones_id,  # ID de la carpeta 'fotos_reparaciones'
             'name': folder_name
         }
-        response = requests.post(url, params=params)
+        response = requests.get(url, params=params)
+
         _logger.info("Respuesta de la creación de carpeta: %s", response.text)
         result = response.json()
         if response.status_code == 200 and 'metadata' in result:
@@ -124,14 +125,18 @@ class Reparaciones(models.Model):
             'folderid': 0,  # ID raíz para crear en la raíz
             'name': folder_name
         }
-        response = requests.post(url, params=params)
+        response = requests.get(url, params=params)
+
         result = response.json()
         if response.status_code == 200 and 'metadata' in result:
             _logger.info("Carpeta '%s' creada exitosamente en pCloud.", folder_name)
             return result['metadata']['folderid']
         else:
-            _logger.error("Error al crear la carpeta '%s': %s", folder_name, result)
-            raise ValidationError(_("No se pudo crear la carpeta '%s' en pCloud: %s") % (folder_name, result.get('error')))
+            _logger.error("Error al crear la carpeta '%s'. Código HTTP: %s. Respuesta completa: %s",
+              folder_name, response.status_code, json.dumps(result, indent=2))
+
+            raise ValidationError(_("No se pudo crear la carpeta '%s'. Código: %s. Detalles: %s")
+                                % (folder_name, result.get('result'), result.get('error', json.dumps(result))))
 
     def get_folder_id(self, folder_name):
         """Obtiene el folderid de una carpeta existente en pCloud."""
