@@ -88,7 +88,7 @@ class UnidadAlquiler(models.Model):
                         self.env.cr.execute(query, list(update_vals.values()) + [list(otros_equipos.ids)])
                         
                         # Invalidar cache para reflejar cambios
-                        otros_equipos.invalidate_cache()
+                        otros_equipos._invalidate_cache()  # ✅ CORREGIDO: Con underscore
                         
                         # Log para auditoría en el equipo original
                         estado_nombre = dict(self._fields['estado_bloqueo'].selection).get(vals.get('estado_bloqueo'))
