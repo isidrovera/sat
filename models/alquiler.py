@@ -47,12 +47,17 @@ class UnidadAlquiler(models.Model):
         if 'estado_bloqueo' in vals:
             for record in self:
                 if record.cliente_id:
+                    # Log para debugging
+                    _logger.info(f"SINCRONIZACIÓN INICIADA para equipo {record.serie} del cliente {record.cliente_id.name}")
+                    
                     # Buscar otros equipos del mismo cliente (excluyendo el actual)
                     otros_equipos = self.search([
                         ('id', '!=', record.id),
                         ('cliente_id', '=', record.cliente_id.id),
                         ('estado_alquiler_id', '=', 'alquilada')  # Solo equipos alquilados
                     ])
+                    
+                    _logger.info(f"Equipos encontrados para sincronizar: {len(otros_equipos)} - Series: {otros_equipos.mapped('serie')}")
                     
                     if otros_equipos:
                         # Preparar valores para actualización
@@ -77,37 +82,50 @@ class UnidadAlquiler(models.Model):
                                 'acceso_remoto_disponible': True,
                             })
                         
-                        # Actualizar usando SQL directo para evitar recursión infinita
-                        placeholders = ', '.join([f"{key} = %s" for key in update_vals.keys()])
-                        query = f"""
-                            UPDATE alquiler 
-                            SET {placeholders}
-                            WHERE id = ANY(%s)
-                        """
+                        # Log de valores que se van a actualizar
+                        _logger.info(f"Valores a actualizar: {update_vals}")
                         
-                        self.env.cr.execute(query, list(update_vals.values()) + [list(otros_equipos.ids)])
-                        
-                        # Invalidar cache para reflejar cambios
-                        otros_equipos._invalidate_cache()  # ✅ CORREGIDO: Con underscore
-                        
-                        # Log para auditoría en el equipo original
-                        estado_nombre = dict(self._fields['estado_bloqueo'].selection).get(vals.get('estado_bloqueo'))
-                        record.message_post(
-                            body=f"🔄 <b>Sincronización automática:</b><br/>"
-                                f"Estado '{estado_nombre}' aplicado automáticamente a {len(otros_equipos)} equipos adicionales del cliente <b>{record.cliente_id.name}</b><br/>"
-                                f"<small>Series afectadas: {', '.join(otros_equipos.mapped('serie'))}</small>",
-                            message_type='notification'
-                        )
-                        
-                        # Log en cada equipo sincronizado
-                        for equipo in otros_equipos:
-                            equipo.message_post(
-                                body=f"🔄 <b>Estado sincronizado automáticamente</b><br/>"
-                                    f"Nuevo estado: <span class='badge badge-info'>{estado_nombre}</span><br/>"
-                                    f"Origen: Equipo {record.serie} del mismo cliente<br/>"
-                                    f"Usuario: {self.env.user.name}",
+                        try:
+                            # OPCIÓN 1: Usar write() normal (recomendado para mantener consistencia)
+                            # Temporalmente desactivar la sincronización para evitar recursión
+                            context_sin_sync = dict(self.env.context, skip_sync=True)
+                            otros_equipos.with_context(context_sin_sync).write(update_vals)
+                            
+                            # Invalidar cache para reflejar cambios
+                            otros_equipos.invalidate_cache()
+                            
+                            _logger.info(f"✅ ÉXITO: Actualización completada para {len(otros_equipos)} equipos")
+                            
+                            # Log para auditoría en el equipo original
+                            estado_nombre = dict(self._fields['estado_bloqueo'].selection).get(vals.get('estado_bloqueo'))
+                            record.message_post(
+                                body=f"🔄 <b>Sincronización automática:</b><br/>"
+                                    f"Estado '{estado_nombre}' aplicado automáticamente a {len(otros_equipos)} equipos adicionales del cliente <b>{record.cliente_id.name}</b><br/>"
+                                    f"<small>Series afectadas: {', '.join(otros_equipos.mapped('serie'))}</small>",
                                 message_type='notification'
                             )
+                            
+                            # Log en cada equipo sincronizado
+                            for equipo in otros_equipos:
+                                equipo.message_post(
+                                    body=f"🔄 <b>Estado sincronizado automáticamente</b><br/>"
+                                        f"Nuevo estado: <span class='badge badge-info'>{estado_nombre}</span><br/>"
+                                        f"Origen: Equipo {record.serie} del mismo cliente<br/>"
+                                        f"Usuario: {self.env.user.name}",
+                                    message_type='notification'
+                                )
+                                
+                        except Exception as e:
+                            _logger.error(f"❌ ERROR en sincronización: {str(e)}")
+                            # Continuar con el proceso aunque falle la sincronización
+                            record.message_post(
+                                body=f"⚠️ <b>Error en sincronización automática:</b><br/>"
+                                    f"No se pudo sincronizar con otros equipos del cliente.<br/>"
+                                    f"Error: {str(e)}",
+                                message_type='notification'
+                            )
+                    else:
+                        _logger.info("No se encontraron otros equipos para sincronizar")
         
         return res
     @api.model
