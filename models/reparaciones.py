@@ -935,9 +935,9 @@ class Reparaciones(models.Model):
         # Continuar con el código original de la función action_finalizar_reparacion
         # Deshabilitar las reglas de acceso temporalmente para evitar restricciones
         self = self.sudo()  # Utilizamos sudo() para evitar restricciones de acceso
-    
+
         _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
-    
+
         # Verificar si la autenticación ya fue realizada
         if not self.autenticacion_correcta:
             _logger.info(f"Autenticación requerida para el usuario {self.env.user.id}")
@@ -951,52 +951,54 @@ class Reparaciones(models.Model):
                     'target': 'new',
                     'context': {'default_reparacion_id': self.id},
                 }
-    
+
         # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
         if not self.contometrok_id or not self.contometro_inicial:
             _logger.error(f"Reparación ID {self.id}: Los datos del contómetro no están configurados correctamente.")
             raise UserError(_("❗ <b>Error en el Contómetro</b>: Los valores del contómetro no están configurados correctamente. Verifique e intente nuevamente."))
-    
+
         # Verificar si el contómetro fue actualizado
         if self.contometrok_id == self.contometro_inicial:
             _logger.warning(f"Reparación ID {self.id}: El contómetro no ha sido actualizado. Contómetro actual: {self.contometrok_id}")
             raise UserError(_("❗ Error en el Contómetro: El contómetro no ha sido actualizado. Debe ser diferente del valor inicial."))
-    
+
         # Validar la cantidad de dígitos
         if len(self.contometrok_id) != len(self.contometro_inicial):
             if not self.autorizacion_cambio_digitos:
                 _logger.warning(f"Reparación ID {self.id}: Diferencia en la cantidad de dígitos del contómetro y sin autorización. Contómetro actual: {self.contometrok_id}, Contómetro inicial: {self.contometro_inicial}")
                 raise UserError(_("❗ Error en el Número de Dígitos: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
-    
+
         # Validar cantidad mínima de fotos
         if len(self.fotos_ids) < 10:
             _logger.warning(f"Reparación ID {self.id}: Número insuficiente de fotos. Cantidad actual: {len(self.fotos_ids)}")
             raise UserError(_("❗ Error en la Documentación Fotográfica: Se requieren al menos 10 fotos para finalizar la reparación. Actualmente hay %s fotos.") % len(self.fotos_ids))
-    
-        # Continuar con el proceso de finalización
-        _logger.info(f"Generando reporte para reparación ID: {self.id}")
+
+        # CORRECCIÓN: Generar el reporte QR usando la misma lógica que funciona en imprimir_reporte_qr
+        _logger.info(f"Generando reporte QR para reparación ID: {self.id}")
         try:
             _logger.info(f"Intentando generar reporte QR para reparación ID: {self.id}")
             report = self.env.ref('sat.action_report_qr_codes_reparaciones_template')
-            # Generamos el reporte sin esperar a que termine
-            report.with_context(discard_logo_check=True).report_action(self.id)
+            # Generar el reporte de la misma forma que en imprimir_reporte_qr
+            report.with_context(discard_logo_check=True).report_action(self)
+            _logger.info(f"Reporte QR generado exitosamente para reparación ID: {self.id}")
         except Exception as e:
             _logger.error(f"Error generando reporte QR para reparación ID {self.id}: {e}")
-            raise UserError(_("❗ Error generando el reporte QR. Por favor, contacte al administrador."))
-    
+            # Si el reporte falla, no debe detener el proceso de finalización
+            _logger.warning("Continuando con el proceso de finalización sin el reporte QR")
+
         try:
             _logger.info(f"Enviando mensaje a la asesora para reparación ID: {self.id}")
             self.enviar_mensaje_finalizacion_asesora()
         except Exception as e:
             _logger.error(f"Error enviando el mensaje a la asesora para reparación ID {self.id}: {e}")
-    
+
         try:
             _logger.info(f"Enviando correo de finalización para reparación ID: {self.id}")
             template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
             template_id.send_mail(self.id, force_send=True)
         except Exception as e:
             _logger.error(f"Error enviando el correo para reparación ID {self.id}: {e}")
-    
+
         _logger.info(f"Cambiando estado a 'finalizado' para reparación ID: {self.id}")
         self.estado_id = "finalizado"
         _logger.info(f"Estado cambiado a 'finalizado' para reparación ID: {self.id}")
@@ -1004,7 +1006,7 @@ class Reparaciones(models.Model):
         # Crear la próxima reparación sin verificar el estado
         _logger.info(f"Creando siguiente reparación para reparación ID: {self.id}")
         self.sudo()._create_next_reparacion()
-    
+
         _logger.info(f"Proceso de finalización completado para reparación ID: {self.id}")
         
         # Retornamos directamente a la vista de lista
