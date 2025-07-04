@@ -159,22 +159,7 @@
         </field>
     </record>
 
-    <!-- Botón para notificar manualmente desde el ticket -->
-    <record id="view_ticket_alquiler_form_inherit_whatsapp" model="ir.ui.view">
-        <field name="name">ticket.alquiler.form.inherit.whatsapp</field>
-        <field name="model">ticket.alquiler</field>
-        <field name="inherit_id" ref="sat.view_ticket_alquiler_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//header" position="inside">
-                <button name="%(action_whatsapp_notification_wizard)d" 
-                        string="Notificar Grupos WhatsApp" 
-                        type="action" 
-                        class="btn-secondary"
-                        invisible="estado != 'nuevo'"
-                        context="{'default_ticket_id': active_id, 'default_notificar_grupos': True}"/>
-            </xpath>
-        </field>
-    </record>
+
 
     <!-- Reglas de acceso básicas -->
     <record id="access_whatsapp_notification_wizard_all" model="ir.model.access">
