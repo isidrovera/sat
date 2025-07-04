@@ -10,7 +10,7 @@
                     <header>
                         <field name="estado" widget="statusbar" options="{'clickable_group': 'base.group_system'}"/>
                         <button string="Cerrar" name="action_finalizar" type="object" class="btn btn-info" icon="fa-wrench" invisible="estado !='proceso'" />
-                        <button class="oe_highlight" name="action_asignar_ticket" type="object" icon="fa-paper-plane" string="Asignar" invisible="estado != 'nuevo'" />
+                       
                         <button name="action_crear_evaluacion" string="Generar Evaluación" type="object"                          
                             icon="fa-check-circle"  groups="base.group_system"/>
                         <button string="Proceso" name="action_proceso" type="object" class="oe_highlight" groups="base.group_system" />
