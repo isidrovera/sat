@@ -105,3 +105,6 @@ access_copier_parts_request_wizard_portal,copier_parts_request_wizard.portal_acc
 access_solicitud_partes_portal,solicitud_partes.portal_access,model_solicitud_partes,base.group_portal,1,0,0,0
 access_solicitud_partes_linea_portal,solicitud_partes_linea.portal_access,model_solicitud_partes_linea,base.group_portal,1,0,0,0
 access_equipment_visit_report_portal,equipment_visit_report.portal_access,model_equipment_visit_report,base.group_portal,1,0,0,0
+
+access_whatsapp_notification_wizard_user,whatsapp.notification.wizard.user,model_whatsapp_notification_wizard,base.group_user,1,1,1,1
+access_whatsapp_notification_wizard_admin,whatsapp.notification.wizard.admin,model_whatsapp_notification_wizard,base.group_system,1,1,1,1
