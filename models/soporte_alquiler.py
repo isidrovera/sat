@@ -813,6 +813,10 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
        
     def _enviar_mensaje_whatsapp_original(self):
+        """
+        Método original con tu código actual de envío de WhatsApp
+        (Copia EXACTAMENTE tu método enviar_mensaje_whatsapp actual aquí)
+        """
         import logging
         _logger = logging.getLogger(__name__)
         
@@ -939,35 +943,33 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'type': 'ir.actions.act_window_close'
         }
 
-
     def enviar_mensaje_whatsapp(self):
         """
-        Método modificado para mostrar wizard de notificación antes de enviar
+        Método que SIEMPRE muestra el wizard antes de proceder con la asignación
         """
         self.ensure_one()
         
-        # Verificar si hay grupos configurados
-        wizard_model = self.env['whatsapp.notification.wizard']
-        grupos_disponibles = wizard_model._get_grupos_whatsapp()
+        _logger.info(f"🎯 Iniciando proceso de asignación para ticket {self.name}")
         
-        # Si no hay grupos, proceder normalmente
-        if not grupos_disponibles or grupos_disponibles == [('', 'No hay grupos disponibles')]:
-            return self._enviar_mensaje_whatsapp_original()
-        
-        # Mostrar wizard de notificación
-        wizard = wizard_model.create({
+        # SIEMPRE mostrar el wizard, sin importar si hay grupos configurados o no
+        wizard = self.env['whatsapp.notification.wizard'].create({
             'ticket_id': self.id,
-            'notificar_grupos': True,
+            'notificar_grupos': False,  # Por defecto NO notificar, que el usuario decida
         })
+        
+        _logger.info(f"🪄 Wizard creado con ID: {wizard.id}")
         
         return {
             'type': 'ir.actions.act_window',
-            'name': 'Notificar Visita Técnica',
+            'name': 'Confirmar Asignación de Ticket',
             'res_model': 'whatsapp.notification.wizard',
             'res_id': wizard.id,
             'view_mode': 'form',
             'target': 'new',
-            'context': {'default_ticket_id': self.id}
+            'context': {
+                'default_ticket_id': self.id,
+                'default_notificar_grupos': False
+            }
         }
 
     def action_proceso(self):
