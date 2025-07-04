@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista del Wizard para Notificación WhatsApp -->
+    <record id="view_whatsapp_notification_wizard_form" model="ir.ui.view">
+        <field name="name">whatsapp.notification.wizard.form</field>
+        <field name="model">whatsapp.notification.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Notificar Visita Técnica">
+                <header>
+                    <button name="action_enviar_notificacion" 
+                            string="Notificar y Proceder" 
+                            type="object" 
+                            class="btn-primary"
+                            invisible="not notificar_grupos"/>
+                    
+                    <button name="action_solo_notificar" 
+                            string="Solo Notificar" 
+                            type="object" 
+                            class="btn-secondary"
+                            invisible="not notificar_grupos"/>
+                    
+                    <button name="action_cancelar" 
+                            string="Proceder sin Notificar" 
+                            type="object" 
+                            class="btn-secondary"/>
+                    
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="ticket_id" readonly="1" options="{'no_open': True}"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Información del Ticket">
+                            <field name="cliente_name"/>
+                            <field name="direccion"/>
+                            <field name="fecha_visita"/>
+                            <field name="tecnico_name"/>
+                        </group>
+                        
+                        <group string="Información del Equipo">
+                            <field name="modelo_equipo"/>
+                            <field name="serie_equipo"/>
+                            <field name="tipo_equipo"/>
+                        </group>
+                    </group>
+
+                    <group string="Problema Reportado">
+                        <field name="problema_descripcion" nolabel="1"/>
+                    </group>
+
+                    <separator string="Configuración de Notificación"/>
+                    
+                    <group>
+                        <group string="WhatsApp">
+                            <field name="notificar_grupos"/>
+                            <field name="grupo_seleccionado" 
+                                   required="notificar_grupos"
+                                   invisible="not notificar_grupos"/>
+                        </group>
+                        
+                        <group string="Gestión de Tóner">
+                            <field name="cliente_solicita_toner"/>
+                            <field name="enviar_toner" 
+                                   readonly="cliente_solicita_toner"/>
+                        </group>
+                    </group>
+
+                    <group string="Observaciones sobre Tóner" 
+                           invisible="not cliente_solicita_toner and not enviar_toner">
+                        <field name="observaciones_toner" nolabel="1" placeholder="Especificar tipo de tóner, cantidades, etc."/>
+                    </group>
+
+                    <group string="Mensaje Adicional">
+                        <field name="mensaje_adicional" nolabel="1" placeholder="Información adicional para incluir en la notificación (opcional)"/>
+                    </group>
+
+                    <!-- Vista previa del mensaje -->
+                    <separator string="Vista Previa del Mensaje" invisible="not notificar_grupos"/>
+                    <div invisible="not notificar_grupos" 
+                         style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                        <p><strong>El siguiente mensaje será enviado al grupo de WhatsApp:</strong></p>
+                        <div style="background-color: white; padding: 10px; border-left: 4px solid #25D366; font-family: monospace; font-size: 12px; white-space: pre-line;">
+                            <p><strong>🔧 VISITA TÉCNICA PROGRAMADA 🔧</strong></p>
+                            
+                            <p><strong>INFORMACIÓN DEL TICKET</strong></p>
+                            <p>• Ticket #: <field name="ticket_id" readonly="1" nolabel="1" options="{'no_open': True}" class="d-inline"/></p>
+                            <p>• Cliente: <span invisible="not cliente_name"><field name="cliente_name" readonly="1" nolabel="1" class="d-inline"/></span><span invisible="cliente_name">No especificado</span></p>
+                            <p>• Dirección: <span invisible="not direccion"><field name="direccion" readonly="1" nolabel="1" class="d-inline"/></span><span invisible="direccion">No especificada</span></p>
+                            <p>• Fecha y hora: <span invisible="not fecha_visita"><field name="fecha_visita" readonly="1" nolabel="1" class="d-inline"/></span><span invisible="fecha_visita">No programada</span></p>
+                            <p>• Técnico: <span invisible="not tecnico_name"><field name="tecnico_name" readonly="1" nolabel="1" class="d-inline"/></span><span invisible="tecnico_name">No asignado</span></p>
+                            
+                            <p><strong>EQUIPO</strong></p>
+                            <p>• Modelo: <span invisible="not modelo_equipo"><field name="modelo_equipo" readonly="1" nolabel="1" class="d-inline"/></span><span invisible="modelo_equipo">No especificado</span></p>
+                            <p>• Serie: <span invisible="not serie_equipo"><field name="serie_equipo" readonly="1" nolabel="1" class="d-inline"/></span><span invisible="serie_equipo">No especificada</span></p>
+                            <p>• Tipo: <span invisible="tipo_equipo != 'color'">Color</span><span invisible="tipo_equipo == 'color'">Monocromática</span></p>
+                            
+                            <p><strong>PROBLEMA REPORTADO</strong></p>
+                            <p><span invisible="not problema_descripcion"><field name="problema_descripcion" readonly="1" nolabel="1" class="d-inline"/></span><span invisible="problema_descripcion">No especificado</span></p>
+                            
+                            <div invisible="not cliente_solicita_toner and not enviar_toner">
+                                <p><strong>TÓNER</strong></p>
+                                <p invisible="not cliente_solicita_toner">✅ Cliente solicita tóner</p>
+                                <p invisible="not enviar_toner">📦 Se enviará tóner con el técnico</p>
+                                <p invisible="enviar_toner or not observaciones_toner">❌ No se enviará tóner</p>
+                                <p invisible="not observaciones_toner">• Especificaciones: <field name="observaciones_toner" readonly="1" nolabel="1" class="d-inline"/></p>
+                            </div>
+                            
+                            <div invisible="not mensaje_adicional">
+                                <p><strong>OBSERVACIONES ADICIONALES</strong></p>
+                                <p><field name="mensaje_adicional" readonly="1" nolabel="1" class="d-inline"/></p>
+                            </div>
+                            
+                            <p><strong>⚠️ Por favor, evalúen si es necesario enviar suministros adicionales con el técnico.</strong></p>
+                        </div>
+                    </div>
+
+                    <!-- Información importante -->
+                    <div class="alert alert-info mt-3" role="alert">
+                        <strong>ℹ️ Información:</strong>
+                        <ul class="mb-0">
+                            <li><strong>Notificar y Proceder:</strong> Envía la notificación al grupo y continúa con el proceso normal del ticket</li>
+                            <li><strong>Solo Notificar:</strong> Únicamente envía la notificación sin proceder con el ticket</li>
+                            <li><strong>Proceder sin Notificar:</strong> Continúa con el proceso normal sin enviar notificación</li>
+                        </ul>
+                    </div>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción para abrir el wizard -->
+    <record id="action_whatsapp_notification_wizard" model="ir.actions.act_window">
+        <field name="name">Notificar Visita Técnica</field>
+        <field name="res_model">whatsapp.notification.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_whatsapp_notification_wizard_form"/>
+    </record>
+
+    <!-- Vista de lista para el wizard (para historial/debug) -->
+    <record id="view_whatsapp_notification_wizard_list" model="ir.ui.view">
+        <field name="name">whatsapp.notification.wizard.list</field>
+        <field name="model">whatsapp.notification.wizard</field>
+        <field name="arch" type="xml">
+            <list string="Notificaciones WhatsApp" create="false" edit="false">
+                <field name="ticket_id"/>
+                <field name="cliente_name"/>
+                <field name="fecha_visita"/>
+                <field name="grupo_seleccionado"/>
+                <field name="enviar_toner"/>
+                <field name="create_date"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Botón para notificar manualmente desde el ticket -->
+    <record id="view_ticket_alquiler_form_inherit_whatsapp" model="ir.ui.view">
+        <field name="name">ticket.alquiler.form.inherit.whatsapp</field>
+        <field name="model">ticket.alquiler</field>
+        <field name="inherit_id" ref="sat.view_ticket_alquiler_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="%(action_whatsapp_notification_wizard)d" 
+                        string="Notificar Grupos WhatsApp" 
+                        type="action" 
+                        class="btn-secondary"
+                        invisible="estado != 'nuevo'"
+                        context="{'default_ticket_id': active_id, 'default_notificar_grupos': True}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Reglas de acceso básicas -->
+    <record id="access_whatsapp_notification_wizard_all" model="ir.model.access">
+        <field name="name">whatsapp.notification.wizard.all</field>
+        <field name="model_id" ref="model_whatsapp_notification_wizard"/>
+        <field name="group_id" ref="base.group_user"/>
+        <field name="perm_read" eval="1"/>
+        <field name="perm_write" eval="1"/>
+        <field name="perm_create" eval="1"/>
+        <field name="perm_unlink" eval="1"/>
+    </record>
+
+</odoo>

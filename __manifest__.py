@@ -114,6 +114,7 @@
         'views/equipment_visit_report_views.xml',
         'views/leave_request_template.xml',
         'report/equipment_visit_report.xml',
+        'views/whatsapp_notification_wizard_views.xml',
         
     ],
     

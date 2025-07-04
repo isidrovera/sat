@@ -812,7 +812,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
 
        
-    def enviar_mensaje_whatsapp(self):
+    def _enviar_mensaje_whatsapp_original(self):
         import logging
         _logger = logging.getLogger(__name__)
         
@@ -898,7 +898,8 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                     self.send_whatsapp_message(phone_number, msg_cliente)
             except Exception as e:
                 _logger.error("Error al enviar mensaje de WhatsApp al cliente. Detalles: %s", str(e))
-           # Añadir notificación al gerente si es asistencia directa
+                
+        # Añadir notificación al gerente si es asistencia directa
         if self.asistencia_id == 'si':
             msg_gerente = (
                 f"⚠️ *VISITA TÉCNICA DIRECTA*\n\n"
@@ -935,9 +936,39 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         _logger.info("Estado del registro ID: %s cambiado a 'proceso'.", self.id)
 
         return {
-            'type': 'ir.actions.act_window_close'  # Cerrar ventana tras completar la acción
+            'type': 'ir.actions.act_window_close'
         }
 
+
+    def enviar_mensaje_whatsapp(self):
+        """
+        Método modificado para mostrar wizard de notificación antes de enviar
+        """
+        self.ensure_one()
+        
+        # Verificar si hay grupos configurados
+        wizard_model = self.env['whatsapp.notification.wizard']
+        grupos_disponibles = wizard_model._get_grupos_whatsapp()
+        
+        # Si no hay grupos, proceder normalmente
+        if not grupos_disponibles or grupos_disponibles == [('', 'No hay grupos disponibles')]:
+            return self._enviar_mensaje_whatsapp_original()
+        
+        # Mostrar wizard de notificación
+        wizard = wizard_model.create({
+            'ticket_id': self.id,
+            'notificar_grupos': True,
+        })
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Notificar Visita Técnica',
+            'res_model': 'whatsapp.notification.wizard',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_ticket_id': self.id}
+        }
 
     def action_proceso(self):
         self.estado='proceso'
