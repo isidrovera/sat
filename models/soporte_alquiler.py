@@ -943,7 +943,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'type': 'ir.actions.act_window_close'
         }
 
-    def enviar_mensaje_whatsapp(self):
+    def action_asignar_ticket(self):
         """
         Método que SIEMPRE muestra el wizard antes de proceder con la asignación
         """
