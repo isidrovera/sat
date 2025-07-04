@@ -330,3 +330,90 @@ class WhatsappNotificationWizard(models.TransientModel):
                     'type': 'danger',
                 }
             }
+
+
+    def action_enviar_notificacion(self):
+        """Acción: Enviar notificación y proceder con el ticket"""
+        self.ensure_one()
+        
+        try:
+            # 1. Validar que hay grupo seleccionado
+            if not self.grupo_seleccionado:
+                raise UserError("Debe seleccionar un grupo de WhatsApp para enviar la notificación")
+            
+            # 2. Enviar notificación
+            self._enviar_notificacion_whatsapp()
+            
+            # 3. Registrar información en el ticket
+            self._registrar_informacion_ticket(notificacion_enviada=True)
+            
+            # 4. Ejecutar el proceso normal de asignación del ticket
+            return self.ticket_id._enviar_mensaje_whatsapp_original()
+            
+        except UserError:
+            # Re-lanzar errores de usuario sin modificar
+            raise
+        except Exception as e:
+            _logger.error(f"Error en action_enviar_notificacion: {str(e)}")
+            raise UserError(f"Error al procesar la notificación y asignación: {str(e)}")
+
+    def action_solo_notificar(self):
+        """Acción: Solo enviar notificación sin proceder con el ticket"""
+        self.ensure_one()
+        
+        try:
+            # 1. Validar que hay grupo seleccionado
+            if not self.grupo_seleccionado:
+                raise UserError("Debe seleccionar un grupo de WhatsApp para enviar la notificación")
+            
+            # 2. Enviar notificación
+            self._enviar_notificacion_whatsapp()
+            
+            # 3. Registrar solo la notificación en el ticket (sin proceder)
+            grupos_disponibles = dict(self._get_grupos_disponibles())
+            nombre_grupo = grupos_disponibles.get(self.grupo_seleccionado, self.grupo_seleccionado)
+            
+            mensaje_chatter = f"📤 <b>Solo Notificación Enviada</b><br/>"
+            mensaje_chatter += f"📤 <b>Grupo WhatsApp notificado:</b> {nombre_grupo}<br/>"
+            
+            # Información de tóner si existe
+            if self.cliente_solicita_toner or self.enviar_toner:
+                mensaje_chatter += "<br/><b>🖨️ Información de Tóner:</b><br/>"
+                if self.cliente_solicita_toner:
+                    mensaje_chatter += "• Cliente solicita tóner<br/>"
+                if self.enviar_toner:
+                    mensaje_chatter += "• Se enviará tóner con el técnico<br/>"
+                    if self.observaciones_toner:
+                        mensaje_chatter += f"• Especificaciones: {self.observaciones_toner}<br/>"
+            
+            # Mensaje adicional
+            if self.mensaje_adicional:
+                mensaje_chatter += f"<br/><b>📝 Observaciones adicionales:</b><br/>{self.mensaje_adicional}<br/>"
+            
+            mensaje_chatter += f"<br/><small>⚠️ El ticket NO fue procesado automáticamente</small><br/>"
+            mensaje_chatter += f"<small>Notificado por: {self.env.user.name}</small>"
+            
+            # Registrar en el ticket
+            self.ticket_id.message_post(
+                body=mensaje_chatter,
+                message_type='notification'
+            )
+            
+            # Mostrar mensaje de confirmación y cerrar wizard
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': '✅ Notificación Enviada',
+                    'message': f'Notificación enviada exitosamente al grupo: {nombre_grupo}',
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+            
+        except UserError:
+            # Re-lanzar errores de usuario sin modificar
+            raise
+        except Exception as e:
+            _logger.error(f"Error en action_solo_notificar: {str(e)}")
+            raise UserError(f"Error al enviar la notificación: {str(e)}")
