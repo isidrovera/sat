@@ -1,0 +1,492 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista Lista de Confirmaciones de Entrega -->
+    <record id="view_toner_delivery_confirmation_list" model="ir.ui.view">
+        <field name="name">toner.delivery.confirmation.list</field>
+        <field name="model">toner.delivery.confirmation</field>
+        <field name="arch" type="xml">
+            <list string="Confirmaciones de Entrega de Tóner" 
+                  default_order="delivery_date desc"
+                  sample="1">
+                <field name="secuencia"/>
+                <field name="delivery_date"/>
+                <field name="schedule_id"/>
+                <field name="equipment_id"/>
+                <field name="partner_id"/>
+                <field name="received_by_name" string="Recibido por"/>
+                <field name="total_delivered" string="Total Entregado"/>
+                <field name="has_differences" 
+                       decoration-warning="has_differences == True"/>
+                <field name="delivered_by_user" string="Entregado por"/>
+                <field name="state" 
+                       decoration-bf="state == 'draft'"
+                       decoration-info="state == 'confirmed'"
+                       decoration-success="state == 'processed'"/>
+                <field name="validation_status" 
+                       decoration-warning="validation_status == 'pending'"
+                       decoration-success="validation_status == 'validated'"
+                       decoration-danger="validation_status == 'rejected'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista Formulario de Confirmaciones de Entrega -->
+    <record id="view_toner_delivery_confirmation_form" model="ir.ui.view">
+        <field name="name">toner.delivery.confirmation.form</field>
+        <field name="model">toner.delivery.confirmation</field>
+        <field name="arch" type="xml">
+            <form string="Confirmación de Entrega de Tóner">
+                <header>
+                    <button name="action_confirm" 
+                            type="object" 
+                            string="Confirmar Entrega" 
+                            class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_process" 
+                            type="object" 
+                            string="Procesar y Actualizar Stock" 
+                            class="btn-success"
+                            invisible="state != 'confirmed'"/>
+                    <button name="action_validate" 
+                            type="object" 
+                            string="Validar" 
+                            class="btn-info"
+                            invisible="validation_status != 'pending'"/>
+                    <button name="action_reject" 
+                            type="object" 
+                            string="Rechazar" 
+                            class="btn-danger"
+                            invisible="validation_status != 'pending'"/>
+                    <button name="action_reset_to_draft" 
+                            type="object" 
+                            string="Regresar a Borrador" 
+                            class="btn-secondary"
+                            invisible="state == 'processed'"/>
+                    <field name="state" widget="statusbar" 
+                           statusbar_visible="draft,confirmed,processed"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" 
+                                type="object" 
+                                name="action_view_equipment" 
+                                icon="fa-print">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Equipo</span>
+                            </div>
+                        </button>
+                        <button class="oe_stat_button" 
+                                type="object" 
+                                name="action_view_schedule" 
+                                icon="fa-calendar"
+                                invisible="not schedule_id">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Programación</span>
+                            </div>
+                        </button>
+                        <button class="oe_stat_button" 
+                                type="object" 
+                                name="action_print_delivery_receipt" 
+                                icon="fa-print">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Imprimir</span>
+                                <span class="o_stat_text">Comprobante</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <h1>
+                            <field name="secuencia" readonly="1"/>
+                        </h1>
+                        <h2>
+                            <field name="display_name" readonly="1"/>
+                        </h2>
+                    </div>
+
+                    <group>
+                        <group string="Información de la Entrega">
+                            <field name="schedule_id" readonly="state == 'processed'"/>
+                            <field name="equipment_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="delivery_date" readonly="state == 'processed'"/>
+                            <field name="delivery_time" readonly="state == 'processed'" widget="float_time"/>
+                        </group>
+                        <group string="Estado y Validación">
+                            <field name="validation_status" readonly="1"
+                                   decoration-warning="validation_status == 'pending'"
+                                   decoration-success="validation_status == 'validated'"
+                                   decoration-danger="validation_status == 'rejected'"/>
+                            <field name="validated_by" readonly="1"/>
+                            <field name="validation_date" readonly="1"/>
+                            <field name="has_differences" readonly="1"
+                                   decoration-warning="has_differences == True"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Responsables" name="responsible">
+                            <group>
+                                <group string="Entregado por">
+                                    <field name="delivered_by_user" readonly="state == 'processed'"/>
+                                </group>
+                                <group string="Recibido por">
+                                    <field name="received_by_name" readonly="state == 'processed'"/>
+                                    <field name="received_by_position" readonly="state == 'processed'"/>
+                                    <field name="received_by_dni" readonly="state == 'processed'"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Cantidades Entregadas" name="quantities">
+                            <group>
+                                <group string="Tóners Entregados">
+                                    <field name="toner_black_delivered" readonly="state == 'processed'"/>
+                                    <field name="toner_cyan_delivered" readonly="state == 'processed'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="toner_magenta_delivered" readonly="state == 'processed'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="toner_yellow_delivered" readonly="state == 'processed'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="total_delivered" readonly="1"/>
+                                </group>
+                                <group string="Cantidades Programadas" 
+                                       invisible="not schedule_id">
+                                    <field name="toner_black_planned" readonly="1"/>
+                                    <field name="toner_cyan_planned" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="toner_magenta_planned" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="toner_yellow_planned" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                </group>
+                            </group>
+                            
+                            <group string="Diferencias vs. Programado" 
+                                   invisible="not has_differences">
+                                <group>
+                                    <field name="difference_black" readonly="1"
+                                           decoration-success="difference_black == 0"
+                                           decoration-warning="difference_black != 0"/>
+                                    <field name="difference_cyan" readonly="1"
+                                           decoration-success="difference_cyan == 0"
+                                           decoration-warning="difference_cyan != 0"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="difference_magenta" readonly="1"
+                                           decoration-success="difference_magenta == 0"
+                                           decoration-warning="difference_magenta != 0"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="difference_yellow" readonly="1"
+                                           decoration-success="difference_yellow == 0"
+                                           decoration-warning="difference_yellow != 0"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Análisis de Stock" name="stock_analysis">
+                            <group>
+                                <group string="Stock Antes de la Entrega">
+                                    <field name="stock_before_black" readonly="1"/>
+                                    <field name="stock_before_cyan" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="stock_before_magenta" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="stock_before_yellow" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                </group>
+                                <group string="Stock Después de la Entrega">
+                                    <field name="stock_after_black" readonly="1"/>
+                                    <field name="stock_after_cyan" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="stock_after_magenta" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="stock_after_yellow" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Detalles de Entrega" name="delivery_details">
+                            <group>
+                                <group string="Almacenamiento">
+                                    <field name="storage_location" readonly="state == 'processed'"/>
+                                    <field name="installation_required" readonly="state == 'processed'"/>
+                                </group>
+                            </group>
+                            <group string="Observaciones">
+                                <field name="delivery_notes" nolabel="1" 
+                                       placeholder="Observaciones sobre la entrega realizada..."
+                                       readonly="state == 'processed'"/>
+                            </group>
+                            <group string="Notas de Instalación" 
+                                   invisible="not installation_required">
+                                <field name="installation_notes" nolabel="1" 
+                                       placeholder="Observaciones sobre instalación de tóner..."
+                                       readonly="state == 'processed'"/>
+                            </group>
+                        </page>
+
+                        <page string="Evidencia" name="evidence">
+                            <group>
+                                <group string="Foto de Entrega">
+                                    <field name="delivery_photo" widget="image" class="oe_avatar"
+                                           readonly="state == 'processed'"/>
+                                    <field name="delivery_photo_filename" invisible="1"/>
+                                </group>
+                                <group string="Firma del Cliente">
+                                    <field name="client_signature" widget="image" class="oe_avatar"
+                                           readonly="state == 'processed'"/>
+                                    <field name="client_signature_filename" invisible="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Validación" name="validation" 
+                              invisible="validation_status == 'pending'">
+                            <group>
+                                <group string="Información de Validación">
+                                    <field name="validated_by" readonly="1"/>
+                                    <field name="validation_date" readonly="1"/>
+                                </group>
+                            </group>
+                            <group string="Notas de Validación">
+                                <field name="validation_notes" nolabel="1" 
+                                       placeholder="Notas del validador..."
+                                       readonly="validation_status != 'pending'"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista Kanban de Confirmaciones de Entrega -->
+    <record id="view_toner_delivery_confirmation_kanban" model="ir.ui.view">
+        <field name="name">toner.delivery.confirmation.kanban</field>
+        <field name="model">toner.delivery.confirmation</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column">
+                <field name="secuencia"/>
+                <field name="delivery_date"/>
+                <field name="equipment_id"/>
+                <field name="partner_id"/>
+                <field name="received_by_name"/>
+                <field name="state"/>
+                <field name="validation_status"/>
+                <field name="total_delivered"/>
+                <field name="has_differences"/>
+                <field name="delivered_by_user"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="o_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="secuencia"/>
+                                        </strong>
+                                        <br/>
+                                        <small class="o_kanban_record_subtitle text-muted">
+                                            <field name="delivery_date"/>
+                                        </small>
+                                    </div>
+                                    <div class="o_kanban_manage_button_section">
+                                        <a class="o_kanban_manage_toggle_button" href="#">
+                                            <i class="fa fa-ellipsis-v" role="img" aria-label="Manage" title="Manage"/>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Equipo:</strong><br/>
+                                            <field name="equipment_id"/>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>Cliente:</strong><br/>
+                                            <field name="partner_id"/>
+                                        </div>
+                                    </div>
+                                    <div class="row mt8">
+                                        <div class="col-6">
+                                            <strong>Recibido por:</strong><br/>
+                                            <field name="received_by_name"/>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>Entregado:</strong><br/>
+                                            <field name="total_delivered"/> unidades
+                                        </div>
+                                    </div>
+                                    <div class="row mt8">
+                                        <div class="col-12">
+                                            <strong>Por:</strong><br/>
+                                            <field name="delivered_by_user"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left">
+                                        <t t-if="record.has_differences.raw_value">
+                                            <span class="badge badge-warning">Con Diferencias</span>
+                                        </t>
+                                        <t t-if="record.validation_status.raw_value == 'validated'">
+                                            <span class="badge badge-success">Validado</span>
+                                        </t>
+                                        <t t-if="record.validation_status.raw_value == 'rejected'">
+                                            <span class="badge badge-danger">Rechazado</span>
+                                        </t>
+                                        <t t-if="record.validation_status.raw_value == 'pending'">
+                                            <span class="badge badge-warning">Pendiente</span>
+                                        </t>
+                                    </div>
+                                    <div class="oe_kanban_bottom_right">
+                                        <field name="activity_ids" widget="kanban_activity"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Vista de Búsqueda -->
+    <record id="view_toner_delivery_confirmation_search" model="ir.ui.view">
+        <field name="name">toner.delivery.confirmation.search</field>
+        <field name="model">toner.delivery.confirmation</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Confirmaciones de Entrega">
+                <field name="secuencia"/>
+                <field name="schedule_id"/>
+                <field name="equipment_id"/>
+                <field name="partner_id"/>
+                <field name="received_by_name"/>
+                <field name="delivered_by_user"/>
+                <separator/>
+                <filter string="Borradores" name="draft" 
+                        domain="[('state', '=', 'draft')]"/>
+                <filter string="Confirmadas" name="confirmed" 
+                        domain="[('state', '=', 'confirmed')]"/>
+                <filter string="Procesadas" name="processed" 
+                        domain="[('state', '=', 'processed')]"/>
+                <separator/>
+                <filter string="Pendientes de Validación" name="pending_validation" 
+                        domain="[('validation_status', '=', 'pending')]"/>
+                <filter string="Validadas" name="validated" 
+                        domain="[('validation_status', '=', 'validated')]"/>
+                <filter string="Rechazadas" name="rejected" 
+                        domain="[('validation_status', '=', 'rejected')]"/>
+                <separator/>
+                <filter string="Con Diferencias" name="with_differences" 
+                        domain="[('has_differences', '=', True)]"/>
+                <filter string="Sin Diferencias" name="no_differences" 
+                        domain="[('has_differences', '=', False)]"/>
+                <separator/>
+                <filter string="Hoy" name="today" 
+                        domain="[('delivery_date', '=', context_today())]"/>
+                <filter string="Esta Semana" name="week" 
+                        domain="[('delivery_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%%Y-%%m-%%d')), ('delivery_date', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%%Y-%%m-%%d'))]"/>
+                <filter string="Este Mes" name="month" 
+                        domain="[('delivery_date', '&gt;=', (context_today().replace(day=1)).strftime('%%Y-%%m-%%d'))]"/>
+                <separator/>
+                <filter string="Mis Entregas" name="my_deliveries" 
+                        domain="[('delivered_by_user', '=', uid)]"/>
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Estado de Validación" name="group_validation" context="{'group_by': 'validation_status'}"/>
+                    <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Entregado por" name="group_user" context="{'group_by': 'delivered_by_user'}"/>
+                    <filter string="Fecha" name="group_date" context="{'group_by': 'delivery_date:day'}"/>
+                    <filter string="Programación" name="group_schedule" context="{'group_by': 'schedule_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Vista Gráfico/Pivot -->
+    <record id="view_toner_delivery_confirmation_graph" model="ir.ui.view">
+        <field name="name">toner.delivery.confirmation.graph</field>
+        <field name="model">toner.delivery.confirmation</field>
+        <field name="arch" type="xml">
+            <graph string="Análisis de Entregas Confirmadas" type="bar">
+                <field name="delivery_date" type="row" interval="week"/>
+                <field name="state" type="col"/>
+                <field name="total_delivered" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Vista Pivot -->
+    <record id="view_toner_delivery_confirmation_pivot" model="ir.ui.view">
+        <field name="name">toner.delivery.confirmation.pivot</field>
+        <field name="model">toner.delivery.confirmation</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de Entregas">
+                <field name="delivery_date" type="row" interval="month"/>
+                <field name="partner_id" type="col"/>
+                <field name="total_delivered" type="measure"/>
+                <field name="toner_black_delivered" type="measure"/>
+                <field name="toner_cyan_delivered" type="measure"/>
+                <field name="toner_magenta_delivered" type="measure"/>
+                <field name="toner_yellow_delivered" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana -->
+    <record id="action_toner_delivery_confirmation" model="ir.actions.act_window">
+        <field name="name">Confirmaciones de Entrega</field>
+        <field name="res_model">toner.delivery.confirmation</field>
+        <field name="view_mode">kanban,list,form,graph,pivot</field>
+        <field name="search_view_id" ref="view_toner_delivery_confirmation_search"/>
+        <field name="context">{
+            'search_default_draft': 1,
+            'search_default_confirmed': 1
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡No hay confirmaciones de entrega!
+            </p>
+            <p>
+                Las confirmaciones de entrega aparecerán aquí cuando se confirmen 
+                las entregas realizadas desde las programaciones.
+            </p>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana para Validaciones Pendientes -->
+    <record id="action_toner_delivery_validation_pending" model="ir.actions.act_window">
+        <field name="name">Validaciones Pendientes</field>
+        <field name="res_model">toner.delivery.confirmation</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_toner_delivery_confirmation_search"/>
+        <field name="domain">[('validation_status', '=', 'pending')]</field>
+        <field name="context">{}</field>
+    </record>
+
+    <!-- Menú Principal -->
+    <menuitem id="menu_toner_delivery_confirmation"
+              name="Confirmaciones de Entrega"
+              parent="sat_menu_root"
+              action="action_toner_delivery_confirmation"
+              sequence="74"/>
+
+    <!-- Submenú Validaciones -->
+    <menuitem id="menu_toner_delivery_validation"
+              name="Validaciones Pendientes"
+              parent="sat_menu_root"
+              action="action_toner_delivery_validation_pending"
+              sequence="75"/>
+</odoo>

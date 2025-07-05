@@ -105,3 +105,27 @@ access_copier_parts_request_wizard_portal,copier_parts_request_wizard.portal_acc
 access_solicitud_partes_portal,solicitud_partes.portal_access,model_solicitud_partes,base.group_portal,1,0,0,0
 access_solicitud_partes_linea_portal,solicitud_partes_linea.portal_access,model_solicitud_partes_linea,base.group_portal,1,0,0,0
 access_equipment_visit_report_portal,equipment_visit_report.portal_access,model_equipment_visit_report,base.group_portal,1,0,0,0
+# Permisos para toner.counter.submission
+access_toner_counter_submission_user,toner.counter.submission.user,model_toner_counter_submission,base.group_user,1,1,1,0
+access_toner_counter_submission_system,toner.counter.submission.system,model_toner_counter_submission,base.group_system,1,1,1,1
+access_toner_counter_submission_tecnico,toner.counter.submission.tecnico,model_toner_counter_submission,sat.sat_tecnica_group_user,1,1,1,1
+access_toner_counter_submission_ventas,toner.counter.submission.ventas,model_toner_counter_submission,sat.Sat_ventas_group_user,1,1,0,0
+access_toner_counter_submission_jefes,toner.counter.submission.jefes,model_toner_counter_submission,sat_jefes_group_user,1,1,1,0
+access_toner_counter_submission_portal,toner.counter.submission.portal,model_toner_counter_submission,base.group_portal,1,0,0,0
+access_toner_counter_submission_public,toner.counter.submission.public,model_toner_counter_submission,base.group_public,1,1,1,0
+
+# Permisos para toner.delivery.schedule
+access_toner_delivery_schedule_user,toner.delivery.schedule.user,model_toner_delivery_schedule,base.group_user,1,1,1,0
+access_toner_delivery_schedule_system,toner.delivery.schedule.system,model_toner_delivery_schedule,base.group_system,1,1,1,1
+access_toner_delivery_schedule_tecnico,toner.delivery.schedule.tecnico,model_toner_delivery_schedule,sat.sat_tecnica_group_user,1,1,1,1
+access_toner_delivery_schedule_ventas,toner.delivery.schedule.ventas,model_toner_delivery_schedule,sat.Sat_ventas_group_user,1,1,0,0
+access_toner_delivery_schedule_jefes,toner.delivery.schedule.jefes,model_toner_delivery_schedule,sat_jefes_group_user,1,1,1,0
+access_toner_delivery_schedule_portal,toner.delivery.schedule.portal,model_toner_delivery_schedule,base.group_portal,1,0,0,0
+
+# Permisos para toner.delivery.confirmation
+access_toner_delivery_confirmation_user,toner.delivery.confirmation.user,model_toner_delivery_confirmation,base.group_user,1,1,1,0
+access_toner_delivery_confirmation_system,toner.delivery.confirmation.system,model_toner_delivery_confirmation,base.group_system,1,1,1,1
+access_toner_delivery_confirmation_tecnico,toner.delivery.confirmation.tecnico,model_toner_delivery_confirmation,sat.sat_tecnica_group_user,1,1,1,1
+access_toner_delivery_confirmation_ventas,toner.delivery.confirmation.ventas,model_toner_delivery_confirmation,sat.Sat_ventas_group_user,1,1,0,0
+access_toner_delivery_confirmation_jefes,toner.delivery.confirmation.jefes,model_toner_delivery_confirmation,sat_jefes_group_user,1,1,1,0
+access_toner_delivery_confirmation_portal,toner.delivery.confirmation.portal,model_toner_delivery_confirmation,base.group_portal,1,0,0,0

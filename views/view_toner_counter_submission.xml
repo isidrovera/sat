@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista Lista de Reportes de Contadores y Tóner -->
+    <record id="view_toner_counter_submission_list" model="ir.ui.view">
+        <field name="name">toner.counter.submission.list</field>
+        <field name="model">toner.counter.submission</field>
+        <field name="arch" type="xml">
+            <list string="Reportes de Contadores y Tóner" 
+                  default_order="submission_date desc"
+                  sample="1">
+                <field name="secuencia"/>
+                <field name="submission_date"/>
+                <field name="equipment_id"/>
+                <field name="partner_id"/>
+                <field name="client_name"/>
+                <field name="counter_bn" string="Contador B/N"/>
+                <field name="counter_color" string="Contador Color"/>
+                <field name="total_copies_period" string="Copias Período"/>
+                <field name="requiere_entrega_automatica" 
+                       decoration-info="requiere_entrega_automatica == True"/>
+                <field name="urgente" 
+                       decoration-warning="urgente == True"/>
+                <field name="state" 
+                       decoration-bf="state == 'pending'"
+                       decoration-success="state == 'approved'"
+                       decoration-info="state == 'processed'"
+                       decoration-muted="state == 'rejected'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista Formulario de Reportes de Contadores y Tóner -->
+    <record id="view_toner_counter_submission_form" model="ir.ui.view">
+        <field name="name">toner.counter.submission.form</field>
+        <field name="model">toner.counter.submission</field>
+        <field name="arch" type="xml">
+            <form string="Reporte de Contadores y Tóner">
+                <header>
+                    <button name="action_review" 
+                            type="object" 
+                            string="Marcar como Revisado" 
+                            class="btn-secondary"
+                            invisible="state != 'pending'"/>
+                    <button name="action_approve" 
+                            type="object" 
+                            string="Aprobar Reporte" 
+                            class="btn-primary"
+                            invisible="state not in ['pending', 'reviewed']"/>
+                    <button name="action_process_delivery" 
+                            type="object" 
+                            string="Procesar Entrega" 
+                            class="btn-success"
+                            invisible="state != 'approved' or not requiere_entrega_automatica"/>
+                    <button name="action_reject" 
+                            type="object" 
+                            string="Rechazar" 
+                            class="btn-danger"
+                            invisible="state not in ['pending', 'reviewed']"/>
+                    <button name="action_reset_to_pending" 
+                            type="object" 
+                            string="Regresar a Pendiente" 
+                            invisible="state == 'processed'"/>
+                    <field name="state" widget="statusbar" 
+                           statusbar_visible="pending,reviewed,approved,processed"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" 
+                                type="object" 
+                                name="action_view_equipment" 
+                                icon="fa-print">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Equipo</span>
+                            </div>
+                        </button>
+                        <button class="oe_stat_button" 
+                                type="object" 
+                                name="action_view_delivery" 
+                                icon="fa-truck"
+                                invisible="not delivery_scheduled_id">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Entrega</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <h1>
+                            <field name="secuencia" readonly="1"/>
+                        </h1>
+                        <h2>
+                            <field name="display_name" readonly="1"/>
+                        </h2>
+                    </div>
+
+                    <group>
+                        <group string="Información del Equipo">
+                            <field name="equipment_id" 
+                                   domain="[('estado_alquiler_id', '=', 'alquilada')]"
+                                   readonly="state != 'pending'"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="equipment_serie" readonly="1"/>
+                            <field name="equipment_location" readonly="1"/>
+                        </group>
+                        <group string="Información del Reporte">
+                            <field name="submission_date" readonly="state != 'pending'"/>
+                            <field name="urgente" readonly="state != 'pending'"/>
+                            <field name="requiere_entrega_automatica" readonly="1"/>
+                            <field name="delivery_scheduled_id" readonly="1"
+                                   invisible="not delivery_scheduled_id"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Datos del Contacto" name="contact_info">
+                            <group>
+                                <group string="Persona que Reporta">
+                                    <field name="client_name" readonly="state != 'pending'"/>
+                                    <field name="client_email" readonly="state != 'pending'"/>
+                                    <field name="client_phone" readonly="state != 'pending'"/>
+                                    <field name="client_phone_clean" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Contadores" name="counters">
+                            <group>
+                                <group string="Contadores Actuales">
+                                    <field name="counter_bn" readonly="state != 'pending'"/>
+                                    <field name="counter_color" readonly="state != 'pending'"/>
+                                </group>
+                                <group string="Contadores Anteriores">
+                                    <field name="previous_counter_bn" readonly="1"/>
+                                    <field name="previous_counter_color" readonly="1"/>
+                                </group>
+                                <group string="Copias del Período">
+                                    <field name="copies_bn_period" readonly="1"/>
+                                    <field name="copies_color_period" readonly="1"/>
+                                    <field name="total_copies_period" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Stock de Tóner" name="toner_stock">
+                            <group string="Stock Reportado por Cliente">
+                                <group>
+                                    <field name="stock_reportado_black" readonly="state != 'pending'"/>
+                                    <field name="stock_reportado_cyan" readonly="state != 'pending'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="stock_reportado_magenta" readonly="state != 'pending'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="stock_reportado_yellow" readonly="state != 'pending'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                </group>
+                                <group>
+                                    <field name="stock_total_black" readonly="1"/>
+                                    <field name="stock_total_cyan" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="stock_total_magenta" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="stock_total_yellow" readonly="1"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Nivel de Tóner Instalado" name="toner_levels">
+                            <group>
+                                <group string="Estado del Tóner Instalado">
+                                    <field name="nivel_toner_black" readonly="state != 'pending'"/>
+                                    <field name="nivel_toner_cyan" readonly="state != 'pending'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="nivel_toner_magenta" readonly="state != 'pending'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="nivel_toner_yellow" readonly="state != 'pending'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Solicitudes Urgentes" name="urgent_requests">
+                            <group>
+                                <group string="Tóner Solicitado Urgente">
+                                    <field name="requiere_toner_black" readonly="state != 'pending'"/>
+                                    <field name="requiere_toner_cyan" readonly="state != 'pending'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="requiere_toner_magenta" readonly="state != 'pending'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="requiere_toner_yellow" readonly="state != 'pending'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Evidencia" name="evidence">
+                            <group>
+                                <group string="Fotos de Evidencia">
+                                    <field name="photo_counter" widget="image" class="oe_avatar"/>
+                                    <field name="photo_counter_filename" invisible="1"/>
+                                    <field name="photo_toner" widget="image" class="oe_avatar"/>
+                                    <field name="photo_toner_filename" invisible="1"/>
+                                </group>
+                                <group string="Observaciones">
+                                    <field name="notes" nolabel="1" placeholder="Observaciones del cliente..."/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Revisión" name="review" invisible="state == 'pending'">
+                            <group>
+                                <group string="Información de Revisión">
+                                    <field name="reviewer_id" readonly="1"/>
+                                    <field name="review_date" readonly="1"/>
+                                </group>
+                                <group string="Análisis Automático">
+                                    <field name="fecha_sugerida_entrega" readonly="1"/>
+                                    <field name="fecha_estimada_agotamiento_black" readonly="1"/>
+                                </group>
+                            </group>
+                            <group string="Notas de Revisión">
+                                <field name="review_notes" nolabel="1" 
+                                       placeholder="Notas del revisor..."/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista Kanban de Reportes de Contadores y Tóner -->
+    <record id="view_toner_counter_submission_kanban" model="ir.ui.view">
+        <field name="name">toner.counter.submission.kanban</field>
+        <field name="model">toner.counter.submission</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column">
+                <field name="secuencia"/>
+                <field name="client_name"/>
+                <field name="submission_date"/>
+                <field name="equipment_id"/>
+                <field name="partner_id"/>
+                <field name="state"/>
+                <field name="urgente"/>
+                <field name="requiere_entrega_automatica"/>
+                <field name="total_copies_period"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="o_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="secuencia"/>
+                                        </strong>
+                                        <br/>
+                                        <small class="o_kanban_record_subtitle text-muted">
+                                            <field name="client_name"/>
+                                        </small>
+                                    </div>
+                                    <div class="o_kanban_manage_button_section">
+                                        <a class="o_kanban_manage_toggle_button" href="#">
+                                            <i class="fa fa-ellipsis-v" role="img" aria-label="Manage" title="Manage"/>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Equipo:</strong><br/>
+                                            <field name="equipment_id"/>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>Cliente:</strong><br/>
+                                            <field name="partner_id"/>
+                                        </div>
+                                    </div>
+                                    <div class="row mt8">
+                                        <div class="col-6">
+                                            <strong>Fecha:</strong><br/>
+                                            <field name="submission_date"/>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>Copias:</strong><br/>
+                                            <field name="total_copies_period"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left">
+                                        <t t-if="record.urgente.raw_value">
+                                            <span class="badge badge-warning">Urgente</span>
+                                        </t>
+                                        <t t-if="record.requiere_entrega_automatica.raw_value">
+                                            <span class="badge badge-info">Requiere Entrega</span>
+                                        </t>
+                                    </div>
+                                    <div class="oe_kanban_bottom_right">
+                                        <field name="activity_ids" widget="kanban_activity"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Vista de Búsqueda -->
+    <record id="view_toner_counter_submission_search" model="ir.ui.view">
+        <field name="name">toner.counter.submission.search</field>
+        <field name="model">toner.counter.submission</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Reportes de Tóner">
+                <field name="secuencia"/>
+                <field name="client_name"/>
+                <field name="equipment_id"/>
+                <field name="partner_id"/>
+                <separator/>
+                <filter string="Pendientes" name="pending" 
+                        domain="[('state', '=', 'pending')]"/>
+                <filter string="Aprobados" name="approved" 
+                        domain="[('state', '=', 'approved')]"/>
+                <filter string="Procesados" name="processed" 
+                        domain="[('state', '=', 'processed')]"/>
+                <separator/>
+                <filter string="Urgentes" name="urgent" 
+                        domain="[('urgente', '=', True)]"/>
+                <filter string="Requiere Entrega" name="requires_delivery" 
+                        domain="[('requiere_entrega_automatica', '=', True)]"/>
+                <separator/>
+                <filter string="Hoy" name="today" 
+                        domain="[('submission_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))), ('submission_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+                <filter string="Esta Semana" name="week" 
+                        domain="[('submission_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%%Y-%%m-%%d'))]"/>
+                <filter string="Este Mes" name="month" 
+                        domain="[('submission_date', '&gt;=', (context_today().replace(day=1)).strftime('%%Y-%%m-%%d'))]"/>
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Equipo" name="group_equipment" context="{'group_by': 'equipment_id'}"/>
+                    <filter string="Fecha" name="group_date" context="{'group_by': 'submission_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana -->
+    <record id="action_toner_counter_submission" model="ir.actions.act_window">
+        <field name="name">Reportes de Contadores y Tóner</field>
+        <field name="res_model">toner.counter.submission</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_toner_counter_submission_search"/>
+        <field name="context">{
+            'search_default_pending': 1
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡No hay reportes de tóner!
+            </p>
+            <p>
+                Los reportes de contadores y tóner aparecerán aquí cuando los clientes 
+                envíen información sobre sus equipos desde el formulario web.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menú -->
+    <menuitem id="menu_toner_counter_submission"
+              name="Reportes de Tóner"
+              parent="sat_menu_root"
+              action="action_toner_counter_submission"
+              sequence="71"/>
+</odoo>

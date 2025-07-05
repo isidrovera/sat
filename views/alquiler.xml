@@ -32,7 +32,26 @@
                             type="object"
                             class="oe_highlight" 
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+                        <button name="action_view_toner_reports" 
+                                type="object" 
+                                string="Reportes de Tóner" 
+                                class="btn-info"
+                                icon="fa-file-text"
+                                invisible="estado_alquiler_id != 'alquilada'"/>
 
+                        <button name="action_view_toner_deliveries" 
+                                type="object" 
+                                string="Entregas de Tóner" 
+                                class="btn-secondary"
+                                icon="fa-truck"
+                                invisible="estado_alquiler_id != 'alquilada'"/>
+
+                        <button name="action_create_manual_delivery" 
+                                type="object" 
+                                string="Programar Entrega Tóner" 
+                                class="btn-primary"
+                                icon="fa-plus"
+                                invisible="estado_alquiler_id != 'alquilada'"/>
 
                         <field name="estado_alquiler_id" widget="statusbar"
                             options="{'clickable': '1'}" />
@@ -88,7 +107,22 @@
                                 <field name="partes_solicitadas_count" widget="statinfo"
                                     string="Pedidos Partes" />
                             </button>
-                        </div>
+                            <button class="oe_stat_button" 
+                                    type="object" 
+                                    name="action_view_toner_reports"
+                                    icon="fa-tint"
+                                    invisible="estado_alquiler_id != 'alquilada'">
+                                <field string="Reportes Tóner" name="toner_reports_count" widget="statinfo" />
+                            </button>
+
+                            <button class="oe_stat_button" 
+                                    type="object" 
+                                    name="action_view_toner_deliveries"
+                                    icon="fa-truck"
+                                    invisible="estado_alquiler_id != 'alquilada'">
+                                <field string="Entregas Tóner" name="toner_deliveries_count" widget="statinfo" />
+                            </button>
+                                                    </div>
 
                         <separator />
                         <div class="oe_title">
@@ -741,6 +775,301 @@
                                     </list>
                                 </field>
                             </page>
+                            <page string="🎨 Gestión de Tóner" name="toner_management">
+    <div class="row">
+        <!-- Columna Izquierda: Estado del Stock -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fa fa-tint me-2"></i> Estado del Stock de Tóner
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="o_form_label">
+                                <i class="fa fa-info-circle text-primary me-1"></i>
+                                Estado General del Stock
+                            </div>
+                            <field name="estado_stock_toner" 
+                                   widget="badge"
+                                   decoration-success="estado_stock_toner == 'normal'"
+                                   decoration-warning="estado_stock_toner == 'bajo'"
+                                   decoration-danger="estado_stock_toner == 'critico'"
+                                   decoration-info="estado_stock_toner == 'alto'"/>
+                        </div>
+                        
+                        <div class="col-6">
+                            <div class="o_form_label">Última Lectura</div>
+                            <field name="fecha_ultima_lectura" readonly="1"/>
+                        </div>
+                        
+                        <div class="col-6">
+                            <div class="o_form_label">Tipo de Máquina</div>
+                            <field name="tipo_maquina_id" readonly="1"/>
+                        </div>
+                    </div>
+                    
+                    <!-- Contadores Actuales -->
+                    <div class="mt-4">
+                        <h6><i class="fa fa-calculator me-2"></i>Contadores Actuales</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <field name="contador_actual_black"/>
+                            </div>
+                            <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                                <field name="contador_actual_color"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panel de Stock del Cliente -->
+            <div class="card border-success mt-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="fa fa-warehouse me-2"></i> Stock en Poder del Cliente
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="o_form_label">Tóner Negro</div>
+                            <div class="d-flex align-items-center">
+                                <field name="stock_cliente_toner_black" class="me-2"/>
+                                <span class="text-muted">+ 
+                                    <field name="toner_black_instalado" widget="boolean_toggle" readonly="1"/>
+                                    instalado
+                                </span>
+                            </div>
+                            <small class="text-success">
+                                Total: <field name="stock_total_toner_black" readonly="1"/>
+                            </small>
+                        </div>
+                        
+                        <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                            <div class="o_form_label">Tóner Cian</div>
+                            <div class="d-flex align-items-center">
+                                <field name="stock_cliente_toner_cyan" class="me-2"/>
+                                <span class="text-muted">+ 
+                                    <field name="toner_cyan_instalado" widget="boolean_toggle" readonly="1"/>
+                                    instalado
+                                </span>
+                            </div>
+                            <small class="text-success">
+                                Total: <field name="stock_total_toner_cyan" readonly="1"/>
+                            </small>
+                        </div>
+                        
+                        <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                            <div class="o_form_label">Tóner Magenta</div>
+                            <div class="d-flex align-items-center">
+                                <field name="stock_cliente_toner_magenta" class="me-2"/>
+                                <span class="text-muted">+ 
+                                    <field name="toner_magenta_instalado" widget="boolean_toggle" readonly="1"/>
+                                    instalado
+                                </span>
+                            </div>
+                            <small class="text-success">
+                                Total: <field name="stock_total_toner_magenta" readonly="1"/>
+                            </small>
+                        </div>
+                        
+                        <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                            <div class="o_form_label">Tóner Amarillo</div>
+                            <div class="d-flex align-items-center">
+                                <field name="stock_cliente_toner_yellow" class="me-2"/>
+                                <span class="text-muted">+ 
+                                    <field name="toner_yellow_instalado" widget="boolean_toggle" readonly="1"/>
+                                    instalado
+                                </span>
+                            </div>
+                            <small class="text-success">
+                                Total: <field name="stock_total_toner_yellow" readonly="1"/>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Columna Derecha: Información del Tóner Instalado y Configuración -->
+        <div class="col-12 col-lg-6">
+            <!-- Panel de Tóner Instalado -->
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fa fa-cog me-2"></i> Tóner Actualmente Instalado
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="o_form_label">Tóner Negro</div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <field name="fecha_instalacion_toner_black"/>
+                                </div>
+                                <div class="col-6">
+                                    <field name="contador_instalacion_toner_black"/>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-info">
+                                    Páginas usadas: <field name="paginas_usadas_toner_black" readonly="1"/>
+                                    | Páginas restantes: <field name="paginas_restantes_toner_black" readonly="1"/>
+                                </small>
+                                <div class="progress mt-1" style="height: 8px;">
+                                    <div class="progress-bar bg-success" 
+                                         role="progressbar" 
+                                         t-attf-style="width: #{record.nivel_toner_black.raw_value}%"
+                                         t-attf-aria-valuenow="#{record.nivel_toner_black.raw_value}"
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    Nivel: <field name="nivel_toner_black" readonly="1"/>%
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Repetir para colores si no es monocromática -->
+                        <div class="col-12" invisible="tipo_maquina_id == 'monocromatica'">
+                            <div class="o_form_label">Tóners Color</div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <small>Cian:</small><br/>
+                                    <field name="fecha_instalacion_toner_cyan"/>
+                                    <small class="text-info d-block">
+                                        Usadas: <field name="paginas_usadas_toner_cyan" readonly="1"/>
+                                    </small>
+                                </div>
+                                <div class="col-4">
+                                    <small>Magenta:</small><br/>
+                                    <field name="fecha_instalacion_toner_magenta"/>
+                                    <small class="text-info d-block">
+                                        Usadas: <field name="paginas_usadas_toner_magenta" readonly="1"/>
+                                    </small>
+                                </div>
+                                <div class="col-4">
+                                    <small>Amarillo:</small><br/>
+                                    <field name="fecha_instalacion_toner_yellow"/>
+                                    <small class="text-info d-block">
+                                        Usadas: <field name="paginas_usadas_toner_yellow" readonly="1"/>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panel de Configuración del Modelo -->
+            <div class="card border-primary mt-3">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fa fa-settings me-2"></i> Configuración del Modelo
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12">
+                            <button name="action_view_model_toner_config" 
+                                    type="object" 
+                                    string="Ver Configuración del Modelo" 
+                                    class="btn btn-outline-primary w-100 mb-3"
+                                    icon="fa-external-link"/>
+                        </div>
+                    </div>
+                    
+                    <!-- Mostrar configuración básica -->
+                    <div class="row g-2" invisible="not name">
+                        <div class="col-6">
+                            <small class="text-muted">Durabilidad Negro:</small><br/>
+                            <field name="name.durabilidad_toner_black" readonly="1"/> páginas
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Stock Mínimo Negro:</small><br/>
+                            <field name="name.stock_minimo_black" readonly="1"/> unidades
+                        </div>
+                        <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                            <small class="text-muted">Durabilidad Color:</small><br/>
+                            <field name="name.durabilidad_toner_cyan" readonly="1"/> páginas
+                        </div>
+                        <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                            <small class="text-muted">Stock Mínimo Color:</small><br/>
+                            <field name="name.stock_minimo_cyan" readonly="1"/> unidades
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Tiempo Entrega:</small><br/>
+                            <field name="name.tiempo_entrega_dias" readonly="1"/> días
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Margen Seguridad:</small><br/>
+                            <field name="name.margen_seguridad_dias" readonly="1"/> días
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panel de Acciones Rápidas -->
+            <div class="card border-secondary mt-3">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0">
+                        <i class="fa fa-bolt me-2"></i> Acciones Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button name="action_update_toner_stock" 
+                                type="object" 
+                                string="Actualizar Stock Manual" 
+                                class="btn btn-outline-info"/>
+                        <button name="action_install_new_toner" 
+                                type="object" 
+                                string="Registrar Instalación de Tóner" 
+                                class="btn btn-outline-success"/>
+                        <button name="action_send_stock_reminder" 
+                                type="object" 
+                                string="Enviar Recordatorio de Stock" 
+                                class="btn btn-outline-warning"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Panel de Alertas -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info" invisible="estado_stock_toner != 'critico'">
+                <div class="d-flex align-items-center">
+                    <i class="fa fa-exclamation-triangle me-2"></i>
+                    <div>
+                        <strong>Stock Crítico:</strong> 
+                        Este equipo tiene stock de tóner en nivel crítico. 
+                        Se recomienda programar una entrega urgente.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-warning" invisible="estado_stock_toner != 'bajo'">
+                <div class="d-flex align-items-center">
+                    <i class="fa fa-info-circle me-2"></i>
+                    <div>
+                        <strong>Stock Bajo:</strong> 
+                        El stock de tóner está por debajo del mínimo recomendado. 
+                        Considere programar una entrega próxima.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</page>
+
                         </notebook>
                     </sheet>
                     <chatter />

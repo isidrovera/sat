@@ -26,7 +26,9 @@ from . import onboarding
 from . import technical_service_evaluation
 from . import tickets_mensuales
 from . import whatsapp_notification_wizard
-
+from . import toner_delivery_confirmation
+from . import toner_delivery
+from . import toner_solicitudes
 
 
 

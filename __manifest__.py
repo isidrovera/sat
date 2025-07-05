@@ -115,6 +115,9 @@
         'views/leave_request_template.xml',
         'report/equipment_visit_report.xml',
         'views/whatsapp_notification_wizard_views.xml',
+        'views/view_toner_counter_submission.xml',
+        'views/view_toner_delivery_confirmation.xml',
+        'views/view_toner_delivery_schedule.xml',
         
     ],
     

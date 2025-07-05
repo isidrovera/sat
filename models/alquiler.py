@@ -1960,7 +1960,465 @@ class UnidadAlquiler(models.Model):
         
         return resultado
 
+    # Agregar estos campos al modelo UnidadAlquiler (clase alquiler)
+    # Insertar después de los campos existentes, antes de los métodos
 
+    # ==========================================
+    # GESTIÓN DE TÓNER - STOCK DEL CLIENTE
+    # ==========================================
+
+    # Stock físico que tiene el cliente guardado
+    stock_cliente_toner_black = fields.Integer(
+        string='Stock Cliente - Tóner Negro',
+        default=0,
+        tracking=True,
+        help='Cantidad de tóner negro que tiene el cliente en stock (sin instalar)'
+    )
+
+    stock_cliente_toner_cyan = fields.Integer(
+        string='Stock Cliente - Tóner Cian',
+        default=0,
+        tracking=True,
+        help='Cantidad de tóner cian que tiene el cliente en stock (sin instalar)'
+    )
+
+    stock_cliente_toner_magenta = fields.Integer(
+        string='Stock Cliente - Tóner Magenta',
+        default=0,
+        tracking=True,
+        help='Cantidad de tóner magenta que tiene el cliente en stock (sin instalar)'
+    )
+
+    stock_cliente_toner_yellow = fields.Integer(
+        string='Stock Cliente - Tóner Amarillo',
+        default=0,
+        tracking=True,
+        help='Cantidad de tóner amarillo que tiene el cliente en stock (sin instalar)'
+    )
+
+    # ==========================================
+    # TÓNER INSTALADO ACTUALMENTE EN LA MÁQUINA
+    # ==========================================
+
+    # Tóner Negro
+    toner_black_instalado = fields.Boolean(
+        string='Tóner Negro Instalado',
+        default=True,
+        tracking=True,
+        help='¿Hay tóner negro instalado en la máquina?'
+    )
+
+    fecha_instalacion_toner_black = fields.Date(
+        string='Fecha Instalación Tóner Negro',
+        tracking=True,
+        help='Cuándo se instaló el tóner negro actual'
+    )
+
+    contador_instalacion_toner_black = fields.Integer(
+        string='Contador al Instalar Tóner Negro',
+        default=0,
+        tracking=True,
+        help='Lectura del contador cuando se instaló el tóner negro'
+    )
+
+    paginas_usadas_toner_black = fields.Integer(
+        string='Páginas Usadas Tóner Negro',
+        compute='_compute_paginas_usadas_toner',
+        store=True,
+        help='Páginas que ha impreso el tóner negro instalado'
+    )
+
+    # Tóner Cian
+    toner_cyan_instalado = fields.Boolean(
+        string='Tóner Cian Instalado',
+        default=True,
+        tracking=True,
+        help='¿Hay tóner cian instalado en la máquina?'
+    )
+
+    fecha_instalacion_toner_cyan = fields.Date(
+        string='Fecha Instalación Tóner Cian',
+        tracking=True,
+        help='Cuándo se instaló el tóner cian actual'
+    )
+
+    contador_instalacion_toner_cyan = fields.Integer(
+        string='Contador al Instalar Tóner Cian',
+        default=0,
+        tracking=True,
+        help='Lectura del contador color cuando se instaló el tóner cian'
+    )
+
+    paginas_usadas_toner_cyan = fields.Integer(
+        string='Páginas Usadas Tóner Cian',
+        compute='_compute_paginas_usadas_toner',
+        store=True,
+        help='Páginas que ha impreso el tóner cian instalado'
+    )
+
+    # Tóner Magenta
+    toner_magenta_instalado = fields.Boolean(
+        string='Tóner Magenta Instalado',
+        default=True,
+        tracking=True,
+        help='¿Hay tóner magenta instalado en la máquina?'
+    )
+
+    fecha_instalacion_toner_magenta = fields.Date(
+        string='Fecha Instalación Tóner Magenta',
+        tracking=True,
+        help='Cuándo se instaló el tóner magenta actual'
+    )
+
+    contador_instalacion_toner_magenta = fields.Integer(
+        string='Contador al Instalar Tóner Magenta',
+        default=0,
+        tracking=True,
+        help='Lectura del contador color cuando se instaló el tóner magenta'
+    )
+
+    paginas_usadas_toner_magenta = fields.Integer(
+        string='Páginas Usadas Tóner Magenta',
+        compute='_compute_paginas_usadas_toner',
+        store=True,
+        help='Páginas que ha impreso el tóner magenta instalado'
+    )
+
+    # Tóner Amarillo
+    toner_yellow_instalado = fields.Boolean(
+        string='Tóner Amarillo Instalado',
+        default=True,
+        tracking=True,
+        help='¿Hay tóner amarillo instalado en la máquina?'
+    )
+
+    fecha_instalacion_toner_yellow = fields.Date(
+        string='Fecha Instalación Tóner Amarillo',
+        tracking=True,
+        help='Cuándo se instaló el tóner amarillo actual'
+    )
+
+    contador_instalacion_toner_yellow = fields.Integer(
+        string='Contador al Instalar Tóner Amarillo',
+        default=0,
+        tracking=True,
+        help='Lectura del contador color cuando se instaló el tóner amarillo'
+    )
+
+    paginas_usadas_toner_yellow = fields.Integer(
+        string='Páginas Usadas Tóner Amarillo',
+        compute='_compute_paginas_usadas_toner',
+        store=True,
+        help='Páginas que ha impreso el tóner amarillo instalado'
+    )
+
+    # ==========================================
+    # CONTADORES ACTUALES PARA CÁLCULOS
+    # ==========================================
+
+    contador_actual_black = fields.Integer(
+        string='Contador Actual B/N',
+        default=0,
+        tracking=True,
+        help='Última lectura del contador blanco y negro'
+    )
+
+    contador_actual_color = fields.Integer(
+        string='Contador Actual Color',
+        default=0,
+        tracking=True,
+        help='Última lectura del contador color'
+    )
+
+    fecha_ultima_lectura = fields.Datetime(
+        string='Fecha Última Lectura',
+        tracking=True,
+        help='Cuándo se tomó la última lectura de contadores'
+    )
+
+    # ==========================================
+    # CAMPOS CALCULADOS
+    # ==========================================
+
+    # Páginas restantes de cada tóner
+    paginas_restantes_toner_black = fields.Integer(
+        string='Páginas Restantes Tóner Negro',
+        compute='_compute_paginas_restantes_toner',
+        help='Páginas estimadas que le quedan al tóner negro instalado'
+    )
+
+    paginas_restantes_toner_cyan = fields.Integer(
+        string='Páginas Restantes Tóner Cian',
+        compute='_compute_paginas_restantes_toner',
+        help='Páginas estimadas que le quedan al tóner cian instalado'
+    )
+
+    paginas_restantes_toner_magenta = fields.Integer(
+        string='Páginas Restantes Tóner Magenta',
+        compute='_compute_paginas_restantes_toner',
+        help='Páginas estimadas que le quedan al tóner magenta instalado'
+    )
+
+    paginas_restantes_toner_yellow = fields.Integer(
+        string='Páginas Restantes Tóner Amarillo',
+        compute='_compute_paginas_restantes_toner',
+        help='Páginas estimadas que le quedan al tóner amarillo instalado'
+    )
+
+    # Nivel de tóner (porcentaje)
+    nivel_toner_black = fields.Float(
+        string='Nivel Tóner Negro (%)',
+        compute='_compute_nivel_toner',
+        help='Porcentaje restante del tóner negro instalado'
+    )
+
+    nivel_toner_cyan = fields.Float(
+        string='Nivel Tóner Cian (%)',
+        compute='_compute_nivel_toner',
+        help='Porcentaje restante del tóner cian instalado'
+    )
+
+    nivel_toner_magenta = fields.Float(
+        string='Nivel Tóner Magenta (%)',
+        compute='_compute_nivel_toner',
+        help='Porcentaje restante del tóner magenta instalado'
+    )
+
+    nivel_toner_yellow = fields.Float(
+        string='Nivel Tóner Amarillo (%)',
+        compute='_compute_nivel_toner',
+        help='Porcentaje restante del tóner amarillo instalado'
+    )
+
+    # Días estimados restantes
+    dias_estimados_toner_black = fields.Integer(
+        string='Días Estimados Tóner Negro',
+        compute='_compute_dias_estimados_toner',
+        help='Días estimados que durará el tóner negro instalado'
+    )
+
+    dias_estimados_toner_cyan = fields.Integer(
+        string='Días Estimados Tóner Cian',
+        compute='_compute_dias_estimados_toner',
+        help='Días estimados que durará el tóner cian instalado'
+    )
+
+    dias_estimados_toner_magenta = fields.Integer(
+        string='Días Estimados Tóner Magenta',
+        compute='_compute_dias_estimados_toner',
+        help='Días estimados que durará el tóner magenta instalado'
+    )
+
+    dias_estimados_toner_yellow = fields.Integer(
+        string='Días Estimados Tóner Amarillo',
+        compute='_compute_dias_estimados_toner',
+        help='Días estimados que durará el tóner amarillo instalado'
+    )
+
+    # Stock total disponible (instalado + en stock)
+    stock_total_toner_black = fields.Integer(
+        string='Stock Total Tóner Negro',
+        compute='_compute_stock_total_toner',
+        help='Total de tóner negro disponible (instalado + en stock)'
+    )
+
+    stock_total_toner_cyan = fields.Integer(
+        string='Stock Total Tóner Cian',
+        compute='_compute_stock_total_toner',
+        help='Total de tóner cian disponible (instalado + en stock)'
+    )
+
+    stock_total_toner_magenta = fields.Integer(
+        string='Stock Total Tóner Magenta',
+        compute='_compute_stock_total_toner',
+        help='Total de tóner magenta disponible (instalado + en stock)'
+    )
+
+    stock_total_toner_yellow = fields.Integer(
+        string='Stock Total Tóner Amarillo',
+        compute='_compute_stock_total_toner',
+        help='Total de tóner amarillo disponible (instalado + en stock)'
+    )
+
+    # Estado general del stock
+    estado_stock_toner = fields.Selection([
+        ('critico', 'Crítico'),
+        ('bajo', 'Bajo'),
+        ('normal', 'Normal'),
+        ('alto', 'Alto')
+    ], string='Estado Stock Tóner', compute='_compute_estado_stock_toner',
+    help='Estado general del stock de tóner')
+
+    # ==========================================
+    # MÉTODOS COMPUTE
+    # ==========================================
+
+    @api.depends('contador_actual_black', 'contador_actual_color', 
+                'contador_instalacion_toner_black', 'contador_instalacion_toner_cyan',
+                'contador_instalacion_toner_magenta', 'contador_instalacion_toner_yellow')
+    def _compute_paginas_usadas_toner(self):
+        """Calcula páginas usadas por cada tóner instalado"""
+        for record in self:
+            # Tóner Negro
+            if record.toner_black_instalado and record.contador_instalacion_toner_black:
+                record.paginas_usadas_toner_black = max(0, 
+                    record.contador_actual_black - record.contador_instalacion_toner_black)
+            else:
+                record.paginas_usadas_toner_black = 0
+            
+            # Para tóners color, dividir el consumo color entre 3 (aprox)
+            consumo_color_total = max(0, record.contador_actual_color - 
+                                    min(record.contador_instalacion_toner_cyan or record.contador_actual_color,
+                                        record.contador_instalacion_toner_magenta or record.contador_actual_color,
+                                        record.contador_instalacion_toner_yellow or record.contador_actual_color))
+            
+            consumo_color_por_toner = consumo_color_total // 3 if consumo_color_total > 0 else 0
+            
+            record.paginas_usadas_toner_cyan = consumo_color_por_toner if record.toner_cyan_instalado else 0
+            record.paginas_usadas_toner_magenta = consumo_color_por_toner if record.toner_magenta_instalado else 0
+            record.paginas_usadas_toner_yellow = consumo_color_por_toner if record.toner_yellow_instalado else 0
+
+    @api.depends('paginas_usadas_toner_black', 'paginas_usadas_toner_cyan',
+                'paginas_usadas_toner_magenta', 'paginas_usadas_toner_yellow',
+                'name.durabilidad_toner_black', 'name.durabilidad_toner_cyan',
+                'name.durabilidad_toner_magenta', 'name.durabilidad_toner_yellow')
+    def _compute_paginas_restantes_toner(self):
+        """Calcula páginas restantes de cada tóner"""
+        for record in self:
+            if record.name:  # Si tiene modelo asociado
+                record.paginas_restantes_toner_black = max(0,
+                    (record.name.durabilidad_toner_black or 0) - record.paginas_usadas_toner_black)
+                record.paginas_restantes_toner_cyan = max(0,
+                    (record.name.durabilidad_toner_cyan or 0) - record.paginas_usadas_toner_cyan)
+                record.paginas_restantes_toner_magenta = max(0,
+                    (record.name.durabilidad_toner_magenta or 0) - record.paginas_usadas_toner_magenta)
+                record.paginas_restantes_toner_yellow = max(0,
+                    (record.name.durabilidad_toner_yellow or 0) - record.paginas_usadas_toner_yellow)
+            else:
+                record.paginas_restantes_toner_black = 0
+                record.paginas_restantes_toner_cyan = 0
+                record.paginas_restantes_toner_magenta = 0
+                record.paginas_restantes_toner_yellow = 0
+
+    @api.depends('paginas_restantes_toner_black', 'paginas_restantes_toner_cyan',
+                'paginas_restantes_toner_magenta', 'paginas_restantes_toner_yellow',
+                'name.durabilidad_toner_black', 'name.durabilidad_toner_cyan',
+                'name.durabilidad_toner_magenta', 'name.durabilidad_toner_yellow')
+    def _compute_nivel_toner(self):
+        """Calcula el porcentaje restante de cada tóner"""
+        for record in self:
+            if record.name:  # Si tiene modelo asociado
+                # Tóner Negro
+                if record.name.durabilidad_toner_black and record.name.durabilidad_toner_black > 0:
+                    record.nivel_toner_black = (record.paginas_restantes_toner_black / 
+                                            record.name.durabilidad_toner_black) * 100
+                else:
+                    record.nivel_toner_black = 0
+                
+                # Tóner Cian
+                if record.name.durabilidad_toner_cyan and record.name.durabilidad_toner_cyan > 0:
+                    record.nivel_toner_cyan = (record.paginas_restantes_toner_cyan / 
+                                            record.name.durabilidad_toner_cyan) * 100
+                else:
+                    record.nivel_toner_cyan = 0
+                
+                # Tóner Magenta
+                if record.name.durabilidad_toner_magenta and record.name.durabilidad_toner_magenta > 0:
+                    record.nivel_toner_magenta = (record.paginas_restantes_toner_magenta / 
+                                                record.name.durabilidad_toner_magenta) * 100
+                else:
+                    record.nivel_toner_magenta = 0
+                
+                # Tóner Amarillo
+                if record.name.durabilidad_toner_yellow and record.name.durabilidad_toner_yellow > 0:
+                    record.nivel_toner_yellow = (record.paginas_restantes_toner_yellow / 
+                                            record.name.durabilidad_toner_yellow) * 100
+                else:
+                    record.nivel_toner_yellow = 0
+            else:
+                record.nivel_toner_black = 0
+                record.nivel_toner_cyan = 0
+                record.nivel_toner_magenta = 0
+                record.nivel_toner_yellow = 0
+
+    @api.depends('stock_cliente_toner_black', 'stock_cliente_toner_cyan',
+                'stock_cliente_toner_magenta', 'stock_cliente_toner_yellow',
+                'toner_black_instalado', 'toner_cyan_instalado',
+                'toner_magenta_instalado', 'toner_yellow_instalado')
+    def _compute_stock_total_toner(self):
+        """Calcula stock total disponible (instalado + en stock del cliente)"""
+        for record in self:
+            record.stock_total_toner_black = record.stock_cliente_toner_black + (1 if record.toner_black_instalado else 0)
+            record.stock_total_toner_cyan = record.stock_cliente_toner_cyan + (1 if record.toner_cyan_instalado else 0)
+            record.stock_total_toner_magenta = record.stock_cliente_toner_magenta + (1 if record.toner_magenta_instalado else 0)
+            record.stock_total_toner_yellow = record.stock_cliente_toner_yellow + (1 if record.toner_yellow_instalado else 0)
+
+    @api.depends('stock_total_toner_black', 'stock_total_toner_cyan',
+                'stock_total_toner_magenta', 'stock_total_toner_yellow',
+                'name.stock_minimo_black', 'name.stock_minimo_cyan',
+                'name.stock_minimo_magenta', 'name.stock_minimo_yellow')
+    def _compute_estado_stock_toner(self):
+        """Calcula estado general del stock de tóner"""
+        for record in self:
+            if not record.name:
+                record.estado_stock_toner = 'normal'
+                continue
+            
+            estados = []
+            
+            # Evaluar cada tóner según el tipo de máquina
+            if record.tipo_maquina_id == 'monocromatica':
+                # Solo evaluar tóner negro
+                stock_min = record.name.stock_minimo_black or 1
+                if record.stock_total_toner_black == 0:
+                    estados.append('critico')
+                elif record.stock_total_toner_black < stock_min:
+                    estados.append('bajo')
+                elif record.stock_total_toner_black > stock_min * 2:
+                    estados.append('alto')
+                else:
+                    estados.append('normal')
+            
+            elif record.tipo_maquina_id == 'color':
+                # Evaluar todos los tóners
+                toners = [
+                    (record.stock_total_toner_black, record.name.stock_minimo_black or 1),
+                    (record.stock_total_toner_cyan, record.name.stock_minimo_cyan or 1),
+                    (record.stock_total_toner_magenta, record.name.stock_minimo_magenta or 1),
+                    (record.stock_total_toner_yellow, record.name.stock_minimo_yellow or 1),
+                ]
+                
+                for stock_actual, stock_min in toners:
+                    if stock_actual == 0:
+                        estados.append('critico')
+                    elif stock_actual < stock_min:
+                        estados.append('bajo')
+                    elif stock_actual > stock_min * 2:
+                        estados.append('alto')
+                    else:
+                        estados.append('normal')
+            
+            # Determinar estado general (el más crítico)
+            if 'critico' in estados:
+                record.estado_stock_toner = 'critico'
+            elif 'bajo' in estados:
+                record.estado_stock_toner = 'bajo'
+            elif all(estado == 'alto' for estado in estados):
+                record.estado_stock_toner = 'alto'
+            else:
+                record.estado_stock_toner = 'normal'
+
+    @api.depends('paginas_restantes_toner_black', 'paginas_restantes_toner_cyan',
+                'paginas_restantes_toner_magenta', 'paginas_restantes_toner_yellow')
+    def _compute_dias_estimados_toner(self):
+        """Calcula días estimados que durarán los tóners (requiere historial de consumo)"""
+        for record in self:
+            # Por ahora retornamos 0, esto se calculará cuando tengamos histórico
+            # TODO: Implementar cálculo basado en consumo promedio diario
+            record.dias_estimados_toner_black = 0
+            record.dias_estimados_toner_cyan = 0
+            record.dias_estimados_toner_magenta = 0
+            record.dias_estimados_toner_yellow = 0
    
 class SolicitudPartes(models.Model):
     _name = 'solicitud.partes'

@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista Lista de Programación de Entregas -->
+    <record id="view_toner_delivery_schedule_list" model="ir.ui.view">
+        <field name="name">toner.delivery.schedule.list</field>
+        <field name="model">toner.delivery.schedule</field>
+        <field name="arch" type="xml">
+            <list string="Programación de Entregas de Tóner" 
+                  default_order="delivery_date_planned desc"
+                  sample="1">
+                <field name="secuencia"/>
+                <field name="delivery_date_planned"/>
+                <field name="equipment_id"/>
+                <field name="partner_id"/>
+                <field name="total_units" string="Total Unidades"/>
+                <field name="priority" 
+                       decoration-success="priority == 'baja'"
+                       decoration-info="priority == 'normal'"
+                       decoration-warning="priority == 'alta'"
+                       decoration-danger="priority == 'urgente'"/>
+                <field name="delivery_status" string="Estado Entrega"
+                       decoration-success="delivery_status == 'a_tiempo'"
+                       decoration-info="delivery_status == 'proximo'"
+                       decoration-warning="delivery_status == 'hoy'"
+                       decoration-danger="delivery_status == 'atrasado'"/>
+                <field name="state" 
+                       decoration-bf="state == 'programado'"
+                       decoration-info="state == 'confirmado'"
+                       decoration-warning="state == 'preparando'"
+                       decoration-primary="state == 'enviado'"
+                       decoration-success="state == 'entregado'"
+                       decoration-muted="state == 'cancelado'"/>
+                <field name="assigned_user"/>
+                <field name="urgente" 
+                       decoration-danger="urgente == True"/>
+                <field name="days_until_delivery" string="Días Restantes"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista Formulario de Programación de Entregas -->
+    <record id="view_toner_delivery_schedule_form" model="ir.ui.view">
+        <field name="name">toner.delivery.schedule.form</field>
+        <field name="model">toner.delivery.schedule</field>
+        <field name="arch" type="xml">
+            <form string="Programación de Entrega de Tóner">
+                <header>
+                    <button name="action_confirm" 
+                            type="object" 
+                            string="Confirmar" 
+                            class="btn-primary"
+                            invisible="state != 'programado'"/>
+                    <button name="action_prepare" 
+                            type="object" 
+                            string="Preparar" 
+                            class="btn-secondary"
+                            invisible="state not in ['programado', 'confirmado']"/>
+                    <button name="action_send" 
+                            type="object" 
+                            string="Enviar" 
+                            class="btn-info"
+                            invisible="state != 'preparando'"/>
+                    <button name="action_deliver" 
+                            type="object" 
+                            string="Confirmar Entrega" 
+                            class="btn-success"
+                            invisible="state not in ['enviado', 'preparando']"/>
+                    <button name="action_reschedule" 
+                            type="object" 
+                            string="Reprogramar" 
+                            class="btn-warning"
+                            invisible="state in ['entregado', 'cancelado']"/>
+                    <button name="action_cancel" 
+                            type="object" 
+                            string="Cancelar" 
+                            class="btn-danger"
+                            invisible="state == 'entregado'"/>
+                    <button name="action_duplicate_delivery" 
+                            type="object" 
+                            string="Duplicar Entrega" 
+                            class="btn-secondary"/>
+                    <field name="state" widget="statusbar" 
+                           statusbar_visible="programado,confirmado,preparando,enviado,entregado"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" 
+                                type="object" 
+                                name="action_view_equipment" 
+                                icon="fa-print">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Equipo</span>
+                            </div>
+                        </button>
+                        <button class="oe_stat_button" 
+                                type="object" 
+                                name="action_view_submission" 
+                                icon="fa-file-text"
+                                invisible="not submission_id">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Reporte</span>
+                            </div>
+                        </button>
+                        <button class="oe_stat_button" 
+                                type="object" 
+                                name="action_view_confirmation" 
+                                icon="fa-check"
+                                invisible="not confirmation_id">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Confirmación</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <h1>
+                            <field name="secuencia" readonly="1"/>
+                        </h1>
+                        <h2>
+                            <field name="display_name" readonly="1"/>
+                        </h2>
+                    </div>
+
+                    <group>
+                        <group string="Información del Equipo">
+                            <field name="equipment_id" 
+                                   domain="[('estado_alquiler_id', '=', 'alquilada')]"
+                                   readonly="state != 'programado'"/>
+                            <field name="partner_id" readonly="1"/>
+                        </group>
+                        <group string="Programación">
+                            <field name="delivery_date_planned" readonly="state == 'entregado'"/>
+                            <field name="delivery_date_confirmed" readonly="1"/>
+                            <field name="delivery_date_actual" readonly="1"/>
+                            <field name="days_until_delivery" readonly="1"/>
+                            <field name="is_overdue" readonly="1" 
+                                   decoration-danger="is_overdue == True"/>
+                            <field name="delivery_status" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Configuración">
+                            <field name="priority" readonly="state == 'entregado'"/>
+                            <field name="urgente" readonly="state == 'entregado'"/>
+                            <field name="calculation_basis" readonly="1"/>
+                            <field name="submission_id" readonly="1" 
+                                   invisible="not submission_id"/>
+                        </group>
+                        <group string="Responsables">
+                            <field name="assigned_user" readonly="state == 'entregado'"/>
+                            <field name="delivery_company" readonly="state == 'entregado'"/>
+                            <field name="delivery_method" readonly="state == 'entregado'"/>
+                            <field name="tracking_number" readonly="state in ['programado', 'entregado']"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Cantidades a Entregar" name="quantities">
+                            <group>
+                                <group string="Tóners Programados">
+                                    <field name="toner_black_qty" readonly="state == 'entregado'"/>
+                                    <field name="toner_cyan_qty" readonly="state == 'entregado'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="toner_magenta_qty" readonly="state == 'entregado'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                    <field name="toner_yellow_qty" readonly="state == 'entregado'"
+                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
+                                </group>
+                                <group string="Resumen">
+                                    <field name="total_units" readonly="1"/>
+                                    <field name="creation_date" readonly="1"/>
+                                    <field name="created_by_user" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Información de Entrega" name="delivery_info">
+                            <group>
+                                <group string="Dirección y Contacto">
+                                    <field name="delivery_address" readonly="1"/>
+                                    <field name="contact_person" readonly="1"/>
+                                    <field name="contact_phone" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Observaciones" name="notes">
+                            <group>
+                                <group string="Observaciones Generales">
+                                    <field name="notes" nolabel="1" 
+                                           placeholder="Observaciones sobre la entrega..."
+                                           readonly="state == 'entregado'"/>
+                                </group>
+                                <group string="Notas Internas">
+                                    <field name="internal_notes" nolabel="1" 
+                                           placeholder="Notas internas del equipo..."
+                                           readonly="state == 'entregado'"/>
+                                </group>
+                                <group string="Motivo de Cancelación" 
+                                       invisible="state != 'cancelado'">
+                                    <field name="cancellation_reason" nolabel="1" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Confirmación" name="confirmation" 
+                              invisible="not confirmation_id">
+                            <group>
+                                <field name="confirmation_id" readonly="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista Kanban de Programación de Entregas -->
+    <record id="view_toner_delivery_schedule_kanban" model="ir.ui.view">
+        <field name="name">toner.delivery.schedule.kanban</field>
+        <field name="model">toner.delivery.schedule</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column">
+                <field name="secuencia"/>
+                <field name="delivery_date_planned"/>
+                <field name="equipment_id"/>
+                <field name="partner_id"/>
+                <field name="state"/>
+                <field name="priority"/>
+                <field name="urgente"/>
+                <field name="total_units"/>
+                <field name="delivery_status"/>
+                <field name="days_until_delivery"/>
+                <field name="assigned_user"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="o_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="secuencia"/>
+                                        </strong>
+                                        <br/>
+                                        <small class="o_kanban_record_subtitle text-muted">
+                                            <field name="delivery_date_planned"/>
+                                        </small>
+                                    </div>
+                                    <div class="o_kanban_manage_button_section">
+                                        <a class="o_kanban_manage_toggle_button" href="#">
+                                            <i class="fa fa-ellipsis-v" role="img" aria-label="Manage" title="Manage"/>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Equipo:</strong><br/>
+                                            <field name="equipment_id"/>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>Cliente:</strong><br/>
+                                            <field name="partner_id"/>
+                                        </div>
+                                    </div>
+                                    <div class="row mt8">
+                                        <div class="col-6">
+                                            <strong>Unidades:</strong><br/>
+                                            <field name="total_units"/>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>Días:</strong><br/>
+                                            <field name="days_until_delivery"/>
+                                        </div>
+                                    </div>
+                                    <div class="row mt8" t-if="record.assigned_user.raw_value">
+                                        <div class="col-12">
+                                            <strong>Responsable:</strong><br/>
+                                            <field name="assigned_user"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left">
+                                        <t t-if="record.urgente.raw_value">
+                                            <span class="badge badge-danger">Urgente</span>
+                                        </t>
+                                        <t t-if="record.priority.raw_value == 'alta'">
+                                            <span class="badge badge-warning">Alta</span>
+                                        </t>
+                                        <t t-if="record.delivery_status.raw_value == 'atrasado'">
+                                            <span class="badge badge-danger">Atrasado</span>
+                                        </t>
+                                        <t t-if="record.delivery_status.raw_value == 'hoy'">
+                                            <span class="badge badge-warning">Hoy</span>
+                                        </t>
+                                        <t t-if="record.delivery_status.raw_value == 'proximo'">
+                                            <span class="badge badge-info">Próximo</span>
+                                        </t>
+                                    </div>
+                                    <div class="oe_kanban_bottom_right">
+                                        <field name="activity_ids" widget="kanban_activity"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Vista Calendario de Entregas -->
+    <record id="view_toner_delivery_schedule_calendar" model="ir.ui.view">
+        <field name="name">toner.delivery.schedule.calendar</field>
+        <field name="model">toner.delivery.schedule</field>
+        <field name="arch" type="xml">
+            <calendar string="Calendario de Entregas" 
+                      date_start="delivery_date_planned"
+                      color="priority"
+                      event_open_popup="true"
+                      quick_add="false">
+                <field name="secuencia"/>
+                <field name="equipment_id"/>
+                <field name="partner_id"/>
+                <field name="total_units"/>
+                <field name="state"/>
+                <field name="priority"/>
+                <field name="urgente"/>
+            </calendar>
+        </field>
+    </record>
+
+    <!-- Vista de Búsqueda -->
+    <record id="view_toner_delivery_schedule_search" model="ir.ui.view">
+        <field name="name">toner.delivery.schedule.search</field>
+        <field name="model">toner.delivery.schedule</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Entregas de Tóner">
+                <field name="secuencia"/>
+                <field name="equipment_id"/>
+                <field name="partner_id"/>
+                <field name="assigned_user"/>
+                <separator/>
+                <filter string="Programadas" name="programado" 
+                        domain="[('state', '=', 'programado')]"/>
+                <filter string="Confirmadas" name="confirmado" 
+                        domain="[('state', '=', 'confirmado')]"/>
+                <filter string="En Preparación" name="preparando" 
+                        domain="[('state', '=', 'preparando')]"/>
+                <filter string="Enviadas" name="enviado" 
+                        domain="[('state', '=', 'enviado')]"/>
+                <filter string="Entregadas" name="entregado" 
+                        domain="[('state', '=', 'entregado')]"/>
+                <separator/>
+                <filter string="Urgentes" name="urgente" 
+                        domain="[('urgente', '=', True)]"/>
+                <filter string="Prioridad Alta" name="priority_alta" 
+                        domain="[('priority', '=', 'alta')]"/>
+                <filter string="Atrasadas" name="overdue" 
+                        domain="[('is_overdue', '=', True)]"/>
+                <separator/>
+                <filter string="Hoy" name="today" 
+                        domain="[('delivery_date_planned', '=', context_today())]"/>
+                <filter string="Esta Semana" name="week" 
+                        domain="[('delivery_date_planned', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%%Y-%%m-%%d')), ('delivery_date_planned', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%%Y-%%m-%%d'))]"/>
+                <filter string="Próximos 7 días" name="next_week" 
+                        domain="[('delivery_date_planned', '&gt;=', context_today()), ('delivery_date_planned', '&lt;=', (context_today() + datetime.timedelta(days=7)).strftime('%%Y-%%m-%%d'))]"/>
+                <separator/>
+                <filter string="Mis Entregas" name="my_deliveries" 
+                        domain="[('assigned_user', '=', uid)]"/>
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Prioridad" name="group_priority" context="{'group_by': 'priority'}"/>
+                    <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Responsable" name="group_user" context="{'group_by': 'assigned_user'}"/>
+                    <filter string="Fecha" name="group_date" context="{'group_by': 'delivery_date_planned:day'}"/>
+                    <filter string="Método de Entrega" name="group_method" context="{'group_by': 'delivery_method'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Vista Gráfico/Pivot -->
+    <record id="view_toner_delivery_schedule_graph" model="ir.ui.view">
+        <field name="name">toner.delivery.schedule.graph</field>
+        <field name="model">toner.delivery.schedule</field>
+        <field name="arch" type="xml">
+            <graph string="Análisis de Entregas" type="bar">
+                <field name="delivery_date_planned" type="row" interval="week"/>
+                <field name="state" type="col"/>
+                <field name="total_units" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana -->
+    <record id="action_toner_delivery_schedule" model="ir.actions.act_window">
+        <field name="name">Programación de Entregas</field>
+        <field name="res_model">toner.delivery.schedule</field>
+        <field name="view_mode">kanban,list,form,calendar,graph</field>
+        <field name="search_view_id" ref="view_toner_delivery_schedule_search"/>
+        <field name="context">{
+            'search_default_programado': 1,
+            'search_default_confirmado': 1,
+            'search_default_preparando': 1,
+            'search_default_enviado': 1
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡No hay entregas programadas!
+            </p>
+            <p>
+                Las entregas de tóner aparecerán aquí cuando se programen 
+                automáticamente desde los reportes de clientes o se creen manualmente.
+            </p>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana para Dashboard -->
+    <record id="action_toner_delivery_dashboard" model="ir.actions.act_window">
+        <field name="name">Dashboard de Entregas</field>
+        <field name="res_model">toner.delivery.schedule</field>
+        <field name="view_mode">kanban,calendar,graph</field>
+        <field name="search_view_id" ref="view_toner_delivery_schedule_search"/>
+        <field name="context">{
+            'search_default_next_week': 1
+        }</field>
+    </record>
+
+    <!-- Menú Principal -->
+    <menuitem id="menu_toner_delivery_schedule"
+              name="Entregas de Tóner"
+              parent="sat_menu_root"
+              action="action_toner_delivery_schedule"
+              sequence="72"/>
+
+    <!-- Submenú Dashboard -->
+    <menuitem id="menu_toner_delivery_dashboard"
+              name="Dashboard de Entregas"
+              parent="sat_menu_root"
+              action="action_toner_delivery_dashboard"
+              sequence="73"/>
+</odoo>
