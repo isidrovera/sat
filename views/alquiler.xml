@@ -775,33 +775,58 @@
                                     </list>
                                 </field>
                             </page>
-                            <page string="Gestión de Tóner">
+   <page string="Tóner y Contadores">
     <group>
-        <field name="tipo_maquina_id"/>
-    </group>
-
-    <group string="Contadores Iniciales">
-        <field name="contador_inicial_bn"/>
-        <field name="contador_inicial_color" invisible="tipo_maquina_id == 'monocromatica'"/>
-    </group>
-
-    <group string="Contadores Actuales">
-        <field name="contador_actual_bn"/>
+        <field name="contador_actual_black"/>
         <field name="contador_actual_color" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="fecha_ultima_lectura"/>
     </group>
 
-    <group string="Stock Inicial de Tóner">
-        <field name="stock_toner_bn"/>
-        <field name="stock_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="stock_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="stock_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+    <group string="Stock del Cliente">
+        <field name="stock_cliente_toner_black"/>
+        <field name="stock_cliente_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="stock_cliente_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="stock_cliente_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
     </group>
 
-    <group string="Stock Actual de Tóner">
-        <field name="stock_actual_toner_bn"/>
-        <field name="stock_actual_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="stock_actual_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="stock_actual_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+    <group string="Tóner Instalado">
+        <field name="toner_black_instalado"/>
+        <field name="toner_cyan_instalado" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="toner_magenta_instalado" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="toner_yellow_instalado" invisible="tipo_maquina_id == 'monocromatica'"/>
+    </group>
+
+    <group string="Contadores de Instalación">
+        <field name="contador_instalacion_toner_black"/>
+        <field name="contador_instalacion_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="contador_instalacion_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="contador_instalacion_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+    </group>
+
+    <group string="Páginas Usadas y Restantes">
+        <field name="paginas_usadas_toner_black"/>
+        <field name="paginas_restantes_toner_black"/>
+        <field name="nivel_toner_black"/>
+
+        <field name="paginas_usadas_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="paginas_restantes_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="nivel_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+
+        <field name="paginas_usadas_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="paginas_restantes_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="nivel_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+
+        <field name="paginas_usadas_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="paginas_restantes_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+        <field name="nivel_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+    </group>
+
+    <group string="Resumen">
+        <field name="estado_stock_toner" readonly="1"/>
+        <field name="stock_total_toner_black" readonly="1"/>
+        <field name="stock_total_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
+        <field name="stock_total_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
+        <field name="stock_total_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
     </group>
 
     <group>
