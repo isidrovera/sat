@@ -66,7 +66,7 @@
 
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button class="oe_stat_button" 
+                      <!--  <button class="oe_stat_button" 
                                 type="object" 
                                 name="action_view_equipment" 
                                 icon="fa-print">
@@ -74,7 +74,7 @@
                                 <span class="o_stat_text">Ver</span>
                                 <span class="o_stat_text">Equipo</span>
                             </div>
-                        </button>
+                        </button>-->
                         <button class="oe_stat_button" 
                                 type="object" 
                                 name="action_view_delivery" 
