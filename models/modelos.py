@@ -147,6 +147,7 @@ class ModelosMaquin(models.Model):
     equipos_activos_count = fields.Integer(
         string='Equipos Activos',
         compute='_compute_equipos_activos_count',
+        store=True,  # Hacer el campo almacenado para permitir búsquedas
         help='Cantidad de equipos activos que usan este modelo'
     )
 
@@ -221,6 +222,7 @@ class ModelosMaquin(models.Model):
             html += '</div>'
             record.resumen_configuracion_toner = html
 
+    @api.depends('name')  # Se recalculará cuando cambie el modelo
     def _compute_equipos_activos_count(self):
         """Cuenta equipos activos que usan este modelo"""
         for record in self:
