@@ -74,7 +74,7 @@
                                 <span class="o_stat_text">Ver</span>
                                 <span class="o_stat_text">Equipo</span>
                             </div>
-                        </button>-->
+                        </button>
                         <button class="oe_stat_button" 
                                 type="object" 
                                 name="action_view_delivery" 
@@ -84,7 +84,7 @@
                                 <span class="o_stat_text">Ver</span>
                                 <span class="o_stat_text">Entrega</span>
                             </div>
-                        </button>
+                        </button>-->
                     </div>
 
                     <div class="oe_title">
