@@ -816,9 +816,11 @@
                         <h6><i class="fa fa-calculator me-2"></i>Contadores Actuales</h6>
                         <div class="row">
                             <div class="col-6">
+                                <label>Contador B/N:</label>
                                 <field name="contador_actual_black"/>
                             </div>
                             <div class="col-6" column_invisible="tipo_maquina_id == 'monocromatica'">
+                                <label>Contador Color:</label>
                                 <field name="contador_actual_color"/>
                             </div>
                         </div>
@@ -910,9 +912,11 @@
                             <div class="o_form_label">Tóner Negro</div>
                             <div class="row">
                                 <div class="col-6">
+                                    <label>Fecha Instalación:</label>
                                     <field name="fecha_instalacion_toner_black"/>
                                 </div>
                                 <div class="col-6">
+                                    <label>Contador Instalación:</label>
                                     <field name="contador_instalacion_toner_black"/>
                                 </div>
                             </div>
@@ -921,7 +925,6 @@
                                     Páginas usadas: <field name="paginas_usadas_toner_black" readonly="1"/>
                                     | Páginas restantes: <field name="paginas_restantes_toner_black" readonly="1"/>
                                 </small>
-                                <!-- Removido el elemento con t-attf-style -->
                                 <div class="progress mt-1" style="height: 8px;">
                                     <div class="progress-bar bg-success" 
                                          role="progressbar" 
@@ -937,7 +940,7 @@
                             </div>
                         </div>
                         
-                        <!-- Repetir para colores si no es monocromática -->
+                        <!-- Tóners Color -->
                         <div class="col-12" column_invisible="tipo_maquina_id == 'monocromatica'">
                             <div class="o_form_label">Tóners Color</div>
                             <div class="row">
@@ -986,31 +989,15 @@
                         </div>
                     </div>
                     
-                    <!-- Mostrar configuración básica -->
+                    <!-- Información básica del modelo -->
                     <div class="row g-2" column_invisible="not name">
-                        <div class="col-6">
-                            <small class="text-muted">Durabilidad Negro:</small><br/>
-                            <field name="name.durabilidad_toner_black" readonly="1"/> páginas
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted">Stock Mínimo Negro:</small><br/>
-                            <field name="name.stock_minimo_black" readonly="1"/> unidades
-                        </div>
-                        <div class="col-6" column_invisible="tipo_maquina_id == 'monocromatica'">
-                            <small class="text-muted">Durabilidad Color:</small><br/>
-                            <field name="name.durabilidad_toner_cyan" readonly="1"/> páginas
-                        </div>
-                        <div class="col-6" column_invisible="tipo_maquina_id == 'monocromatica'">
-                            <small class="text-muted">Stock Mínimo Color:</small><br/>
-                            <field name="name.stock_minimo_cyan" readonly="1"/> unidades
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted">Tiempo Entrega:</small><br/>
-                            <field name="name.tiempo_entrega_dias" readonly="1"/> días
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted">Margen Seguridad:</small><br/>
-                            <field name="name.margen_seguridad_dias" readonly="1"/> días
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <i class="fa fa-info-circle me-2"></i>
+                                <strong>Modelo:</strong> <field name="name" readonly="1"/>
+                                <br/>
+                                <small class="text-muted">Configure los parámetros de tóner en la vista del modelo.</small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1046,7 +1033,7 @@
     <!-- Panel de Alertas -->
     <div class="row mt-4">
         <div class="col-12">
-            <div class="alert alert-info" column_invisible="estado_stock_toner != 'critico'">
+            <div class="alert alert-danger" column_invisible="estado_stock_toner != 'critico'">
                 <div class="d-flex align-items-center">
                     <i class="fa fa-exclamation-triangle me-2"></i>
                     <div>
