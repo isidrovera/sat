@@ -614,7 +614,7 @@ class TonerCounterSubmission(models.Model):
         for record in self:
             if record.client_email:
                 import re
-                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
                 if not re.match(email_pattern, record.client_email):
                     raise ValidationError(f"El email '{record.client_email}' no tiene un formato válido.")
 
