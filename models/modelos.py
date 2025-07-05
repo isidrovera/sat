@@ -1,4 +1,5 @@
 from odoo import _, models, fields, api
+from odoo.exceptions import ValidationError
 
 class ModelosMaquin(models.Model):
 
@@ -93,6 +94,17 @@ class ModelosMaquin(models.Model):
         help='Días adicionales de margen para evitar quedarse sin tóner'
     )
 
+    # ==========================================
+    # CAMPO CALCULADO PARA TIEMPO TOTAL
+    # ==========================================
+    
+    tiempo_total_prevencion = fields.Integer(
+        string='Tiempo Total de Prevención',
+        compute='_compute_tiempo_total_prevencion',
+        store=True,
+        help='Suma de tiempo de entrega y margen de seguridad'
+    )
+
     # Configuración de alertas
     alerta_stock_critico = fields.Boolean(
         string='Alertas de Stock Crítico',
@@ -142,6 +154,12 @@ class ModelosMaquin(models.Model):
     # MÉTODOS COMPUTE
     # ==========================================
 
+    @api.depends('tiempo_entrega_dias', 'margen_seguridad_dias')
+    def _compute_tiempo_total_prevencion(self):
+        """Calcula el tiempo total de prevención"""
+        for record in self:
+            record.tiempo_total_prevencion = (record.tiempo_entrega_dias or 0) + (record.margen_seguridad_dias or 0)
+
     @api.depends('tipo_id')
     def _compute_mostrar_toner_color(self):
         """Determina si mostrar campos de tóner color según el tipo de máquina"""
@@ -189,7 +207,7 @@ class ModelosMaquin(models.Model):
             html += '<strong>⏰ Configuración de Tiempos:</strong><br/>'
             html += f'• Tiempo de entrega: {record.tiempo_entrega_dias} día(s)<br/>'
             html += f'• Margen de seguridad: {record.margen_seguridad_dias} día(s)<br/>'
-            html += f'• Total tiempo prevención: {record.tiempo_entrega_dias + record.margen_seguridad_dias} día(s)<br/>'
+            html += f'• Total tiempo prevención: {record.tiempo_total_prevencion} día(s)<br/>'
             html += '</div>'
             
             # Alertas
@@ -267,7 +285,7 @@ class ModelosMaquin(models.Model):
             'name': f'Equipos - {self.name}',
             'type': 'ir.actions.act_window',
             'res_model': 'alquiler',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',  # Cambiado tree por list
             'domain': [('name', '=', self.id)],
             'context': {
                 'default_name': self.id,
