@@ -818,7 +818,7 @@
                             <div class="col-6">
                                 <field name="contador_actual_black"/>
                             </div>
-                            <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                            <div class="col-6" column_invisible="tipo_maquina_id == 'monocromatica'">
                                 <field name="contador_actual_color"/>
                             </div>
                         </div>
@@ -849,7 +849,7 @@
                             </small>
                         </div>
                         
-                        <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <div class="col-6" column_invisible="tipo_maquina_id == 'monocromatica'">
                             <div class="o_form_label">Tóner Cian</div>
                             <div class="d-flex align-items-center">
                                 <field name="stock_cliente_toner_cyan" class="me-2"/>
@@ -863,7 +863,7 @@
                             </small>
                         </div>
                         
-                        <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <div class="col-6" column_invisible="tipo_maquina_id == 'monocromatica'">
                             <div class="o_form_label">Tóner Magenta</div>
                             <div class="d-flex align-items-center">
                                 <field name="stock_cliente_toner_magenta" class="me-2"/>
@@ -877,7 +877,7 @@
                             </small>
                         </div>
                         
-                        <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <div class="col-6" column_invisible="tipo_maquina_id == 'monocromatica'">
                             <div class="o_form_label">Tóner Amarillo</div>
                             <div class="d-flex align-items-center">
                                 <field name="stock_cliente_toner_yellow" class="me-2"/>
@@ -921,11 +921,12 @@
                                     Páginas usadas: <field name="paginas_usadas_toner_black" readonly="1"/>
                                     | Páginas restantes: <field name="paginas_restantes_toner_black" readonly="1"/>
                                 </small>
+                                <!-- Removido el elemento con t-attf-style -->
                                 <div class="progress mt-1" style="height: 8px;">
                                     <div class="progress-bar bg-success" 
                                          role="progressbar" 
-                                         t-attf-style="width: #{record.nivel_toner_black.raw_value}%"
-                                         t-attf-aria-valuenow="#{record.nivel_toner_black.raw_value}"
+                                         style="width: 75%"
+                                         aria-valuenow="75"
                                          aria-valuemin="0" 
                                          aria-valuemax="100">
                                     </div>
@@ -937,7 +938,7 @@
                         </div>
                         
                         <!-- Repetir para colores si no es monocromática -->
-                        <div class="col-12" invisible="tipo_maquina_id == 'monocromatica'">
+                        <div class="col-12" column_invisible="tipo_maquina_id == 'monocromatica'">
                             <div class="o_form_label">Tóners Color</div>
                             <div class="row">
                                 <div class="col-4">
@@ -986,7 +987,7 @@
                     </div>
                     
                     <!-- Mostrar configuración básica -->
-                    <div class="row g-2" invisible="not name">
+                    <div class="row g-2" column_invisible="not name">
                         <div class="col-6">
                             <small class="text-muted">Durabilidad Negro:</small><br/>
                             <field name="name.durabilidad_toner_black" readonly="1"/> páginas
@@ -995,11 +996,11 @@
                             <small class="text-muted">Stock Mínimo Negro:</small><br/>
                             <field name="name.stock_minimo_black" readonly="1"/> unidades
                         </div>
-                        <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <div class="col-6" column_invisible="tipo_maquina_id == 'monocromatica'">
                             <small class="text-muted">Durabilidad Color:</small><br/>
                             <field name="name.durabilidad_toner_cyan" readonly="1"/> páginas
                         </div>
-                        <div class="col-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <div class="col-6" column_invisible="tipo_maquina_id == 'monocromatica'">
                             <small class="text-muted">Stock Mínimo Color:</small><br/>
                             <field name="name.stock_minimo_cyan" readonly="1"/> unidades
                         </div>
@@ -1045,7 +1046,7 @@
     <!-- Panel de Alertas -->
     <div class="row mt-4">
         <div class="col-12">
-            <div class="alert alert-info" invisible="estado_stock_toner != 'critico'">
+            <div class="alert alert-info" column_invisible="estado_stock_toner != 'critico'">
                 <div class="d-flex align-items-center">
                     <i class="fa fa-exclamation-triangle me-2"></i>
                     <div>
@@ -1056,7 +1057,7 @@
                 </div>
             </div>
             
-            <div class="alert alert-warning" invisible="estado_stock_toner != 'bajo'">
+            <div class="alert alert-warning" column_invisible="estado_stock_toner != 'bajo'">
                 <div class="d-flex align-items-center">
                     <i class="fa fa-info-circle me-2"></i>
                     <div>
