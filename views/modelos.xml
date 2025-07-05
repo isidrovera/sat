@@ -42,7 +42,7 @@
                                 <field name="tipo_id"/>
                                 <field name="tipo_maquina_id"/>
                                 <field name="marca_id"/>
-                                <field name="mostrar_toner_color" invisible="1"/>
+                                <field name="mostrar_toner_color" column_invisible="1"/>
                                 <field name="gestionar_toner_automatico"/>
                             </group>
                             <group string="💰 Información Comercial">
@@ -75,7 +75,7 @@
                                                         <field name="durabilidad_toner_black"/>
                                                     </div>
                                                     
-                                                    <div class="col-12" invisible="tipo_id != 'color'">
+                                                    <div class="col-12" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">
                                                             <i class="fa fa-circle text-primary me-1"></i>
                                                             Tóner Cian
@@ -83,7 +83,7 @@
                                                         <field name="durabilidad_toner_cyan"/>
                                                     </div>
                                                     
-                                                    <div class="col-12" invisible="tipo_id != 'color'">
+                                                    <div class="col-12" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">
                                                             <i class="fa fa-circle text-danger me-1"></i>
                                                             Tóner Magenta
@@ -91,7 +91,7 @@
                                                         <field name="durabilidad_toner_magenta"/>
                                                     </div>
                                                     
-                                                    <div class="col-12" invisible="tipo_id != 'color'">
+                                                    <div class="col-12" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">
                                                             <i class="fa fa-circle text-warning me-1"></i>
                                                             Tóner Amarillo
@@ -126,17 +126,17 @@
                                                         <field name="stock_minimo_black"/>
                                                     </div>
                                                     
-                                                    <div class="col-6" invisible="tipo_id != 'color'">
+                                                    <div class="col-6" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">Tóner Cian</div>
                                                         <field name="stock_minimo_cyan"/>
                                                     </div>
                                                     
-                                                    <div class="col-6" invisible="tipo_id != 'color'">
+                                                    <div class="col-6" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">Tóner Magenta</div>
                                                         <field name="stock_minimo_magenta"/>
                                                     </div>
                                                     
-                                                    <div class="col-6" invisible="tipo_id != 'color'">
+                                                    <div class="col-6" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">Tóner Amarillo</div>
                                                         <field name="stock_minimo_yellow"/>
                                                     </div>
@@ -174,7 +174,8 @@
                                                         <small>
                                                             <i class="fa fa-info-circle me-1"></i>
                                                             <strong>Total tiempo de prevención:</strong> 
-                                                            <span t-field="tiempo_entrega_dias + margen_seguridad_dias"/> días
+                                                            <!-- Cambio: Usar field calculado en lugar de t-field -->
+                                                            <field name="tiempo_total_prevencion" readonly="1"/> días
                                                         </small>
                                                     </div>
                                                 </div>
@@ -196,14 +197,14 @@
                                                 <div class="row g-3">
                                                     <div class="col-6">
                                                         <div class="d-flex align-items-center">
-                                                            <field name="alerta_stock_critico" widget="toggle"/>
+                                                            <field name="alerta_stock_critico" widget="boolean_toggle"/>
                                                             <span class="ms-2">Alertas de Stock Crítico</span>
                                                         </div>
                                                     </div>
                                                     
                                                     <div class="col-6">
                                                         <div class="d-flex align-items-center">
-                                                            <field name="alerta_consumo_alto" widget="toggle"/>
+                                                            <field name="alerta_consumo_alto" widget="boolean_toggle"/>
                                                             <span class="ms-2">Alertas de Consumo Alto</span>
                                                         </div>
                                                     </div>
@@ -245,18 +246,18 @@
                                                 string="Aplicar Configuración" 
                                                 class="btn btn-secondary"
                                                 icon="fa-sync"
-                                                invisible="equipos_activos_count == 0"/>
+                                                column_invisible="equipos_activos_count == 0"/>
                                     </div>
                                 </div>
                                 
-                                <div class="alert alert-info" invisible="equipos_activos_count > 0">
+                                <div class="alert alert-info" column_invisible="equipos_activos_count > 0">
                                     <div class="text-center">
                                         <i class="fa fa-info-circle fa-2x mb-2"></i>
                                         <p class="mb-0">No hay equipos alquilados usando este modelo actualmente.</p>
                                     </div>
                                 </div>
                                 
-                                <div invisible="equipos_activos_count == 0">
+                                <div column_invisible="equipos_activos_count == 0">
                                     <p class="text-muted">
                                         <i class="fa fa-info-circle me-1"></i>
                                         Hay <strong><field name="equipos_activos_count" readonly="1"/></strong> 
@@ -281,7 +282,7 @@
 
         <!-- Vista Lista del Modelo Máquina -->
         <record id="modelos_maquina_tree_view" model="ir.ui.view">
-            <field name="name">Modelos_maquina.tree</field>
+            <field name="name">Modelos_maquina.list</field>
             <field name="model">modelo.maquina</field>
             <field name="arch" type="xml">
                 <list string="Modelos de Máquina" 
@@ -296,7 +297,7 @@
                     <field name="durabilidad_toner_black" string="Dur. Negro" optional="hide"/>
                     <field name="stock_minimo_black" string="Stock Min." optional="hide"/>
                     <field name="tiempo_entrega_dias" string="T. Entrega" optional="hide"/>
-                    <field name="gestionar_toner_automatico" string="Gestión Auto" widget="toggle" optional="hide"/>
+                    <field name="gestionar_toner_automatico" string="Gestión Auto" widget="boolean_toggle" optional="hide"/>
                     <field name="equipos_activos_count" string="Equipos" optional="show"/>
                 </list>
             </field>
