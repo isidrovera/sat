@@ -775,7 +775,100 @@
                                     </list>
                                 </field>
                             </page>
-                            
+                            <page string="Gestión de Tóner">
+    <div class="container o_container_small">
+        <div class="row mb-3">
+            <div class="col-12">
+                <field name="tipo_maquina_id"/>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header fw-bold text-primary">Contadores Iniciales</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">BN</label>
+                        <field name="contador_inicial_bn"/>
+                    </div>
+                    <div class="col-md-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <label class="form-label">Color</label>
+                        <field name="contador_inicial_color"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header fw-bold text-success">Contadores Actuales</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">BN</label>
+                        <field name="contador_actual_bn"/>
+                    </div>
+                    <div class="col-md-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <label class="form-label">Color</label>
+                        <field name="contador_actual_color"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header fw-bold text-warning">Stock Inicial de Tóner</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Tóner BN</label>
+                        <field name="stock_toner_bn"/>
+                    </div>
+                    <div class="col-md-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <label class="form-label">Cyan</label>
+                        <field name="stock_toner_cyan"/>
+                    </div>
+                    <div class="col-md-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <label class="form-label">Magenta</label>
+                        <field name="stock_toner_magenta"/>
+                    </div>
+                    <div class="col-md-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <label class="form-label">Yellow</label>
+                        <field name="stock_toner_yellow"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header fw-bold text-danger">Stock Actual de Tóner</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Tóner BN</label>
+                        <field name="stock_actual_toner_bn"/>
+                    </div>
+                    <div class="col-md-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <label class="form-label">Cyan</label>
+                        <field name="stock_actual_toner_cyan"/>
+                    </div>
+                    <div class="col-md-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <label class="form-label">Magenta</label>
+                        <field name="stock_actual_toner_magenta"/>
+                    </div>
+                    <div class="col-md-6" invisible="tipo_maquina_id == 'monocromatica'">
+                        <label class="form-label">Yellow</label>
+                        <field name="stock_actual_toner_yellow"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-end mt-3">
+            <button name="action_update_toner_stock" type="object" string="Actualizar Stock Manual" class="btn btn-outline-info"/>
+        </div>
+    </div>
+</page>
+
 
                         </notebook>
                     </sheet>
