@@ -324,55 +324,7 @@
     <!-- Vista Calendario de Entregas -->
     
 
-    <!-- Vista de Búsqueda -->
-    <record id="view_toner_delivery_schedule_search" model="ir.ui.view">
-        <field name="name">toner.delivery.schedule.search</field>
-        <field name="model">toner.delivery.schedule</field>
-        <field name="arch" type="xml">
-            <search string="Buscar Entregas de Tóner">
-                <field name="secuencia"/>
-                <field name="equipment_id"/>
-                <field name="partner_id"/>
-                <field name="assigned_user"/>
-                <separator/>
-                <filter string="Programadas" name="programado" 
-                        domain="[('state', '=', 'programado')]"/>
-                <filter string="Confirmadas" name="confirmado" 
-                        domain="[('state', '=', 'confirmado')]"/>
-                <filter string="En Preparación" name="preparando" 
-                        domain="[('state', '=', 'preparando')]"/>
-                <filter string="Enviadas" name="enviado" 
-                        domain="[('state', '=', 'enviado')]"/>
-                <filter string="Entregadas" name="entregado" 
-                        domain="[('state', '=', 'entregado')]"/>
-                <separator/>
-                <filter string="Urgentes" name="urgente" 
-                        domain="[('urgente', '=', True)]"/>
-                <filter string="Prioridad Alta" name="priority_alta" 
-                        domain="[('priority', '=', 'alta')]"/>
-                <filter string="Atrasadas" name="overdue" 
-                        domain="[('is_overdue', '=', True)]"/>
-                <separator/>
-                <filter string="Hoy" name="today" 
-                        domain="[('delivery_date_planned', '=', context_today())]"/>
-                <filter string="Esta Semana" name="week" 
-                        domain="[('delivery_date_planned', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%%Y-%%m-%%d')), ('delivery_date_planned', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%%Y-%%m-%%d'))]"/>
-                <filter string="Próximos 7 días" name="next_week" 
-                        domain="[('delivery_date_planned', '&gt;=', context_today()), ('delivery_date_planned', '&lt;=', (context_today() + datetime.timedelta(days=7)).strftime('%%Y-%%m-%%d'))]"/>
-                <separator/>
-                <filter string="Mis Entregas" name="my_deliveries" 
-                        domain="[('assigned_user', '=', uid)]"/>
-                <group expand="0" string="Agrupar Por">
-                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
-                    <filter string="Prioridad" name="group_priority" context="{'group_by': 'priority'}"/>
-                    <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
-                    <filter string="Responsable" name="group_user" context="{'group_by': 'assigned_user'}"/>
-                    <filter string="Fecha" name="group_date" context="{'group_by': 'delivery_date_planned:day'}"/>
-                    <filter string="Método de Entrega" name="group_method" context="{'group_by': 'delivery_method'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
+   
 
     <!-- Vista Gráfico/Pivot -->
     <record id="view_toner_delivery_schedule_graph" model="ir.ui.view">
