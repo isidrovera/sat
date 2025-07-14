@@ -596,3 +596,41 @@ class TonerDeliveryConfirmation(models.Model):
             self.equipment_id.serie or self.equipment_id.id,
             new_stock_black, new_stock_cyan, new_stock_magenta, new_stock_yellow
         )
+
+    def action_view_equipment(self):
+        """Muestra el equipo relacionado"""
+        self.ensure_one()
+        return {
+            'name': 'Equipo',
+            'view_mode': 'form',
+            'res_model': 'alquiler',
+            'res_id': self.equipment_id.id,
+            'type': 'ir.actions.act_window',
+            'target': 'current',
+        }
+
+    def action_view_schedule(self):
+        """Muestra la programación relacionada"""
+        self.ensure_one()
+        return {
+            'name': 'Programación de Entrega',
+            'view_mode': 'form',
+            'res_model': 'toner.delivery.schedule',
+            'res_id': self.schedule_id.id,
+            'type': 'ir.actions.act_window',
+            'target': 'current',
+        }
+
+    def action_print_delivery_receipt(self):
+        """Imprime comprobante de entrega"""
+        self.ensure_one()
+        # Por ahora solo mostrar mensaje, después se puede implementar el reporte
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'message': f'Comprobante de entrega {self.secuencia} - Funcionalidad en desarrollo',
+                'type': 'info',
+                'sticky': False,
+            }
+        }
