@@ -322,25 +322,7 @@
     </record>
 
     <!-- Vista Calendario de Entregas -->
-    <record id="view_toner_delivery_schedule_calendar" model="ir.ui.view">
-        <field name="name">toner.delivery.schedule.calendar</field>
-        <field name="model">toner.delivery.schedule</field>
-        <field name="arch" type="xml">
-            <calendar string="Calendario de Entregas" 
-                      date_start="delivery_date_planned"
-                      color="priority"
-                      event_open_popup="true"
-                      quick_add="false">
-                <field name="secuencia"/>
-                <field name="equipment_id"/>
-                <field name="partner_id"/>
-                <field name="total_units"/>
-                <field name="state"/>
-                <field name="priority"/>
-                <field name="urgente"/>
-            </calendar>
-        </field>
-    </record>
+    
 
     <!-- Vista de Búsqueda -->
     <record id="view_toner_delivery_schedule_search" model="ir.ui.view">
