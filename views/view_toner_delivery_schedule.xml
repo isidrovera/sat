@@ -327,39 +327,31 @@
    
 
     <!-- Acción de Ventana -->
-    <record id="action_toner_delivery_schedule" model="ir.actions.act_window">
-        <field name="name">Programación de Entregas</field>
-        <field name="res_model">toner.delivery.schedule</field>
-        <field name="view_mode">kanban,list,form,calendar,graph</field>
-        <field name="search_view_id" ref="view_toner_delivery_schedule_search"/>
-        <field name="context">{
-            'search_default_programado': 1,
-            'search_default_confirmado': 1,
-            'search_default_preparando': 1,
-            'search_default_enviado': 1
-        }</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                ¡No hay entregas programadas!
-            </p>
-            <p>
-                Las entregas de tóner aparecerán aquí cuando se programen 
-                automáticamente desde los reportes de clientes o se creen manualmente.
-            </p>
-        </field>
-    </record>
+<record id="action_toner_delivery_schedule" model="ir.actions.act_window">
+    <field name="name">Programación de Entregas</field>
+    <field name="res_model">toner.delivery.schedule</field>
+    <field name="view_mode">kanban,list,form</field>
+    <!-- Quitar esta línea: <field name="search_view_id" ref="view_toner_delivery_schedule_search"/> -->
+    <field name="context">{}</field>
+    <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+            ¡No hay entregas programadas!
+        </p>
+        <p>
+            Las entregas de tóner aparecerán aquí cuando se programen 
+            automáticamente desde los reportes de clientes o se creen manualmente.
+        </p>
+    </field>
+</record>
 
-    <!-- Acción de Ventana para Dashboard -->
-    <record id="action_toner_delivery_dashboard" model="ir.actions.act_window">
-        <field name="name">Dashboard de Entregas</field>
-        <field name="res_model">toner.delivery.schedule</field>
-        <field name="view_mode">kanban,calendar,graph</field>
-        <field name="search_view_id" ref="view_toner_delivery_schedule_search"/>
-        <field name="context">{
-            'search_default_next_week': 1
-        }</field>
-    </record>
-
+<!-- Acción de Ventana para Dashboard -->
+<record id="action_toner_delivery_dashboard" model="ir.actions.act_window">
+    <field name="name">Dashboard de Entregas</field>
+    <field name="res_model">toner.delivery.schedule</field>
+    <field name="view_mode">kanban</field>
+    <!-- Quitar esta línea: <field name="search_view_id" ref="view_toner_delivery_schedule_search"/> -->
+    <field name="context">{}</field>
+</record>
     <!-- Menú Principal -->
     <menuitem id="menu_toner_delivery_schedule"
               name="Entregas de Tóner"
