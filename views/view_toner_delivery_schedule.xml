@@ -326,19 +326,6 @@
 
    
 
-    <!-- Vista Gráfico/Pivot -->
-    <record id="view_toner_delivery_schedule_graph" model="ir.ui.view">
-        <field name="name">toner.delivery.schedule.graph</field>
-        <field name="model">toner.delivery.schedule</field>
-        <field name="arch" type="xml">
-            <graph string="Análisis de Entregas" type="bar">
-                <field name="delivery_date_planned" type="row" interval="week"/>
-                <field name="state" type="col"/>
-                <field name="total_units" type="measure"/>
-            </graph>
-        </field>
-    </record>
-
     <!-- Acción de Ventana -->
     <record id="action_toner_delivery_schedule" model="ir.actions.act_window">
         <field name="name">Programación de Entregas</field>
