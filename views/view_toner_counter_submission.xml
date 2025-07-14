@@ -102,8 +102,7 @@
                                    domain="[('estado_alquiler_id', '=', 'alquilada')]"
                                    readonly="state != 'pending'"/>
                             <field name="partner_id" readonly="1"/>
-                            <field name="equipment_serie" readonly="1"/>
-                            <field name="equipment_location" readonly="1"/>
+                            
                         </group>
                         <group string="Información del Reporte">
                             <field name="submission_date" readonly="state != 'pending'"/>
