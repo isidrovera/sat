@@ -35,7 +35,7 @@ class TonerDeliveryConfirmation(models.Model):
                 if record.schedule_id:
                     base_name = f"Confirmación {record.schedule_id.secuencia}"
                 else:
-                    equipment_name = record.equipment_id.name.name if record.equipment_id and record.equipment_id.name else 'Sin equipo'
+                    equipment_name = record.equipment_id.name if record.equipment_id and record.equipment_id.name else 'Sin equipo'
                     base_name = f"Entrega {equipment_name}"
                 
                 date_str = record.delivery_date.strftime('%d/%m/%Y') if record.delivery_date else 'Sin fecha'
@@ -465,7 +465,7 @@ class TonerDeliveryConfirmation(models.Model):
         
         <b>📋 Información:</b><br/>
         • <b>Programación:</b> {self.schedule_id.secuencia if self.schedule_id else 'Sin programación'}<br/>
-        • <b>Equipo:</b> {self.equipment_id.name.name if self.equipment_id.name else 'Sin nombre'}<br/>
+        • <b>Equipo:</b> {self.equipment_id.name if self.equipment_id.name else 'Sin nombre'}<br/>
         • <b>Cliente:</b> {self.partner_id.name if self.partner_id else 'Sin cliente'}<br/><br/>
         
         <b>📅 Detalles de Entrega:</b><br/>

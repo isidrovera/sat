@@ -33,7 +33,7 @@ class TonerDeliverySchedule(models.Model):
         """Calcula el nombre a mostrar del registro"""
         for record in self:
             try:
-                equipment_name = record.equipment_id.name.name if record.equipment_id and record.equipment_id.name else 'Sin equipo'
+                equipment_name = record.equipment_id.name if record.equipment_id and record.equipment_id.name else 'Sin equipo'
                 date_str = record.delivery_date_planned.strftime('%d/%m/%Y') if record.delivery_date_planned else 'Sin fecha'
                 state_display = dict(record._fields['state'].selection).get(record.state, 'Desconocido')
                 
@@ -402,7 +402,7 @@ class TonerDeliverySchedule(models.Model):
         🚚 <b>Nueva Entrega Programada</b><br/><br/>
         
         <b>📋 Información del Equipo:</b><br/>
-        • <b>Equipo:</b> {self.equipment_id.name.name if self.equipment_id.name else 'Sin nombre'}<br/>
+        • <b>Equipo:</b> {self.equipment_id.name if self.equipment_id.name else 'Sin nombre'}<br/>
         • <b>Serie:</b> {self.equipment_id.serie or 'Sin serie'}<br/>
         • <b>Cliente:</b> {self.partner_id.name if self.partner_id else 'Sin cliente'}<br/><br/>
         
@@ -459,7 +459,7 @@ class TonerDeliverySchedule(models.Model):
                     🚚 <b>Entrega de Tóner Programada</b><br/><br/>
                     
                     <b>Cliente:</b> {self.partner_id.name if self.partner_id else 'Sin cliente'}<br/>
-                    <b>Equipo:</b> {self.equipment_id.name.name if self.equipment_id.name else 'Sin nombre'}<br/>
+                    <b>Equipo:</b> {self.equipment_id.name if self.equipment_id.name else 'Sin nombre'}<br/>
                     <b>Serie:</b> {self.equipment_id.serie or 'Sin serie'}<br/><br/>
                     
                     <b>Fecha Programada:</b> {self.delivery_date_planned.strftime('%d/%m/%Y') if self.delivery_date_planned else 'No definida'}<br/>
@@ -746,7 +746,7 @@ class TonerDeliverySchedule(models.Model):
                 saludo = "👋 Buenas noches"
 
             # Construir mensaje
-            equipment_name = self.equipment_id.name.name if self.equipment_id and self.equipment_id.name else 'su equipo'
+            equipment_name = self.equipment_id.name if self.equipment_id and self.equipment_id.name else 'su equipo'
             
             message = (
                 f"*🏢 Copier Company*\n\n"
@@ -820,7 +820,7 @@ class TonerDeliverySchedule(models.Model):
         
         try:
             # Construir mensaje de recordatorio
-            equipment_name = self.equipment_id.name.name if self.equipment_id and self.equipment_id.name else 'su equipo'
+            equipment_name = self.equipment_id.name if self.equipment_id and self.equipment_id.name else 'su equipo'
             
             message = (
                 f"*🏢 Copier Company*\n\n"
@@ -902,7 +902,7 @@ class TonerDeliverySchedule(models.Model):
         
         return {
             'secuencia': self.secuencia,
-            'equipment_name': self.equipment_id.name.name if self.equipment_id.name else 'Sin nombre',
+            'equipment_name': self.equipment_id.name if self.equipment_id.name else 'Sin nombre',
             'client_name': self.partner_id.name if self.partner_id else 'Sin cliente',
             'delivery_date': self.delivery_date_planned.strftime('%d/%m/%Y') if self.delivery_date_planned else 'Sin fecha',
             'total_units': self.total_units,
