@@ -492,3 +492,107 @@ class TonerDeliveryConfirmation(models.Model):
             body=body,
             message_type='notification'
         )
+
+    # ==========================================
+    # MÉTODOS DE ACCIÓN
+    # ==========================================
+
+    def action_confirm(self):
+        """Confirma la entrega"""
+        self.ensure_one()
+        
+        # Validaciones básicas
+        if self.total_delivered == 0:
+            raise UserError("Debe entregar al menos una unidad de tóner.")
+        
+        if not self.received_by_name:
+            raise UserError("Debe especificar quién recibió la entrega.")
+        
+        self.state = 'confirmed'
+        self.message_post(
+            body="✅ Entrega confirmada - Lista para procesar",
+            message_type='notification'
+        )
+        
+        return True
+
+    def action_process(self):
+        """Procesa y actualiza stock del equipo"""
+        self.ensure_one()
+        
+        if self.state != 'confirmed':
+            raise UserError("Solo se pueden procesar entregas confirmadas.")
+        
+        # Actualizar stock en el equipo
+        self._update_equipment_stock()
+        
+        # Marcar programación como entregada
+        if self.schedule_id:
+            self.schedule_id.state = 'delivered'
+            self.schedule_id.delivery_confirmation_id = self.id
+        
+        self.state = 'processed'
+        self.message_post(
+            body="🔄 Entrega procesada - Stock del equipo actualizado",
+            message_type='notification'
+        )
+        
+        return True
+
+    def action_validate(self):
+        """Valida la entrega"""
+        self.ensure_one()
+        
+        self.validation_status = 'validated'
+        self.validated_by = self.env.user
+        self.validation_date = fields.Datetime.now()
+        
+        self.message_post(
+            body=f"✅ Entrega validada por {self.env.user.name}",
+            message_type='notification'
+        )
+        
+        return True
+
+    def action_reject_validation(self):
+        """Rechaza la validación"""
+        self.ensure_one()
+        
+        self.validation_status = 'rejected'
+        self.validated_by = self.env.user
+        self.validation_date = fields.Datetime.now()
+        
+        self.message_post(
+            body=f"❌ Validación rechazada por {self.env.user.name}",
+            message_type='notification'
+        )
+        
+        return True
+
+    def _update_equipment_stock(self):
+        """Actualiza el stock de tóner en el equipo"""
+        self.ensure_one()
+        
+        if not self.equipment_id:
+            return
+        
+        # Calcular nuevo stock
+        new_stock_black = self.stock_before_black + self.toner_black_delivered
+        new_stock_cyan = self.stock_before_cyan + self.toner_cyan_delivered
+        new_stock_magenta = self.stock_before_magenta + self.toner_magenta_delivered
+        new_stock_yellow = self.stock_before_yellow + self.toner_yellow_delivered
+        
+        # Actualizar el equipo
+        self.equipment_id.write({
+            'stock_cliente_toner_black': new_stock_black,
+            'stock_cliente_toner_cyan': new_stock_cyan,
+            'stock_cliente_toner_magenta': new_stock_magenta,
+            'stock_cliente_toner_yellow': new_stock_yellow,
+            'fecha_ultima_entrega_toner': self.delivery_date,
+        })
+        
+        _logger.info(
+            "Stock actualizado para equipo %s: Negro=%d, Cian=%d, Magenta=%d, Amarillo=%d",
+            self.equipment_id.serie or self.equipment_id.id,
+            new_stock_black, new_stock_cyan, new_stock_magenta, new_stock_yellow
+        )
