@@ -53,7 +53,7 @@ class TonerCounterSubmission(models.Model):
             domain=[('estado_alquiler_id', '=', 'alquilada')],
             help='Equipo para el cual se reportan los contadores y estado de tóner'
         )
-        equipment_serie = fields.Char(
+    equipment_serie = fields.Char(
         string='Serie del Equipo',
         related='equipment_id.serie',
         store=True,
