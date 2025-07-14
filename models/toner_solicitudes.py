@@ -53,19 +53,7 @@ class TonerCounterSubmission(models.Model):
             domain=[('estado_alquiler_id', '=', 'alquilada')],
             help='Equipo para el cual se reportan los contadores y estado de tóner'
         )
-    equipment_serie = fields.Char(
-        string='Serie del Equipo',
-        related='equipment_id.serie',
-        store=True,
-        readonly=True
-    )
-
-    equipment_location = fields.Char(
-        string='Ubicación del Equipo', 
-        related='equipment_id.ubicacion',
-        store=True,
-        readonly=True
-    )
+    
     partner_id = fields.Many2one(
         'res.partner',
         string='Cliente',
