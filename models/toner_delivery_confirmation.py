@@ -554,8 +554,8 @@ class TonerDeliveryConfirmation(models.Model):
         
         return True
 
-    def action_reject_validation(self):
-        """Rechaza la validación"""
+    def action_reject(self):
+        """Rechaza la entrega"""
         self.ensure_one()
         
         self.validation_status = 'rejected'
@@ -563,7 +563,27 @@ class TonerDeliveryConfirmation(models.Model):
         self.validation_date = fields.Datetime.now()
         
         self.message_post(
-            body=f"❌ Validación rechazada por {self.env.user.name}",
+            body=f"❌ Entrega rechazada por {self.env.user.name}",
+            message_type='notification'
+        )
+        
+        return True
+
+    def action_reset_to_draft(self):
+        """Regresa a estado borrador"""
+        self.ensure_one()
+        
+        if self.state == 'processed':
+            raise UserError("No se puede regresar a borrador una entrega ya procesada.")
+        
+        self.state = 'draft'
+        self.validation_status = 'pending'
+        self.validated_by = False
+        self.validation_date = False
+        self.validation_notes = False
+        
+        self.message_post(
+            body="🔄 Entrega regresada a estado borrador",
             message_type='notification'
         )
         
