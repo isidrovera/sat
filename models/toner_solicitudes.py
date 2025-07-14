@@ -1048,38 +1048,4 @@ class TonerCounterSubmission(models.Model):
         }
 
 
-    def action_view_equipment(self):
-        """Muestra el equipo relacionado"""
-        self.ensure_one()
-        return {
-            'name': 'Equipo',
-            'view_mode': 'form',
-            'res_model': 'alquiler',
-            'res_id': self.equipment_id.id,
-            'type': 'ir.actions.act_window',
-            'target': 'current',
-        }
-
-    def action_view_submission(self):
-        """Muestra el reporte origen relacionado"""
-        self.ensure_one()
-        return {
-            'name': 'Reporte de Tóner',
-            'view_mode': 'form',
-            'res_model': 'toner.counter.submission',
-            'res_id': self.submission_id.id,
-            'type': 'ir.actions.act_window',
-            'target': 'current',
-        }
-
-    def action_view_confirmation(self):
-        """Muestra la confirmación de entrega"""
-        self.ensure_one()
-        return {
-            'name': 'Confirmación de Entrega',
-            'view_mode': 'form',
-            'res_model': 'toner.delivery.confirmation',
-            'res_id': self.confirmation_id.id,
-            'type': 'ir.actions.act_window',
-            'target': 'current',
-        }
+    
