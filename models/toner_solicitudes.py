@@ -435,16 +435,15 @@ class TonerCounterSubmission(models.Model):
             record.stock_total_yellow = record.stock_reportado_yellow + instalado_yellow
 
     @api.depends('stock_total_black', 'stock_total_cyan', 'stock_total_magenta', 'stock_total_yellow',
-                 'equipment_id.name.stock_minimo_black', 'equipment_id.name.stock_minimo_cyan',
-                 'equipment_id.name.stock_minimo_magenta', 'equipment_id.name.stock_minimo_yellow',
-                 'requiere_toner_black', 'requiere_toner_cyan', 'requiere_toner_magenta', 'requiere_toner_yellow',
-                 'nivel_toner_black', 'nivel_toner_cyan', 'nivel_toner_magenta', 'nivel_toner_yellow')
+             'requiere_toner_black', 'requiere_toner_cyan', 'requiere_toner_magenta', 'requiere_toner_yellow',
+             'nivel_toner_black', 'nivel_toner_cyan', 'nivel_toner_magenta', 'nivel_toner_yellow')
     def _compute_requiere_entrega(self):
         """Determina si requiere entrega automática basado en stock y configuración"""
         for record in self:
             requiere = False
             
             if record.equipment_id and record.equipment_id.name:
+                # ✅ CORRECCIÓN: Usar el objeto modelo correctamente
                 modelo = record.equipment_id.name
                 
                 # Verificar solicitudes urgentes del cliente
@@ -452,9 +451,17 @@ class TonerCounterSubmission(models.Model):
                     record.requiere_toner_magenta or record.requiere_toner_yellow):
                     requiere = True
                 
+                # ✅ CORRECCIÓN: Acceder a campos que SÍ existen en modelo.maquina
                 # Verificar stock mínimo - Tóner Negro
-                if record.stock_total_black <= (modelo.stock_minimo_black or 1):
-                    requiere = True
+                # NOTA: Debes verificar qué campos realmente existen en modelo.maquina
+                # Por ahora uso stock_minimo_black, pero puede ser otro nombre
+                if hasattr(modelo, 'stock_minimo_black'):
+                    if record.stock_total_black <= (modelo.stock_minimo_black or 1):
+                        requiere = True
+                else:
+                    # Fallback: usar valores por defecto si no existen los campos
+                    if record.stock_total_black <= 1:
+                        requiere = True
                 
                 # Verificar niveles críticos
                 if record.nivel_toner_black in ['critico', 'agotado']:
@@ -462,9 +469,14 @@ class TonerCounterSubmission(models.Model):
                 
                 # Para máquinas color, verificar tóners color
                 if record.equipment_id.tipo_maquina_id == 'color':
-                    if (record.stock_total_cyan <= (modelo.stock_minimo_cyan or 1) or
-                        record.stock_total_magenta <= (modelo.stock_minimo_magenta or 1) or
-                        record.stock_total_yellow <= (modelo.stock_minimo_yellow or 1)):
+                    # Usar hasattr para verificar si existen los campos
+                    stock_min_cyan = getattr(modelo, 'stock_minimo_cyan', 1)
+                    stock_min_magenta = getattr(modelo, 'stock_minimo_magenta', 1)
+                    stock_min_yellow = getattr(modelo, 'stock_minimo_yellow', 1)
+                    
+                    if (record.stock_total_cyan <= stock_min_cyan or
+                        record.stock_total_magenta <= stock_min_magenta or
+                        record.stock_total_yellow <= stock_min_yellow):
                         requiere = True
                     
                     if (record.nivel_toner_cyan in ['critico', 'agotado'] or

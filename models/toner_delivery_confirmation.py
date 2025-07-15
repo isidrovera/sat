@@ -106,7 +106,7 @@ class TonerDeliveryConfirmation(models.Model):
     
     received_by_name = fields.Char(
         string='Recibido por',
-        required=True,
+        required=False,  # ✅ CORRECCIÓN: No obligatorio al crear
         tracking=True,
         help='Nombre completo de quien recibió la entrega'
     )

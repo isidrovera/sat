@@ -29,6 +29,10 @@ from . import whatsapp_notification_wizard
 from . import toner_delivery_confirmation
 from . import toner_delivery
 from . import toner_solicitudes
+from . import inspeccion_equipo
+from . import solicitud_partes
+from . import solicitud_partes_linea
+from . import wizard_inspeccion
 
 
 
