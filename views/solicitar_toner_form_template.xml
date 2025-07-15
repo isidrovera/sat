@@ -302,122 +302,143 @@
             </style>
 
             <script>
-                function goBack() {
-                    if (document.referrer) {
-                        window.location.href = document.referrer;
-                    } else {
-                        window.history.back();
-                    }
+               function goBack() {
+    if (document.referrer) {
+        window.location.href = document.referrer;
+    } else {
+        window.history.back();
+    }
+}
+
+// Funcionalidad para seleccionar tóners
+document.addEventListener('DOMContentLoaded', function() {
+    const tonerCards = document.querySelectorAll('.toner-card');
+    const checkboxes = document.querySelectorAll('.toner-checkbox');
+    const validateBtn = document.getElementById('validateBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const validationAlert = document.getElementById('validationAlert');
+
+    // Funcionalidad de selección de tarjetas
+    tonerCards.forEach(function(card) {
+        card.addEventListener('click', function() {
+            const checkbox = card.querySelector('.toner-checkbox');
+            checkbox.checked = !checkbox.checked;
+            card.classList.toggle('selected', checkbox.checked);
+            checkTonerSelection();
+        });
+    });
+
+    // Sincronizar checkboxes con tarjetas
+    checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const card = checkbox.closest('.toner-card');
+            card.classList.toggle('selected', checkbox.checked);
+            checkTonerSelection();
+        });
+    });
+
+    function checkTonerSelection() {
+        const hasSelection = Array.from(checkboxes).some(cb =&gt; cb.checked);
+        
+        if (hasSelection &amp;&amp; validateBtn) {
+            validateBtn.style.display = 'inline-block';
+            submitBtn.textContent = 'Enviar sin Validar';
+            submitBtn.className = 'btn btn-outline-primary';
+        } else {
+            if (validateBtn) {
+                validateBtn.style.display = 'none';
+            }
+            submitBtn.textContent = 'Enviar Solicitud';
+            submitBtn.className = 'btn btn-primary';
+            hideValidationAlert();
+        }
+    }
+
+    // Validación previa usando FormData (CORREGIDO)
+    if (validateBtn) {
+        validateBtn.addEventListener('click', function() {
+            console.log("=== INICIANDO VALIDACIÓN ===");
+            
+            validateBtn.disabled = true;
+            validateBtn.innerHTML = 'Validando...';
+            
+            // Crear FormData en lugar de JSON
+            const formData = new FormData();
+            formData.append('equipment_id', document.querySelector('input[name="id_registro"]').value);
+            formData.append('toner_black', document.getElementById('toner_black').checked);
+            formData.append('toner_cyan', document.getElementById('toner_cyan') ? document.getElementById('toner_cyan').checked : false);
+            formData.append('toner_magenta', document.getElementById('toner_magenta') ? document.getElementById('toner_magenta').checked : false);
+            formData.append('toner_yellow', document.getElementById('toner_yellow') ? document.getElementById('toner_yellow').checked : false);
+            formData.append('counter_bn', document.getElementById('contometro_black').value);
+            formData.append('counter_color', document.getElementById('contometro_color') ? document.getElementById('contometro_color').value : 0);
+
+            // Log para debug
+            console.log("Datos enviados:");
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+
+            fetch('/toner/validate_request_http', {
+                method: 'POST',
+                body: formData  // Sin Content-Type, el navegador lo establece automáticamente
+            })
+            .then(response =&gt; {
+                console.log("Status:", response.status);
+                if (!response.ok) {
+                    throw new Error('Error HTTP: ' + response.status);
                 }
+                return response.json();
+            })
+            .then(data =&gt; {
+                console.log("Respuesta:", data);
+                showValidationResult(data);
+                validateBtn.disabled = false;
+                validateBtn.innerHTML = 'Validar Solicitud';
+            })
+            .catch(error =&gt; {
+                console.error('Error completo:', error);
+                showValidationAlert('Error al validar: ' + error.message, 'danger');
+                validateBtn.disabled = false;
+                validateBtn.innerHTML = 'Validar Solicitud';
+            });
+        });
+    }
 
-                // Funcionalidad para seleccionar tóners
-                document.addEventListener('DOMContentLoaded', function() {
-                    const tonerCards = document.querySelectorAll('.toner-card');
-                    const checkboxes = document.querySelectorAll('.toner-checkbox');
-                    const validateBtn = document.getElementById('validateBtn');
-                    const submitBtn = document.getElementById('submitBtn');
-                    const validationAlert = document.getElementById('validationAlert');
-
-                    // Funcionalidad de selección de tarjetas
-                    tonerCards.forEach(function(card) {
-                        card.addEventListener('click', function() {
-                            const checkbox = card.querySelector('.toner-checkbox');
-                            checkbox.checked = !checkbox.checked;
-                            card.classList.toggle('selected', checkbox.checked);
-                            checkTonerSelection();
-                        });
-                    });
-
-                    // Sincronizar checkboxes con tarjetas
-                    checkboxes.forEach(function(checkbox) {
-                        checkbox.addEventListener('change', function() {
-                            const card = checkbox.closest('.toner-card');
-                            card.classList.toggle('selected', checkbox.checked);
-                            checkTonerSelection();
-                        });
-                    });
-
-                    function checkTonerSelection() {
-                        const hasSelection = Array.from(checkboxes).some(cb =&gt; cb.checked);
-                        
-                        if (hasSelection) {
-                            // Mostrar botón de validación si la gestión automática está activa
-                            <t t-if="values.get('gestion_automatica', True)">
-                                validateBtn.style.display = 'inline-block';
-                                submitBtn.textContent = 'Enviar sin Validar';
-                                submitBtn.className = 'btn btn-outline-primary';
-                            </t>
-                        } else {
-                            validateBtn.style.display = 'none';
-                            submitBtn.textContent = 'Enviar Solicitud';
-                            submitBtn.className = 'btn btn-primary';
-                            hideValidationAlert();
-                        }
-                    }
-
-                    // Validación previa (opcional)
-                    validateBtn.addEventListener('click', function() {
-                        validateBtn.disabled = true;
-                        validateBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Validando...';
-                        
-                        const formData = {
-                            equipment_id: document.querySelector('input[name="id_registro"]').value,
-                            toner_black: document.getElementById('toner_black').checked,
-                            toner_cyan: document.getElementById('toner_cyan') ? document.getElementById('toner_cyan').checked : false,
-                            toner_magenta: document.getElementById('toner_magenta') ? document.getElementById('toner_magenta').checked : false,
-                            toner_yellow: document.getElementById('toner_yellow') ? document.getElementById('toner_yellow').checked : false,
-                            counter_bn: document.getElementById('contometro_black').value,
-                            counter_color: document.getElementById('contometro_color') ? document.getElementById('contometro_color').value : 0
-                        };
-
-                        fetch('/toner/validate_request', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(formData)
-                        })
-                        .then(response =&gt; response.json())
-                        .then(data =&gt; {
-                            showValidationResult(data);
-                            validateBtn.disabled = false;
-                            validateBtn.innerHTML = '<i class="fa fa-check-circle"></i> Validar Solicitud';
-                        })
-                        .catch(error =&gt; {
-                            console.error('Error:', error);
-                            showValidationAlert('Error al validar la solicitud', 'danger');
-                            validateBtn.disabled = false;
-                            validateBtn.innerHTML = '<i class="fa fa-check-circle"></i> Validar Solicitud';
-                        });
-                    });
-
-                    function showValidationResult(result) {
-                        if (result.valid) {
-                            showValidationAlert('✅ Solicitud válida. Puede proceder con el envío.', 'success');
-                            submitBtn.textContent = 'Enviar Solicitud Validada';
-                            submitBtn.className = 'btn btn-success';
-                        } else {
-                            let message = '❌ ' + result.message;
-                            if (result.blocked_toners &amp;&amp; result.blocked_toners.length &gt; 0) {
-                                message += '\n\nTóners no necesarios:';
-                                result.blocked_toners.forEach(function(blocked) {
-                                    message += '\n• ' + blocked.color + ': ' + blocked.reason;
-                                });
-                            }
-                            showValidationAlert(message, 'warning');
-                        }
-                    }
-
-                    function showValidationAlert(message, type) {
-                        validationAlert.className = `alert alert-${type}`;
-                        validationAlert.innerHTML = message.replace(/\n/g, '<br/>');
-                        validationAlert.classList.remove('d-none');
-                    }
-
-                    function hideValidationAlert() {
-                        validationAlert.classList.add('d-none');
-                    }
+    function showValidationResult(result) {
+        console.log("Mostrando resultado:", result);
+        
+        if (result.valid) {
+            showValidationAlert('Solicitud válida. Puede proceder con el envío.', 'success');
+            submitBtn.textContent = 'Enviar Solicitud Validada';
+            submitBtn.className = 'btn btn-success';
+        } else {
+            let message = result.message;
+            if (result.blocked_toners &amp;&amp; result.blocked_toners.length &gt; 0) {
+                message += ' - Tóners no necesarios: ';
+                const blockedList = result.blocked_toners.map(function(blocked) {
+                    return blocked.color + ' (' + blocked.reason + ')';
                 });
+                message += blockedList.join(', ');
+            }
+            showValidationAlert(message, 'warning');
+        }
+    }
+
+    function showValidationAlert(message, type) {
+        validationAlert.className = 'alert alert-' + type;
+        validationAlert.innerHTML = message;
+        validationAlert.classList.remove('d-none');
+        
+        // Scroll hacia el alert
+        validationAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideValidationAlert() {
+        if (validationAlert) {
+            validationAlert.classList.add('d-none');
+        }
+    }
+});
             </script>
         </t>
     </template>
