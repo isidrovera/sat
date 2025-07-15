@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 from odoo import models, fields, api
 import requests
 import json
