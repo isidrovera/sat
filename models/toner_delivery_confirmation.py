@@ -608,7 +608,7 @@ class TonerDeliveryConfirmation(models.Model):
             'stock_cliente_toner_cyan': new_stock_cyan,
             'stock_cliente_toner_magenta': new_stock_magenta,
             'stock_cliente_toner_yellow': new_stock_yellow,
-            'fecha_ultima_entrega_toner': self.delivery_date,
+            # ✅ ELIMINAR ESTA LÍNEA: 'fecha_ultima_entrega_toner': self.delivery_date,
         })
         
         _logger.info(
@@ -616,7 +616,6 @@ class TonerDeliveryConfirmation(models.Model):
             self.equipment_id.serie or self.equipment_id.id,
             new_stock_black, new_stock_cyan, new_stock_magenta, new_stock_yellow
         )
-
     def action_view_equipment(self):
         """Muestra el equipo relacionado"""
         self.ensure_one()
