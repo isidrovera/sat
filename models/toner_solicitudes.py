@@ -850,7 +850,7 @@ class TonerCounterSubmission(models.Model):
     def send_whatsapp_message(self, phone, message):
         """Envía mensaje de WhatsApp usando la API corporativa"""
         try:
-            url = 'https://whatsappapi.copiercompanysac.com/api/message'
+            url = 'https://whatsapp.andessolutioncopiers.com/api/message'
             data = {
                 'phone': phone,
                 'message': message
@@ -912,7 +912,7 @@ class TonerCounterSubmission(models.Model):
                 entrega_info = "\n\n✅ *Stock Suficiente:*\nSu stock actual es suficiente según nuestros parámetros."
 
             message = (
-                f"*🏢 Copier Company*\n\n"
+                f"*🏢 Soporte*\n\n"
                 f"{saludo}, {self.client_name}.\n\n"
                 f"Hemos recibido exitosamente su reporte de contadores y tóner:\n\n"
                 f"📋 *Número de Reporte:* {self.secuencia}\n"
@@ -925,11 +925,8 @@ class TonerCounterSubmission(models.Model):
                 f"{entrega_info}\n\n"
                 f"Su reporte será revisado por nuestro equipo administrativo.\n\n"
                 f"Recibirá confirmación de la validación en: {self.client_email}\n\n"
-                f"Gracias por confiar en Copier Company.\n\n"
-                f"Atentamente,\n"
-                f"📞 Administración Copier Company\n"
-                f"☎️ Tel: +51975399303\n"
-                f"📧 Email: info@copiercompanysac.com"
+                
+                
             )
 
             # Enviar mensaje

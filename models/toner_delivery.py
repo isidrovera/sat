@@ -735,7 +735,7 @@ class TonerDeliverySchedule(models.Model):
     def send_whatsapp_message(self, phone, message):
         """Envía mensaje de WhatsApp usando la API corporativa"""
         try:
-            url = 'https://whatsappapi.copiercompanysac.com/api/message'
+            url = 'https://whatsapp.andessolutioncopiers.com/api/message'
             data = {
                 'phone': phone,
                 'message': message
@@ -804,7 +804,7 @@ class TonerDeliverySchedule(models.Model):
             equipment_name = self.equipment_id.name.name if self.equipment_id and self.equipment_id.name.name else 'su equipo'
             
             message = (
-                f"*🏢 Copier Company*\n\n"
+                f"*🏢 Soporte*\n\n"
                 f"{saludo}!\n\n"
                 f"Le informamos que su pedido de tóner ha sido enviado:\n\n"
                 f"📋 *Orden:* {self.secuencia}\n"
@@ -824,10 +824,7 @@ class TonerDeliverySchedule(models.Model):
             
             message += (
                 f"\nSi tiene alguna consulta, no dude en contactarnos.\n\n"
-                f"Atentamente,\n"
-                f"📞 Equipo Copier Company\n"
-                f"☎️ Tel: +51975399303\n"
-                f"📧 Email: info@copiercompanysac.com"
+                
             )
 
             # Enviar mensaje
@@ -878,7 +875,7 @@ class TonerDeliverySchedule(models.Model):
             equipment_name = self.equipment_id.name.name if self.equipment_id and self.equipment_id.name.name else 'su equipo'
             
             message = (
-                f"*🏢 Copier Company*\n\n"
+                f"*🏢 Soporte*\n\n"
                 f"👋 Recordatorio de entrega de tóner:\n\n"
                 f"📋 *Orden:* {self.secuencia}\n"
                 f"🖨️ *Equipo:* {equipment_name}\n"
@@ -886,8 +883,7 @@ class TonerDeliverySchedule(models.Model):
                 f"📍 *Dirección:* {self.delivery_address or 'Dirección registrada'}\n\n"
                 f"Por favor, asegúrese de que haya alguien disponible para recibir la entrega.\n\n"
                 f"Si necesita reprogramar, contáctenos:\n"
-                f"☎️ Tel: +51975399303\n"
-                f"📧 Email: info@copiercompanysac.com"
+               
             )
 
             response = self.send_whatsapp_message(phone, message)

@@ -236,7 +236,7 @@ class TonerRequestController(http.Controller):
             }
             
             # Enviar notificación de error al cliente
-            mensaje = f"""*🏢 Copier Company*
+            mensaje = f"""*🏢 Soporte*
 
 ⚠️ *Error en Solicitud de Tóner*
 
@@ -249,11 +249,11 @@ Su solicitud no pudo ser procesada porque no seleccionó ningún tóner.
 
 Por favor, vuelva a llenar el formulario seleccionando al menos un tipo de tóner.
 
-📞 Tel: +51975399303
+📞 Tel: +51924894829
 📧 soporte@andescopiers.com.pe
 
 Atentamente,
-Copier Company"""
+Andes Copier"""
             
             self.send_whatsapp_message_toner(datos_formulario['celular'], mensaje)
             
@@ -351,7 +351,7 @@ Copier Company"""
                 blocked_list.append(f"• {blocked['color'].title()}: {blocked['reason']}")
             blocked_info = "\n\n🚫 *Tóners no necesarios:*\n" + "\n".join(blocked_list)
         
-        mensaje = f"""*🏢 Copier Company*
+        mensaje = f"""*🏢 Soporte*
 
 🚨 *Solicitud de Tóner No Aprobada*
 
@@ -369,11 +369,11 @@ Su solicitud de tóner ha sido evaluada automáticamente por nuestro sistema:
 
 Si considera que hay un error o tiene una situación especial, puede contactarnos directamente:
 
-📞 Tel: +51975399303
+📞 Tel: +51924894829
 📧 Email: soporte@andescopiers.com.pe
 
 Atentamente,
-Sistema Automatizado Copier Company"""
+Soporte"""
         
         return mensaje
 
@@ -391,7 +391,7 @@ Sistema Automatizado Copier Company"""
             summary = creation_result.get('validation_details', {})
             toners_aprobados = summary.get('requested_toners', [])
             
-            mensaje = f"""*🏢 Copier Company*
+            mensaje = f"""*🏢 Soporte*
 
 ✅ *Solicitud de Tóner Aprobada*
 
@@ -408,9 +408,7 @@ Su solicitud ha sido aprobada y registrada en nuestro sistema:
 
 Recibirá confirmación de la fecha de entrega.
 
-Gracias por confiar en Copier Company.
-
-📞 Tel: +51975399303
+📞 Tel: +51924894829
 📧 soporte@andescopiers.com.pe"""
             
             self.send_whatsapp_message_toner(datos_formulario['celular'], mensaje)

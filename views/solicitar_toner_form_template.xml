@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="text-center mt-4">
                                 <h6><strong>¿Considera que hay un error?</strong></h6>
                                 <p>Puede contactarnos directamente:</p>
-                                <a href="tel:+51975399303" class="btn btn-primary me-2">
+                                <a href="tel:+51924894829" class="btn btn-primary me-2">
                                     <i class="fa fa-phone"></i> +51 975 399 303
                                 </a>
                                 <a href="mailto:soporte@andescopiers.com.pe" class="btn btn-outline-primary">
@@ -566,9 +566,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             
                             <div class="text-center mt-4">
-                                <h6><strong>¡Gracias por confiar en Copier Company!</strong></h6>
+                                <h6><strong>¡Gracias por confiar en Andes Copier!</strong></h6>
                                 <p>Ha recibido una confirmación por WhatsApp.</p>
-                                <a href="tel:+51975399303" class="btn btn-success me-2">
+                                <a href="tel:+51924894829" class="btn btn-success me-2">
                                     <i class="fa fa-phone"></i> +51 975 399 303
                                 </a>
                                 <a href="mailto:soporte@andescopiers.com.pe" class="btn btn-outline-success">
@@ -630,7 +630,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <button type="button" class="btn btn-primary me-2" onclick="goBack()">
                                     <i class="fa fa-arrow-left"></i> Volver al Formulario
                                 </button>
-                                <a href="tel:+51975399303" class="btn btn-outline-primary">
+                                <a href="tel:+51924894829" class="btn btn-outline-primary">
                                     <i class="fa fa-phone"></i> Contactar Soporte
                                 </a>
                             </div>
