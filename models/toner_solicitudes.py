@@ -444,8 +444,8 @@ class TonerCounterSubmission(models.Model):
         for record in self:
             requiere = False
             
-            if record.equipment_id and record.equipment_id.name.name:
-                modelo = record.equipment_id.name.name
+            if record.equipment_id and record.equipment_id.name:
+                modelo = record.equipment_id.name
                 
                 # Verificar solicitudes urgentes del cliente
                 if (record.requiere_toner_black or record.requiere_toner_cyan or 
