@@ -107,44 +107,55 @@ class TonerRequestController(http.Controller):
             _logger.exception(f"Error obteniendo info de stock: {str(e)}")
             return {}
 
-    @http.route('/toner/validate_request', type='json', auth="public", methods=['POST'])
-    def validate_toner_request(self, **kwargs):
+    @http.route('/toner/validate_request_http', type='http', auth="public", methods=['POST'], csrf=False)
+    def validate_toner_request_http(self, **post):
         """
-        ✅ NUEVA RUTA: Valida la solicitud de tóner antes de enviarla
+        Ruta HTTP alternativa para validación de tóner
         """
         try:
-            data = kwargs
-            equipment_id = data.get('equipment_id')
+            _logger.info("=== VALIDACIÓN HTTP INICIADA ===")
+            _logger.info(f"POST data: {post}")
             
+            equipment_id = post.get('equipment_id')
             if not equipment_id:
-                return {'valid': False, 'message': 'Equipo no especificado'}
+                return json.dumps({'valid': False, 'message': 'Equipo no especificado'})
             
-            # Preparar tóners solicitados
+            # Preparar datos
             requested_toners = {
-                'black': data.get('toner_black', False),
-                'cyan': data.get('toner_cyan', False),
-                'magenta': data.get('toner_magenta', False),
-                'yellow': data.get('toner_yellow', False),
+                'black': post.get('toner_black') == 'true',
+                'cyan': post.get('toner_cyan') == 'true',
+                'magenta': post.get('toner_magenta') == 'true',
+                'yellow': post.get('toner_yellow') == 'true',
             }
             
-            # Validar usando el método del modelo
+            _logger.info(f"Tóners solicitados (HTTP): {requested_toners}")
+            
+            # Validar
             validation_result = request.env['toner.counter.submission'].sudo().validate_web_toner_request(
                 equipment_id=int(equipment_id),
                 requested_toners=requested_toners,
                 current_counters={
-                    'bn': data.get('counter_bn', 0),
-                    'color': data.get('counter_color', 0)
+                    'bn': int(post.get('counter_bn', 0)),
+                    'color': int(post.get('counter_color', 0))
                 }
             )
             
-            return validation_result
+            _logger.info(f"Resultado validación HTTP: {validation_result}")
+            
+            # Retornar JSON
+            response = request.make_response(
+                json.dumps(validation_result),
+                headers={'Content-Type': 'application/json'}
+            )
+            return response
             
         except Exception as e:
-            _logger.exception(f"Error validando solicitud: {str(e)}")
-            return {
-                'valid': False,
-                'message': f'Error del sistema: {str(e)}'
-            }
+            _logger.exception(f"Error en validación HTTP: {str(e)}")
+            error_response = {'valid': False, 'message': f'Error: {str(e)}'}
+            return request.make_response(
+                json.dumps(error_response),
+                headers={'Content-Type': 'application/json'}
+            )
 
     @http.route('/toner/enviar_solicitud', type='http', auth="public", methods=['POST'], website=True)
     def send_toner_request(self, **post):
