@@ -528,8 +528,8 @@ class TonerDeliveryConfirmation(models.Model):
         
         # Marcar programación como entregada
         if self.schedule_id:
-            self.schedule_id.state = 'delivered'
-            self.schedule_id.delivery_confirmation_id = self.id
+            self.schedule_id.state = 'entregado'  # ✅ CAMBIAR 'delivered' por 'entregado'
+            self.schedule_id.confirmation_id = self.id  # ✅ También cambiar delivery_confirmation_id por confirmation_id
         
         self.state = 'processed'
         self.message_post(
