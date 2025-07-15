@@ -286,8 +286,7 @@
             <field name="model">modelo.maquina</field>
             <field name="arch" type="xml">
                 <list string="Modelos de Máquina" 
-                      editable="bottom"
-                      sample="1">
+                      >
                     <field name="tipo_id"/>
                     <field name="tipo_maquina_id"/>
                     <field name="marca_id"/>
