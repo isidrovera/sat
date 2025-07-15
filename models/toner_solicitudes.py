@@ -549,7 +549,7 @@ class TonerCounterSubmission(models.Model):
         📊 <b>Nuevo Reporte de Contadores y Tóner</b><br/><br/>
         
         <b>📋 Información del Equipo:</b><br/>
-        • <b>Equipo:</b> {self.equipment_id.name if self.equipment_id.name else 'Sin nombre'}<br/>
+        • <b>Equipo:</b> {self.equipment_id.name.name if self.equipment_id.name.name else 'Sin nombre'}<br/>
         • <b>Serie:</b> {self.equipment_id.serie or 'Sin serie'}<br/>
         • <b>Cliente:</b> {self.partner_id.name if self.partner_id else 'Sin cliente'}<br/><br/>
         
@@ -789,7 +789,7 @@ class TonerCounterSubmission(models.Model):
             delivery_date = fields.Date.today() + timedelta(days=2)
         
         # Determinar cantidades a entregar
-        modelo = self.equipment_id.name
+        modelo = self.equipment_id.name.name
         qty_black = 0
         qty_cyan = 0
         qty_magenta = 0
@@ -884,7 +884,7 @@ class TonerCounterSubmission(models.Model):
                 saludo = "👋 Buenas noches"
 
             # Construir mensaje de confirmación
-            equipment_name = self.equipment_id.name if self.equipment_id and self.equipment_id.name else 'Sin especificar'
+            equipment_name = self.equipment_id.name.name if self.equipment_id and self.equipment_id.name.name else 'Sin especificar'
             serie = self.equipment_id.serie or 'Sin serie'
 
             # Resumen de stock reportado
@@ -1038,7 +1038,7 @@ class TonerCounterSubmission(models.Model):
         """Obtiene datos de resumen para dashboard"""
         self.ensure_one()
         return {
-            'equipment_name': self.equipment_id.name if self.equipment_id.name else 'Sin nombre',
+            'equipment_name': self.equipment_id.name.name if self.equipment_id.name.name else 'Sin nombre',
             'client_name': self.client_name,
             'submission_date': self.submission_date.strftime('%d/%m/%Y %H:%M'),
             'copies_total': self.total_copies_period,
