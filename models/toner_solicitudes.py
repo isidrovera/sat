@@ -789,7 +789,7 @@ class TonerCounterSubmission(models.Model):
             delivery_date = fields.Date.today() + timedelta(days=2)
         
         # Determinar cantidades a entregar
-        modelo = self.equipment_id.name.name
+        modelo = self.equipment_id.name
         qty_black = 0
         qty_cyan = 0
         qty_magenta = 0
