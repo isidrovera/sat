@@ -687,8 +687,9 @@ class TonerCounterSubmission(models.Model):
             self.delivery_scheduled_id = delivery.id
             self.state = 'processed'
             
+            # ✅ LÍNEA CORREGIDA - USAR display_name
             self.message_post(
-                body=f"🚚 Entrega programada creada: {delivery.name or delivery.id}",
+                body=f"🚚 Entrega programada creada: {delivery.display_name}",
                 message_type='notification'
             )
             
@@ -703,7 +704,6 @@ class TonerCounterSubmission(models.Model):
         except Exception as e:
             _logger.exception("Error creando programación de entrega: %s", str(e))
             raise UserError(f"Error al crear la programación de entrega: {str(e)}")
-
     def action_reject(self):
         """Rechaza el reporte"""
         self.ensure_one()
