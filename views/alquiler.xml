@@ -10,48 +10,48 @@
                     <header>
                         <!-- Botones principales de acción -->
                         <button string="Crear Pedido" name="create_sale_order" type="object"
-                            icon="fa-cart-plus" class="btn btn-success" 
+                            icon="fa-cart-plus" class="btn btn-success"
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
-                        
+
                         <button string="Crear Ticket" name="create_ticket" type="object"
-                            icon="fa-wrench" class="btn btn-primary" 
+                            icon="fa-wrench" class="btn btn-primary"
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
-                        
+
                         <button string="Enviar Recordatorio" type="object" class="oe_highlight"
-                            name="button_send_test_mail" 
+                            name="button_send_test_mail"
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
-                        
+
                         <button name="action_enviar_inspeccion"
                             string="Enviar Inspección"
                             type="object"
-                            class="btn-primary" 
+                            class="btn-primary"
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
-                        
+
                         <button name="action_solicitar_partes"
                             string="Solicitar Partes"
                             type="object"
-                            class="oe_highlight" 
+                            class="oe_highlight"
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
-                        <button name="action_view_toner_reports" 
-                                type="object" 
-                                string="Reportes de Tóner" 
-                                class="btn-info"
-                                icon="fa-file-text"
-                                invisible="estado_alquiler_id != 'alquilada'"/>
+                        <button name="action_view_toner_reports"
+                            type="object"
+                            string="Reportes de Tóner"
+                            class="btn-info"
+                            icon="fa-file-text"
+                            invisible="estado_alquiler_id != 'alquilada'" />
 
-                        <button name="action_view_toner_deliveries" 
-                                type="object" 
-                                string="Entregas de Tóner" 
-                                class="btn-secondary"
-                                icon="fa-truck"
-                                invisible="estado_alquiler_id != 'alquilada'"/>
+                        <button name="action_view_toner_deliveries"
+                            type="object"
+                            string="Entregas de Tóner"
+                            class="btn-secondary"
+                            icon="fa-truck"
+                            invisible="estado_alquiler_id != 'alquilada'" />
 
-                        <button name="action_create_manual_delivery" 
-                                type="object" 
-                                string="Programar Entrega Tóner" 
-                                class="btn-primary"
-                                icon="fa-plus"
-                                invisible="estado_alquiler_id != 'alquilada'"/>
+                        <button name="action_create_manual_delivery"
+                            type="object"
+                            string="Programar Entrega Tóner"
+                            class="btn-primary"
+                            icon="fa-plus"
+                            invisible="estado_alquiler_id != 'alquilada'" />
 
                         <field name="estado_alquiler_id" widget="statusbar"
                             options="{'clickable': '1'}" />
@@ -107,22 +107,24 @@
                                 <field name="partes_solicitadas_count" widget="statinfo"
                                     string="Pedidos Partes" />
                             </button>
-                            <button class="oe_stat_button" 
-                                    type="object" 
-                                    name="action_view_toner_reports"
-                                    icon="fa-tint"
-                                    invisible="estado_alquiler_id != 'alquilada'">
-                                <field string="Reportes Tóner" name="toner_reports_count" widget="statinfo" />
+                            <button class="oe_stat_button"
+                                type="object"
+                                name="action_view_toner_reports"
+                                icon="fa-tint"
+                                invisible="estado_alquiler_id != 'alquilada'">
+                                <field string="Reportes Tóner" name="toner_reports_count"
+                                    widget="statinfo" />
                             </button>
 
-                            <button class="oe_stat_button" 
-                                    type="object" 
-                                    name="action_view_toner_deliveries"
-                                    icon="fa-truck"
-                                    invisible="estado_alquiler_id != 'alquilada'">
-                                <field string="Entregas Tóner" name="toner_deliveries_count" widget="statinfo" />
+                            <button class="oe_stat_button"
+                                type="object"
+                                name="action_view_toner_deliveries"
+                                icon="fa-truck"
+                                invisible="estado_alquiler_id != 'alquilada'">
+                                <field string="Entregas Tóner" name="toner_deliveries_count"
+                                    widget="statinfo" />
                             </button>
-                                                    </div>
+                        </div>
 
                         <separator />
                         <div class="oe_title">
@@ -775,67 +777,150 @@
                                     </list>
                                 </field>
                             </page>
-   <page string="Tóner y Contadores">
-    <group>
-        <field name="contador_actual_black"/>
-        <field name="contador_actual_color" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="fecha_ultima_lectura"/>
-    </group>
+                            <page string="Tóner y Contadores">
+                                <!-- Resumen General en la parte superior -->
+                                <group string="📊 Resumen General" col="4">
+                                    <field name="estado_stock_toner" readonly="1" widget="badge" />
+                                    <field name="fecha_ultima_lectura" readonly="1" />
+                                    <field name="stock_total_toner_black" readonly="1" />
+                                    <field name="stock_total_toner_cyan"
+                                        invisible="tipo_maquina_id == 'monocromatica'" readonly="1" />
+                                    <field name="stock_total_toner_magenta"
+                                        invisible="tipo_maquina_id == 'monocromatica'" readonly="1" />
+                                    <field name="stock_total_toner_yellow"
+                                        invisible="tipo_maquina_id == 'monocromatica'" readonly="1" />
+                                </group>
 
-    <group string="Stock del Cliente">
-        <field name="stock_cliente_toner_black"/>
-        <field name="stock_cliente_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="stock_cliente_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="stock_cliente_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
-    </group>
+                                <!-- Contadores Actuales -->
+                                <group string="📈 Contadores Actuales" col="4">
+                                    <field name="contador_actual_black" />
+                                    <field name="contador_actual_color"
+                                        invisible="tipo_maquina_id == 'monocromatica'" />
+                                </group>
 
-    <group string="Tóner Instalado">
-        <field name="toner_black_instalado"/>
-        <field name="toner_cyan_instalado" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="toner_magenta_instalado" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="toner_yellow_instalado" invisible="tipo_maquina_id == 'monocromatica'"/>
-    </group>
+                                <!-- Sección dividida en dos columnas principales -->
+                                <group col="2">
+                                    <!-- Columna izquierda: Stock e Instalación -->
+                                    <group>
+                                        <!-- Stock del Cliente -->
+                                        <group string="📦 Stock del Cliente" col="2">
+                                            <field name="stock_cliente_toner_black" />
+                                            <field name="toner_black_instalado"
+                                                widget="boolean_toggle" />
+                                            <field name="stock_cliente_toner_cyan"
+                                                invisible="tipo_maquina_id == 'monocromatica'" />
+                                            <field name="toner_cyan_instalado"
+                                                invisible="tipo_maquina_id == 'monocromatica'"
+                                                widget="boolean_toggle" />
+                                            <field name="stock_cliente_toner_magenta"
+                                                invisible="tipo_maquina_id == 'monocromatica'" />
+                                            <field name="toner_magenta_instalado"
+                                                invisible="tipo_maquina_id == 'monocromatica'"
+                                                widget="boolean_toggle" />
+                                            <field name="stock_cliente_toner_yellow"
+                                                invisible="tipo_maquina_id == 'monocromatica'" />
+                                            <field name="toner_yellow_instalado"
+                                                invisible="tipo_maquina_id == 'monocromatica'"
+                                                widget="boolean_toggle" />
+                                        </group>
+                                    </group>
 
-    <group string="Contadores de Instalación">
-        <field name="contador_instalacion_toner_black"/>
-        <field name="contador_instalacion_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="contador_instalacion_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="contador_instalacion_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
-    </group>
+                                    <!-- Columna derecha: Contadores y Niveles -->
+                                    <group>
+                                        <!-- Contadores de Instalación -->
+                                        <group string="🔧 Contadores de Instalación" col="2">
+                                            <field name="contador_instalacion_toner_black" />
+                                            <field name="fecha_instalacion_toner_black" />
+                                            <field name="contador_instalacion_toner_cyan"
+                                                invisible="tipo_maquina_id == 'monocromatica'" />
+                                            <field name="fecha_instalacion_toner_cyan"
+                                                invisible="tipo_maquina_id == 'monocromatica'" />
+                                            <field name="contador_instalacion_toner_magenta"
+                                                invisible="tipo_maquina_id == 'monocromatica'" />
+                                            <field name="fecha_instalacion_toner_magenta"
+                                                invisible="tipo_maquina_id == 'monocromatica'" />
+                                            <field name="contador_instalacion_toner_yellow"
+                                                invisible="tipo_maquina_id == 'monocromatica'" />
+                                            <field name="fecha_instalacion_toner_yellow"
+                                                invisible="tipo_maquina_id == 'monocromatica'" />
+                                        </group>
+                                    </group>
+                                </group>
 
-    <group string="Páginas Usadas y Restantes">
-        <field name="paginas_usadas_toner_black"/>
-        <field name="paginas_restantes_toner_black"/>
-        <field name="nivel_toner_black"/>
+                                <!-- Análisis de Rendimiento - Separado por colores -->
+                                <notebook>
+                                    <!-- Tóner Negro -->
+                                    <page string="🖤 Tóner Negro">
+                                        <group col="4">
+                                            <field name="paginas_usadas_toner_black" readonly="1" />
+                                            <field name="paginas_restantes_toner_black" readonly="1" />
+                                            <field name="nivel_toner_black" readonly="1"
+                                                widget="progressbar" />
+                                            <label string="" />
+                                        </group>
+                                    </page>
 
-        <field name="paginas_usadas_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="paginas_restantes_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="nivel_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                    <!-- Tóner Color (solo para máquinas color) -->
+                                    <page string="🌈 Tóners Color"
+                                        invisible="tipo_maquina_id == 'monocromatica'">
+                                        <!-- Tóner Cian -->
+                                        <group string="🔵 Tóner Cian" col="4">
+                                            <field name="paginas_usadas_toner_cyan" readonly="1" />
+                                            <field name="paginas_restantes_toner_cyan" readonly="1" />
+                                            <field name="nivel_toner_cyan" readonly="1"
+                                                widget="progressbar" />
+                                            <label string="" />
+                                        </group>
 
-        <field name="paginas_usadas_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="paginas_restantes_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="nivel_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                        <!-- Tóner Magenta -->
+                                        <group string="🔴 Tóner Magenta" col="4">
+                                            <field name="paginas_usadas_toner_magenta" readonly="1" />
+                                            <field name="paginas_restantes_toner_magenta"
+                                                readonly="1" />
+                                            <field name="nivel_toner_magenta" readonly="1"
+                                                widget="progressbar" />
+                                            <label string="" />
+                                        </group>
 
-        <field name="paginas_usadas_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="paginas_restantes_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
-        <field name="nivel_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
-    </group>
+                                        <!-- Tóner Amarillo -->
+                                        <group string="🟡 Tóner Amarillo" col="4">
+                                            <field name="paginas_usadas_toner_yellow" readonly="1" />
+                                            <field name="paginas_restantes_toner_yellow"
+                                                readonly="1" />
+                                            <field name="nivel_toner_yellow" readonly="1"
+                                                widget="progressbar" />
+                                            <label string="" />
+                                        </group>
+                                    </page>
+                                </notebook>
 
-    <group string="Resumen">
-        <field name="estado_stock_toner" readonly="1"/>
-        <field name="stock_total_toner_black" readonly="1"/>
-        <field name="stock_total_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
-        <field name="stock_total_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
-        <field name="stock_total_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
-    </group>
+                                <!-- Botones de Acción -->
+                                <group string="🔧 Acciones" col="4">
+                                    <button name="action_update_toner_stock"
+                                        type="object"
+                                        string="📦 Actualizar Stock"
+                                        class="btn btn-primary"
+                                        icon="fa-refresh" />
 
-    <group>
-        <button name="action_update_toner_stock"
-                type="object"
-                string="Actualizar Stock Manual"
-                class="btn btn-primary"/>
-    </group>
-</page>
+                                    <button name="action_install_new_toner"
+                                        type="object"
+                                        string="🔧 Instalar Tóner"
+                                        class="btn btn-success"
+                                        icon="fa-wrench" />
+
+                                    <button name="action_view_model_toner_config"
+                                        type="object"
+                                        string="⚙️ Configuración Modelo"
+                                        class="btn btn-info"
+                                        icon="fa-cog" />
+
+                                    <button name="action_send_stock_reminder"
+                                        type="object"
+                                        string="📧 Recordatorio Cliente"
+                                        class="btn btn-warning"
+                                        icon="fa-envelope" />
+                                </group>
+                            </page>
 
 
                         </notebook>
@@ -997,7 +1082,7 @@
             </field>
         </record>
 
-      <record id="alquiler_tree_view" model="ir.ui.view">
+        <record id="alquiler_tree_view" model="ir.ui.view">
             <field name="name">alquiler.tree</field>
             <field name="model">alquiler</field>
             <field name="arch" type="xml">
@@ -1046,14 +1131,14 @@
                         decoration-warning="estado_programacion == 'pendiente'"
                         decoration-danger="estado_programacion == 'reprogramado'" />
                     <field name="estado_bloqueo"
-       string="Estado Servicio"
-       widget="badge"
-       decoration-danger="estado_bloqueo in ('suspendido', 'bloqueado')"
-       decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
-       decoration-muted="estado_bloqueo == 'no_accesible'"
-       decoration-success="estado_bloqueo == 'activo'" />
+                        string="Estado Servicio"
+                        widget="badge"
+                        decoration-danger="estado_bloqueo in ('suspendido', 'bloqueado')"
+                        decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
+                        decoration-muted="estado_bloqueo == 'no_accesible'"
+                        decoration-success="estado_bloqueo == 'activo'" />
                     <field name="qr_image" />
-                    
+
                     <!-- Contadores con suma -->
                     <field name="ticket_count"
                         string="Tickets"
