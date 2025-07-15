@@ -33,7 +33,7 @@ class TonerCounterSubmission(models.Model):
         """Calcula el nombre a mostrar del registro"""
         for record in self:
             try:
-                equipment_name = record.equipment_id.name if record.equipment_id and record.equipment_id.name else 'Sin equipo'
+                equipment_name = record.equipment_id.name.name if record.equipment_id and record.equipment_id.name.name else 'Sin equipo'
                 date_str = record.submission_date.strftime('%d/%m/%Y') if record.submission_date else 'Sin fecha'
                 client_name = record.client_name or 'Sin cliente'
                 
@@ -444,8 +444,8 @@ class TonerCounterSubmission(models.Model):
         for record in self:
             requiere = False
             
-            if record.equipment_id and record.equipment_id.name:
-                modelo = record.equipment_id.name
+            if record.equipment_id and record.equipment_id.name.name:
+                modelo = record.equipment_id.name.name
                 
                 # Verificar solicitudes urgentes del cliente
                 if (record.requiere_toner_black or record.requiere_toner_cyan or 
@@ -485,8 +485,8 @@ class TonerCounterSubmission(models.Model):
     def _compute_fecha_sugerida_entrega(self):
         """Calcula fecha sugerida de entrega"""
         for record in self:
-            if record.fecha_estimada_agotamiento_black and record.equipment_id and record.equipment_id.name:
-                modelo = record.equipment_id.name
+            if record.fecha_estimada_agotamiento_black and record.equipment_id and record.equipment_id.name.name:
+                modelo = record.equipment_id.name.name
                 dias_previos = (modelo.tiempo_entrega_dias or 2) + (modelo.margen_seguridad_dias or 3)
                 record.fecha_sugerida_entrega = record.fecha_estimada_agotamiento_black - timedelta(days=dias_previos)
             else:
