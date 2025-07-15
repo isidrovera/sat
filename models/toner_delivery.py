@@ -533,7 +533,58 @@ class TonerDeliverySchedule(models.Model):
                 record.equipment_id.tipo_maquina_id == 'monocromatica' and
                 (record.toner_cyan_qty > 0 or record.toner_magenta_qty > 0 or record.toner_yellow_qty > 0)):
                 raise ValidationError("No se pueden programar tóners de color para máquinas monocromáticas.")
-
+    @api.constrains('equipment_id', 'toner_black_qty', 'toner_cyan_qty', 'toner_magenta_qty', 'toner_yellow_qty')
+    def _validate_toner_necessity(self):
+        """Valida que la entrega sea realmente necesaria basada en stock actual"""
+        for record in self:
+            if record.calculation_basis == 'manual':
+                continue  # No validar entregas manuales
+                
+            if not record.equipment_id or not record.equipment_id.name:
+                continue
+                
+            equipment = record.equipment_id
+            modelo = equipment.name
+            
+            # Solo validar si la gestión automática está activada
+            if not modelo.gestionar_toner_automatico:
+                continue
+            
+            validation_errors = []
+            
+            # Validar tóner negro
+            if record.toner_black_qty > 0:
+                if equipment.stock_total_toner_black >= modelo.stock_minimo_black + 1:
+                    validation_errors.append(
+                        f"Tóner Negro: Stock actual ({equipment.stock_total_toner_black}) supera el mínimo ({modelo.stock_minimo_black})"
+                    )
+            
+            # Validar tóners color para máquinas color
+            if equipment.tipo_maquina_id == 'color':
+                if record.toner_cyan_qty > 0:
+                    if equipment.stock_total_toner_cyan >= (modelo.stock_minimo_cyan or 1) + 1:
+                        validation_errors.append(
+                            f"Tóner Cian: Stock actual ({equipment.stock_total_toner_cyan}) supera el mínimo ({modelo.stock_minimo_cyan or 1})"
+                        )
+                
+                if record.toner_magenta_qty > 0:
+                    if equipment.stock_total_toner_magenta >= (modelo.stock_minimo_magenta or 1) + 1:
+                        validation_errors.append(
+                            f"Tóner Magenta: Stock actual ({equipment.stock_total_toner_magenta}) supera el mínimo ({modelo.stock_minimo_magenta or 1})"
+                        )
+                
+                if record.toner_yellow_qty > 0:
+                    if equipment.stock_total_toner_yellow >= (modelo.stock_minimo_yellow or 1) + 1:
+                        validation_errors.append(
+                            f"Tóner Amarillo: Stock actual ({equipment.stock_total_toner_yellow}) supera el mínimo ({modelo.stock_minimo_yellow or 1})"
+                        )
+            
+            if validation_errors:
+                raise ValidationError(
+                    f"La entrega programada para {equipment.serie} puede ser innecesaria:\n\n" + 
+                    "\n".join([f"• {error}" for error in validation_errors]) +
+                    f"\n\nSi desea proceder de todos modos, cambie la 'Base de Cálculo' a 'Creación Manual'."
+                )
     # ==========================================
     # MÉTODOS DE ACCIÓN - CAMBIO DE ESTADO
     # ==========================================

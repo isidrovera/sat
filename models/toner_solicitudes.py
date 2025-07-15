@@ -1060,4 +1060,207 @@ class TonerCounterSubmission(models.Model):
         }
 
 
-    
+    @api.model
+    def validate_web_toner_request(self, equipment_id, requested_toners, current_counters=None):
+        """
+        Valida si una solicitud web de tóner es válida basada en configuración y stock actual
+        
+        Args:
+            equipment_id: ID del equipo
+            requested_toners: dict con tóners solicitados {'black': True, 'cyan': False, ...}
+            current_counters: dict con contadores actuales {'bn': 1500, 'color': 800}
+        
+        Returns:
+            dict con resultado de validación
+        """
+        try:
+            equipment = self.env['alquiler'].browse(equipment_id)
+            if not equipment.exists():
+                return {
+                    'valid': False,
+                    'reason': 'Equipo no encontrado',
+                    'message': 'El equipo especificado no existe en el sistema.'
+                }
+            
+            if not equipment.name:
+                return {
+                    'valid': False,
+                    'reason': 'Sin configuración',
+                    'message': 'El equipo no tiene configuración de tóner.'
+                }
+            
+            modelo = equipment.name
+            
+            # Verificar si está habilitada la gestión automática
+            if not modelo.gestionar_toner_automatico:
+                return {
+                    'valid': True,
+                    'reason': 'Gestión manual',
+                    'message': 'Gestión manual habilitada - Solicitud aprobada automáticamente.'
+                }
+            
+            validation_result = {
+                'valid': True,
+                'reason': 'approved',
+                'message': 'Solicitud aprobada',
+                'details': {},
+                'warnings': [],
+                'blocked_toners': []
+            }
+            
+            # Evaluar cada tóner solicitado
+            toners_to_check = [
+                ('black', requested_toners.get('black', False), equipment.stock_total_toner_black, modelo.stock_minimo_black),
+                ('cyan', requested_toners.get('cyan', False), equipment.stock_total_toner_cyan, modelo.stock_minimo_cyan),
+                ('magenta', requested_toners.get('magenta', False), equipment.stock_total_toner_magenta, modelo.stock_minimo_magenta),
+                ('yellow', requested_toners.get('yellow', False), equipment.stock_total_toner_yellow, modelo.stock_minimo_yellow),
+            ]
+            
+            # Para máquinas monocromáticas, no evaluar tóners color
+            if equipment.tipo_maquina_id == 'monocromatica':
+                toners_to_check = [toners_to_check[0]]  # Solo negro
+            
+            for color, requested, stock_actual, stock_minimo in toners_to_check:
+                if not requested:
+                    continue
+                    
+                stock_min = stock_minimo or 1
+                
+                validation_result['details'][color] = {
+                    'stock_actual': stock_actual,
+                    'stock_minimo': stock_min,
+                    'requested': requested
+                }
+                
+                # VALIDACIÓN PRINCIPAL: ¿Realmente necesita este tóner?
+                if stock_actual >= stock_min + 1:  # Tiene stock suficiente + 1 de margen
+                    validation_result['blocked_toners'].append({
+                        'color': color,
+                        'reason': f'Stock suficiente: {stock_actual} unidades (mínimo: {stock_min})',
+                        'stock_actual': stock_actual,
+                        'stock_minimo': stock_min
+                    })
+                
+                # ADVERTENCIA: Stock bajo pero no crítico
+                elif stock_actual == stock_min:
+                    validation_result['warnings'].append({
+                        'color': color,
+                        'message': f'Stock en límite mínimo ({stock_actual} unidades). Solicitud aprobada.',
+                        'stock_actual': stock_actual
+                    })
+            
+            # Si hay tóners bloqueados, la solicitud no es completamente válida
+            if validation_result['blocked_toners']:
+                validation_result['valid'] = False
+                validation_result['reason'] = 'stock_sufficient'
+                
+                blocked_colors = [t['color'] for t in validation_result['blocked_toners']]
+                validation_result['message'] = f"Tóner(s) {', '.join(blocked_colors)} no necesario(s) - Stock suficiente"
+            
+            return validation_result
+            
+        except Exception as e:
+            _logger.exception("Error validando solicitud web de tóner: %s", str(e))
+            return {
+                'valid': False,
+                'reason': 'error',
+                'message': f'Error del sistema: {str(e)}'
+            }
+
+    @api.model
+    def create_from_web_request(self, web_data):
+        """
+        Crea un reporte desde una solicitud web del controlador
+        
+        Args:
+            web_data: dict con datos del formulario web
+        
+        Returns:
+            dict con resultado de la creación
+        """
+        try:
+            # Preparar datos para el reporte
+            equipment_id = web_data.get('equipment_id')
+            equipment = self.env['alquiler'].browse(equipment_id)
+            
+            if not equipment.exists():
+                raise ValidationError("Equipo no encontrado")
+            
+            submission_vals = {
+                'equipment_id': equipment_id,
+                'client_name': web_data.get('client_name'),
+                'client_email': web_data.get('client_email', 'solicitud@web.com'),  # Email por defecto si no viene
+                'client_phone': web_data.get('client_phone'),
+                'counter_bn': int(web_data.get('counter_bn', 0)),
+                'counter_color': int(web_data.get('counter_color', 0)),
+                
+                # Stock reportado (usar el stock actual del equipo como base)
+                'stock_reportado_black': equipment.stock_cliente_toner_black,
+                'stock_reportado_cyan': equipment.stock_cliente_toner_cyan,
+                'stock_reportado_magenta': equipment.stock_cliente_toner_magenta,
+                'stock_reportado_yellow': equipment.stock_cliente_toner_yellow,
+                
+                # Tóners solicitados
+                'requiere_toner_black': web_data.get('requires_black', False),
+                'requiere_toner_cyan': web_data.get('requires_cyan', False),
+                'requiere_toner_magenta': web_data.get('requires_magenta', False),
+                'requiere_toner_yellow': web_data.get('requires_yellow', False),
+                
+                # Urgente si cualquier tóner fue solicitado
+                'urgente': any([
+                    web_data.get('requires_black', False),
+                    web_data.get('requires_cyan', False),
+                    web_data.get('requires_magenta', False),
+                    web_data.get('requires_yellow', False)
+                ]),
+                
+                'notes': web_data.get('notes', 'Solicitud desde formulario web'),
+                'state': 'pending'
+            }
+            
+            # Crear el reporte
+            submission = self.create(submission_vals)
+            
+            return {
+                'success': True,
+                'submission_id': submission.id,
+                'secuencia': submission.secuencia,
+                'requires_automatic_delivery': submission.requiere_entrega_automatica,
+                'validation_details': submission._get_validation_summary()
+            }
+            
+        except Exception as e:
+            _logger.exception("Error creando reporte desde web: %s", str(e))
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _get_validation_summary(self):
+        """Obtiene resumen de validación para mostrar al cliente"""
+        self.ensure_one()
+        
+        summary = {
+            'equipment_name': self.equipment_id.name.name if self.equipment_id.name else 'Sin nombre',
+            'client_name': self.client_name,
+            'total_copies_period': self.total_copies_period,
+            'requires_delivery': self.requiere_entrega_automatica,
+            'requested_toners': [],
+            'stock_status': {}
+        }
+        
+        # Tóners solicitados
+        if self.requiere_toner_black: summary['requested_toners'].append('Negro')
+        if self.requiere_toner_cyan: summary['requested_toners'].append('Cian')
+        if self.requiere_toner_magenta: summary['requested_toners'].append('Magenta')
+        if self.requiere_toner_yellow: summary['requested_toners'].append('Amarillo')
+        
+        # Estado del stock
+        summary['stock_status'] = {
+            'black': f"{self.stock_total_black} unidades",
+            'cyan': f"{self.stock_total_cyan} unidades",
+            'magenta': f"{self.stock_total_magenta} unidades",
+            'yellow': f"{self.stock_total_yellow} unidades",
+        }
+        
+        return summary

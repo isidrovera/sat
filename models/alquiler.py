@@ -28,7 +28,7 @@ class UnidadAlquiler(models.Model):
     name = fields.Many2one('modelo.maquina', string='Modelo',
                            required=True
                            )
-
+    serie = fields.Char(string='Serie', required=True, tracking=True)
     tipo_maquina = fields.Char(related='name.tipo_maquina_id.name', readonly=True, store=True,
                                string='Tipo de maquina')
     tipo_maquina_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')],
@@ -36,6 +36,10 @@ class UnidadAlquiler(models.Model):
 
     precio_venta = fields.Float(string='Precio de venta', tracking=True)
     precio_compra = fields.Float(string='Precio de compra', tracking=True)
+    contador_bn = fields.Integer(string="Contador B/N", tracking=True)
+    contador_color = fields.Integer(string="Contador Color", tracking=True)
+    contador_scan = fields.Integer(string="Contador Escáner", tracking=True)
+    fecha_ultima_actualizacion = fields.Datetime(string="Fecha de última actualización")
     # En la clase UnidadAlquiler, agregar este método
     def write(self, vals):
         """Sobrescribir write para sincronizar estado de bloqueo entre equipos del mismo cliente"""
@@ -149,7 +153,7 @@ class UnidadAlquiler(models.Model):
     marca = fields.Char(related='name.marca_id.name',
                         readonly=True, store=True, string='Marca')
 
-    serie = fields.Char(string='Serie', required=True, tracking=True)
+    
 
     @api.constrains('serie')
     def unique_field_serie(self):
@@ -2459,3 +2463,151 @@ class UnidadAlquiler(models.Model):
 
 
 
+    # AGREGAR ESTOS MÉTODOS AL FINAL DE LA CLASE alquiler (UnidadAlquiler)
+
+    def _calcular_dias_restantes_toner(self):
+        """
+        Calcula días estimados restantes para el tóner negro basado en consumo promedio
+        """
+        self.ensure_one()
+        
+        try:
+            # Buscar reportes recientes para calcular consumo promedio
+            reportes_recientes = self.env['toner.counter.submission'].search([
+                ('equipment_id', '=', self.id),
+                ('state', 'in', ['approved', 'processed'])
+            ], order='submission_date desc', limit=5)
+            
+            if len(reportes_recientes) < 2:
+                # No hay suficientes datos, usar valores por defecto conservadores
+                return self.name.tiempo_entrega_dias + self.name.margen_seguridad_dias if self.name else 7
+            
+            # Calcular consumo promedio por día
+            total_dias = 0
+            total_consumo_bn = 0
+            
+            for i in range(len(reportes_recientes) - 1):
+                reporte_actual = reportes_recientes[i]
+                reporte_anterior = reportes_recientes[i + 1]
+                
+                dias_entre_reportes = (reporte_actual.submission_date.date() - reporte_anterior.submission_date.date()).days
+                if dias_entre_reportes > 0:
+                    consumo_periodo = reporte_actual.copies_bn_period
+                    total_dias += dias_entre_reportes
+                    total_consumo_bn += consumo_periodo
+            
+            if total_dias == 0:
+                return 30  # Fallback: 30 días
+            
+            consumo_promedio_diario = total_consumo_bn / total_dias
+            
+            if consumo_promedio_diario <= 0:
+                return 30  # Si no hay consumo, asumir 30 días
+            
+            # Calcular días restantes basado en páginas restantes del tóner negro
+            if self.paginas_restantes_toner_black > 0:
+                dias_restantes = self.paginas_restantes_toner_black / consumo_promedio_diario
+                return max(1, int(dias_restantes))
+            
+            return 1  # Tóner agotado
+            
+        except Exception as e:
+            _logger.exception("Error calculando días restantes de tóner: %s", str(e))
+            return 7  # Fallback conservador
+
+    def _crear_alerta_toner_preventiva(self):
+        """
+        Crea alerta preventiva cuando el tóner se agotará pronto
+        """
+        self.ensure_one()
+        
+        try:
+            dias_restantes = self._calcular_dias_restantes_toner()
+            tiempo_critico = self.name.tiempo_total_prevencion if self.name else 7
+            
+            if dias_restantes <= tiempo_critico:
+                # Verificar si ya existe una entrega programada reciente
+                entrega_existente = self.env['toner.delivery.schedule'].search([
+                    ('equipment_id', '=', self.id),
+                    ('state', 'in', ['programado', 'confirmado', 'preparando', 'enviado']),
+                    ('toner_black_qty', '>', 0)
+                ], limit=1)
+                
+                if entrega_existente:
+                    _logger.info(f"Ya existe entrega programada para equipo {self.serie}")
+                    return False
+                
+                # Crear programación automática
+                delivery_vals = {
+                    'equipment_id': self.id,
+                    'delivery_date_planned': fields.Date.today() + timedelta(days=2),
+                    'toner_black_qty': max(1, (self.name.stock_minimo_black or 1) - self.stock_total_toner_black + 1),
+                    'toner_cyan_qty': 0,
+                    'toner_magenta_qty': 0,
+                    'toner_yellow_qty': 0,
+                    'calculation_basis': 'consumo_automatico',
+                    'priority': 'alta' if dias_restantes <= 3 else 'normal',
+                    'notes': f"Entrega preventiva automática - Se agotará en {dias_restantes} días"
+                }
+                
+                # Para máquinas color, evaluar también tóners color
+                if self.tipo_maquina_id == 'color':
+                    if self.stock_total_toner_cyan <= (self.name.stock_minimo_cyan or 1):
+                        delivery_vals['toner_cyan_qty'] = max(1, (self.name.stock_minimo_cyan or 1) - self.stock_total_toner_cyan + 1)
+                    if self.stock_total_toner_magenta <= (self.name.stock_minimo_magenta or 1):
+                        delivery_vals['toner_magenta_qty'] = max(1, (self.name.stock_minimo_magenta or 1) - self.stock_total_toner_magenta + 1)
+                    if self.stock_total_toner_yellow <= (self.name.stock_minimo_yellow or 1):
+                        delivery_vals['toner_yellow_qty'] = max(1, (self.name.stock_minimo_yellow or 1) - self.stock_total_toner_yellow + 1)
+                
+                delivery = self.env['toner.delivery.schedule'].create(delivery_vals)
+                
+                self.message_post(
+                    body=f"🔔 Alerta preventiva: Entrega automática programada ({delivery.secuencia}) - Tóner se agotará en {dias_restantes} días",
+                    message_type='notification'
+                )
+                
+                return True
+                
+        except Exception as e:
+            _logger.exception("Error creando alerta preventiva: %s", str(e))
+            return False
+
+    @api.model
+    def check_toner_alerts(self):
+        """
+        Método cron para evaluar equipos que necesitan tóner preventivamente
+        """
+        equipos = self.search([
+            ('estado_alquiler_id', '=', 'alquilada'),
+            ('name.gestionar_toner_automatico', '=', True)
+        ])
+        
+        alertas_creadas = 0
+        
+        for equipo in equipos:
+            try:
+                if equipo._crear_alerta_toner_preventiva():
+                    alertas_creadas += 1
+            except Exception as e:
+                _logger.error(f"Error evaluando equipo {equipo.serie}: {str(e)}")
+        
+        _logger.info(f"Alertas preventivas creadas: {alertas_creadas} de {len(equipos)} equipos evaluados")
+        return alertas_creadas
+
+    @api.model
+    def get_toner_dashboard_data(self):
+        """Dashboard centralizado de estado de tóner"""
+        base_domain = [('estado_alquiler_id', '=', 'alquilada')]
+        
+        return {
+            'equipos_criticos': self.search_count(base_domain + [('estado_stock_toner', '=', 'critico')]),
+            'equipos_bajo_stock': self.search_count(base_domain + [('estado_stock_toner', '=', 'bajo')]),
+            'entregas_pendientes': self.env['toner.delivery.schedule'].search_count([
+                ('state', 'in', ['programado', 'confirmado'])
+            ]),
+            'reportes_pendientes': self.env['toner.counter.submission'].search_count([
+                ('state', '=', 'pending')
+            ]),
+            'total_alquilados': self.search_count(base_domain),
+            'gestion_automatica_activa': self.search_count(base_domain + [('name.gestionar_toner_automatico', '=', True)])
+        }

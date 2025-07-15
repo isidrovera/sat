@@ -10,3 +10,5 @@ from . import maintenance_controller
 from . import evaluation_controller
 from . import levantamiento
 from . import permisos
+from . import api_contometros
+from . import solicitud_toner
