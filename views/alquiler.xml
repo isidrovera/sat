@@ -778,150 +778,118 @@
                                 </field>
                             </page>
                             <page string="Tóner y Contadores">
-                                <!-- Resumen General en la parte superior -->
-                                <group string="📊 Resumen General" col="4">
-                                    <field name="estado_stock_toner" readonly="1" widget="badge" />
-                                    <field name="fecha_ultima_lectura" readonly="1" />
-                                    <field name="stock_total_toner_black" readonly="1" />
-                                    <field name="stock_total_toner_cyan"
-                                        invisible="tipo_maquina_id == 'monocromatica'" readonly="1" />
-                                    <field name="stock_total_toner_magenta"
-                                        invisible="tipo_maquina_id == 'monocromatica'" readonly="1" />
-                                    <field name="stock_total_toner_yellow"
-                                        invisible="tipo_maquina_id == 'monocromatica'" readonly="1" />
-                                </group>
+    <!-- Resumen General en la parte superior -->
+    <group string="📊 Resumen General" col="4">
+        <field name="estado_stock_toner" readonly="1" widget="badge"/>
+        <field name="fecha_ultima_lectura" readonly="1"/>
+        <field name="stock_total_toner_black" readonly="1"/>
+        <field name="stock_total_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
+        <field name="stock_total_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
+        <field name="stock_total_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
+    </group>
 
-                                <!-- Contadores Actuales -->
-                                <group string="📈 Contadores Actuales" col="4">
-                                    <field name="contador_actual_black" />
-                                    <field name="contador_actual_color"
-                                        invisible="tipo_maquina_id == 'monocromatica'" />
-                                </group>
+    <!-- Contadores Actuales -->
+    <group string="📈 Contadores Actuales" col="4">
+        <field name="contador_actual_black"/>
+        <field name="contador_actual_color" invisible="tipo_maquina_id == 'monocromatica'"/>
+    </group>
 
-                                <!-- Sección dividida en dos columnas principales -->
-                                <group col="2">
-                                    <!-- Columna izquierda: Stock e Instalación -->
-                                    <group>
-                                        <!-- Stock del Cliente -->
-                                        <group string="📦 Stock del Cliente" col="2">
-                                            <field name="stock_cliente_toner_black" />
-                                            <field name="toner_black_instalado"
-                                                widget="boolean_toggle" />
-                                            <field name="stock_cliente_toner_cyan"
-                                                invisible="tipo_maquina_id == 'monocromatica'" />
-                                            <field name="toner_cyan_instalado"
-                                                invisible="tipo_maquina_id == 'monocromatica'"
-                                                widget="boolean_toggle" />
-                                            <field name="stock_cliente_toner_magenta"
-                                                invisible="tipo_maquina_id == 'monocromatica'" />
-                                            <field name="toner_magenta_instalado"
-                                                invisible="tipo_maquina_id == 'monocromatica'"
-                                                widget="boolean_toggle" />
-                                            <field name="stock_cliente_toner_yellow"
-                                                invisible="tipo_maquina_id == 'monocromatica'" />
-                                            <field name="toner_yellow_instalado"
-                                                invisible="tipo_maquina_id == 'monocromatica'"
-                                                widget="boolean_toggle" />
-                                        </group>
-                                    </group>
+    <!-- Sección dividida en dos columnas principales -->
+    <group col="2">
+        <!-- Columna izquierda: Stock e Instalación -->
+        <group>
+            <!-- Stock del Cliente -->
+            <group string="📦 Stock del Cliente" col="2">
+                <field name="stock_cliente_toner_black"/>
+                <field name="toner_black_instalado" widget="boolean_toggle"/>
+                <field name="stock_cliente_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+                <field name="toner_cyan_instalado" invisible="tipo_maquina_id == 'monocromatica'" widget="boolean_toggle"/>
+                <field name="stock_cliente_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+                <field name="toner_magenta_instalado" invisible="tipo_maquina_id == 'monocromatica'" widget="boolean_toggle"/>
+                <field name="stock_cliente_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+                <field name="toner_yellow_instalado" invisible="tipo_maquina_id == 'monocromatica'" widget="boolean_toggle"/>
+            </group>
+        </group>
 
-                                    <!-- Columna derecha: Contadores y Niveles -->
-                                    <group>
-                                        <!-- Contadores de Instalación -->
-                                        <group string="🔧 Contadores de Instalación" col="2">
-                                            <field name="contador_instalacion_toner_black" />
-                                            <field name="fecha_instalacion_toner_black" />
-                                            <field name="contador_instalacion_toner_cyan"
-                                                invisible="tipo_maquina_id == 'monocromatica'" />
-                                            <field name="fecha_instalacion_toner_cyan"
-                                                invisible="tipo_maquina_id == 'monocromatica'" />
-                                            <field name="contador_instalacion_toner_magenta"
-                                                invisible="tipo_maquina_id == 'monocromatica'" />
-                                            <field name="fecha_instalacion_toner_magenta"
-                                                invisible="tipo_maquina_id == 'monocromatica'" />
-                                            <field name="contador_instalacion_toner_yellow"
-                                                invisible="tipo_maquina_id == 'monocromatica'" />
-                                            <field name="fecha_instalacion_toner_yellow"
-                                                invisible="tipo_maquina_id == 'monocromatica'" />
-                                        </group>
-                                    </group>
-                                </group>
+        <!-- Columna derecha: Contadores y Niveles -->
+        <group>
+            <!-- Contadores de Instalación -->
+            <group string="🔧 Contadores de Instalación" col="2">
+                <field name="contador_instalacion_toner_black"/>
+                <field name="fecha_instalacion_toner_black"/>
+                <field name="contador_instalacion_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+                <field name="fecha_instalacion_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+                <field name="contador_instalacion_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+                <field name="fecha_instalacion_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+                <field name="contador_instalacion_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+                <field name="fecha_instalacion_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+            </group>
+        </group>
+    </group>
 
-                                <!-- Análisis de Rendimiento - Separado por colores -->
-                                <notebook>
-                                    <!-- Tóner Negro -->
-                                    <page string="🖤 Tóner Negro">
-                                        <group col="4">
-                                            <field name="paginas_usadas_toner_black" readonly="1" />
-                                            <field name="paginas_restantes_toner_black" readonly="1" />
-                                            <field name="nivel_toner_black" readonly="1"
-                                                widget="progressbar" />
-                                            <label string="" />
-                                        </group>
-                                    </page>
+    <!-- Análisis de Rendimiento - Separado por colores -->
+    <notebook>
+        <!-- Tóner Negro -->
+        <page string="🖤 Tóner Negro">
+            <group col="3">
+                <field name="paginas_usadas_toner_black" readonly="1"/>
+                <field name="paginas_restantes_toner_black" readonly="1"/>
+                <field name="nivel_toner_black" readonly="1" widget="progressbar"/>
+            </group>
+        </page>
 
-                                    <!-- Tóner Color (solo para máquinas color) -->
-                                    <page string="🌈 Tóners Color"
-                                        invisible="tipo_maquina_id == 'monocromatica'">
-                                        <!-- Tóner Cian -->
-                                        <group string="🔵 Tóner Cian" col="4">
-                                            <field name="paginas_usadas_toner_cyan" readonly="1" />
-                                            <field name="paginas_restantes_toner_cyan" readonly="1" />
-                                            <field name="nivel_toner_cyan" readonly="1"
-                                                widget="progressbar" />
-                                            <label string="" />
-                                        </group>
+        <!-- Tóner Color (solo para máquinas color) -->
+        <page string="🌈 Tóners Color" invisible="tipo_maquina_id == 'monocromatica'">
+            <!-- Tóner Cian -->
+            <group string="🔵 Tóner Cian" col="3">
+                <field name="paginas_usadas_toner_cyan" readonly="1"/>
+                <field name="paginas_restantes_toner_cyan" readonly="1"/>
+                <field name="nivel_toner_cyan" readonly="1" widget="progressbar"/>
+            </group>
 
-                                        <!-- Tóner Magenta -->
-                                        <group string="🔴 Tóner Magenta" col="4">
-                                            <field name="paginas_usadas_toner_magenta" readonly="1" />
-                                            <field name="paginas_restantes_toner_magenta"
-                                                readonly="1" />
-                                            <field name="nivel_toner_magenta" readonly="1"
-                                                widget="progressbar" />
-                                            <label string="" />
-                                        </group>
+            <!-- Tóner Magenta -->
+            <group string="🔴 Tóner Magenta" col="3">
+                <field name="paginas_usadas_toner_magenta" readonly="1"/>
+                <field name="paginas_restantes_toner_magenta" readonly="1"/>
+                <field name="nivel_toner_magenta" readonly="1" widget="progressbar"/>
+            </group>
 
-                                        <!-- Tóner Amarillo -->
-                                        <group string="🟡 Tóner Amarillo" col="4">
-                                            <field name="paginas_usadas_toner_yellow" readonly="1" />
-                                            <field name="paginas_restantes_toner_yellow"
-                                                readonly="1" />
-                                            <field name="nivel_toner_yellow" readonly="1"
-                                                widget="progressbar" />
-                                            <label string="" />
-                                        </group>
-                                    </page>
-                                </notebook>
+            <!-- Tóner Amarillo -->
+            <group string="🟡 Tóner Amarillo" col="3">
+                <field name="paginas_usadas_toner_yellow" readonly="1"/>
+                <field name="paginas_restantes_toner_yellow" readonly="1"/>
+                <field name="nivel_toner_yellow" readonly="1" widget="progressbar"/>
+            </group>
+        </page>
+    </notebook>
 
-                                <!-- Botones de Acción -->
-                                <group string="🔧 Acciones" col="4">
-                                    <button name="action_update_toner_stock"
-                                        type="object"
-                                        string="📦 Actualizar Stock"
-                                        class="btn btn-primary"
-                                        icon="fa-refresh" />
-
-                                    <button name="action_install_new_toner"
-                                        type="object"
-                                        string="🔧 Instalar Tóner"
-                                        class="btn btn-success"
-                                        icon="fa-wrench" />
-
-                                    <button name="action_view_model_toner_config"
-                                        type="object"
-                                        string="⚙️ Configuración Modelo"
-                                        class="btn btn-info"
-                                        icon="fa-cog" />
-
-                                    <button name="action_send_stock_reminder"
-                                        type="object"
-                                        string="📧 Recordatorio Cliente"
-                                        class="btn btn-warning"
-                                        icon="fa-envelope" />
-                                </group>
-                            </page>
-
+    <!-- Botones de Acción -->
+    <group string="🔧 Acciones" col="4">
+        <button name="action_update_toner_stock"
+                type="object"
+                string="📦 Actualizar Stock"
+                class="btn btn-primary"
+                icon="fa-refresh"/>
+        
+        <button name="action_install_new_toner"
+                type="object"
+                string="🔧 Instalar Tóner"
+                class="btn btn-success"
+                icon="fa-wrench"/>
+        
+        <button name="action_view_model_toner_config"
+                type="object"
+                string="⚙️ Configuración Modelo"
+                class="btn btn-info"
+                icon="fa-cog"/>
+        
+        <button name="action_send_stock_reminder"
+                type="object"
+                string="📧 Recordatorio Cliente"
+                class="btn btn-warning"
+                icon="fa-envelope"/>
+    </group>
+</page>
 
                         </notebook>
                     </sheet>
