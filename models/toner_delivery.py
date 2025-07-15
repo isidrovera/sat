@@ -323,8 +323,12 @@ class TonerDeliverySchedule(models.Model):
         """Determina si la entrega está atrasada"""
         today = fields.Date.today()
         for record in self:
-            record.is_overdue = (record.delivery_date_planned < today and 
-                               record.state not in ['entregado', 'cancelado'])
+            delivery_date = record.delivery_date_planned
+            if isinstance(delivery_date, date):
+                record.is_overdue = (delivery_date < today and
+                                    record.state not in ['entregado', 'cancelado'])
+            else:
+                record.is_overdue = False
 
     @api.depends('days_until_delivery', 'is_overdue', 'state')
     def _compute_delivery_status(self):
