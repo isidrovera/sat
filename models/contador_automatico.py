@@ -558,6 +558,7 @@ class ContadorAutomatico(models.Model):
     def buscar_y_procesar_correos(self):
         """
         Busca correos en el canal "Correos" y los registra como contadores
+        VERSIÓN CORREGIDA - Mejor detección de correos nuevos
         """
         try:
             _logger.info("🔍 === INICIO BÚSQUEDA Y PROCESAMIENTO DE CORREOS ===")
@@ -581,39 +582,81 @@ class ContadorAutomatico(models.Model):
             
             _logger.info(f"✅ Canal encontrado: '{canal_correos.name}' (ID: {canal_correos.id})")
             
-            # Buscar mensajes en el canal
+            # Buscar mensajes en el canal - MEJORADO: ordenar por fecha desc y buscar más tipos
             _logger.info("📧 Buscando mensajes de correo en el canal...")
             mensajes = self.env['mail.message'].search([
                 ('model', '=', 'discuss.channel'),
                 ('res_id', '=', canal_correos.id),
-                ('message_type', '=', 'email')
-            ])
+                ('message_type', 'in', ['email', 'comment']),  # Incluir también comments
+            ], order='date desc')  # Ordenar por fecha descendente
             
             _logger.info(f"📧 Total de mensajes encontrados: {len(mensajes)}")
             
-            # Obtener asuntos ya procesados
-            _logger.info("📋 Verificando asuntos ya procesados...")
-            asuntos_procesados = self.env['contador.automatico'].search([]).mapped('name')
-            _logger.info(f"📋 Total asuntos ya procesados: {len(asuntos_procesados)}")
+            # MEJORADO: Obtener registros ya procesados usando una clave más robusta
+            _logger.info("📋 Verificando mensajes ya procesados...")
+            
+            # Crear clave única combinando asunto y remitente
+            registros_existentes = self.env['contador.automatico'].search([])
+            claves_procesadas = set()
+            
+            for registro in registros_existentes:
+                # Crear clave única: asunto + remitente
+                clave = f"{registro.name}|{registro.remitente or ''}"
+                claves_procesadas.add(clave)
+                _logger.info(f"📋 Clave procesada: {clave}")
+            
+            _logger.info(f"📋 Total claves procesadas: {len(claves_procesadas)}")
             
             # Procesar mensajes nuevos
             correos_nuevos = 0
+            mensajes_ignorados = 0
+            
             for i, mensaje in enumerate(mensajes):
                 asunto = mensaje.subject or f'Sin asunto - {mensaje.id}'
-                _logger.info(f"📨 Procesando mensaje {i+1}/{len(mensajes)}: '{asunto}'")
+                remitente = mensaje.email_from or mensaje.author_id.email if mensaje.author_id else 'Desconocido'
                 
-                if asunto not in asuntos_procesados:
-                    _logger.info(f"🆕 Mensaje nuevo, creando registro...")
-                    
+                # Crear clave única para este mensaje
+                clave_mensaje = f"{asunto}|{remitente}"
+                
+                _logger.info(f"📨 Procesando mensaje {i+1}/{len(mensajes)}")
+                _logger.info(f"   📧 Asunto: '{asunto}'")
+                _logger.info(f"   👤 Remitente: '{remitente}'")
+                _logger.info(f"   🔑 Clave: '{clave_mensaje}'")
+                _logger.info(f"   📅 Fecha: {mensaje.date}")
+                _logger.info(f"   📝 Tipo: {mensaje.message_type}")
+                
+                # Verificar si es un mensaje válido para procesar
+                if not asunto or asunto.strip() == '':
+                    _logger.info(f"⏭️ Mensaje sin asunto válido, saltando...")
+                    mensajes_ignorados += 1
+                    continue
+                
+                # Filtros adicionales para evitar mensajes del sistema
+                if mensaje.message_type == 'notification':
+                    _logger.info(f"⏭️ Mensaje de notificación del sistema, saltando...")
+                    mensajes_ignorados += 1
+                    continue
+                
+                # Verificar si ya fue procesado
+                if clave_mensaje in claves_procesadas:
+                    _logger.info(f"⏭️ Mensaje ya procesado (clave existe), saltando...")
+                    continue
+                
+                _logger.info(f"🆕 Mensaje nuevo detectado, creando registro...")
+                
+                try:
                     # Crear registro
                     registro = self.env['contador.automatico'].create({
                         'name': asunto,
-                        'remitente': mensaje.email_from or 'Desconocido',
+                        'remitente': remitente,
                         'contenido_original': mensaje.body or '',
                         'estado': 'pendiente'
                     })
                     
                     _logger.info(f"✅ Registro creado con ID={registro.id}")
+                    
+                    # Agregar la clave a las procesadas para evitar duplicados en esta sesión
+                    claves_procesadas.add(clave_mensaje)
                     
                     # Procesar automáticamente
                     _logger.info(f"🚀 Iniciando procesamiento automático para ID={registro.id}")
@@ -621,15 +664,25 @@ class ContadorAutomatico(models.Model):
                     
                     _logger.info(f"✅ Procesamiento completado para ID={registro.id}, Estado: {registro.estado}")
                     correos_nuevos += 1
-                else:
-                    _logger.info(f"⏭️ Mensaje ya procesado, saltando...")
+                    
+                except Exception as e:
+                    _logger.error(f"❌ Error procesando mensaje {mensaje.id}: {e}")
+                    continue
             
             # Preparar resultado
-            mensaje_result = f'Se procesaron {correos_nuevos} correos nuevos' if correos_nuevos > 0 else 'No hay correos nuevos para procesar'
-            tipo = 'success' if correos_nuevos > 0 else 'info'
+            if correos_nuevos > 0:
+                mensaje_result = f'Se procesaron {correos_nuevos} correos nuevos'
+                tipo = 'success'
+            elif mensajes_ignorados > 0:
+                mensaje_result = f'No hay correos nuevos para procesar. {mensajes_ignorados} mensajes ignorados (sin asunto válido o notificaciones del sistema)'
+                tipo = 'info'
+            else:
+                mensaje_result = 'No hay correos nuevos para procesar'
+                tipo = 'info'
             
             _logger.info(f"🎯 === RESULTADO FINAL ===")
             _logger.info(f"Total correos procesados: {correos_nuevos}")
+            _logger.info(f"Total mensajes ignorados: {mensajes_ignorados}")
             _logger.info(f"Mensaje: {mensaje_result}")
             _logger.info(f"🏁 === FIN BÚSQUEDA Y PROCESAMIENTO ===")
             
@@ -653,6 +706,72 @@ class ContadorAutomatico(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'message': f'Error técnico: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+    # MÉTODO ADICIONAL PARA DEBUG
+    def debug_canal_correos(self):
+        """
+        Método de debug para inspeccionar el canal de correos
+        """
+        try:
+            _logger.info("🔍 === DEBUG CANAL CORREOS ===")
+            
+            # Buscar canal
+            canal_correos = self.env['discuss.channel'].search([
+                ('name', 'ilike', 'correos')
+            ], limit=1)
+            
+            if not canal_correos:
+                _logger.warning("❌ No se encontró canal 'Correos'")
+                return
+            
+            _logger.info(f"✅ Canal: '{canal_correos.name}' (ID: {canal_correos.id})")
+            
+            # Buscar TODOS los mensajes (sin filtros)
+            todos_mensajes = self.env['mail.message'].search([
+                ('model', '=', 'discuss.channel'),
+                ('res_id', '=', canal_correos.id),
+            ], order='date desc', limit=10)
+            
+            _logger.info(f"📧 Total mensajes en canal: {len(todos_mensajes)}")
+            
+            for i, msg in enumerate(todos_mensajes):
+                _logger.info(f"📨 Mensaje {i+1}:")
+                _logger.info(f"   ID: {msg.id}")
+                _logger.info(f"   Asunto: '{msg.subject}'")
+                _logger.info(f"   Tipo: {msg.message_type}")
+                _logger.info(f"   Remitente: {msg.email_from}")
+                _logger.info(f"   Autor: {msg.author_id.name if msg.author_id else 'Sin autor'}")
+                _logger.info(f"   Fecha: {msg.date}")
+                _logger.info(f"   Cuerpo (primeros 100 chars): {(msg.body or '')[:100]}...")
+                _logger.info(f"   ---")
+            
+            # Verificar registros existentes
+            registros = self.env['contador.automatico'].search([], order='create_date desc', limit=5)
+            _logger.info(f"📋 Últimos registros procesados:")
+            for reg in registros:
+                _logger.info(f"   ID: {reg.id}, Asunto: '{reg.name}', Remitente: '{reg.remitente}', Estado: {reg.estado}")
+            
+            _logger.info("🏁 === FIN DEBUG ===")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Debug completado. Revisa los logs para detalles. Mensajes en canal: {len(todos_mensajes)}',
+                    'type': 'info'
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error en debug: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error en debug: {str(e)}',
                     'type': 'danger'
                 }
             }
