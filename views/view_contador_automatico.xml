@@ -260,6 +260,7 @@
     <menuitem id="menu_contador_automatico_root"
               name="Contadores Automáticos"
               parent="sat_menu_root"
+              action="action_contador_automatico"
               sequence="80"/>
     
 </odoo>
