@@ -265,33 +265,33 @@
     <!-- Submenús -->
     <menuitem id="menu_contador_automatico_todos"
               name="Todos los Registros"
-              parent="menu_contador_automatico_root"
+              parent="sat_menu_root"
               action="action_contador_automatico"
-              sequence="10"/>
+              sequence="90"/>
               
     <menuitem id="menu_contador_automatico_pendientes"
               name="Pendientes"
-              parent="menu_contador_automatico_root"
+              parent="sat_menu_root"
               action="action_contador_automatico_pendientes"
-              sequence="20"/>
+              sequence="100"/>
               
     <menuitem id="menu_contador_automatico_errores"
               name="Con Problemas"
-              parent="menu_contador_automatico_root"
+              parent="sat_menu_root"
               action="action_contador_automatico_errores"
-              sequence="30"/>
+              sequence="110"/>
               
     <menuitem id="menu_contador_automatico_procesados"
               name="Procesados"
-              parent="menu_contador_automatico_root"
+              parent="sat_menu_root"
               action="action_contador_automatico_procesados"
-              sequence="40"/>
+              sequence="120"/>
 
     <!-- Menú alternativo bajo Validaciones Pendientes -->
     <menuitem id="menu_contador_automatico_validaciones"
               name="Contadores Automáticos"
-              parent="menu_toner_delivery_validation"
+              parent="sat_menu_root"
               action="action_contador_automatico_pendientes"
-              sequence="76"/>
+              sequence="130"/>
 
 </odoo>
