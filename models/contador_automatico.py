@@ -1,5 +1,3 @@
-# models/contador_automatico.py
-
 from odoo import models, fields, api
 import logging
 import re
@@ -313,6 +311,77 @@ class ContadorAutomatico(models.Model):
         self.procesado_automaticamente = False
         self.procesar_correo_automaticamente()
 
+    @api.model
+    def buscar_y_procesar_correos(self):
+        """
+        Busca correos en el canal "Correos" y los registra como contadores
+        """
+        try:
+            _logger.info("🔍 Buscando correos en canal 'Correos'...")
+            
+            # Buscar canal "Correos"
+            canal_correos = self.env['mail.channel'].search([
+                ('name', 'ilike', 'correos')
+            ], limit=1)
+            
+            if not canal_correos:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': 'No se encontró el canal "Correos"',
+                        'type': 'warning'
+                    }
+                }
+            
+            # Buscar mensajes en el canal
+            mensajes = self.env['mail.message'].search([
+                ('model', '=', 'mail.channel'),
+                ('res_id', '=', canal_correos.id),
+                ('message_type', '=', 'email')
+            ])
+            
+            # Obtener asuntos ya procesados
+            asuntos_procesados = self.search([]).mapped('name')
+            
+            correos_nuevos = 0
+            for mensaje in mensajes:
+                asunto = mensaje.subject or 'Sin asunto'
+                if asunto not in asuntos_procesados:
+                    # Crear registro
+                    registro = self.create({
+                        'name': asunto,
+                        'remitente': mensaje.email_from or 'Desconocido',
+                        'contenido_original': mensaje.body or '',
+                        'estado': 'pendiente'
+                    })
+                    # Procesar automáticamente
+                    registro.procesar_correo_automaticamente()
+                    correos_nuevos += 1
+            
+            mensaje = f'Se procesaron {correos_nuevos} correos nuevos' if correos_nuevos > 0 else 'No hay correos nuevos'
+            tipo = 'success' if correos_nuevos > 0 else 'info'
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': tipo
+                }
+            }
+                
+        except Exception as e:
+            _logger.error(f"❌ Error procesando correos: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
     def marcar_como_procesado_manual(self):
         """
         Marca el registro como procesado manualmente
@@ -373,4 +442,3 @@ class MailThreadInherit(models.AbstractModel):
             # No fallar el procesamiento normal del correo
         
         return result
-

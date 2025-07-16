@@ -39,6 +39,8 @@
                             class="btn-primary" invisible="estado == 'procesado'"/>
                     <button name="marcar_como_procesado_manual" type="object" string="Marcar como Procesado"
                             class="btn-success" invisible="estado == 'procesado'"/>
+                    <button name="buscar_y_procesar_correos" type="object" 
+                            string="📧 Buscar Correos" class="btn-primary"/>
                 </header>
                 <sheet>
                     <group>
