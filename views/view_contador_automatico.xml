@@ -115,7 +115,7 @@
         </field>
     </record>
     
-    <!-- Vista Kanban -->
+    <!-- Vista Kanban CORREGIDA -->
     <record id="view_contador_automatico_kanban" model="ir.ui.view">
         <field name="name">contador.automatico.kanban</field>
         <field name="model">contador.automatico</field>
@@ -130,8 +130,9 @@
                 <field name="contador_bn_detectado"/>
                 <field name="contador_color_detectado"/>
                 <field name="contador_scan_detectado"/>
+                <field name="procesado_automaticamente"/>
                 <templates>
-                    <t t-name="kanban-card">
+                    <t t-name="card">
                         <div class="oe_kanban_card oe_kanban_global_click">
                             <div class="oe_kanban_content">
                                 <div class="o_kanban_record_title">
