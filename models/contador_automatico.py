@@ -1073,4 +1073,346 @@ class ContadorAutomatico(models.Model):
                 }
             }
 
-    
+    def crear_patrones_multiformato(self):
+        """
+        Crea patrones que funcionen con múltiples formatos de correo:
+        - Bizhub: [Número de serie], A5C4011011874
+        - Ricoh: Nº de serie: 3359PB02667
+        - Y otros formatos comunes
+        """
+        try:
+            _logger.info("🔧 === CREANDO PATRONES MULTIFORMATO ===")
+            
+            # Desactivar todos los patrones actuales
+            patrones_existentes = self.env['patron.contador'].search([('activo', '=', True)])
+            if patrones_existentes:
+                patrones_existentes.write({'activo': False})
+                _logger.info(f"⏸️ Desactivados {len(patrones_existentes)} patrones existentes")
+            
+            # PATRONES PARA SERIE - Múltiples formatos
+            patrones_serie = [
+                {
+                    'name': 'Serie Bizhub - Corchetes',
+                    'tipo': 'serie',
+                    'patron_regex': r'\[Número de serie\],?\s*([A-Z0-9]{5,15})',
+                    'descripcion': 'Formato Bizhub: [Número de serie], A5C4011011874',
+                    'ejemplo': '[Número de serie], A5C4011011874',
+                    'orden': 1,
+                    'activo': True
+                },
+                {
+                    'name': 'Serie Ricoh - Dos puntos',
+                    'tipo': 'serie',
+                    'patron_regex': r'N[ºo°]\s*de\s*serie\s*:?\s*([A-Z0-9]{5,15})',
+                    'descripcion': 'Formato Ricoh: Nº de serie: 3359PB02667',
+                    'ejemplo': 'Nº de serie: 3359PB02667',
+                    'orden': 2,
+                    'activo': True
+                },
+                {
+                    'name': 'Serie genérica - Serial',
+                    'tipo': 'serie',
+                    'patron_regex': r'(?:serie|serial|s/?n)\s*:?\s*([A-Z0-9]{5,15})',
+                    'descripcion': 'Formato genérico: Serie: ABC123',
+                    'ejemplo': 'Serie: A5C4011011874',
+                    'orden': 3,
+                    'activo': True
+                },
+                {
+                    'name': 'Serie libre formato',
+                    'tipo': 'serie',
+                    'patron_regex': r'\b([A-Z]{2,4}\d{5,12})\b',
+                    'descripcion': 'Serie sin etiqueta: ABC123456789',
+                    'ejemplo': '3359PB02667',
+                    'orden': 10,
+                    'activo': True
+                }
+            ]
+            
+            # PATRONES PARA CONTADOR B/N
+            patrones_bn = [
+                {
+                    'name': 'BN Bizhub - Corchetes Negro',
+                    'tipo': 'contador_bn',
+                    'patron_regex': r'\[Contador de negro total\],?\s*(\d{1,9})',
+                    'descripcion': 'Formato Bizhub: [Contador de negro total],00183098',
+                    'ejemplo': '[Contador de negro total],00183098',
+                    'orden': 1,
+                    'activo': True
+                },
+                {
+                    'name': 'BN Ricoh - T_TotalPrtPGS',
+                    'tipo': 'contador_bn',
+                    'patron_regex': r'T_TotalPrtPGS\s*:?\s*(\d{1,9})',
+                    'descripcion': 'Formato Ricoh: T_TotalPrtPGS:36089',
+                    'ejemplo': 'T_TotalPrtPGS:36089',
+                    'orden': 2,
+                    'activo': True
+                },
+                {
+                    'name': 'BN genérico - Negro/Black/BN',
+                    'tipo': 'contador_bn',
+                    'patron_regex': r'(?:contador\s*)?(?:b/?n|negro|black|mono)\s*:?\s*(\d{1,9})',
+                    'descripcion': 'Formato genérico: Contador BN: 123456',
+                    'ejemplo': 'Contador BN: 183098',
+                    'orden': 5,
+                    'activo': True
+                }
+            ]
+            
+            # PATRONES PARA CONTADOR COLOR
+            patrones_color = [
+                {
+                    'name': 'Color Bizhub - Corchetes Color',
+                    'tipo': 'contador_color',
+                    'patron_regex': r'\[Contador de color total\],?\s*(\d{1,9})',
+                    'descripcion': 'Formato Bizhub: [Contador de color total],00085643',
+                    'ejemplo': '[Contador de color total],00085643',
+                    'orden': 1,
+                    'activo': True
+                },
+                {
+                    'name': 'Color Ricoh - T_ColorPrtPGS',
+                    'tipo': 'contador_color',
+                    'patron_regex': r'T_ColorPrtPGS\s*:?\s*(\d{1,9})',
+                    'descripcion': 'Formato Ricoh: T_ColorPrtPGS:15234',
+                    'ejemplo': 'T_ColorPrtPGS:15234',
+                    'orden': 2,
+                    'activo': True
+                },
+                {
+                    'name': 'Color genérico',
+                    'tipo': 'contador_color',
+                    'patron_regex': r'(?:contador\s*)?color\s*:?\s*(\d{1,9})',
+                    'descripcion': 'Formato genérico: Contador Color: 85643',
+                    'ejemplo': 'Contador Color: 85643',
+                    'orden': 5,
+                    'activo': True
+                }
+            ]
+            
+            # PATRONES PARA CONTADOR SCAN/TOTAL
+            patrones_scan = [
+                {
+                    'name': 'Total Bizhub - Corchetes Total',
+                    'tipo': 'contador_scan',
+                    'patron_regex': r'\[Contador total\],?\s*(\d{1,9})',
+                    'descripcion': 'Formato Bizhub: [Contador total],00268741',
+                    'ejemplo': '[Contador total],00268741',
+                    'orden': 1,
+                    'activo': True
+                },
+                {
+                    'name': 'Scan Bizhub - Corchetes Escaneo',
+                    'tipo': 'contador_scan',
+                    'patron_regex': r'\[Contador total de escaneo/?fax\],?\s*(\d{1,9})',
+                    'descripcion': 'Formato Bizhub: [Contador total de escaneo/fax],00066775',
+                    'ejemplo': '[Contador total de escaneo/fax],00066775',
+                    'orden': 2,
+                    'activo': True
+                },
+                {
+                    'name': 'Scan Ricoh - T_ScanPGS',
+                    'tipo': 'contador_scan',
+                    'patron_regex': r'T_ScanPGS\s*:?\s*(\d{1,9})',
+                    'descripcion': 'Formato Ricoh: T_ScanPGS:5432',
+                    'ejemplo': 'T_ScanPGS:5432',
+                    'orden': 3,
+                    'activo': True
+                },
+                {
+                    'name': 'Scan genérico',
+                    'tipo': 'contador_scan',
+                    'patron_regex': r'(?:contador\s*)?(?:scan|escaneo|total)\s*:?\s*(\d{1,9})',
+                    'descripcion': 'Formato genérico: Contador Scan: 66775',
+                    'ejemplo': 'Contador Scan: 66775',
+                    'orden': 10,
+                    'activo': True
+                }
+            ]
+            
+            # Combinar todos los patrones
+            todos_patrones = patrones_serie + patrones_bn + patrones_color + patrones_scan
+            
+            # Crear los patrones
+            patrones_creados = 0
+            for patron_data in todos_patrones:
+                try:
+                    patron = self.env['patron.contador'].create(patron_data)
+                    patrones_creados += 1
+                    _logger.info(f"✅ Creado: {patron.name}")
+                except Exception as e:
+                    _logger.error(f"❌ Error creando patrón {patron_data['name']}: {e}")
+            
+            mensaje = f"✅ Creados {patrones_creados} patrones multiformato (Bizhub + Ricoh)"
+            _logger.info(mensaje)
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': 'success'
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error creando patrones multiformato: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+    def probar_formato_ricoh(self):
+        """
+        Prueba específica para el formato Ricoh detectado
+        """
+        try:
+            _logger.info("🧪 === PROBANDO FORMATO RICOH ===")
+            
+            # Texto de muestra del formato Ricoh
+            texto_ricoh = "Nº de serie: 3359PB02667 Fecha: Wed Jul 16 01:02:17 2025 ChargeCounterDispType:1 T_TotalPrtPGS:36089 T_ColorPrtPGS:15234 T_ScanPGS:5432"
+            
+            _logger.info(f"📝 Texto Ricoh de prueba: {texto_ricoh}")
+            
+            resultados = []
+            tipos_a_probar = ['serie', 'contador_bn', 'contador_color', 'contador_scan']
+            
+            for tipo in tipos_a_probar:
+                _logger.info(f"🔍 Probando tipo: {tipo}")
+                resultado = self.env['patron.contador'].buscar_por_tipo(tipo, texto_ricoh)
+                
+                if resultado:
+                    resultados.append(f"{tipo}: {resultado}")
+                    _logger.info(f"✅ {tipo} detectado: {resultado}")
+                else:
+                    _logger.warning(f"❌ {tipo} NO detectado")
+            
+            if resultados:
+                mensaje = f"🎉 Formato Ricoh funcionando! Detectados: {', '.join(resultados)}"
+                tipo_notif = 'success'
+            else:
+                mensaje = "⚠️ Los patrones Ricoh no funcionaron correctamente"
+                tipo_notif = 'warning'
+            
+            _logger.info(f"📊 Resultado Ricoh: {mensaje}")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': tipo_notif
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error probando Ricoh: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+    def probar_formato_bizhub(self):
+        """
+        Prueba específica para el formato Bizhub
+        """
+        try:
+            _logger.info("🧪 === PROBANDO FORMATO BIZHUB ===")
+            
+            # Texto de muestra del formato Bizhub
+            texto_bizhub = "[Nombre del modelo], Bizhub C224A_1784 [Número de serie], A5C4011011874 [Fecha de envío],01/07/25 [Contador total],00268741 [Contador de color total],00085643 [Contador de negro total],00183098"
+            
+            _logger.info(f"📝 Texto Bizhub de prueba: {texto_bizhub}")
+            
+            resultados = []
+            tipos_a_probar = ['serie', 'contador_bn', 'contador_color', 'contador_scan']
+            
+            for tipo in tipos_a_probar:
+                _logger.info(f"🔍 Probando tipo: {tipo}")
+                resultado = self.env['patron.contador'].buscar_por_tipo(tipo, texto_bizhub)
+                
+                if resultado:
+                    resultados.append(f"{tipo}: {resultado}")
+                    _logger.info(f"✅ {tipo} detectado: {resultado}")
+                else:
+                    _logger.warning(f"❌ {tipo} NO detectado")
+            
+            if resultados:
+                mensaje = f"🎉 Formato Bizhub funcionando! Detectados: {', '.join(resultados)}"
+                tipo_notif = 'success'
+            else:
+                mensaje = "⚠️ Los patrones Bizhub no funcionaron correctamente"
+                tipo_notif = 'warning'
+            
+            _logger.info(f"📊 Resultado Bizhub: {mensaje}")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': tipo_notif
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error probando Bizhub: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+    def detectar_formato_correo(self, texto):
+        """
+        Detecta qué formato de correo es (Bizhub, Ricoh, etc.)
+        """
+        try:
+            _logger.info(f"🔍 === DETECTANDO FORMATO DE CORREO ===")
+            _logger.info(f"📝 Texto a analizar: {texto[:100]}...")
+            
+            formatos_detectados = []
+            
+            # Detectar Bizhub
+            if '[Número de serie]' in texto or 'Bizhub' in texto:
+                formatos_detectados.append('Bizhub')
+                _logger.info("✅ Formato Bizhub detectado")
+            
+            # Detectar Ricoh  
+            if 'Nº de serie:' in texto or 'T_TotalPrtPGS' in texto:
+                formatos_detectados.append('Ricoh')
+                _logger.info("✅ Formato Ricoh detectado")
+            
+            # Detectar otros formatos posibles
+            if 'Canon' in texto:
+                formatos_detectados.append('Canon')
+                _logger.info("✅ Formato Canon detectado")
+            
+            if 'HP' in texto or 'Hewlett' in texto:
+                formatos_detectados.append('HP')
+                _logger.info("✅ Formato HP detectado")
+            
+            if not formatos_detectados:
+                formatos_detectados.append('Genérico')
+                _logger.info("⚠️ Formato genérico (no identificado)")
+            
+            formato_principal = formatos_detectados[0]
+            _logger.info(f"🎯 Formato principal detectado: {formato_principal}")
+            
+            return formato_principal
+            
+        except Exception as e:
+            _logger.error(f"❌ Error detectando formato: {e}")
+            return 'Genérico'

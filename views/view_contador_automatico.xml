@@ -43,6 +43,15 @@
                             string="📧 Buscar Correos" class="btn-primary"/>
                     <button name="actualizar_patrones_para_bizhub" string="🔧 Actualizar Patrones Bizhub" type="object" class="btn-primary"/>
 <button name="probar_patrones_con_texto_real" string="🧪 Probar Patrones" type="object" class="btn-info"/>
+
+<button name="probar_formato_ricoh" 
+                string="🧪 Probar Ricoh" 
+                type="object" 
+                class="btn-info"/>
+                <button name="crear_patrones_multiformato" 
+                string="🔧 Crear Patrones Multiformato" 
+                type="object" 
+                class="btn-primary"/>
                 </header>
                 <sheet>
                     <group>
