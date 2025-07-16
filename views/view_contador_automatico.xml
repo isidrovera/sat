@@ -41,16 +41,6 @@
                             class="btn-success" invisible="estado == 'procesado'"/>
                 </header>
                 <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button type="object" name="action_view_equipo" 
-                                class="oe_stat_button" icon="fa-cog"
-                                invisible="not equipo_id">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text">Ver Equipo</span>
-                            </div>
-                        </button>
-                    </div>
-                    
                     <group>
                         <group name="correo_info">
                             <field name="name"/>
