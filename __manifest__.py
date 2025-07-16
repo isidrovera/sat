@@ -118,6 +118,7 @@
         'views/view_toner_counter_submission.xml',
         'views/view_toner_delivery_confirmation.xml',
         'views/view_toner_delivery_schedule.xml',
+        'views/view_contador_automatico.xml',
         
     ],
     

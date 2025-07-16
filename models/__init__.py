@@ -33,8 +33,7 @@ from . import inspeccion_equipo
 from . import solicitud_partes
 from . import solicitud_partes_linea
 from . import wizard_inspeccion
-
-
+from . import contador_automatico
 
 
 
