@@ -903,3 +903,174 @@ class ContadorAutomatico(models.Model):
             }
 
 
+    # MÉTODO PARA AGREGAR AL MODELO contador.automatico
+
+    def actualizar_patrones_para_bizhub(self):
+        """
+        Actualiza o crea patrones específicos para el formato de correo Bizhub
+        """
+        try:
+            _logger.info("🔧 === ACTUALIZANDO PATRONES PARA FORMATO BIZHUB ===")
+            
+            # Patrones específicos para tu formato exacto
+            patrones_bizhub = [
+                # SERIE - Formato exacto de tu correo
+                {
+                    'name': 'Serie Bizhub - Corchetes con coma',
+                    'tipo': 'serie',
+                    'patron_regex': r'\[Número de serie\],\s*([A-Z0-9]+)',
+                    'descripcion': 'Detecta serie en formato [Número de serie], A5C4011011874',
+                    'ejemplo': '[Número de serie], A5C4011011874',
+                    'orden': 1,  # Máxima prioridad
+                    'activo': True
+                },
+                
+                # CONTADOR TOTAL (que parece ser el scan en tu caso)
+                {
+                    'name': 'Contador Total Bizhub',
+                    'tipo': 'contador_scan',
+                    'patron_regex': r'\[Contador total\],\s*(\d+)',
+                    'descripcion': 'Detecta contador total en formato [Contador total],00268741',
+                    'ejemplo': '[Contador total],00268741',
+                    'orden': 1,
+                    'activo': True
+                },
+                
+                # CONTADOR COLOR
+                {
+                    'name': 'Contador Color Bizhub',
+                    'tipo': 'contador_color',
+                    'patron_regex': r'\[Contador de color total\],\s*(\d+)',
+                    'descripcion': 'Detecta contador color en formato [Contador de color total],00085643',
+                    'ejemplo': '[Contador de color total],00085643',
+                    'orden': 1,
+                    'activo': True
+                },
+                
+                # CONTADOR B/N (NEGRO)
+                {
+                    'name': 'Contador Negro Bizhub',
+                    'tipo': 'contador_bn',
+                    'patron_regex': r'\[Contador de negro total\],\s*(\d+)',
+                    'descripcion': 'Detecta contador negro en formato [Contador de negro total],00183098',
+                    'ejemplo': '[Contador de negro total],00183098',
+                    'orden': 1,
+                    'activo': True
+                }
+            ]
+            
+            patrones_creados = 0
+            patrones_actualizados = 0
+            
+            for patron_data in patrones_bizhub:
+                # Buscar si ya existe un patrón con el mismo nombre
+                patron_existente = self.env['patron.contador'].search([
+                    ('name', '=', patron_data['name'])
+                ], limit=1)
+                
+                if patron_existente:
+                    # Actualizar patrón existente
+                    patron_existente.write(patron_data)
+                    patrones_actualizados += 1
+                    _logger.info(f"🔄 Actualizado patrón: {patron_data['name']}")
+                else:
+                    # Crear nuevo patrón
+                    self.env['patron.contador'].create(patron_data)
+                    patrones_creados += 1
+                    _logger.info(f"✅ Creado patrón: {patron_data['name']}")
+            
+            # Desactivar patrones antiguos del mismo tipo para evitar conflictos
+            for tipo in ['serie', 'contador_scan', 'contador_color', 'contador_bn']:
+                patrones_antiguos = self.env['patron.contador'].search([
+                    ('tipo', '=', tipo),
+                    ('orden', '>', 1),  # Solo los que no son prioridad 1
+                    ('activo', '=', True)
+                ])
+                if patrones_antiguos:
+                    patrones_antiguos.write({'activo': False})
+                    _logger.info(f"⏸️ Desactivados {len(patrones_antiguos)} patrones antiguos de tipo {tipo}")
+            
+            mensaje = f"✅ Patrones actualizados: {patrones_creados} creados, {patrones_actualizados} actualizados"
+            _logger.info(mensaje)
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': 'success'
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error actualizando patrones: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+    def probar_patrones_con_texto_real(self):
+        """
+        Prueba los patrones con el texto real del correo procesado
+        """
+        try:
+            _logger.info("🧪 === PROBANDO PATRONES CON TEXTO REAL ===")
+            
+            # Usar el texto del registro actual o un texto de muestra
+            if hasattr(self, 'contenido_procesado') and self.contenido_procesado:
+                texto_prueba = self.contenido_procesado
+                _logger.info(f"📄 Usando contenido del registro actual")
+            else:
+                # Texto de muestra basado en tus logs
+                texto_prueba = "[Nombre del modelo], Bizhub C224A_1784 [Número de serie], A5C4011011874 [Fecha de envío],01/07/25 [Contador total],00268741 [Contador de color total],00085643 [Contador de negro total],00183098"
+                _logger.info(f"📄 Usando texto de muestra")
+            
+            _logger.info(f"📝 Texto a probar ({len(texto_prueba)} chars): {texto_prueba[:200]}...")
+            
+            resultados = []
+            tipos_a_probar = ['serie', 'contador_scan', 'contador_color', 'contador_bn']
+            
+            for tipo in tipos_a_probar:
+                _logger.info(f"🔍 Probando tipo: {tipo}")
+                resultado = self.env['patron.contador'].buscar_por_tipo(tipo, texto_prueba)
+                
+                if resultado:
+                    resultados.append(f"{tipo}: {resultado}")
+                    _logger.info(f"✅ {tipo} detectado: {resultado}")
+                else:
+                    _logger.warning(f"❌ {tipo} NO detectado")
+            
+            if resultados:
+                mensaje = f"🎉 Patrones funcionando! Detectados: {', '.join(resultados)}"
+                tipo_notif = 'success'
+            else:
+                mensaje = "⚠️ Los patrones no detectaron ningún valor. Verifica la configuración."
+                tipo_notif = 'warning'
+            
+            _logger.info(f"📊 Resultado final: {mensaje}")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': tipo_notif
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error probando patrones: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+    
