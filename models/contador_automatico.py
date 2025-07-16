@@ -318,10 +318,27 @@ class ContadorAutomatico(models.Model):
         try:
             _logger.info("🔍 Buscando correos en canal 'Correos'...")
             
-            # Buscar canal "Correos"
-            canal_correos = self.env['mail.channel'].search([
-                ('name', 'ilike', 'correos')
-            ], limit=1)
+            # Buscar canal "Correos" - usando discuss.channel en lugar de mail.channel
+            try:
+                canal_correos = self.env['discuss.channel'].search([
+                    ('name', 'ilike', 'correos')
+                ], limit=1)
+            except:
+                # Fallback para versiones que usan mail.channel
+                try:
+                    canal_correos = self.env['mail.channel'].search([
+                        ('name', 'ilike', 'correos')
+                    ], limit=1)
+                except Exception as e:
+                    _logger.error(f"❌ Error accediendo canales: {e}")
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'message': 'Error: No se puede acceder a los canales de discusión',
+                            'type': 'danger'
+                        }
+                    }
             
             if not canal_correos:
                 return {
@@ -333,8 +350,65 @@ class ContadorAutomatico(models.Model):
                     }
                 }
             
-            # Buscar mensajes en el canal
+            _logger.info(f"✅ Canal encontrado: {canal_correos.name} (ID: {canal_correos.id})")
+            
+            # Buscar mensajes en el canal - usar el modelo correcto
+            modelo_canal = 'discuss.channel' if 'discuss.channel' in self.env else 'mail.channel'
+            
             mensajes = self.env['mail.message'].search([
+                ('model', '=', modelo_canal),
+                ('res_id', '=', canal_correos.id),
+                ('message_type', '=', 'email')
+            ])
+            
+            _logger.info(f"📧 Mensajes encontrados en canal: {len(mensajes)}")
+            
+            # Obtener asuntos ya procesados
+            asuntos_procesados = self.env['contador.automatico'].search([]).mapped('name')
+            _logger.info(f"📋 Asuntos ya procesados: {len(asuntos_procesados)}")
+            
+            correos_nuevos = 0
+            for mensaje in mensajes:
+                asunto = mensaje.subject or f'Sin asunto - {mensaje.id}'
+                if asunto not in asuntos_procesados:
+                    _logger.info(f"📨 Procesando mensaje: {asunto}")
+                    # Crear registro
+                    registro = self.env['contador.automatico'].create({
+                        'name': asunto,
+                        'remitente': mensaje.email_from or 'Desconocido',
+                        'contenido_original': mensaje.body or '',
+                        'estado': 'pendiente'
+                    })
+                    # Procesar automáticamente
+                    registro.procesar_correo_automaticamente()
+                    correos_nuevos += 1
+            
+            mensaje_result = f'Se procesaron {correos_nuevos} correos nuevos' if correos_nuevos > 0 else 'No hay correos nuevos para procesar'
+            tipo = 'success' if correos_nuevos > 0 else 'info'
+            
+            _logger.info(f"✅ Resultado: {mensaje_result}")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje_result,
+                    'type': tipo
+                }
+            }
+                
+        except Exception as e:
+            _logger.error(f"❌ Error procesando correos: {e}")
+            import traceback
+            _logger.error(f"🔍 Traceback: {traceback.format_exc()}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error técnico: {str(e)}',
+                    'type': 'danger'
+                }
+            }mensajes = self.env['mail.message'].search([
                 ('model', '=', 'mail.channel'),
                 ('res_id', '=', canal_correos.id),
                 ('message_type', '=', 'email')
@@ -406,9 +480,9 @@ class MailThreadInherit(models.AbstractModel):
         )
         
         try:
-            # Solo procesar si es un canal específico
-            if model == 'mail.channel' and thread_id:
-                canal = self.env['mail.channel'].browse(thread_id)
+            # Solo procesar si es un canal específico - Odoo 18 usa discuss.channel
+            if model == 'discuss.channel' and thread_id:
+                canal = self.env['discuss.channel'].browse(thread_id)
                 
                 # Verificar si es el canal "Correos" (puedes cambiar el nombre)
                 if canal.name and 'correos' in canal.name.lower():
