@@ -119,7 +119,7 @@
         'views/view_toner_delivery_confirmation.xml',
         'views/view_toner_delivery_schedule.xml',
         'views/view_contador_automatico.xml',
-        
+        'views/view_patron_contador.xml',
     ],
     
     'assets': {

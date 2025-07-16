@@ -126,3 +126,5 @@ access_toner_delivery_confirmation_jefes,toner.delivery.confirmation.jefes,model
 access_toner_delivery_confirmation_portal,toner.delivery.confirmation.portal,model_toner_delivery_confirmation,base.group_portal,1,0,0,0
 access_contador_automatico_user,contador.automatico.user,model_contador_automatico,base.group_user,1,0,0,0
 access_contador_automatico_admin,contador.automatico.admin,model_contador_automatico,base.group_system,1,1,1,1
+access_patron_contador_user,patron.contador.user,model_patron_contador,base.group_user,1,0,0,0
+access_patron_contador_admin,patron.contador.admin,model_patron_contador,base.group_system,1,1,1,1

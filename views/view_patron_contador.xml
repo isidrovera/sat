@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vista List para gestión de patrones -->
+    <record id="view_patron_contador_list" model="ir.ui.view">
+        <field name="name">patron.contador.list</field>
+        <field name="model">patron.contador</field>
+        <field name="arch" type="xml">
+            <list string="Patrones de Detección" 
+                  decoration-muted="not activo"
+                  multi_edit="1" editable="bottom">
+                <header>
+                    <button name="create_default_patterns" type="object" 
+                            string="🔧 Crear Patrones por Defecto" class="btn-primary"/>
+                </header>
+                <field name="orden" widget="handle"/>
+                <field name="name"/>
+                <field name="tipo"/>
+                <field name="patron_regex" widget="text"/>
+                <field name="ejemplo"/>
+                <field name="activo" widget="boolean"/>
+                <field name="veces_usado" readonly="1"/>
+                <field name="ultima_deteccion" readonly="1"/>
+                <button name="probar_patron" type="object" 
+                        string="🧪 Probar" class="btn-sm btn-secondary"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista Form para editar patrones -->
+    <record id="view_patron_contador_form" model="ir.ui.view">
+        <field name="name">patron.contador.form</field>
+        <field name="model">patron.contador</field>
+        <field name="arch" type="xml">
+            <form string="Patrón de Detección">
+                <header>
+                    <button name="probar_patron" type="object" 
+                            string="🧪 Probar Patrón" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="tipo"/>
+                            <field name="orden"/>
+                            <field name="activo"/>
+                        </group>
+                        <group>
+                            <field name="veces_usado" readonly="1"/>
+                            <field name="ultima_deteccion" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Configuración del Patrón">
+                        <field name="patron_regex" widget="text" nolabel="1" 
+                               placeholder="Expresión regular. Use () para capturar el valor"/>
+                        <field name="descripcion" nolabel="1" 
+                               placeholder="Descripción de qué detecta este patrón"/>
+                        <field name="ejemplo" nolabel="1" 
+                               placeholder="Texto de ejemplo para probar el patrón"/>
+                    </group>
+                    
+                    <group string="Ayuda de Expresiones Regulares">
+                        <div class="alert alert-info">
+                            <h5>Ejemplos de patrones útiles:</h5>
+                            <ul>
+                                <li><code>\[Texto\],?\s*([A-Z0-9]+)</code> - Detecta: [Texto], VALOR</li>
+                                <li><code>(?:palabra1|palabra2)\s*:?\s*(\d+)</code> - Detecta: palabra1: 123456</li>
+                                <li><code>([A-Z]{2,4}\d{5,10})</code> - Detecta códigos alfanuméricos</li>
+                                <li><code>(\d{1,9})</code> - Captura números de 1-9 dígitos</li>
+                            </ul>
+                            <p><strong>Importante:</strong> Use paréntesis () para capturar el valor que quiere extraer.</p>
+                        </div>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista Search -->
+    <record id="view_patron_contador_search" model="ir.ui.view">
+        <field name="name">patron.contador.search</field>
+        <field name="model">patron.contador</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Patrones">
+                <field name="name"/>
+                <field name="tipo"/>
+                <field name="patron_regex"/>
+                <separator/>
+                <filter string="Activos" name="activos" domain="[('activo', '=', True)]"/>
+                <filter string="Inactivos" name="inactivos" domain="[('activo', '=', False)]"/>
+                <separator/>
+                <filter string="Series" name="series" domain="[('tipo', '=', 'serie')]"/>
+                <filter string="Contador B/N" name="contador_bn" domain="[('tipo', '=', 'contador_bn')]"/>
+                <filter string="Contador Color" name="contador_color" domain="[('tipo', '=', 'contador_color')]"/>
+                <filter string="Contador Scan" name="contador_scan" domain="[('tipo', '=', 'contador_scan')]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Tipo" name="group_tipo" context="{'group_by': 'tipo'}"/>
+                    <filter string="Estado" name="group_activo" context="{'group_by': 'activo'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción para gestión de patrones -->
+    <record id="action_patron_contador" model="ir.actions.act_window">
+        <field name="name">Patrones de Detección</field>
+        <field name="res_model">patron.contador</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_patron_contador_list"/>
+        <field name="search_view_id" ref="view_patron_contador_search"/>
+        <field name="context">{'search_default_activos': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡Crea patrones para detectar contadores automáticamente!
+            </p>
+            <p>
+                Los patrones permiten detectar automáticamente series y contadores 
+                desde diferentes formatos de correo.
+            </p>
+            <p>
+                <strong>Empezar:</strong>
+            </p>
+            <ol>
+                <li>Haz clic en "Crear Patrones por Defecto"</li>
+                <li>Personaliza o agrega nuevos patrones</li>
+                <li>Usa el botón "Probar" para validar</li>
+            </ol>
+        </field>
+    </record>
+
+    <!-- Menú para patrones -->
+    <menuitem id="menu_patron_contador"
+              name="Patrones de Detección"
+              parent="sat_menu_root"
+              action="action_patron_contador"
+              sequence="85"/>
+
+    <!-- Agregar botón en contador automático para gestionar patrones -->
+    <record id="view_contador_automatico_form_inherit" model="ir.ui.view">
+        <field name="name">contador.automatico.form.inherit</field>
+        <field name="model">contador.automatico</field>
+        <field name="inherit_id" ref="view_contador_automatico_form"/>
+        <field name="arch" type="xml">
+            <button name="marcar_como_procesado_manual" position="after">
+                <button name="%(action_patron_contador)d" type="action" 
+                        string="⚙️ Gestionar Patrones" class="btn-secondary"/>
+            </button>
+        </field>
+    </record>
+
+</odoo>
