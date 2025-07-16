@@ -311,6 +311,18 @@ class ContadorAutomatico(models.Model):
         self.procesado_automaticamente = False
         self.procesar_correo_automaticamente()
 
+    
+
+    def marcar_como_procesado_manual(self):
+        """
+        Marca el registro como procesado manualmente
+        """
+        self.ensure_one()
+        self.estado = 'procesado'
+        self.procesado_automaticamente = False
+        self.fecha_procesamiento = fields.Datetime.now()
+
+
     def buscar_y_procesar_correos(self):
         """
         Busca correos en el canal "Correos" y los registra como contadores
@@ -318,27 +330,10 @@ class ContadorAutomatico(models.Model):
         try:
             _logger.info("🔍 Buscando correos en canal 'Correos'...")
             
-            # Buscar canal "Correos" - usando discuss.channel en lugar de mail.channel
-            try:
-                canal_correos = self.env['discuss.channel'].search([
-                    ('name', 'ilike', 'correos')
-                ], limit=1)
-            except:
-                # Fallback para versiones que usan mail.channel
-                try:
-                    canal_correos = self.env['mail.channel'].search([
-                        ('name', 'ilike', 'correos')
-                    ], limit=1)
-                except Exception as e:
-                    _logger.error(f"❌ Error accediendo canales: {e}")
-                    return {
-                        'type': 'ir.actions.client',
-                        'tag': 'display_notification',
-                        'params': {
-                            'message': 'Error: No se puede acceder a los canales de discusión',
-                            'type': 'danger'
-                        }
-                    }
+            # Buscar canal "Correos" - Odoo 18 usa discuss.channel
+            canal_correos = self.env['discuss.channel'].search([
+                ('name', 'ilike', 'correos')
+            ], limit=1)
             
             if not canal_correos:
                 return {
@@ -352,16 +347,14 @@ class ContadorAutomatico(models.Model):
             
             _logger.info(f"✅ Canal encontrado: {canal_correos.name} (ID: {canal_correos.id})")
             
-            # Buscar mensajes en el canal - usar el modelo correcto
-            modelo_canal = 'discuss.channel' if 'discuss.channel' in self.env else 'mail.channel'
-            
+            # Buscar mensajes en el canal
             mensajes = self.env['mail.message'].search([
-                ('model', '=', modelo_canal),
+                ('model', '=', 'discuss.channel'),
                 ('res_id', '=', canal_correos.id),
                 ('message_type', '=', 'email')
             ])
             
-            _logger.info(f"📧 Mensajes encontrados en canal: {len(mensajes)}")
+            _logger.info(f"📧 Mensajes encontrados: {len(mensajes)}")
             
             # Obtener asuntos ya procesados
             asuntos_procesados = self.env['contador.automatico'].search([]).mapped('name')
@@ -371,7 +364,7 @@ class ContadorAutomatico(models.Model):
             for mensaje in mensajes:
                 asunto = mensaje.subject or f'Sin asunto - {mensaje.id}'
                 if asunto not in asuntos_procesados:
-                    _logger.info(f"📨 Procesando mensaje: {asunto}")
+                    _logger.info(f"📨 Procesando nuevo mensaje: {asunto}")
                     # Crear registro
                     registro = self.env['contador.automatico'].create({
                         'name': asunto,
@@ -383,7 +376,7 @@ class ContadorAutomatico(models.Model):
                     registro.procesar_correo_automaticamente()
                     correos_nuevos += 1
             
-            mensaje_result = f'Se procesaron {correos_nuevos} correos nuevos' if correos_nuevos > 0 else 'No hay correos nuevos para procesar'
+            mensaje_result = f'Se procesaron {correos_nuevos} correos nuevos' if correos_nuevos > 0 else 'No hay correos nuevos'
             tipo = 'success' if correos_nuevos > 0 else 'info'
             
             _logger.info(f"✅ Resultado: {mensaje_result}")
@@ -400,7 +393,7 @@ class ContadorAutomatico(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error procesando correos: {e}")
             import traceback
-            _logger.error(f"🔍 Traceback: {traceback.format_exc()}")
+            _logger.error(f"🔍 Traceback completo: {traceback.format_exc()}")
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -408,110 +401,4 @@ class ContadorAutomatico(models.Model):
                     'message': f'Error técnico: {str(e)}',
                     'type': 'danger'
                 }
-            }mensajes = self.env['mail.message'].search([
-                ('model', '=', 'mail.channel'),
-                ('res_id', '=', canal_correos.id),
-                ('message_type', '=', 'email')
-            ])
-            
-            # Obtener asuntos ya procesados
-            asuntos_procesados = self.env['contador.automatico'].search([]).mapped('name')
-            
-            correos_nuevos = 0
-            for mensaje in mensajes:
-                asunto = mensaje.subject or 'Sin asunto'
-                if asunto not in asuntos_procesados:
-                    # Crear registro
-                    registro = self.env['contador.automatico'].create({
-                        'name': asunto,
-                        'remitente': mensaje.email_from or 'Desconocido',
-                        'contenido_original': mensaje.body or '',
-                        'estado': 'pendiente'
-                    })
-                    # Procesar automáticamente
-                    registro.procesar_correo_automaticamente()
-                    correos_nuevos += 1
-            
-            mensaje = f'Se procesaron {correos_nuevos} correos nuevos' if correos_nuevos > 0 else 'No hay correos nuevos'
-            tipo = 'success' if correos_nuevos > 0 else 'info'
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': mensaje,
-                    'type': tipo
-                }
             }
-                
-        except Exception as e:
-            _logger.error(f"❌ Error procesando correos: {e}")
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': f'Error: {str(e)}',
-                    'type': 'danger'
-                }
-            }
-
-    def marcar_como_procesado_manual(self):
-        """
-        Marca el registro como procesado manualmente
-        """
-        self.ensure_one()
-        self.estado = 'procesado'
-        self.procesado_automaticamente = False
-        self.fecha_procesamiento = fields.Datetime.now()
-
-
-# models/mail_thread_inherit.py
-
-class MailThreadInherit(models.AbstractModel):
-    _inherit = 'mail.thread'
-    
-    @api.model
-    def message_process(self, model, message, custom_values=None, save_original=False, strip_attachments=False, thread_id=None):
-        """
-        Intercepta correos que llegan al canal "Correos" para procesamiento automático
-        """
-        result = super().message_process(
-            model, message, custom_values, save_original, strip_attachments, thread_id
-        )
-        
-        try:
-            # Solo procesar si es un canal específico - Odoo 18 usa discuss.channel
-            if model == 'discuss.channel' and thread_id:
-                canal = self.env['discuss.channel'].browse(thread_id)
-                
-                # Verificar si es el canal "Correos" (puedes cambiar el nombre)
-                if canal.name and 'correos' in canal.name.lower():
-                    _logger.info(f"📧 Correo detectado en canal de contadores: {canal.name}")
-                    
-                    # Extraer información del mensaje
-                    import email
-                    msg = email.message_from_bytes(message)
-                    
-                    subject = msg.get('Subject', 'Sin asunto')
-                    email_from = msg.get('From', 'Remitente desconocido')
-                    
-                    # Obtener cuerpo del mensaje
-                    body = ""
-                    if msg.is_multipart():
-                        for part in msg.walk():
-                            if part.get_content_type() == "text/plain":
-                                body = part.get_payload(decode=True).decode('utf-8', errors='ignore')
-                                break
-                            elif part.get_content_type() == "text/html":
-                                body = part.get_payload(decode=True).decode('utf-8', errors='ignore')
-                    else:
-                        body = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
-                    
-                    # Crear y procesar registro automáticamente
-                    self.env['contador.automatico'].crear_desde_correo(subject, body, email_from)
-                    
-        except Exception as e:
-            _logger.error(f"❌ Error en procesamiento automático de correo: {e}")
-            # No fallar el procesamiento normal del correo
-        
-        return result
