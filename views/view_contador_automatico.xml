@@ -262,36 +262,4 @@
               parent="sat_menu_root"
               sequence="80"/>
     
-    <!-- Submenús -->
-    <menuitem id="menu_contador_automatico_todos"
-              name="Todos los Registros"
-              parent="sat_menu_root"
-              action="action_contador_automatico"
-              sequence="90"/>
-              
-    <menuitem id="menu_contador_automatico_pendientes"
-              name="Pendientes"
-              parent="sat_menu_root"
-              action="action_contador_automatico_pendientes"
-              sequence="100"/>
-              
-    <menuitem id="menu_contador_automatico_errores"
-              name="Con Problemas"
-              parent="sat_menu_root"
-              action="action_contador_automatico_errores"
-              sequence="110"/>
-              
-    <menuitem id="menu_contador_automatico_procesados"
-              name="Procesados"
-              parent="sat_menu_root"
-              action="action_contador_automatico_procesados"
-              sequence="120"/>
-
-    <!-- Menú alternativo bajo Validaciones Pendientes -->
-    <menuitem id="menu_contador_automatico_validaciones"
-              name="Contadores Automáticos"
-              parent="sat_menu_root"
-              action="action_contador_automatico_pendientes"
-              sequence="130"/>
-
 </odoo>
