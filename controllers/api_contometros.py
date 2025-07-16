@@ -341,37 +341,25 @@ class ContadorAPI(http.Controller):
             _logger.info(f"💾 Iniciando actualización del equipo ID={equipo.id}")
             _logger.info(f"📊 Valores a escribir: {valores}")
             
-            # Verificar permisos antes de escribir
+            # Verificar que el equipo existe
             if not equipo.exists():
                 raise ValueError("El equipo ya no existe en la base de datos")
             
             # Realizar backup de valores actuales
             valores_actuales = {}
-            for campo in valores.keys():
-                if campo != 'fecha_ultima_actualizacion' and hasattr(equipo, campo):
+            for campo in ['contador_bn', 'contador_color', 'contador_scan']:
+                if hasattr(equipo, campo):
                     try:
-                        valores_actuales[campo] = getattr(equipo, campo)
+                        valores_actuales[campo] = getattr(equipo, campo) or 0
                     except:
-                        valores_actuales[campo] = None
+                        valores_actuales[campo] = 0
             
             _logger.info(f"📋 Valores actuales: {valores_actuales}")
             
             # Realizar la actualización
             equipo.sudo().write(valores)
             
-            # Verificar que se escribió correctamente
-            equipo.invalidate_cache()  # Forzar recarga desde DB
-            
-            valores_verificacion = {}
-            for campo in valores.keys():
-                if campo != 'fecha_ultima_actualizacion' and hasattr(equipo, campo):
-                    try:
-                        valores_verificacion[campo] = getattr(equipo, campo)
-                    except:
-                        valores_verificacion[campo] = None
-            
-            _logger.info(f"✅ Valores después de actualización: {valores_verificacion}")
-            _logger.info(f"🎉 Equipo actualizado exitosamente")
+            _logger.info(f"✅ Equipo actualizado exitosamente")
             
             return valores_actuales
             
