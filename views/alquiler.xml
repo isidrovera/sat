@@ -154,6 +154,10 @@
                                 <field name="marca" />
                                 <field name="name" options="{'no_create': True}" />
                                 <field name="serie" />
+                                <field name="contador_bn" />
+                                <field name="contador_color" />
+                                <field name="contador_scan" />
+                                <field name="fecha_ultima_actualizacion" />
                                 <field name="ubicacion_id"
                                     invisible="estado_alquiler_id == 'alquilada'" />
                                 <field name="observaciones" />
