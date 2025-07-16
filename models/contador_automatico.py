@@ -311,7 +311,6 @@ class ContadorAutomatico(models.Model):
         self.procesado_automaticamente = False
         self.procesar_correo_automaticamente()
 
-    @api.model
     def buscar_y_procesar_correos(self):
         """
         Busca correos en el canal "Correos" y los registra como contadores
@@ -342,14 +341,14 @@ class ContadorAutomatico(models.Model):
             ])
             
             # Obtener asuntos ya procesados
-            asuntos_procesados = self.search([]).mapped('name')
+            asuntos_procesados = self.env['contador.automatico'].search([]).mapped('name')
             
             correos_nuevos = 0
             for mensaje in mensajes:
                 asunto = mensaje.subject or 'Sin asunto'
                 if asunto not in asuntos_procesados:
                     # Crear registro
-                    registro = self.create({
+                    registro = self.env['contador.automatico'].create({
                         'name': asunto,
                         'remitente': mensaje.email_from or 'Desconocido',
                         'contenido_original': mensaje.body or '',
