@@ -320,29 +320,37 @@ class PatronContador(models.Model):
     @api.model
     def buscar_por_tipo(self, tipo, texto):
         """
-        Busca patrones de un tipo específico en el texto (MEJORADO)
+        Busca patrones de un tipo específico en el texto (MEJORADO con exclusiones y validaciones adicionales)
         """
         patrones = self.search([
             ('tipo', '=', tipo),
             ('activo', '=', True)
         ], order='orden')
-        
+
+        # Palabras prohibidas para serie (comunes pero no son seriales)
+        exclusiones_serie = {'model', 'total', 'pages', 'counter', 'black', 'white', 'color', 'scan'}
+
         for patron in patrones:
             try:
                 matches = re.finditer(patron.patron_regex, texto, re.IGNORECASE)
                 for match in matches:
                     if match.groups():
                         valor = match.group(1).strip()
+
                         if valor:
-                            # Si es serie, validar formato
                             if tipo == 'serie':
-                                if len(valor) >= 5 and re.match(r'^[A-Z0-9]+$', valor.upper()):
+                                valor_up = valor.upper()
+                                # Validar longitud, formato, y que no esté en exclusiones
+                                if (
+                                    6 <= len(valor_up) <= 15 and
+                                    re.match(r'^[A-Z0-9\-]+$', valor_up) and
+                                    valor.lower() not in exclusiones_serie
+                                ):
                                     patron.marcar_deteccion_exitosa()
-                                    return valor.upper()
+                                    return valor_up
                                 else:
                                     patron.marcar_deteccion_fallida()
                             else:
-                                # Si es contador, validar que sea número
                                 try:
                                     numero = int(re.sub(r'[^0-9]', '', valor))
                                     if numero > 0:
@@ -352,13 +360,13 @@ class PatronContador(models.Model):
                                         patron.marcar_deteccion_fallida()
                                 except:
                                     patron.marcar_deteccion_fallida()
-                                    continue
             except re.error:
                 _logger.warning(f"Error en patrón {patron.name}: {patron.patron_regex}")
                 patron.marcar_deteccion_fallida()
                 continue
-        
+
         return None
+
 
     def validar_patron_manualmente(self):
         """

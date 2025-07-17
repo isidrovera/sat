@@ -1,6 +1,3 @@
-# SISTEMA INTELIGENTE DE PROCESAMIENTO - PARTE 1 COMPLETA
-# Filtros inteligentes + Detector de idioma + Analizador de contenido
-
 from odoo import models, fields, api
 import logging
 import re
@@ -27,16 +24,6 @@ class ContadorAutomatico(models.Model):
     contador_color_detectado = fields.Integer('Contador Color detectado')
     contador_scan_detectado = fields.Integer('Contador Scan detectado')
     
-    # Control del proceso
-    estado = fields.Selection([
-        ('pendiente', 'Pendiente de procesar'),
-        ('procesado', 'Procesado exitosamente'),
-        ('error', 'Error en procesamiento'),
-        ('manual', 'Requiere intervención manual'),
-        ('filtrado', 'Filtrado - No es correo de contadores')
-    ], default='pendiente', tracking=True)
-    
-    fecha_procesamiento = fields.Datetime('Fecha de procesamiento')
     mensaje_error = fields.Text('Mensaje de error')
     procesado_automaticamente = fields.Boolean('Procesado automáticamente', default=False)
     
@@ -44,61 +31,24 @@ class ContadorAutomatico(models.Model):
     contador_bn_anterior = fields.Integer('Contador B/N anterior')
     contador_color_anterior = fields.Integer('Contador Color anterior')
     contador_scan_anterior = fields.Integer('Contador Scan anterior')
-    
-    # NUEVOS CAMPOS PARA SISTEMA INTELIGENTE
-    idioma_detectado = fields.Char('Idioma Detectado', readonly=True)
-    formato_detectado = fields.Char('Formato Detectado', readonly=True) 
-    confianza_deteccion = fields.Float('Confianza de Detección (%)', readonly=True)
-    requiere_aprendizaje = fields.Boolean('Requiere Aprendizaje', default=False)
     patrones_aplicados = fields.Text('Patrones Aplicados', readonly=True)
-    estructura_detectada = fields.Text('Estructura Detectada', readonly=True)
-    marca_detectada = fields.Char('Marca Detectada', readonly=True)
-    palabras_clave_encontradas = fields.Text('Palabras Clave Encontradas', readonly=True)
-
-    def es_correo_de_contadores(self, asunto):
-        """
-        Filtro estricto: Solo correos con asuntos específicos de contadores
-        """
-        if not asunto:
-            _logger.info("❌ Sin asunto - No es correo de contadores")
-            return False
-            
-        asunto_lower = asunto.lower().strip()
-        
-        # Asuntos válidos EXACTOS para contadores
-        asuntos_validos = [
-            'counter list',
-            'counter page', 
-            'page counter',
-            'counter lists',
-            'page counters',
-            'contador',
-            'contadores'
-        ]
-        
-        # Verificar coincidencia exacta (case insensitive)
-        for asunto_valido in asuntos_validos:
-            if asunto_valido in asunto_lower:
-                _logger.info(f"✅ Asunto válido detectado: '{asunto}' contiene '{asunto_valido}'")
-                return True
-        
-        _logger.info(f"❌ Asunto no válido para contadores: '{asunto}'")
-        return False
-
+    
+    
     def detectar_idioma_automatico(self, texto):
         """
-        Detecta automáticamente el idioma del contenido del correo
+        Detecta automáticamente el idioma del contenido del correo,
+        pero ignora detecciones con confianza < 30%
         """
         try:
-            _logger.info(f"🌍 === DETECTANDO IDIOMA AUTOMÁTICAMENTE ===")
+            _logger.info("🌍 === DETECTANDO IDIOMA AUTOMÁTICAMENTE ===")
             _logger.info(f"📝 Texto a analizar: {len(texto)} caracteres")
             
             # Palabras clave por idioma para contadores
             palabras_clave = {
                 'español': [
-                    'número de serie', 'contador', 'negro', 'color', 'total', 
+                    'número de serie', 'contador', 'negro', 'color', 'total',
                     'escaneo', 'serie', 'fecha', 'modelo', 'impresiones',
-                    'Bizhub', 'de envío', 'blanco y negro'
+                    'bizhub', 'de envío', 'blanco y negro'
                 ],
                 'english': [
                     'serial number', 'counter', 'black', 'color', 'total',
@@ -106,50 +56,48 @@ class ContadorAutomatico(models.Model):
                     'white', 'print counter', 'page counter'
                 ],
                 'ricoh_format': [
-                    'T_TotalPrtPGS', 'T_ColorPrtPGS', 'T_ScanPGS', 
-                    'ChargeCounterDispType', 'Nº de serie'
+                    't_totalprtpgs', 't_colorprtpgs', 't_scanpgs',
+                    'chargecounterdisptype', 'nº de serie'
                 ],
                 'bizhub_format': [
-                    '[Número de serie]', '[Contador total]', '[Contador de negro total]',
-                    '[Contador de color total]', '[Fecha de envío]'
+                    '[número de serie]', '[contador total]', '[contador de negro total]',
+                    '[contador de color total]', '[fecha de envío]'
                 ]
             }
             
-            # Contar coincidencias por idioma
-            coincidencias = {}
-            palabras_encontradas = {}
-            
             texto_lower = texto.lower()
+            coincidencias = {idioma: 0 for idioma in palabras_clave}
+            palabras_encontradas = {idioma: [] for idioma in palabras_clave}
             
-            for idioma, palabras in palabras_clave.items():
-                coincidencias[idioma] = 0
-                palabras_encontradas[idioma] = []
-                
-                for palabra in palabras:
-                    if palabra.lower() in texto_lower:
+            for idioma, lista in palabras_clave.items():
+                for palabra in lista:
+                    if palabra in texto_lower:
                         coincidencias[idioma] += 1
                         palabras_encontradas[idioma].append(palabra)
-                        _logger.info(f"🔍 Palabra '{palabra}' encontrada en {idioma}")
+                        _logger.info(f"🔍 Palabra '{palabra}' encontrada en '{idioma}'")
             
-            # Determinar idioma con más coincidencias
             if not any(coincidencias.values()):
                 _logger.warning("⚠️ No se detectaron palabras clave conocidas")
-                return 'desconocido', 0, []
+                return 'desconocido', 0.0, []
             
             idioma_detectado = max(coincidencias, key=coincidencias.get)
-            max_coincidencias = coincidencias[idioma_detectado]
-            total_palabras = len(palabras_clave[idioma_detectado])
-            confianza = (max_coincidencias / total_palabras) * 100
+            max_coinc = coincidencias[idioma_detectado]
+            total = len(palabras_clave[idioma_detectado])
+            confianza = (max_coinc / total) * 100
             
-            _logger.info(f"🎯 Idioma detectado: {idioma_detectado}")
-            _logger.info(f"📊 Coincidencias: {max_coincidencias}/{total_palabras} ({confianza:.1f}%)")
-            _logger.info(f"🔑 Palabras encontradas: {palabras_encontradas[idioma_detectado]}")
+            _logger.info(f"🎯 Idioma candidato: {idioma_detectado} ({max_coinc}/{total}) → {confianza:.1f}%")
             
+            # Umbral mínimo
+            if confianza < 30.0:
+                _logger.warning(f"🔻 Confianza baja ({confianza:.1f}%), marcando como 'desconocido'")
+                return 'desconocido', confianza, []
+            
+            _logger.info(f"✅ Idioma confirmado: {idioma_detectado} con {confianza:.1f}% de confianza")
             return idioma_detectado, confianza, palabras_encontradas[idioma_detectado]
-            
+        
         except Exception as e:
-            _logger.error(f"❌ Error detectando idioma: {e}")
-            return 'error', 0, []
+            _logger.error(f"❌ Error detectando idioma: {e}", exc_info=True)
+            return 'error', 0.0, []
 
     def detectar_marca_automatico(self, texto):
         """
@@ -191,268 +139,9 @@ class ContadorAutomatico(models.Model):
             _logger.error(f"❌ Error detectando marca: {e}")
             return 'Error'
 
-    def analizar_estructura_contenido(self, texto):
-        """
-        Analiza la estructura del contenido para identificar patrones
-        """
-        try:
-            _logger.info(f"🔍 === ANALIZANDO ESTRUCTURA DEL CONTENIDO ===")
-            
-            estructura = {
-                'tiene_corchetes': '[' in texto and ']' in texto,
-                'tiene_dos_puntos': ':' in texto,
-                'tiene_numeros_serie': bool(re.search(r'[A-Z0-9]{5,15}', texto)),
-                'tiene_contadores': bool(re.search(r'\d{4,9}', texto)),
-                'formato_fecha': None,
-                'separadores': [],
-                'patrones_numericos': [],
-                'estructura_tipo': 'desconocida'
-            }
-            
-            # Detectar formato de fecha
-            if re.search(r'\d{2}/\d{2}/\d{2,4}', texto):
-                estructura['formato_fecha'] = 'DD/MM/YYYY'
-            elif re.search(r'\w{3}\s+\w{3}\s+\d{1,2}', texto):
-                estructura['formato_fecha'] = 'Day Mon DD'
-            
-            # Detectar separadores
-            if ',' in texto:
-                estructura['separadores'].append('coma')
-            if ';' in texto:
-                estructura['separadores'].append('punto_coma')
-            if '|' in texto:
-                estructura['separadores'].append('pipe')
-            
-            # Detectar patrones numéricos
-            numeros = re.findall(r'\d{4,9}', texto)
-            estructura['patrones_numericos'] = numeros[:5]  # Primeros 5 números
-            
-            # Determinar tipo de estructura
-            if estructura['tiene_corchetes']:
-                estructura['estructura_tipo'] = 'formato_corchetes'
-            elif 'T_' in texto and estructura['tiene_dos_puntos']:
-                estructura['estructura_tipo'] = 'formato_ricoh'
-            elif estructura['tiene_dos_puntos']:
-                estructura['estructura_tipo'] = 'formato_dos_puntos'
-            else:
-                estructura['estructura_tipo'] = 'formato_libre'
-            
-            _logger.info(f"📋 Estructura detectada: {estructura['estructura_tipo']}")
-            _logger.info(f"🔢 Números encontrados: {len(numeros)} números")
-            _logger.info(f"📐 Características: corchetes={estructura['tiene_corchetes']}, dos_puntos={estructura['tiene_dos_puntos']}")
-            
-            return estructura
-            
-        except Exception as e:
-            _logger.error(f"❌ Error analizando estructura: {e}")
-            return {'estructura_tipo': 'error', 'error': str(e)}
+     
 
-    def procesar_correo_inteligente(self):
-        """
-        Procesamiento inteligente del correo con análisis automático
-        """
-        try:
-            _logger.info(f"🧠 === INICIO PROCESAMIENTO INTELIGENTE ===")
-            _logger.info(f"📧 Registro ID={self.id}, Asunto='{self.name}'")
-            
-            # 1. VERIFICAR SI ES CORREO DE CONTADORES
-            if not self.es_correo_de_contadores(self.name):
-                self.estado = 'filtrado'
-                self.mensaje_error = 'Asunto no corresponde a correo de contadores'
-                _logger.info(f"🚫 Correo filtrado - No es de contadores")
-                return False
-            
-            # 2. LIMPIAR CONTENIDO HTML
-            if self.contenido_original:
-                _logger.info(f"📄 Procesando contenido HTML de {len(self.contenido_original)} caracteres")
-                texto_limpio = self.limpiar_html_correo(self.contenido_original)
-                self.contenido_procesado = texto_limpio
-            else:
-                _logger.info(f"📄 No hay contenido HTML, usando asunto como texto")
-                texto_limpio = self.name or ""
-            
-            # 3. ANÁLISIS INTELIGENTE DEL CONTENIDO
-            _logger.info(f"🔍 === FASE: ANÁLISIS INTELIGENTE ===")
-            
-            # Detectar idioma
-            idioma, confianza_idioma, palabras_clave = self.detectar_idioma_automatico(texto_limpio)
-            self.idioma_detectado = idioma
-            self.confianza_deteccion = confianza_idioma
-            self.palabras_clave_encontradas = ', '.join(palabras_clave)
-            
-            # Detectar marca
-            marca = self.detectar_marca_automatico(texto_limpio)
-            self.marca_detectada = marca
-            
-            # Analizar estructura
-            estructura = self.analizar_estructura_contenido(texto_limpio)
-            self.formato_detectado = estructura.get('estructura_tipo', 'desconocida')
-            self.estructura_detectada = str(estructura)
-            
-            _logger.info(f"🌍 Idioma: {idioma} ({confianza_idioma:.1f}%)")
-            _logger.info(f"🏭 Marca: {marca}")
-            _logger.info(f"📐 Formato: {estructura.get('estructura_tipo')}")
-            
-            # 4. VERIFICAR SI REQUIERE APRENDIZAJE
-            if confianza_idioma < 50 or estructura.get('estructura_tipo') == 'desconocida':
-                self.requiere_aprendizaje = True
-                _logger.warning(f"🎓 Correo requiere aprendizaje - Confianza baja o formato desconocido")
-            
-            # 5. CONTINUAR CON PROCESAMIENTO NORMAL (por ahora)
-            _logger.info(f"✅ Análisis inteligente completado")
-            _logger.info(f"📊 === RESUMEN ANÁLISIS ===")
-            _logger.info(f"Estado: {self.estado}")
-            _logger.info(f"Idioma: {self.idioma_detectado}")
-            _logger.info(f"Marca: {self.marca_detectada}")
-            _logger.info(f"Formato: {self.formato_detectado}")
-            _logger.info(f"Requiere aprendizaje: {self.requiere_aprendizaje}")
-            _logger.info(f"🏁 === FIN PROCESAMIENTO INTELIGENTE ===")
-            
-            return True
-            
-        except Exception as e:
-            _logger.error(f"❌ === ERROR EN PROCESAMIENTO INTELIGENTE ===")
-            _logger.error(f"Error: {e}")
-            import traceback
-            _logger.error(f"Traceback: {traceback.format_exc()}")
-            
-            self.estado = 'error'
-            self.mensaje_error = f"Error en procesamiento inteligente: {str(e)}"
-            return False
-
-    def buscar_y_procesar_correos_inteligente(self):
-        """
-        Versión inteligente de búsqueda y procesamiento de correos
-        """
-        try:
-            _logger.info("🧠 === INICIO BÚSQUEDA Y PROCESAMIENTO INTELIGENTE ===")
-            
-            # Buscar canal "Correos"
-            _logger.info("🔍 Buscando canal 'Correos'...")
-            canal_correos = self.env['discuss.channel'].search([
-                ('name', 'ilike', 'correos')
-            ], limit=1)
-            
-            if not canal_correos:
-                _logger.warning("❌ No se encontró canal 'Correos'")
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': 'No se encontró el canal "Correos"',
-                        'type': 'warning'
-                    }
-                }
-            
-            _logger.info(f"✅ Canal encontrado: '{canal_correos.name}' (ID: {canal_correos.id})")
-            
-            # Buscar mensajes en el canal
-            _logger.info("📧 Buscando mensajes de correo en el canal...")
-            mensajes = self.env['mail.message'].search([
-                ('model', '=', 'discuss.channel'),
-                ('res_id', '=', canal_correos.id),
-                ('message_type', 'in', ['email', 'comment']),
-            ], order='date desc')
-            
-            _logger.info(f"📧 Total de mensajes encontrados: {len(mensajes)}")
-            
-            # Obtener registros ya procesados
-            registros_existentes = self.env['contador.automatico'].search([])
-            claves_procesadas = set()
-            
-            for registro in registros_existentes:
-                clave = f"{registro.name}|{registro.remitente or ''}"
-                claves_procesadas.add(clave)
-            
-            _logger.info(f"📋 Total claves procesadas: {len(claves_procesadas)}")
-            
-            # Procesar mensajes con filtro inteligente
-            correos_procesados = 0
-            correos_filtrados = 0
-            correos_ignorados = 0
-            
-            for i, mensaje in enumerate(mensajes):
-                asunto = mensaje.subject or f'Sin asunto - {mensaje.id}'
-                remitente = mensaje.email_from or mensaje.author_id.email if mensaje.author_id else 'Desconocido'
-                clave_mensaje = f"{asunto}|{remitente}"
-                
-                _logger.info(f"📨 Analizando mensaje {i+1}/{len(mensajes)}: '{asunto}'")
-                
-                # FILTRO INTELIGENTE 1: Verificar si es correo de contadores
-                if not self.es_correo_de_contadores(asunto):
-                    correos_filtrados += 1
-                    _logger.info(f"🚫 Correo filtrado - No es de contadores")
-                    continue
-                
-                # FILTRO 2: Verificar si ya fue procesado
-                if clave_mensaje in claves_procesadas:
-                    _logger.info(f"⏭️ Correo ya procesado")
-                    continue
-                
-                # FILTRO 3: Validaciones básicas
-                if not asunto or asunto.strip() == '':
-                    correos_ignorados += 1
-                    continue
-                
-                if mensaje.message_type == 'notification':
-                    correos_ignorados += 1
-                    continue
-                
-                # CREAR Y PROCESAR REGISTRO
-                _logger.info(f"🧠 Creando registro inteligente...")
-                
-                try:
-                    registro = self.env['contador.automatico'].create({
-                        'name': asunto,
-                        'remitente': remitente,
-                        'contenido_original': mensaje.body or '',
-                        'estado': 'pendiente'
-                    })
-                    
-                    _logger.info(f"✅ Registro creado con ID={registro.id}")
-                    claves_procesadas.add(clave_mensaje)
-                    
-                    # Procesar con sistema inteligente
-                    _logger.info(f"🧠 Iniciando procesamiento inteligente...")
-                    if registro.procesar_correo_inteligente():
-                        correos_procesados += 1
-                        _logger.info(f"✅ Procesamiento inteligente completado")
-                    else:
-                        _logger.warning(f"⚠️ Procesamiento inteligente con problemas")
-                    
-                except Exception as e:
-                    _logger.error(f"❌ Error procesando mensaje {mensaje.id}: {e}")
-                    continue
-            
-            # Preparar resultado
-            mensaje_result = f"Procesamiento inteligente completado: {correos_procesados} procesados, {correos_filtrados} filtrados, {correos_ignorados} ignorados"
-            tipo = 'success' if correos_procesados > 0 else 'info'
-            
-            _logger.info(f"🎯 === RESULTADO FINAL INTELIGENTE ===")
-            _logger.info(f"Correos procesados: {correos_procesados}")
-            _logger.info(f"Correos filtrados: {correos_filtrados}")
-            _logger.info(f"Correos ignorados: {correos_ignorados}")
-            _logger.info(f"🏁 === FIN PROCESAMIENTO INTELIGENTE ===")
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': mensaje_result,
-                    'type': tipo
-                }
-            }
-                
-        except Exception as e:
-            _logger.error(f"❌ Error en procesamiento inteligente: {e}")
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': f'Error técnico: {str(e)}',
-                    'type': 'danger'
-                }
-            }
+    
 
     def limpiar_html_correo(self, html_content):
         """
@@ -494,58 +183,7 @@ class ContadorAutomatico(models.Model):
             _logger.error(f"❌ Error limpiando HTML: {e}")
             return str(html_content)
 
-    # MÉTODO PARA PROBAR EL SISTEMA INTELIGENTE
-    def test_sistema_inteligente(self):
-        """
-        Método de prueba para el sistema inteligente
-        """
-        try:
-            _logger.info("🧪 === PROBANDO SISTEMA INTELIGENTE ===")
-            
-            # Probar con diferentes tipos de asuntos
-            asuntos_prueba = [
-                "Counter List",  # Válido
-                "Page Counter",  # Válido
-                "Error Alert",   # No válido
-                "counter list",  # Válido (case insensitive)
-                "Maintenance Required"  # No válido
-            ]
-            
-            for asunto in asuntos_prueba:
-                resultado = self.es_correo_de_contadores(asunto)
-                _logger.info(f"📧 '{asunto}' → {'✅ VÁLIDO' if resultado else '❌ FILTRADO'}")
-            
-            # Probar detección de idioma con texto de muestra
-            textos_prueba = {
-                'bizhub_es': "[Número de serie], A5C4011011874 [Contador total],00268741",
-                'ricoh_en': "Serial No: 3359PB02667 T_TotalPrtPGS:36089",
-                'generico': "Model XYZ123 Pages: 15000 Date: 2025-01-01"
-            }
-            
-            for nombre, texto in textos_prueba.items():
-                idioma, confianza, palabras = self.detectar_idioma_automatico(texto)
-                _logger.info(f"🌍 {nombre} → {idioma} ({confianza:.1f}%)")
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': 'Prueba del sistema inteligente completada. Revisa logs.',
-                    'type': 'success'
-                }
-            }
-            
-        except Exception as e:
-            _logger.error(f"❌ Error en prueba: {e}")
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': f'Error en prueba: {str(e)}',
-                    'type': 'danger'
-                }
-            }
-
+    
     # NUEVOS CAMPOS PARA AGREGAR AL MODELO (después de los campos existentes):
     idioma_detectado = fields.Char('Idioma Detectado', readonly=True)
     formato_detectado = fields.Char('Formato Detectado', readonly=True) 
@@ -596,112 +234,8 @@ class ContadorAutomatico(models.Model):
         _logger.info(f"❌ Asunto no válido para contadores: '{asunto}'")
         return False
 
-    def detectar_idioma_automatico(self, texto):
-        """
-        Detecta automáticamente el idioma del contenido del correo
-        """
-        try:
-            _logger.info(f"🌍 === DETECTANDO IDIOMA AUTOMÁTICAMENTE ===")
-            _logger.info(f"📝 Texto a analizar: {len(texto)} caracteres")
-            
-            # Palabras clave por idioma para contadores
-            palabras_clave = {
-                'español': [
-                    'número de serie', 'contador', 'negro', 'color', 'total', 
-                    'escaneo', 'serie', 'fecha', 'modelo', 'impresiones',
-                    'Bizhub', 'de envío', 'blanco y negro'
-                ],
-                'english': [
-                    'serial number', 'counter', 'black', 'color', 'total',
-                    'scan', 'serial', 'date', 'model', 'prints', 'pages',
-                    'white', 'print counter', 'page counter'
-                ],
-                'ricoh_format': [
-                    'T_TotalPrtPGS', 'T_ColorPrtPGS', 'T_ScanPGS', 
-                    'ChargeCounterDispType', 'Nº de serie'
-                ],
-                'bizhub_format': [
-                    '[Número de serie]', '[Contador total]', '[Contador de negro total]',
-                    '[Contador de color total]', '[Fecha de envío]'
-                ]
-            }
-            
-            # Contar coincidencias por idioma
-            coincidencias = {}
-            palabras_encontradas = {}
-            
-            texto_lower = texto.lower()
-            
-            for idioma, palabras in palabras_clave.items():
-                coincidencias[idioma] = 0
-                palabras_encontradas[idioma] = []
-                
-                for palabra in palabras:
-                    if palabra.lower() in texto_lower:
-                        coincidencias[idioma] += 1
-                        palabras_encontradas[idioma].append(palabra)
-                        _logger.info(f"🔍 Palabra '{palabra}' encontrada en {idioma}")
-            
-            # Determinar idioma con más coincidencias
-            if not any(coincidencias.values()):
-                _logger.warning("⚠️ No se detectaron palabras clave conocidas")
-                return 'desconocido', 0, []
-            
-            idioma_detectado = max(coincidencias, key=coincidencias.get)
-            max_coincidencias = coincidencias[idioma_detectado]
-            total_palabras = len(palabras_clave[idioma_detectado])
-            confianza = (max_coincidencias / total_palabras) * 100
-            
-            _logger.info(f"🎯 Idioma detectado: {idioma_detectado}")
-            _logger.info(f"📊 Coincidencias: {max_coincidencias}/{total_palabras} ({confianza:.1f}%)")
-            _logger.info(f"🔑 Palabras encontradas: {palabras_encontradas[idioma_detectado]}")
-            
-            return idioma_detectado, confianza, palabras_encontradas[idioma_detectado]
-            
-        except Exception as e:
-            _logger.error(f"❌ Error detectando idioma: {e}")
-            return 'error', 0, []
-
-    def detectar_marca_automatico(self, texto):
-        """
-        Detecta automáticamente la marca del equipo
-        """
-        try:
-            _logger.info(f"🏭 === DETECTANDO MARCA AUTOMÁTICAMENTE ===")
-            
-            marcas_conocidas = {
-                'Bizhub': ['bizhub', 'konica', 'minolta'],
-                'Ricoh': ['ricoh', 'T_TotalPrtPGS', 'T_ColorPrtPGS'],
-                'Canon': ['canon', 'imagerunner'],
-                'HP': ['hp', 'hewlett', 'packard', 'laserjet'],
-                'Xerox': ['xerox', 'workcentre'],
-                'Brother': ['brother'],
-                'Epson': ['epson'],
-                'Samsung': ['samsung', 'proxpress']
-            }
-            
-            texto_lower = texto.lower()
-            marcas_detectadas = {}
-            
-            for marca, keywords in marcas_conocidas.items():
-                marcas_detectadas[marca] = 0
-                for keyword in keywords:
-                    if keyword in texto_lower:
-                        marcas_detectadas[marca] += 1
-                        _logger.info(f"🏷️ Keyword '{keyword}' encontrado para marca {marca}")
-            
-            if any(marcas_detectadas.values()):
-                marca_detectada = max(marcas_detectadas, key=marcas_detectadas.get)
-                _logger.info(f"✅ Marca detectada: {marca_detectada}")
-                return marca_detectada
-            else:
-                _logger.info("❓ Marca no identificada")
-                return 'Desconocida'
-                
-        except Exception as e:
-            _logger.error(f"❌ Error detectando marca: {e}")
-            return 'Error'
-
+    
+    
     def analizar_estructura_contenido(self, texto):
         """
         Analiza la estructura del contenido para identificar patrones
@@ -1140,119 +674,89 @@ class ContadorAutomatico(models.Model):
 
     def procesar_correo_inteligente(self):
         """
-        Procesamiento inteligente del correo con análisis y generación automática
+        Procesamiento inteligente del correo con análisis,
+        validación extra de serie y generación de patrones.
         """
         try:
-            _logger.info(f"🧠 === INICIO PROCESAMIENTO INTELIGENTE ===")
-            _logger.info(f"📧 Registro ID={self.id}, Asunto='{self.name}'")
+            _logger.info("🧠 === INICIO PROCESAMIENTO INTELIGENTE ===")
+            _logger.info(f"📧 ID={self.id}, Asunto='{self.name}'")
             
-            # 1. VERIFICAR SI ES CORREO DE CONTADORES
+            # 1. Filtro por asunto
             if not self.es_correo_de_contadores(self.name):
                 self.estado = 'filtrado'
                 self.mensaje_error = 'Asunto no corresponde a correo de contadores'
-                _logger.info(f"🚫 Correo filtrado - No es de contadores")
+                _logger.info("🚫 Correo filtrado - asunto inválido")
                 return False
             
-            # 2. LIMPIAR CONTENIDO HTML
-            if self.contenido_original:
-                texto_limpio = self.limpiar_html_correo(self.contenido_original)
-                self.contenido_procesado = texto_limpio
-            else:
-                texto_limpio = self.name or ""
+            # 2. Limpiar HTML
+            texto_limpio = (self.limpiar_html_correo(self.contenido_original)
+                            if self.contenido_original else self.name or "")
+            self.contenido_procesado = texto_limpio
             
-            # 3. ANÁLISIS INTELIGENTE DEL CONTENIDO
-            _logger.info(f"🔍 === FASE: ANÁLISIS INTELIGENTE ===")
-            
-            # Detectar idioma
-            idioma, confianza_idioma, palabras_clave = self.detectar_idioma_automatico(texto_limpio)
+            # 3. Análisis de idioma, marca y estructura
+            idioma, conf, claves = self.detectar_idioma_automatico(texto_limpio)
             self.idioma_detectado = idioma
-            self.confianza_deteccion = confianza_idioma
-            self.palabras_clave_encontradas = ', '.join(palabras_clave)
+            self.confianza_deteccion = conf
+            self.palabras_clave_encontradas = ', '.join(claves)
             
-            # Detectar marca
             marca = self.detectar_marca_automatico(texto_limpio)
             self.marca_detectada = marca
             
-            # Analizar estructura
             estructura = self.analizar_estructura_contenido(texto_limpio)
             self.formato_detectado = estructura.get('estructura_tipo', 'desconocida')
             self.estructura_detectada = str(estructura)
             
-            _logger.info(f"🌍 Idioma: {idioma} ({confianza_idioma:.1f}%)")
-            _logger.info(f"🏭 Marca: {marca}")
-            _logger.info(f"📐 Formato: {estructura.get('estructura_tipo')}")
+            _logger.info(f"🌍 Idioma={idioma} ({conf:.1f}%), 🏭 Marca={marca}, 📐 Formato={self.formato_detectado}")
             
-            # 4. INTENTAR PROCESAMIENTO CON PATRONES EXISTENTES
-            _logger.info(f"📊 === FASE: PROCESAMIENTO CON PATRONES EXISTENTES ===")
-            
-            # Buscar serie y contadores con patrones actuales
+            # 4. Buscar serie y contadores con patrones existentes
             serie_encontrada = self.buscar_serie_dinamico(texto_limpio)
-            contadores_encontrados = self.buscar_patrones_contadores_dinamico(texto_limpio)
+            contadores = self.buscar_patrones_contadores_dinamico(texto_limpio)
             
-            # 5. SI NO ENCONTRÓ DATOS, GENERAR PATRONES AUTOMÁTICAMENTE
-            if not serie_encontrada or not contadores_encontrados:
-                _logger.info(f"🤖 === FASE: GENERACIÓN AUTOMÁTICA DE PATRONES ===")
-                _logger.warning(f"⚠️ Patrones existentes insuficientes. Generando automáticamente...")
-                
-                self.requiere_aprendizaje = True
-                
-                # Generar patrones automáticamente
-                if self.generar_patrones_automaticamente():
-                    _logger.info(f"✅ Patrones generados y aplicados exitosamente")
+            # --- Validación extra de la serie detectada ---
+            if serie_encontrada:
+                exclusiones = {'model', 'serial', 'pages', 'total'}
+                su = serie_encontrada.upper()
+                if any(c.isdigit() for c in su) and any(c.isalpha() for c in su) and su.lower() not in exclusiones:
+                    _logger.info(f"✅ Serie tras validación adicional: {su}")
+                    serie_encontrada = su
                 else:
-                    _logger.warning(f"⚠️ No se pudieron generar patrones efectivos")
+                    _logger.warning(f"💥 Serie descartada tras validación: '{serie_encontrada}'")
+                    serie_encontrada = None
+            
+            # 5. Si falta algo, generar patrones automáticos
+            if not serie_encontrada or not contadores:
+                _logger.warning("⚠️ Patrones existentes insuficientes, generando automáticos...")
+                self.requiere_aprendizaje = True
+                if self.generar_patrones_automaticamente():
+                    _logger.info("✅ Patrones automáticos generados y aplicados")
+                else:
+                    _logger.warning("⚠️ No se generaron patrones efectivos")
             else:
-                # Procesamiento exitoso con patrones existentes
-                _logger.info(f"✅ Procesamiento exitoso con patrones existentes")
+                # 6. Procesamiento exitoso
+                self.serie_detectada = serie_encontrada
+                self.contador_bn_detectado = contadores.get('contador_bn') or 0
+                self.contador_color_detectado = contadores.get('contador_color') or 0
+                self.contador_scan_detectado = contadores.get('contador_scan') or 0
                 
-                if serie_encontrada:
-                    self.serie_detectada = serie_encontrada
-                    
-                    # Actualizar contadores detectados
-                    if 'contador_bn' in contadores_encontrados:
-                        self.contador_bn_detectado = contadores_encontrados['contador_bn']
-                    if 'contador_color' in contadores_encontrados:
-                        self.contador_color_detectado = contadores_encontrados['contador_color']
-                    if 'contador_scan' in contadores_encontrados:
-                        self.contador_scan_detectado = contadores_encontrados['contador_scan']
-                    
-                    # Buscar equipo y actualizar
-                    equipo = self.buscar_equipo_por_serie(serie_encontrada)
-                    if equipo and contadores_encontrados:
-                        self.equipo_id = equipo.id
-                        self.actualizar_contadores_equipo(equipo, contadores_encontrados)
-                        self.estado = 'procesado'
-                        self.procesado_automaticamente = True
-                    else:
-                        self.estado = 'manual'
-                        self.mensaje_error = f"Serie detectada pero equipo no encontrado: {serie_encontrada}"
+                equipo = self.buscar_equipo_por_serie(serie_encontrada)
+                if equipo:
+                    self.equipo_id = equipo.id
+                    self.actualizar_contadores_equipo(equipo, contadores)
+                    self.estado = 'procesado'
+                    self.procesado_automaticamente = True
+                    _logger.info("🎉 Procesamiento completado con patrones existentes")
                 else:
                     self.estado = 'manual'
-                    self.mensaje_error = "No se detectó número de serie"
+                    self.mensaje_error = f"Serie detectada pero equipo no encontrado: {serie_encontrada}"
             
-            # Actualizar fecha de procesamiento
             self.fecha_procesamiento = fields.Datetime.now()
-            
-            _logger.info(f"📊 === RESUMEN PROCESAMIENTO INTELIGENTE ===")
-            _logger.info(f"Estado final: {self.estado}")
-            _logger.info(f"Idioma: {self.idioma_detectado}")
-            _logger.info(f"Marca: {self.marca_detectada}")
-            _logger.info(f"Formato: {self.formato_detectado}")
-            _logger.info(f"Serie: {self.serie_detectada or 'No detectada'}")
-            _logger.info(f"Requiere aprendizaje: {self.requiere_aprendizaje}")
-            _logger.info(f"Patrones auto-generados: {self.patrones_auto_generados}")
-            _logger.info(f"🏁 === FIN PROCESAMIENTO INTELIGENTE ===")
-            
+            _logger.info(f"🏁 Estado final: {self.estado}")
             return True
-            
+        
         except Exception as e:
-            _logger.error(f"❌ === ERROR EN PROCESAMIENTO INTELIGENTE ===")
-            _logger.error(f"Error: {e}")
-            import traceback
-            _logger.error(f"Traceback: {traceback.format_exc()}")
-            
+            _logger.error(f"❌ ERROR EN PROCESAMIENTO INTELIGENTE: {e}", exc_info=True)
             self.estado = 'error'
-            self.mensaje_error = f"Error en procesamiento inteligente: {str(e)}"
+            self.mensaje_error = f"Error en procesamiento inteligente: {e}"
             self.fecha_procesamiento = fields.Datetime.now()
             return False
 
@@ -1725,10 +1229,6 @@ class ContadorAutomatico(models.Model):
                     'type': 'danger'
                 }
             }
-
-
-
-    # MÉTODOS PARA CRON Y SISTEMA DE MONITOREO - PARTE 3 FINAL
 
     @api.model
     def cron_procesar_correos_perdidos(self):
@@ -2543,7 +2043,6 @@ class ContadorAutomatico(models.Model):
     patrones_usados = fields.Text('Patrones utilizados', readonly=True, 
                                 help="Registro de qué patrones se usaron para detectar datos")
 
-    # MODELO ADICIONAL PARA ESTADÍSTICAS (crear como archivo separado)
     
 class ContadorAutomaticoEstadisticas(models.Model):
         _name = 'contador.automatico.estadisticas'
