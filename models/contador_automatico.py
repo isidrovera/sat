@@ -351,55 +351,60 @@ class ContadorAutomatico(models.Model):
 
     def _generar_patrones_serie(self, texto, formato, idioma, marca):
         """
-        Genera patrones automáticos para números de serie
+        🔢 Genera patrones automáticos para números de serie,
+        basados únicamente en contexto (palabras clave, corchetes, dos puntos).
         """
         try:
-            _logger.info(f"🔢 === GENERANDO PATRONES DE SERIE ===")
-            
+            _logger.info("🔢 === GENERANDO PATRONES DE SERIE ===")
             patrones_serie = []
-            
-            # Buscar posibles números de serie en el texto
             posibles_series = []
-            
-            # Patrón 1: Código alfanumérico de 5-15 caracteres
-            series_alfanum = re.findall(r'\b([A-Z0-9]{5,15})\b', texto.upper())
-            posibles_series.extend(series_alfanum)
-            
-            # Patrón 2: Después de palabras clave específicas por idioma
+
+            # 1) Buscamos tras palabras clave según idioma
             palabras_serie = {
                 'español': ['número de serie', 'serie', 'serial'],
-                'english': ['serial number', 'serial no', 'serial', 'model'],
+                'english': ['serial number', 'serial no', 'serial'],
                 'bizhub_format': ['número de serie'],
                 'ricoh_format': ['nº de serie']
             }
-            
             for palabra in palabras_serie.get(idioma, []):
-                # Buscar series después de la palabra clave
                 patron_busqueda = rf'{re.escape(palabra)}[^\w]*([A-Z0-9]{{5,15}})'
                 matches = re.findall(patron_busqueda, texto, re.IGNORECASE)
+                if matches:
+                    _logger.info(f"🔍 Series tras '{palabra}': {matches}")
                 posibles_series.extend(matches)
-            
-            # Patrón 3: Entre corchetes
-            if '[' in texto and ']' in texto:
-                series_corchetes = re.findall(r'\[.*?serie.*?\][^A-Z0-9]*([A-Z0-9]{5,15})', texto, re.IGNORECASE)
+
+            # 2) Entre corchetes solo si la etiqueta es “Serial Number” o “Número de serie”
+            series_corchetes = re.findall(
+                r'\[(?:Serial Number|Número de serie)\][^A-Z0-9]*([A-Z0-9]{5,15})',
+                texto, re.IGNORECASE
+            )
+            if series_corchetes:
+                _logger.info(f"🔍 Series en corchetes: {series_corchetes}")
                 posibles_series.extend(series_corchetes)
-            
-            # Patrón 4: Después de dos puntos
-            series_dos_puntos = re.findall(r'(?:serie|serial)[^:]*:\s*([A-Z0-9]{5,15})', texto, re.IGNORECASE)
-            posibles_series.extend(series_dos_puntos)
-            
-            _logger.info(f"🔍 Posibles series encontradas: {posibles_series}")
-            
-            # Generar patrones basados en las series encontradas
-            for i, serie in enumerate(set(posibles_series)):  # Eliminar duplicados
-                if len(serie) >= 5:  # Solo series válidas
-                    patron_data = self._crear_patron_serie_automatico(texto, serie, formato, idioma, marca, i)
+
+            # 3) Tras dos puntos con “serial” o “serie”
+            series_dos_puntos = re.findall(
+                r'(?:serial no\.?|serial|serie)\s*:?\s*([A-Z0-9]{5,15})',
+                texto, re.IGNORECASE
+            )
+            if series_dos_puntos:
+                _logger.info(f"🔍 Series tras dos puntos: {series_dos_puntos}")
+                posibles_series.extend(series_dos_puntos)
+
+            _logger.info(f"🔍 Posibles series encontradas (filtradas): {posibles_series}")
+
+            # 4) Creamos patrones solo de los valores únicos y con al menos una letra
+            for i, serie in enumerate(set(posibles_series)):
+                if len(serie) >= 5 and re.search(r'[A-Z]', serie):
+                    patron_data = self._crear_patron_serie_automatico(
+                        texto, serie, formato, idioma, marca, i
+                    )
                     if patron_data:
                         patrones_serie.append(patron_data)
-            
+
             _logger.info(f"✅ Patrones de serie generados: {len(patrones_serie)}")
             return patrones_serie
-            
+
         except Exception as e:
             _logger.error(f"❌ Error generando patrones de serie: {e}")
             return []
