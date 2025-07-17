@@ -1850,51 +1850,71 @@ class ContadorAutomatico(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error en mantenimiento automático: {e}")
             return False
-    def buscar_serie_dinamico(self, texto):
+        def buscar_serie_dinamico(self, texto):
         """
-        Busca número de serie usando patrones dinámicos,
-        descartando las capturas puramente numéricas.
+        🔍 Busca número de serie usando patrones dinámicos,
+        con fallback si no encuentra nada.
         """
         _logger.info("🔍 Iniciando búsqueda de serie con patrones dinámicos...")
-        # 1. ¿Tenemos patrones configurados?
-        total = self.env['patron.contador'].search_count([
+
+        # 1) ¿Tenemos patrones activos de tipo 'serie'?
+        cnt = self.env['patron.contador'].search_count([
             ('tipo', '=', 'serie'),
-            ('activo', '=', True),
+            ('activo', '=', True)
         ])
-        _logger.info(f"📊 Patrones de serie disponibles: {total}")
-        if total == 0:
+        _logger.info(f"📊 Patrones de serie disponibles: {cnt}")
+
+        if cnt == 0:
             _logger.warning("⚠️ No hay patrones de serie configurados. Usando fallback...")
             return self._buscar_serie_fallback(texto)
 
-        # 2. Intentamos con los patrones activos
+        # 2) Intentamos detectar con patrones configurados
         resultado = self.env['patron.contador'].buscar_por_tipo('serie', texto)
-        if not resultado:
-            _logger.warning("❌ No se encontró serie con patrones dinámicos")
-            return None
-
-        # 3. Si el valor es sólo dígitos, lo descartamos y probamos fallback
-        if resultado.isdigit():
-            _logger.warning(f"💥 Serie descartada tras validación: '{resultado}'")
-            fallback = self._buscar_serie_fallback(texto)
-            if fallback:
-                _logger.info(f"🔄 Serie obtenida por fallback: '{fallback}'")
-                return fallback
-            _logger.warning("❌ No se encontró serie válida tras fallback")
-            return None
-
-        # 4. Guardamos qué patrón exacto se usó
-        patron_usado = self._encontrar_patron_usado('serie', texto, resultado)
-        if patron_usado:
-            info = f"serie: {patron_usado.name}"
-            if self.patrones_usados:
-                self.patrones_usados += f"; {info}"
+        if resultado:
+            patron = self._encontrar_patron_usado('serie', texto, resultado)
+            if patron:
+                detalle = f"serie: {patron.name}"
+                self.patrones_usados = (
+                    f"{self.patrones_usados}; {detalle}"
+                    if self.patrones_usados else detalle
+                )
+                _logger.info(f"✅ Serie encontrada: {resultado} usando patrón '{patron.name}'")
             else:
-                self.patrones_usados = info
-            _logger.info(f"✅ Serie encontrada: {resultado} usando patrón '{patron_usado.name}'")
-        else:
-            _logger.info(f"✅ Serie encontrada: {resultado}")
+                _logger.info(f"✅ Serie encontrada: {resultado}")
+            return resultado
 
-        return resultado
+        # 3) Si no, lanzamos fallback
+        _logger.warning("❌ No se encontró serie con patrones dinámicos, intentando fallback...")
+        serie = self._buscar_serie_fallback(texto)
+        if serie:
+            _logger.info(f"✅ Serie encontrada (fallback): {serie}")
+        else:
+            _logger.warning("❌ Tampoco en fallback se encontró serie")
+        return serie
+
+
+    def _buscar_serie_fallback(self, texto):
+        """
+        🔧 Fallback si no hay detección dinámica de serie.
+        Incluye corchetes, inglés y formas con 'No.' o 'Page Counter'.
+        """
+        _logger.info("🔧 Usando patrones de serie de fallback...")
+
+        patrones = [
+            r'\[Número de serie\].*?([A-Z0-9]{5,15})',          # [Número de serie], X...
+            r'\[Serial Number\].*?([A-Z0-9]{5,15})',            # [Serial Number], X...
+            r'Serial\s*No\.?:\s*([A-Z0-9]{5,15})',              # Serial No.: X...
+            r'Page\s*Counter\s*:\s*([A-Z0-9]{5,15})',           # Page Counter: X...
+            r'(?:serie|serial)\s*(?:no\.?)?\s*:?\s*([A-Z0-9]{5,15})'
+        ]
+        for pat in patrones:
+            _logger.info(f"🔍 Probando fallback: '{pat}'")
+            for match in re.finditer(pat, texto, re.IGNORECASE):
+                serie = match.group(1).upper()
+                if len(serie) >= 5:
+                    _logger.info(f"✅ Serie encontrada con fallback '{pat}': {serie}")
+                    return serie
+        return None
 
 
     def buscar_patrones_contadores_dinamico(self, texto):
@@ -2036,33 +2056,7 @@ class ContadorAutomatico(models.Model):
         
         return contadores
 
-    def _buscar_serie_fallback(self, texto):
-        """
-        Fallback para extraer serie si no hay patrones dinámicos.
-        Incluye patrones en español e inglés.
-        """
-        _logger.info("🔧 Usando patrones de serie de fallback...")
-        patrones_serie = [
-            # Español
-            r'\[Número de serie\]\s*,?\s*([A-Z0-9]{5,15})',
-            # Inglés
-            r'\[Serial Number\]\s*,?\s*([A-Z0-9]{5,15})',
-            r'Serial No\.?:\s*([A-Z0-9]{5,15})',
-            # Genérico alfanumérico
-            r'([A-Z]{2,4}\d{5,15})',
-            r'(?:serie|serial).*?([A-Z0-9]{5,15})',
-        ]
-        for patron in patrones_serie:
-            try:
-                for match in re.finditer(patron, texto, re.IGNORECASE):
-                    valor = match.group(1).upper().strip()
-                    if len(valor) >= 5 and re.search(r'[A-Z]', valor):
-                        _logger.info(f"✅ Serie encontrada (fallback) con '{patron}': {valor}")
-                        return valor
-            except re.error as e:
-                _logger.warning(f"Error en fallback '{patron}': {e}")
-        _logger.warning("❌ No se encontró serie en fallback")
-        return None
+    
 
     def buscar_equipo_por_serie(self, serie):
         """
