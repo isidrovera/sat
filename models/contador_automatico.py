@@ -1278,17 +1278,18 @@ class ContadorAutomatico(models.Model):
     @api.model
     def cron_procesar_correos_perdidos(self):
         """
-        CRON que procesa TODOS los correos del día, incluyendo los no leídos/nuevos
+        CRON con debug detallado para procesar correos nuevos
         """
         try:
-            _logger.info("⏰ === INICIO CRON PROCESAMIENTO CORREOS DEL DÍA ===")
+            _logger.info("⏰ === INICIO CRON DEBUG CORREOS ===")
             
             # Configuración: procesar correos de las últimas 24 horas
             horas_buscar = 24  
             fecha_limite = fields.Datetime.now() - timedelta(hours=horas_buscar)
+            ahora = fields.Datetime.now()
             
             _logger.info(f"🔍 Buscando correos desde: {fecha_limite}")
-            _logger.info(f"⏰ Hora actual: {fields.Datetime.now()}")
+            _logger.info(f"⏰ Hora actual: {ahora}")
             
             # Buscar canal "Correos"
             canal_correos = self.env['discuss.channel'].search([
@@ -1311,31 +1312,34 @@ class ContadorAutomatico(models.Model):
             
             _logger.info(f"📧 CRON: Mensajes del día encontrados: {len(mensajes_recientes)}")
             
-            if not mensajes_recientes:
-                _logger.info("ℹ️ CRON: No hay mensajes del día para procesar")
-                return True
+            # DEBUG: Obtener TODOS los registros existentes para análisis
+            todos_los_registros = self.env['contador.automatico'].search([])
+            _logger.info(f"🔍 DEBUG: Total registros en BD: {len(todos_los_registros)}")
             
-            # Obtener registros YA PROCESADOS HOY (no todos los existentes)
-            registros_procesados_hoy = self.env['contador.automatico'].search([
-                ('fecha_procesamiento', '>=', fecha_limite),
-                ('estado', '=', 'procesado')
+            # DEBUG: Mostrar registros existentes con fechas
+            for registro in todos_los_registros:
+                fecha_proc = registro.fecha_procesamiento or "Sin fecha"
+                _logger.info(f"🔍 DEBUG: Registro ID={registro.id}, Asunto='{registro.name}', Estado={registro.estado}, Fecha_proc={fecha_proc}")
+            
+            # Obtener registros procesados en las últimas 24 horas
+            registros_recientes = self.env['contador.automatico'].search([
+                ('fecha_procesamiento', '>=', fecha_limite)
             ])
             
-            claves_procesadas_hoy = set()
-            for registro in registros_procesados_hoy:
+            _logger.info(f"📋 CRON: Registros procesados en últimas 24h: {len(registros_recientes)}")
+            
+            claves_procesadas_recientes = set()
+            for registro in registros_recientes:
                 clave = f"{registro.name}|{registro.remitente or ''}"
-                claves_procesadas_hoy.add(clave)
+                claves_procesadas_recientes.add(clave)
+                _logger.info(f"📋 CRON: Clave procesada reciente: '{clave}' (ID={registro.id}, Fecha={registro.fecha_procesamiento})")
             
-            _logger.info(f"📋 CRON: Registros ya procesados HOY: {len(registros_procesados_hoy)}")
-            _logger.info(f"📋 CRON: Claves procesadas HOY: {len(claves_procesadas_hoy)}")
-            
-            # Estadísticas
+            # Procesar mensajes
             correos_analizados = 0
             correos_validos = 0
-            correos_ya_procesados_hoy = 0
-            correos_nuevos_encontrados = 0
+            correos_ya_procesados = 0
+            correos_nuevos = 0
             correos_procesados_exitosos = 0
-            correos_fallidos = 0
             
             for i, mensaje in enumerate(mensajes_recientes):
                 correos_analizados += 1
@@ -1344,44 +1348,51 @@ class ContadorAutomatico(models.Model):
                 clave_mensaje = f"{asunto}|{remitente}"
                 fecha_mensaje = mensaje.date
                 
-                _logger.info(f"📨 CRON: Analizando mensaje {i+1}/{len(mensajes_recientes)}")
-                _logger.info(f"📧 Asunto: '{asunto}' de '{remitente}'")
+                _logger.info(f"📨 CRON: === ANALIZANDO MENSAJE {i+1}/{len(mensajes_recientes)} ===")
+                _logger.info(f"📧 Asunto: '{asunto}'")
+                _logger.info(f"👤 Remitente: '{remitente}'")
+                _logger.info(f"🔑 Clave: '{clave_mensaje}'")
                 _logger.info(f"⏰ Fecha mensaje: {fecha_mensaje}")
                 
                 # FILTRO 1: Verificar si es correo de contadores
                 dummy_registro = self.env['contador.automatico'].new()
                 if not dummy_registro.es_correo_de_contadores(asunto):
-                    _logger.info(f"🚫 CRON: Correo filtrado - No es de contadores")
+                    _logger.info(f"🚫 CRON: NO es correo de contadores")
                     continue
                 
                 correos_validos += 1
-                _logger.info(f"✅ CRON: Correo válido de contadores encontrado")
+                _logger.info(f"✅ CRON: SÍ es correo de contadores")
                 
-                # FILTRO 2: ¿Ya fue procesado HOY?
-                if clave_mensaje in claves_procesadas_hoy:
-                    _logger.info(f"⏭️ CRON: Correo ya procesado HOY, saltando")
-                    correos_ya_procesados_hoy += 1
+                # DEBUG: Verificar si existe la clave en procesados recientes
+                _logger.info(f"🔍 DEBUG: ¿Clave '{clave_mensaje}' en procesados recientes?")
+                if clave_mensaje in claves_procesadas_recientes:
+                    _logger.info(f"⚠️ DEBUG: SÍ está en procesados recientes")
+                    correos_ya_procesados += 1
                     continue
+                else:
+                    _logger.info(f"✅ DEBUG: NO está en procesados recientes - ES NUEVO")
                 
-                # CORREO NUEVO/NO PROCESADO HOY
-                correos_nuevos_encontrados += 1
-                _logger.info(f"🆕 CRON: Correo NUEVO/NO PROCESADO encontrado!")
-                _logger.info(f"📊 CRON: Progreso - Nuevos: {correos_nuevos_encontrados}, Válidos: {correos_validos}")
-                
-                # Verificar si existe un registro anterior (de días pasados)
+                # DEBUG: Verificar si existe registro anterior (cualquier fecha)
                 registro_anterior = self.env['contador.automatico'].search([
                     ('name', '=', asunto),
                     ('remitente', '=', remitente)
                 ], limit=1)
                 
                 if registro_anterior:
-                    _logger.info(f"🔄 CRON: Existe registro anterior ID={registro_anterior.id}, Estado={registro_anterior.estado}")
-                    _logger.info(f"🔄 CRON: Eliminando registro anterior para crear uno nuevo con datos actuales")
+                    _logger.info(f"🔍 DEBUG: Existe registro anterior - ID={registro_anterior.id}")
+                    _logger.info(f"🔍 DEBUG: Estado anterior: {registro_anterior.estado}")
+                    _logger.info(f"🔍 DEBUG: Fecha anterior: {registro_anterior.fecha_procesamiento}")
+                    _logger.info(f"🔄 DEBUG: Eliminando registro anterior para crear uno nuevo")
                     registro_anterior.unlink()
+                else:
+                    _logger.info(f"🆕 DEBUG: No existe registro anterior - completamente nuevo")
                 
-                # CREAR Y PROCESAR REGISTRO NUEVO
+                # CREAR NUEVO REGISTRO
+                correos_nuevos += 1
+                _logger.info(f"🆕 CRON: PROCESANDO CORREO NUEVO #{correos_nuevos}")
+                
                 try:
-                    _logger.info(f"🧠 CRON: Creando registro para correo del día...")
+                    _logger.info(f"🧠 CRON: Creando registro...")
                     
                     registro = self.env['contador.automatico'].create({
                         'name': asunto,
@@ -1393,67 +1404,51 @@ class ContadorAutomatico(models.Model):
                     _logger.info(f"✅ CRON: Registro creado con ID={registro.id}")
                     
                     # Agregar a tracking
-                    claves_procesadas_hoy.add(clave_mensaje)
+                    claves_procesadas_recientes.add(clave_mensaje)
                     
-                    # Procesar con sistema inteligente
+                    # Procesar
                     _logger.info(f"🧠 CRON: Iniciando procesamiento inteligente...")
                     
                     if registro.procesar_correo_inteligente():
                         correos_procesados_exitosos += 1
-                        _logger.info(f"✅ CRON: Correo procesado exitosamente!")
-                        _logger.info(f"📝 CRON: Estado final: {registro.estado}")
-                        _logger.info(f"🎯 CRON: Serie: {registro.serie_detectada}")
-                        _logger.info(f"📊 CRON: Contadores - BN: {registro.contador_bn_detectado}, Color: {registro.contador_color_detectado}, Scan: {registro.contador_scan_detectado}")
-                        
+                        _logger.info(f"✅ CRON: ¡PROCESADO EXITOSAMENTE!")
+                        _logger.info(f"📝 Estado: {registro.estado}")
+                        _logger.info(f"🎯 Serie: {registro.serie_detectada}")
+                        _logger.info(f"📊 Contadores: BN={registro.contador_bn_detectado}, Color={registro.contador_color_detectado}, Scan={registro.contador_scan_detectado}")
                         if registro.equipo_id:
-                            _logger.info(f"🎯 CRON: Equipo actualizado: ID={registro.equipo_id.id}")
+                            _logger.info(f"🎯 Equipo: ID={registro.equipo_id.id}")
                     else:
-                        _logger.warning(f"⚠️ CRON: Procesamiento con problemas - Estado: {registro.estado}")
+                        _logger.warning(f"⚠️ CRON: Procesamiento con problemas")
+                        _logger.warning(f"Estado: {registro.estado}")
                         if registro.mensaje_error:
-                            _logger.warning(f"⚠️ CRON: Error: {registro.mensaje_error}")
+                            _logger.warning(f"Error: {registro.mensaje_error}")
                     
                 except Exception as e:
-                    correos_fallidos += 1
-                    _logger.error(f"❌ CRON: Error procesando correo '{asunto}': {e}")
+                    _logger.error(f"❌ CRON: Error procesando: {e}")
                     import traceback
-                    _logger.error(f"🔍 CRON: Traceback: {traceback.format_exc()}")
+                    _logger.error(f"Traceback: {traceback.format_exc()}")
                     continue
             
             # RESUMEN FINAL
-            _logger.info(f"📊 === RESUMEN PROCESAMIENTO CORREOS DEL DÍA ===")
+            _logger.info(f"📊 === RESUMEN FINAL DEBUG ===")
             _logger.info(f"📧 Mensajes analizados: {correos_analizados}")
-            _logger.info(f"✅ Correos válidos (de contadores): {correos_validos}")
-            _logger.info(f"⏭️ Correos ya procesados HOY: {correos_ya_procesados_hoy}")
-            _logger.info(f"🆕 Correos nuevos/no procesados encontrados: {correos_nuevos_encontrados}")
-            _logger.info(f"✅ Correos procesados exitosamente: {correos_procesados_exitosos}")
-            _logger.info(f"❌ Correos con fallos: {correos_fallidos}")
-            _logger.info(f"⏰ Período revisado: {horas_buscar} horas")
+            _logger.info(f"✅ Correos válidos: {correos_validos}")
+            _logger.info(f"⏭️ Ya procesados: {correos_ya_procesados}")
+            _logger.info(f"🆕 Correos nuevos: {correos_nuevos}")
+            _logger.info(f"✅ Procesados exitosos: {correos_procesados_exitosos}")
             
-            # Eficiencia
-            if correos_nuevos_encontrados > 0:
-                eficiencia = (correos_procesados_exitosos / correos_nuevos_encontrados) * 100
-                _logger.info(f"📈 Eficiencia de procesamiento: {eficiencia:.1f}%")
+            if correos_nuevos == 0:
+                _logger.warning("⚠️ NO SE ENCONTRARON CORREOS NUEVOS")
+                _logger.warning("⚠️ Posibles causas:")
+                _logger.warning("⚠️ 1. Todos los correos ya fueron procesados")
+                _logger.warning("⚠️ 2. No hay correos de contadores en las últimas 24h")
+                _logger.warning("⚠️ 3. Problema en la lógica de detección")
             
-            # Estadísticas para BD
-            resumen = {
-                'fecha_ejecucion': fields.Datetime.now(),
-                'correos_analizados': correos_analizados,
-                'correos_validos': correos_validos,
-                'correos_ya_procesados': correos_ya_procesados_hoy,
-                'correos_encontrados': correos_nuevos_encontrados,
-                'correos_procesados': correos_procesados_exitosos,
-                'correos_fallidos': correos_fallidos,
-                'horas_revision': horas_buscar
-            }
-            
-            self._guardar_estadisticas_cron(resumen)
-            
-            _logger.info("⏰ === FIN CRON PROCESAMIENTO CORREOS DEL DÍA ===")
+            _logger.info("⏰ === FIN CRON DEBUG ===")
             return True
             
         except Exception as e:
-            _logger.error(f"❌ === ERROR CRÍTICO EN CRON ===")
-            _logger.error(f"Error: {e}")
+            _logger.error(f"❌ ERROR CRÍTICO: {e}")
             import traceback
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
