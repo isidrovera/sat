@@ -1899,49 +1899,76 @@ class ContadorAutomatico(models.Model):
 
     def buscar_patrones_contadores_dinamico(self, texto):
         """
-        Busca patrones de contadores usando configuración dinámica
+        🔍 Busca patrones de contadores usando configuración dinámica,
+        con fallback tipo‑a‑tipo si no encuentra nada.
         """
         contadores = {}
         patrones_usados = []
-        
-        _logger.info(f"🔍 Iniciando búsqueda de contadores con patrones dinámicos...")
+
+        _logger.info("🔍 Iniciando búsqueda de contadores con patrones dinámicos...")
         _logger.info(f"📄 Texto a analizar (primeros 200 chars): {texto[:200]}...")
-        
+
         # Verificar si existen patrones configurados
         total_patrones = self.env['patron.contador'].search_count([('activo', '=', True)])
         _logger.info(f"📊 Total de patrones activos disponibles: {total_patrones}")
-        
-        if total_patrones == 0:
-            _logger.warning(f"⚠️ No hay patrones activos configurados. Usando patrones por defecto...")
-            return self._buscar_patrones_fallback(texto)
-        
-        # Buscar cada tipo de contador
+
+        # Tipos de contador a buscar
         tipos = ['contador_bn', 'contador_color', 'contador_scan']
-        
+
+        # Fallback regexs específicas para etiquetas en inglés
+        fallback_por_tipo = {
+            'contador_bn': [
+                r'\[Total Black Counter\][^0-9]*(\d{4,9})',
+                r'(?:black|b\/w).*?(\d{4,9})'
+            ],
+            'contador_color': [
+                r'\[Total Color Counter\][^0-9]*(\d{4,9})',
+                r'(?:color|colour).*?(\d{4,9})'
+            ],
+            'contador_scan': [
+                r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
+                r'(?:scan|fax|copy).*?(\d{4,9})'
+            ],
+        }
+
         for tipo in tipos:
             _logger.info(f"🔍 Buscando patrones para: {tipo}")
-            
+            # 1) Intento con patrones dinámicos
             resultado = self.env['patron.contador'].buscar_por_tipo(tipo, texto)
-            
             if resultado:
                 contadores[tipo] = resultado
-                # Encontrar qué patrón se usó
                 patron_usado = self._encontrar_patron_usado(tipo, texto, resultado)
                 if patron_usado:
                     patrones_usados.append(f"{tipo}: {patron_usado.name}")
                     _logger.info(f"✅ {tipo} encontrado: {resultado} usando patrón '{patron_usado.name}'")
                 else:
                     _logger.info(f"✅ {tipo} encontrado: {resultado}")
-            else:
-                _logger.info(f"❌ No se encontró {tipo} en el texto")
-        
-        # Guardar información de patrones usados
+                continue
+
+            # 2) Fallback específico si no hay detección dinámica
+            _logger.warning(f"❌ No se encontró {tipo} con patrones dinámicos, intentando fallback...")
+            for pat in fallback_por_tipo[tipo]:
+                for match in re.finditer(pat, texto, re.IGNORECASE):
+                    raw = match.group(1)
+                    numero = int(re.sub(r'[^0-9]', '', raw))
+                    if numero > 0:
+                        contadores[tipo] = numero
+                        patrones_usados.append(f"{tipo}: fallback '{pat}'")
+                        _logger.info(f"✅ {tipo} encontrado por fallback: {numero} usando patrón '{pat}'")
+                        break
+                if tipo in contadores:
+                    break
+            if tipo not in contadores:
+                _logger.info(f"❌ No se encontró {tipo} incluso en fallback")
+
+        # Guardamos el detalle de qué patrones se usaron
         if patrones_usados:
             self.patrones_usados = "; ".join(patrones_usados)
             _logger.info(f"📋 Patrones utilizados: {self.patrones_usados}")
-        
+
         _logger.info(f"🎯 Resultado final de contadores: {contadores}")
         return contadores
+
 
     def _encontrar_patron_usado(self, tipo, texto, valor_encontrado):
         """
