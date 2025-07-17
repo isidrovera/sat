@@ -292,17 +292,6 @@
               action="action_patron_contador"
               sequence="85"/>
 
-    <!-- Agregar botón en contador automático para gestionar patrones MANTENIDO -->
-    <record id="view_contador_automatico_form_inherit" model="ir.ui.view">
-        <field name="name">contador.automatico.form.inherit</field>
-        <field name="model">contador.automatico</field>
-        <field name="inherit_id" ref="view_contador_automatico_form"/>
-        <field name="arch" type="xml">
-            <button name="marcar_como_procesado_manual" position="after">
-                <button name="%(action_patron_contador)d" type="action" 
-                        string="⚙️ Gestionar Patrones" class="btn-secondary"/>
-            </button>
-        </field>
-    </record>
+    
 
 </odoo>
