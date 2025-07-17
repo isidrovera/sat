@@ -42,9 +42,9 @@
                 <field name="casos_detectados" readonly="1" optional="show"/>
                 <field name="casos_fallidos" readonly="1" optional="hide"/>
                 <field name="tasa_exito" readonly="1" optional="show" 
-                       decoration-success="tasa_exito >= 80"
-                       decoration-warning="tasa_exito >= 50 and tasa_exito < 80"
-                       decoration-danger="tasa_exito < 50"/>
+                       decoration-success="tasa_exito &gt;= 80"
+                       decoration-warning="tasa_exito &gt;= 50 and tasa_exito &lt; 80"
+                       decoration-danger="tasa_exito &lt; 50"/>
                 <field name="ultima_deteccion" readonly="1" optional="hide"/>
                 
                 <!-- BOTONES DE ACCIÓN -->
@@ -71,7 +71,7 @@
                             invisible="not auto_generado or validado_manualmente"/>
                     <button name="desactivar_patron_inefectivo" type="object" 
                             string="⏸️ Desactivar" class="btn-warning"
-                            invisible="not activo or tasa_exito >= 20"/>
+                            invisible="not activo or tasa_exito &gt;= 20"/>
                     
                     <!-- Estado visual del patrón -->
                     <field name="estado_patron" widget="statusbar" 
@@ -151,16 +151,15 @@
                                 </group>
                             </group>
                             
-                            <!-- Visualización de rendimiento -->
+                            <!-- Visualización de rendimiento simplificada -->
                             <div class="row" invisible="veces_usado == 0">
                                 <div class="col-md-6">
                                     <div class="o_field_widget">
                                         <label class="o_form_label">Efectividad del Patrón</label>
                                         <div class="progress" style="height: 20px;">
-                                            <div class="progress-bar progress-bar-striped" 
+                                            <div class="progress-bar progress-bar-striped bg-success" 
                                                  role="progressbar" 
-                                                 t-att-style="'width: ' + record.tasa_exito.raw_value + '%'"
-                                                 t-att-class="record.tasa_exito.raw_value >= 80 ? 'progress-bar-success' : record.tasa_exito.raw_value >= 50 ? 'progress-bar-warning' : 'progress-bar-danger'">
+                                                 style="width: 100%">
                                                 <field name="tasa_exito"/>%
                                             </div>
                                         </div>
@@ -241,8 +240,8 @@
                 <filter string="Contador Scan" name="contador_scan" domain="[('tipo', '=', 'contador_scan')]"/>
                 
                 <separator/>
-                <filter string="🎯 Alta Efectividad (&gt;80%)" name="alta_efectividad" domain="[('tasa_exito', '>=', 80)]"/>
-                <filter string="⚡ Muy Usados (&gt;10)" name="muy_usados" domain="[('veces_usado', '>', 10)]"/>
+                <filter string="🎯 Alta Efectividad (&gt;80%)" name="alta_efectividad" domain="[('tasa_exito', '&gt;=', 80)]"/>
+                <filter string="⚡ Muy Usados (&gt;10)" name="muy_usados" domain="[('veces_usado', '&gt;', 10)]"/>
                 <filter string="💤 Sin Usar" name="sin_usar" domain="[('veces_usado', '=', 0)]"/>
                 
                 <separator/>
