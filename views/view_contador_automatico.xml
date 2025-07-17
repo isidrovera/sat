@@ -158,13 +158,12 @@
                                             <h5 class="card-title">Rendimiento del Patrón</h5>
                                             <div class="progress mb-2">
                                                 <div class="progress-bar bg-success" 
-                                                     role="progressbar" 
-                                                     t-attf-style="width: {{tasa_exito}}%">
-                                                    <t t-esc="tasa_exito"/>% Éxito
+                                                     role="progressbar">
+                                                    <field name="tasa_exito"/>% Éxito
                                                 </div>
                                             </div>
                                             <small class="text-muted">
-                                                <t t-esc="casos_detectados"/> detecciones exitosas de <t t-esc="veces_usado"/> total
+                                                <field name="casos_detectados"/> detecciones exitosas de <field name="veces_usado"/> total
                                             </small>
                                         </div>
                                     </div>
@@ -263,7 +262,7 @@
                                 <div class="progress mt-2" style="height: 6px;">
                                     <div class="progress-bar" 
                                          t-att-class="record.tasa_exito.value >= 80 ? 'bg-success' : record.tasa_exito.value >= 50 ? 'bg-warning' : 'bg-danger'"
-                                         t-att-style="'width: ' + record.tasa_exito.value + '%'"/>
+                                         style="width: 100%"/>
                                 </div>
                             </div>
                             
