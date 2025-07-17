@@ -1943,19 +1943,18 @@ class ContadorAutomatico(models.Model):
             'contador_bn': [
                 r'\[Total Black Counter\][^0-9]*(\d{4,9})',
                 r'(?:black|b\/w).*?(\d{4,9})',
-                r'T_TotalPrtPGS:\s*(\d{4,9})',           # ← AGREGAR ESTE PATRÓN RICOH
-                r'T_MonoPrtPGS:\s*(\d{4,9})'             # ← AGREGAR ESTE PATRÓN RICOH
+                r'T_TotalPrtPGS:\s*(\d{4,9})',           # ← RICOH: Total páginas impresas
+                r'T_MonoPrtPGS:\s*(\d{4,9})'             # ← RICOH: Páginas monocromo (si existe)
             ],
             'contador_color': [
                 r'\[Total Color Counter\][^0-9]*(\d{4,9})',
                 r'(?:color|colour).*?(\d{4,9})',
-                r'T_ColorPrtPGS:\s*(\d{4,9})'            # ← AGREGAR ESTE PATRÓN RICOH
+                r'T_ColorPrtPGS:\s*(\d{4,9})'            # ← RICOH: Páginas color
             ],
             'contador_scan': [
                 r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
-                r'(?:scan|fax|copy).*?(\d{4,9})',
-                r'T_ScanPGS:\s*(\d{4,9})',               # ← AGREGAR ESTE PATRÓN RICOH
-                r'T_TotalPrtPGS:\s*(\d{4,9})'            # ← AGREGAR ESTE PATRÓN RICOH (total pages)
+                r'(?:scan|fax|copy).*?(\d{4,9})'
+                # ← NO agregar patrones Ricoh aquí porque no envía scan por separado
             ],
         }
 
