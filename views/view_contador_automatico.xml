@@ -364,6 +364,6 @@
               name="Contadores Automáticos"
               parent="sat_menu_root"
               action="action_contador_automatico"
-              sequence="80"/>
+              sequence="90"/>
     
 </odoo>
