@@ -208,8 +208,7 @@ class ContadorAutomatico(models.Model):
 
     def es_correo_de_contadores(self, asunto):
         """
-        Filtro estricto: Solo correos con asuntos específicos de contadores
-        Actualizado para incluir formatos dinámicos de Ricoh
+        Filtro: Correos que CONTENGAN palabras clave de contadores
         """
         if not asunto:
             _logger.info("❌ Sin asunto - No es correo de contadores")
@@ -217,38 +216,24 @@ class ContadorAutomatico(models.Model):
             
         asunto_lower = asunto.lower().strip()
         
-        # Asuntos válidos para contadores
-        # Incluye tanto formatos exactos como patrones dinámicos
-        asuntos_validos_exactos = [
+        # Palabras clave que SI indican correos de contadores
+        # Si el asunto CONTIENE cualquiera de estas, es válido
+        palabras_validas = [
             'counter list',
-            'counter page', 
-            'page counter',
-            'counter lists',
-            'page counters',
+            'Counter List',
+            'Counter Page',
+            'counter',
+            'page counter', 
+            'page count',
             'contador',
-            'contadores'
+            'contadores',
+            'ricoh'
         ]
         
-        # Patrones dinámicos para Ricoh y otros
-        patrones_dinamicos = [
-            r'page\s+count:',        # "Page Count: xxxx serie"
-            r'counter\s+count:',     # "Counter Count: xxxx"
-            r'count\s+list:',        # "Count List: xxxx"
-            r'page\s+counter:',      # "Page Counter: xxxx serie"
-            r'counter\s+report:'     # "Counter Report: xxxx"
-        ]
-        
-        # Verificar coincidencia exacta (case insensitive)
-        for asunto_valido in asuntos_validos_exactos:
-            if asunto_valido in asunto_lower:
-                _logger.info(f"✅ Asunto válido detectado: '{asunto}' contiene '{asunto_valido}'")
-                return True
-        
-        # Verificar patrones dinámicos (especialmente para Ricoh)
-        import re
-        for patron in patrones_dinamicos:
-            if re.search(patron, asunto_lower):
-                _logger.info(f"✅ Asunto válido detectado (patrón dinámico): '{asunto}' coincide con patrón '{patron}'")
+        # Verificar si CONTIENE alguna palabra clave
+        for palabra in palabras_validas:
+            if palabra in asunto_lower:
+                _logger.info(f"✅ Asunto válido detectado: '{asunto}' contiene '{palabra}'")
                 return True
         
         _logger.info(f"❌ Asunto no válido para contadores: '{asunto}'")
