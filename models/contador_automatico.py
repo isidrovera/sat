@@ -219,9 +219,7 @@ class ContadorAutomatico(models.Model):
         # Palabras clave que SI indican correos de contadores
         # Si el asunto CONTIENE cualquiera de estas, es válido
         palabras_validas = [
-            'counter list',
-            'Counter List',
-            'Counter Page',
+            'counter list',            
             'counter',
             'page counter', 
             'page count',
@@ -1085,7 +1083,108 @@ class ContadorAutomatico(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error aprendiendo patrón de contador: {e}")
             return False
-
+    @api.model
+    def limpiar_registros_problematicos_total(self):
+        """
+        SOLUCIÓN: Limpieza completa de registros que pueden estar causando problemas
+        """
+        try:
+            _logger.info("🧹 === INICIO LIMPIEZA TOTAL DE REGISTROS PROBLEMÁTICOS ===")
+            
+            # 1. Registros sin fecha de procesamiento
+            sin_fecha = self.env['contador.automatico'].search([
+                ('fecha_procesamiento', '=', False)
+            ])
+            _logger.info(f"🔍 Registros sin fecha_procesamiento: {len(sin_fecha)}")
+            
+            # 2. Registros en estado pendiente o error
+            estados_problematicos = self.env['contador.automatico'].search([
+                ('estado', 'in', ['pendiente', 'error'])
+            ])
+            _logger.info(f"🔍 Registros en estado problemático: {len(estados_problematicos)}")
+            
+            # 3. Registros duplicados (mismo asunto y remitente)
+            todos_registros = self.env['contador.automatico'].search([])
+            claves_vistas = {}
+            duplicados = []
+            
+            for registro in todos_registros:
+                clave = f"{registro.name}|{registro.remitente or ''}"
+                if clave in claves_vistas:
+                    # Es duplicado, marcar el más antiguo para eliminar
+                    registro_anterior = claves_vistas[clave]
+                    if registro.create_date < registro_anterior.create_date:
+                        duplicados.append(registro_anterior)
+                        claves_vistas[clave] = registro
+                    else:
+                        duplicados.append(registro)
+                else:
+                    claves_vistas[clave] = registro
+            
+            _logger.info(f"🔍 Registros duplicados encontrados: {len(duplicados)}")
+            
+            # 4. Combinar todos los registros problemáticos
+            registros_a_eliminar = sin_fecha | estados_problematicos
+            for dup in duplicados:
+                registros_a_eliminar |= dup
+            
+            # Remover duplicados de la lista
+            registros_a_eliminar = list(set(registros_a_eliminar.ids))
+            
+            _logger.info(f"📊 Total de registros problemáticos a eliminar: {len(registros_a_eliminar)}")
+            
+            if registros_a_eliminar:
+                # Mostrar detalles antes de eliminar
+                for reg_id in registros_a_eliminar[:10]:  # Mostrar solo primeros 10
+                    registro = self.env['contador.automatico'].browse(reg_id)
+                    _logger.info(f"🗑️ A eliminar: ID={registro.id}, Estado={registro.estado}, Asunto='{registro.name}', Fecha={registro.fecha_procesamiento}")
+                
+                # Eliminar en lotes para evitar problemas de memoria
+                batch_size = 50
+                eliminados = 0
+                
+                for i in range(0, len(registros_a_eliminar), batch_size):
+                    batch = registros_a_eliminar[i:i+batch_size]
+                    registros_batch = self.env['contador.automatico'].browse(batch)
+                    registros_batch.unlink()
+                    eliminados += len(batch)
+                    _logger.info(f"🗑️ Eliminados {eliminados}/{len(registros_a_eliminar)} registros...")
+                
+                _logger.info(f"✅ Limpieza completada: {eliminados} registros problemáticos eliminados")
+            else:
+                _logger.info("ℹ️ No se encontraron registros problemáticos para eliminar")
+            
+            # 5. Limpiar estadísticas antiguas también
+            fecha_limite_stats = fields.Date.today() - timedelta(days=30)
+            stats_antiguas = self.env['contador.automatico.estadisticas'].search([
+                ('fecha', '<', fecha_limite_stats)
+            ])
+            
+            if stats_antiguas:
+                stats_antiguas.unlink()
+                _logger.info(f"🗑️ Eliminadas {len(stats_antiguas)} estadísticas antiguas")
+            
+            _logger.info("🧹 === FIN LIMPIEZA TOTAL ===")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Limpieza completada: {len(registros_a_eliminar)} registros problemáticos eliminados',
+                    'type': 'success'
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error en limpieza total: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error en limpieza: {str(e)}',
+                    'type': 'danger'
+                }
+            }
     def _extraer_patron_de_contexto(self, contexto, valor):
         """
         Extrae un patrón regex del contexto que rodea un valor
@@ -1278,17 +1377,31 @@ class ContadorAutomatico(models.Model):
     @api.model
     def cron_procesar_correos_perdidos(self):
         """
-        CRON con debug detallado para procesar correos nuevos
+        CRON DEFINITIVO: Todas las soluciones aplicadas
+        Procesa correos basado en timestamp y limpia registros problemáticos
         """
         try:
-            _logger.info("⏰ === INICIO CRON DEBUG CORREOS ===")
+            _logger.info("⏰ === INICIO CRON FINAL - TODAS LAS SOLUCIONES ===")
             
-            # Configuración: procesar correos de las últimas 24 horas
-            horas_buscar = 24  
-            fecha_limite = fields.Datetime.now() - timedelta(hours=horas_buscar)
+            # SOLUCIÓN: Usar timestamp de última ejecución real
             ahora = fields.Datetime.now()
             
-            _logger.info(f"🔍 Buscando correos desde: {fecha_limite}")
+            # Obtener última ejecución exitosa del CRON
+            ultima_estadistica = self.env['contador.automatico.estadisticas'].search([
+                ('fecha', '!=', False),
+                ('correos_procesados_cron', '>', 0)  # Solo ejecuciones que procesaron algo
+            ], order='fecha desc', limit=1)
+            
+            if ultima_estadistica and ultima_estadistica.fecha:
+                # Buscar desde la última ejecución EXITOSA
+                fecha_desde = fields.Datetime.combine(ultima_estadistica.fecha, fields.Datetime.min.time())
+                _logger.info(f"🔍 Última ejecución exitosa: {ultima_estadistica.fecha}")
+            else:
+                # Primera ejecución o no hay ejecuciones exitosas: últimas 6 horas
+                fecha_desde = ahora - timedelta(hours=6)
+                _logger.info(f"🔍 Primera ejecución - Buscando últimas 6h")
+            
+            _logger.info(f"🔍 Buscando correos desde: {fecha_desde}")
             _logger.info(f"⏰ Hora actual: {ahora}")
             
             # Buscar canal "Correos"
@@ -1302,97 +1415,92 @@ class ContadorAutomatico(models.Model):
             
             _logger.info(f"✅ CRON: Canal encontrado: '{canal_correos.name}' (ID: {canal_correos.id})")
             
-            # Buscar mensajes recientes del día
-            mensajes_recientes = self.env['mail.message'].search([
+            # SOLUCIÓN: Buscar SOLO mensajes posteriores a última ejecución
+            mensajes_nuevos = self.env['mail.message'].search([
                 ('model', '=', 'discuss.channel'),
                 ('res_id', '=', canal_correos.id),
                 ('message_type', 'in', ['email', 'comment']),
-                ('date', '>=', fecha_limite)
+                ('date', '>', fecha_desde)  # ESTRICTAMENTE posteriores
             ], order='date desc')
             
-            _logger.info(f"📧 CRON: Mensajes del día encontrados: {len(mensajes_recientes)}")
+            _logger.info(f"📧 CRON: Mensajes NUEVOS encontrados: {len(mensajes_nuevos)}")
             
-            # DEBUG: Obtener TODOS los registros existentes para análisis
-            todos_los_registros = self.env['contador.automatico'].search([])
-            _logger.info(f"🔍 DEBUG: Total registros en BD: {len(todos_los_registros)}")
-            
-            # DEBUG: Mostrar registros existentes con fechas
-            for registro in todos_los_registros:
-                fecha_proc = registro.fecha_procesamiento or "Sin fecha"
-                _logger.info(f"🔍 DEBUG: Registro ID={registro.id}, Asunto='{registro.name}', Estado={registro.estado}, Fecha_proc={fecha_proc}")
-            
-            # Obtener registros procesados en las últimas 24 horas
-            registros_recientes = self.env['contador.automatico'].search([
-                ('fecha_procesamiento', '>=', fecha_limite)
+            # SOLUCIÓN: Limpiar registros problemáticos antes de procesar
+            _logger.info("🧹 === LIMPIEZA DE REGISTROS PROBLEMÁTICOS ===")
+            registros_problematicos = self.env['contador.automatico'].search([
+                '|', '|',
+                ('estado', 'in', ['pendiente', 'error']),
+                ('fecha_procesamiento', '=', False),
+                ('serie_detectada', '=', False)
             ])
             
-            _logger.info(f"📋 CRON: Registros procesados en últimas 24h: {len(registros_recientes)}")
+            if registros_problematicos:
+                _logger.info(f"🗑️ Eliminando {len(registros_problematicos)} registros problemáticos")
+                for reg in registros_problematicos:
+                    _logger.info(f"🗑️ Eliminando registro problemático: ID={reg.id}, Estado={reg.estado}, Asunto='{reg.name}'")
+                registros_problematicos.unlink()
             
-            claves_procesadas_recientes = set()
-            for registro in registros_recientes:
-                clave = f"{registro.name}|{registro.remitente or ''}"
-                claves_procesadas_recientes.add(clave)
-                _logger.info(f"📋 CRON: Clave procesada reciente: '{clave}' (ID={registro.id}, Fecha={registro.fecha_procesamiento})")
+            if not mensajes_nuevos:
+                _logger.info("ℹ️ CRON: No hay mensajes nuevos para procesar")
+                # Guardar estadísticas vacías
+                self._guardar_estadisticas_cron_seguro({
+                    'fecha_ejecucion': ahora,
+                    'correos_analizados': 0,
+                    'correos_validos': 0,
+                    'correos_encontrados': 0,
+                    'correos_procesados': 0,
+                    'correos_fallidos': 0,
+                    'horas_revision': 6
+                })
+                return True
             
-            # Procesar mensajes
+            # PROCESAR TODOS LOS MENSAJES NUEVOS
             correos_analizados = 0
             correos_validos = 0
-            correos_ya_procesados = 0
-            correos_nuevos = 0
             correos_procesados_exitosos = 0
+            correos_fallidos = 0
+            claves_procesadas_en_sesion = set()
             
-            for i, mensaje in enumerate(mensajes_recientes):
+            for i, mensaje in enumerate(mensajes_nuevos):
                 correos_analizados += 1
                 asunto = mensaje.subject or f'Sin asunto - {mensaje.id}'
                 remitente = mensaje.email_from or mensaje.author_id.email if mensaje.author_id else 'Desconocido'
                 clave_mensaje = f"{asunto}|{remitente}"
                 fecha_mensaje = mensaje.date
                 
-                _logger.info(f"📨 CRON: === ANALIZANDO MENSAJE {i+1}/{len(mensajes_recientes)} ===")
+                _logger.info(f"📨 CRON: === PROCESANDO MENSAJE NUEVO {i+1}/{len(mensajes_nuevos)} ===")
                 _logger.info(f"📧 Asunto: '{asunto}'")
-                _logger.info(f"👤 Remitente: '{remitente}'")
-                _logger.info(f"🔑 Clave: '{clave_mensaje}'")
                 _logger.info(f"⏰ Fecha mensaje: {fecha_mensaje}")
+                _logger.info(f"🔑 Clave: '{clave_mensaje}'")
                 
-                # FILTRO 1: Verificar si es correo de contadores
-                dummy_registro = self.env['contador.automatico'].new()
-                if not dummy_registro.es_correo_de_contadores(asunto):
-                    _logger.info(f"🚫 CRON: NO es correo de contadores")
+                # SOLUCIÓN: Filtro mejorado de correos de contadores
+                if not self._es_correo_de_contadores_mejorado(asunto):
+                    _logger.info(f"🚫 CRON: NO es correo de contadores, saltando")
                     continue
                 
                 correos_validos += 1
                 _logger.info(f"✅ CRON: SÍ es correo de contadores")
                 
-                # DEBUG: Verificar si existe la clave en procesados recientes
-                _logger.info(f"🔍 DEBUG: ¿Clave '{clave_mensaje}' en procesados recientes?")
-                if clave_mensaje in claves_procesadas_recientes:
-                    _logger.info(f"⚠️ DEBUG: SÍ está en procesados recientes")
-                    correos_ya_procesados += 1
+                # Evitar duplicados en esta sesión
+                if clave_mensaje in claves_procesadas_en_sesion:
+                    _logger.info(f"⏭️ CRON: Ya procesado en esta sesión, saltando")
                     continue
-                else:
-                    _logger.info(f"✅ DEBUG: NO está en procesados recientes - ES NUEVO")
                 
-                # DEBUG: Verificar si existe registro anterior (cualquier fecha)
-                registro_anterior = self.env['contador.automatico'].search([
+                # SOLUCIÓN: Eliminar CUALQUIER registro anterior
+                registros_anteriores = self.env['contador.automatico'].search([
                     ('name', '=', asunto),
                     ('remitente', '=', remitente)
-                ], limit=1)
+                ])
                 
-                if registro_anterior:
-                    _logger.info(f"🔍 DEBUG: Existe registro anterior - ID={registro_anterior.id}")
-                    _logger.info(f"🔍 DEBUG: Estado anterior: {registro_anterior.estado}")
-                    _logger.info(f"🔍 DEBUG: Fecha anterior: {registro_anterior.fecha_procesamiento}")
-                    _logger.info(f"🔄 DEBUG: Eliminando registro anterior para crear uno nuevo")
-                    registro_anterior.unlink()
-                else:
-                    _logger.info(f"🆕 DEBUG: No existe registro anterior - completamente nuevo")
+                if registros_anteriores:
+                    _logger.info(f"🔄 CRON: Eliminando {len(registros_anteriores)} registros anteriores para actualizar")
+                    for reg in registros_anteriores:
+                        _logger.info(f"🔄 Eliminando: ID={reg.id}, Estado={reg.estado}")
+                    registros_anteriores.unlink()
                 
-                # CREAR NUEVO REGISTRO
-                correos_nuevos += 1
-                _logger.info(f"🆕 CRON: PROCESANDO CORREO NUEVO #{correos_nuevos}")
-                
+                # CREAR Y PROCESAR REGISTRO NUEVO
                 try:
-                    _logger.info(f"🧠 CRON: Creando registro...")
+                    _logger.info(f"🆕 CRON: Creando registro para correo nuevo...")
                     
                     registro = self.env['contador.automatico'].create({
                         'name': asunto,
@@ -1403,55 +1511,157 @@ class ContadorAutomatico(models.Model):
                     
                     _logger.info(f"✅ CRON: Registro creado con ID={registro.id}")
                     
-                    # Agregar a tracking
-                    claves_procesadas_recientes.add(clave_mensaje)
+                    # Marcar como procesado en esta sesión
+                    claves_procesadas_en_sesion.add(clave_mensaje)
                     
-                    # Procesar
+                    # SOLUCIÓN: Procesar con sistema inteligente mejorado
                     _logger.info(f"🧠 CRON: Iniciando procesamiento inteligente...")
                     
                     if registro.procesar_correo_inteligente():
                         correos_procesados_exitosos += 1
-                        _logger.info(f"✅ CRON: ¡PROCESADO EXITOSAMENTE!")
-                        _logger.info(f"📝 Estado: {registro.estado}")
-                        _logger.info(f"🎯 Serie: {registro.serie_detectada}")
-                        _logger.info(f"📊 Contadores: BN={registro.contador_bn_detectado}, Color={registro.contador_color_detectado}, Scan={registro.contador_scan_detectado}")
+                        _logger.info(f"🎉 CRON: ¡PROCESADO EXITOSAMENTE!")
+                        _logger.info(f"📝 Estado final: {registro.estado}")
+                        _logger.info(f"🎯 Serie detectada: {registro.serie_detectada}")
+                        
+                        # Log de contadores detectados
+                        contadores_info = []
+                        if registro.contador_bn_detectado:
+                            contadores_info.append(f"BN={registro.contador_bn_detectado}")
+                        if registro.contador_color_detectado:
+                            contadores_info.append(f"Color={registro.contador_color_detectado}")
+                        if registro.contador_scan_detectado:
+                            contadores_info.append(f"Scan={registro.contador_scan_detectado}")
+                        
+                        if contadores_info:
+                            _logger.info(f"📊 Contadores: {', '.join(contadores_info)}")
+                        
                         if registro.equipo_id:
-                            _logger.info(f"🎯 Equipo: ID={registro.equipo_id.id}")
+                            _logger.info(f"🎯 Equipo actualizado: ID={registro.equipo_id.id}")
+                        
+                        # SOLUCIÓN: Asegurar que fecha_procesamiento esté configurada
+                        if not registro.fecha_procesamiento:
+                            registro.write({'fecha_procesamiento': ahora})
+                            _logger.info(f"📅 Fecha de procesamiento actualizada")
+                        
                     else:
                         _logger.warning(f"⚠️ CRON: Procesamiento con problemas")
                         _logger.warning(f"Estado: {registro.estado}")
                         if registro.mensaje_error:
                             _logger.warning(f"Error: {registro.mensaje_error}")
+                        
+                        # Asegurar fecha incluso en casos problemáticos
+                        if not registro.fecha_procesamiento:
+                            registro.write({'fecha_procesamiento': ahora})
                     
                 except Exception as e:
-                    _logger.error(f"❌ CRON: Error procesando: {e}")
+                    correos_fallidos += 1
+                    _logger.error(f"❌ CRON: Error procesando correo '{asunto}': {e}")
                     import traceback
                     _logger.error(f"Traceback: {traceback.format_exc()}")
                     continue
             
             # RESUMEN FINAL
-            _logger.info(f"📊 === RESUMEN FINAL DEBUG ===")
-            _logger.info(f"📧 Mensajes analizados: {correos_analizados}")
-            _logger.info(f"✅ Correos válidos: {correos_validos}")
-            _logger.info(f"⏭️ Ya procesados: {correos_ya_procesados}")
-            _logger.info(f"🆕 Correos nuevos: {correos_nuevos}")
-            _logger.info(f"✅ Procesados exitosos: {correos_procesados_exitosos}")
+            _logger.info(f"📊 === RESUMEN PROCESAMIENTO FINAL ===")
+            _logger.info(f"📧 Mensajes nuevos analizados: {correos_analizados}")
+            _logger.info(f"✅ Correos válidos encontrados: {correos_validos}")
+            _logger.info(f"🎉 Correos procesados exitosamente: {correos_procesados_exitosos}")
+            _logger.info(f"❌ Correos con fallos: {correos_fallidos}")
             
-            if correos_nuevos == 0:
-                _logger.warning("⚠️ NO SE ENCONTRARON CORREOS NUEVOS")
-                _logger.warning("⚠️ Posibles causas:")
-                _logger.warning("⚠️ 1. Todos los correos ya fueron procesados")
-                _logger.warning("⚠️ 2. No hay correos de contadores en las últimas 24h")
-                _logger.warning("⚠️ 3. Problema en la lógica de detección")
+            if correos_validos > 0:
+                eficiencia = (correos_procesados_exitosos / correos_validos) * 100
+                _logger.info(f"📈 Eficiencia: {eficiencia:.1f}%")
             
-            _logger.info("⏰ === FIN CRON DEBUG ===")
+            if correos_procesados_exitosos > 0:
+                _logger.info(f"🎉 ¡SE PROCESARON {correos_procesados_exitosos} CORREOS NUEVOS!")
+            elif correos_validos == 0:
+                _logger.info(f"ℹ️ No había correos de contadores nuevos")
+            else:
+                _logger.warning(f"⚠️ Se encontraron {correos_validos} correos válidos pero no se procesaron exitosamente")
+            
+            # SOLUCIÓN: Guardar estadísticas de forma segura
+            resumen = {
+                'fecha_ejecucion': ahora,
+                'correos_analizados': correos_analizados,
+                'correos_validos': correos_validos,
+                'correos_encontrados': correos_validos,
+                'correos_procesados': correos_procesados_exitosos,
+                'correos_fallidos': correos_fallidos,
+                'horas_revision': 6
+            }
+            
+            self._guardar_estadisticas_cron_seguro(resumen)
+            
+            _logger.info("⏰ === FIN CRON FINAL - TODAS LAS SOLUCIONES ===")
             return True
             
         except Exception as e:
-            _logger.error(f"❌ ERROR CRÍTICO: {e}")
+            _logger.error(f"❌ === ERROR CRÍTICO EN CRON FINAL ===")
+            _logger.error(f"Error: {e}")
             import traceback
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
+    def _es_correo_de_contadores_mejorado(self, asunto):
+        """
+        SOLUCIÓN: Función mejorada de filtrado de correos
+        """
+        if not asunto:
+            return False
+            
+        asunto_lower = asunto.lower().strip()
+        
+        # TODAS en minúsculas para coincidencia exacta
+        palabras_validas = [
+            'counter list',
+            'counter page',
+            'counter',
+            'page counter', 
+            'page count',
+            'contador',
+            'contadores',
+            'ricoh'
+        ]
+        
+        for palabra in palabras_validas:
+            if palabra in asunto_lower:
+                _logger.info(f"✅ CRON: Asunto válido detectado: '{asunto}' contiene '{palabra}'")
+                return True
+        
+        _logger.info(f"❌ CRON: Asunto no válido para contadores: '{asunto}'")
+        return False
+
+    def _guardar_estadisticas_cron_seguro(self, resumen):
+        """
+        SOLUCIÓN: Guardar estadísticas de forma segura
+        """
+        try:
+            hoy = fields.Date.today()
+            estadisticas = self.env['contador.automatico.estadisticas'].search([
+                ('fecha', '=', hoy)
+            ], limit=1)
+            
+            datos_estadisticas = {
+                'fecha': hoy,
+                'correos_encontrados_cron': resumen.get('correos_encontrados', 0),
+                'correos_procesados_cron': resumen.get('correos_procesados', 0),
+                'correos_fallidos_cron': resumen.get('correos_fallidos', 0),
+                'ejecuciones_cron': 1
+            }
+            
+            if not estadisticas:
+                estadisticas = self.env['contador.automatico.estadisticas'].create(datos_estadisticas)
+                _logger.info(f"📊 Nuevas estadísticas CRON creadas para {hoy}")
+            else:
+                # Acumular valores existentes
+                estadisticas.write({
+                    'correos_encontrados_cron': estadisticas.correos_encontrados_cron + datos_estadisticas['correos_encontrados_cron'],
+                    'correos_procesados_cron': estadisticas.correos_procesados_cron + datos_estadisticas['correos_procesados_cron'],
+                    'correos_fallidos_cron': estadisticas.correos_fallidos_cron + datos_estadisticas['correos_fallidos_cron'],
+                    'ejecuciones_cron': estadisticas.ejecuciones_cron + 1
+                })
+                _logger.info(f"📊 Estadísticas CRON actualizadas para {hoy}")
+            
+        except Exception as e:
+            _logger.error(f"❌ Error guardando estadísticas CRON: {e}")
     def _guardar_estadisticas_cron(self, resumen):
         """
         Guarda estadísticas de ejecución del CRON
