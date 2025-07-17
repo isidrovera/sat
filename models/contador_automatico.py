@@ -1377,11 +1377,13 @@ class ContadorAutomatico(models.Model):
     @api.model
     def cron_procesar_correos_perdidos(self):
         """
-        CRON DEFINITIVO: Todas las soluciones aplicadas
-        Procesa correos basado en timestamp y limpia registros problemáticos
+        CRON CORREGIDO: Error de Datetime solucionado
         """
         try:
             _logger.info("⏰ === INICIO CRON FINAL - TODAS LAS SOLUCIONES ===")
+            
+            # CORRECCIÓN: Importar datetime de Python
+            from datetime import datetime, time
             
             # SOLUCIÓN: Usar timestamp de última ejecución real
             ahora = fields.Datetime.now()
@@ -1393,8 +1395,10 @@ class ContadorAutomatico(models.Model):
             ], order='fecha desc', limit=1)
             
             if ultima_estadistica and ultima_estadistica.fecha:
-                # Buscar desde la última ejecución EXITOSA
-                fecha_desde = fields.Datetime.combine(ultima_estadistica.fecha, fields.Datetime.min.time())
+                # CORRECCIÓN: Usar datetime.combine en lugar de fields.Datetime.combine
+                fecha_desde = datetime.combine(ultima_estadistica.fecha, time.min)
+                # Convertir a formato Odoo datetime
+                fecha_desde = fields.Datetime.to_datetime(fecha_desde)
                 _logger.info(f"🔍 Última ejecución exitosa: {ultima_estadistica.fecha}")
             else:
                 # Primera ejecución o no hay ejecuciones exitosas: últimas 6 horas
@@ -1436,7 +1440,7 @@ class ContadorAutomatico(models.Model):
             
             if registros_problematicos:
                 _logger.info(f"🗑️ Eliminando {len(registros_problematicos)} registros problemáticos")
-                for reg in registros_problematicos:
+                for reg in registros_problematicos[:5]:  # Log solo primeros 5
                     _logger.info(f"🗑️ Eliminando registro problemático: ID={reg.id}, Estado={reg.estado}, Asunto='{reg.name}'")
                 registros_problematicos.unlink()
             
