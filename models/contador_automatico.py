@@ -2308,6 +2308,240 @@ class ContadorAutomatico(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error en mantenimiento automático: {e}")
             return False
+    def buscar_serie_dinamico(self, texto):
+        """
+        Busca número de serie usando patrones dinámicos
+        """
+        _logger.info(f"🔍 Iniciando búsqueda de serie con patrones dinámicos...")
+        
+        # Verificar si existen patrones de serie
+        patrones_serie = self.env['patron.contador'].search_count([
+            ('tipo', '=', 'serie'),
+            ('activo', '=', True)
+        ])
+        _logger.info(f"📊 Patrones de serie disponibles: {patrones_serie}")
+        
+        if patrones_serie == 0:
+            _logger.warning(f"⚠️ No hay patrones de serie configurados. Usando patrones por defecto...")
+            return self._buscar_serie_fallback(texto)
+        
+        resultado = self.env['patron.contador'].buscar_por_tipo('serie', texto)
+        
+        if resultado:
+            # Encontrar qué patrón se usó
+            patron_usado = self._encontrar_patron_usado('serie', texto, resultado)
+            if patron_usado:
+                patrones_info = f"serie: {patron_usado.name}"
+                if hasattr(self, 'patrones_usados') and self.patrones_usados:
+                    self.patrones_usados += f"; {patrones_info}"
+                else:
+                    self.patrones_usados = patrones_info
+                _logger.info(f"✅ Serie encontrada: {resultado} usando patrón '{patron_usado.name}'")
+            else:
+                _logger.info(f"✅ Serie encontrada: {resultado}")
+            
+            return resultado
+        else:
+            _logger.warning(f"❌ No se encontró serie en el texto")
+            return None
+
+    def buscar_patrones_contadores_dinamico(self, texto):
+        """
+        Busca patrones de contadores usando configuración dinámica
+        """
+        contadores = {}
+        patrones_usados = []
+        
+        _logger.info(f"🔍 Iniciando búsqueda de contadores con patrones dinámicos...")
+        _logger.info(f"📄 Texto a analizar (primeros 200 chars): {texto[:200]}...")
+        
+        # Verificar si existen patrones configurados
+        total_patrones = self.env['patron.contador'].search_count([('activo', '=', True)])
+        _logger.info(f"📊 Total de patrones activos disponibles: {total_patrones}")
+        
+        if total_patrones == 0:
+            _logger.warning(f"⚠️ No hay patrones activos configurados. Usando patrones por defecto...")
+            return self._buscar_patrones_fallback(texto)
+        
+        # Buscar cada tipo de contador
+        tipos = ['contador_bn', 'contador_color', 'contador_scan']
+        
+        for tipo in tipos:
+            _logger.info(f"🔍 Buscando patrones para: {tipo}")
+            
+            resultado = self.env['patron.contador'].buscar_por_tipo(tipo, texto)
+            
+            if resultado:
+                contadores[tipo] = resultado
+                # Encontrar qué patrón se usó
+                patron_usado = self._encontrar_patron_usado(tipo, texto, resultado)
+                if patron_usado:
+                    patrones_usados.append(f"{tipo}: {patron_usado.name}")
+                    _logger.info(f"✅ {tipo} encontrado: {resultado} usando patrón '{patron_usado.name}'")
+                else:
+                    _logger.info(f"✅ {tipo} encontrado: {resultado}")
+            else:
+                _logger.info(f"❌ No se encontró {tipo} en el texto")
+        
+        # Guardar información de patrones usados
+        if patrones_usados:
+            self.patrones_usados = "; ".join(patrones_usados)
+            _logger.info(f"📋 Patrones utilizados: {self.patrones_usados}")
+        
+        _logger.info(f"🎯 Resultado final de contadores: {contadores}")
+        return contadores
+
+    def _encontrar_patron_usado(self, tipo, texto, valor_encontrado):
+        """
+        Encuentra qué patrón específico se usó para detectar un valor
+        """
+        try:
+            patrones = self.env['patron.contador'].search([
+                ('tipo', '=', tipo),
+                ('activo', '=', True)
+            ], order='orden')
+            
+            for patron in patrones:
+                try:
+                    matches = re.finditer(patron.patron_regex, texto, re.IGNORECASE)
+                    for match in matches:
+                        if match.groups():
+                            valor = match.group(1).strip()
+                            # Comparar valores
+                            if tipo == 'serie':
+                                if valor.upper() == str(valor_encontrado).upper():
+                                    return patron
+                            else:
+                                valor_num = int(re.sub(r'[^0-9]', '', valor))
+                                if valor_num == valor_encontrado:
+                                    return patron
+                except:
+                    continue
+            return None
+        except Exception as e:
+            _logger.error(f"❌ Error encontrando patrón usado: {e}")
+            return None
+
+    def _buscar_patrones_fallback(self, texto):
+        """
+        Patrones de fallback si no hay configuración dinámica
+        """
+        _logger.info(f"🔧 Usando patrones de fallback...")
+        contadores = {}
+        
+        # Patrones básicos de fallback
+        patrones = {
+            'contador_bn': [
+                r'(?:negro|black|b/?n).*?(\d{5,9})',
+                r'\[Contador de negro total\].*?(\d{5,9})'
+            ],
+            'contador_color': [
+                r'(?:color).*?(\d{5,9})',
+                r'\[Contador de color total\].*?(\d{5,9})'
+            ],
+            'contador_scan': [
+                r'(?:scan|escaneo).*?(\d{5,9})',
+                r'\[Contador total de escaneo\].*?(\d{5,9})'
+            ]
+        }
+        
+        for tipo, lista_patrones in patrones.items():
+            for patron in lista_patrones:
+                matches = re.finditer(patron, texto, re.IGNORECASE)
+                for match in matches:
+                    numero = int(re.sub(r'[^0-9]', '', match.group(1)))
+                    if numero > 0:
+                        contadores[tipo] = numero
+                        _logger.info(f"✅ {tipo} encontrado (fallback): {numero}")
+                        break
+        
+        return contadores
+
+    def _buscar_serie_fallback(self, texto):
+        """
+        Búsqueda de serie de fallback si no hay configuración dinámica
+        """
+        _logger.info(f"🔧 Usando patrones de serie de fallback...")
+        
+        patrones_serie = [
+            r'\[Número de serie\].*?([A-Z0-9]{5,15})',
+            r'([A-Z]{2,4}\d{5,10})',
+            r'(?:serie|serial).*?([A-Z0-9]{5,15})'
+        ]
+        
+        for patron in patrones_serie:
+            matches = re.finditer(patron, texto, re.IGNORECASE)
+            for match in matches:
+                serie = match.group(1).upper()
+                if len(serie) >= 5:
+                    _logger.info(f"✅ Serie encontrada (fallback): {serie}")
+                    return serie
+        
+        return None
+
+    def buscar_equipo_por_serie(self, serie):
+        """
+        Busca el equipo en alquiler por serie
+        """
+        if not serie:
+            _logger.warning(f"⚠️ No se proporcionó serie para buscar equipo")
+            return None
+        
+        _logger.info(f"🔍 Buscando equipo con serie: '{serie}'")
+        
+        try:
+            equipo = self.env['alquiler'].search([('serie', '=', serie)], limit=1)
+            
+            if equipo:
+                _logger.info(f"✅ Equipo encontrado: ID={equipo.id}, Serie={serie}")
+                return equipo
+            else:
+                _logger.warning(f"❌ No se encontró equipo con serie: '{serie}'")
+                return None
+                
+        except Exception as e:
+            _logger.error(f"❌ Error buscando equipo: {e}")
+            return None
+
+    def actualizar_contadores_equipo(self, equipo, contadores):
+        """
+        Actualiza los contadores del equipo
+        """
+        try:
+            _logger.info(f"💾 === INICIANDO ACTUALIZACIÓN DE EQUIPO ===")
+            _logger.info(f"🎯 Equipo ID={equipo.id}, Serie={equipo.serie}")
+            _logger.info(f"📊 Contadores a actualizar: {contadores}")
+            
+            # Preparar valores para actualizar
+            valores_actualizacion = {}
+            
+            if 'contador_bn' in contadores:
+                valores_actualizacion['contador_bn'] = contadores['contador_bn']
+                _logger.info(f"✅ Preparando actualización BN: → {contadores['contador_bn']}")
+            
+            if 'contador_color' in contadores:
+                valores_actualizacion['contador_color'] = contadores['contador_color']
+                _logger.info(f"✅ Preparando actualización Color: → {contadores['contador_color']}")
+            
+            if 'contador_scan' in contadores:
+                valores_actualizacion['contador_scan'] = contadores['contador_scan']
+                _logger.info(f"✅ Preparando actualización Scan: → {contadores['contador_scan']}")
+            
+            # Realizar actualización
+            _logger.info(f"💾 Ejecutando write() en equipo...")
+            equipo.sudo().write(valores_actualizacion)
+            _logger.info(f"✅ Write() ejecutado exitosamente")
+            
+            _logger.info(f"🎉 === ACTUALIZACIÓN DE EQUIPO COMPLETADA ===")
+            
+        except Exception as e:
+            _logger.error(f"❌ === ERROR ACTUALIZANDO EQUIPO ===")
+            _logger.error(f"Error: {e}")
+            raise
+
+    # Agregar el campo patrones_usados si no existe
+    patrones_usados = fields.Text('Patrones utilizados', readonly=True, 
+                                help="Registro de qué patrones se usaron para detectar datos")
 
     # MODELO ADICIONAL PARA ESTADÍSTICAS (crear como archivo separado)
     
