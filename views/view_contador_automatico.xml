@@ -161,7 +161,7 @@
                         <page string="⚙️ Control" name="control">
                             <group>
                                 <group string="Estado del Procesamiento">
-                                    <field name="fecha_procesamiento" readonly="1"/>
+                                    <!--<field name="fecha_procesamiento" readonly="1"/>-->
                                     <field name="procesado_automaticamente" readonly="1"/>
                                     <field name="mensaje_error" widget="text" readonly="1" invisible="not mensaje_error"/>
                                 </group>
