@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     
-    <!-- VISTA LISTA (anteriormente tree) -->
-    <record id="view_patron_contador_list" model="ir.ui.view">
-        <field name="name">patron.contador.list</field>
-        <field name="model">patron.contador</field>
+    <!-- VISTA LISTA -->
+    <record id="view_contador_automatico_list" model="ir.ui.view">
+        <field name="name">contador.automatico.list</field>
+        <field name="model">contador.automatico</field>
         <field name="arch" type="xml">
-            <list string="Patrones de Contadores" 
+            <list string="Contadores Automáticos" 
                   multi_edit="1"
                   sample="1"
                   create="1"
@@ -14,171 +14,166 @@
                   edit="1">
                 
                 <!-- Campos principales -->
-                <field name="name" string="Nombre del Patrón"/>
-                <field name="tipo" string="Tipo"/>
-                <field name="marca_patron" string="Marca" optional="show"/>
-                <field name="idioma_patron" string="Idioma" optional="show"/>
-                <field name="activo" string="Activo" widget="boolean_toggle"/>
-                <field name="orden" string="Prioridad"/>
+                <field name="name" string="Asunto del Correo"/>
+                <field name="remitente" string="Remitente"/>
+                <field name="estado" string="Estado"
+                       decoration-success="estado == 'procesado'"
+                       decoration-info="estado == 'pendiente'"
+                       decoration-warning="estado == 'manual'"
+                       decoration-danger="estado == 'error'"
+                       decoration-muted="estado == 'filtrado'"/>
                 
-                <!-- Estadísticas de rendimiento -->
-                <field name="veces_usado" string="Usos" optional="show"/>
-                <field name="tasa_exito" string="Éxito %" optional="show" 
-                       decoration-success="tasa_exito &gt;= 80"
-                       decoration-warning="tasa_exito &gt;= 50 and tasa_exito &lt; 80"
-                       decoration-danger="tasa_exito &lt; 50"/>
-                <field name="estado_patron" string="Estado" optional="show"
-                       decoration-success="estado_patron == 'efectivo'"
-                       decoration-info="estado_patron == 'activo'"
-                       decoration-warning="estado_patron == 'problematico'"
-                       decoration-muted="estado_patron == 'obsoleto'"/>
+                <!-- Datos detectados -->
+                <field name="serie_detectada" string="Serie" optional="show"/>
+                <field name="contador_bn_detectado" string="Contador B/N" optional="show"/>
+                <field name="contador_color_detectado" string="Contador Color" optional="show"/>
+                <field name="contador_scan_detectado" string="Contador Scan" optional="show"/>
+                <field name="equipo_id" string="Equipo" optional="show"/>
                 
-                <!-- Campos del sistema inteligente -->
-                <field name="auto_generado" string="Auto-gen." widget="boolean_toggle" optional="hide"/>
-                <field name="validado_manualmente" string="Validado" widget="boolean_toggle" optional="hide"/>
-                <field name="confianza_patron" string="Confianza %" optional="hide"/>
-                <field name="ultima_deteccion" string="Última Detección" optional="hide"/>
+                <!-- Sistema inteligente -->
+                <field name="idioma_detectado" string="Idioma" optional="hide"/>
+                <field name="marca_detectada" string="Marca" optional="hide"/>
+                <field name="formato_detectado" string="Formato" optional="hide"/>
+                <field name="confianza_deteccion" string="Confianza %" optional="hide"/>
+                <field name="requiere_aprendizaje" string="Requiere Aprendizaje" widget="boolean_toggle" optional="hide"/>
                 
-                <!-- Filtros y agrupaciones -->
+                <!-- Fechas -->
+                <field name="fecha_procesamiento" string="Fecha Procesamiento" optional="show"/>
+                <field name="create_date" string="Fecha Creación" optional="hide"/>
+                
+                <!-- Control -->
                 <control>
-                    <create name="add_pattern" string="Nuevo Patrón"/>
-                    
+                    <create name="add_contador" string="Nuevo Registro"/>
                 </control>
             </list>
         </field>
     </record>
 
     <!-- VISTA FORMULARIO -->
-    <record id="view_patron_contador_form" model="ir.ui.view">
-        <field name="name">patron.contador.form</field>
-        <field name="model">patron.contador</field>
+    <record id="view_contador_automatico_form" model="ir.ui.view">
+        <field name="name">contador.automatico.form</field>
+        <field name="model">contador.automatico</field>
         <field name="arch" type="xml">
-            <form string="Configuración de Patrón">
+            <form string="Contador Automático">
                 
                 <!-- Header con botones principales -->
                 <header>
-                    <button name="probar_patron" 
-                            string="🧪 Probar Patrón" 
+                    <button name="procesar_correo_inteligente" 
+                            string="🧠 Procesar Inteligente" 
                             type="object" 
-                            class="btn-primary"/>
+                            class="btn-primary"
+                            invisible="estado in ['procesado']"/>
                     
-                    <button name="validar_patron_manualmente" 
-                            string="✅ Validar Patrón" 
+                    <button name="generar_patrones_para_correo_actual" 
+                            string="🤖 Generar Patrones" 
                             type="object" 
                             class="btn-success"
-                            invisible="not auto_generado or validado_manualmente"/>
+                            invisible="estado != 'manual'"/>
                     
-                    <button name="desactivar_patron_inefectivo" 
-                            string="⏸️ Desactivar" 
+                    <button name="marcar_como_procesado_manual" 
+                            string="✅ Marcar Procesado" 
                             type="object" 
                             class="btn-warning"
-                            invisible="not activo or tasa_exito &gt;= 20"/>
+                            invisible="estado != 'manual'"/>
                     
-                    <!-- Estado visual del patrón -->
-                    <field name="estado_patron" widget="statusbar" 
-                           statusbar_visible="nuevo,activo,efectivo,problematico,obsoleto"/>
+                    <!-- Estado visual -->
+                    <field name="estado" widget="statusbar" 
+                           statusbar_visible="pendiente,procesado,manual,error,filtrado"/>
                 </header>
 
                 <sheet>
-                    <!-- Información básica del patrón -->
+                    <!-- Información básica -->
                     <div class="oe_title">
                         <h1>
-                            <field name="name" placeholder="Nombre descriptivo del patrón..."/>
+                            <field name="name" placeholder="Asunto del correo..."/>
                         </h1>
                         <h3>
-                            <field name="tipo" widget="selection"/>
-                            <span invisible="not marca_patron"> - </span>
-                            <field name="marca_patron" placeholder="Marca del equipo"/>
+                            <field name="remitente" placeholder="Remitente del correo"/>
                         </h3>
                     </div>
 
                     <!-- Badges informativos -->
                     <div class="o_row">
-                        <span class="badge text-bg-primary" invisible="not auto_generado">
-                            🤖 Auto-generado
+                        <span class="badge text-bg-success" invisible="not procesado_automaticamente">
+                            🤖 Procesado Automáticamente
                         </span>
-                        <span class="badge text-bg-success" invisible="not validado_manualmente">
-                            ✅ Validado
+                        <span class="badge text-bg-info" invisible="not requiere_aprendizaje">
+                            🎓 Requiere Aprendizaje
                         </span>
-                        <span class="badge text-bg-info" invisible="not activo">
-                            🟢 Activo
-                        </span>
-                        <span class="badge text-bg-secondary" invisible="activo">
-                            ⭕ Inactivo
+                        <span class="badge text-bg-warning" invisible="not aprendizaje_completado">
+                            ✅ Aprendizaje Completado
                         </span>
                     </div>
 
                     <notebook>
-                        <!-- Pestaña: Configuración del Patrón -->
-                        <page string="📝 Configuración" name="config">
+                        <!-- Pestaña: Datos Detectados -->
+                        <page string="📊 Datos Detectados" name="datos">
                             <group>
-                                <group string="Patrón Regular">
-                                    <field name="patron_regex" 
-                                           widget="text" 
-                                           placeholder="Expresión regular con grupo de captura: (\d+)"/>
-                                    <field name="descripcion" 
-                                           widget="text"
-                                           placeholder="Descripción de qué detecta este patrón"/>
-                                    <field name="ejemplo" 
-                                           placeholder="Texto de ejemplo para probar"/>
+                                <group string="Serie y Equipo">
+                                    <field name="serie_detectada"/>
+                                    <field name="equipo_id"/>
                                 </group>
                                 
-                                <group string="Configuración">
-                                    <field name="activo" widget="boolean_toggle"/>
-                                    <field name="orden"/>
-                                    <field name="idioma_patron" placeholder="español, english, ricoh_format..."/>
-                                    <field name="formato_origen" placeholder="formato_corchetes, formato_ricoh..."/>
-                                </group>
-                            </group>
-                        </page>
-
-                        <!-- Pestaña: Estadísticas de Rendimiento -->
-                        <page string="📊 Estadísticas" name="stats">
-                            <group>
-                                <group string="Rendimiento">
-                                    <field name="veces_usado" readonly="1"/>
-                                    <field name="casos_detectados" readonly="1"/>
-                                    <field name="casos_fallidos" readonly="1"/>
-                                    <field name="tasa_exito" readonly="1" widget="percentage"/>
-                                    <field name="ultima_deteccion" readonly="1"/>
-                                </group>
-                                
-                                <group string="Sistema Inteligente">
-                                    <field name="auto_generado" readonly="1"/>
-                                    <field name="confianza_patron" readonly="1" widget="percentage"/>
-                                    <field name="validado_manualmente" readonly="1"/>
+                                <group string="Contadores Detectados">
+                                    <field name="contador_bn_detectado"/>
+                                    <field name="contador_color_detectado"/>
+                                    <field name="contador_scan_detectado"/>
                                 </group>
                             </group>
                             
-                            <!-- Gráfico de rendimiento visual -->
-                            <div class="row" invisible="veces_usado == 0">
-                                <div class="col-md-6">
-                                    <div class="card">
-                                        <div class="card-body">
-                                            <h5 class="card-title">Rendimiento del Patrón</h5>
-                                            <div class="progress mb-2">
-                                                <div class="progress-bar bg-success" 
-                                                     role="progressbar">
-                                                    <field name="tasa_exito"/>% Éxito
-                                                </div>
-                                            </div>
-                                            <small class="text-muted">
-                                                <field name="casos_detectados"/> detecciones exitosas de <field name="veces_usado"/> total
-                                            </small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- Contadores anteriores -->
+                            <group string="Valores Anteriores del Equipo" invisible="not equipo_id">
+                                <group>
+                                    <field name="contador_bn_anterior" readonly="1"/>
+                                    <field name="contador_color_anterior" readonly="1"/>
+                                    <field name="contador_scan_anterior" readonly="1"/>
+                                </group>
+                            </group>
                         </page>
 
-                        <!-- Pestaña: Información Técnica -->
-                        <page string="🔧 Técnico" name="technical" invisible="not auto_generado">
+                        <!-- Pestaña: Análisis Inteligente -->
+                        <page string="🧠 Análisis Inteligente" name="inteligente">
                             <group>
-                                <group string="Origen del Patrón">
-                                    <field name="texto_origen" 
-                                           widget="text" 
-                                           readonly="1"
-                                           placeholder="Texto original que generó este patrón"/>
+                                <group string="Detección Automática">
+                                    <field name="idioma_detectado" readonly="1"/>
+                                    <field name="marca_detectada" readonly="1"/>
+                                    <field name="formato_detectado" readonly="1"/>
+                                    <field name="confianza_deteccion" readonly="1" widget="percentage"/>
+                                </group>
+                                
+                                <group string="Estado del Aprendizaje">
+                                    <field name="requiere_aprendizaje" readonly="1"/>
+                                    <field name="aprendizaje_completado" readonly="1"/>
+                                    <field name="patrones_auto_generados" readonly="1"/>
+                                </group>
+                            </group>
+                            
+                            <!-- Información adicional -->
+                            <group string="Análisis de Contenido">
+                                <field name="palabras_clave_encontradas" widget="text" readonly="1"/>
+                                <field name="estructura_detectada" widget="text" readonly="1"/>
+                                <field name="patrones_aplicados" widget="text" readonly="1"/>
+                            </group>
+                        </page>
+
+                        <!-- Pestaña: Contenido del Correo -->
+                        <page string="📧 Contenido" name="contenido">
+                            <group>
+                                <field name="contenido_original" widget="html" readonly="1" nolabel="1"/>
+                            </group>
+                            
+                            <group string="Contenido Procesado (Texto Plano)">
+                                <field name="contenido_procesado" widget="text" readonly="1" nolabel="1"/>
+                            </group>
+                        </page>
+
+                        <!-- Pestaña: Control -->
+                        <page string="⚙️ Control" name="control">
+                            <group>
+                                <group string="Estado del Procesamiento">
+                                    <field name="fecha_procesamiento" readonly="1"/>
+                                    <field name="procesado_automaticamente" readonly="1"/>
+                                    <field name="mensaje_error" widget="text" readonly="1" invisible="not mensaje_error"/>
                                 </group>
                             </group>
                         </page>
@@ -191,168 +186,80 @@
         </field>
     </record>
 
-    <!-- VISTA KANBAN -->
-    <record id="view_patron_contador_kanban" model="ir.ui.view">
-        <field name="name">patron.contador.kanban</field>
-        <field name="model">patron.contador</field>
+    <!-- VISTA SEARCH -->
+    <record id="view_contador_automatico_search" model="ir.ui.view">
+        <field name="name">contador.automatico.search</field>
+        <field name="model">contador.automatico</field>
         <field name="arch" type="xml">
-            <kanban string="Patrones de Contadores" 
-                    class="o_kanban_dashboard"
-                    group_by="tipo"
-                    quick_create="false">
+            <search string="Buscar Contadores Automáticos">
                 
-                <field name="name"/>
-                <field name="tipo"/>
-                <field name="marca_patron"/>
-                <field name="activo"/>
-                <field name="tasa_exito"/>
-                <field name="veces_usado"/>
-                <field name="estado_patron"/>
-                <field name="auto_generado"/>
+                <!-- Campos de búsqueda -->
+                <field name="name" string="Asunto" 
+                       filter_domain="['|', ('name', 'ilike', self), ('contenido_procesado', 'ilike', self)]"/>
+                <field name="remitente"/>
+                <field name="serie_detectada"/>
+                <field name="equipo_id"/>
                 
-                <templates>
-                    <t t-name="kanban-box">
-                        <div class="oe_kanban_card oe_kanban_global_click">
-                            <div class="o_kanban_card_header">
-                                <div class="o_kanban_card_header_title">
-                                    <div class="o_primary">
-                                        <field name="name"/>
-                                    </div>
-                                    <div class="o_secondary">
-                                        <span t-if="record.marca_patron.value">
-                                            <i class="fa fa-industry"/> <t t-esc="record.marca_patron.value"/>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="o_kanban_manage_button_section">
-                                    <a class="o_kanban_manage_toggle_button" href="#">
-                                        <i class="fa fa-ellipsis-v" role="img" aria-label="Manage" title="Manage"/>
-                                    </a>
-                                </div>
-                            </div>
-                            
-                            <div class="o_kanban_card_content">
-                                <!-- Estado y badges -->
-                                <div class="mb-2">
-                                    <span t-if="record.activo.raw_value" class="badge text-bg-success">
-                                        🟢 Activo
-                                    </span>
-                                    <span t-if="!record.activo.raw_value" class="badge text-bg-secondary">
-                                        ⭕ Inactivo
-                                    </span>
-                                    <span t-if="record.auto_generado.raw_value" class="badge text-bg-primary">
-                                        🤖 Auto
-                                    </span>
-                                </div>
-                                
-                                <!-- Estadísticas -->
-                                <div class="row">
-                                    <div class="col-6">
-                                        <strong>Usos:</strong> <t t-esc="record.veces_usado.value"/>
-                                    </div>
-                                    <div class="col-6">
-                                        <strong>Éxito:</strong> 
-                                        <span t-att-class="record.tasa_exito.value >= 80 ? 'text-success' : record.tasa_exito.value >= 50 ? 'text-warning' : 'text-danger'">
-                                            <t t-esc="Math.round(record.tasa_exito.value)"/>%
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                <!-- Barra de progreso -->
-                                <div class="progress mt-2" style="height: 6px;">
-                                    <div class="progress-bar" 
-                                         t-att-class="record.tasa_exito.value >= 80 ? 'bg-success' : record.tasa_exito.value >= 50 ? 'bg-warning' : 'bg-danger'"
-                                         style="width: 100%"/>
-                                </div>
-                            </div>
-                            
-                            <div class="o_kanban_card_manage_section">
-                                <div class="o_kanban_manage_view">
-                                    <div class="o_kanban_card_manage_title">
-                                        <span>Acciones</span>
-                                    </div>
-                                    <div>
-                                        <a type="object" name="probar_patron">🧪 Probar</a>
-                                    </div>
-                                    <div t-if="record.auto_generado.raw_value">
-                                        <a type="object" name="validar_patron_manualmente">✅ Validar</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </t>
-                </templates>
-            </kanban>
-        </field>
-    </record>
-
-    <!-- VISTA SEARCH (filtros y agrupaciones) -->
-    <record id="view_patron_contador_search" model="ir.ui.view">
-        <field name="name">patron.contador.search</field>
-        <field name="model">patron.contador</field>
-        <field name="arch" type="xml">
-            <search string="Buscar Patrones">
-                
-                <!-- Campo de búsqueda principal -->
-                <field name="name" string="Nombre" 
-                       filter_domain="['|', ('name', 'ilike', self), ('descripcion', 'ilike', self)]"/>
-                <field name="tipo"/>
-                <field name="marca_patron"/>
-                <field name="patron_regex"/>
-                
-                <!-- Filtros predefinidos -->
+                <!-- Filtros por estado -->
                 <separator/>
-                <filter string="🟢 Activos" name="activos" domain="[('activo', '=', True)]"/>
-                <filter string="⭕ Inactivos" name="inactivos" domain="[('activo', '=', False)]"/>
+                <filter string="🟢 Procesados" name="procesados" domain="[('estado', '=', 'procesado')]"/>
+                <filter string="⏳ Pendientes" name="pendientes" domain="[('estado', '=', 'pendiente')]"/>
+                <filter string="✋ Manuales" name="manuales" domain="[('estado', '=', 'manual')]"/>
+                <filter string="❌ Error" name="errores" domain="[('estado', '=', 'error')]"/>
+                <filter string="🚫 Filtrados" name="filtrados" domain="[('estado', '=', 'filtrado')]"/>
                 
+                <!-- Filtros sistema inteligente -->
                 <separator/>
-                <filter string="🤖 Auto-generados" name="auto_generados" domain="[('auto_generado', '=', True)]"/>
-                <filter string="👤 Manuales" name="manuales" domain="[('auto_generado', '=', False)]"/>
-                <filter string="✅ Validados" name="validados" domain="[('validado_manualmente', '=', True)]"/>
+                <filter string="🤖 Procesado Automáticamente" name="automaticos" domain="[('procesado_automaticamente', '=', True)]"/>
+                <filter string="🎓 Requiere Aprendizaje" name="requiere_aprendizaje" domain="[('requiere_aprendizaje', '=', True)]"/>
+                <filter string="✅ Aprendizaje Completado" name="aprendizaje_completado" domain="[('aprendizaje_completado', '=', True)]"/>
                 
+                <!-- Filtros por marca/idioma -->
                 <separator/>
-                <filter string="🌟 Efectivos" name="efectivos" domain="[('estado_patron', '=', 'efectivo')]"/>
-                <filter string="⚠️ Problemáticos" name="problematicos" domain="[('estado_patron', '=', 'problematico')]"/>
-                <filter string="🆕 Nuevos" name="nuevos" domain="[('estado_patron', '=', 'nuevo')]"/>
+                <filter string="Bizhub" name="bizhub" domain="[('marca_detectada', '=', 'Bizhub')]"/>
+                <filter string="Ricoh" name="ricoh" domain="[('marca_detectada', '=', 'Ricoh')]"/>
+                <filter string="Español" name="espanol" domain="[('idioma_detectado', '=', 'español')]"/>
+                <filter string="English" name="english" domain="[('idioma_detectado', '=', 'english')]"/>
                 
+                <!-- Filtros por fecha -->
                 <separator/>
-                <filter string="🎯 Alta Efectividad" name="alta_efectividad" domain="[('tasa_exito', '>=', 80)]"/>
-                <filter string="⚡ Muy Usados" name="muy_usados" domain="[('veces_usado', '>', 10)]"/>
-                <filter string="💤 Sin Usar" name="sin_usar" domain="[('veces_usado', '=', 0)]"/>
+                <filter string="Hoy" name="hoy" domain="[('create_date', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter string="Esta Semana" name="esta_semana" domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter string="Este Mes" name="este_mes" domain="[('create_date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
                 
                 <!-- Agrupaciones -->
                 <group expand="1" string="Agrupar Por">
-                    <filter string="Tipo" name="group_tipo" context="{'group_by': 'tipo'}"/>
-                    <filter string="Marca" name="group_marca" context="{'group_by': 'marca_patron'}"/>
-                    <filter string="Estado" name="group_estado" context="{'group_by': 'estado_patron'}"/>
-                    <filter string="Idioma" name="group_idioma" context="{'group_by': 'idioma_patron'}"/>
+                    <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
+                    <filter string="Marca Detectada" name="group_marca" context="{'group_by': 'marca_detectada'}"/>
+                    <filter string="Idioma Detectado" name="group_idioma" context="{'group_by': 'idioma_detectado'}"/>
+                    <filter string="Fecha Creación" name="group_fecha" context="{'group_by': 'create_date:day'}"/>
                 </group>
             </search>
         </field>
     </record>
 
     <!-- ACCIÓN VENTANA -->
-    <record id="action_patron_contador" model="ir.actions.act_window">
-        <field name="name">Patrones de Contadores</field>
-        <field name="res_model">patron.contador</field>
-        <field name="view_mode">list,kanban,form</field>
+    <record id="action_contador_automatico" model="ir.actions.act_window">
+        <field name="name">Contadores Automáticos</field>
+        <field name="res_model">contador.automatico</field>
+        <field name="view_mode">list,form</field>
         <field name="context">{
-            'search_default_activos': 1,
-            'search_default_group_tipo': 1
+            'search_default_procesados': 1,
+            'search_default_group_estado': 1
         }</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                ¡Crea tu primer patrón de detección!
+                ¡Comienza a procesar correos de contadores!
             </p>
             <p>
-                Los patrones permiten detectar automáticamente números de serie y contadores 
-                en los correos de equipos. El sistema puede generar patrones automáticamente 
-                basado en los correos que recibe.
+                El sistema procesa automáticamente correos de contadores usando 
+                inteligencia artificial para detectar series, contadores y marcas.
             </p>
             <p>
-                <a href="#" class="btn btn-primary" data-method="crear_patrones_multiformato" data-model="patron.contador">
-                    🔧 Crear Patrones Automáticamente
-                </a>
+                <button name="buscar_y_procesar_correos_inteligente" type="object" 
+                        class="btn btn-primary">
+                    🔍 Buscar y Procesar Correos
+                </button>
             </p>
         </field>
     </record>
@@ -364,6 +271,6 @@
               name="Contadores Automáticos"
               parent="sat_menu_root"
               action="action_contador_automatico"
-              sequence="90"/>
+              sequence="80"/>
     
 </odoo>
