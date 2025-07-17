@@ -109,8 +109,8 @@ class ContadorAutomatico(models.Model):
             _logger.info(f"🏭 === DETECTANDO MARCA AUTOMÁTICAMENTE ===")
             
             marcas_conocidas = {
-                'Bizhub': ['bizhub', 'konica', 'minolta'],
-                'Ricoh': ['ricoh', 'T_TotalPrtPGS', 'T_ColorPrtPGS'],
+                'Bizhub': ['bizhub', 'konica', 'minolta', 'nombre del modelo'],  # Agregar "nombre del modelo"
+                'Ricoh': ['ricoh', 'T_TotalPrtPGS', 'T_ColorPrtPGS', 'nº de serie'],  # Agregar "nº de serie"
                 'Canon': ['canon', 'imagerunner'],
                 'HP': ['hp', 'hewlett', 'packard', 'laserjet'],
                 'Xerox': ['xerox', 'workcentre'],
@@ -118,7 +118,7 @@ class ContadorAutomatico(models.Model):
                 'Epson': ['epson'],
                 'Samsung': ['samsung', 'proxpress']
             }
-            
+                        
             texto_lower = texto.lower()
             marcas_detectadas = {}
             
@@ -2134,18 +2134,33 @@ class ContadorAutomatico(models.Model):
 
     def _buscar_serie_fallback(self, texto):
         """
-        🔧 Fallback si no hay detección dinámica de serie.
-        Incluye corchetes, inglés y formas con 'No.' o 'Page Counter'.
+        🔧 Fallback con soporte para español, inglés y Ricoh
         """
         _logger.info("🔧 Usando patrones de serie de fallback...")
 
         patrones = [
+            # ESPAÑOL (Konica/Minolta)
             r'\[Número de serie\].*?([A-Z0-9]{5,15})',          # [Número de serie], X...
+            r'Número de serie[^\w]*([A-Z0-9]{5,15})',           # Número de serie: X...
+            r'Serie[^\w]*([A-Z0-9]{5,15})',                     # Serie: X...
+            
+            # INGLÉS (Konica/Minolta)
             r'\[Serial Number\].*?([A-Z0-9]{5,15})',            # [Serial Number], X...
             r'Serial\s*No\.?:\s*([A-Z0-9]{5,15})',              # Serial No.: X...
+            r'Serial\s*Number[^\w]*([A-Z0-9]{5,15})',           # Serial Number: X...
+            
+            # RICOH (español)
+            r'Nº de serie:\s*([A-Z0-9]{5,15})',                 # Nº de serie: X...
+            r'N° de serie:\s*([A-Z0-9]{5,15})',                 # N° de serie: X...
+            
+            # RICOH (inglés)
+            r'Serial\s*No\s*:\s*([A-Z0-9]{5,15})',              # Serial No : X...
+            
+            # GENÉRICOS
             r'Page\s*Counter\s*:\s*([A-Z0-9]{5,15})',           # Page Counter: X...
-            r'(?:serie|serial)\s*(?:no\.?)?\s*:?\s*([A-Z0-9]{5,15})'
+            r'(?:serie|serial)\s*(?:no\.?)?\s*:?\s*([A-Z0-9]{5,15})'  # Genérico
         ]
+        
         for pat in patrones:
             _logger.info(f"🔍 Probando fallback: '{pat}'")
             for match in re.finditer(pat, texto, re.IGNORECASE):
@@ -2177,20 +2192,50 @@ class ContadorAutomatico(models.Model):
         # Fallback regexs específicas para etiquetas en inglés
         fallback_por_tipo = {
             'contador_bn': [
+                # INGLÉS
                 r'\[Total Black Counter\][^0-9]*(\d{4,9})',
                 r'(?:black|b\/w).*?(\d{4,9})',
-                r'T_TotalPrtPGS:\s*(\d{4,9})',           # ← RICOH: Total páginas impresas
-                r'T_MonoPrtPGS:\s*(\d{4,9})'             # ← RICOH: Páginas monocromo (si existe)
+                
+                # ESPAÑOL 
+                r'\[Contador de negro total\][^0-9]*(\d{4,9})',     # [Contador de negro total],00183098
+                r'\[Contador negro total\][^0-9]*(\d{4,9})',        # Variante sin "de"
+                r'Contador de negro[^0-9]*(\d{4,9})',               # Sin corchetes
+                r'Contador negro[^0-9]*(\d{4,9})',                  # Sin corchetes, sin "de"
+                
+                # RICOH
+                r'T_TotalPrtPGS:\s*(\d{4,9})',                      # RICOH: Total páginas
+                r'T_MonoPrtPGS:\s*(\d{4,9})'                        # RICOH: Páginas mono
             ],
+            
             'contador_color': [
+                # INGLÉS
                 r'\[Total Color Counter\][^0-9]*(\d{4,9})',
                 r'(?:color|colour).*?(\d{4,9})',
-                r'T_ColorPrtPGS:\s*(\d{4,9})'            # ← RICOH: Páginas color
+                
+                # ESPAÑOL
+                r'\[Contador de color total\][^0-9]*(\d{4,9})',     # [Contador de color total],00085643
+                r'\[Contador color total\][^0-9]*(\d{4,9})',        # Variante sin "de"
+                r'Contador de color[^0-9]*(\d{4,9})',               # Sin corchetes
+                r'Contador color[^0-9]*(\d{4,9})',                  # Sin corchetes, sin "de"
+                
+                # RICOH
+                r'T_ColorPrtPGS:\s*(\d{4,9})'                       # RICOH: Páginas color
             ],
+            
             'contador_scan': [
+                # INGLÉS
                 r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
-                r'(?:scan|fax|copy).*?(\d{4,9})'
-                # ← NO agregar patrones Ricoh aquí porque no envía scan por separado
+                r'(?:scan|fax|copy).*?(\d{4,9})',
+                
+                # ESPAÑOL
+                r'\[Contador total de escaneo\/fax\][^0-9]*(\d{4,9})',  # [Contador total de escaneo/fax],00066775
+                r'\[Contador de escaneo total\][^0-9]*(\d{4,9})',       # Variante
+                r'\[Contador escaneo total\][^0-9]*(\d{4,9})',          # Sin "de"
+                r'Contador.*escaneo[^0-9]*(\d{4,9})',                   # Genérico escaneo
+                r'Contador.*fax[^0-9]*(\d{4,9})',                       # Genérico fax
+                
+                # RICOH (normalmente no envía scan separado)
+                r'T_ScanPGS:\s*(\d{4,9})'                               # RICOH: Páginas scan (raro)
             ],
         }
 
