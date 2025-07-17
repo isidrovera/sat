@@ -1574,7 +1574,7 @@ class ContadorAutomatico(models.Model):
             import traceback
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
-        def _es_correo_de_contadores_mejorado(self, asunto):
+    def _es_correo_de_contadores_mejorado(self, asunto):
             """
             SOLUCIÓN: Función mejorada de filtrado de correos
             """
