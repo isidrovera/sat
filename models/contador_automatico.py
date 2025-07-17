@@ -2310,8 +2310,8 @@ class ContadorAutomatico(models.Model):
             return False
 
     # MODELO ADICIONAL PARA ESTADÍSTICAS (crear como archivo separado)
-    """
-    class ContadorAutomaticoEstadisticas(models.Model):
+    
+class ContadorAutomaticoEstadisticas(models.Model):
         _name = 'contador.automatico.estadisticas'
         _description = 'Estadísticas diarias del procesamiento de contadores'
         _order = 'fecha desc'
@@ -2359,4 +2359,4 @@ class ContadorAutomatico(models.Model):
             })
             
             return estadisticas
-    """
+    
