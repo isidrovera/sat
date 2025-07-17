@@ -1850,7 +1850,7 @@ class ContadorAutomatico(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error en mantenimiento automático: {e}")
             return False
-        def buscar_serie_dinamico(self, texto):
+    def buscar_serie_dinamico(self, texto):
         """
         🔍 Busca número de serie usando patrones dinámicos,
         con fallback si no encuentra nada.
