@@ -154,8 +154,7 @@
                             <!-- Visualización de rendimiento simplificada -->
                             <div class="row" invisible="veces_usado == 0">
                                 <div class="col-md-6">
-                                    <div class="o_field_widget">
-                                        <label class="o_form_label">Efectividad del Patrón</label>
+                                    <group string="Efectividad del Patrón">
                                         <div class="progress" style="height: 20px;">
                                             <div class="progress-bar progress-bar-striped bg-success" 
                                                  role="progressbar" 
@@ -166,7 +165,7 @@
                                         <small class="text-muted">
                                             <field name="casos_detectados"/> detecciones exitosas de <field name="veces_usado"/> total
                                         </small>
-                                    </div>
+                                    </group>
                                 </div>
                             </div>
                         </page>
