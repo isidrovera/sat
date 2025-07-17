@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- CRON PRINCIPAL: Procesar correos perdidos cada hora -->
+        <record id="cron_procesar_correos_perdidos" model="ir.cron">
+            <field name="name">🔄 Procesar Correos Perdidos - Sistema Contadores</field>
+            <field name="model_id" ref="model_contador_automatico"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_procesar_correos_perdidos()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+            <field name="priority">5</field>
+            <field name="user_id" ref="base.user_admin"/>
+            <field name="doall">False</field>
+        </record>
+
+        <!-- CRON MANTENIMIENTO: Sistema completo cada 6 horas -->
+        <record id="cron_mantenimiento_sistema_contadores" model="ir.cron">
+            <field name="name">🔧 Mantenimiento Automático - Sistema Contadores</field>
+            <field name="model_id" ref="model_contador_automatico"/>
+            <field name="state">code</field>
+            <field name="code">model.mantenimiento_automatico_sistema()</field>
+            <field name="interval_number">6</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+            <field name="priority">10</field>
+            <field name="user_id" ref="base.user_admin"/>
+            <field name="doall">False</field>
+        </record>
+
+        <!-- CRON OPTIMIZACIÓN: Optimizar patrones diariamente -->
+        <record id="cron_optimizar_patrones" model="ir.cron">
+            <field name="name">⚙️ Optimización de Patrones - Sistema Contadores</field>
+            <field name="model_id" ref="model_contador_automatico"/>
+            <field name="state">code</field>
+            <field name="code">
+# Ejecutar optimización de patrones
+registros = model.search([], limit=1)
+if registros:
+    registros[0].optimizar_patrones_automaticamente()
+            </field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+            <field name="priority">15</field>
+            <field name="user_id" ref="base.user_admin"/>
+            <field name="doall">False</field>
+        </record>
+
+        <!-- CRON ESTADÍSTICAS: Actualizar estadísticas diarias -->
+        <record id="cron_actualizar_estadisticas" model="ir.cron">
+            <field name="name">📊 Actualizar Estadísticas - Sistema Contadores</field>
+            <field name="model_id" ref="model_contador_automatico_estadisticas"/>
+            <field name="state">code</field>
+            <field name="code">model.actualizar_estadisticas_diarias()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+            <field name="priority">20</field>
+            <field name="user_id" ref="base.user_admin"/>
+            <field name="doall">False</field>
+            <field name="nextcall" eval="DateTime.now().replace(hour=1, minute=0, second=0)"/>
+        </record>
+
+        <!-- CRON LIMPIEZA: Limpiar registros antiguos semanalmente -->
+        <record id="cron_limpiar_registros_antiguos" model="ir.cron">
+            <field name="name">🧹 Limpieza Semanal - Sistema Contadores</field>
+            <field name="model_id" ref="model_contador_automatico"/>
+            <field name="state">code</field>
+            <field name="code">
+# Ejecutar limpieza semanal
+registros = model.search([], limit=1)
+if registros:
+    registros[0].limpiar_registros_antiguos(dias_mantener=90)
+            </field>
+            <field name="interval_number">7</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+            <field name="priority">25</field>
+            <field name="user_id" ref="base.user_admin"/>
+            <field name="doall">False</field>
+            <field name="nextcall" eval="(DateTime.now() + timedelta(days=(6-DateTime.now().weekday()))).replace(hour=2, minute=0, second=0)"/>
+        </record>
+
+        <!-- CRON BACKUP: Procesamiento manual de respaldo (cada 4 horas) -->
+        <record id="cron_procesamiento_respaldo" model="ir.cron">
+            <field name="name">🛡️ Procesamiento de Respaldo - Sistema Contadores</field>
+            <field name="model_id" ref="model_contador_automatico"/>
+            <field name="state">code</field>
+            <field name="code">
+# Buscar correos pendientes y reprocesarlos
+correos_pendientes = model.search([
+    ('estado', '=', 'pendiente'),
+    ('create_date', '>=', fields.Datetime.now() - timedelta(hours=12))
+])
+
+for correo in correos_pendientes:
+    try:
+        correo.procesar_correo_inteligente()
+    except Exception as e:
+        pass
+            </field>
+            <field name="interval_number">4</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+            <field name="priority">30</field>
+            <field name="user_id" ref="base.user_admin"/>
+            <field name="doall">False</field>
+        </record>
+
+        <!-- CRON MONITOREO: Verificar salud del sistema cada 2 horas -->
+        <record id="cron_monitoreo_sistema" model="ir.cron">
+            <field name="name">🩺 Monitoreo de Salud - Sistema Contadores</field>
+            <field name="model_id" ref="model_contador_automatico"/>
+            <field name="state">code</field>
+            <field name="code">
+# Verificar salud del sistema
+import logging
+_logger = logging.getLogger(__name__)
+
+try:
+    # Verificar si hay muchos errores recientes
+    errores_recientes = model.search_count([
+        ('estado', '=', 'error'),
+        ('create_date', '>=', fields.Datetime.now() - timedelta(hours=2))
+    ])
+    
+    # Verificar si hay patrones activos
+    patrones_activos = env['patron.contador'].search_count([('activo', '=', True)])
+    
+    # Log de salud del sistema
+    _logger.info(f"🩺 SALUD SISTEMA - Errores últimas 2h: {errores_recientes}, Patrones activos: {patrones_activos}")
+    
+    # Si hay muchos errores, crear notificación
+    if errores_recientes > 10:
+        _logger.warning(f"⚠️ ALERTA: {errores_recientes} errores en las últimas 2 horas")
+        
+    # Si no hay patrones activos, es crítico
+    if patrones_activos == 0:
+        _logger.error("🚨 CRÍTICO: No hay patrones activos en el sistema")
+        
+except Exception as e:
+    _logger.error(f"❌ Error en monitoreo de salud: {e}")
+            </field>
+            <field name="interval_number">2</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+            <field name="priority">35</field>
+            <field name="user_id" ref="base.user_admin"/>
+            <field name="doall">False</field>
+        </record>
+
+    </data>
+</odoo>

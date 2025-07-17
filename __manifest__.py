@@ -39,6 +39,7 @@
         'data/ir_secuense_ev.xml',
         'data/print.xml',
         'data/cron_data.xml',
+        'data/cron_contador_automatico.xml',
         'data/cron_evaluador_diario.xml',
         'data/cron_tickets.xml',
         'data/ir.secuence_incidencia.xml',        

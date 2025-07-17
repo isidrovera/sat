@@ -1,33 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Vista List para gestión de patrones -->
+    <!-- Vista List para gestión de patrones ACTUALIZADA -->
     <record id="view_patron_contador_list" model="ir.ui.view">
         <field name="name">patron.contador.list</field>
         <field name="model">patron.contador</field>
         <field name="arch" type="xml">
             <list string="Patrones de Detección" 
                   decoration-muted="not activo"
-                  multi_edit="1" editable="bottom">
+                  decoration-success="estado_patron == 'efectivo'"
+                  decoration-warning="estado_patron == 'problematico'"
+                  decoration-info="auto_generado"
+                  multi_edit="1" 
+                  editable="bottom">
                 <header>
                     <button name="create_default_patterns" type="object" 
                             string="🔧 Crear Patrones por Defecto" class="btn-primary"/>
+                    <button name="limpiar_patrones_obsoletos" type="object" 
+                            string="🧹 Limpiar Obsoletos" class="btn-secondary"/>
+                    <button name="obtener_estadisticas_patrones" type="object" 
+                            string="📊 Ver Estadísticas" class="btn-info"/>
                 </header>
+                
                 <field name="orden" widget="handle"/>
                 <field name="name"/>
                 <field name="tipo"/>
+                <field name="marca_patron" optional="show"/>
+                <field name="idioma_patron" optional="show"/>
                 <field name="patron_regex" widget="text"/>
                 <field name="ejemplo"/>
                 <field name="activo" widget="boolean"/>
+                
+                <!-- NUEVOS CAMPOS DEL SISTEMA INTELIGENTE -->
+                <field name="auto_generado" widget="boolean" optional="show"/>
+                <field name="validado_manualmente" widget="boolean" optional="hide"/>
+                <field name="confianza_patron" optional="hide"/>
+                <field name="estado_patron" optional="show"/>
+                
+                <!-- ESTADÍSTICAS MEJORADAS -->
                 <field name="veces_usado" readonly="1"/>
-                <field name="ultima_deteccion" readonly="1"/>
+                <field name="casos_detectados" readonly="1" optional="show"/>
+                <field name="casos_fallidos" readonly="1" optional="hide"/>
+                <field name="tasa_exito" readonly="1" optional="show" 
+                       decoration-success="tasa_exito >= 80"
+                       decoration-warning="tasa_exito >= 50 and tasa_exito < 80"
+                       decoration-danger="tasa_exito < 50"/>
+                <field name="ultima_deteccion" readonly="1" optional="hide"/>
+                
+                <!-- BOTONES DE ACCIÓN -->
                 <button name="probar_patron" type="object" 
                         string="🧪 Probar" class="btn-sm btn-secondary"/>
+                <button name="validar_patron_manualmente" type="object" 
+                        string="✅ Validar" class="btn-sm btn-success"
+                        invisible="not auto_generado or validado_manualmente"/>
             </list>
         </field>
     </record>
 
-    <!-- Vista Form para editar patrones -->
+    <!-- Vista Form para editar patrones MEJORADA -->
     <record id="view_patron_contador_form" model="ir.ui.view">
         <field name="name">patron.contador.form</field>
         <field name="model">patron.contador</field>
@@ -36,48 +66,149 @@
                 <header>
                     <button name="probar_patron" type="object" 
                             string="🧪 Probar Patrón" class="btn-primary"/>
+                    <button name="validar_patron_manualmente" type="object" 
+                            string="✅ Validar Patrón" class="btn-success"
+                            invisible="not auto_generado or validado_manualmente"/>
+                    <button name="desactivar_patron_inefectivo" type="object" 
+                            string="⏸️ Desactivar" class="btn-warning"
+                            invisible="not activo or tasa_exito >= 20"/>
+                    
+                    <!-- Estado visual del patrón -->
+                    <field name="estado_patron" widget="statusbar" 
+                           statusbar_visible="nuevo,activo,efectivo,problematico,obsoleto"/>
                 </header>
+                
                 <sheet>
-                    <group>
-                        <group>
+                    <!-- Título con badges informativos -->
+                    <div class="oe_title">
+                        <h1>
                             <field name="name"/>
-                            <field name="tipo"/>
-                            <field name="orden"/>
-                            <field name="activo"/>
-                        </group>
-                        <group>
-                            <field name="veces_usado" readonly="1"/>
-                            <field name="ultima_deteccion" readonly="1"/>
-                        </group>
-                    </group>
-                    
-                    <group string="Configuración del Patrón">
-                        <field name="patron_regex" widget="text" nolabel="1" 
-                               placeholder="Expresión regular. Use () para capturar el valor"/>
-                        <field name="descripcion" nolabel="1" 
-                               placeholder="Descripción de qué detecta este patrón"/>
-                        <field name="ejemplo" nolabel="1" 
-                               placeholder="Texto de ejemplo para probar el patrón"/>
-                    </group>
-                    
-                    <group string="Ayuda de Expresiones Regulares">
-                        <div class="alert alert-info">
-                            <h5>Ejemplos de patrones útiles:</h5>
-                            <ul>
-                                <li><code>\[Texto\],?\s*([A-Z0-9]+)</code> - Detecta: [Texto], VALOR</li>
-                                <li><code>(?:palabra1|palabra2)\s*:?\s*(\d+)</code> - Detecta: palabra1: 123456</li>
-                                <li><code>([A-Z]{2,4}\d{5,10})</code> - Detecta códigos alfanuméricos</li>
-                                <li><code>(\d{1,9})</code> - Captura números de 1-9 dígitos</li>
-                            </ul>
-                            <p><strong>Importante:</strong> Use paréntesis () para capturar el valor que quiere extraer.</p>
+                        </h1>
+                        <h3>
+                            <field name="tipo"/> 
+                            <span invisible="not marca_patron"> - </span>
+                            <field name="marca_patron"/>
+                        </h3>
+                    </div>
+
+                    <!-- Badges de estado -->
+                    <div class="oe_button_box">
+                        <div class="o_field_widget">
+                            <span class="badge badge-primary" invisible="not auto_generado">
+                                🤖 Auto-generado
+                            </span>
+                            <span class="badge badge-success" invisible="not validado_manualmente">
+                                ✅ Validado
+                            </span>
+                            <span class="badge badge-info" invisible="not activo">
+                                🟢 Activo
+                            </span>
+                            <span class="badge badge-secondary" invisible="activo">
+                                ⭕ Inactivo
+                            </span>
                         </div>
-                    </group>
+                    </div>
+                    
+                    <notebook>
+                        <!-- Pestaña: Configuración Básica -->
+                        <page string="📝 Configuración" name="config">
+                            <group>
+                                <group>
+                                    <field name="activo"/>
+                                    <field name="orden"/>
+                                    <field name="idioma_patron"/>
+                                    <field name="formato_origen"/>
+                                </group>
+                                <group>
+                                    <field name="veces_usado" readonly="1"/>
+                                    <field name="ultima_deteccion" readonly="1"/>
+                                    <field name="confianza_patron" readonly="1" 
+                                           invisible="not auto_generado"/>
+                                </group>
+                            </group>
+                            
+                            <group string="Configuración del Patrón">
+                                <field name="patron_regex" widget="text" nolabel="1" 
+                                       placeholder="Expresión regular. Use () para capturar el valor"/>
+                                <field name="descripcion" nolabel="1" 
+                                       placeholder="Descripción de qué detecta este patrón"/>
+                                <field name="ejemplo" nolabel="1" 
+                                       placeholder="Texto de ejemplo para probar el patrón"/>
+                            </group>
+                        </page>
+
+                        <!-- Pestaña: Estadísticas de Rendimiento -->
+                        <page string="📊 Estadísticas" name="stats">
+                            <group>
+                                <group string="Rendimiento">
+                                    <field name="casos_detectados" readonly="1"/>
+                                    <field name="casos_fallidos" readonly="1"/>
+                                    <field name="tasa_exito" readonly="1"/>
+                                </group>
+                                <group string="Sistema Inteligente">
+                                    <field name="auto_generado" readonly="1"/>
+                                    <field name="validado_manualmente" readonly="1"/>
+                                </group>
+                            </group>
+                            
+                            <!-- Visualización de rendimiento -->
+                            <div class="row" invisible="veces_usado == 0">
+                                <div class="col-md-6">
+                                    <div class="o_field_widget">
+                                        <label class="o_form_label">Efectividad del Patrón</label>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar progress-bar-striped" 
+                                                 role="progressbar" 
+                                                 t-att-style="'width: ' + record.tasa_exito.raw_value + '%'"
+                                                 t-att-class="record.tasa_exito.raw_value >= 80 ? 'progress-bar-success' : record.tasa_exito.raw_value >= 50 ? 'progress-bar-warning' : 'progress-bar-danger'">
+                                                <field name="tasa_exito"/>%
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">
+                                            <field name="casos_detectados"/> detecciones exitosas de <field name="veces_usado"/> total
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </page>
+
+                        <!-- Pestaña: Información Técnica (solo para auto-generados) -->
+                        <page string="🔧 Técnico" name="technical" invisible="not auto_generado">
+                            <group string="Origen del Patrón">
+                                <field name="texto_origen" widget="text" readonly="1"/>
+                            </group>
+                        </page>
+
+                        <!-- Pestaña: Ayuda -->
+                        <page string="❓ Ayuda" name="help">
+                            <group string="Ayuda de Expresiones Regulares">
+                                <div class="alert alert-info">
+                                    <h5>Ejemplos de patrones útiles:</h5>
+                                    <ul>
+                                        <li><code>\[Texto\],?\s*([A-Z0-9]+)</code> - Detecta: [Texto], VALOR</li>
+                                        <li><code>(?:palabra1|palabra2)\s*:?\s*(\d+)</code> - Detecta: palabra1: 123456</li>
+                                        <li><code>([A-Z]{2,4}\d{5,10})</code> - Detecta códigos alfanuméricos</li>
+                                        <li><code>(\d{1,9})</code> - Captura números de 1-9 dígitos</li>
+                                        <li><code>T_\w+\s*:?\s*(\d+)</code> - Para formatos Ricoh como T_TotalPrtPGS:123</li>
+                                    </ul>
+                                    <p><strong>Importante:</strong> Use paréntesis () para capturar el valor que quiere extraer.</p>
+                                    
+                                    <h5>Patrones por Marca:</h5>
+                                    <ul>
+                                        <li><strong>Bizhub:</strong> Usan formato [Etiqueta], Valor</li>
+                                        <li><strong>Ricoh:</strong> Usan formato Campo: Valor o T_Campo:Valor</li>
+                                        <li><strong>Generic:</strong> Usan formato Palabra: Valor</li>
+                                    </ul>
+                                </div>
+                            </group>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
     </record>
 
-    <!-- Vista Search -->
+    <!-- Vista Search ACTUALIZADA -->
     <record id="view_patron_contador_search" model="ir.ui.view">
         <field name="name">patron.contador.search</field>
         <field name="model">patron.contador</field>
@@ -85,25 +216,48 @@
             <search string="Buscar Patrones">
                 <field name="name"/>
                 <field name="tipo"/>
+                <field name="marca_patron"/>
                 <field name="patron_regex"/>
+                
                 <separator/>
                 <filter string="Activos" name="activos" domain="[('activo', '=', True)]"/>
                 <filter string="Inactivos" name="inactivos" domain="[('activo', '=', False)]"/>
+                
+                <separator/>
+                <!-- NUEVOS FILTROS PARA SISTEMA INTELIGENTE -->
+                <filter string="🤖 Auto-generados" name="auto_generados" domain="[('auto_generado', '=', True)]"/>
+                <filter string="👤 Manuales" name="manuales" domain="[('auto_generado', '=', False)]"/>
+                <filter string="✅ Validados" name="validados" domain="[('validado_manualmente', '=', True)]"/>
+                
+                <separator/>
+                <filter string="🌟 Efectivos" name="efectivos" domain="[('estado_patron', '=', 'efectivo')]"/>
+                <filter string="⚠️ Problemáticos" name="problematicos" domain="[('estado_patron', '=', 'problematico')]"/>
+                <filter string="🆕 Nuevos" name="nuevos" domain="[('estado_patron', '=', 'nuevo')]"/>
+                
                 <separator/>
                 <filter string="Series" name="series" domain="[('tipo', '=', 'serie')]"/>
                 <filter string="Contador B/N" name="contador_bn" domain="[('tipo', '=', 'contador_bn')]"/>
                 <filter string="Contador Color" name="contador_color" domain="[('tipo', '=', 'contador_color')]"/>
                 <filter string="Contador Scan" name="contador_scan" domain="[('tipo', '=', 'contador_scan')]"/>
+                
+                <separator/>
+                <filter string="🎯 Alta Efectividad (&gt;80%)" name="alta_efectividad" domain="[('tasa_exito', '>=', 80)]"/>
+                <filter string="⚡ Muy Usados (&gt;10)" name="muy_usados" domain="[('veces_usado', '>', 10)]"/>
+                <filter string="💤 Sin Usar" name="sin_usar" domain="[('veces_usado', '=', 0)]"/>
+                
                 <separator/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Tipo" name="group_tipo" context="{'group_by': 'tipo'}"/>
-                    <filter string="Estado" name="group_activo" context="{'group_by': 'activo'}"/>
+                    <filter string="Estado del Patrón" name="group_estado" context="{'group_by': 'estado_patron'}"/>
+                    <filter string="Marca" name="group_marca" context="{'group_by': 'marca_patron'}"/>
+                    <filter string="Idioma" name="group_idioma" context="{'group_by': 'idioma_patron'}"/>
+                    <filter string="Auto/Manual" name="group_auto" context="{'group_by': 'auto_generado'}"/>
                 </group>
             </search>
         </field>
     </record>
 
-    <!-- Acción para gestión de patrones -->
+    <!-- Acción para gestión de patrones MANTENIDA IGUAL -->
     <record id="action_patron_contador" model="ir.actions.act_window">
         <field name="name">Patrones de Detección</field>
         <field name="res_model">patron.contador</field>
@@ -117,27 +271,30 @@
             </p>
             <p>
                 Los patrones permiten detectar automáticamente series y contadores 
-                desde diferentes formatos de correo.
+                desde diferentes formatos de correo. El sistema puede generar 
+                patrones automáticamente basado en los correos recibidos.
             </p>
             <p>
                 <strong>Empezar:</strong>
             </p>
             <ol>
-                <li>Haz clic en "Crear Patrones por Defecto"</li>
-                <li>Personaliza o agrega nuevos patrones</li>
-                <li>Usa el botón "Probar" para validar</li>
+                <li>Haz clic en "🔧 Crear Patrones por Defecto"</li>
+                <li>El sistema generará patrones automáticamente desde correos</li>
+                <li>Personaliza o agrega nuevos patrones manualmente</li>
+                <li>Usa el botón "🧪 Probar" para validar patrones</li>
+                <li>Revisa las estadísticas de efectividad</li>
             </ol>
         </field>
     </record>
 
-    <!-- Menú para patrones -->
+    <!-- Menú para patrones MANTENIDO IGUAL -->
     <menuitem id="menu_patron_contador"
               name="Patrones de Detección"
               parent="sat_menu_root"
               action="action_patron_contador"
               sequence="85"/>
 
-    <!-- Agregar botón en contador automático para gestionar patrones -->
+    <!-- Agregar botón en contador automático para gestionar patrones MANTENIDO -->
     <record id="view_contador_automatico_form_inherit" model="ir.ui.view">
         <field name="name">contador.automatico.form.inherit</field>
         <field name="model">contador.automatico</field>
