@@ -18,7 +18,9 @@ class ContadorAutomatico(models.Model):
     contenido_procesado = fields.Text('Contenido procesado (texto plano)')
     serie_detectada = fields.Char('Serie detectada', tracking=True)
     equipo_id = fields.Many2one('alquiler', string='Equipo relacionado', tracking=True)
-    
+        # Fecha en que se completa el procesamiento (añadido)
+    fecha_procesamiento = fields.Datetime('Fecha de procesamiento', readonly=True)
+
     # Contadores detectados
     contador_bn_detectado = fields.Integer('Contador B/N detectado')
     contador_color_detectado = fields.Integer('Contador Color detectado')
@@ -674,90 +676,125 @@ class ContadorAutomatico(models.Model):
 
     def procesar_correo_inteligente(self):
         """
-        Procesamiento inteligente del correo con análisis,
-        validación extra de serie y generación de patrones.
+        Procesamiento inteligente del correo con análisis y generación automática
         """
         try:
-            _logger.info("🧠 === INICIO PROCESAMIENTO INTELIGENTE ===")
-            _logger.info(f"📧 ID={self.id}, Asunto='{self.name}'")
-            
-            # 1. Filtro por asunto
+            _logger.info(f"🧠 === INICIO PROCESAMIENTO INTELIGENTE ===")
+            _logger.info(f"📧 Registro ID={self.id}, Asunto='{self.name}'")
+
+            # 1. VERIFICAR SI ES CORREO DE CONTADORES
             if not self.es_correo_de_contadores(self.name):
                 self.estado = 'filtrado'
                 self.mensaje_error = 'Asunto no corresponde a correo de contadores'
-                _logger.info("🚫 Correo filtrado - asunto inválido")
+                _logger.info(f"🚫 Correo filtrado - No es de contadores")
                 return False
-            
-            # 2. Limpiar HTML
-            texto_limpio = (self.limpiar_html_correo(self.contenido_original)
-                            if self.contenido_original else self.name or "")
-            self.contenido_procesado = texto_limpio
-            
-            # 3. Análisis de idioma, marca y estructura
-            idioma, conf, claves = self.detectar_idioma_automatico(texto_limpio)
+
+            # 2. LIMPIAR CONTENIDO HTML
+            if self.contenido_original:
+                texto_limpio = self.limpiar_html_correo(self.contenido_original)
+                self.contenido_procesado = texto_limpio
+            else:
+                texto_limpio = self.name or ""
+
+            # 3. ANÁLISIS INTELIGENTE DEL CONTENIDO
+            _logger.info(f"🔍 === FASE: ANÁLISIS INTELIGENTE ===")
+
+            # Detectar idioma
+            idioma, confianza_idioma, palabras_clave = self.detectar_idioma_automatico(texto_limpio)
             self.idioma_detectado = idioma
-            self.confianza_deteccion = conf
-            self.palabras_clave_encontradas = ', '.join(claves)
-            
+            self.confianza_deteccion = confianza_idioma
+            self.palabras_clave_encontradas = ', '.join(palabras_clave)
+
+            # Detectar marca
             marca = self.detectar_marca_automatico(texto_limpio)
             self.marca_detectada = marca
-            
+
+            # Analizar estructura
             estructura = self.analizar_estructura_contenido(texto_limpio)
             self.formato_detectado = estructura.get('estructura_tipo', 'desconocida')
             self.estructura_detectada = str(estructura)
-            
-            _logger.info(f"🌍 Idioma={idioma} ({conf:.1f}%), 🏭 Marca={marca}, 📐 Formato={self.formato_detectado}")
-            
-            # 4. Buscar serie y contadores con patrones existentes
+
+            _logger.info(f"🌍 Idioma: {idioma} ({confianza_idioma:.1f}%)")
+            _logger.info(f"🏭 Marca: {marca}")
+            _logger.info(f"📐 Formato: {estructura.get('estructura_tipo')}")
+
+            # 4. INTENTAR PROCESAMIENTO CON PATRONES EXISTENTES
+            _logger.info(f"📊 === FASE: PROCESAMIENTO CON PATRONES EXISTENTES ===")
+
             serie_encontrada = self.buscar_serie_dinamico(texto_limpio)
-            contadores = self.buscar_patrones_contadores_dinamico(texto_limpio)
-            
-            # --- Validación extra de la serie detectada ---
-            if serie_encontrada:
-                exclusiones = {'model', 'serial', 'pages', 'total'}
-                su = serie_encontrada.upper()
-                if any(c.isdigit() for c in su) and any(c.isalpha() for c in su) and su.lower() not in exclusiones:
-                    _logger.info(f"✅ Serie tras validación adicional: {su}")
-                    serie_encontrada = su
-                else:
-                    _logger.warning(f"💥 Serie descartada tras validación: '{serie_encontrada}'")
-                    serie_encontrada = None
-            
-            # 5. Si falta algo, generar patrones automáticos
-            if not serie_encontrada or not contadores:
-                _logger.warning("⚠️ Patrones existentes insuficientes, generando automáticos...")
+            # Descartar si la “serie” es solo dígitos
+            if serie_encontrada and serie_encontrada.isdigit():
+                _logger.warning(f"💥 Serie descartada tras validación: '{serie_encontrada}'")
+                serie_encontrada = None
+
+            contadores_encontrados = self.buscar_patrones_contadores_dinamico(texto_limpio)
+
+            # 5. SI NO ENCONTRÓ DATOS, GENERAR PATRONES AUTOMÁTICAMENTE
+            if not serie_encontrada or not contadores_encontrados:
+                _logger.info(f"🤖 === FASE: GENERACIÓN AUTOMÁTICA DE PATRONES ===")
+                _logger.warning(f"⚠️ Patrones existentes insuficientes. Generando automáticamente...")
+
                 self.requiere_aprendizaje = True
+
+                # Generar patrones automáticamente
                 if self.generar_patrones_automaticamente():
-                    _logger.info("✅ Patrones automáticos generados y aplicados")
+                    _logger.info(f"✅ Patrones generados y aplicados exitosamente")
                 else:
-                    _logger.warning("⚠️ No se generaron patrones efectivos")
+                    _logger.warning(f"⚠️ No se pudieron generar patrones efectivos")
             else:
-                # 6. Procesamiento exitoso
-                self.serie_detectada = serie_encontrada
-                self.contador_bn_detectado = contadores.get('contador_bn') or 0
-                self.contador_color_detectado = contadores.get('contador_color') or 0
-                self.contador_scan_detectado = contadores.get('contador_scan') or 0
-                
-                equipo = self.buscar_equipo_por_serie(serie_encontrada)
-                if equipo:
-                    self.equipo_id = equipo.id
-                    self.actualizar_contadores_equipo(equipo, contadores)
-                    self.estado = 'procesado'
-                    self.procesado_automaticamente = True
-                    _logger.info("🎉 Procesamiento completado con patrones existentes")
+                # Procesamiento exitoso con patrones existentes
+                _logger.info(f"✅ Procesamiento exitoso con patrones existentes")
+
+                if serie_encontrada:
+                    self.serie_detectada = serie_encontrada
+
+                    # Actualizar contadores detectados
+                    if 'contador_bn' in contadores_encontrados:
+                        self.contador_bn_detectado = contadores_encontrados['contador_bn']
+                    if 'contador_color' in contadores_encontrados:
+                        self.contador_color_detectado = contadores_encontrados['contador_color']
+                    if 'contador_scan' in contadores_encontrados:
+                        self.contador_scan_detectado = contadores_encontrados['contador_scan']
+
+                    # Buscar equipo y actualizar
+                    equipo = self.buscar_equipo_por_serie(serie_encontrada)
+                    if equipo and contadores_encontrados:
+                        self.equipo_id = equipo.id
+                        self.actualizar_contadores_equipo(equipo, contadores_encontrados)
+                        self.estado = 'procesado'
+                        self.procesado_automaticamente = True
+                    else:
+                        self.estado = 'manual'
+                        self.mensaje_error = f"Serie detectada pero equipo no encontrado: {serie_encontrada}"
                 else:
                     self.estado = 'manual'
-                    self.mensaje_error = f"Serie detectada pero equipo no encontrado: {serie_encontrada}"
-            
-            self.fecha_procesamiento = fields.Datetime.now()
-            _logger.info(f"🏁 Estado final: {self.estado}")
+                    self.mensaje_error = "No se detectó número de serie"
+
+            # 6. ACTUALIZAR fecha_procesamiento
+            self.write({'fecha_procesamiento': fields.Datetime.now()})
+
+            _logger.info(f"📊 === RESUMEN PROCESAMIENTO INTELIGENTE ===")
+            _logger.info(f"Estado final: {self.estado}")
+            _logger.info(f"Idioma: {self.idioma_detectado}")
+            _logger.info(f"Marca: {self.marca_detectada}")
+            _logger.info(f"Formato: {self.formato_detectado}")
+            _logger.info(f"Serie: {self.serie_detectada or 'No detectada'}")
+            _logger.info(f"Requiere aprendizaje: {self.requiere_aprendizaje}")
+            _logger.info(f"Patrones auto-generados: {self.patrones_auto_generados}")
+            _logger.info(f"🏁 === FIN PROCESAMIENTO INTELIGENTE ===")
+
             return True
-        
+
         except Exception as e:
-            _logger.error(f"❌ ERROR EN PROCESAMIENTO INTELIGENTE: {e}", exc_info=True)
+            _logger.error(f"❌ === ERROR EN PROCESAMIENTO INTELIGENTE ===")
+            _logger.error(f"Error: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
+
             self.estado = 'error'
-            self.mensaje_error = f"Error en procesamiento inteligente: {e}"
-            self.fecha_procesamiento = fields.Datetime.now()
+            self.mensaje_error = f"Error en procesamiento inteligente: {str(e)}"
+            # también usar write() aquí si quieres persistir fecha de error:
+            self.write({'fecha_procesamiento': fields.Datetime.now()})
             return False
 
     def buscar_y_procesar_correos_inteligente(self):
