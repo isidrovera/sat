@@ -1847,40 +1847,50 @@ class ContadorAutomatico(models.Model):
             return False
     def buscar_serie_dinamico(self, texto):
         """
-        Busca número de serie usando patrones dinámicos
+        Busca número de serie usando patrones dinámicos,
+        descartando las capturas puramente numéricas.
         """
-        _logger.info(f"🔍 Iniciando búsqueda de serie con patrones dinámicos...")
-        
-        # Verificar si existen patrones de serie
-        patrones_serie = self.env['patron.contador'].search_count([
+        _logger.info("🔍 Iniciando búsqueda de serie con patrones dinámicos...")
+        # 1. ¿Tenemos patrones configurados?
+        total = self.env['patron.contador'].search_count([
             ('tipo', '=', 'serie'),
-            ('activo', '=', True)
+            ('activo', '=', True),
         ])
-        _logger.info(f"📊 Patrones de serie disponibles: {patrones_serie}")
-        
-        if patrones_serie == 0:
-            _logger.warning(f"⚠️ No hay patrones de serie configurados. Usando patrones por defecto...")
+        _logger.info(f"📊 Patrones de serie disponibles: {total}")
+        if total == 0:
+            _logger.warning("⚠️ No hay patrones de serie configurados. Usando fallback...")
             return self._buscar_serie_fallback(texto)
-        
+
+        # 2. Intentamos con los patrones activos
         resultado = self.env['patron.contador'].buscar_por_tipo('serie', texto)
-        
-        if resultado:
-            # Encontrar qué patrón se usó
-            patron_usado = self._encontrar_patron_usado('serie', texto, resultado)
-            if patron_usado:
-                patrones_info = f"serie: {patron_usado.name}"
-                if hasattr(self, 'patrones_usados') and self.patrones_usados:
-                    self.patrones_usados += f"; {patrones_info}"
-                else:
-                    self.patrones_usados = patrones_info
-                _logger.info(f"✅ Serie encontrada: {resultado} usando patrón '{patron_usado.name}'")
-            else:
-                _logger.info(f"✅ Serie encontrada: {resultado}")
-            
-            return resultado
-        else:
-            _logger.warning(f"❌ No se encontró serie en el texto")
+        if not resultado:
+            _logger.warning("❌ No se encontró serie con patrones dinámicos")
             return None
+
+        # 3. Si el valor es sólo dígitos, lo descartamos y probamos fallback
+        if resultado.isdigit():
+            _logger.warning(f"💥 Serie descartada tras validación: '{resultado}'")
+            fallback = self._buscar_serie_fallback(texto)
+            if fallback:
+                _logger.info(f"🔄 Serie obtenida por fallback: '{fallback}'")
+                return fallback
+            _logger.warning("❌ No se encontró serie válida tras fallback")
+            return None
+
+        # 4. Guardamos qué patrón exacto se usó
+        patron_usado = self._encontrar_patron_usado('serie', texto, resultado)
+        if patron_usado:
+            info = f"serie: {patron_usado.name}"
+            if self.patrones_usados:
+                self.patrones_usados += f"; {info}"
+            else:
+                self.patrones_usados = info
+            _logger.info(f"✅ Serie encontrada: {resultado} usando patrón '{patron_usado.name}'")
+        else:
+            _logger.info(f"✅ Serie encontrada: {resultado}")
+
+        return resultado
+
 
     def buscar_patrones_contadores_dinamico(self, texto):
         """
@@ -1996,24 +2006,30 @@ class ContadorAutomatico(models.Model):
 
     def _buscar_serie_fallback(self, texto):
         """
-        Búsqueda de serie de fallback si no hay configuración dinámica
+        Fallback para extraer serie si no hay patrones dinámicos.
+        Incluye patrones en español e inglés.
         """
-        _logger.info(f"🔧 Usando patrones de serie de fallback...")
-        
+        _logger.info("🔧 Usando patrones de serie de fallback...")
         patrones_serie = [
-            r'\[Número de serie\].*?([A-Z0-9]{5,15})',
-            r'([A-Z]{2,4}\d{5,10})',
-            r'(?:serie|serial).*?([A-Z0-9]{5,15})'
+            # Español
+            r'\[Número de serie\]\s*,?\s*([A-Z0-9]{5,15})',
+            # Inglés
+            r'\[Serial Number\]\s*,?\s*([A-Z0-9]{5,15})',
+            r'Serial No\.?:\s*([A-Z0-9]{5,15})',
+            # Genérico alfanumérico
+            r'([A-Z]{2,4}\d{5,15})',
+            r'(?:serie|serial).*?([A-Z0-9]{5,15})',
         ]
-        
         for patron in patrones_serie:
-            matches = re.finditer(patron, texto, re.IGNORECASE)
-            for match in matches:
-                serie = match.group(1).upper()
-                if len(serie) >= 5:
-                    _logger.info(f"✅ Serie encontrada (fallback): {serie}")
-                    return serie
-        
+            try:
+                for match in re.finditer(patron, texto, re.IGNORECASE):
+                    valor = match.group(1).upper().strip()
+                    if len(valor) >= 5 and re.search(r'[A-Z]', valor):
+                        _logger.info(f"✅ Serie encontrada (fallback) con '{patron}': {valor}")
+                        return valor
+            except re.error as e:
+                _logger.warning(f"Error en fallback '{patron}': {e}")
+        _logger.warning("❌ No se encontró serie en fallback")
         return None
 
     def buscar_equipo_por_serie(self, serie):

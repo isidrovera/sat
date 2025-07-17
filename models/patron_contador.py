@@ -320,52 +320,43 @@ class PatronContador(models.Model):
     @api.model
     def buscar_por_tipo(self, tipo, texto):
         """
-        Busca patrones de un tipo específico en el texto (MEJORADO con exclusiones y validaciones adicionales)
+        Busca patrones de un tipo específico en el texto.
+        Para 'serie', exige al menos una letra en el resultado.
         """
-        patrones = self.search([
-            ('tipo', '=', tipo),
-            ('activo', '=', True)
-        ], order='orden')
-
-        # Palabras prohibidas para serie (comunes pero no son seriales)
-        exclusiones_serie = {'model', 'total', 'pages', 'counter', 'black', 'white', 'color', 'scan'}
-
+        patrones = self.search(
+            [('tipo', '=', tipo), ('activo', '=', True)],
+            order='orden'
+        )
         for patron in patrones:
             try:
-                matches = re.finditer(patron.patron_regex, texto, re.IGNORECASE)
-                for match in matches:
-                    if match.groups():
-                        valor = match.group(1).strip()
+                for match in re.finditer(patron.patron_regex, texto, re.IGNORECASE):
+                    if not match.groups():
+                        continue
+                    valor = match.group(1).strip()
+                    if not valor:
+                        continue
 
-                        if valor:
-                            if tipo == 'serie':
-                                valor_up = valor.upper()
-                                # Validar longitud, formato, y que no esté en exclusiones
-                                if (
-                                    6 <= len(valor_up) <= 15 and
-                                    re.match(r'^[A-Z0-9\-]+$', valor_up) and
-                                    valor.lower() not in exclusiones_serie
-                                ):
-                                    patron.marcar_deteccion_exitosa()
-                                    return valor_up
-                                else:
-                                    patron.marcar_deteccion_fallida()
-                            else:
-                                try:
-                                    numero = int(re.sub(r'[^0-9]', '', valor))
-                                    if numero > 0:
-                                        patron.marcar_deteccion_exitosa()
-                                        return numero
-                                    else:
-                                        patron.marcar_deteccion_fallida()
-                                except:
-                                    patron.marcar_deteccion_fallida()
+                    if tipo == 'serie':
+                        val = valor.upper()
+                        # longitud >=5, solo A–Z y 0–9, y al menos UNA letra
+                        if (len(val) >= 5
+                                and re.match(r'^[A-Z0-9]+$', val)
+                                and re.search(r'[A-Z]', val)):
+                            patron.marcar_deteccion_exitosa()
+                            return val
+                        patron.marcar_deteccion_fallida()
+                    else:
+                        # contador: convertimos a entero y >0
+                        numero = int(re.sub(r'[^0-9]', '', valor) or 0)
+                        if numero > 0:
+                            patron.marcar_deteccion_exitosa()
+                            return numero
+                        patron.marcar_deteccion_fallida()
             except re.error:
                 _logger.warning(f"Error en patrón {patron.name}: {patron.patron_regex}")
                 patron.marcar_deteccion_fallida()
-                continue
-
         return None
+
 
 
     def validar_patron_manualmente(self):
