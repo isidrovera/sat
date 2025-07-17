@@ -64,17 +64,7 @@
                             class="btn-primary"
                             invisible="estado in ['procesado']"/>
                     
-                    <button name="generar_patrones_para_correo_actual" 
-                            string="🤖 Generar Patrones" 
-                            type="object" 
-                            class="btn-success"
-                            invisible="estado != 'manual'"/>
                     
-                    <button name="marcar_como_procesado_manual" 
-                            string="✅ Marcar Procesado" 
-                            type="object" 
-                            class="btn-warning"
-                            invisible="estado != 'manual'"/>
                     
                     <!-- Estado visual -->
                     <field name="estado" widget="statusbar" 
