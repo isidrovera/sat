@@ -6,7 +6,7 @@ import logging
 import re
 import html
 from html.parser import HTMLParser
-from collections import Counter
+
 
 _logger = logging.getLogger(__name__)
 
