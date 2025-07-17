@@ -42,14 +42,7 @@
                 <!-- Filtros y agrupaciones -->
                 <control>
                     <create name="add_pattern" string="Nuevo Patrón"/>
-                    <button name="crear_patrones_multiformato" 
-                            string="🔧 Crear Patrones Automáticos" 
-                            type="object" 
-                            class="btn-primary"/>
-                    <button name="limpiar_patrones_obsoletos" 
-                            string="🧹 Limpiar Obsoletos" 
-                            type="object" 
-                            class="btn-secondary"/>
+                    
                 </control>
             </list>
         </field>
