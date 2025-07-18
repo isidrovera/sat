@@ -178,10 +178,7 @@
         <field name="res_model">contador.dashboard</field>
         <!-- habilita el switcher Kanban ↔ Lista -->
         <field name="view_mode">kanban,list</field>
-        <field name="view_ids" eval="[
-            (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_contador_dashboard_kanban')}),
-            (0, 0, {'view_mode': 'list',   'view_id': ref('view_contador_dashboard_list')})
-        ]"/>
+        
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face text-center">
                 <i class="fa fa-chart-line fa-3x text-primary mb-3"></i>
