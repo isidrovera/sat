@@ -1844,43 +1844,62 @@ class ContadorAutomatico(models.Model):
                 if len(todos_registros) > 10:
                     _logger.info(f"  ... y {len(todos_registros) - 10} registros más")
             
-            def _ya_existe_registro_con_estos_datos(serie, contador_bn, contador_color, contador_scan):
+            def _ya_existe_registro_con_estos_datos(serie, contador_bn, contador_color, contador_scan, asunto, fecha_correo):
                 """
-                DIAGNÓSTICO: Verifica duplicados con logging detallado
+                LÓGICA CORREGIDA: Verifica duplicados por asunto + fecha, NO por contadores exactos
                 """
+                _logger.info(f"🔍 === VERIFICANDO DUPLICADOS (LÓGICA CORREGIDA) ===")
+                _logger.info(f"🎯 Datos a verificar:")
+                _logger.info(f"   Serie: '{serie}'")
+                _logger.info(f"   Asunto: '{asunto}'") 
+                _logger.info(f"   Fecha correo: {fecha_correo}")
+                _logger.info(f"   Contadores: BN={contador_bn}, Color={contador_color}, Scan={contador_scan}")
+                
                 if not serie:
-                    _logger.info(f"🔍 DUPLICADOS: Serie vacía, no verificar duplicados")
+                    _logger.info(f"🔍 Serie vacía, no verificar duplicados")
                     return False
                 
-                _logger.info(f"🔍 === VERIFICANDO DUPLICADOS ===")
-                _logger.info(f"🎯 Buscando: Serie='{serie}', BN={contador_bn}, Color={contador_color}, Scan={contador_scan}")
+                # NUEVA LÓGICA: Buscar por asunto + fecha cercana (mismo día)
+                fecha_inicio_dia = fecha_correo.replace(hour=0, minute=0, second=0, microsecond=0)
+                fecha_fin_dia = fecha_inicio_dia + timedelta(days=1)
                 
-                # Buscar registros similares
-                registros_similares = self.env['contador.automatico'].search([
-                    ('serie_detectada', '=', serie),
-                    ('contador_bn_detectado', '=', contador_bn or 0),
-                    ('contador_color_detectado', '=', contador_color or 0),
-                    ('contador_scan_detectado', '=', contador_scan or 0)
+                _logger.info(f"🔍 Buscando duplicados por asunto en el mismo día:")
+                _logger.info(f"   Desde: {fecha_inicio_dia}")
+                _logger.info(f"   Hasta: {fecha_fin_dia}")
+                
+                # Buscar registros del mismo día con el mismo asunto
+                registros_mismo_dia = self.env['contador.automatico'].search([
+                    ('name', '=', asunto),
+                    ('create_date', '>=', fecha_inicio_dia),
+                    ('create_date', '<', fecha_fin_dia)
                 ])
                 
-                _logger.info(f"📊 Registros encontrados con estos datos exactos: {len(registros_similares)}")
+                _logger.info(f"📊 Registros encontrados con mismo asunto y día: {len(registros_mismo_dia)}")
                 
-                if registros_similares:
-                    _logger.info(f"📋 === DETALLES DE REGISTROS SIMILARES ===")
-                    for i, registro in enumerate(registros_similares, 1):
+                if registros_mismo_dia:
+                    _logger.info(f"📋 === DETALLES DE REGISTROS MISMO DÍA ===")
+                    for i, registro in enumerate(registros_mismo_dia, 1):
                         _logger.info(f"  {i}. ID={registro.id}")
                         _logger.info(f"     Serie: '{registro.serie_detectada}'")
+                        _logger.info(f"     Asunto: '{registro.name}'")
+                        _logger.info(f"     Fecha: {registro.create_date}")
                         _logger.info(f"     BN: {registro.contador_bn_detectado}")
                         _logger.info(f"     Color: {registro.contador_color_detectado}")
                         _logger.info(f"     Scan: {registro.contador_scan_detectado}")
-                        _logger.info(f"     Estado: {registro.estado}")
-                        _logger.info(f"     Fecha: {registro.create_date}")
-                        _logger.info(f"     Asunto: '{registro.name}'")
+                        
+                        # Verificar si es exactamente el mismo correo (misma serie + mismos contadores)
+                        if (registro.serie_detectada == serie and 
+                            registro.contador_bn_detectado == (contador_bn or 0) and
+                            registro.contador_color_detectado == (contador_color or 0) and
+                            registro.contador_scan_detectado == (contador_scan or 0)):
+                            
+                            _logger.info(f"❌ DUPLICADO EXACTO encontrado: mismo asunto, día, serie y contadores")
+                            return True
                     
-                    _logger.info(f"❌ DUPLICADO CONFIRMADO - Ya existe(n) {len(registros_similares)} registro(s)")
-                    return True
+                    _logger.info(f"✅ Mismo asunto/día pero contadores diferentes - NO es duplicado")
+                    return False
                 else:
-                    _logger.info(f"✅ NO DUPLICADO - No se encontraron registros con estos datos")
+                    _logger.info(f"✅ NO DUPLICADO - No se encontraron registros del mismo asunto en el mismo día")
                     return False
             
             # PROCESAR CORREOS DE CONTADORES
