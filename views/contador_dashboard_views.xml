@@ -118,7 +118,7 @@
                                             <input type="text" 
                                                    class="form-control" 
                                                    placeholder="Buscar cliente o serie..."
-                                                   id="search_input">
+                                                   id="search_input"/>
                                         </div>
                                     </div>
                                 </div>
