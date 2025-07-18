@@ -48,8 +48,7 @@ class PatronContador(models.Model):
                                      help="Número de veces que este patrón ha detectado correctamente")
     casos_fallidos = fields.Integer('Casos Fallidos', default=0, 
                                    help="Número de veces que este patrón falló")
-    texto_origen = fields.Text('Texto de Origen', 
-                              help="Texto original que sirvió para crear el patrón")
+   
     validado_manualmente = fields.Boolean('Validado Manualmente', default=False, 
                                          help="Si el patrón fue validado por un usuario")
     
@@ -286,15 +285,7 @@ class PatronContador(models.Model):
             }
         }
 
-    def marcar_uso(self):
-        """
-        Marca que el patrón fue usado (MEJORADO con estadísticas)
-        """
-        self.ensure_one()
-        self.sudo().write({
-            'veces_usado': self.veces_usado + 1,
-            'ultima_deteccion': fields.Datetime.now()
-        })
+    
 
     def marcar_deteccion_exitosa(self):
         """
@@ -307,15 +298,7 @@ class PatronContador(models.Model):
             'ultima_deteccion': fields.Datetime.now()
         })
 
-    def marcar_deteccion_fallida(self):
-        """
-        NUEVO: Marca una detección fallida
-        """
-        self.ensure_one()
-        self.sudo().write({
-            'casos_fallidos': self.casos_fallidos + 1,
-            'veces_usado': self.veces_usado + 1
-        })
+   
 
     @api.model
     def buscar_por_tipo(self, tipo, texto):
@@ -344,17 +327,29 @@ class PatronContador(models.Model):
                                 and re.search(r'[A-Z]', val)):
                             patron.marcar_deteccion_exitosa()
                             return val
-                        patron.marcar_deteccion_fallida()
+                        # CAMBIO AQUÍ - reemplazar marcar_deteccion_fallida()
+                        patron.sudo().write({
+                            'casos_fallidos': patron.casos_fallidos + 1,
+                            'veces_usado': patron.veces_usado + 1
+                        })
                     else:
                         # contador: convertimos a entero y >0
                         numero = int(re.sub(r'[^0-9]', '', valor) or 0)
                         if numero > 0:
                             patron.marcar_deteccion_exitosa()
                             return numero
-                        patron.marcar_deteccion_fallida()
+                        # CAMBIO AQUÍ - reemplazar marcar_deteccion_fallida()
+                        patron.sudo().write({
+                            'casos_fallidos': patron.casos_fallidos + 1,
+                            'veces_usado': patron.veces_usado + 1
+                        })
             except re.error:
                 _logger.warning(f"Error en patrón {patron.name}: {patron.patron_regex}")
-                patron.marcar_deteccion_fallida()
+                # CAMBIO AQUÍ - reemplazar marcar_deteccion_fallida()
+                patron.sudo().write({
+                    'casos_fallidos': patron.casos_fallidos + 1,
+                    'veces_usado': patron.veces_usado + 1
+                })
         return None
 
 

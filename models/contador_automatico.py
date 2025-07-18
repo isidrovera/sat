@@ -18,7 +18,6 @@ class ContadorAutomatico(models.Model):
     contenido_procesado = fields.Text('Contenido procesado (texto plano)')
     serie_detectada = fields.Char('Serie detectada', tracking=True)
     equipo_id = fields.Many2one('alquiler', string='Equipo relacionado', tracking=True)
-        # Fecha en que se completa el procesamiento (añadido)
     fecha_procesamiento = fields.Datetime('Fecha de procesamiento', readonly=True)
 
     # Contadores detectados
@@ -33,9 +32,59 @@ class ContadorAutomatico(models.Model):
     contador_bn_anterior = fields.Integer('Contador B/N anterior')
     contador_color_anterior = fields.Integer('Contador Color anterior')
     contador_scan_anterior = fields.Integer('Contador Scan anterior')
-    patrones_aplicados = fields.Text('Patrones Aplicados', readonly=True)
     
-    
+    # CAMPOS PARA SISTEMA INTELIGENTE
+    idioma_detectado = fields.Char('Idioma Detectado', readonly=True)
+    formato_detectado = fields.Char('Formato Detectado', readonly=True) 
+    confianza_deteccion = fields.Float('Confianza de Detección (%)', readonly=True)
+    requiere_aprendizaje = fields.Boolean('Requiere Aprendizaje', default=False)
+    estructura_detectada = fields.Text('Estructura Detectada', readonly=True)
+    marca_detectada = fields.Char('Marca Detectada', readonly=True)
+    palabras_clave_encontradas = fields.Text('Palabras Clave Encontradas', readonly=True)
+    patrones_auto_generados = fields.Integer('Patrones Auto-generados', default=0, readonly=True)
+    aprendizaje_completado = fields.Boolean('Aprendizaje Completado', default=False)
+    patrones_usados = fields.Text('Patrones utilizados', readonly=True, 
+                                help="Registro de qué patrones se usaron para detectar datos")
+
+    # CAMPO ESTADO
+    estado = fields.Selection([
+        ('pendiente', 'Pendiente de procesar'),
+        ('procesado', 'Procesado exitosamente'),
+        ('error', 'Error en procesamiento'),
+        ('manual', 'Requiere intervención manual'),
+        ('filtrado', 'Filtrado - No es correo de contadores')
+    ], default='pendiente', tracking=True)
+
+    # CORRECCIÓN: Agregar método de filtrado mejorado
+    def _es_correo_de_contadores_mejorado(self, asunto):
+        """
+        SOLUCIÓN: Función mejorada de filtrado de correos
+        """
+        if not asunto:
+            return False
+            
+        asunto_lower = asunto.lower().strip()
+        
+        # TODAS en minúsculas para coincidencia exacta
+        palabras_validas = [
+            'counter list',
+            'counter page',
+            'counter',
+            'page counter', 
+            'page count',
+            'contador',
+            'contadores',
+            'ricoh'
+        ]
+        
+        for palabra in palabras_validas:
+            if palabra in asunto_lower:
+                _logger.info(f"✅ Asunto válido detectado: '{asunto}' contiene '{palabra}'")
+                return True
+        
+        _logger.info(f"❌ Asunto no válido para contadores: '{asunto}'")
+        return False
+
     def detectar_idioma_automatico(self, texto):
         """
         Detecta automáticamente el idioma del contenido del correo,
@@ -109,8 +158,8 @@ class ContadorAutomatico(models.Model):
             _logger.info(f"🏭 === DETECTANDO MARCA AUTOMÁTICAMENTE ===")
             
             marcas_conocidas = {
-                'Bizhub': ['bizhub', 'konica', 'minolta', 'nombre del modelo'],  # Agregar "nombre del modelo"
-                'Ricoh': ['ricoh', 'T_TotalPrtPGS', 'T_ColorPrtPGS', 'nº de serie'],  # Agregar "nº de serie"
+                'Bizhub': ['bizhub', 'konica', 'minolta', 'nombre del modelo'],
+                'Ricoh': ['ricoh', 'T_TotalPrtPGS', 'T_ColorPrtPGS', 'nº de serie'],
                 'Canon': ['canon', 'imagerunner'],
                 'HP': ['hp', 'hewlett', 'packard', 'laserjet'],
                 'Xerox': ['xerox', 'workcentre'],
@@ -140,11 +189,6 @@ class ContadorAutomatico(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error detectando marca: {e}")
             return 'Error'
-
-     
-
-    
-
     def limpiar_html_correo(self, html_content):
         """
         Convierte HTML a texto plano y limpia el contenido
@@ -185,60 +229,6 @@ class ContadorAutomatico(models.Model):
             _logger.error(f"❌ Error limpiando HTML: {e}")
             return str(html_content)
 
-    
-    # NUEVOS CAMPOS PARA AGREGAR AL MODELO (después de los campos existentes):
-    idioma_detectado = fields.Char('Idioma Detectado', readonly=True)
-    formato_detectado = fields.Char('Formato Detectado', readonly=True) 
-    confianza_deteccion = fields.Float('Confianza de Detección (%)', readonly=True)
-    requiere_aprendizaje = fields.Boolean('Requiere Aprendizaje', default=False)
-    estructura_detectada = fields.Text('Estructura Detectada', readonly=True)
-    marca_detectada = fields.Char('Marca Detectada', readonly=True)
-    palabras_clave_encontradas = fields.Text('Palabras Clave Encontradas', readonly=True)
-    patrones_auto_generados = fields.Integer('Patrones Auto-generados', default=0, readonly=True)
-    aprendizaje_completado = fields.Boolean('Aprendizaje Completado', default=False)
-
-    # ACTUALIZAR EL CAMPO ESTADO EXISTENTE:
-    estado = fields.Selection([
-        ('pendiente', 'Pendiente de procesar'),
-        ('procesado', 'Procesado exitosamente'),
-        ('error', 'Error en procesamiento'),
-        ('manual', 'Requiere intervención manual'),
-        ('filtrado', 'Filtrado - No es correo de contadores')
-    ], default='pendiente', tracking=True)
-
-    def es_correo_de_contadores(self, asunto):
-        """
-        Filtro: Correos que CONTENGAN palabras clave de contadores
-        """
-        if not asunto:
-            _logger.info("❌ Sin asunto - No es correo de contadores")
-            return False
-            
-        asunto_lower = asunto.lower().strip()
-        
-        # Palabras clave que SI indican correos de contadores
-        # Si el asunto CONTIENE cualquiera de estas, es válido
-        palabras_validas = [
-            'counter list',            
-            'counter',
-            'page counter', 
-            'page count',
-            'contador',
-            'contadores',
-            'ricoh'
-        ]
-        
-        # Verificar si CONTIENE alguna palabra clave
-        for palabra in palabras_validas:
-            if palabra in asunto_lower:
-                _logger.info(f"✅ Asunto válido detectado: '{asunto}' contiene '{palabra}'")
-                return True
-        
-        _logger.info(f"❌ Asunto no válido para contadores: '{asunto}'")
-        return False
-
-    
-    
     def analizar_estructura_contenido(self, texto):
         """
         Analiza la estructura del contenido para identificar patrones
@@ -334,7 +324,6 @@ class ContadorAutomatico(models.Model):
             _logger.info(f"✅ Patrones generados automáticamente: {patrones_creados}")
             
             # 4. ACTUALIZAR INFORMACIÓN DEL REGISTRO
-            self.patrones_aplicados = f"Auto-generados: {patrones_creados} patrones"
             self.patrones_auto_generados = patrones_creados
             
             # 5. INTENTAR PROCESAR CON LOS NUEVOS PATRONES
@@ -374,7 +363,7 @@ class ContadorAutomatico(models.Model):
                     _logger.info(f"🔍 Series tras '{palabra}': {matches}")
                 posibles_series.extend(matches)
 
-            # 2) Entre corchetes solo si la etiqueta es “Serial Number” o “Número de serie”
+            # 2) Entre corchetes solo si la etiqueta es "Serial Number" o "Número de serie"
             series_corchetes = re.findall(
                 r'\[(?:Serial Number|Número de serie)\][^A-Z0-9]*([A-Z0-9]{5,15})',
                 texto, re.IGNORECASE
@@ -383,7 +372,7 @@ class ContadorAutomatico(models.Model):
                 _logger.info(f"🔍 Series en corchetes: {series_corchetes}")
                 posibles_series.extend(series_corchetes)
 
-            # 3) Tras dos puntos con “serial” o “serie”
+            # 3) Tras dos puntos con "serial" o "serie"
             series_dos_puntos = re.findall(
                 r'(?:serial no\.?|serial|serie)\s*:?\s*([A-Z0-9]{5,15})',
                 texto, re.IGNORECASE
@@ -413,6 +402,7 @@ class ContadorAutomatico(models.Model):
     def _generar_patrones_contadores(self, texto, formato, idioma, marca):
         """
         Genera patrones automáticos para contadores
+        CORRECCIÓN: Mejorado para detectar máquinas monocromas donde el total=BN
         """
         try:
             _logger.info(f"📊 === GENERANDO PATRONES DE CONTADORES ===")
@@ -422,6 +412,12 @@ class ContadorAutomatico(models.Model):
             # Buscar números que parezcan contadores (4-9 dígitos)
             numeros_contador = re.findall(r'\d{4,9}', texto)
             _logger.info(f"🔢 Números de contador encontrados: {numeros_contador}")
+            
+            # CORRECCIÓN: Detectar si es máquina monocroma
+            es_monocroma = self._detectar_maquina_monocroma(texto, idioma)
+            if es_monocroma:
+                _logger.info("🖤 === MÁQUINA MONOCROMA DETECTADA ===")
+                _logger.info("ℹ️ El contador total será usado como contador B/N")
             
             # Palabras clave por tipo de contador e idioma
             palabras_contador = {
@@ -447,10 +443,22 @@ class ContadorAutomatico(models.Model):
                 }
             }
             
+            # CORRECCIÓN: Si es monocroma, agregar "total" a contador_bn
+            if es_monocroma:
+                for idioma_key in palabras_contador:
+                    if 'total' not in palabras_contador[idioma_key]['contador_bn']:
+                        palabras_contador[idioma_key]['contador_bn'].append('total')
+                    # Remover color para máquinas monocromas
+                    palabras_contador[idioma_key]['contador_color'] = []
+            
             palabras_idioma = palabras_contador.get(idioma, palabras_contador.get('english', {}))
             
             # Generar patrones para cada tipo de contador
             for tipo_contador, palabras in palabras_idioma.items():
+                # Saltar contador_color si es monocroma
+                if es_monocroma and tipo_contador == 'contador_color':
+                    continue
+                    
                 for palabra in palabras:
                     patron_data = self._crear_patron_contador_automatico(
                         texto, palabra, tipo_contador, formato, idioma, marca
@@ -464,6 +472,46 @@ class ContadorAutomatico(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error generando patrones de contadores: {e}")
             return []
+
+    def _detectar_maquina_monocroma(self, texto, idioma):
+        """
+        NUEVO: Detecta si la máquina es monocroma analizando el contenido
+        """
+        try:
+            texto_lower = texto.lower()
+            
+            # Indicadores de máquina monocroma
+            indicadores_monocroma = [
+                'monochrome', 'monocromo', 'mono', 'b/w', 'black and white',
+                'blanco y negro'
+            ]
+            
+            # Buscar ausencia de contadores de color específicos
+            sin_color = True
+            indicadores_color = ['color counter', 'contador color', 'color total']
+            
+            for indicador in indicadores_color:
+                if indicador in texto_lower:
+                    sin_color = False
+                    break
+            
+            # Buscar presencia de indicadores monocroma
+            con_mono = False
+            for indicador in indicadores_monocroma:
+                if indicador in texto_lower:
+                    con_mono = True
+                    break
+            
+            # Si tiene indicadores mono Y no tiene contadores color específicos
+            es_monocroma = con_mono or sin_color
+            
+            _logger.info(f"🔍 Análisis monocroma: con_mono={con_mono}, sin_color={sin_color}, resultado={es_monocroma}")
+            
+            return es_monocroma
+            
+        except Exception as e:
+            _logger.error(f"❌ Error detectando máquina monocroma: {e}")
+            return False
 
     def _crear_patron_serie_automatico(self, texto, serie, formato, idioma, marca, indice):
         """
@@ -518,7 +566,11 @@ class ContadorAutomatico(models.Model):
                 'descripcion': f'Patrón auto-generado para serie {serie} en formato {formato}',
                 'ejemplo': f'Detecta series como: {serie}',
                 'orden': 1,
-                'activo': True
+                'activo': True,
+                'auto_generado': True,  # CORRECCIÓN: Marcar como auto-generado
+                'idioma_patron': idioma,
+                'marca_patron': marca,
+                'formato_origen': formato
             }
             
             _logger.info(f"🎯 Patrón de serie creado: {patron_regex}")
@@ -567,7 +619,11 @@ class ContadorAutomatico(models.Model):
                 'descripcion': f'Patrón auto-generado para {nombre_tipo} basado en "{palabra_clave}"',
                 'ejemplo': f'Detecta contadores con palabra clave: {palabra_clave}',
                 'orden': 1,
-                'activo': True
+                'activo': True,
+                'auto_generado': True,  # CORRECCIÓN: Marcar como auto-generado
+                'idioma_patron': idioma,
+                'marca_patron': marca,
+                'formato_origen': formato
             }
             
             _logger.info(f"📊 Patrón de contador creado: {nombre_tipo} → {patron_regex}")
@@ -683,13 +739,14 @@ class ContadorAutomatico(models.Model):
     def procesar_correo_inteligente(self):
         """
         Procesamiento inteligente del correo con análisis y generación automática
+        CORRECCIÓN: Usar método de filtrado mejorado
         """
         try:
             _logger.info(f"🧠 === INICIO PROCESAMIENTO INTELIGENTE ===")
             _logger.info(f"📧 Registro ID={self.id}, Asunto='{self.name}'")
 
-            # 1. VERIFICAR SI ES CORREO DE CONTADORES
-            if not self.es_correo_de_contadores(self.name):
+            # 1. VERIFICAR SI ES CORREO DE CONTADORES - CORRECCIÓN
+            if not self._es_correo_de_contadores_mejorado(self.name):
                 self.estado = 'filtrado'
                 self.mensaje_error = 'Asunto no corresponde a correo de contadores'
                 _logger.info(f"🚫 Correo filtrado - No es de contadores")
@@ -728,7 +785,7 @@ class ContadorAutomatico(models.Model):
             _logger.info(f"📊 === FASE: PROCESAMIENTO CON PATRONES EXISTENTES ===")
 
             serie_encontrada = self.buscar_serie_dinamico(texto_limpio)
-            # Descartar si la “serie” es solo dígitos
+            # Descartar si la "serie" es solo dígitos
             if serie_encontrada and serie_encontrada.isdigit():
                 _logger.warning(f"💥 Serie descartada tras validación: '{serie_encontrada}'")
                 serie_encontrada = None
@@ -799,151 +856,10 @@ class ContadorAutomatico(models.Model):
 
             self.estado = 'error'
             self.mensaje_error = f"Error en procesamiento inteligente: {str(e)}"
-            # también usar write() aquí si quieres persistir fecha de error:
             self.write({'fecha_procesamiento': fields.Datetime.now()})
             return False
 
-    def buscar_y_procesar_correos_inteligente(self):
-        """
-        Versión inteligente de búsqueda y procesamiento de correos
-        """
-        try:
-            _logger.info("🧠 === INICIO BÚSQUEDA Y PROCESAMIENTO INTELIGENTE ===")
-            
-            # Buscar canal "Correos"
-            _logger.info("🔍 Buscando canal 'Correos'...")
-            canal_correos = self.env['discuss.channel'].search([
-                ('name', 'ilike', 'correos')
-            ], limit=1)
-            
-            if not canal_correos:
-                _logger.warning("❌ No se encontró canal 'Correos'")
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': 'No se encontró el canal "Correos"',
-                        'type': 'warning'
-                    }
-                }
-            
-            _logger.info(f"✅ Canal encontrado: '{canal_correos.name}' (ID: {canal_correos.id})")
-            
-            # Buscar mensajes en el canal
-            _logger.info("📧 Buscando mensajes de correo en el canal...")
-            mensajes = self.env['mail.message'].search([
-                ('model', '=', 'discuss.channel'),
-                ('res_id', '=', canal_correos.id),
-                ('message_type', 'in', ['email', 'comment']),
-            ], order='date desc')
-            
-            _logger.info(f"📧 Total de mensajes encontrados: {len(mensajes)}")
-            
-            # Obtener registros ya procesados
-            registros_existentes = self.env['contador.automatico'].search([])
-            claves_procesadas = set()
-            
-            for registro in registros_existentes:
-                clave = f"{registro.name}|{registro.remitente or ''}"
-                claves_procesadas.add(clave)
-            
-            _logger.info(f"📋 Total claves procesadas: {len(claves_procesadas)}")
-            
-            # Procesar mensajes con sistema inteligente
-            correos_procesados = 0
-            correos_filtrados = 0
-            correos_ignorados = 0
-            correos_aprendizaje = 0
-            
-            for i, mensaje in enumerate(mensajes):
-                asunto = mensaje.subject or f'Sin asunto - {mensaje.id}'
-                remitente = mensaje.email_from or mensaje.author_id.email if mensaje.author_id else 'Desconocido'
-                clave_mensaje = f"{asunto}|{remitente}"
-                
-                _logger.info(f"📨 Analizando mensaje {i+1}/{len(mensajes)}: '{asunto}'")
-                
-                # FILTRO INTELIGENTE 1: Verificar si es correo de contadores
-                dummy_registro = self.env['contador.automatico'].new()
-                if not dummy_registro.es_correo_de_contadores(asunto):
-                    correos_filtrados += 1
-                    _logger.info(f"🚫 Correo filtrado - No es de contadores")
-                    continue
-                
-                # FILTRO 2: Verificar si ya fue procesado
-                if clave_mensaje in claves_procesadas:
-                    _logger.info(f"⏭️ Correo ya procesado")
-                    continue
-                
-                # FILTRO 3: Validaciones básicas
-                if not asunto or asunto.strip() == '':
-                    correos_ignorados += 1
-                    continue
-                
-                if mensaje.message_type == 'notification':
-                    correos_ignorados += 1
-                    continue
-                
-                # CREAR Y PROCESAR REGISTRO CON SISTEMA INTELIGENTE
-                _logger.info(f"🧠 Creando registro inteligente...")
-                
-                try:
-                    registro = self.env['contador.automatico'].create({
-                        'name': asunto,
-                        'remitente': remitente,
-                        'contenido_original': mensaje.body or '',
-                        'estado': 'pendiente'
-                    })
-                    
-                    _logger.info(f"✅ Registro creado con ID={registro.id}")
-                    claves_procesadas.add(clave_mensaje)
-                    
-                    # Procesar con sistema inteligente
-                    _logger.info(f"🧠 Iniciando procesamiento inteligente...")
-                    if registro.procesar_correo_inteligente():
-                        correos_procesados += 1
-                        if registro.requiere_aprendizaje:
-                            correos_aprendizaje += 1
-                        _logger.info(f"✅ Procesamiento inteligente completado")
-                    else:
-                        _logger.warning(f"⚠️ Procesamiento inteligente con problemas")
-                    
-                except Exception as e:
-                    _logger.error(f"❌ Error procesando mensaje {mensaje.id}: {e}")
-                    continue
-            
-            # Preparar resultado
-            mensaje_result = f"Procesamiento inteligente completado: {correos_procesados} procesados, {correos_filtrados} filtrados, {correos_ignorados} ignorados"
-            if correos_aprendizaje > 0:
-                mensaje_result += f", {correos_aprendizaje} con aprendizaje automático"
-            
-            tipo = 'success' if correos_procesados > 0 else 'info'
-            
-            _logger.info(f"🎯 === RESULTADO FINAL INTELIGENTE ===")
-            _logger.info(f"Correos procesados: {correos_procesados}")
-            _logger.info(f"Correos filtrados: {correos_filtrados}")
-            _logger.info(f"Correos ignorados: {correos_ignorados}")
-            _logger.info(f"Correos con aprendizaje: {correos_aprendizaje}")
-            _logger.info(f"🏁 === FIN PROCESAMIENTO INTELIGENTE ===")
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': mensaje_result,
-                    'type': tipo
-                }
-            }
-                
-        except Exception as e:
-            _logger.error(f"❌ Error en procesamiento inteligente: {e}")
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': f'Error técnico: {str(e)}',
-                    'type': 'danger'
-                }
-            }
+
 
     def aprender_de_procesamiento_manual(self):
         """
@@ -1020,7 +936,9 @@ class ContadorAutomatico(models.Model):
                     'descripcion': f'Patrón aprendido de corrección manual',
                     'ejemplo': f'Detecta: {serie_manual}',
                     'orden': 1,
-                    'activo': True
+                    'activo': True,
+                    'auto_generado': True,
+                    'validado_manualmente': True
                 }
                 
                 return self._crear_patron_si_no_existe(patron_data)
@@ -1073,7 +991,9 @@ class ContadorAutomatico(models.Model):
                     'descripcion': f'Patrón aprendido de corrección manual para {nombres_tipo[tipo_contador]}',
                     'ejemplo': f'Detecta valores como: {valor_manual}',
                     'orden': 1,
-                    'activo': True
+                    'activo': True,
+                    'auto_generado': True,
+                    'validado_manualmente': True
                 }
                 
                 return self._crear_patron_si_no_existe(patron_data)
@@ -1083,6 +1003,471 @@ class ContadorAutomatico(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error aprendiendo patrón de contador: {e}")
             return False
+
+    def _extraer_patron_de_contexto(self, contexto, valor):
+        """
+        Extrae un patrón regex del contexto que rodea un valor
+        """
+        try:
+            # Buscar estructuras comunes
+            if '[' in contexto and ']' in contexto:
+                # Formato corchetes
+                match = re.search(r'\[([^\]]+)\]', contexto)
+                if match:
+                    etiqueta = match.group(1)
+                    return rf'\[{re.escape(etiqueta)}\][^A-Z0-9]*([A-Z0-9]{{5,15}})'
+            
+            elif ':' in contexto:
+                # Formato dos puntos
+                palabras_antes = re.findall(r'\b\w+\b', contexto)
+                if palabras_antes:
+                    palabra_clave = palabras_antes[-1]
+                    return rf'{re.escape(palabra_clave)}\s*:?\s*([A-Z0-9]{{5,15}})'
+            
+            # Formato libre - buscar palabra clave más cercana
+            palabras_clave = ['serie', 'serial', 'model', 'número', 'no']
+            for palabra in palabras_clave:
+                if palabra.lower() in contexto.lower():
+                    return rf'{re.escape(palabra)}[^A-Z0-9]*([A-Z0-9]{{5,15}})'
+            
+            return rf'\b([A-Z0-9]{{5,15}})\b'
+            
+        except Exception as e:
+            _logger.error(f"❌ Error extrayendo patrón de contexto: {e}")
+            return None
+
+    def _extraer_patron_contador_de_contexto(self, contexto, tipo_contador):
+        """
+        Extrae un patrón regex para contador del contexto
+        """
+        try:
+            # Palabras clave por tipo de contador
+            palabras_clave = {
+                'contador_bn': ['negro', 'black', 'mono', 'b/n'],
+                'contador_color': ['color', 'colour'],
+                'contador_scan': ['scan', 'total', 'escaneo']
+            }
+            
+            # Buscar formato específico
+            if '[' in contexto and ']' in contexto:
+                # Formato corchetes
+                match = re.search(r'\[([^\]]+)\]', contexto)
+                if match:
+                    etiqueta = match.group(1)
+                    return rf'\[{re.escape(etiqueta)}\][^0-9]*(\d{{4,9}})'
+            
+            elif 'T_' in contexto:
+                # Formato Ricoh
+                match = re.search(r'(T_\w+)', contexto)
+                if match:
+                    campo_ricoh = match.group(1)
+                    return rf'{re.escape(campo_ricoh)}\s*:?\s*(\d{{4,9}})'
+            
+            else:
+                # Buscar palabra clave más cercana
+                for palabra in palabras_clave.get(tipo_contador, []):
+                    if palabra.lower() in contexto.lower():
+                        return rf'{re.escape(palabra)}[^0-9]*(\d{{4,9}})'
+            
+            return rf'(\d{{4,9}})'  # Patrón genérico
+            
+        except Exception as e:
+            _logger.error(f"❌ Error extrayendo patrón de contador: {e}")
+            return None
+
+    def buscar_serie_dinamico(self, texto):
+        """
+        🔍 Busca número de serie usando patrones dinámicos,
+        con fallback si no encuentra nada.
+        """
+        _logger.info("🔍 Iniciando búsqueda de serie con patrones dinámicos...")
+
+        # 1) ¿Tenemos patrones activos de tipo 'serie'?
+        cnt = self.env['patron.contador'].search_count([
+            ('tipo', '=', 'serie'),
+            ('activo', '=', True)
+        ])
+        _logger.info(f"📊 Patrones de serie disponibles: {cnt}")
+
+        if cnt == 0:
+            _logger.warning("⚠️ No hay patrones de serie configurados. Usando fallback...")
+            return self._buscar_serie_fallback(texto)
+
+        # 2) Intentamos detectar con patrones configurados
+        resultado = self.env['patron.contador'].buscar_por_tipo('serie', texto)
+        if resultado:
+            patron = self._encontrar_patron_usado('serie', texto, resultado)
+            if patron:
+                detalle = f"serie: {patron.name}"
+                self.patrones_usados = (
+                    f"{self.patrones_usados}; {detalle}"
+                    if self.patrones_usados else detalle
+                )
+                _logger.info(f"✅ Serie encontrada: {resultado} usando patrón '{patron.name}'")
+            else:
+                _logger.info(f"✅ Serie encontrada: {resultado}")
+            return resultado
+
+        # 3) Si no, lanzamos fallback
+        _logger.warning("❌ No se encontró serie con patrones dinámicos, intentando fallback...")
+        serie = self._buscar_serie_fallback(texto)
+        if serie:
+            _logger.info(f"✅ Serie encontrada (fallback): {serie}")
+        else:
+            _logger.warning("❌ Tampoco en fallback se encontró serie")
+        return serie
+
+    def _buscar_serie_fallback(self, texto):
+        """
+        🔧 Fallback COMPLETO con soporte para español, inglés y Ricoh
+        """
+        _logger.info("🔧 Usando patrones de serie de fallback...")
+
+        patrones = [
+            # ESPAÑOL (Konica/Minolta)
+            r'\[Número de serie\].*?([A-Z0-9]{5,15})',          # [Número de serie], X...
+            r'Número de serie[^\w]*([A-Z0-9]{5,15})',           # Número de serie: X...
+            r'Serie[^\w]*([A-Z0-9]{5,15})',                     # Serie: X...
+            
+            # INGLÉS (Konica/Minolta)
+            r'\[Serial Number\].*?([A-Z0-9]{5,15})',            # [Serial Number], X...
+            r'Serial\s*No\.?:\s*([A-Z0-9]{5,15})',              # Serial No.: X...
+            r'Serial\s*Number[^\w]*([A-Z0-9]{5,15})',           # Serial Number: X...
+            
+            # RICOH (español)
+            r'Nº de serie:\s*([A-Z0-9]{5,15})',                 # Nº de serie: X...
+            r'N° de serie:\s*([A-Z0-9]{5,15})',                 # N° de serie: X...
+            
+            # RICOH (inglés)
+            r'Serial\s*No\s*:\s*([A-Z0-9]{5,15})',              # Serial No : X...
+            
+            # GENÉRICOS
+            r'Page\s*Counter\s*:\s*([A-Z0-9]{5,15})',           # Page Counter: X...
+            r'(?:serie|serial)\s*(?:no\.?)?\s*:?\s*([A-Z0-9]{5,15})',  # Genérico
+            
+            # FALLBACK FINAL - Cualquier código alfanumérico de 5-15 caracteres que tenga al menos una letra
+            r'\b([A-Z0-9]{5,15})\b'
+        ]
+        
+        for pat in patrones:
+            _logger.info(f"🔍 Probando fallback: '{pat}'")
+            for match in re.finditer(pat, texto, re.IGNORECASE):
+                serie = match.group(1).upper()
+                # CORRECCIÓN: Validar que tenga al menos una letra y longitud mínima
+                if len(serie) >= 5 and re.search(r'[A-Z]', serie):
+                    _logger.info(f"✅ Serie encontrada con fallback '{pat}': {serie}")
+                    return serie
+        
+        _logger.warning("❌ No se encontró serie válida en fallback")
+        return None
+
+    def _encontrar_patron_usado(self, tipo, texto, valor_encontrado):
+        """
+        Encuentra qué patrón específico se usó para detectar un valor
+        """
+        try:
+            patrones = self.env['patron.contador'].search([
+                ('tipo', '=', tipo),
+                ('activo', '=', True)
+            ], order='orden')
+            
+            for patron in patrones:
+                try:
+                    matches = re.finditer(patron.patron_regex, texto, re.IGNORECASE)
+                    for match in matches:
+                        if match.groups():
+                            valor = match.group(1).strip()
+                            # Comparar valores
+                            if tipo == 'serie':
+                                if valor.upper() == str(valor_encontrado).upper():
+                                    return patron
+                            else:
+                                valor_num = int(re.sub(r'[^0-9]', '', valor))
+                                if valor_num == valor_encontrado:
+                                    return patron
+                except:
+                    continue
+            return None
+        except Exception as e:
+            _logger.error(f"❌ Error encontrando patrón usado: {e}")
+            return None
+
+    def buscar_patrones_contadores_dinamico(self, texto):
+        """
+        🔍 Busca patrones de contadores usando configuración dinámica,
+        con fallback tipo‑a‑tipo si no encuentra nada.
+        CORRECCIÓN: Mejorado para máquinas monocromas donde total=BN
+        """
+        contadores = {}
+        patrones_usados = []
+
+        _logger.info("🔍 Iniciando búsqueda de contadores con patrones dinámicos...")
+        _logger.info(f"📄 Texto a analizar (primeros 200 chars): {texto[:200]}...")
+
+        # Verificar si existen patrones configurados
+        total_patrones = self.env['patron.contador'].search_count([('activo', '=', True)])
+        _logger.info(f"📊 Total de patrones activos disponibles: {total_patrones}")
+
+        # CORRECCIÓN: Detectar si es máquina monocroma antes de buscar
+        es_monocroma = self._detectar_maquina_monocroma(texto, self.idioma_detectado or 'desconocido')
+        if es_monocroma:
+            _logger.info("🖤 === MÁQUINA MONOCROMA DETECTADA ===")
+            _logger.info("ℹ️ Buscando 'total' como contador B/N, omitiendo color")
+
+        # Tipos de contador a buscar
+        tipos = ['contador_bn', 'contador_color', 'contador_scan']
+        
+        # CORRECCIÓN: Fallback mejorado para máquinas monocromas
+        fallback_por_tipo = {
+            'contador_bn': [
+                # INGLÉS
+                r'\[Total Black Counter\][^0-9]*(\d{4,9})',
+                r'\[Total Counter\][^0-9]*(\d{4,9})',              # NUEVO: Para monocromas
+                r'(?:black|b\/w|total).*?(\d{4,9})',               # MEJORADO: Incluir "total"
+                
+                # ESPAÑOL 
+                r'\[Contador de negro total\][^0-9]*(\d{4,9})',    
+                r'\[Contador total\][^0-9]*(\d{4,9})',             # NUEVO: Para monocromas
+                r'\[Contador negro total\][^0-9]*(\d{4,9})',       
+                r'Contador\s*(?:de\s*)?(?:negro|total)[^0-9]*(\d{4,9})',  # MEJORADO
+                
+                # RICOH
+                r'T_TotalPrtPGS:\s*(\d{4,9})',                     
+                r'T_MonoPrtPGS:\s*(\d{4,9})'                       
+            ],
+            
+            'contador_color': [
+                # INGLÉS
+                r'\[Total Color Counter\][^0-9]*(\d{4,9})',
+                r'(?:color|colour).*?(\d{4,9})',
+                
+                # ESPAÑOL
+                r'\[Contador de color total\][^0-9]*(\d{4,9})',    
+                r'\[Contador color total\][^0-9]*(\d{4,9})',       
+                r'Contador\s*(?:de\s*)?color[^0-9]*(\d{4,9})',     
+                
+                # RICOH
+                r'T_ColorPrtPGS:\s*(\d{4,9})'                      
+            ],
+            
+            'contador_scan': [
+                # INGLÉS
+                r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
+                r'(?:scan|fax|copy).*?(\d{4,9})',
+                
+                # ESPAÑOL
+                r'\[Contador total de escaneo\/fax\][^0-9]*(\d{4,9})',  
+                r'\[Contador de escaneo total\][^0-9]*(\d{4,9})',       
+                r'\[Contador escaneo total\][^0-9]*(\d{4,9})',          
+                r'Contador.*(?:escaneo|fax)[^0-9]*(\d{4,9})',           
+                
+                # RICOH
+                r'T_ScanPGS:\s*(\d{4,9})'                              
+            ],
+        }
+
+        for tipo in tipos:
+            _logger.info(f"🔍 Buscando patrones para: {tipo}")
+            
+            # CORRECCIÓN: Saltar color si es monocroma
+            if es_monocroma and tipo == 'contador_color':
+                _logger.info(f"⏭️ Saltando {tipo} - máquina monocroma detectada")
+                continue
+            
+            # 1) Intento con patrones dinámicos
+            resultado = self.env['patron.contador'].buscar_por_tipo(tipo, texto)
+            if resultado:
+                contadores[tipo] = resultado
+                patron_usado = self._encontrar_patron_usado(tipo, texto, resultado)
+                if patron_usado:
+                    patrones_usados.append(f"{tipo}: {patron_usado.name}")
+                    _logger.info(f"✅ {tipo} encontrado: {resultado} usando patrón '{patron_usado.name}'")
+                else:
+                    _logger.info(f"✅ {tipo} encontrado: {resultado}")
+                continue
+
+            # 2) Fallback específico si no hay detección dinámica
+            _logger.warning(f"❌ No se encontró {tipo} con patrones dinámicos, intentando fallback...")
+            for pat in fallback_por_tipo[tipo]:
+                for match in re.finditer(pat, texto, re.IGNORECASE):
+                    raw = match.group(1)
+                    numero = int(re.sub(r'[^0-9]', '', raw))
+                    if numero > 0:
+                        contadores[tipo] = numero
+                        patrones_usados.append(f"{tipo}: fallback '{pat}'")
+                        _logger.info(f"✅ {tipo} encontrado por fallback: {numero} usando patrón '{pat}'")
+                        break
+                if tipo in contadores:
+                    break
+            if tipo not in contadores:
+                _logger.info(f"❌ No se encontró {tipo} incluso en fallback")
+
+        # CORRECCIÓN: Si es monocroma y solo encontramos scan/total, asignarlo también a BN
+        if es_monocroma and 'contador_scan' in contadores and 'contador_bn' not in contadores:
+            contadores['contador_bn'] = contadores['contador_scan']
+            patrones_usados.append("contador_bn: copiado de total (máquina monocroma)")
+            _logger.info(f"🔄 Máquina monocroma: copiando total ({contadores['contador_scan']}) a contador BN")
+
+        # Guardamos el detalle de qué patrones se usaron
+        if patrones_usados:
+            self.patrones_usados = "; ".join(patrones_usados)
+            _logger.info(f"📋 Patrones utilizados: {self.patrones_usados}")
+
+        _logger.info(f"🎯 Resultado final de contadores: {contadores}")
+        return contadores
+
+    def buscar_equipo_por_serie(self, serie):
+        """
+        Busca el equipo en alquiler por serie
+        CORRECCIÓN: Mejorado con múltiples intentos de búsqueda
+        """
+        if not serie:
+            _logger.warning(f"⚠️ No se proporcionó serie para buscar equipo")
+            return None
+        
+        _logger.info(f"🔍 Buscando equipo con serie: '{serie}'")
+        
+        try:
+            # 1. Búsqueda exacta
+            equipo = self.env['alquiler'].search([('serie', '=', serie)], limit=1)
+            if equipo:
+                _logger.info(f"✅ Equipo encontrado (exacto): ID={equipo.id}, Serie={serie}")
+                return equipo
+            
+            # 2. Búsqueda case-insensitive
+            equipo = self.env['alquiler'].search([('serie', 'ilike', serie)], limit=1)
+            if equipo:
+                _logger.info(f"✅ Equipo encontrado (ilike): ID={equipo.id}, Serie={equipo.serie}")
+                return equipo
+            
+            # 3. Búsqueda con wildcards (contiene)
+            equipo = self.env['alquiler'].search([('serie', 'like', f'%{serie}%')], limit=1)
+            if equipo:
+                _logger.info(f"✅ Equipo encontrado (like): ID={equipo.id}, Serie={equipo.serie}")
+                return equipo
+            
+            # 4. Búsqueda inversa (el campo contiene nuestra serie)
+            equipos_posibles = self.env['alquiler'].search([])
+            for equipo in equipos_posibles:
+                if equipo.serie and serie.upper() in equipo.serie.upper():
+                    _logger.info(f"✅ Equipo encontrado (inverso): ID={equipo.id}, Serie={equipo.serie}")
+                    return equipo
+            
+            _logger.warning(f"❌ No se encontró equipo con serie: '{serie}' tras múltiples intentos")
+            return None
+                
+        except Exception as e:
+            _logger.error(f"❌ Error buscando equipo: {e}")
+            return None
+
+    def actualizar_contadores_equipo(self, equipo, contadores):
+        """
+        Actualiza los contadores del equipo
+        CORRECCIÓN: Validación mejorada y logging detallado
+        """
+        try:
+            _logger.info(f"💾 === INICIANDO ACTUALIZACIÓN DE EQUIPO ===")
+            _logger.info(f"🎯 Equipo ID={equipo.id}, Serie={equipo.serie}")
+            _logger.info(f"📊 Contadores a actualizar: {contadores}")
+            
+            # Guardar valores anteriores para comparación
+            valores_anteriores = {
+                'contador_bn': getattr(equipo, 'contador_bn', 0),
+                'contador_color': getattr(equipo, 'contador_color', 0),
+                'contador_scan': getattr(equipo, 'contador_scan', 0)
+            }
+            _logger.info(f"📋 Valores anteriores: {valores_anteriores}")
+            
+            # Preparar valores para actualizar
+            valores_actualizacion = {}
+            
+            if 'contador_bn' in contadores:
+                nuevo_valor = contadores['contador_bn']
+                anterior = valores_anteriores.get('contador_bn', 0)
+                if nuevo_valor != anterior:
+                    valores_actualizacion['contador_bn'] = nuevo_valor
+                    self.contador_bn_anterior = anterior
+                    _logger.info(f"✅ BN: {anterior} → {nuevo_valor} (diferencia: {nuevo_valor - anterior})")
+                else:
+                    _logger.info(f"ℹ️ BN sin cambios: {nuevo_valor}")
+            
+            if 'contador_color' in contadores:
+                nuevo_valor = contadores['contador_color']
+                anterior = valores_anteriores.get('contador_color', 0)
+                if nuevo_valor != anterior:
+                    valores_actualizacion['contador_color'] = nuevo_valor
+                    self.contador_color_anterior = anterior
+                    _logger.info(f"✅ Color: {anterior} → {nuevo_valor} (diferencia: {nuevo_valor - anterior})")
+                else:
+                    _logger.info(f"ℹ️ Color sin cambios: {nuevo_valor}")
+            
+            if 'contador_scan' in contadores:
+                nuevo_valor = contadores['contador_scan']
+                anterior = valores_anteriores.get('contador_scan', 0)
+                if nuevo_valor != anterior:
+                    valores_actualizacion['contador_scan'] = nuevo_valor
+                    self.contador_scan_anterior = anterior
+                    _logger.info(f"✅ Scan: {anterior} → {nuevo_valor} (diferencia: {nuevo_valor - anterior})")
+                else:
+                    _logger.info(f"ℹ️ Scan sin cambios: {nuevo_valor}")
+            
+            # Realizar actualización solo si hay cambios
+            if valores_actualizacion:
+                _logger.info(f"💾 Ejecutando write() en equipo con: {valores_actualizacion}")
+                equipo.sudo().write(valores_actualizacion)
+                _logger.info(f"✅ Write() ejecutado exitosamente")
+            else:
+                _logger.info(f"ℹ️ No hay cambios que actualizar en el equipo")
+            
+            _logger.info(f"🎉 === ACTUALIZACIÓN DE EQUIPO COMPLETADA ===")
+            
+        except Exception as e:
+            _logger.error(f"❌ === ERROR ACTUALIZANDO EQUIPO ===")
+            _logger.error(f"Error: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
+
+    def _guardar_estadisticas_cron_seguro(self, resumen):
+        """
+        SOLUCIÓN: Guardar estadísticas de forma segura
+        """
+        try:
+            hoy = fields.Date.today()
+            
+            # Verificar si el modelo existe
+            try:
+                estadisticas = self.env['contador.automatico.estadisticas'].search([
+                    ('fecha', '=', hoy)
+                ], limit=1)
+            except:
+                _logger.warning("⚠️ Modelo 'contador.automatico.estadisticas' no existe, saltando estadísticas")
+                return
+            
+            datos_estadisticas = {
+                'fecha': hoy,
+                'correos_encontrados_cron': resumen.get('correos_encontrados', 0),
+                'correos_procesados_cron': resumen.get('correos_procesados', 0),
+                'correos_fallidos_cron': resumen.get('correos_fallidos', 0),
+                'ejecuciones_cron': 1
+            }
+            
+            if not estadisticas:
+                estadisticas = self.env['contador.automatico.estadisticas'].create(datos_estadisticas)
+                _logger.info(f"📊 Nuevas estadísticas CRON creadas para {hoy}")
+            else:
+                # Acumular valores existentes
+                estadisticas.write({
+                    'correos_encontrados_cron': estadisticas.correos_encontrados_cron + datos_estadisticas['correos_encontrados_cron'],
+                    'correos_procesados_cron': estadisticas.correos_procesados_cron + datos_estadisticas['correos_procesados_cron'],
+                    'correos_fallidos_cron': estadisticas.correos_fallidos_cron + datos_estadisticas['correos_fallidos_cron'],
+                    'ejecuciones_cron': estadisticas.ejecuciones_cron + 1
+                })
+                _logger.info(f"📊 Estadísticas CRON actualizadas para {hoy}")
+            
+        except Exception as e:
+            _logger.error(f"❌ Error guardando estadísticas CRON: {e}")
+
     @api.model
     def limpiar_registros_problematicos_total(self):
         """
@@ -1155,14 +1540,17 @@ class ContadorAutomatico(models.Model):
                 _logger.info("ℹ️ No se encontraron registros problemáticos para eliminar")
             
             # 5. Limpiar estadísticas antiguas también
-            fecha_limite_stats = fields.Date.today() - timedelta(days=30)
-            stats_antiguas = self.env['contador.automatico.estadisticas'].search([
-                ('fecha', '<', fecha_limite_stats)
-            ])
-            
-            if stats_antiguas:
-                stats_antiguas.unlink()
-                _logger.info(f"🗑️ Eliminadas {len(stats_antiguas)} estadísticas antiguas")
+            try:
+                fecha_limite_stats = fields.Date.today() - timedelta(days=30)
+                stats_antiguas = self.env['contador.automatico.estadisticas'].search([
+                    ('fecha', '<', fecha_limite_stats)
+                ])
+                
+                if stats_antiguas:
+                    stats_antiguas.unlink()
+                    _logger.info(f"🗑️ Eliminadas {len(stats_antiguas)} estadísticas antiguas")
+            except:
+                _logger.info("ℹ️ Modelo de estadísticas no existe, saltando limpieza")
             
             _logger.info("🧹 === FIN LIMPIEZA TOTAL ===")
             
@@ -1185,202 +1573,13 @@ class ContadorAutomatico(models.Model):
                     'type': 'danger'
                 }
             }
-    def _extraer_patron_de_contexto(self, contexto, valor):
-        """
-        Extrae un patrón regex del contexto que rodea un valor
-        """
-        try:
-            # Buscar estructuras comunes
-            if '[' in contexto and ']' in contexto:
-                # Formato corchetes
-                match = re.search(r'\[([^\]]+)\]', contexto)
-                if match:
-                    etiqueta = match.group(1)
-                    return rf'\[{re.escape(etiqueta)}\][^A-Z0-9]*([A-Z0-9]{{5,15}})'
-            
-            elif ':' in contexto:
-                # Formato dos puntos
-                palabras_antes = re.findall(r'\b\w+\b', contexto)
-                if palabras_antes:
-                    palabra_clave = palabras_antes[-1]
-                    return rf'{re.escape(palabra_clave)}\s*:?\s*([A-Z0-9]{{5,15}})'
-            
-            # Formato libre - buscar palabra clave más cercana
-            palabras_clave = ['serie', 'serial', 'model', 'número', 'no']
-            for palabra in palabras_clave:
-                if palabra.lower() in contexto.lower():
-                    return rf'{re.escape(palabra)}[^A-Z0-9]*([A-Z0-9]{{5,15}})'
-            
-            return rf'\b([A-Z0-9]{{5,15}})\b'
-            
-        except Exception as e:
-            _logger.error(f"❌ Error extrayendo patrón de contexto: {e}")
-            return None
-
-    def _extraer_patron_contador_de_contexto(self, contexto, tipo_contador):
-        """
-        Extrae un patrón regex para contador del contexto
-        """
-        try:
-            # Palabras clave por tipo de contador
-            palabras_clave = {
-                'contador_bn': ['negro', 'black', 'mono', 'b/n'],
-                'contador_color': ['color', 'colour'],
-                'contador_scan': ['scan', 'total', 'escaneo']
-            }
-            
-            # Buscar formato específico
-            if '[' in contexto and ']' in contexto:
-                # Formato corchetes
-                match = re.search(r'\[([^\]]+)\]', contexto)
-                if match:
-                    etiqueta = match.group(1)
-                    return rf'\[{re.escape(etiqueta)}\][^0-9]*(\d{{4,9}})'
-            
-            elif 'T_' in contexto:
-                # Formato Ricoh
-                match = re.search(r'(T_\w+)', contexto)
-                if match:
-                    campo_ricoh = match.group(1)
-                    return rf'{re.escape(campo_ricoh)}\s*:?\s*(\d{{4,9}})'
-            
-            else:
-                # Buscar palabra clave más cercana
-                for palabra in palabras_clave.get(tipo_contador, []):
-                    if palabra.lower() in contexto.lower():
-                        return rf'{re.escape(palabra)}[^0-9]*(\d{{4,9}})'
-            
-            return rf'(\d{{4,9}})'  # Patrón genérico
-            
-        except Exception as e:
-            _logger.error(f"❌ Error extrayendo patrón de contador: {e}")
-            return None
-
-    # MÉTODOS DE PRUEBA Y DEBUG PARA SISTEMA INTELIGENTE
-    def test_sistema_inteligente(self):
-        """
-        Método de prueba para el sistema inteligente
-        """
-        try:
-            _logger.info("🧪 === PROBANDO SISTEMA INTELIGENTE ===")
-            
-            # Probar filtro de asuntos
-            asuntos_prueba = [
-                "Counter List",  # Válido
-                "Page Counter",  # Válido
-                "Error Alert",   # No válido
-                "counter list",  # Válido (case insensitive)
-                "Maintenance Required"  # No válido
-            ]
-            
-            for asunto in asuntos_prueba:
-                resultado = self.es_correo_de_contadores(asunto)
-                _logger.info(f"📧 '{asunto}' → {'✅ VÁLIDO' if resultado else '❌ FILTRADO'}")
-            
-            # Probar detección de idioma
-            textos_prueba = {
-                'bizhub_es': "[Número de serie], A5C4011011874 [Contador total],00268741",
-                'ricoh_en': "Serial No: 3359PB02667 T_TotalPrtPGS:36089",
-                'generico': "Model XYZ123 Pages: 15000 Date: 2025-01-01"
-            }
-            
-            for nombre, texto in textos_prueba.items():
-                idioma, confianza, palabras = self.detectar_idioma_automatico(texto)
-                _logger.info(f"🌍 {nombre} → {idioma} ({confianza:.1f}%)")
-            
-            # Probar detección de marca
-            for nombre, texto in textos_prueba.items():
-                marca = self.detectar_marca_automatico(texto)
-                _logger.info(f"🏭 {nombre} → Marca: {marca}")
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': 'Prueba del sistema inteligente completada. Revisa logs.',
-                    'type': 'success'
-                }
-            }
-            
-        except Exception as e:
-            _logger.error(f"❌ Error en prueba: {e}")
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': f'Error en prueba: {str(e)}',
-                    'type': 'danger'
-                }
-            }
-
-    def generar_patrones_para_correo_actual(self):
-        """
-        Genera patrones específicamente para el correo actual
-        """
-        try:
-            _logger.info(f"🎯 === GENERANDO PATRONES PARA CORREO ACTUAL ===")
-            _logger.info(f"📧 Registro ID={self.id}")
-            
-            if not self.contenido_procesado:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': 'No hay contenido procesado para generar patrones',
-                        'type': 'warning'
-                    }
-                }
-            
-            # Realizar análisis si no se ha hecho
-            if not self.idioma_detectado:
-                idioma, confianza, palabras = self.detectar_idioma_automatico(self.contenido_procesado)
-                self.idioma_detectado = idioma
-                self.confianza_deteccion = confianza
-                self.palabras_clave_encontradas = ', '.join(palabras)
-            
-            if not self.marca_detectada:
-                self.marca_detectada = self.detectar_marca_automatico(self.contenido_procesado)
-            
-            if not self.formato_detectado:
-                estructura = self.analizar_estructura_contenido(self.contenido_procesado)
-                self.formato_detectado = estructura.get('estructura_tipo', 'desconocida')
-                self.estructura_detectada = str(estructura)
-            
-            # Generar patrones
-            if self.generar_patrones_automaticamente():
-                mensaje = f"✅ Patrones generados exitosamente para este correo. {self.patrones_auto_generados} patrones creados."
-                tipo = 'success'
-            else:
-                mensaje = "⚠️ No se pudieron generar patrones para este correo"
-                tipo = 'warning'
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': mensaje,
-                    'type': tipo
-                }
-            }
-            
-        except Exception as e:
-            _logger.error(f"❌ Error generando patrones para correo actual: {e}")
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': f'Error: {str(e)}',
-                    'type': 'danger'
-                }
-            }
-
     @api.model
     def cron_procesar_correos_perdidos(self):
         """
-        CRON SIMPLE: Solo procesar correos que NO existen en la BD
+        CRON MODIFICADO: Busca directamente en mail.message sin depender de canales
         """
         try:
-            _logger.info("⏰ === INICIO CRON SIMPLE - SOLO CORREOS NO EXISTENTES ===")
+            _logger.info("⏰ === INICIO CRON DIRECTO - BÚSQUEDA EN MAIL.MESSAGE ===")
             
             from datetime import datetime, time
             ahora = fields.Datetime.now()
@@ -1388,29 +1587,21 @@ class ContadorAutomatico(models.Model):
             # Buscar correos de las últimas 24 horas (ventana fija)
             fecha_limite = ahora - timedelta(hours=24)
             
-            _logger.info(f"🔍 Buscando correos de las últimas 24 horas desde: {fecha_limite}")
+            _logger.info(f"🔍 Buscando correos directamente en mail.message desde: {fecha_limite}")
             _logger.info(f"⏰ Hora actual: {ahora}")
             
-            # Buscar canal "Correos"
-            canal_correos = self.env['discuss.channel'].search([
-                ('name', 'ilike', 'correos')
-            ], limit=1)
-            
-            if not canal_correos:
-                _logger.warning("❌ CRON: No se encontró canal 'Correos'")
-                return False
-            
-            _logger.info(f"✅ CRON: Canal encontrado: '{canal_correos.name}' (ID: {canal_correos.id})")
-            
-            # Buscar TODOS los mensajes de las últimas 24 horas
+            # MODIFICACIÓN PRINCIPAL: Buscar DIRECTAMENTE en mail.message
             mensajes_canal = self.env['mail.message'].search([
-                ('model', '=', 'discuss.channel'),
-                ('res_id', '=', canal_correos.id),
-                ('message_type', 'in', ['email', 'comment']),
-                ('date', '>=', fecha_limite)
+                ('message_type', '=', 'email'),  # Solo correos electrónicos
+                ('date', '>=', fecha_limite),
+                # Opcional: filtrar por remitentes conocidos de contadores
+                '|', '|',
+                ('email_from', 'ilike', 'printer@andescopiers.com.pe'),
+                ('email_from', 'ilike', 'counter'),
+                ('subject', 'ilike', 'counter')  # O por asunto que contenga "counter"
             ], order='date desc')
             
-            _logger.info(f"📧 CRON: Total mensajes en canal (últimas 24h): {len(mensajes_canal)}")
+            _logger.info(f"📧 CRON: Total correos encontrados (últimas 24h): {len(mensajes_canal)}")
             
             # Obtener TODAS las claves de correos ya existentes en la BD
             registros_existentes = self.env['contador.automatico'].search([])
@@ -1426,13 +1617,17 @@ class ContadorAutomatico(models.Model):
             mensajes_nuevos = []
             correos_filtrados = 0
             
+            # CORRECCIÓN: Crear instancia temporal para usar el método de filtrado
+            dummy_instance = self.browse(1) if self.search([], limit=1) else self.new()
+            
             for mensaje in mensajes_canal:
                 asunto = mensaje.subject or f'Sin asunto - {mensaje.id}'
-                remitente = mensaje.email_from or mensaje.author_id.email if mensaje.author_id else 'Desconocido'
+                # MEJORADO: Manejo más robusto del remitente
+                remitente = mensaje.email_from or (mensaje.author_id.email if mensaje.author_id else 'Desconocido')
                 clave_mensaje = f"{asunto}|{remitente}"
                 
                 # Solo procesar si es correo de contadores Y no existe
-                if self._es_correo_de_contadores_mejorado(asunto):
+                if dummy_instance._es_correo_de_contadores_mejorado(asunto):
                     if clave_mensaje not in claves_existentes:
                         mensajes_nuevos.append(mensaje)
                         _logger.info(f"🆕 NUEVO correo encontrado: '{asunto}' - Fecha: {mensaje.date}")
@@ -1447,7 +1642,7 @@ class ContadorAutomatico(models.Model):
             if not mensajes_nuevos:
                 _logger.info("ℹ️ CRON: No hay correos REALMENTE NUEVOS para procesar")
                 # Guardar estadísticas vacías
-                self._guardar_estadisticas_cron_seguro({
+                dummy_instance._guardar_estadisticas_cron_seguro({
                     'fecha_ejecucion': ahora,
                     'correos_analizados': len(mensajes_canal),
                     'correos_validos': 0,
@@ -1466,22 +1661,29 @@ class ContadorAutomatico(models.Model):
             
             for i, mensaje in enumerate(mensajes_nuevos):
                 asunto = mensaje.subject or f'Sin asunto - {mensaje.id}'
-                remitente = mensaje.email_from or mensaje.author_id.email if mensaje.author_id else 'Desconocido'
+                remitente = mensaje.email_from or (mensaje.author_id.email if mensaje.author_id else 'Desconocido')
                 fecha_mensaje = mensaje.date
                 
                 _logger.info(f"📨 CRON: === PROCESANDO CORREO NUEVO {i+1}/{len(mensajes_nuevos)} ===")
                 _logger.info(f"📧 Asunto: '{asunto}'")
                 _logger.info(f"⏰ Fecha mensaje: {fecha_mensaje}")
                 _logger.info(f"👤 Remitente: '{remitente}'")
+                _logger.info(f"📎 Mensaje ID: {mensaje.id}")
                 
                 # CREAR Y PROCESAR REGISTRO NUEVO
                 try:
                     _logger.info(f"🆕 CRON: Creando registro para correo NUEVO...")
                     
+                    # CORRECCIÓN: Validar contenido del mensaje
+                    contenido_mensaje = mensaje.body or ''
+                    if not contenido_mensaje.strip():
+                        _logger.warning(f"⚠️ CRON: Mensaje sin contenido, usando asunto como contenido")
+                        contenido_mensaje = asunto
+                    
                     registro = self.env['contador.automatico'].create({
                         'name': asunto,
                         'remitente': remitente,
-                        'contenido_original': mensaje.body or '',
+                        'contenido_original': contenido_mensaje,
                         'estado': 'pendiente'
                     })
                     
@@ -1534,8 +1736,8 @@ class ContadorAutomatico(models.Model):
                     continue
             
             # RESUMEN FINAL
-            _logger.info(f"📊 === RESUMEN PROCESAMIENTO SIMPLE ===")
-            _logger.info(f"📧 Total mensajes analizados (últimas 24h): {correos_analizados}")
+            _logger.info(f"📊 === RESUMEN PROCESAMIENTO DIRECTO ===")
+            _logger.info(f"📧 Total correos analizados (últimas 24h): {correos_analizados}")
             _logger.info(f"✅ Correos nuevos válidos encontrados: {correos_validos}")
             _logger.info(f"🎉 Correos procesados exitosamente: {correos_procesados_exitosos}")
             _logger.info(f"❌ Correos con fallos: {correos_fallidos}")
@@ -1563,175 +1765,261 @@ class ContadorAutomatico(models.Model):
                 'horas_revision': 24
             }
             
-            self._guardar_estadisticas_cron_seguro(resumen)
+            dummy_instance._guardar_estadisticas_cron_seguro(resumen)
             
-            _logger.info("⏰ === FIN CRON SIMPLE - SOLO CORREOS NO EXISTENTES ===")
+            _logger.info("⏰ === FIN CRON DIRECTO - BÚSQUEDA EN MAIL.MESSAGE ===")
             return True
             
         except Exception as e:
-            _logger.error(f"❌ === ERROR CRÍTICO EN CRON SIMPLE ===")
+            _logger.error(f"❌ === ERROR CRÍTICO EN CRON DIRECTO ===")
             _logger.error(f"Error: {e}")
             import traceback
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
-    def _es_correo_de_contadores_mejorado(self, asunto):
-            """
-            SOLUCIÓN: Función mejorada de filtrado de correos
-            """
-            if not asunto:
-                return False
-                
-            asunto_lower = asunto.lower().strip()
-            
-            # TODAS en minúsculas para coincidencia exacta
-            palabras_validas = [
-                'counter list',
-                'counter page',
-                'counter',
-                'page counter', 
-                'page count',
-                'contador',
-                'contadores',
-                'ricoh'
-            ]
-            
-            for palabra in palabras_validas:
-                if palabra in asunto_lower:
-                    _logger.info(f"✅ CRON: Asunto válido detectado: '{asunto}' contiene '{palabra}'")
-                    return True
-            
-            _logger.info(f"❌ CRON: Asunto no válido para contadores: '{asunto}'")
-            return False
 
-    def _guardar_estadisticas_cron_seguro(self, resumen):
+
+    @api.model
+    def procesar_correos_directos_manual(self, horas=24):
         """
-        SOLUCIÓN: Guardar estadísticas de forma segura
+        NUEVO: Procesamiento manual directo desde mail.message
+        Útil para probar o procesar correos específicos
         """
         try:
-            hoy = fields.Date.today()
-            estadisticas = self.env['contador.automatico.estadisticas'].search([
-                ('fecha', '=', hoy)
-            ], limit=1)
+            _logger.info(f"🔧 === PROCESAMIENTO MANUAL DIRECTO ({horas}h) ===")
             
-            datos_estadisticas = {
-                'fecha': hoy,
-                'correos_encontrados_cron': resumen.get('correos_encontrados', 0),
-                'correos_procesados_cron': resumen.get('correos_procesados', 0),
-                'correos_fallidos_cron': resumen.get('correos_fallidos', 0),
-                'ejecuciones_cron': 1
+            fecha_limite = fields.Datetime.now() - timedelta(hours=horas)
+            
+            # Buscar correos de contadores directamente
+            correos_contadores = self.env['mail.message'].search([
+                ('message_type', '=', 'email'),
+                ('date', '>=', fecha_limite),
+                '|', '|', '|',
+                ('subject', 'ilike', 'counter'),
+                ('subject', 'ilike', 'contador'),
+                ('email_from', 'ilike', 'printer@andescopiers.com.pe'),
+                ('body', 'ilike', 'serial number')
+            ], order='date desc')
+            
+            _logger.info(f"📧 Correos de contadores encontrados: {len(correos_contadores)}")
+            
+            # Mostrar lista para revisar
+            for i, correo in enumerate(correos_contadores[:10], 1):  # Mostrar primeros 10
+                _logger.info(f"{i}. '{correo.subject}' - {correo.email_from} - {correo.date}")
+            
+            # Procesar cada correo
+            procesados = 0
+            errores = 0
+            
+            for correo in correos_contadores:
+                try:
+                    # Verificar si ya existe
+                    existe = self.search([
+                        ('name', '=', correo.subject),
+                        ('remitente', '=', correo.email_from)
+                    ], limit=1)
+                    
+                    if not existe:
+                        # Crear y procesar
+                        registro = self.create({
+                            'name': correo.subject or f'Sin asunto - {correo.id}',
+                            'remitente': correo.email_from,
+                            'contenido_original': correo.body or '',
+                            'estado': 'pendiente'
+                        })
+                        
+                        if registro.procesar_correo_inteligente():
+                            procesados += 1
+                            _logger.info(f"✅ Procesado: {registro.name}")
+                        else:
+                            _logger.warning(f"⚠️ Falló: {registro.name}")
+                            
+                except Exception as e:
+                    errores += 1
+                    _logger.error(f"❌ Error procesando correo: {e}")
+            
+            mensaje = f"Procesamiento manual completado: {procesados} procesados, {errores} errores de {len(correos_contadores)} encontrados"
+            _logger.info(mensaje)
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': 'success' if errores == 0 else 'warning'
+                }
             }
             
-            if not estadisticas:
-                estadisticas = self.env['contador.automatico.estadisticas'].create(datos_estadisticas)
-                _logger.info(f"📊 Nuevas estadísticas CRON creadas para {hoy}")
-            else:
-                # Acumular valores existentes
-                estadisticas.write({
-                    'correos_encontrados_cron': estadisticas.correos_encontrados_cron + datos_estadisticas['correos_encontrados_cron'],
-                    'correos_procesados_cron': estadisticas.correos_procesados_cron + datos_estadisticas['correos_procesados_cron'],
-                    'correos_fallidos_cron': estadisticas.correos_fallidos_cron + datos_estadisticas['correos_fallidos_cron'],
-                    'ejecuciones_cron': estadisticas.ejecuciones_cron + 1
-                })
-                _logger.info(f"📊 Estadísticas CRON actualizadas para {hoy}")
-            
         except Exception as e:
-            _logger.error(f"❌ Error guardando estadísticas CRON: {e}")
-    def _guardar_estadisticas_cron(self, resumen):
+            _logger.error(f"❌ Error en procesamiento manual: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+    def test_sistema_inteligente(self):
         """
-        Guarda estadísticas de ejecución del CRON
+        Método de prueba para el sistema inteligente
+        CORRECCIÓN: Mejorado con más casos de prueba
         """
         try:
-            # Buscar o crear registro de estadísticas de hoy
-            hoy = fields.Date.today()
-            estadisticas = self.env['contador.automatico.estadisticas'].search([
-                ('fecha', '=', hoy)
-            ], limit=1)
+            _logger.info("🧪 === PROBANDO SISTEMA INTELIGENTE ===")
             
-            if not estadisticas:
-                estadisticas = self.env['contador.automatico.estadisticas'].create({
-                    'fecha': hoy,
-                    'correos_encontrados_cron': resumen['correos_encontrados'],
-                    'correos_procesados_cron': resumen['correos_procesados'],
-                    'correos_fallidos_cron': resumen['correos_fallidos'],
-                    'ejecuciones_cron': 1
-                })
-            else:
-                estadisticas.write({
-                    'correos_encontrados_cron': estadisticas.correos_encontrados_cron + resumen['correos_encontrados'],
-                    'correos_procesados_cron': estadisticas.correos_procesados_cron + resumen['correos_procesados'],
-                    'correos_fallidos_cron': estadisticas.correos_fallidos_cron + resumen['correos_fallidos'],
-                    'ejecuciones_cron': estadisticas.ejecuciones_cron + 1
-                })
+            # Probar filtro de asuntos
+            asuntos_prueba = [
+                "Counter List",          # Válido
+                "Page Counter",          # Válido
+                "counter list",          # Válido (case insensitive)
+                "Ricoh Counter Report",  # Válido
+                "Error Alert",           # No válido
+                "Maintenance Required",  # No válido
+                "contador konica",       # Válido
+                "contadores ricoh"       # Válido
+            ]
             
-            _logger.info(f"📊 Estadísticas CRON guardadas para {hoy}")
+            _logger.info("🔍 === PROBANDO FILTRO DE ASUNTOS ===")
+            for asunto in asuntos_prueba:
+                resultado = self._es_correo_de_contadores_mejorado(asunto)
+                _logger.info(f"📧 '{asunto}' → {'✅ VÁLIDO' if resultado else '❌ FILTRADO'}")
+            
+            # Probar detección de idioma
+            textos_prueba = {
+                'bizhub_es': "[Número de serie], A5C4011011874 [Contador total],00268741",
+                'ricoh_en': "Serial No: 3359PB02667 T_TotalPrtPGS:36089",
+                'ricoh_es': "Nº de serie: 3359PB02667 T_TotalPrtPGS:36089",
+                'generico': "Model XYZ123 Pages: 15000 Date: 2025-01-01",
+                'monocroma': "Total Counter: 25000 Black Pages: 25000 Serial: ABC123456"
+            }
+            
+            _logger.info("🌍 === PROBANDO DETECCIÓN DE IDIOMA ===")
+            for nombre, texto in textos_prueba.items():
+                idioma, confianza, palabras = self.detectar_idioma_automatico(texto)
+                _logger.info(f"🌍 {nombre} → {idioma} ({confianza:.1f}%) | Palabras: {palabras[:3]}")
+            
+            # Probar detección de marca
+            _logger.info("🏭 === PROBANDO DETECCIÓN DE MARCA ===")
+            for nombre, texto in textos_prueba.items():
+                marca = self.detectar_marca_automatico(texto)
+                _logger.info(f"🏭 {nombre} → Marca: {marca}")
+            
+            # Probar detección de máquina monocroma
+            _logger.info("🖤 === PROBANDO DETECCIÓN MONOCROMA ===")
+            textos_monocroma = {
+                'mono_explicito': "Monochrome printer - Total pages: 15000",
+                'mono_implicito': "Total Counter: 25000 Black White printer",
+                'color_explicito': "Color Counter: 5000 Black Counter: 20000",
+                'ricoh_mono': "T_TotalPrtPGS: 25000 Serial No: ABC123"
+            }
+            
+            for nombre, texto in textos_monocroma.items():
+                es_mono = self._detectar_maquina_monocroma(texto, 'english')
+                _logger.info(f"🖤 {nombre} → {'MONOCROMA' if es_mono else 'COLOR'}")
+            
+            # Probar búsqueda de series
+            _logger.info("🔍 === PROBANDO BÚSQUEDA DE SERIES ===")
+            for nombre, texto in textos_prueba.items():
+                serie = self._buscar_serie_fallback(texto)
+                _logger.info(f"🔍 {nombre} → Serie: {serie or 'No encontrada'}")
+            
+            _logger.info("✅ === PRUEBAS COMPLETADAS ===")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': 'Prueba del sistema inteligente completada. Revisa logs para detalles.',
+                    'type': 'success'
+                }
+            }
             
         except Exception as e:
-            _logger.error(f"❌ Error guardando estadísticas CRON: {e}")
+            _logger.error(f"❌ Error en prueba: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error en prueba: {str(e)}',
+                    'type': 'danger'
+                }
+            }
 
-    def _enviar_notificacion_cron(self, resumen):
+    def generar_patrones_para_correo_actual(self):
         """
-        Envía notificación sobre la ejecución del CRON
+        Genera patrones específicamente para el correo actual
+        CORRECCIÓN: Validaciones mejoradas
         """
         try:
-            # Solo notificar si hay correos encontrados o fallos
-            if resumen['correos_encontrados'] == 0 and resumen['correos_fallidos'] == 0:
-                return
+            _logger.info(f"🎯 === GENERANDO PATRONES PARA CORREO ACTUAL ===")
+            _logger.info(f"📧 Registro ID={self.id}")
             
-            # Buscar usuarios administradores o grupo específico
-            try:
-                grupo_admin = self.env.ref('base.group_system')
-                usuarios_notificar = grupo_admin.users
-            except:
-                # Fallback: buscar usuario admin
-                usuarios_notificar = self.env['res.users'].search([('login', '=', 'admin')], limit=1)
+            if not self.contenido_procesado:
+                # CORRECCIÓN: Intentar procesar el contenido si no existe
+                if self.contenido_original:
+                    texto_limpio = self.limpiar_html_correo(self.contenido_original)
+                    self.contenido_procesado = texto_limpio
+                else:
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'message': 'No hay contenido para procesar. Verifique el correo original.',
+                            'type': 'warning'
+                        }
+                    }
             
-            if not usuarios_notificar:
-                _logger.warning("⚠️ No se encontraron usuarios para notificar")
-                return
+            # Realizar análisis si no se ha hecho
+            if not self.idioma_detectado:
+                idioma, confianza, palabras = self.detectar_idioma_automatico(self.contenido_procesado)
+                self.idioma_detectado = idioma
+                self.confianza_deteccion = confianza
+                self.palabras_clave_encontradas = ', '.join(palabras)
             
-            # Preparar mensaje
-            asunto = f"CRON Contadores - {resumen['correos_encontrados']} correos perdidos procesados"
+            if not self.marca_detectada:
+                self.marca_detectada = self.detectar_marca_automatico(self.contenido_procesado)
             
-            if resumen['correos_fallidos'] > 0:
-                asunto += f" ({resumen['correos_fallidos']} fallos)"
+            if not self.formato_detectado:
+                estructura = self.analizar_estructura_contenido(self.contenido_procesado)
+                self.formato_detectado = estructura.get('estructura_tipo', 'desconocida')
+                self.estructura_detectada = str(estructura)
             
-            cuerpo = f"""
-            <h3>Resumen de ejecución CRON - Procesamiento de Contadores</h3>
-            <p><strong>Fecha:</strong> {resumen['fecha_ejecucion']}</p>
-            <ul>
-                <li><strong>Correos perdidos encontrados:</strong> {resumen['correos_encontrados']}</li>
-                <li><strong>Correos procesados exitosamente:</strong> {resumen['correos_procesados']}</li>
-                <li><strong>Correos con fallos:</strong> {resumen['correos_fallidos']}</li>
-                <li><strong>Período revisado:</strong> {resumen['horas_revision']} horas</li>
-            </ul>
+            # Generar patrones
+            patrones_anteriores = self.patrones_auto_generados
+            if self.generar_patrones_automaticamente():
+                patrones_nuevos = self.patrones_auto_generados - patrones_anteriores
+                mensaje = f"✅ Patrones generados exitosamente para este correo. {patrones_nuevos} patrones nuevos creados."
+                tipo = 'success'
+            else:
+                mensaje = "⚠️ No se pudieron generar patrones para este correo. Revise el contenido y formato."
+                tipo = 'warning'
             
-            {f'<p style="color: orange;"><strong>⚠️ Atención:</strong> {resumen["correos_fallidos"]} correos fallaron al procesarse. Revisa los logs para más detalles.</p>' if resumen['correos_fallidos'] > 0 else ''}
-            
-            <p><em>Este es un mensaje automático del sistema de procesamiento de contadores.</em></p>
-            """
-            
-            # Enviar mensaje interno en Odoo
-            for usuario in usuarios_notificar:
-                try:
-                    self.env['mail.message'].create({
-                        'subject': asunto,
-                        'body': cuerpo,
-                        'message_type': 'notification',
-                        'partner_ids': [(4, usuario.partner_id.id)],
-                        'needaction_partner_ids': [(4, usuario.partner_id.id)]
-                    })
-                except Exception as e:
-                    _logger.error(f"❌ Error enviando notificación a {usuario.name}: {e}")
-            
-            _logger.info(f"📧 Notificaciones CRON enviadas a {len(usuarios_notificar)} usuarios")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': tipo
+                }
+            }
             
         except Exception as e:
-            _logger.error(f"❌ Error enviando notificaciones CRON: {e}")
+            _logger.error(f"❌ Error generando patrones para correo actual: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
 
     @api.model
     def obtener_estadisticas_dashboard(self):
         """
         Obtiene estadísticas para dashboard de monitoreo
+        CORRECCIÓN: Manejo seguro de errores y validaciones
         """
         try:
             _logger.info("📊 === GENERANDO ESTADÍSTICAS DASHBOARD ===")
@@ -1775,31 +2063,41 @@ class ContadorAutomatico(models.Model):
             ])
             suma_patrones = sum(registro.patrones_auto_generados for registro in total_patrones_generados)
             
-            # Estadísticas por marca
-            marcas_detectadas = self.env['contador.automatico'].read_group(
-                [('marca_detectada', '!=', False)],
-                ['marca_detectada'],
-                ['marca_detectada']
-            )
+            # Estadísticas por marca (con manejo de errores)
+            try:
+                marcas_detectadas = self.env['contador.automatico'].read_group(
+                    [('marca_detectada', '!=', False)],
+                    ['marca_detectada'],
+                    ['marca_detectada']
+                )
+            except:
+                marcas_detectadas = []
             
-            # Estadísticas por idioma
-            idiomas_detectados = self.env['contador.automatico'].read_group(
-                [('idioma_detectado', '!=', False)],
-                ['idioma_detectado'],
-                ['idioma_detectado']
-            )
+            # Estadísticas por idioma (con manejo de errores)
+            try:
+                idiomas_detectados = self.env['contador.automatico'].read_group(
+                    [('idioma_detectado', '!=', False)],
+                    ['idioma_detectado'],
+                    ['idioma_detectado']
+                )
+            except:
+                idiomas_detectados = []
             
-            # Patrones activos
-            total_patrones_activos = self.env['patron.contador'].search_count([
-                ('activo', '=', True)
-            ])
+            # Patrones activos (verificar si el modelo existe)
+            try:
+                total_patrones_activos = self.env['patron.contador'].search_count([
+                    ('activo', '=', True)
+                ])
+                
+                patrones_auto_generados = self.env['patron.contador'].search_count([
+                    ('activo', '=', True),
+                    ('auto_generado', '=', True)
+                ])
+            except:
+                total_patrones_activos = 0
+                patrones_auto_generados = 0
             
-            patrones_auto_generados = self.env['patron.contador'].search_count([
-                ('activo', '=', True),
-                ('name', 'ilike', 'auto-generado')
-            ])
-            
-            # Estadísticas CRON (si existen)
+            # Estadísticas CRON (con manejo de errores)
             try:
                 estadisticas_cron = self.env['contador.automatico.estadisticas'].search([
                     ('fecha', '>=', hace_7_dias)
@@ -1810,6 +2108,10 @@ class ContadorAutomatico(models.Model):
                 total_cron_encontrados = 0
                 total_cron_procesados = 0
             
+            # CORRECCIÓN: Calcular tasas de éxito
+            tasa_procesamiento = (registros_procesados / total_registros * 100) if total_registros > 0 else 0
+            tasa_automatico = (registros_aprendizaje_completado / total_registros * 100) if total_registros > 0 else 0
+            
             estadisticas = {
                 'resumen_general': {
                     'total_registros': total_registros,
@@ -1817,7 +2119,9 @@ class ContadorAutomatico(models.Model):
                     'manual': registros_manual,
                     'error': registros_error,
                     'filtrados': registros_filtrados,
-                    'ultima_semana': registros_ultima_semana
+                    'ultima_semana': registros_ultima_semana,
+                    'tasa_procesamiento': round(tasa_procesamiento, 1),
+                    'tasa_automatico': round(tasa_automatico, 1)
                 },
                 'aprendizaje_automatico': {
                     'requiere_aprendizaje': registros_con_aprendizaje,
@@ -1826,7 +2130,8 @@ class ContadorAutomatico(models.Model):
                 },
                 'patrones': {
                     'total_activos': total_patrones_activos,
-                    'auto_generados': patrones_auto_generados
+                    'auto_generados': patrones_auto_generados,
+                    'efectividad': round((patrones_auto_generados / total_patrones_activos * 100) if total_patrones_activos > 0 else 0, 1)
                 },
                 'distribucion_marcas': [
                     {'marca': marca['marca_detectada'], 'cantidad': marca['marca_detectada_count']}
@@ -1838,23 +2143,63 @@ class ContadorAutomatico(models.Model):
                 ],
                 'cron_stats': {
                     'correos_encontrados_7_dias': total_cron_encontrados,
-                    'correos_procesados_7_dias': total_cron_procesados
+                    'correos_procesados_7_dias': total_cron_procesados,
+                    'efectividad_cron': round((total_cron_procesados / total_cron_encontrados * 100) if total_cron_encontrados > 0 else 0, 1)
                 }
             }
             
             _logger.info("✅ Estadísticas dashboard generadas exitosamente")
+            _logger.info(f"📊 Resumen: {total_registros} total, {registros_procesados} procesados ({tasa_procesamiento:.1f}%)")
+            
             return estadisticas
             
         except Exception as e:
             _logger.error(f"❌ Error generando estadísticas dashboard: {e}")
-            return {}
+            return {
+                'resumen_general': {
+                    'total_registros': 0,
+                    'procesados': 0,
+                    'manual': 0,
+                    'error': 0,
+                    'filtrados': 0,
+                    'ultima_semana': 0,
+                    'tasa_procesamiento': 0,
+                    'tasa_automatico': 0
+                },
+                'error': str(e)
+            }
 
     def optimizar_patrones_automaticamente(self):
         """
         Optimiza automáticamente los patrones basado en estadísticas de uso
+        CORRECCIÓN: Validaciones mejoradas y manejo de errores
         """
         try:
             _logger.info("🔧 === OPTIMIZANDO PATRONES AUTOMÁTICAMENTE ===")
+            
+            # Verificar si el modelo de patrones existe
+            try:
+                patrones_disponibles = self.env['patron.contador'].search_count([])
+                if patrones_disponibles == 0:
+                    _logger.warning("⚠️ No hay patrones disponibles para optimizar")
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'message': 'No hay patrones disponibles para optimizar',
+                            'type': 'info'
+                        }
+                    }
+            except:
+                _logger.error("❌ Modelo 'patron.contador' no disponible")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': 'Modelo de patrones no disponible',
+                        'type': 'error'
+                    }
+                }
             
             # Buscar patrones con baja efectividad
             patrones_problematicos = self.env['patron.contador'].search([
@@ -1873,24 +2218,23 @@ class ContadorAutomatico(models.Model):
                     if total_casos > 0:
                         tasa_exito = (patron.casos_detectados / total_casos) * 100
                 
-                # Si el patrón tiene muy baja efectividad, desactivarlo
-                if tasa_exito < 20 and patron.veces_usado > 5:
+                # CORRECCIÓN: Criterios más estrictos para desactivar patrones
+                if tasa_exito < 15 and patron.veces_usado > 10:  # Más estricto
                     patron.write({'activo': False})
                     patrones_desactivados += 1
                     _logger.info(f"⏸️ Patrón desactivado por baja efectividad: {patron.name} ({tasa_exito:.1f}%)")
                 
-                # Si el patrón nunca se usa, marcarlo para revisión
-                elif patron.veces_usado == 0 and patron.create_date < (fields.Datetime.now() - timedelta(days=7)):
-                    # Patrón no usado en 7 días, reducir prioridad
+                # Si el patrón nunca se usa, reducir prioridad gradualmente
+                elif patron.veces_usado == 0 and patron.create_date < (fields.Datetime.now() - timedelta(days=14)):
                     if patron.orden < 50:
-                        patron.write({'orden': patron.orden + 10})
+                        patron.write({'orden': patron.orden + 5})  # Incremento menor
                         patrones_optimizados += 1
                         _logger.info(f"📉 Reducida prioridad de patrón no usado: {patron.name}")
             
             # Buscar patrones muy exitosos para darles mayor prioridad
             patrones_exitosos = self.env['patron.contador'].search([
                 ('activo', '=', True),
-                ('veces_usado', '>', 10)
+                ('veces_usado', '>', 5)  # Reducido el umbral
             ])
             
             for patron in patrones_exitosos:
@@ -1900,18 +2244,42 @@ class ContadorAutomatico(models.Model):
                         tasa_exito = (patron.casos_detectados / total_casos) * 100
                         
                         # Si tiene alta efectividad, darle mayor prioridad
-                        if tasa_exito > 90 and patron.orden > 3:
-                            patron.write({'orden': max(1, patron.orden - 2)})
+                        if tasa_exito > 85 and patron.orden > 2:  # Más permisivo
+                            nuevo_orden = max(1, patron.orden - 1)
+                            patron.write({'orden': nuevo_orden})
                             patrones_optimizados += 1
                             _logger.info(f"📈 Aumentada prioridad de patrón exitoso: {patron.name} ({tasa_exito:.1f}%)")
             
+            # CORRECCIÓN: Optimizar patrones auto-generados poco efectivos
+            patrones_auto = self.env['patron.contador'].search([
+                ('auto_generado', '=', True),
+                ('activo', '=', True),
+                ('veces_usado', '>', 3)
+            ])
+            
+            for patron in patrones_auto:
+                if hasattr(patron, 'casos_detectados') and hasattr(patron, 'casos_fallidos'):
+                    total_casos = patron.casos_detectados + patron.casos_fallidos
+                    if total_casos > 0:
+                        tasa_exito = (patron.casos_detectados / total_casos) * 100
+                        
+                        # Patrones auto-generados con muy baja efectividad
+                        if tasa_exito < 25:
+                            patron.write({'activo': False})
+                            patrones_desactivados += 1
+                            _logger.info(f"🤖⏸️ Patrón auto-generado desactivado: {patron.name} ({tasa_exito:.1f}%)")
+            
             _logger.info(f"✅ Optimización completada: {patrones_optimizados} optimizados, {patrones_desactivados} desactivados")
+            
+            mensaje = f'Optimización completada: {patrones_optimizados} patrones optimizados, {patrones_desactivados} desactivados'
+            if patrones_optimizados == 0 and patrones_desactivados == 0:
+                mensaje = 'Optimización completada: No se encontraron patrones que requieran ajustes'
             
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'message': f'Optimización completada: {patrones_optimizados} patrones optimizados, {patrones_desactivados} desactivados',
+                    'message': mensaje,
                     'type': 'success'
                 }
             }
@@ -1930,84 +2298,132 @@ class ContadorAutomatico(models.Model):
     def generar_reporte_actividad(self, dias=7):
         """
         Genera reporte de actividad de los últimos N días
+        CORRECCIÓN: Manejo mejorado de errores y más detalles
         """
         try:
             _logger.info(f"📋 === GENERANDO REPORTE DE ACTIVIDAD ({dias} días) ===")
             
             fecha_inicio = fields.Date.today() - timedelta(days=dias)
             
-            # Registros por día
-            registros_por_dia = self.env['contador.automatico'].read_group(
-                [('create_date', '>=', fecha_inicio)],
-                ['create_date:day', 'estado'],
-                ['create_date:day', 'estado'],
-                lazy=False
-            )
+            # Registros por día (con manejo de errores)
+            try:
+                registros_por_dia = self.env['contador.automatico'].read_group(
+                    [('create_date', '>=', fecha_inicio)],
+                    ['create_date:day', 'estado'],
+                    ['create_date:day', 'estado'],
+                    lazy=False
+                )
+            except:
+                registros_por_dia = []
             
             # Procesamiento por estado
-            estados_resumen = self.env['contador.automatico'].read_group(
-                [('create_date', '>=', fecha_inicio)],
-                ['estado'],
-                ['estado']
-            )
+            try:
+                estados_resumen = self.env['contador.automatico'].read_group(
+                    [('create_date', '>=', fecha_inicio)],
+                    ['estado'],
+                    ['estado']
+                )
+            except:
+                estados_resumen = []
             
             # Marcas más procesadas
-            marcas_resumen = self.env['contador.automatico'].read_group(
-                [
-                    ('create_date', '>=', fecha_inicio),
-                    ('marca_detectada', '!=', False)
-                ],
-                ['marca_detectada'],
-                ['marca_detectada']
-            )
+            try:
+                marcas_resumen = self.env['contador.automatico'].read_group(
+                    [
+                        ('create_date', '>=', fecha_inicio),
+                        ('marca_detectada', '!=', False)
+                    ],
+                    ['marca_detectada'],
+                    ['marca_detectada']
+                )
+            except:
+                marcas_resumen = []
             
-            # Patrones más usados
-            patrones_mas_usados = self.env['patron.contador'].search([
-                ('veces_usado', '>', 0)
-            ], order='veces_usado desc', limit=10)
+            # Patrones más usados (con verificación del modelo)
+            try:
+                patrones_mas_usados = self.env['patron.contador'].search([
+                    ('veces_usado', '>', 0)
+                ], order='veces_usado desc', limit=10)
+                
+                patrones_info = [
+                    {
+                        'nombre': p.name,
+                        'tipo': p.tipo,
+                        'veces_usado': p.veces_usado,
+                        'ultima_deteccion': p.ultima_deteccion,
+                        'auto_generado': getattr(p, 'auto_generado', False)
+                    }
+                    for p in patrones_mas_usados
+                ]
+            except:
+                patrones_info = []
+            
+            # CORRECCIÓN: Estadísticas adicionales
+            total_registros_periodo = self.env['contador.automatico'].search_count([
+                ('create_date', '>=', fecha_inicio)
+            ])
+            
+            procesados_periodo = self.env['contador.automatico'].search_count([
+                ('create_date', '>=', fecha_inicio),
+                ('estado', '=', 'procesado')
+            ])
+            
+            tasa_exito_periodo = (procesados_periodo / total_registros_periodo * 100) if total_registros_periodo > 0 else 0
             
             reporte = {
                 'periodo': f"Últimos {dias} días",
                 'fecha_inicio': fecha_inicio,
                 'fecha_fin': fields.Date.today(),
+                'total_registros': total_registros_periodo,
+                'procesados': procesados_periodo,
+                'tasa_exito': round(tasa_exito_periodo, 1),
                 'registros_por_dia': registros_por_dia,
                 'resumen_estados': estados_resumen,
                 'marcas_procesadas': marcas_resumen,
-                'patrones_top': [
-                    {
-                        'nombre': p.name,
-                        'tipo': p.tipo,
-                        'veces_usado': p.veces_usado,
-                        'ultima_deteccion': p.ultima_deteccion
-                    }
-                    for p in patrones_mas_usados
-                ]
+                'patrones_top': patrones_info,
+                'generado_en': fields.Datetime.now()
             }
             
-            _logger.info("✅ Reporte de actividad generado")
+            _logger.info(f"✅ Reporte de actividad generado: {total_registros_periodo} registros, {tasa_exito_periodo:.1f}% éxito")
             return reporte
             
         except Exception as e:
             _logger.error(f"❌ Error generando reporte: {e}")
-            return {}
+            return {
+                'error': str(e),
+                'periodo': f"Últimos {dias} días",
+                'fecha_inicio': fecha_inicio,
+                'fecha_fin': fields.Date.today(),
+            }
 
     def limpiar_registros_antiguos(self, dias_mantener=90):
         """
         Limpia registros antiguos para mantener la BD optimizada
+        CORRECCIÓN: Criterios más inteligentes de limpieza
         """
         try:
             _logger.info(f"🧹 === LIMPIANDO REGISTROS ANTIGUOS (>{dias_mantener} días) ===")
             
             fecha_limite = fields.Date.today() - timedelta(days=dias_mantener)
             
-            # Buscar registros antiguos filtrados o con error
-            registros_limpiar = self.env['contador.automatico'].search([
-                '|',
-                ('estado', 'in', ['filtrado', 'error']),
+            # CORRECCIÓN: Criterios más específicos para limpiar
+            # 1. Registros filtrados antiguos (no son útiles)
+            registros_filtrados = self.env['contador.automatico'].search([
+                ('estado', '=', 'filtrado'),
                 ('create_date', '<', fecha_limite)
             ])
             
-            if not registros_limpiar:
+            # 2. Registros en error muy antiguos (más de 6 meses)
+            fecha_error_limite = fields.Date.today() - timedelta(days=180)
+            registros_error_antiguos = self.env['contador.automatico'].search([
+                ('estado', '=', 'error'),
+                ('create_date', '<', fecha_error_limite)
+            ])
+            
+            # 3. Registros duplicados (mismo asunto, remitente y fecha similar)
+            registros_duplicados = self._encontrar_registros_duplicados()
+            
+            if not (registros_filtrados or registros_error_antiguos or registros_duplicados):
                 _logger.info("ℹ️ No hay registros antiguos para limpiar")
                 return {
                     'type': 'ir.actions.client',
@@ -2018,30 +2434,64 @@ class ContadorAutomatico(models.Model):
                     }
                 }
             
-            cantidad_eliminar = len(registros_limpiar)
+            # CORRECCIÓN: Preservar registros importantes
+            registros_importantes = self.env['contador.automatico'].search([
+                ('estado', '=', 'procesado'),
+                ('equipo_id', '!=', False),
+                ('create_date', '<', fecha_limite)
+            ])
             
-            # Crear backup de información importante antes de eliminar
-            registros_importantes = registros_limpiar.filtered(
-                lambda r: r.estado == 'procesado' and r.equipo_id
-            )
+            # Combinar registros a eliminar
+            registros_eliminar = registros_filtrados | registros_error_antiguos
+            for dup in registros_duplicados:
+                registros_eliminar |= dup
             
-            # Solo eliminar registros no importantes
-            registros_eliminar = registros_limpiar.filtered(
-                lambda r: r.estado in ['filtrado', 'error'] or not r.equipo_id
-            )
+            # No eliminar los importantes
+            registros_eliminar = registros_eliminar - registros_importantes
             
             if registros_eliminar:
+                cantidad_eliminar = len(registros_eliminar)
+                
+                # Log de muestra antes de eliminar
+                for registro in registros_eliminar[:5]:
+                    _logger.info(f"🗑️ A eliminar: ID={registro.id}, Estado={registro.estado}, Fecha={registro.create_date}")
+                
                 registros_eliminar.unlink()
-                _logger.info(f"🗑️ Eliminados {len(registros_eliminar)} registros antiguos")
+                _logger.info(f"🗑️ Eliminados {cantidad_eliminar} registros antiguos")
+            else:
+                cantidad_eliminar = 0
             
             if registros_importantes:
-                _logger.info(f"💾 Conservados {len(registros_importantes)} registros importantes")
+                _logger.info(f"💾 Conservados {len(registros_importantes)} registros procesados importantes")
+            
+            # CORRECCIÓN: Limpiar también estadísticas muy antiguas
+            try:
+                fecha_stats_limite = fields.Date.today() - timedelta(days=60)
+                stats_antiguas = self.env['contador.automatico.estadisticas'].search([
+                    ('fecha', '<', fecha_stats_limite)
+                ])
+                
+                if stats_antiguas:
+                    cantidad_stats = len(stats_antiguas)
+                    stats_antiguas.unlink()
+                    _logger.info(f"📊 Eliminadas {cantidad_stats} estadísticas antiguas")
+                else:
+                    cantidad_stats = 0
+            except:
+                cantidad_stats = 0
+                _logger.info("ℹ️ Modelo de estadísticas no existe, saltando limpieza")
+            
+            mensaje = f'Limpieza completada: {cantidad_eliminar} registros eliminados'
+            if registros_importantes:
+                mensaje += f', {len(registros_importantes)} importantes conservados'
+            if cantidad_stats > 0:
+                mensaje += f', {cantidad_stats} estadísticas limpiadas'
             
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'message': f'Limpieza completada: {len(registros_eliminar)} registros eliminados, {len(registros_importantes)} conservados',
+                    'message': mensaje,
                     'type': 'success'
                 }
             }
@@ -2057,358 +2507,527 @@ class ContadorAutomatico(models.Model):
                 }
             }
 
-    # MÉTODO PRINCIPAL PARA MANTENIMIENTO AUTOMÁTICO
+    def _encontrar_registros_duplicados(self):
+        """
+        NUEVO: Encuentra registros duplicados de forma más inteligente
+        """
+        try:
+            registros_duplicados = []
+            todos_registros = self.env['contador.automatico'].search([])
+            
+            # Agrupar por clave similar
+            grupos = {}
+            for registro in todos_registros:
+                # Crear clave más flexible
+                asunto_limpio = re.sub(r'\s+', ' ', registro.name.lower().strip())
+                fecha_str = registro.create_date.strftime('%Y-%m-%d') if registro.create_date else 'sin_fecha'
+                clave = f"{asunto_limpio}|{registro.remitente or ''}|{fecha_str}"
+                
+                if clave not in grupos:
+                    grupos[clave] = []
+                grupos[clave].append(registro)
+            
+            # Encontrar grupos con más de un registro
+            for clave, registros_grupo in grupos.items():
+                if len(registros_grupo) > 1:
+                    # Mantener el más reciente, marcar otros para eliminar
+                    registros_grupo_ordenados = sorted(registros_grupo, key=lambda r: r.create_date, reverse=True)
+                    for registro_dup in registros_grupo_ordenados[1:]:  # Saltar el primero (más reciente)
+                        registros_duplicados.append(registro_dup)
+                        
+            _logger.info(f"🔍 Encontrados {len(registros_duplicados)} registros duplicados")
+            return registros_duplicados
+            
+        except Exception as e:
+            _logger.error(f"❌ Error encontrando duplicados: {e}")
+            return []
+
     @api.model
     def mantenimiento_automatico_sistema(self):
         """
         Ejecuta mantenimiento automático completo del sistema
+        CORRECCIÓN: Mantenimiento más inteligente y seguro
         """
         try:
             _logger.info("🔧 === INICIO MANTENIMIENTO AUTOMÁTICO SISTEMA ===")
             
+            resultados = {
+                'correos_procesados': 0,
+                'patrones_optimizados': 0,
+                'registros_limpiados': 0,
+                'errores': []
+            }
+            
             # 1. Procesar correos perdidos
             _logger.info("📧 Ejecutando procesamiento de correos perdidos...")
-            self.cron_procesar_correos_perdidos()
+            try:
+                if self.cron_procesar_correos_perdidos():
+                    resultados['correos_procesados'] = 1  # Indicador de éxito
+                    _logger.info("✅ Procesamiento de correos completado")
+                else:
+                    resultados['errores'].append("Fallo en procesamiento de correos")
+            except Exception as e:
+                _logger.error(f"❌ Error procesando correos: {e}")
+                resultados['errores'].append(f"Error correos: {str(e)}")
             
-            # 2. Optimizar patrones
-            _logger.info("⚙️ Ejecutando optimización de patrones...")
-            dummy_registro = self.env['contador.automatico'].browse(1)
-            if dummy_registro.exists():
-                dummy_registro.optimizar_patrones_automaticamente()
+            # 2. Optimizar patrones (solo si hay registros para analizar)
+            total_registros = self.env['contador.automatico'].search_count([])
+            if total_registros > 10:  # Solo optimizar si hay suficientes datos
+                _logger.info("⚙️ Ejecutando optimización de patrones...")
+                try:
+                    dummy_registro = self.env['contador.automatico'].search([], limit=1)
+                    if dummy_registro:
+                        resultado_opt = dummy_registro.optimizar_patrones_automaticamente()
+                        if 'params' in resultado_opt and 'success' in resultado_opt['params']['type']:
+                            resultados['patrones_optimizados'] = 1
+                            _logger.info("✅ Optimización de patrones completada")
+                except Exception as e:
+                    _logger.error(f"❌ Error optimizando patrones: {e}")
+                    resultados['errores'].append(f"Error optimización: {str(e)}")
+            else:
+                _logger.info("⏭️ Saltando optimización - pocos registros para analizar")
             
-            # 3. Limpiar registros antiguos (solo una vez por semana)
+            # 3. Limpiar registros antiguos (solo domingos para evitar sobrecarga)
             hoy = fields.Date.today()
             if hoy.weekday() == 6:  # Domingo
                 _logger.info("🧹 Ejecutando limpieza semanal...")
-                if dummy_registro.exists():
-                    dummy_registro.limpiar_registros_antiguos()
-            
-            _logger.info("✅ Mantenimiento automático completado exitosamente")
-            return True
-            
-        except Exception as e:
-            _logger.error(f"❌ Error en mantenimiento automático: {e}")
-            return False
-    def buscar_serie_dinamico(self, texto):
-        """
-        🔍 Busca número de serie usando patrones dinámicos,
-        con fallback si no encuentra nada.
-        """
-        _logger.info("🔍 Iniciando búsqueda de serie con patrones dinámicos...")
-
-        # 1) ¿Tenemos patrones activos de tipo 'serie'?
-        cnt = self.env['patron.contador'].search_count([
-            ('tipo', '=', 'serie'),
-            ('activo', '=', True)
-        ])
-        _logger.info(f"📊 Patrones de serie disponibles: {cnt}")
-
-        if cnt == 0:
-            _logger.warning("⚠️ No hay patrones de serie configurados. Usando fallback...")
-            return self._buscar_serie_fallback(texto)
-
-        # 2) Intentamos detectar con patrones configurados
-        resultado = self.env['patron.contador'].buscar_por_tipo('serie', texto)
-        if resultado:
-            patron = self._encontrar_patron_usado('serie', texto, resultado)
-            if patron:
-                detalle = f"serie: {patron.name}"
-                self.patrones_usados = (
-                    f"{self.patrones_usados}; {detalle}"
-                    if self.patrones_usados else detalle
-                )
-                _logger.info(f"✅ Serie encontrada: {resultado} usando patrón '{patron.name}'")
-            else:
-                _logger.info(f"✅ Serie encontrada: {resultado}")
-            return resultado
-
-        # 3) Si no, lanzamos fallback
-        _logger.warning("❌ No se encontró serie con patrones dinámicos, intentando fallback...")
-        serie = self._buscar_serie_fallback(texto)
-        if serie:
-            _logger.info(f"✅ Serie encontrada (fallback): {serie}")
-        else:
-            _logger.warning("❌ Tampoco en fallback se encontró serie")
-        return serie
-
-
-    def _buscar_serie_fallback(self, texto):
-        """
-        🔧 Fallback con soporte para español, inglés y Ricoh
-        """
-        _logger.info("🔧 Usando patrones de serie de fallback...")
-
-        patrones = [
-            # ESPAÑOL (Konica/Minolta)
-            r'\[Número de serie\].*?([A-Z0-9]{5,15})',          # [Número de serie], X...
-            r'Número de serie[^\w]*([A-Z0-9]{5,15})',           # Número de serie: X...
-            r'Serie[^\w]*([A-Z0-9]{5,15})',                     # Serie: X...
-            
-            # INGLÉS (Konica/Minolta)
-            r'\[Serial Number\].*?([A-Z0-9]{5,15})',            # [Serial Number], X...
-            r'Serial\s*No\.?:\s*([A-Z0-9]{5,15})',              # Serial No.: X...
-            r'Serial\s*Number[^\w]*([A-Z0-9]{5,15})',           # Serial Number: X...
-            
-            # RICOH (español)
-            r'Nº de serie:\s*([A-Z0-9]{5,15})',                 # Nº de serie: X...
-            r'N° de serie:\s*([A-Z0-9]{5,15})',                 # N° de serie: X...
-            
-            # RICOH (inglés)
-            r'Serial\s*No\s*:\s*([A-Z0-9]{5,15})',              # Serial No : X...
-            
-            # GENÉRICOS
-            r'Page\s*Counter\s*:\s*([A-Z0-9]{5,15})',           # Page Counter: X...
-            r'(?:serie|serial)\s*(?:no\.?)?\s*:?\s*([A-Z0-9]{5,15})'  # Genérico
-        ]
-        
-        for pat in patrones:
-            _logger.info(f"🔍 Probando fallback: '{pat}'")
-            for match in re.finditer(pat, texto, re.IGNORECASE):
-                serie = match.group(1).upper()
-                if len(serie) >= 5:
-                    _logger.info(f"✅ Serie encontrada con fallback '{pat}': {serie}")
-                    return serie
-        return None
-
-
-    def buscar_patrones_contadores_dinamico(self, texto):
-        """
-        🔍 Busca patrones de contadores usando configuración dinámica,
-        con fallback tipo‑a‑tipo si no encuentra nada.
-        """
-        contadores = {}
-        patrones_usados = []
-
-        _logger.info("🔍 Iniciando búsqueda de contadores con patrones dinámicos...")
-        _logger.info(f"📄 Texto a analizar (primeros 200 chars): {texto[:200]}...")
-
-        # Verificar si existen patrones configurados
-        total_patrones = self.env['patron.contador'].search_count([('activo', '=', True)])
-        _logger.info(f"📊 Total de patrones activos disponibles: {total_patrones}")
-
-        # Tipos de contador a buscar
-        tipos = ['contador_bn', 'contador_color', 'contador_scan']
-
-        # Fallback regexs específicas para etiquetas en inglés
-        fallback_por_tipo = {
-            'contador_bn': [
-                # INGLÉS
-                r'\[Total Black Counter\][^0-9]*(\d{4,9})',
-                r'(?:black|b\/w).*?(\d{4,9})',
-                
-                # ESPAÑOL 
-                r'\[Contador de negro total\][^0-9]*(\d{4,9})',     # [Contador de negro total],00183098
-                r'\[Contador negro total\][^0-9]*(\d{4,9})',        # Variante sin "de"
-                r'Contador de negro[^0-9]*(\d{4,9})',               # Sin corchetes
-                r'Contador negro[^0-9]*(\d{4,9})',                  # Sin corchetes, sin "de"
-                
-                # RICOH
-                r'T_TotalPrtPGS:\s*(\d{4,9})',                      # RICOH: Total páginas
-                r'T_MonoPrtPGS:\s*(\d{4,9})'                        # RICOH: Páginas mono
-            ],
-            
-            'contador_color': [
-                # INGLÉS
-                r'\[Total Color Counter\][^0-9]*(\d{4,9})',
-                r'(?:color|colour).*?(\d{4,9})',
-                
-                # ESPAÑOL
-                r'\[Contador de color total\][^0-9]*(\d{4,9})',     # [Contador de color total],00085643
-                r'\[Contador color total\][^0-9]*(\d{4,9})',        # Variante sin "de"
-                r'Contador de color[^0-9]*(\d{4,9})',               # Sin corchetes
-                r'Contador color[^0-9]*(\d{4,9})',                  # Sin corchetes, sin "de"
-                
-                # RICOH
-                r'T_ColorPrtPGS:\s*(\d{4,9})'                       # RICOH: Páginas color
-            ],
-            
-            'contador_scan': [
-                # INGLÉS
-                r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
-                r'(?:scan|fax|copy).*?(\d{4,9})',
-                
-                # ESPAÑOL
-                r'\[Contador total de escaneo\/fax\][^0-9]*(\d{4,9})',  # [Contador total de escaneo/fax],00066775
-                r'\[Contador de escaneo total\][^0-9]*(\d{4,9})',       # Variante
-                r'\[Contador escaneo total\][^0-9]*(\d{4,9})',          # Sin "de"
-                r'Contador.*escaneo[^0-9]*(\d{4,9})',                   # Genérico escaneo
-                r'Contador.*fax[^0-9]*(\d{4,9})',                       # Genérico fax
-                
-                # RICOH (normalmente no envía scan separado)
-                r'T_ScanPGS:\s*(\d{4,9})'                               # RICOH: Páginas scan (raro)
-            ],
-        }
-
-        for tipo in tipos:
-            _logger.info(f"🔍 Buscando patrones para: {tipo}")
-            # 1) Intento con patrones dinámicos
-            resultado = self.env['patron.contador'].buscar_por_tipo(tipo, texto)
-            if resultado:
-                contadores[tipo] = resultado
-                patron_usado = self._encontrar_patron_usado(tipo, texto, resultado)
-                if patron_usado:
-                    patrones_usados.append(f"{tipo}: {patron_usado.name}")
-                    _logger.info(f"✅ {tipo} encontrado: {resultado} usando patrón '{patron_usado.name}'")
-                else:
-                    _logger.info(f"✅ {tipo} encontrado: {resultado}")
-                continue
-
-            # 2) Fallback específico si no hay detección dinámica
-            _logger.warning(f"❌ No se encontró {tipo} con patrones dinámicos, intentando fallback...")
-            for pat in fallback_por_tipo[tipo]:
-                for match in re.finditer(pat, texto, re.IGNORECASE):
-                    raw = match.group(1)
-                    numero = int(re.sub(r'[^0-9]', '', raw))
-                    if numero > 0:
-                        contadores[tipo] = numero
-                        patrones_usados.append(f"{tipo}: fallback '{pat}'")
-                        _logger.info(f"✅ {tipo} encontrado por fallback: {numero} usando patrón '{pat}'")
-                        break
-                if tipo in contadores:
-                    break
-            if tipo not in contadores:
-                _logger.info(f"❌ No se encontró {tipo} incluso en fallback")
-
-        # Guardamos el detalle de qué patrones se usaron
-        if patrones_usados:
-            self.patrones_usados = "; ".join(patrones_usados)
-            _logger.info(f"📋 Patrones utilizados: {self.patrones_usados}")
-
-        _logger.info(f"🎯 Resultado final de contadores: {contadores}")
-        return contadores
-
-
-    def _encontrar_patron_usado(self, tipo, texto, valor_encontrado):
-        """
-        Encuentra qué patrón específico se usó para detectar un valor
-        """
-        try:
-            patrones = self.env['patron.contador'].search([
-                ('tipo', '=', tipo),
-                ('activo', '=', True)
-            ], order='orden')
-            
-            for patron in patrones:
                 try:
-                    matches = re.finditer(patron.patron_regex, texto, re.IGNORECASE)
-                    for match in matches:
-                        if match.groups():
-                            valor = match.group(1).strip()
-                            # Comparar valores
-                            if tipo == 'serie':
-                                if valor.upper() == str(valor_encontrado).upper():
-                                    return patron
-                            else:
-                                valor_num = int(re.sub(r'[^0-9]', '', valor))
-                                if valor_num == valor_encontrado:
-                                    return patron
-                except:
-                    continue
-            return None
-        except Exception as e:
-            _logger.error(f"❌ Error encontrando patrón usado: {e}")
-            return None
-
-    def _buscar_patrones_fallback(self, texto):
-        """
-        Patrones de fallback si no hay configuración dinámica
-        """
-        _logger.info(f"🔧 Usando patrones de fallback...")
-        contadores = {}
-        
-        # Patrones básicos de fallback
-        patrones = {
-            'contador_bn': [
-                r'(?:negro|black|b/?n).*?(\d{5,9})',
-                r'\[Contador de negro total\].*?(\d{5,9})'
-            ],
-            'contador_color': [
-                r'(?:color).*?(\d{5,9})',
-                r'\[Contador de color total\].*?(\d{5,9})'
-            ],
-            'contador_scan': [
-                r'(?:scan|escaneo).*?(\d{5,9})',
-                r'\[Contador total de escaneo\].*?(\d{5,9})'
-            ]
-        }
-        
-        for tipo, lista_patrones in patrones.items():
-            for patron in lista_patrones:
-                matches = re.finditer(patron, texto, re.IGNORECASE)
-                for match in matches:
-                    numero = int(re.sub(r'[^0-9]', '', match.group(1)))
-                    if numero > 0:
-                        contadores[tipo] = numero
-                        _logger.info(f"✅ {tipo} encontrado (fallback): {numero}")
-                        break
-        
-        return contadores
-
-    
-
-    def buscar_equipo_por_serie(self, serie):
-        """
-        Busca el equipo en alquiler por serie
-        """
-        if not serie:
-            _logger.warning(f"⚠️ No se proporcionó serie para buscar equipo")
-            return None
-        
-        _logger.info(f"🔍 Buscando equipo con serie: '{serie}'")
-        
-        try:
-            equipo = self.env['alquiler'].search([('serie', '=', serie)], limit=1)
-            
-            if equipo:
-                _logger.info(f"✅ Equipo encontrado: ID={equipo.id}, Serie={serie}")
-                return equipo
+                    dummy_registro = self.env['contador.automatico'].search([], limit=1)
+                    if dummy_registro:
+                        resultado_limp = dummy_registro.limpiar_registros_antiguos()
+                        if 'params' in resultado_limp and 'success' in resultado_limp['params']['type']:
+                            resultados['registros_limpiados'] = 1
+                            _logger.info("✅ Limpieza semanal completada")
+                except Exception as e:
+                    _logger.error(f"❌ Error en limpieza: {e}")
+                    resultados['errores'].append(f"Error limpieza: {str(e)}")
             else:
-                _logger.warning(f"❌ No se encontró equipo con serie: '{serie}'")
-                return None
-                
+                _logger.info("⏭️ Saltando limpieza - solo se ejecuta los domingos")
+            
+            # 4. Resumen final
+            exitos = sum([resultados['correos_procesados'], resultados['patrones_optimizados'], resultados['registros_limpiados']])
+            total_errores = len(resultados['errores'])
+            
+            _logger.info(f"📊 === RESUMEN MANTENIMIENTO ===")
+            _logger.info(f"✅ Tareas exitosas: {exitos}")
+            _logger.info(f"❌ Errores: {total_errores}")
+            
+            if total_errores == 0:
+                _logger.info("🎉 Mantenimiento automático completado exitosamente")
+                return True
+            else:
+                _logger.warning(f"⚠️ Mantenimiento completado con {total_errores} errores")
+                for error in resultados['errores']:
+                    _logger.warning(f"  - {error}")
+                return False
+            
         except Exception as e:
-            _logger.error(f"❌ Error buscando equipo: {e}")
-            return None
+            _logger.error(f"❌ Error crítico en mantenimiento automático: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
+            return False
 
-    def actualizar_contadores_equipo(self, equipo, contadores):
+
+    def _enviar_notificacion_cron(self, resumen):
         """
-        Actualiza los contadores del equipo
+        Envía notificación sobre la ejecución del CRON
+        CORRECCIÓN: Notificaciones más inteligentes y menos invasivas
         """
         try:
-            _logger.info(f"💾 === INICIANDO ACTUALIZACIÓN DE EQUIPO ===")
-            _logger.info(f"🎯 Equipo ID={equipo.id}, Serie={equipo.serie}")
-            _logger.info(f"📊 Contadores a actualizar: {contadores}")
+            # CORRECCIÓN: Solo notificar en casos importantes
+            debe_notificar = False
+            razon_notificacion = ""
             
-            # Preparar valores para actualizar
-            valores_actualizacion = {}
+            # Notificar si hay correos procesados exitosamente
+            if resumen.get('correos_procesados', 0) > 0:
+                debe_notificar = True
+                razon_notificacion = f"{resumen['correos_procesados']} correos procesados"
             
-            if 'contador_bn' in contadores:
-                valores_actualizacion['contador_bn'] = contadores['contador_bn']
-                _logger.info(f"✅ Preparando actualización BN: → {contadores['contador_bn']}")
+            # Notificar si hay muchos fallos (más del 50%)
+            correos_encontrados = resumen.get('correos_encontrados', 0)
+            correos_fallidos = resumen.get('correos_fallidos', 0)
+            if correos_encontrados > 0 and (correos_fallidos / correos_encontrados) > 0.5:
+                debe_notificar = True
+                if razon_notificacion:
+                    razon_notificacion += f", {correos_fallidos} fallos críticos"
+                else:
+                    razon_notificacion = f"{correos_fallidos} fallos críticos"
             
-            if 'contador_color' in contadores:
-                valores_actualizacion['contador_color'] = contadores['contador_color']
-                _logger.info(f"✅ Preparando actualización Color: → {contadores['contador_color']}")
+            if not debe_notificar:
+                _logger.info("ℹ️ No se requiere notificación - ejecución normal sin eventos significativos")
+                return
             
-            if 'contador_scan' in contadores:
-                valores_actualizacion['contador_scan'] = contadores['contador_scan']
-                _logger.info(f"✅ Preparando actualización Scan: → {contadores['contador_scan']}")
+            _logger.info(f"📧 Enviando notificación CRON: {razon_notificacion}")
             
-            # Realizar actualización
-            _logger.info(f"💾 Ejecutando write() en equipo...")
-            equipo.sudo().write(valores_actualizacion)
-            _logger.info(f"✅ Write() ejecutado exitosamente")
+            # Buscar usuarios para notificar (con fallbacks)
+            usuarios_notificar = []
             
-            _logger.info(f"🎉 === ACTUALIZACIÓN DE EQUIPO COMPLETADA ===")
+            try:
+                # Intentar grupo de administradores
+                grupo_admin = self.env.ref('base.group_system')
+                usuarios_notificar = grupo_admin.users[:3]  # Máximo 3 usuarios
+            except:
+                try:
+                    # Fallback: usuario admin
+                    usuario_admin = self.env['res.users'].search([('login', '=', 'admin')], limit=1)
+                    if usuario_admin:
+                        usuarios_notificar = [usuario_admin]
+                except:
+                    pass
+            
+            if not usuarios_notificar:
+                _logger.warning("⚠️ No se encontraron usuarios para notificar")
+                return
+            
+            # CORRECCIÓN: Preparar mensaje más conciso y útil
+            fecha_str = resumen.get('fecha_ejecucion', fields.Datetime.now()).strftime('%Y-%m-%d %H:%M')
+            
+            # Determinar nivel de urgencia
+            if correos_fallidos > correos_encontrados * 0.7:
+                nivel = "🔴 CRÍTICO"
+                color = "red"
+            elif correos_fallidos > correos_encontrados * 0.3:
+                nivel = "🟡 ATENCIÓN"
+                color = "orange"
+            else:
+                nivel = "🟢 NORMAL"
+                color = "green"
+            
+            asunto = f"CRON Contadores {nivel} - {razon_notificacion}"
+            
+            cuerpo = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                <h3 style="color: {color};">{nivel} - Procesamiento Automático de Contadores</h3>
+                
+                <table style="border-collapse: collapse; width: 100%; margin: 15px 0;">
+                    <tr style="background-color: #f5f5f5;">
+                        <td style="padding: 8px; border: 1px solid #ddd;"><strong>Fecha de ejecución:</strong></td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">{fecha_str}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ddd;"><strong>Correos encontrados:</strong></td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">{resumen.get('correos_encontrados', 0)}</td>
+                    </tr>
+                    <tr style="background-color: #f5f5f5;">
+                        <td style="padding: 8px; border: 1px solid #ddd;"><strong>Procesados exitosamente:</strong></td>
+                        <td style="padding: 8px; border: 1px solid #ddd; color: green;"><strong>{resumen.get('correos_procesados', 0)}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ddd;"><strong>Fallos:</strong></td>
+                        <td style="padding: 8px; border: 1px solid #ddd; color: {color};"><strong>{correos_fallidos}</strong></td>
+                    </tr>
+                    <tr style="background-color: #f5f5f5;">
+                        <td style="padding: 8px; border: 1px solid #ddd;"><strong>Período revisado:</strong></td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">{resumen.get('horas_revision', 24)} horas</td>
+                    </tr>
+                </table>
+                
+                {f'<div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 15px 0; border-radius: 5px;"><strong>⚠️ Atención:</strong> Alta tasa de fallos ({correos_fallidos}/{correos_encontrados}). Revisar logs del sistema.</div>' if correos_fallidos > correos_encontrados * 0.3 else ''}
+                
+                <div style="margin: 20px 0; padding: 10px; background-color: #e8f5e8; border-radius: 5px;">
+                    <small><em>📧 Notificación automática del sistema de procesamiento de contadores.<br>
+                    Para revisar detalles, consulte los logs del sistema o el dashboard de contadores.</em></small>
+                </div>
+            </div>
+            """
+            
+            # Enviar notificación a usuarios seleccionados
+            notificaciones_enviadas = 0
+            for usuario in usuarios_notificar:
+                try:
+                    # CORRECCIÓN: Usar método más confiable de notificación
+                    self.env['mail.mail'].create({
+                        'subject': asunto,
+                        'body_html': cuerpo,
+                        'email_to': usuario.email or usuario.partner_id.email,
+                        'auto_delete': True,
+                        'state': 'outgoing'
+                    })
+                    notificaciones_enviadas += 1
+                    _logger.info(f"📧 Notificación enviada a {usuario.name} ({usuario.email})")
+                    
+                except Exception as e:
+                    _logger.error(f"❌ Error enviando notificación a {usuario.name}: {e}")
+                    
+                    # Fallback: mensaje interno en Odoo
+                    try:
+                        self.env['mail.message'].create({
+                            'subject': asunto,
+                            'body': cuerpo,
+                            'message_type': 'notification',
+                            'partner_ids': [(4, usuario.partner_id.id)],
+                            'needaction_partner_ids': [(4, usuario.partner_id.id)]
+                        })
+                        notificaciones_enviadas += 1
+                        _logger.info(f"📧 Notificación interna enviada a {usuario.name}")
+                    except Exception as e2:
+                        _logger.error(f"❌ Error también en notificación interna: {e2}")
+            
+            if notificaciones_enviadas > 0:
+                _logger.info(f"✅ Notificaciones CRON enviadas exitosamente a {notificaciones_enviadas} usuarios")
+            else:
+                _logger.error("❌ No se pudo enviar ninguna notificación")
             
         except Exception as e:
-            _logger.error(f"❌ === ERROR ACTUALIZANDO EQUIPO ===")
-            _logger.error(f"Error: {e}")
-            raise
+            _logger.error(f"❌ Error crítico enviando notificaciones CRON: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
 
-    # Agregar el campo patrones_usados si no existe
-    patrones_usados = fields.Text('Patrones utilizados', readonly=True, 
-                                help="Registro de qué patrones se usaron para detectar datos")
+    @api.model
+    def diagnosticar_sistema(self):
+        """
+        NUEVO: Diagnóstico completo del sistema para detectar problemas
+        """
+        try:
+            _logger.info("🔬 === INICIANDO DIAGNÓSTICO DEL SISTEMA ===")
+            
+            diagnostico = {
+                'fecha_diagnostico': fields.Datetime.now(),
+                'estado_general': 'saludable',
+                'problemas_encontrados': [],
+                'recomendaciones': [],
+                'estadisticas': {}
+            }
+            
+            # 1. Verificar modelos requeridos
+            _logger.info("🔍 Verificando modelos del sistema...")
+            try:
+                self.env['patron.contador'].search_count([])
+                diagnostico['modelo_patrones'] = 'disponible'
+            except:
+                diagnostico['modelo_patrones'] = 'no_disponible'
+                diagnostico['problemas_encontrados'].append("Modelo 'patron.contador' no disponible")
+                diagnostico['estado_general'] = 'problemas_menores'
+            
+            try:
+                self.env['alquiler'].search_count([])
+                diagnostico['modelo_equipos'] = 'disponible'
+            except:
+                diagnostico['modelo_equipos'] = 'no_disponible'
+                diagnostico['problemas_encontrados'].append("Modelo 'alquiler' no disponible")
+                diagnostico['estado_general'] = 'problemas_criticos'
+            
+            # 2. Verificar canal de correos
+            _logger.info("📧 Verificando canal de correos...")
+            canal_correos = self.env['discuss.channel'].search([('name', 'ilike', 'correos')], limit=1)
+            if canal_correos:
+                diagnostico['canal_correos'] = 'encontrado'
+                
+                # Verificar mensajes recientes
+                hace_24h = fields.Datetime.now() - timedelta(hours=24)
+                mensajes_recientes = self.env['mail.message'].search_count([
+                    ('model', '=', 'discuss.channel'),
+                    ('res_id', '=', canal_correos.id),
+                    ('date', '>=', hace_24h)
+                ])
+                diagnostico['mensajes_24h'] = mensajes_recientes
+                
+                if mensajes_recientes == 0:
+                    diagnostico['problemas_encontrados'].append("No hay mensajes recientes en canal de correos")
+                    diagnostico['recomendaciones'].append("Verificar configuración del canal de correos")
+            else:
+                diagnostico['canal_correos'] = 'no_encontrado'
+                diagnostico['problemas_encontrados'].append("Canal 'correos' no encontrado")
+                diagnostico['recomendaciones'].append("Crear canal 'correos' para recibir correos automáticos")
+                diagnostico['estado_general'] = 'problemas_criticos'
+            
+            # 3. Analizar registros problemáticos
+            _logger.info("📊 Analizando registros...")
+            total_registros = self.env['contador.automatico'].search_count([])
+            registros_error = self.env['contador.automatico'].search_count([('estado', '=', 'error')])
+            registros_manual = self.env['contador.automatico'].search_count([('estado', '=', 'manual')])
+            registros_procesados = self.env['contador.automatico'].search_count([('estado', '=', 'procesado')])
+            
+            diagnostico['estadisticas'].update({
+                'total_registros': total_registros,
+                'registros_error': registros_error,
+                'registros_manual': registros_manual,
+                'registros_procesados': registros_procesados,
+                'tasa_exito': round((registros_procesados / total_registros * 100) if total_registros > 0 else 0, 1)
+            })
+            
+            # Detectar problemas en tasas
+            if total_registros > 10:
+                tasa_error = registros_error / total_registros
+                tasa_manual = registros_manual / total_registros
+                
+                if tasa_error > 0.2:  # Más del 20% en error
+                    diagnostico['problemas_encontrados'].append(f"Alta tasa de errores: {tasa_error:.1%}")
+                    diagnostico['recomendaciones'].append("Revisar logs para identificar errores recurrentes")
+                    diagnostico['estado_general'] = 'problemas_menores'
+                
+                if tasa_manual > 0.5:  # Más del 50% requiere procesamiento manual
+                    diagnostico['problemas_encontrados'].append(f"Alta tasa de procesamiento manual: {tasa_manual:.1%}")
+                    diagnostico['recomendaciones'].append("Mejorar patrones automáticos o entrenar el sistema")
+                    diagnostico['estado_general'] = 'problemas_menores'
+            
+            # 4. Verificar patrones
+            if diagnostico['modelo_patrones'] == 'disponible':
+                _logger.info("🎯 Analizando patrones...")
+                try:
+                    total_patrones = self.env['patron.contador'].search_count([('activo', '=', True)])
+                    patrones_auto = self.env['patron.contador'].search_count([('auto_generado', '=', True), ('activo', '=', True)])
+                    
+                    diagnostico['estadisticas'].update({
+                        'total_patrones_activos': total_patrones,
+                        'patrones_auto_generados': patrones_auto
+                    })
+                    
+                    if total_patrones < 5:
+                        diagnostico['problemas_encontrados'].append("Pocos patrones activos disponibles")
+                        diagnostico['recomendaciones'].append("Ejecutar creación de patrones por defecto")
+                        
+                except Exception as e:
+                    _logger.error(f"Error analizando patrones: {e}")
+            
+            # 5. Determinar estado final
+            if diagnostico['problemas_encontrados']:
+                if any('criticos' in problema for problema in diagnostico['problemas_encontrados']):
+                    diagnostico['estado_general'] = 'problemas_criticos'
+                elif diagnostico['estado_general'] == 'saludable':
+                    diagnostico['estado_general'] = 'problemas_menores'
+            
+            # 6. Generar recomendaciones automáticas
+            if not diagnostico['recomendaciones']:
+                diagnostico['recomendaciones'].append("Sistema funcionando correctamente")
+            
+            _logger.info(f"🔬 === DIAGNÓSTICO COMPLETADO ===")
+            _logger.info(f"Estado general: {diagnostico['estado_general']}")
+            _logger.info(f"Problemas encontrados: {len(diagnostico['problemas_encontrados'])}")
+            _logger.info(f"Recomendaciones: {len(diagnostico['recomendaciones'])}")
+            
+            return diagnostico
+            
+        except Exception as e:
+            _logger.error(f"❌ Error en diagnóstico del sistema: {e}")
+            return {
+                'fecha_diagnostico': fields.Datetime.now(),
+                'estado_general': 'error_diagnostico',
+                'error': str(e),
+                'problemas_encontrados': [f"Error ejecutando diagnóstico: {str(e)}"],
+                'recomendaciones': ["Contactar soporte técnico"]
+            }
+
+    def ejecutar_diagnostico_completo(self):
+        """
+        NUEVO: Método wrapper para ejecutar diagnóstico desde interfaz
+        """
+        try:
+            diagnostico = self.diagnosticar_sistema()
+            
+            # Preparar mensaje para mostrar
+            estado = diagnostico['estado_general']
+            problemas = len(diagnostico.get('problemas_encontrados', []))
+            
+            if estado == 'saludable':
+                mensaje = "✅ Sistema funcionando correctamente"
+                tipo = 'success'
+            elif estado == 'problemas_menores':
+                mensaje = f"⚠️ Sistema funcional con {problemas} problemas menores detectados"
+                tipo = 'warning'
+            else:
+                mensaje = f"❌ Sistema con {problemas} problemas críticos - requiere atención"
+                tipo = 'danger'
+            
+            # Log detallado
+            _logger.info(f"📋 Diagnóstico completado: {mensaje}")
+            for problema in diagnostico.get('problemas_encontrados', []):
+                _logger.info(f"  ⚠️ {problema}")
+            for recomendacion in diagnostico.get('recomendaciones', []):
+                _logger.info(f"  💡 {recomendacion}")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': tipo
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error ejecutando diagnóstico: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error en diagnóstico: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+    def mostrar_resumen_estado(self):
+        """
+        NUEVO: Muestra un resumen rápido del estado del sistema
+        """
+        try:
+            # Estadísticas rápidas
+            total = self.env['contador.automatico'].search_count([])
+            procesados = self.env['contador.automatico'].search_count([('estado', '=', 'procesado')])
+            ultima_semana = self.env['contador.automatico'].search_count([
+                ('create_date', '>=', fields.Date.today() - timedelta(days=7))
+            ])
+            
+            tasa_exito = (procesados / total * 100) if total > 0 else 0
+            
+            # Mensaje de estado
+            if tasa_exito >= 80:
+                estado_emoji = "🟢"
+                estado_texto = "Excelente"
+            elif tasa_exito >= 60:
+                estado_emoji = "🟡"
+                estado_texto = "Bueno"
+            else:
+                estado_emoji = "🔴"
+                estado_texto = "Requiere atención"
+            
+            mensaje = f"""
+            {estado_emoji} Estado del Sistema: {estado_texto}
+            
+            📊 Estadísticas:
+            • Total registros: {total}
+            • Procesados exitosamente: {procesados} ({tasa_exito:.1f}%)
+            • Actividad última semana: {ultima_semana} registros
+            
+            🔄 Para diagnóstico completo, use el botón "Diagnosticar Sistema"
+            """
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': 'info',
+                    'sticky': True
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error obteniendo estado: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     
 class ContadorAutomaticoEstadisticas(models.Model):

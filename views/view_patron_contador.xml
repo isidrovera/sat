@@ -173,7 +173,7 @@
                         <!-- Pestaña: Información Técnica (solo para auto-generados) -->
                         <page string="🔧 Técnico" name="technical" invisible="not auto_generado">
                             <group string="Origen del Patrón">
-                                <field name="texto_origen" widget="text" readonly="1"/>
+                                
                             </group>
                         </page>
 

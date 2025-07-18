@@ -142,7 +142,7 @@
                             <group string="Análisis de Contenido">
                                 <field name="palabras_clave_encontradas" widget="text" readonly="1"/>
                                 <field name="estructura_detectada" widget="text" readonly="1"/>
-                                <field name="patrones_aplicados" widget="text" readonly="1"/>
+                                
                             </group>
                         </page>
 
@@ -246,10 +246,7 @@
                 inteligencia artificial para detectar series, contadores y marcas.
             </p>
             <p>
-                <button name="buscar_y_procesar_correos_inteligente" type="object" 
-                        class="btn btn-primary">
-                    🔍 Buscar y Procesar Correos
-                </button>
+               
             </p>
         </field>
     </record>
