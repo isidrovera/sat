@@ -63,8 +63,11 @@
                             type="object" 
                             class="btn-primary"
                             invisible="estado in ['procesado']"/>
-                    
-                    
+                    <button name="procesar_correos_directos_manual" 
+                        string="🔧 Procesar Correos Manual" 
+                        type="object" 
+                        class="btn-warning"/>
+                                    
                     
                     <!-- Estado visual -->
                     <field name="estado" widget="statusbar" 
