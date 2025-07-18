@@ -1934,8 +1934,24 @@ class ContadorAutomatico(models.Model):
         """
         NUEVO: Procesamiento manual directo desde mail.message
         Útil para probar o procesar correos específicos
+        CORRECCIÓN: Manejo de parámetros que vienen como lista
         """
         try:
+            # CORRECCIÓN: Validar y convertir el parámetro horas si viene como lista
+            if isinstance(horas, list):
+                if len(horas) > 0 and isinstance(horas[0], (int, float)):
+                    horas = int(horas[0])
+                    _logger.info(f"🔧 Parámetro horas convertido de lista a entero: {horas}")
+                else:
+                    _logger.warning(f"⚠️ Parámetro horas inválido en lista: {horas}, usando valor por defecto")
+                    horas = 24
+            elif not isinstance(horas, (int, float)):
+                _logger.warning(f"⚠️ Parámetro horas inválido: {horas} (tipo: {type(horas)}), usando valor por defecto")
+                horas = 24
+            
+            # Asegurar que sea entero positivo
+            horas = max(1, int(horas))
+            
             _logger.info(f"🔧 === PROCESAMIENTO MANUAL DIRECTO ({horas}h) ===")
             
             fecha_limite = fields.Datetime.now() - timedelta(hours=horas)
