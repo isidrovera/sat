@@ -209,16 +209,16 @@
                                     <i class="fa fa-info-circle me-2"></i>
                                     Detalle del Equipo
                                 </h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                <button type="button" name="close_modal" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body" id="modal_content">
                                 <!-- Contenido dinámico -->
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <button type="button" name="close_modal_footer" class="btn btn-secondary" data-bs-dismiss="modal">
                                     <i class="fa fa-times me-1"></i>Cerrar
                                 </button>
-                                <button type="button" class="btn btn-primary" id="btn_view_history">
+                                <button type="button" name="view_history" class="btn btn-primary" id="btn_view_history">
                                     <i class="fa fa-history me-1"></i>Ver Historial
                                 </button>
                             </div>
@@ -227,9 +227,9 @@
                 </div>
 
                 <!-- Botón flotante de refresh -->
-                <button class="refresh-btn" id="floating_refresh" title="Actualizar datos">
-                    <i class="fa fa-sync-alt"></i>
-                </button>
+                <button type="button" name="floating_refresh" class="refresh-btn" id="floating_refresh" title="Actualizar datos">
+    <i class="fa fa-sync-alt"></i>
+</button>
 
                 <!-- Loading overlay -->
                 <div class="loading-overlay d-none" id="loading_overlay">
