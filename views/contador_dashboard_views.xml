@@ -1,171 +1,242 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_contador_dashboard_list" model="ir.ui.view">
-        <field name="name">contador.dashboard.list</field>
+    <!-- Vista Dashboard Principal con estadísticas arriba y lista abajo -->
+    <record id="view_contador_dashboard_main" model="ir.ui.view">
+        <field name="name">contador.dashboard.main</field>
         <field name="model">contador.dashboard</field>
         <field name="arch" type="xml">
-            <list string="Listado de Contadores" create="false" delete="false" edit="false">
-                <field name="cliente_detectado"/>
-                <field name="serie_detectada"/>
-                <field name="tipo_equipo_detectado"/>
-                <field name="contador_total_actual"/>
-                <field name="ultima_actualizacion"/>
-                <button name="action_ver_detalle_equipo"
-                        type="object"
-                        icon="fa-eye"
-                        string="Detalle"
-                        class="btn-sm btn-outline-primary"/>
-            </list>
-        </field>
-    </record>
-    <!-- Vista Dashboard Principal -->
-    <record id="view_contador_dashboard_kanban" model="ir.ui.view">
-        <field name="name">contador.dashboard.kanban</field>
-        <field name="model">contador.dashboard</field>
-        <field name="arch" type="xml">
-            <kanban class="o_contador_dashboard" js_class="contador_dashboard_kanban">
-                <field name="serie_detectada"/>
-                <field name="cliente_detectado"/>
-                <field name="tipo_equipo_detectado"/>
-                <field name="contador_total_actual"/>
-                <field name="contador_bn_actual"/>
-                <field name="contador_color_actual"/>
-                <field name="ultima_actualizacion"/>
-                <field name="estado_ultimo"/>
-                
-                <templates>
-                    <t t-name="kanban-box">
-                        <div class="oe_kanban_card oe_kanban_global_click contador-card">
-                            <div class="card h-100 shadow-sm border-0">
-                                <!-- Header de la tarjeta -->
-                                <div class="card-header bg-primary text-white py-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0">
-                                            <i class="fa fa-building me-2"></i>
-                                            <field name="cliente_detectado"/>
-                                        </h6>
-                                        <span t-attf-class="badge badge-#{record.estado_ultimo.raw_value == 'procesado' ? 'success' : 'warning'}">
-                                            <i t-attf-class="fa #{record.estado_ultimo.raw_value == 'procesado' ? 'fa-check' : 'fa-exclamation'}"></i>
-                                            <field name="estado_ultimo"/>
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                <!-- Cuerpo de la tarjeta -->
-                                <div class="card-body">
-                                    <!-- Información del equipo -->
-                                    <div class="row mb-3">
-                                        <div class="col-8">
-                                            <div class="d-flex align-items-center mb-2">
-                                                <i t-attf-class="fa #{record.tipo_equipo_detectado.raw_value == 'color' ? 'fa-palette text-info' : 'fa-circle text-dark'} me-2"></i>
-                                                <span class="fw-bold"><field name="serie_detectada"/></span>
-                                            </div>
-                                            <small class="text-muted">
-                                                <i class="fa fa-tag me-1"></i>
-                                                <field name="tipo_equipo_detectado"/>
-                                            </small>
-                                        </div>
-                                        <div class="col-4 text-end">
-                                            <div class="contador-total">
-                                                <h4 class="text-primary mb-0">
-                                                    <field name="contador_total_actual" widget="integer"/>
-                                                </h4>
-                                                <small class="text-muted">Total</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Contadores detallados -->
-                                    <div class="row text-center">
-                                        <div class="col-4">
-                                            <div class="contador-detalle">
-                                                <i class="fa fa-circle text-dark mb-1"></i>
-                                                <div class="fw-bold"><field name="contador_bn_actual" widget="integer"/></div>
-                                                <small class="text-muted">B/N</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-4" t-if="record.tipo_equipo_detectado.raw_value == 'color'">
-                                            <div class="contador-detalle">
-                                                <i class="fa fa-palette text-info mb-1"></i>
-                                                <div class="fw-bold text-info"><field name="contador_color_actual" widget="integer"/></div>
-                                                <small class="text-muted">Color</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-4">
-                                            <div class="contador-detalle">
-                                                <i class="fa fa-clock text-success mb-1"></i>
-                                                <div class="fw-bold text-success">
-                                                    <field name="ultima_actualizacion" widget="relative"/>
-                                                </div>
-                                                <small class="text-muted">Actualizado</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Footer con acciones -->
-                                <div class="card-footer bg-light border-0 py-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">
-                                            <i class="fa fa-calendar me-1"></i>
-                                            <field name="ultima_actualizacion" widget="date"/>
-                                        </small>
-                                        <button name="action_ver_detalle_equipo"
-                                                type="object"
-                                               class="btn btn-sm btn-outline-primary">
-                                            <i class="fa fa-eye me-1"></i>
-                                           Detalle
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </t>
-                </templates>
-            </kanban>
-        </field>
-    </record>
+            <form string="Dashboard Contadores" class="o_contador_dashboard_main">
+                <!-- Header con título y botón refresh -->
+                <div class="dashboard-header text-center py-4 mb-4">
+                    <div class="container">
+                        <h1 class="display-4 fw-bold mb-2">
+                            <i class="fa fa-chart-line me-3"></i>
+                            Dashboard de Contadores
+                        </h1>
+                        <p class="lead mb-3">Monitoreo en tiempo real de equipos de impresión</p>
+                        <button name="refresh_dashboard" 
+                                type="object" 
+                                class="btn btn-light btn-lg rounded-pill px-4">
+                            <i class="fa fa-sync-alt me-2"></i>
+                            Actualizar Dashboard
+                        </button>
+                    </div>
+                </div>
 
-    <!-- Vista de estadísticas superior -->
-    <record id="view_contador_dashboard_stats" model="ir.ui.view">
-        <field name="name">contador.dashboard.stats</field>
-        <field name="model">contador.dashboard</field>
-        <field name="arch" type="xml">
-            <form string="Dashboard Estadísticas" class="o_contador_stats">
-                <div class="alert alert-info text-center mb-4">
-                    <h3 class="mb-3">
-                        <i class="fa fa-chart-line me-2"></i>
-                        Dashboard de Contadores
-                    </h3>
+                <!-- Estadísticas principales -->
+                <div class="container mb-5">
+                    <div class="row g-4">
+                        <!-- Equipos Activos Hoy -->
+                        <div class="col-xl-3 col-lg-6 col-md-6">
+                            <div class="stat-card h-100">
+                                <div class="stat-icon bg-primary">
+                                    <i class="fa fa-desktop"></i>
+                                </div>
+                                <div class="stat-number" id="equipos_hoy">0</div>
+                                <div class="stat-label">Equipos Actualizados Hoy</div>
+                                <div class="stat-subtitle text-muted mt-2">
+                                    <i class="fa fa-calendar-day me-1"></i>
+                                    Últimas 24 horas
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Equipos Semana -->
+                        <div class="col-xl-3 col-lg-6 col-md-6">
+                            <div class="stat-card h-100">
+                                <div class="stat-icon bg-success">
+                                    <i class="fa fa-calendar-week"></i>
+                                </div>
+                                <div class="stat-number" id="equipos_semana">0</div>
+                                <div class="stat-label">Equipos Esta Semana</div>
+                                <div class="stat-subtitle text-muted mt-2">
+                                    <i class="fa fa-chart-line me-1"></i>
+                                    Últimos 7 días
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Equipos -->
+                        <div class="col-xl-3 col-lg-6 col-md-6">
+                            <div class="stat-card h-100">
+                                <div class="stat-icon bg-info">
+                                    <i class="fa fa-database"></i>
+                                </div>
+                                <div class="stat-number" id="total_equipos">0</div>
+                                <div class="stat-label">Total en Sistema</div>
+                                <div class="stat-subtitle text-muted mt-2">
+                                    <i class="fa fa-building me-1"></i>
+                                    Todos los equipos
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Eficiencia -->
+                        <div class="col-xl-3 col-lg-6 col-md-6">
+                            <div class="stat-card h-100">
+                                <div class="stat-icon bg-warning">
+                                    <i class="fa fa-percentage"></i>
+                                </div>
+                                <div class="stat-number" id="eficiencia">0%</div>
+                                <div class="stat-label">Eficiencia Sistema</div>
+                                <div class="stat-subtitle text-muted mt-2">
+                                    <i class="fa fa-thumbs-up me-1"></i>
+                                    Procesamiento automático
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros rápidos -->
+                <div class="container mb-4">
                     <div class="row">
-                        <div class="col-md-3">
-                            <div class="stat-card bg-primary text-white rounded p-3">
-                                <i class="fa fa-desktop fa-2x mb-2"></i>
-                                <h4 id="equipos_hoy">-</h4>
-                                <small>Equipos Hoy</small>
+                        <div class="col-12">
+                            <div class="filters-container bg-white rounded-3 shadow-sm p-3">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button type="button" class="btn btn-outline-primary btn-sm filter-btn" data-filter="all">
+                                                <i class="fa fa-list me-1"></i>Todos
+                                            </button>
+                                            <button type="button" class="btn btn-outline-success btn-sm filter-btn" data-filter="hoy">
+                                                <i class="fa fa-calendar-day me-1"></i>Hoy
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info btn-sm filter-btn" data-filter="color">
+                                                <i class="fa fa-palette me-1"></i>Color
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="mono">
+                                                <i class="fa fa-circle me-1"></i>Monocromáticas
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fa fa-search"></i>
+                                            </span>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   placeholder="Buscar cliente o serie..."
+                                                   id="search_input">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="stat-card bg-success text-white rounded p-3">
-                                <i class="fa fa-calendar-week fa-2x mb-2"></i>
-                                <h4 id="equipos_semana">-</h4>
-                                <small>Equipos Semana</small>
+                    </div>
+                </div>
+
+                <!-- Lista de máquinas -->
+                <div class="container">
+                    <div class="machines-table">
+                        <div class="table-header">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h3 class="mb-0">
+                                        <i class="fa fa-list me-2"></i>
+                                        Equipos de Impresión
+                                    </h3>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <span class="badge bg-light text-dark px-3 py-2">
+                                        <i class="fa fa-clock me-1"></i>
+                                        Actualizado: <span id="last_update">Cargando...</span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="stat-card bg-info text-white rounded p-3">
-                                <i class="fa fa-database fa-2x mb-2"></i>
-                                <h4 id="total_equipos">-</h4>
-                                <small>Total Sistema</small>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="machines_table">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="px-4 py-3 border-0">
+                                            <i class="fa fa-building me-2 text-muted"></i>Cliente
+                                        </th>
+                                        <th class="px-4 py-3 border-0">
+                                            <i class="fa fa-barcode me-2 text-muted"></i>Serie
+                                        </th>
+                                        <th class="px-4 py-3 border-0 text-center">
+                                            <i class="fa fa-cog me-2 text-muted"></i>Tipo
+                                        </th>
+                                        <th class="px-4 py-3 border-0 text-center">
+                                            <i class="fa fa-tachometer-alt me-2 text-muted"></i>Contadores
+                                        </th>
+                                        <th class="px-4 py-3 border-0 text-center">
+                                            <i class="fa fa-clock me-2 text-muted"></i>Última Actualización
+                                        </th>
+                                        <th class="px-4 py-3 border-0 text-center">
+                                            <i class="fa fa-tasks me-2 text-muted"></i>Estado
+                                        </th>
+                                        <th class="px-4 py-3 border-0 text-center">
+                                            <i class="fa fa-eye me-2 text-muted"></i>Acciones
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="machines_tbody">
+                                    <!-- Las filas se llenarán dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Paginación -->
+                        <div class="table-footer p-3 bg-light">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <span class="text-muted">
+                                        Mostrando <span id="showing_count">0</span> de <span id="total_count">0</span> equipos
+                                    </span>
+                                </div>
+                                <div class="col-md-6">
+                                    <nav>
+                                        <ul class="pagination pagination-sm justify-content-end mb-0" id="pagination">
+                                            <!-- Paginación dinámica -->
+                                        </ul>
+                                    </nav>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="stat-card bg-warning text-white rounded p-3">
-                                <i class="fa fa-percentage fa-2x mb-2"></i>
-                                <h4 id="eficiencia">-</h4>
-                                <small>Eficiencia</small>
+                    </div>
+                </div>
+
+                <!-- Modal de detalle -->
+                <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content border-0 shadow">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">
+                                    <i class="fa fa-info-circle me-2"></i>
+                                    Detalle del Equipo
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body" id="modal_content">
+                                <!-- Contenido dinámico -->
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="fa fa-times me-1"></i>Cerrar
+                                </button>
+                                <button type="button" class="btn btn-primary" id="btn_view_history">
+                                    <i class="fa fa-history me-1"></i>Ver Historial
+                                </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Botón flotante de refresh -->
+                <button class="refresh-btn" id="floating_refresh" title="Actualizar datos">
+                    <i class="fa fa-sync-alt"></i>
+                </button>
+
+                <!-- Loading overlay -->
+                <div class="loading-overlay d-none" id="loading_overlay">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                        <h5>Cargando datos...</h5>
+                        <p class="text-muted">Por favor espere un momento</p>
                     </div>
                 </div>
             </form>
@@ -173,11 +244,12 @@
     </record>
 
     <!-- Acción principal del Dashboard -->
-     <record id="action_contador_dashboard" model="ir.actions.act_window">
+    <record id="action_contador_dashboard_main" model="ir.actions.act_window">
         <field name="name">📊 Dashboard Contadores</field>
         <field name="res_model">contador.dashboard</field>
-        <!-- habilita el switcher Kanban ↔ Lista -->
-        <field name="view_mode">kanban,list</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_contador_dashboard_main"/>
+        <field name="target">current</field>
         
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face text-center">
@@ -185,15 +257,15 @@
             </p>
             <h3 class="text-center">¡Bienvenido al Dashboard de Contadores!</h3>
             <p class="text-center text-muted">
-                Usa el selector de vistas para alternar entre Tarjetas y Lista.
+                Monitorea el estado de todos tus equipos de impresión en tiempo real.
             </p>
         </field>
     </record>
 
-    <!-- Menú principal -->
+    <!-- Menú principal actualizado -->
     <menuitem id="menu_contador_dashboard_root"
-          name="📊 Dashboard Contadores"
-          parent="sat_menu_root"
-          action="action_contador_dashboard"
-          sequence="90"/>
+              name="📊 Dashboard Contadores"
+              parent="sat_menu_root"
+              action="action_contador_dashboard_main"
+              sequence="90"/>
 </odoo>

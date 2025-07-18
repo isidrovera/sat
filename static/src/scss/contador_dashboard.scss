@@ -1,137 +1,372 @@
-.o_contador_dashboard {
-    padding: 20px;
+// Dashboard principal
+.o_contador_dashboard_main {
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     min-height: 100vh;
-
-    .contador-card {
-        transition: all 0.3s ease;
-        cursor: pointer;
+    padding: 0;
+    
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         
-        &:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+        .display-4 {
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-
-        .card {
-            border-radius: 15px;
-            overflow: hidden;
+        
+        .lead {
+            opacity: 0.9;
+        }
+        
+        .btn-light {
+            background: rgba(255,255,255,0.9);
+            border: none;
+            color: #667eea;
+            font-weight: 600;
+            transition: all 0.3s ease;
             
-            .card-header {
-                background: linear-gradient(45deg, #007bff, #0056b3) !important;
-                border: none;
-                
-                h6 {
-                    font-weight: 600;
-                    letter-spacing: 0.5px;
-                }
-                
-                .badge {
-                    font-size: 11px;
-                    padding: 4px 8px;
-                    border-radius: 20px;
-                }
-            }
-            
-            .card-body {
-                padding: 20px;
-                
-                .contador-total h4 {
-                    font-size: 2.2rem;
-                    font-weight: 700;
-                    color: #007bff;
-                }
-                
-                .contador-detalle {
-                    padding: 10px 5px;
-                    border-radius: 8px;
-                    background: rgba(0,123,255,0.05);
-                    margin: 0 2px;
-                    
-                    i {
-                        font-size: 1.2rem;
-                        display: block;
-                    }
-                    
-                    .fw-bold {
-                        font-size: 1.1rem;
-                        font-weight: 600;
-                        margin: 5px 0;
-                    }
-                    
-                    small {
-                        font-size: 0.75rem;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                    }
-                }
-            }
-            
-            .card-footer {
-                background: rgba(248,249,250,0.8) !important;
-                
-                .btn {
-                    border-radius: 20px;
-                    padding: 5px 15px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    transition: all 0.2s ease;
-                    
-                    &:hover {
-                        transform: scale(1.05);
-                    }
-                }
+            &:hover {
+                background: white;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             }
         }
     }
-}
-
-.o_contador_stats {
-    margin-bottom: 30px;
     
+    // Tarjetas de estadísticas
     .stat-card {
-        transition: all 0.3s ease;
-        border-radius: 15px !important;
+        background: white;
+        border-radius: 20px;
+        padding: 2rem 1.5rem;
+        text-align: center;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        transition: all 0.4s ease;
+        border: none;
+        position: relative;
+        overflow: hidden;
+        
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
         
         &:hover {
-            transform: scale(1.05);
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
         }
         
-        i {
-            opacity: 0.8;
-        }
-        
-        h4 {
+        .stat-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
             font-size: 2rem;
-            font-weight: 700;
-            margin: 10px 0 5px 0;
+            color: white;
+            position: relative;
+            
+            &.bg-primary { background: linear-gradient(45deg, #007bff, #0056b3); }
+            &.bg-success { background: linear-gradient(45deg, #28a745, #1e7e34); }
+            &.bg-info { background: linear-gradient(45deg, #17a2b8, #138496); }
+            &.bg-warning { background: linear-gradient(45deg, #ffc107, #e0a800); }
+            
+            &::after {
+                content: '';
+                position: absolute;
+                inset: -2px;
+                border-radius: 50%;
+                background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2));
+                z-index: -1;
+            }
         }
         
-        small {
-            font-size: 0.85rem;
-            opacity: 0.9;
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+        
+        .stat-label {
+            color: #2c3e50;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-subtitle {
+            font-size: 0.8rem;
+            opacity: 0.7;
         }
     }
-}
-
-// Responsive design
-@media (max-width: 768px) {
-    .o_contador_dashboard {
-        padding: 10px;
+    
+    // Container de filtros
+    .filters-container {
+        border: 1px solid rgba(0,0,0,0.08);
         
-        .contador-card .card-body {
-            padding: 15px;
+        .filter-btn {
+            border-radius: 25px;
+            font-weight: 600;
+            padding: 0.5rem 1.2rem;
+            transition: all 0.3s ease;
             
-            .contador-total h4 {
-                font-size: 1.8rem;
+            &.active, &:hover {
+                background: linear-gradient(45deg, #667eea, #764ba2);
+                border-color: transparent;
+                color: white;
+                transform: translateY(-2px);
+            }
+        }
+        
+        .input-group {
+            .input-group-text {
+                background: #f8f9fa;
+                border-right: none;
+                color: #6c757d;
+            }
+            
+            .form-control {
+                border-left: none;
+                
+                &:focus {
+                    border-color: #667eea;
+                    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+                }
             }
         }
     }
     
-    .o_contador_stats .row {
-        .col-md-3 {
-            margin-bottom: 15px;
+    // Tabla de máquinas
+    .machines-table {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        overflow: hidden;
+        border: none;
+        
+        .table-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            
+            h3 {
+                font-weight: 600;
+                margin: 0;
+            }
+            
+            .badge {
+                font-size: 0.85rem;
+                padding: 0.6rem 1rem;
+                border-radius: 25px;
+            }
+        }
+        
+        .table {
+            margin: 0;
+            
+            thead th {
+                font-weight: 600;
+                color: #495057;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                font-size: 0.8rem;
+                background: #f8f9fa;
+            }
+            
+            tbody tr {
+                transition: all 0.3s ease;
+                cursor: pointer;
+                
+                &:hover {
+                    background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+                    transform: scale(1.01);
+                }
+                
+                td {
+                    vertical-align: middle;
+                    padding: 1.2rem 1rem;
+                    border-color: rgba(0,0,0,0.05);
+                }
+            }
+        }
+        
+        .table-footer {
+            background: #f8f9fa;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            
+            .pagination {
+                .page-link {
+                    border: none;
+                    color: #667eea;
+                    border-radius: 8px !important;
+                    margin: 0 2px;
+                    
+                    &:hover, &.active {
+                        background: linear-gradient(45deg, #667eea, #764ba2);
+                        color: white;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Estados y badges
+    .status-badge {
+        padding: 0.6rem 1.2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        
+        &.status-procesado {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        &.status-pendiente {
+            background: linear-gradient(45deg, #ffc107, #fd7e14);
+            color: white;
+        }
+        
+        &.status-error {
+            background: linear-gradient(45deg, #dc3545, #e74c3c);
+            color: white;
+        }
+        
+        &.status-manual {
+            background: linear-gradient(45deg, #6f42c1, #5a32a3);
+            color: white;
+        }
+    }
+    
+    .equipment-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.3rem;
+        margin-right: 0.8rem;
+        
+        &.color-equipment { 
+            background: linear-gradient(45deg, #17a2b8, #6f42c1); 
+        }
+        &.mono-equipment { 
+            background: linear-gradient(45deg, #6c757d, #495057); 
+        }
+    }
+    
+    .counter-badge {
+        background: linear-gradient(45deg, #e9ecef, #dee2e6);
+        color: #495057;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin: 0 0.3rem;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .btn-detail {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+        color: white;
+        padding: 0.6rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        font-size: 0.85rem;
+        
+        &:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+    }
+    
+    // Botón flotante
+    .refresh-btn {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        transition: all 0.4s ease;
+        z-index: 1050;
+        
+        &:hover {
+            transform: scale(1.15) rotate(180deg);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+        }
+    }
+    
+    // Modal personalizado
+    .modal-content {
+        border-radius: 20px;
+        
+        .modal-header {
+            border-radius: 20px 20px 0 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            
+            .modal-title {
+                font-weight: 600;
+            }
+        }
+        
+        .modal-body {
+            padding: 2rem;
+        }
+        
+        .modal-footer {
+            border: none;
+            padding: 1.5rem 2rem;
+            
+            .btn {
+                border-radius: 25px;
+                padding: 0.6rem 1.5rem;
+                font-weight: 600;
+            }
+        }
+    }
+    
+    // Loading overlay
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.9);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        &.d-none {
+            display: none !important;
         }
     }
 }
@@ -148,15 +383,74 @@
     }
 }
 
-.contador-card {
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.stat-card {
     animation: fadeInUp 0.6s ease-out;
+    
+    &:nth-child(1) { animation-delay: 0.1s; }
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.3s; }
+    &:nth-child(4) { animation-delay: 0.4s; }
 }
 
-// Estados de máquinas
-.tipo-color {
-    background: linear-gradient(45deg, #17a2b8, #138496);
+.machines-table {
+    animation: fadeInUp 0.8s ease-out;
 }
 
-.tipo-mono {
-    background: linear-gradient(45deg, #6c757d, #545b62);
+// Responsive
+@media (max-width: 768px) {
+    .o_contador_dashboard_main {
+        .dashboard-header {
+            padding: 1.5rem 0;
+            
+            .display-4 {
+                font-size: 2rem;
+            }
+        }
+        
+        .stat-card {
+            padding: 1.5rem 1rem;
+            
+            .stat-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+            
+            .stat-number {
+                font-size: 2.2rem;
+            }
+        }
+        
+        .table-responsive {
+            font-size: 0.9rem;
+            
+            th, td {
+                padding: 0.8rem 0.5rem !important;
+            }
+        }
+        
+        .refresh-btn {
+            width: 60px;
+            height: 60px;
+            bottom: 20px;
+            right: 20px;
+        }
+    }
+}
+
+@media (max-width: 576px) {
+    .filters-container .d-flex {
+        flex-direction: column;
+        gap: 1rem !important;
+        
+        .filter-btn {
+            width: 100%;
+        }
+    }
 }
