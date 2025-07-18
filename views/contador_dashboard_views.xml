@@ -250,19 +250,14 @@
     <field name="view_mode">form</field>
     <field name="view_id" ref="view_contador_dashboard_main"/>
     <field name="target">current</field>
-    <field name="context">{'create': False}</field>  <!-- 👈 AGREGAR ESTA LÍNEA -->
-    
-    <field name="help" type="html">
-        <p class="o_view_nocontent_smiling_face text-center">
-            <i class="fa fa-chart-line fa-3x text-primary mb-3"></i>
-        </p>
-        <h3 class="text-center">¡Bienvenido al Dashboard de Contadores!</h3>
-        <p class="text-center text-muted">
-            Monitorea el estado de todos tus equipos de impresión en tiempo real.
-        </p>
-    </field>
+    <field name="res_id">1</field>  <!-- Forzar ID 1 -->
+    <field name="context">{
+        'create': False, 
+        'edit': False, 
+        'delete': False,
+        'form_view_initial_mode': 'readonly'
+    }</field>
 </record>
-
     <!-- Menú principal actualizado -->
     <menuitem id="menu_contador_dashboard_root"
               name="📊 Dashboard Contadores"
