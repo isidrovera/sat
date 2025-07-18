@@ -29,6 +29,7 @@
                 <field name="contador_color_detectado" string="Contador Color" optional="show"/>
                 <field name="contador_scan_detectado" string="Contador Scan" optional="show"/>
                 <field name="equipo_id" string="Equipo" optional="show"/>
+                <field name="cliente_detectado"/>
                 
                 <!-- Sistema inteligente -->
                 <field name="idioma_detectado" string="Idioma" optional="hide"/>

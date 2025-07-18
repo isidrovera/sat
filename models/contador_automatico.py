@@ -45,7 +45,12 @@ class ContadorAutomatico(models.Model):
     aprendizaje_completado = fields.Boolean('Aprendizaje Completado', default=False)
     patrones_usados = fields.Text('Patrones utilizados', readonly=True, 
                                 help="Registro de qué patrones se usaron para detectar datos")
-
+    # NUEVOS CAMPOS PARA INFORMACIÓN DEL EQUIPO
+    cliente_detectado = fields.Char('Cliente Detectado', readonly=True)
+    tipo_equipo_detectado = fields.Selection([
+        ('color', 'Color'), 
+        ('monocromatica', 'Monocromática')
+    ], string='Tipo Equipo Detectado', readonly=True)
     # CAMPO ESTADO
     estado = fields.Selection([
         ('pendiente', 'Pendiente de procesar'),
@@ -736,16 +741,104 @@ class ContadorAutomatico(models.Model):
             self.mensaje_error = f"Error procesando con patrones generados: {str(e)}"
             return False
 
+    def identificar_tipo_equipo_por_serie(self, serie):
+        """
+        NUEVO: Identifica si el equipo es color o monocromático basado en la serie
+        """
+        try:
+            if not serie:
+                return None, None, None
+            
+            _logger.info(f"🔍 Identificando tipo de equipo para serie: {serie}")
+            
+            # Buscar equipo por serie
+            equipo = self.buscar_equipo_por_serie(serie)
+            if not equipo:
+                _logger.warning(f"❌ No se encontró equipo con serie: {serie}")
+                return None, None, None
+            
+            # Obtener información del equipo
+            tipo_maquina = equipo.tipo_maquina_id if hasattr(equipo, 'tipo_maquina_id') else None
+            cliente = equipo.cliente_id if hasattr(equipo, 'cliente_id') else None
+            
+            _logger.info(f"✅ Equipo encontrado: ID={equipo.id}")
+            _logger.info(f"🎨 Tipo: {tipo_maquina}")
+            _logger.info(f"👤 Cliente: {cliente.name if cliente else 'Sin cliente'}")
+            
+            return equipo, tipo_maquina, cliente
+            
+        except Exception as e:
+            _logger.error(f"❌ Error identificando tipo de equipo: {e}")
+            return None, None, None
+
+
+    def asignar_contadores_por_tipo_equipo(self, contadores_detectados, tipo_maquina):
+        """
+        NUEVO: Asigna contadores según el tipo de equipo (color/monocromático)
+        """
+        try:
+            _logger.info(f"📊 === ASIGNANDO CONTADORES POR TIPO DE EQUIPO ===")
+            _logger.info(f"🎨 Tipo de máquina: {tipo_maquina}")
+            _logger.info(f"📊 Contadores detectados: {contadores_detectados}")
+            
+            contadores_finales = {}
+            
+            if tipo_maquina == 'monocromatica':
+                _logger.info("🖤 MÁQUINA MONOCROMÁTICA - Procesamiento especial")
+                
+                # Para monocromáticas: total = BN, no hay color
+                if 'contador_scan' in contadores_detectados:
+                    # Si hay total, usarlo como BN
+                    contadores_finales['contador_bn'] = contadores_detectados['contador_scan']
+                    contadores_finales['contador_scan'] = contadores_detectados['contador_scan']
+                    _logger.info(f"📄 Total → BN: {contadores_detectados['contador_scan']}")
+                    
+                elif 'contador_bn' in contadores_detectados:
+                    # Si ya viene como BN, mantenerlo
+                    contadores_finales['contador_bn'] = contadores_detectados['contador_bn']
+                    _logger.info(f"🖤 BN mantenido: {contadores_detectados['contador_bn']}")
+                
+                # Para monocromáticas, NO asignar color aunque venga en el correo
+                contadores_finales['contador_color'] = 0
+                _logger.info("🚫 Color = 0 (máquina monocromática)")
+                
+            elif tipo_maquina == 'color':
+                _logger.info("🌈 MÁQUINA COLOR - Procesamiento normal")
+                
+                # Para color: usar todos los contadores como vienen
+                if 'contador_bn' in contadores_detectados:
+                    contadores_finales['contador_bn'] = contadores_detectados['contador_bn']
+                    _logger.info(f"🖤 BN: {contadores_detectados['contador_bn']}")
+                    
+                if 'contador_color' in contadores_detectados:
+                    contadores_finales['contador_color'] = contadores_detectados['contador_color']
+                    _logger.info(f"🎨 Color: {contadores_detectados['contador_color']}")
+                    
+                if 'contador_scan' in contadores_detectados:
+                    contadores_finales['contador_scan'] = contadores_detectados['contador_scan']
+                    _logger.info(f"📄 Scan/Total: {contadores_detectados['contador_scan']}")
+            
+            else:
+                _logger.warning(f"⚠️ Tipo de máquina desconocido: {tipo_maquina}")
+                # Si no sabemos el tipo, usar detección automática como fallback
+                contadores_finales = contadores_detectados.copy()
+            
+            _logger.info(f"✅ Contadores finales asignados: {contadores_finales}")
+            return contadores_finales
+            
+        except Exception as e:
+            _logger.error(f"❌ Error asignando contadores por tipo: {e}")
+            return contadores_detectados  # Fallback a contadores originales
     def procesar_correo_inteligente(self):
         """
         Procesamiento inteligente del correo con análisis y generación automática
-        CORRECCIÓN: Usar método de filtrado mejorado
+        MODIFICADO: Incluye detección de tipo de equipo y asignación inteligente de contadores
         """
         try:
             _logger.info(f"🧠 === INICIO PROCESAMIENTO INTELIGENTE ===")
             _logger.info(f"📧 Registro ID={self.id}, Asunto='{self.name}'")
 
-            # 1. VERIFICAR SI ES CORREO DE CONTADORES - CORRECCIÓN
+            # 1. VERIFICAR SI ES CORREO DE CONTADORES
             if not self._es_correo_de_contadores_mejorado(self.name):
                 self.estado = 'filtrado'
                 self.mensaje_error = 'Asunto no corresponde a correo de contadores'
@@ -792,6 +885,33 @@ class ContadorAutomatico(models.Model):
 
             contadores_encontrados = self.buscar_patrones_contadores_dinamico(texto_limpio)
 
+            # ===== NUEVA LÓGICA: IDENTIFICACIÓN DE TIPO DE EQUIPO =====
+            equipo_detectado = None
+            tipo_maquina_detectado = None
+            cliente_detectado = None
+
+            if serie_encontrada:
+                _logger.info(f"🎯 === IDENTIFICANDO TIPO DE EQUIPO POR SERIE ===")
+                
+                # NUEVO: Identificar tipo de equipo por serie
+                equipo_detectado, tipo_maquina_detectado, cliente_detectado = self.identificar_tipo_equipo_por_serie(serie_encontrada)
+                
+                if equipo_detectado and tipo_maquina_detectado:
+                    _logger.info(f"🎯 Equipo identificado: {equipo_detectado.id} - Tipo: {tipo_maquina_detectado}")
+                    
+                    # NUEVO: Asignar contadores según tipo de equipo
+                    contadores_encontrados = self.asignar_contadores_por_tipo_equipo(
+                        contadores_encontrados, tipo_maquina_detectado
+                    )
+                    
+                    # NUEVO: Guardar información adicional del equipo
+                    self.tipo_equipo_detectado = tipo_maquina_detectado
+                    if cliente_detectado:
+                        self.cliente_detectado = cliente_detectado.name
+                        _logger.info(f"👤 Cliente detectado: {cliente_detectado.name}")
+                else:
+                    _logger.warning(f"⚠️ No se pudo identificar tipo de equipo para serie: {serie_encontrada}")
+
             # 5. SI NO ENCONTRÓ DATOS, GENERAR PATRONES AUTOMÁTICAMENTE
             if not serie_encontrada or not contadores_encontrados:
                 _logger.info(f"🤖 === FASE: GENERACIÓN AUTOMÁTICA DE PATRONES ===")
@@ -811,7 +931,7 @@ class ContadorAutomatico(models.Model):
                 if serie_encontrada:
                     self.serie_detectada = serie_encontrada
 
-                    # Actualizar contadores detectados
+                    # Actualizar contadores detectados (ya procesados por tipo de equipo)
                     if 'contador_bn' in contadores_encontrados:
                         self.contador_bn_detectado = contadores_encontrados['contador_bn']
                     if 'contador_color' in contadores_encontrados:
@@ -819,13 +939,20 @@ class ContadorAutomatico(models.Model):
                     if 'contador_scan' in contadores_encontrados:
                         self.contador_scan_detectado = contadores_encontrados['contador_scan']
 
-                    # Buscar equipo y actualizar
-                    equipo = self.buscar_equipo_por_serie(serie_encontrada)
+                    # Usar equipo ya detectado o buscarlo de nuevo
+                    if equipo_detectado:
+                        equipo = equipo_detectado
+                    else:
+                        equipo = self.buscar_equipo_por_serie(serie_encontrada)
+                    
                     if equipo and contadores_encontrados:
                         self.equipo_id = equipo.id
                         self.actualizar_contadores_equipo(equipo, contadores_encontrados)
                         self.estado = 'procesado'
                         self.procesado_automaticamente = True
+                        _logger.info(f"🎉 === PROCESAMIENTO EXITOSO CON TIPO DE EQUIPO ===")
+                        _logger.info(f"🎯 Equipo: {equipo.id} - Tipo: {tipo_maquina_detectado}")
+                        _logger.info(f"👤 Cliente: {cliente_detectado.name if cliente_detectado else 'N/A'}")
                     else:
                         self.estado = 'manual'
                         self.mensaje_error = f"Serie detectada pero equipo no encontrado: {serie_encontrada}"
@@ -842,6 +969,8 @@ class ContadorAutomatico(models.Model):
             _logger.info(f"Marca: {self.marca_detectada}")
             _logger.info(f"Formato: {self.formato_detectado}")
             _logger.info(f"Serie: {self.serie_detectada or 'No detectada'}")
+            _logger.info(f"Tipo equipo: {self.tipo_equipo_detectado or 'No detectado'}")
+            _logger.info(f"Cliente: {self.cliente_detectado or 'No detectado'}")
             _logger.info(f"Requiere aprendizaje: {self.requiere_aprendizaje}")
             _logger.info(f"Patrones auto-generados: {self.patrones_auto_generados}")
             _logger.info(f"🏁 === FIN PROCESAMIENTO INTELIGENTE ===")
@@ -858,7 +987,6 @@ class ContadorAutomatico(models.Model):
             self.mensaje_error = f"Error en procesamiento inteligente: {str(e)}"
             self.write({'fecha_procesamiento': fields.Datetime.now()})
             return False
-
 
 
     def aprender_de_procesamiento_manual(self):
