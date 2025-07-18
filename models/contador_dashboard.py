@@ -130,6 +130,16 @@ class ContadorDashboard(models.Model):
             }
         }
 
+
+    def refresh_dashboard(self):
+        """
+        Método para refrescar el dashboard
+        """
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'reload',
+        }
+
 class ContadorDetalle(models.TransientModel):
     _name = 'contador.detalle'
     _description = 'Detalle completo de equipo'
