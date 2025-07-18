@@ -801,54 +801,110 @@ class ContadorAutomatico(models.Model):
 
     def asignar_contadores_por_tipo_equipo(self, contadores_detectados, tipo_maquina):
         """
-        NUEVO: Asigna contadores según el tipo de equipo (color/monocromático)
+        CORREGIDO: Asigna contadores con lógica especial para Konica Minolta
         """
         try:
-            _logger.info(f"📊 === ASIGNANDO CONTADORES POR TIPO DE EQUIPO ===")
+            _logger.info(f"📊 === ASIGNANDO CONTADORES POR TIPO DE EQUIPO (MINOLTA CORREGIDO) ===")
             _logger.info(f"🎨 Tipo de máquina: {tipo_maquina}")
-            _logger.info(f"📊 Contadores detectados: {contadores_detectados}")
+            _logger.info(f"🏭 Marca detectada: {self.marca_detectada}")
+            _logger.info(f"📊 Contadores detectados originales: {contadores_detectados}")
             
             contadores_finales = {}
             
-            if tipo_maquina == 'monocromatica':
-                _logger.info("🖤 MÁQUINA MONOCROMÁTICA - Procesamiento especial")
+            # DETECTAR SI ES KONICA MINOLTA/BIZHUB
+            es_minolta = (self.marca_detectada and 'bizhub' in self.marca_detectada.lower()) or \
+                        (self.formato_detectado == 'formato_corchetes') or \
+                        ('[Total Counter]' in (self.contenido_procesado or ''))
+            
+            _logger.info(f"🏭 ¿Es Konica Minolta/Bizhub?: {es_minolta}")
+            
+            if es_minolta:
+                _logger.info("🏭 === PROCESAMIENTO ESPECIAL KONICA MINOLTA ===")
                 
-                # Para monocromáticas: total = BN, no hay color
-                if 'contador_scan' in contadores_detectados:
-                    # Si hay total, usarlo como BN
-                    contadores_finales['contador_bn'] = contadores_detectados['contador_scan']
-                    contadores_finales['contador_scan'] = contadores_detectados['contador_scan']
-                    _logger.info(f"📄 Total → BN: {contadores_detectados['contador_scan']}")
+                if tipo_maquina == 'monocromatica':
+                    _logger.info("🖤 MINOLTA MONOCROMÁTICA")
                     
-                elif 'contador_bn' in contadores_detectados:
-                    # Si ya viene como BN, mantenerlo
-                    contadores_finales['contador_bn'] = contadores_detectados['contador_bn']
-                    _logger.info(f"🖤 BN mantenido: {contadores_detectados['contador_bn']}")
-                
-                # Para monocromáticas, NO asignar color aunque venga en el correo
-                contadores_finales['contador_color'] = 0
-                _logger.info("🚫 Color = 0 (máquina monocromática)")
-                
-            elif tipo_maquina == 'color':
-                _logger.info("🌈 MÁQUINA COLOR - Procesamiento normal")
-                
-                # Para color: usar todos los contadores como vienen
-                if 'contador_bn' in contadores_detectados:
-                    contadores_finales['contador_bn'] = contadores_detectados['contador_bn']
-                    _logger.info(f"🖤 BN: {contadores_detectados['contador_bn']}")
+                    # Para Minolta monocroma:
+                    # [Total Counter] = Total BN (usar como BN)
+                    # [Total Scan/Fax Counter] = Escaneos (usar como Scan)
                     
-                if 'contador_color' in contadores_detectados:
-                    contadores_finales['contador_color'] = contadores_detectados['contador_color']
-                    _logger.info(f"🎨 Color: {contadores_detectados['contador_color']}")
+                    if 'contador_bn' in contadores_detectados and contadores_detectados['contador_bn'] > 0:
+                        # Total Counter detectado (es BN para monocromas)
+                        contadores_finales['contador_bn'] = contadores_detectados['contador_bn']
+                        _logger.info(f"🖤 Total Counter → BN: {contadores_detectados['contador_bn']}")
                     
-                if 'contador_scan' in contadores_detectados:
-                    contadores_finales['contador_scan'] = contadores_detectados['contador_scan']
-                    _logger.info(f"📄 Scan/Total: {contadores_detectados['contador_scan']}")
+                    if 'contador_scan' in contadores_detectados and contadores_detectados['contador_scan'] > 0:
+                        # Total Scan/Fax Counter
+                        contadores_finales['contador_scan'] = contadores_detectados['contador_scan']
+                        _logger.info(f"📄 Scan/Fax Counter: {contadores_detectados['contador_scan']}")
+                    
+                    # Color siempre 0 para monocromas
+                    contadores_finales['contador_color'] = 0
+                    _logger.info("🚫 Color = 0 (monocromática)")
+                    
+                elif tipo_maquina == 'color':
+                    _logger.info("🌈 MINOLTA COLOR")
+                    
+                    # Para Minolta color:
+                    # [Total Counter] = BN + Color (total impresiones)
+                    # [Total Scan/Fax Counter] = Escaneos
+                    # Necesitamos separar BN y Color del total
+                    
+                    total_impresiones = contadores_detectados.get('contador_bn', 0)
+                    total_scan = contadores_detectados.get('contador_scan', 0)
+                    
+                    # Si detectó color por separado, usarlo
+                    if 'contador_color' in contadores_detectados and contadores_detectados['contador_color'] > 0:
+                        color_pages = contadores_detectados['contador_color']
+                        bn_pages = total_impresiones - color_pages if total_impresiones > color_pages else 0
+                        
+                        contadores_finales['contador_bn'] = bn_pages
+                        contadores_finales['contador_color'] = color_pages
+                        _logger.info(f"🖤 BN calculado: {total_impresiones} - {color_pages} = {bn_pages}")
+                        _logger.info(f"🎨 Color detectado: {color_pages}")
+                    else:
+                        # Si no hay color separado, asumir que todo el total es BN
+                        contadores_finales['contador_bn'] = total_impresiones
+                        contadores_finales['contador_color'] = 0
+                        _logger.info(f"🖤 Total como BN (no hay color separado): {total_impresiones}")
+                        _logger.info(f"🎨 Color = 0 (no detectado por separado)")
+                    
+                    contadores_finales['contador_scan'] = total_scan
+                    _logger.info(f"📄 Scan: {total_scan}")
             
             else:
-                _logger.warning(f"⚠️ Tipo de máquina desconocido: {tipo_maquina}")
-                # Si no sabemos el tipo, usar detección automática como fallback
-                contadores_finales = contadores_detectados.copy()
+                _logger.info("🏭 === PROCESAMIENTO ESTÁNDAR (NO MINOLTA) ===")
+                
+                # Lógica original para otras marcas
+                if tipo_maquina == 'monocromatica':
+                    _logger.info("🖤 MÁQUINA MONOCROMÁTICA ESTÁNDAR")
+                    
+                    if 'contador_scan' in contadores_detectados and contadores_detectados['contador_scan'] > 0:
+                        # Para otras marcas monocromas, total suele ser BN
+                        contadores_finales['contador_bn'] = contadores_detectados['contador_scan']
+                        contadores_finales['contador_scan'] = contadores_detectados['contador_scan']
+                        _logger.info(f"🖤 Total → BN: {contadores_detectados['contador_scan']}")
+                    
+                    elif 'contador_bn' in contadores_detectados:
+                        contadores_finales['contador_bn'] = contadores_detectados['contador_bn']
+                        contadores_finales['contador_scan'] = contadores_detectados.get('contador_scan', 0)
+                    
+                    contadores_finales['contador_color'] = 0
+                    
+                elif tipo_maquina == 'color':
+                    _logger.info("🌈 MÁQUINA COLOR ESTÁNDAR")
+                    
+                    # Para color estándar: usar todos los contadores como vienen
+                    contadores_finales['contador_bn'] = contadores_detectados.get('contador_bn', 0)
+                    contadores_finales['contador_color'] = contadores_detectados.get('contador_color', 0)
+                    contadores_finales['contador_scan'] = contadores_detectados.get('contador_scan', 0)
+            
+            # Asegurar que todos los campos existen con valores válidos
+            for campo in ['contador_bn', 'contador_color', 'contador_scan']:
+                if campo not in contadores_finales:
+                    contadores_finales[campo] = 0
+                elif contadores_finales[campo] is None:
+                    contadores_finales[campo] = 0
             
             _logger.info(f"✅ Contadores finales asignados: {contadores_finales}")
             return contadores_finales
