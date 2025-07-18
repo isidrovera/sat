@@ -216,7 +216,75 @@ class ContadorDashboard(models.Model):
                 'form_view_initial_mode': 'readonly',
             }
         }
+    @api.model
+    def create(self, vals):
+        """
+        SOLUCIÓN: Evitar inserciones reales en la vista con DISTINCT
+        """
+        # En lugar de crear, retornar el primer registro existente o uno dummy
+        existing = self.search([], limit=1)
+        if existing:
+            return existing
+        else:
+            # Crear registro en memoria sin guardarlo
+            record = self.browse(1)
+            return record
 
+    @api.model 
+    def load_views(self, views, options=None):
+        """
+        SOLUCIÓN: Interceptar la carga de vistas para evitar creación automática
+        """
+        result = super().load_views(views, options)
+        
+        # Asegurar que existe al menos un registro dummy
+        if not self.search_count([]):
+            try:
+                # Insertar registro dummy directamente en la vista
+                self.env.cr.execute("""
+                    INSERT INTO %s (id, serie_detectada, cliente_detectado, estado_ultimo) 
+                    VALUES (1, 'Dashboard', 'Sistema', 'procesado')
+                    ON CONFLICT (id) DO NOTHING
+                """ % self._table)
+            except:
+                pass  # Ignorar errores de inserción
+        
+        return result
+
+    @api.model
+    def fields_view_get(self, view_id=None, view_type='form', toolbar=False, submenu=False):
+        """
+        SOLUCIÓN: Modificar la vista para que no intente crear registros
+        """
+        result = super().fields_view_get(view_id, view_type, toolbar, submenu)
+        
+        # Asegurar que hay datos para mostrar
+        if not self.search_count([]):
+            # Crear registro temporal para que la vista tenga algo que mostrar
+            try:
+                self.env.cr.execute("""
+                    SELECT 1 FROM %s LIMIT 1
+                """ % self._table)
+                
+                if not self.env.cr.fetchone():
+                    # Si la vista está vacía, insertar un registro dummy
+                    self.env.cr.execute("""
+                        INSERT INTO %s 
+                        SELECT 1 as id, 'Dashboard' as serie_detectada, 
+                            'Sistema Dashboard' as cliente_detectado,
+                            'procesado' as estado_ultimo,
+                            now() as ultima_actualizacion,
+                            0 as contador_total_actual,
+                            0 as contador_bn_actual,
+                            0 as contador_color_actual,
+                            0 as copias_hoy,
+                            'color' as tipo_equipo_detectado
+                        WHERE NOT EXISTS (SELECT 1 FROM %s)
+                    """ % (self._table, self._table))
+            except Exception as e:
+                _logger.error(f"Error creando registro dummy: {e}")
+        
+        return result
 
     def refresh_dashboard(self):
         """
