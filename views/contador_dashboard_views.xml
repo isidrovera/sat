@@ -96,16 +96,16 @@
                                 <div class="row align-items-center">
                                     <div class="col-md-8">
                                         <div class="d-flex flex-wrap gap-2">
-                                            <button type="button" class="btn btn-outline-primary btn-sm filter-btn" data-filter="all">
+                                            <button type="button" name="filter_all" class="btn btn-outline-primary btn-sm filter-btn" data-filter="all">
                                                 <i class="fa fa-list me-1"></i>Todos
                                             </button>
-                                            <button type="button" class="btn btn-outline-success btn-sm filter-btn" data-filter="hoy">
+                                            <button type="button" name="filter_hoy" class="btn btn-outline-success btn-sm filter-btn" data-filter="hoy">
                                                 <i class="fa fa-calendar-day me-1"></i>Hoy
                                             </button>
-                                            <button type="button" class="btn btn-outline-info btn-sm filter-btn" data-filter="color">
+                                            <button type="button" name="filter_color" class="btn btn-outline-info btn-sm filter-btn" data-filter="color">
                                                 <i class="fa fa-palette me-1"></i>Color
                                             </button>
-                                            <button type="button" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="mono">
+                                            <button type="button" name="filter_mono" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="mono">
                                                 <i class="fa fa-circle me-1"></i>Monocromáticas
                                             </button>
                                         </div>
