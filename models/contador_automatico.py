@@ -1731,7 +1731,7 @@ class ContadorAutomatico(models.Model):
     @api.model
     def cron_procesar_correos_perdidos(self):
         """
-        CRON CON DIAGNÓSTICO: Lista todos los correos y muestra qué se detecta
+        CRON CON DIAGNÓSTICO COMPLETO: Lista todos los correos y diagnóstico detallado de duplicados
         """
         try:
             _logger.info("⏰ === INICIO CRON CON DIAGNÓSTICO COMPLETO ===")
@@ -1825,14 +1825,37 @@ class ContadorAutomatico(models.Model):
                 _logger.info("ℹ️ No hay correos de contadores para procesar")
                 return True
             
-            # VERIFICAR DUPLICADOS EXISTENTES
+            def _diagnosticar_registros_existentes():
+                """
+                DIAGNÓSTICO: Muestra todos los registros existentes
+                """
+                _logger.info(f"📊 === DIAGNÓSTICO: TODOS LOS REGISTROS EXISTENTES ===")
+                
+                todos_registros = self.env['contador.automatico'].search([], order='create_date desc')
+                _logger.info(f"📋 Total registros en BD: {len(todos_registros)}")
+                
+                for i, registro in enumerate(todos_registros[:10], 1):  # Primeros 10
+                    _logger.info(f"  {i:2d}. ID={registro.id} | '{registro.name[:40]}...'")
+                    _logger.info(f"      Serie: '{registro.serie_detectada}' | BN: {registro.contador_bn_detectado}")
+                    _logger.info(f"      Color: {registro.contador_color_detectado} | Scan: {registro.contador_scan_detectado}")
+                    _logger.info(f"      Estado: {registro.estado} | Fecha: {registro.create_date}")
+                    _logger.info(f"      ---")
+                
+                if len(todos_registros) > 10:
+                    _logger.info(f"  ... y {len(todos_registros) - 10} registros más")
+            
             def _ya_existe_registro_con_estos_datos(serie, contador_bn, contador_color, contador_scan):
                 """
-                Verifica duplicados por serie + contadores exactos
+                DIAGNÓSTICO: Verifica duplicados con logging detallado
                 """
                 if not serie:
+                    _logger.info(f"🔍 DUPLICADOS: Serie vacía, no verificar duplicados")
                     return False
-                    
+                
+                _logger.info(f"🔍 === VERIFICANDO DUPLICADOS ===")
+                _logger.info(f"🎯 Buscando: Serie='{serie}', BN={contador_bn}, Color={contador_color}, Scan={contador_scan}")
+                
+                # Buscar registros similares
                 registros_similares = self.env['contador.automatico'].search([
                     ('serie_detectada', '=', serie),
                     ('contador_bn_detectado', '=', contador_bn or 0),
@@ -1840,10 +1863,31 @@ class ContadorAutomatico(models.Model):
                     ('contador_scan_detectado', '=', contador_scan or 0)
                 ])
                 
-                return len(registros_similares) > 0
+                _logger.info(f"📊 Registros encontrados con estos datos exactos: {len(registros_similares)}")
+                
+                if registros_similares:
+                    _logger.info(f"📋 === DETALLES DE REGISTROS SIMILARES ===")
+                    for i, registro in enumerate(registros_similares, 1):
+                        _logger.info(f"  {i}. ID={registro.id}")
+                        _logger.info(f"     Serie: '{registro.serie_detectada}'")
+                        _logger.info(f"     BN: {registro.contador_bn_detectado}")
+                        _logger.info(f"     Color: {registro.contador_color_detectado}")
+                        _logger.info(f"     Scan: {registro.contador_scan_detectado}")
+                        _logger.info(f"     Estado: {registro.estado}")
+                        _logger.info(f"     Fecha: {registro.create_date}")
+                        _logger.info(f"     Asunto: '{registro.name}'")
+                    
+                    _logger.info(f"❌ DUPLICADO CONFIRMADO - Ya existe(n) {len(registros_similares)} registro(s)")
+                    return True
+                else:
+                    _logger.info(f"✅ NO DUPLICADO - No se encontraron registros con estos datos")
+                    return False
             
             # PROCESAR CORREOS DE CONTADORES
             _logger.info(f"🚀 === INICIANDO PROCESAMIENTO ===")
+            
+            # DIAGNÓSTICO: Mostrar todos los registros existentes
+            _diagnosticar_registros_existentes()
             
             correos_procesados_exitosos = 0
             correos_fallidos = 0
@@ -1887,13 +1931,13 @@ class ContadorAutomatico(models.Model):
                         
                         # Verificar si extrajo datos válidos
                         if serie and (contador_bn or contador_color or contador_scan):
-                            # Verificar duplicados
+                            # Verificar duplicados CON DIAGNÓSTICO DETALLADO
                             if _ya_existe_registro_con_estos_datos(serie, contador_bn, contador_color, contador_scan):
-                                _logger.info(f"⏭️ DUPLICADO - Ya existe con estos datos")
+                                _logger.info(f"⏭️ DUPLICADO - Ya existe con estos datos exactos")
                                 registro_temp.unlink()
                                 correos_duplicados += 1
                             else:
-                                _logger.info(f"✅ NUEVO REGISTRO VÁLIDO")
+                                _logger.info(f"✅ NUEVO REGISTRO VÁLIDO - Guardando definitivamente")
                                 correos_procesados_exitosos += 1
                                 
                                 # Asegurar fecha
