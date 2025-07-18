@@ -247,7 +247,7 @@
 <record id="action_contador_dashboard_main" model="ir.actions.act_window">
     <field name="name">📊 Dashboard Contadores</field>
     <field name="res_model">contador.dashboard</field>
-    <field name="view_mode">form</field>
+    <field name="view_mode">kanban</field>
     <field name="view_id" ref="view_contador_dashboard_main"/>
     <field name="target">current</field>
     <field name="context">{'create': False}</field>  <!-- 👈 AGREGAR ESTA LÍNEA -->
