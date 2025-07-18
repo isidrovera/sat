@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="view_contador_dashboard_list" model="ir.ui.view">
+        <field name="name">contador.dashboard.list</field>
+        <field name="model">contador.dashboard</field>
+        <field name="arch" type="xml">
+            <list string="Listado de Contadores" create="false" delete="false" edit="false">
+                <field name="cliente_detectado"/>
+                <field name="serie_detectada"/>
+                <field name="tipo_equipo_detectado"/>
+                <field name="contador_total_actual"/>
+                <field name="ultima_actualizacion"/>
+                <button name="action_ver_detalle_equipo"
+                        type="object"
+                        icon="fa-eye"
+                        string="Detalle"
+                        class="btn-sm btn-outline-primary"/>
+            </list>
+        </field>
+    </record>
     <!-- Vista Dashboard Principal -->
     <record id="view_contador_dashboard_kanban" model="ir.ui.view">
         <field name="name">contador.dashboard.kanban</field>
@@ -155,19 +173,22 @@
     </record>
 
     <!-- Acción principal del Dashboard -->
-    <record id="action_contador_dashboard" model="ir.actions.act_window">
+     <record id="action_contador_dashboard" model="ir.actions.act_window">
         <field name="name">📊 Dashboard Contadores</field>
         <field name="res_model">contador.dashboard</field>
-        <field name="view_mode">kanban</field>
-        <field name="view_id" ref="view_contador_dashboard_kanban"/>
+        <!-- habilita el switcher Kanban ↔ Lista -->
+        <field name="view_mode">kanban,list</field>
+        <field name="view_ids" eval="[
+            (0, 0, {'view_mode': 'kanban', 'view_id': ref('view_contador_dashboard_kanban')}),
+            (0, 0, {'view_mode': 'list',   'view_id': ref('view_contador_dashboard_list')})
+        ]"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face text-center">
                 <i class="fa fa-chart-line fa-3x text-primary mb-3"></i>
             </p>
             <h3 class="text-center">¡Bienvenido al Dashboard de Contadores!</h3>
             <p class="text-center text-muted">
-                Aquí verás las últimas actualizaciones de contadores de tus equipos.<br/>
-                Los datos se actualizan automáticamente cuando llegan correos de contadores.
+                Usa el selector de vistas para alternar entre Tarjetas y Lista.
             </p>
         </field>
     </record>
