@@ -5,7 +5,7 @@
         <field name="name">contador.dashboard.kanban</field>
         <field name="model">contador.dashboard</field>
         <field name="arch" type="xml">
-            <kanban class="o_contador_dashboard" js_class="ContadorDashboardKanban">
+            <kanban class="o_contador_dashboard" js_class="contador_dashboard_kanban">
                 <field name="serie_detectada"/>
                 <field name="cliente_detectado"/>
                 <field name="tipo_equipo_detectado"/>
