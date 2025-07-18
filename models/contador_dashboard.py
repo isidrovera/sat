@@ -112,7 +112,94 @@ class ContadorDashboard(models.Model):
                 'total_equipos_sistema': 0,
                 'eficiencia_sistema': 0
             }
+    @api.model
+    def obtener_lista_equipos_dashboard(self):
+        """
+        Método para obtener lista de equipos para el dashboard
+        (Requerido por el JavaScript)
+        """
+        try:
+            # Usar la vista SQL que ya tienes definida
+            equipos_records = self.search([], limit=100, order='ultima_actualizacion desc')
+            
+            equipos = []
+            for record in equipos_records:
+                equipos.append({
+                    'id': record.id,
+                    'cliente_detectado': record.cliente_detectado or 'Cliente no detectado',
+                    'serie_detectada': record.serie_detectada or 'Sin serie',
+                    'tipo_equipo_detectado': record.tipo_equipo_detectado or 'No detectado',
+                    'contador_bn_actual': record.contador_bn_actual or 0,
+                    'contador_color_actual': record.contador_color_actual or 0,
+                    'contador_total_actual': record.contador_total_actual or 0,
+                    'ultima_actualizacion': record.ultima_actualizacion.isoformat() if record.ultima_actualizacion else fields.Datetime.now().isoformat(),
+                    'estado_ultimo': record.estado_ultimo or 'pendiente'
+                })
+            
+            _logger.info(f"📊 Dashboard: {len(equipos)} equipos obtenidos para la lista")
+            return equipos
+            
+        except Exception as e:
+            _logger.error(f"❌ Error obteniendo lista equipos dashboard: {e}")
+            return []
 
+    @api.model
+    def obtener_detalle_equipo(self, equipo_id):
+        """
+        Método para obtener detalle específico de un equipo
+        (Requerido por el JavaScript para el modal)
+        """
+        try:
+            equipo = self.browse(equipo_id)
+            if not equipo.exists():
+                return {}
+            
+            return {
+                'id': equipo.id,
+                'cliente_detectado': equipo.cliente_detectado or 'Cliente no detectado',
+                'serie_detectada': equipo.serie_detectada or 'Sin serie',
+                'tipo_equipo_detectado': equipo.tipo_equipo_detectado or 'No detectado',
+                'contador_bn_actual': equipo.contador_bn_actual or 0,
+                'contador_color_actual': equipo.contador_color_actual or 0,
+                'contador_total_actual': equipo.contador_total_actual or 0,
+                'ultima_actualizacion': equipo.ultima_actualizacion.isoformat() if equipo.ultima_actualizacion else fields.Datetime.now().isoformat(),
+                'estado_ultimo': equipo.estado_ultimo or 'pendiente'
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error obteniendo detalle equipo {equipo_id}: {e}")
+            return {}
+    def filter_all(self):
+        """Filtro: Todos los equipos"""
+        return {'type': 'ir.actions.act_window_close'}
+
+    def filter_hoy(self):
+        """Filtro: Equipos actualizados hoy"""
+        return {'type': 'ir.actions.act_window_close'}
+
+    def filter_color(self):
+        """Filtro: Equipos color"""
+        return {'type': 'ir.actions.act_window_close'}
+
+    def filter_mono(self):
+        """Filtro: Equipos monocromáticos"""
+        return {'type': 'ir.actions.act_window_close'}
+
+    def close_modal(self):
+        """Cerrar modal"""
+        return {'type': 'ir.actions.act_window_close'}
+
+    def close_modal_footer(self):
+        """Cerrar modal desde footer"""
+        return {'type': 'ir.actions.act_window_close'}
+
+    def view_history(self):
+        """Ver historial del equipo"""
+        return {'type': 'ir.actions.act_window_close'}
+
+    def floating_refresh(self):
+        """Refresh flotante"""
+        return self.refresh_dashboard()
     def action_ver_detalle_equipo(self):
         """
         Abre el detalle completo del equipo seleccionado
