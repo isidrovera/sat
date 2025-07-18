@@ -110,12 +110,12 @@
                                             <i class="fa fa-calendar me-1"></i>
                                             <field name="ultima_actualizacion" widget="date"/>
                                         </small>
-                                        <button type="button" 
-                                                class="btn btn-sm btn-outline-primary" 
-                                                name="action_ver_detalle_equipo">
-                                            <i class="fa fa-eye me-1"></i>
-                                            Detalle
-                                        </button>
+                                        <button name="action_ver_detalle_equipo"
+                                        +         type="object"
+                                        +         class="btn btn-sm btn-outline-primary">
+                                        +     <i class="fa fa-eye me-1"></i>
+                                        +     Detalle
+                                        +</button>
                                     </div>
                                 </div>
                             </div>
