@@ -121,6 +121,7 @@
         'views/view_toner_delivery_schedule.xml',
         'views/view_contador_automatico.xml',
         'views/view_patron_contador.xml',
+        'views/contador_dashboard_views.xml',
     ],
     
     'assets': {
@@ -163,6 +164,7 @@
             
             # SCSS existente
             '/sat/static/src/scss/list_dashboard.scss',
+            'sat/static/src/scss/contador_dashboard.scss',
             
             # XML existente
             'sat/static/src/xml/dashboard.xml',
@@ -178,6 +180,7 @@
             'sat/static/src/js/image-viewer_v1.js',
             'sat/static/src/js/equipment_visit_report.js',
             'sat/static/src/js/sat_table_enhancements.js',
+            'sat/static/src/js/contador_dashboard.js',
             
           
             

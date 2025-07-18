@@ -51,6 +51,29 @@ class ContadorAutomatico(models.Model):
         ('color', 'Color'), 
         ('monocromatica', 'Monocromática')
     ], string='Tipo Equipo Detectado', readonly=True)
+
+
+    contador_total_detectado = fields.Integer(
+        'Contador Total', 
+        compute='_compute_contador_total', 
+        store=True,
+        help="Suma de BN + Color (o solo BN para monocromáticas)"
+    )
+
+    @api.depends('contador_bn_detectado', 'contador_color_detectado', 'tipo_equipo_detectado')
+    def _compute_contador_total(self):
+        """
+        Calcula el contador total según el tipo de equipo
+        """
+        for registro in self:
+            if registro.tipo_equipo_detectado == 'monocromatica':
+                # Para monocromáticas: solo BN
+                registro.contador_total_detectado = registro.contador_bn_detectado or 0
+            else:
+                # Para color: BN + Color
+                bn = registro.contador_bn_detectado or 0
+                color = registro.contador_color_detectado or 0
+                registro.contador_total_detectado = bn + color
     # CAMPO ESTADO
     estado = fields.Selection([
         ('pendiente', 'Pendiente de procesar'),

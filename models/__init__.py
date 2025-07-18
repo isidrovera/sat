@@ -35,5 +35,6 @@ from . import solicitud_partes_linea
 from . import wizard_inspeccion
 from . import contador_automatico
 from . import patron_contador
+from . import contador_dashboard
 
 
