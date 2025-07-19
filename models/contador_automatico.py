@@ -1835,16 +1835,13 @@ class ContadorAutomatico(models.Model):
     @api.model
     def cron_procesar_correos_perdidos(self):
         """
-        CRON COMPLETO 24H CON LÓGICA ANTI-DUPLICADOS: 
-        - Busca correos de 24 horas
-        - Evita reprocesar correos ya procesados
-        - Detecta duplicados por contadores idénticos
+        CRON CORREGIDO: SOLO procesa correos "Counter List" y "Counter Page"
         """
         try:
-            _logger.info("⏰ === INICIO CRON 24H CON LÓGICA ANTI-DUPLICADOS ===")
+            _logger.info("⏰ === INICIO CRON ESPECÍFICO COUNTER LIST/PAGE ===")
             
             ahora = fields.Datetime.now()
-            fecha_limite = ahora - timedelta(hours=24)  # 24 HORAS COMPLETAS
+            fecha_limite = ahora - timedelta(hours=24)
             
             _logger.info(f"🔍 Buscando correos desde: {fecha_limite}")
             
@@ -1858,7 +1855,7 @@ class ContadorAutomatico(models.Model):
             _logger.info(f"📊 Total correos: {len(todos_los_correos)}")
             
             # LISTAR CORREOS PARA DIAGNÓSTICO
-            for i, correo in enumerate(todos_los_correos[:15], 1):  # Primeros 15
+            for i, correo in enumerate(todos_los_correos[:15], 1):
                 asunto = correo.subject or f'Sin asunto - {correo.id}'
                 remitente = correo.email_from or 'Sin remitente'
                 fecha_str = correo.date.strftime('%Y-%m-%d %H:%M') if correo.date else 'Sin fecha'
@@ -1868,67 +1865,36 @@ class ContadorAutomatico(models.Model):
             if len(todos_los_correos) > 15:
                 _logger.info(f"📧 ... y {len(todos_los_correos) - 15} correos más")
             
-            # Palabras clave AMPLIADAS para detectar correos de contadores
-            palabras_clave_contadores = [
-                'counter list',
-                'counter page', 
-                'page counter',
-                'counter report',
-                'usage report',
-                'printer counter',
-                'contador',
-                'contadores',
-                'ricoh',
-                'bizhub',
-                'konica',
-                'minolta',
-                'serial number',
-                'número de serie',
-                'total pages',
-                'páginas totales',
-                'scan counter',
-                'contador escaneo'
-            ]
-            
             def _es_correo_contador_diagnostico(asunto, remitente):
                 """
-                Filtrado INTELIGENTE: por asunto Y por remitente
+                Filtrado ESPECÍFICO: SOLO Counter List/Page en inglés o español
                 """
                 if not asunto:
                     return False, "Sin asunto"
                 
                 asunto_lower = asunto.lower().strip()
-                remitente_lower = (remitente or '').lower()
                 
-                # 1. Verificar por remitente conocido PRIMERO
-                remitentes_validos = [
-                    'printer@andescopiers.com.pe',
-                    'printer@',
-                    'admin@ricoh',
-                    'konica@',
-                    'bizhub@'
+                # LISTA EXACTA de palabras que identifican correos de contadores
+                palabras_contador_validas = [
+                    'counter list',      # Inglés
+                    'counter page',      # Inglés  
+                    'page counter',      # Inglés alternativo
+                    'lista contador',    # Español
+                    'lista contadores',  # Español
+                    'página contador',   # Español
+                    'contador página',   # Español
+                    'contador lista'     # Español
                 ]
                 
-                for rem_valido in remitentes_validos:
-                    if rem_valido in remitente_lower:
-                        return True, f"Remitente válido: {rem_valido}"
-                
-                # 2. Verificar por palabras clave en asunto
-                for palabra in palabras_clave_contadores:
+                # Verificar coincidencias EXACTAS
+                for palabra in palabras_contador_validas:
                     if palabra in asunto_lower:
-                        return True, f"Coincide con '{palabra}'"
+                        _logger.info(f"✅ CORREO DE CONTADOR VÁLIDO: '{palabra}' encontrado en '{asunto}'")
+                        return True, f"Coincide exactamente con '{palabra}'"
                 
-                # 3. Verificar "counter" genérico
-                if 'counter' in asunto_lower:
-                    conversacion_indicators = ['gracias por', 'respuesta', 'actualiza esta', 're:', 'fwd:']
-                    
-                    for indicator in conversacion_indicators:
-                        if indicator in asunto_lower:
-                            return False, f"Conversación detectada: '{indicator}'"
-                    
-                    return True, "Counter genérico válido"
-                
-                return False, "No es correo de contadores"
+                # TODOS los demás correos se descartan
+                _logger.info(f"❌ NO ES CORREO DE CONTADOR: '{asunto}' no contiene palabras válidas")
+                return False, "No contiene 'Counter List' ni 'Counter Page'"
             
             # CREAR MAPA DE CORREOS YA PROCESADOS para evitar reprocesar
             def _crear_mapa_correos_procesados():
@@ -1980,7 +1946,7 @@ class ContadorAutomatico(models.Model):
                 return False
             
             # ANALIZAR Y CATEGORIZAR CORREOS
-            _logger.info(f"📊 === ANÁLISIS DETALLADO DE CORREOS ===")
+            _logger.info(f"📊 === ANÁLISIS ESPECÍFICO COUNTER LIST/PAGE ===")
             
             # Crear mapa de procesados
             mapa_correos_procesados = _crear_mapa_correos_procesados()
@@ -1993,7 +1959,7 @@ class ContadorAutomatico(models.Model):
                 asunto = correo.subject or f'Sin asunto - {correo.id}'
                 remitente = correo.email_from or 'Sin remitente'
                 
-                # 1. Verificar si es correo de contadores
+                # 1. Verificar si es correo de contadores (SOLO Counter List/Page)
                 es_contador, razon = _es_correo_contador_diagnostico(asunto, remitente)
                 
                 if not es_contador:
@@ -2006,30 +1972,37 @@ class ContadorAutomatico(models.Model):
                     correos_ya_procesados += 1
                     continue
                 
-                # 3. Es correo válido y no procesado
+                # 3. Es correo válido Counter List/Page y no procesado
                 correos_contadores.append(correo)
-                _logger.info(f"✅ NUEVO CONTADOR: '{asunto[:50]}...' → {razon}")
+                _logger.info(f"✅ COUNTER LIST/PAGE NUEVO: '{asunto[:50]}...' → {razon}")
             
             _logger.info(f"📊 === RESUMEN FILTRADO ===")
-            _logger.info(f"✅ Correos nuevos de contadores: {len(correos_contadores)}")
+            _logger.info(f"✅ Correos Counter List/Page nuevos: {len(correos_contadores)}")
             _logger.info(f"⏭️ Correos ya procesados: {correos_ya_procesados}")
-            _logger.info(f"❌ Correos descartados: {len(correos_descartados)}")
+            _logger.info(f"❌ Correos descartados (no Counter List/Page): {len(correos_descartados)}")
             
             if not correos_contadores:
-                _logger.info("ℹ️ No hay correos nuevos de contadores para procesar")
+                if correos_ya_procesados > 0:
+                    _logger.info(f"ℹ️ No hay correos Counter List/Page nuevos (todos ya procesados)")
+                else:
+                    _logger.warning(f"⚠️ NO SE ENCONTRARON CORREOS 'COUNTER LIST' NI 'COUNTER PAGE' en las últimas 24h")
                 return True
             
             def _diagnosticar_registros_existentes():
                 """
-                DIAGNÓSTICO: Muestra registros recientes
+                DIAGNÓSTICO: Muestra registros Counter List recientes
                 """
-                _logger.info(f"📊 === DIAGNÓSTICO: REGISTROS RECIENTES ===")
+                _logger.info(f"📊 === DIAGNÓSTICO: REGISTROS COUNTER LIST RECIENTES ===")
                 
                 registros_recientes = self.env['contador.automatico'].search([
-                    ('create_date', '>=', fecha_limite)
+                    ('create_date', '>=', fecha_limite),
+                    '|', '|',
+                    ('name', 'ilike', 'counter list'),
+                    ('name', 'ilike', 'counter page'),
+                    ('name', 'ilike', 'page counter')
                 ], order='create_date desc', limit=10)
                 
-                _logger.info(f"📋 Registros de últimas 24h: {len(registros_recientes)}")
+                _logger.info(f"📋 Registros Counter List de últimas 24h: {len(registros_recientes)}")
                 
                 for i, registro in enumerate(registros_recientes, 1):
                     _logger.info(f"  {i:2d}. ID={registro.id} | '{registro.name[:35]}...'")
@@ -2093,8 +2066,8 @@ class ContadorAutomatico(models.Model):
                 _logger.info(f"✅ NO DUPLICADO - Contadores únicos para esta serie")
                 return False
             
-            # PROCESAR CORREOS NUEVOS DE CONTADORES
-            _logger.info(f"🚀 === INICIANDO PROCESAMIENTO DE CORREOS NUEVOS ===")
+            # PROCESAR CORREOS COUNTER LIST/PAGE NUEVOS
+            _logger.info(f"🚀 === PROCESANDO CORREOS COUNTER LIST/PAGE NUEVOS ===")
             
             # Diagnóstico
             _diagnosticar_registros_existentes()
@@ -2108,7 +2081,7 @@ class ContadorAutomatico(models.Model):
                 asunto = correo.subject or f'Sin asunto - {correo.id}'
                 remitente = correo.email_from or 'Sin remitente'
                 
-                _logger.info(f"📨 === PROCESANDO CORREO NUEVO {i+1}/{len(correos_contadores)} ===")
+                _logger.info(f"📨 === PROCESANDO COUNTER LIST {i+1}/{len(correos_contadores)} ===")
                 _logger.info(f"📧 Asunto: '{asunto}'")
                 _logger.info(f"👤 Remitente: '{remitente}'")
                 
@@ -2145,21 +2118,21 @@ class ContadorAutomatico(models.Model):
                                 registro_temp.unlink()
                                 correos_duplicados += 1
                             else:
-                                _logger.info(f"✅ NUEVO REGISTRO VÁLIDO - Guardando")
+                                _logger.info(f"✅ NUEVO COUNTER LIST VÁLIDO - Guardando")
                                 correos_procesados_exitosos += 1
                                 
                                 # Asegurar fecha de procesamiento
                                 if not registro_temp.fecha_procesamiento:
                                     registro_temp.write({'fecha_procesamiento': ahora})
                         else:
-                            _logger.warning(f"⚠️ DATOS INSUFICIENTES")
+                            _logger.warning(f"⚠️ COUNTER LIST SIN DATOS SUFICIENTES")
                             correos_sin_datos += 1
                             
                             # Mantener para revisión manual
                             if not registro_temp.fecha_procesamiento:
                                 registro_temp.write({'fecha_procesamiento': ahora})
                     else:
-                        _logger.warning(f"❌ FALLO EN PROCESAMIENTO INTELIGENTE")
+                        _logger.warning(f"❌ FALLO PROCESANDO COUNTER LIST")
                         correos_sin_datos += 1
                     
                 except Exception as e:
@@ -2169,20 +2142,20 @@ class ContadorAutomatico(models.Model):
                     _logger.error(f"Traceback: {traceback.format_exc()}")
             
             # RESUMEN FINAL
-            _logger.info(f"📊 === RESUMEN FINAL 24H ===")
+            _logger.info(f"📊 === RESUMEN FINAL COUNTER LIST/PAGE ===")
             _logger.info(f"📧 Total correos analizados: {len(todos_los_correos)}")
-            _logger.info(f"🎯 Correos de contadores encontrados: {len(correos_contadores) + correos_ya_procesados}")
+            _logger.info(f"🎯 Correos Counter List/Page encontrados: {len(correos_contadores) + correos_ya_procesados}")
             _logger.info(f"⏭️ Ya procesados previamente: {correos_ya_procesados}")
-            _logger.info(f"🆕 Correos nuevos procesados: {len(correos_contadores)}")
+            _logger.info(f"🆕 Correos nuevos Counter List/Page: {len(correos_contadores)}")
             _logger.info(f"✅ Procesados exitosamente: {correos_procesados_exitosos}")
             _logger.info(f"⏭️ Duplicados por contadores: {correos_duplicados}")
             _logger.info(f"⚠️ Sin datos suficientes: {correos_sin_datos}")
             _logger.info(f"❌ Errores de procesamiento: {correos_fallidos}")
-            _logger.info(f"🚫 Correos descartados: {len(correos_descartados)}")
+            _logger.info(f"🚫 Correos descartados (no Counter List/Page): {len(correos_descartados)}")
             
             if len(correos_contadores) > 0:
                 eficiencia = (correos_procesados_exitosos / len(correos_contadores)) * 100
-                _logger.info(f"📈 Eficiencia procesamiento nuevos: {eficiencia:.1f}%")
+                _logger.info(f"📈 Eficiencia procesamiento Counter List: {eficiencia:.1f}%")
             
             # Guardar estadísticas
             resumen = {
@@ -2198,7 +2171,7 @@ class ContadorAutomatico(models.Model):
             dummy_instance = self.browse(1) if self.search([], limit=1) else self.new()
             dummy_instance._guardar_estadisticas_cron_seguro(resumen)
             
-            _logger.info("⏰ === FIN CRON 24H CON LÓGICA ANTI-DUPLICADOS ===")
+            _logger.info("⏰ === FIN CRON ESPECÍFICO COUNTER LIST/PAGE ===")
             return True
             
         except Exception as e:
@@ -2206,6 +2179,217 @@ class ContadorAutomatico(models.Model):
             import traceback
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
+
+
+    # MÉTODO ADICIONAL: Buscar correos Counter List específicamente
+    @api.model
+    def buscar_correos_counter_list_especificos(self, horas=48):
+        """
+        NUEVO: Busca SOLO correos que contengan 'Counter List' o 'Counter Page'
+        """
+        try:
+            _logger.info(f"🔍 === BÚSQUEDA ESPECÍFICA: COUNTER LIST/PAGE ===")
+            
+            fecha_limite = fields.Datetime.now() - timedelta(hours=horas)
+            
+            # Buscar SOLO correos con Counter List/Page en el asunto
+            correos_counter = self.env['mail.message'].search([
+                ('message_type', '=', 'email'),
+                ('date', '>=', fecha_limite),
+                '|', '|', '|',
+                ('subject', 'ilike', 'counter list'),
+                ('subject', 'ilike', 'counter page'),
+                ('subject', 'ilike', 'page counter'),
+                ('subject', 'ilike', 'lista contador')
+            ], order='date desc')
+            
+            _logger.info(f"📧 Correos Counter List/Page encontrados: {len(correos_counter)}")
+            
+            if not correos_counter:
+                _logger.warning("⚠️ NO SE ENCONTRARON CORREOS 'COUNTER LIST' NI 'COUNTER PAGE'")
+                _logger.info("💡 Esto significa que:")
+                _logger.info("   1. No han llegado correos de contadores en las últimas 48h, O")
+                _logger.info("   2. Los correos tienen un asunto diferente al esperado")
+                return []
+            
+            correos_no_procesados = []
+            
+            for i, correo in enumerate(correos_counter, 1):
+                asunto = correo.subject or f'Sin asunto - {correo.id}'
+                remitente = correo.email_from or 'Sin remitente'
+                fecha_str = correo.date.strftime('%Y-%m-%d %H:%M') if correo.date else 'Sin fecha'
+                
+                _logger.info(f"📧 {i}. COUNTER LIST/PAGE:")
+                _logger.info(f"    Asunto: '{asunto}'")
+                _logger.info(f"    Remitente: {remitente}")
+                _logger.info(f"    Fecha: {fecha_str}")
+                
+                # Verificar si ya fue procesado
+                existe = self.search([
+                    ('name', '=', asunto),
+                    ('remitente', '=', remitente)
+                ], limit=1)
+                
+                if existe:
+                    _logger.info(f"    ✅ Ya procesado: ID={existe.id}, Estado={existe.estado}")
+                    if existe.estado == 'filtrado':
+                        _logger.warning(f"    ⚠️ PROBLEMA: Counter List fue filtrado incorrectamente")
+                else:
+                    _logger.info(f"    🆕 NO PROCESADO - Necesita procesamiento")
+                    correos_no_procesados.append(correo)
+                    
+                    # Mostrar contenido para verificar
+                    contenido = correo.body or "Sin contenido"
+                    if len(contenido) > 100:
+                        _logger.info(f"    📄 Contenido (muestra): {contenido[:200]}...")
+                        
+                        # Buscar indicadores de contadores reales
+                        indicadores = ['serial', 'serie', 'T_Total', 'total', 'black', 'color', 'scan']
+                        encontrados = [ind for ind in indicadores if ind.lower() in contenido.lower()]
+                        if encontrados:
+                            _logger.info(f"    ✅ Contiene indicadores: {encontrados}")
+                        else:
+                            _logger.warning(f"    ⚠️ No contiene indicadores obvios de contadores")
+            
+            _logger.info(f"📊 === RESUMEN COUNTER LIST/PAGE ===")
+            _logger.info(f"🔍 Total encontrados: {len(correos_counter)}")
+            _logger.info(f"🆕 No procesados: {len(correos_no_procesados)}")
+            _logger.info(f"✅ Ya procesados: {len(correos_counter) - len(correos_no_procesados)}")
+            
+            return correos_no_procesados
+            
+        except Exception as e:
+            _logger.error(f"❌ Error buscando Counter List: {e}")
+            return []
+
+
+    # MÉTODO PARA PROCESAR MANUALMENTE LOS COUNTER LIST NO PROCESADOS
+    def procesar_counter_list_pendientes(self):
+        """
+        NUEVO: Procesa manualmente los correos Counter List que no se procesaron
+        """
+        try:
+            _logger.info(f"🔄 === PROCESANDO COUNTER LIST PENDIENTES ===")
+            
+            # Buscar correos Counter List no procesados
+            correos_pendientes = self.buscar_correos_counter_list_especificos(48)
+            
+            if not correos_pendientes:
+                mensaje = "No se encontraron correos 'Counter List' pendientes de procesar"
+                _logger.info(f"ℹ️ {mensaje}")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': mensaje,
+                        'type': 'info'
+                    }
+                }
+            
+            procesados_exitosos = 0
+            errores = 0
+            
+            for correo in correos_pendientes:
+                try:
+                    asunto = correo.subject or f'Sin asunto - {correo.id}'
+                    
+                    _logger.info(f"🔄 Procesando: '{asunto}'")
+                    
+                    # Crear y procesar registro
+                    registro = self.create({
+                        'name': asunto,
+                        'remitente': correo.email_from,
+                        'contenido_original': correo.body or asunto,
+                        'estado': 'pendiente'
+                    })
+                    
+                    if registro.procesar_correo_inteligente():
+                        procesados_exitosos += 1
+                        _logger.info(f"✅ Procesado exitosamente: {asunto}")
+                    else:
+                        errores += 1
+                        _logger.warning(f"⚠️ Error procesando: {asunto}")
+                    
+                except Exception as e:
+                    errores += 1
+                    _logger.error(f"❌ Error procesando correo: {e}")
+            
+            mensaje = f"Procesamiento completado: {procesados_exitosos} exitosos, {errores} errores de {len(correos_pendientes)} correos Counter List"
+            _logger.info(f"📊 {mensaje}")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': mensaje,
+                    'type': 'success' if errores == 0 else 'warning'
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error procesando Counter List pendientes: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+
+    # MÉTODO PARA LIMPIAR REGISTROS QUE NO SON COUNTER LIST
+    def limpiar_registros_no_counter_list(self):
+        """
+        NUEVO: Elimina todos los registros que NO son Counter List ni Counter Page
+        """
+        try:
+            _logger.info(f"🧹 === LIMPIANDO REGISTROS QUE NO SON COUNTER LIST ===")
+            
+            # Buscar todos los registros que NO contienen Counter List/Page
+            registros_incorrectos = self.search([
+                ('name', 'not ilike', 'counter list'),
+                ('name', 'not ilike', 'counter page'),
+                ('name', 'not ilike', 'page counter'),
+                ('name', 'not ilike', 'lista contador')
+            ])
+            
+            _logger.info(f"📋 Registros que NO son Counter List encontrados: {len(registros_incorrectos)}")
+            
+            # Mostrar algunos ejemplos antes de eliminar
+            for i, registro in enumerate(registros_incorrectos[:10], 1):
+                _logger.info(f"🗑️ {i}. A eliminar: '{registro.name}' (ID={registro.id})")
+            
+            if len(registros_incorrectos) > 10:
+                _logger.info(f"   ... y {len(registros_incorrectos) - 10} más")
+            
+            if registros_incorrectos:
+                cantidad = len(registros_incorrectos)
+                registros_incorrectos.unlink()
+                _logger.info(f"✅ Eliminados {cantidad} registros que no son Counter List")
+            else:
+                cantidad = 0
+                _logger.info("ℹ️ No se encontraron registros incorrectos para eliminar")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Limpieza completada: {cantidad} registros eliminados',
+                    'type': 'success'
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error limpiando registros: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error en limpieza: {str(e)}',
+                    'type': 'danger'
+                }
+            }
 
     
     @api.model
