@@ -5,7 +5,7 @@
         <field name="name">contador.dashboard.tree</field>
         <field name="model">contador.automatico</field>
         <field name="arch" type="xml">
-            <tree string="Dashboard Contadores" 
+            <list string="Dashboard Contadores" 
                   create="false" 
                   edit="false" 
                   delete="false"
@@ -23,7 +23,7 @@
                 <field name="create_date" string="Fecha"/>
                 <field name="estado" string="Estado" widget="badge"/>
                 
-            </tree>
+            </list>
         </field>
     </record>
 
