@@ -2288,19 +2288,37 @@ class ContadorAutomatico(models.Model):
             _logger.info(f"🔄 === FORZANDO PROCESAMIENTO PARA HOY ===")
             _logger.info(f"🎯 Serie: {serie_equipo}")
             
-            # Buscar correos Counter List recientes de esta serie
-            correos_serie = self.env['mail.message'].search([
+            # CORRECCIÓN: Buscar correos Counter List recientes de esta serie
+            # Primero buscar por asunto Counter List, luego filtrar por contenido
+            correos_counter_list = self.env['mail.message'].search([
                 ('message_type', '=', 'email'),
                 ('date', '>=', fields.Datetime.now() - timedelta(hours=24)),
-                '|', '|',
+                '|', '|', '|',
                 ('subject', 'ilike', 'counter list'),
                 ('subject', 'ilike', 'counter page'),
-                ('body', 'ilike', serie_equipo)
-            ], order='date desc', limit=1)
+                ('subject', 'ilike', 'page counter'),
+                ('subject', 'ilike', 'lista contador')
+            ], order='date desc')
             
-            if not correos_serie:
+            _logger.info(f"📧 Correos Counter List encontrados: {len(correos_counter_list)}")
+            
+            # Filtrar por serie en el contenido
+            correo_encontrado = None
+            for correo in correos_counter_list:
+                contenido = correo.body or ""
+                if serie_equipo.upper() in contenido.upper():
+                    correo_encontrado = correo
+                    _logger.info(f"✅ Correo encontrado con serie {serie_equipo}")
+                    break
+            
+            if not correo_encontrado:
                 mensaje = f"No se encontraron correos Counter List recientes para la serie {serie_equipo}"
                 _logger.warning(f"⚠️ {mensaje}")
+                _logger.info(f"💡 Correos Counter List disponibles:")
+                for correo in correos_counter_list[:5]:
+                    contenido_muestra = (correo.body or "")[:100]
+                    _logger.info(f"   - {correo.subject} | {contenido_muestra}...")
+                
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -2310,45 +2328,69 @@ class ContadorAutomatico(models.Model):
                     }
                 }
             
-            correo = correos_serie[0]
-            asunto = correo.subject or f'Sin asunto - {correo.id}'
+            asunto = correo_encontrado.subject or f'Sin asunto - {correo_encontrado.id}'
             
             _logger.info(f"📧 Procesando correo: '{asunto}'")
+            _logger.info(f"📅 Fecha correo: {correo_encontrado.date}")
             
-            # Crear registro forzado
-            registro = self.create({
-                'name': f"{asunto} (Forzado {fields.Date.today()})",
-                'remitente': correo.email_from,
-                'contenido_original': correo.body or asunto,
-                'estado': 'pendiente'
-            })
+            # CORRECCIÓN: Verificar si ya existe un registro hoy para evitar duplicados
+            hoy = fields.Date.today()
+            registro_hoy = self.search([
+                ('serie_detectada', '=', serie_equipo),
+                ('create_date', '>=', hoy),
+                ('create_date', '<', hoy + timedelta(days=1))
+            ], limit=1)
             
-            # Procesar
-            if registro.procesar_correo_inteligente():
-                mensaje = f"✅ Procesamiento forzado exitoso para serie {serie_equipo}"
-                _logger.info(mensaje)
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': mensaje,
-                        'type': 'success'
-                    }
-                }
-            else:
-                mensaje = f"❌ Error en procesamiento forzado para serie {serie_equipo}"
+            if registro_hoy:
+                mensaje = f"⚠️ Ya existe un registro hoy para la serie {serie_equipo} (ID: {registro_hoy.id})"
                 _logger.warning(mensaje)
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'message': mensaje,
+                        'type': 'info'
+                    }
+                }
+            
+            # Crear registro forzado
+            registro = self.create({
+                'name': f"{asunto} (Forzado {fields.Date.today()})",
+                'remitente': correo_encontrado.email_from,
+                'contenido_original': correo_encontrado.body or asunto,
+                'estado': 'pendiente'
+            })
+            
+            _logger.info(f"🆕 Registro forzado creado: ID={registro.id}")
+            
+            # Procesar
+            if registro.procesar_correo_inteligente():
+                mensaje = f"✅ Procesamiento forzado exitoso para serie {serie_equipo}. Serie detectada: {registro.serie_detectada}, BN: {registro.contador_bn_detectado}, Scan: {registro.contador_scan_detectado}"
+                _logger.info(mensaje)
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': f"✅ Procesamiento forzado exitoso para serie {serie_equipo}",
+                        'type': 'success'
+                    }
+                }
+            else:
+                mensaje = f"❌ Error en procesamiento forzado para serie {serie_equipo}. Estado: {registro.estado}, Error: {registro.mensaje_error}"
+                _logger.warning(mensaje)
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': f"❌ Error en procesamiento forzado para serie {serie_equipo}",
                         'type': 'danger'
                     }
                 }
             
         except Exception as e:
             _logger.error(f"❌ Error en procesamiento forzado: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -2356,7 +2398,7 @@ class ContadorAutomatico(models.Model):
                     'message': f'Error: {str(e)}',
                     'type': 'danger'
                 }
-    # MÉTODO ADICIONAL: Buscar correos Counter List específicamente
+            }
     @api.model
     def buscar_correos_counter_list_especificos(self, horas=48):
         """
