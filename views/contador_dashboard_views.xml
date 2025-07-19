@@ -1,77 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Crear un registro dummy para el dashboard CON TODOS los campos obligatorios -->
-    <record id="dashboard_dummy_record" model="contador.automatico">
-        <field name="name">📊 Dashboard de Contadores - Registro del Sistema</field>
-        <field name="estado">procesado</field>
-        <field name="remitente">sistema.dashboard@contador.local</field>
-        <field name="contenido_procesado">Registro especial creado para el funcionamiento del Dashboard de Contadores. Este registro permite la visualización y gestión centralizada de todos los equipos.</field>
-        <field name="serie_detectada">DASHBOARD-001</field>
-        <field name="cliente_detectado">Sistema Dashboard</field>
-        <field name="tipo_equipo_detectado">color</field>
-        <field name="contador_bn_detectado">0</field>
-        <field name="contador_color_detectado">0</field>
-        <field name="contador_scan_detectado">0</field>
-        <field name="procesado_automaticamente" eval="True"/>
-        <field name="idioma_detectado">español</field>
-        <field name="marca_detectada">Sistema</field>
-        <field name="confianza_deteccion">100.0</field>
-    </record>
-
-    <!-- Vista Dashboard Principal -->
+    <!-- Vista Dashboard Principal - Solo Bootstrap, sin registro dummy -->
     <record id="view_contador_dashboard_main" model="ir.ui.view">
         <field name="name">contador.dashboard.main</field>
         <field name="model">contador.automatico</field>
         <field name="arch" type="xml">
             <form string="Dashboard Contadores" class="o_contador_dashboard_main" js_class="contador_dashboard_form">
-                <!-- CSS Inline para compatibilidad -->
-                <style>
-                    .dashboard-header {
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: white;
-                        border-radius: 0 0 20px 20px;
-                        margin: -16px -16px 20px -16px;
-                        padding: 2rem 0;
-                    }
-                    .stat-card {
-                        transition: transform 0.2s ease;
-                    }
-                    .stat-card:hover {
-                        transform: translateY(-5px);
-                    }
-                    .filter-btn.active {
-                        background-color: #0d6efd;
-                        color: white;
-                        border-color: #0d6efd;
-                    }
-                    .loading-overlay {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background: rgba(0,0,0,0.5);
-                        z-index: 9999;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                    }
-                    .d-none {
-                        display: none !important;
-                    }
-                </style>
-
-                <!-- Header con título y botón refresh -->
-                <div class="dashboard-header text-center">
+                
+                <!-- Header -->
+                <div class="bg-primary text-white text-center py-5 mb-4">
                     <div class="container">
                         <h1 class="display-4 fw-bold mb-2">
-                            📊 Dashboard de Contadores
+                            <i class="bi bi-graph-up me-3"></i>
+                            Dashboard de Contadores
                         </h1>
                         <p class="lead mb-3">Monitoreo en tiempo real de equipos de impresión</p>
                         <button name="refresh_dashboard" 
                                 type="object" 
-                                class="btn btn-light btn-lg rounded-pill px-4">
-                            🔄 Actualizar Dashboard
+                                class="btn btn-light btn-lg">
+                            <i class="bi bi-arrow-clockwise me-2"></i>
+                            Actualizar Dashboard
                         </button>
                     </div>
                 </div>
@@ -81,56 +29,68 @@
                     <div class="row g-3">
                         <!-- Equipos Activos Hoy -->
                         <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card text-center shadow-sm stat-card">
+                            <div class="card text-center shadow-sm h-100">
                                 <div class="card-body">
                                     <div class="text-primary mb-3">
-                                        <i class="fa fa-desktop fa-3x"></i>
+                                        <i class="bi bi-pc-display stat-icon" style="font-size: 3rem;"></i>
                                     </div>
                                     <h2 class="card-title text-primary" id="equipos_hoy">0</h2>
                                     <p class="card-text fw-bold">Equipos Actualizados Hoy</p>
-                                    <small class="text-muted">📅 Últimas 24 horas</small>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar-day me-1"></i>
+                                        Últimas 24 horas
+                                    </small>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Equipos Semana -->
                         <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card text-center shadow-sm stat-card">
+                            <div class="card text-center shadow-sm h-100">
                                 <div class="card-body">
                                     <div class="text-success mb-3">
-                                        <i class="fa fa-calendar-week fa-3x"></i>
+                                        <i class="bi bi-calendar-week stat-icon" style="font-size: 3rem;"></i>
                                     </div>
                                     <h2 class="card-title text-success" id="equipos_semana">0</h2>
                                     <p class="card-text fw-bold">Equipos Esta Semana</p>
-                                    <small class="text-muted">📈 Últimos 7 días</small>
+                                    <small class="text-muted">
+                                        <i class="bi bi-graph-up me-1"></i>
+                                        Últimos 7 días
+                                    </small>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Total Equipos -->
                         <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card text-center shadow-sm stat-card">
+                            <div class="card text-center shadow-sm h-100">
                                 <div class="card-body">
                                     <div class="text-info mb-3">
-                                        <i class="fa fa-database fa-3x"></i>
+                                        <i class="bi bi-database stat-icon" style="font-size: 3rem;"></i>
                                     </div>
                                     <h2 class="card-title text-info" id="total_equipos">0</h2>
                                     <p class="card-text fw-bold">Total en Sistema</p>
-                                    <small class="text-muted">🏢 Todos los equipos</small>
+                                    <small class="text-muted">
+                                        <i class="bi bi-building me-1"></i>
+                                        Todos los equipos
+                                    </small>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Eficiencia -->
                         <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card text-center shadow-sm stat-card">
+                            <div class="card text-center shadow-sm h-100">
                                 <div class="card-body">
                                     <div class="text-warning mb-3">
-                                        <i class="fa fa-percentage fa-3x"></i>
+                                        <i class="bi bi-percent stat-icon" style="font-size: 3rem;"></i>
                                     </div>
                                     <h2 class="card-title text-warning" id="eficiencia">0%</h2>
                                     <p class="card-text fw-bold">Eficiencia Sistema</p>
-                                    <small class="text-muted">🤖 Procesamiento automático</small>
+                                    <small class="text-muted">
+                                        <i class="bi bi-robot me-1"></i>
+                                        Procesamiento automático
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -140,29 +100,37 @@
                 <!-- Filtros rápidos -->
                 <div class="container-fluid mb-4">
                     <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-funnel me-2"></i>
+                                Filtros y Búsqueda
+                            </h5>
+                        </div>
                         <div class="card-body">
                             <div class="row align-items-center">
                                 <div class="col-md-8">
-                                    <h6 class="mb-3">🔍 Filtros rápidos:</h6>
-                                    <div class="d-flex flex-wrap gap-2">
-                                        <button type="button" name="filter_all" class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all">
-                                            📋 Todos
+                                    <h6 class="mb-3">Filtros rápidos:</h6>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" name="filter_all" class="btn btn-outline-primary filter-btn active" data-filter="all">
+                                            <i class="bi bi-list me-1"></i>Todos
                                         </button>
-                                        <button type="button" name="filter_hoy" class="btn btn-outline-success btn-sm filter-btn" data-filter="hoy">
-                                            📅 Hoy
+                                        <button type="button" name="filter_hoy" class="btn btn-outline-success filter-btn" data-filter="hoy">
+                                            <i class="bi bi-calendar-day me-1"></i>Hoy
                                         </button>
-                                        <button type="button" name="filter_color" class="btn btn-outline-info btn-sm filter-btn" data-filter="color">
-                                            🎨 Color
+                                        <button type="button" name="filter_color" class="btn btn-outline-info filter-btn" data-filter="color">
+                                            <i class="bi bi-palette me-1"></i>Color
                                         </button>
-                                        <button type="button" name="filter_mono" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="mono">
-                                            ⚫ Monocromáticas
+                                        <button type="button" name="filter_mono" class="btn btn-outline-secondary filter-btn" data-filter="mono">
+                                            <i class="bi bi-circle me-1"></i>Monocromáticas
                                         </button>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <h6 class="mb-3">🔍 Búsqueda:</h6>
+                                    <h6 class="mb-3">Búsqueda:</h6>
                                     <div class="input-group">
-                                        <span class="input-group-text">🔍</span>
+                                        <span class="input-group-text">
+                                            <i class="bi bi-search"></i>
+                                        </span>
                                         <input type="text" 
                                                class="form-control" 
                                                placeholder="Buscar cliente o serie..."
@@ -180,11 +148,15 @@
                         <div class="card-header bg-primary text-white">
                             <div class="row align-items-center">
                                 <div class="col-md-6">
-                                    <h4 class="mb-0">📋 Equipos de Impresión</h4>
+                                    <h4 class="mb-0">
+                                        <i class="bi bi-printer me-2"></i>
+                                        Equipos de Impresión
+                                    </h4>
                                 </div>
                                 <div class="col-md-6 text-end">
                                     <span class="badge bg-light text-dark px-3 py-2">
-                                        🕒 Actualizado: <span id="last_update">Cargando...</span>
+                                        <i class="bi bi-clock me-1"></i>
+                                        Actualizado: <span id="last_update">Cargando...</span>
                                     </span>
                                 </div>
                             </div>
@@ -195,13 +167,27 @@
                                 <table class="table table-hover mb-0" id="machines_table">
                                     <thead class="table-light">
                                         <tr>
-                                            <th class="px-3 py-3">🏢 Cliente</th>
-                                            <th class="px-3 py-3">🔢 Serie</th>
-                                            <th class="px-3 py-3 text-center">⚙️ Tipo</th>
-                                            <th class="px-3 py-3 text-center">📊 Contadores</th>
-                                            <th class="px-3 py-3 text-center">🕒 Última Actualización</th>
-                                            <th class="px-3 py-3 text-center">📊 Estado</th>
-                                            <th class="px-3 py-3 text-center">👁️ Acciones</th>
+                                            <th class="px-3 py-3">
+                                                <i class="bi bi-building me-2"></i>Cliente
+                                            </th>
+                                            <th class="px-3 py-3">
+                                                <i class="bi bi-hash me-2"></i>Serie
+                                            </th>
+                                            <th class="px-3 py-3 text-center">
+                                                <i class="bi bi-gear me-2"></i>Tipo
+                                            </th>
+                                            <th class="px-3 py-3 text-center">
+                                                <i class="bi bi-bar-chart me-2"></i>Contadores
+                                            </th>
+                                            <th class="px-3 py-3 text-center">
+                                                <i class="bi bi-clock me-2"></i>Última Actualización
+                                            </th>
+                                            <th class="px-3 py-3 text-center">
+                                                <i class="bi bi-check-circle me-2"></i>Estado
+                                            </th>
+                                            <th class="px-3 py-3 text-center">
+                                                <i class="bi bi-eye me-2"></i>Acciones
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody id="machines_tbody">
@@ -224,6 +210,7 @@
                             <div class="row align-items-center">
                                 <div class="col-md-6">
                                     <span class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
                                         Mostrando <span id="showing_count">0</span> de <span id="total_count">0</span> equipos
                                     </span>
                                 </div>
@@ -244,7 +231,10 @@
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
                             <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title">📋 Detalle del Equipo</h5>
+                                <h5 class="modal-title">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Detalle del Equipo
+                                </h5>
                                 <button type="button" name="close_modal_btn" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                             </div>
                             <div class="modal-body" id="modal_content">
@@ -257,7 +247,7 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" name="close_modal_footer" class="btn btn-secondary" data-bs-dismiss="modal">
-                                    ❌ Cerrar
+                                    <i class="bi bi-x me-1"></i>Cerrar
                                 </button>
                             </div>
                         </div>
@@ -265,27 +255,30 @@
                 </div>
 
                 <!-- Loading overlay -->
-                <div class="loading-overlay d-none" id="loading_overlay">
-                    <div class="text-center text-white">
-                        <div class="spinner-border mb-3" style="width: 3rem; height: 3rem;" role="status">
-                            <span class="visually-hidden">Cargando...</span>
+                <div class="d-none position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50" 
+                     id="loading_overlay" 
+                     style="z-index: 9999;">
+                    <div class="d-flex justify-content-center align-items-center h-100">
+                        <div class="text-center text-white">
+                            <div class="spinner-border mb-3" style="width: 3rem; height: 3rem;" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <h5>Actualizando datos...</h5>
+                            <p>Por favor espere un momento</p>
                         </div>
-                        <h5>Actualizando datos...</h5>
-                        <p>Por favor espere un momento</p>
                     </div>
                 </div>
             </form>
         </field>
     </record>
 
-    <!-- Acción corregida que apunta al registro dummy -->
+    <!-- Acción SIN registro específico -->
     <record id="action_contador_dashboard" model="ir.actions.act_window">
-        <field name="name">📊 Dashboard Contadores</field>
+        <field name="name">Dashboard Contadores</field>
         <field name="res_model">contador.automatico</field>
         <field name="view_mode">form</field>
         <field name="view_id" ref="view_contador_dashboard_main"/>
         <field name="target">current</field>
-        <field name="res_id" ref="dashboard_dummy_record"/>  <!-- Apuntar al registro dummy -->
         <field name="context">{
             'create': False, 
             'edit': False, 
@@ -294,9 +287,9 @@
         }</field>
     </record>
 
-    <!-- Menú corregido -->
+    <!-- Menú -->
     <menuitem id="menu_contador_dashboard_root"
-              name="📊 Dashboard Contadores"
+              name="Dashboard Contadores"
               parent="sat_menu_root"
               action="action_contador_dashboard"
               sequence="90"/>

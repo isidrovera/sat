@@ -170,18 +170,17 @@ class ContadorAutomatico(models.Model):
     def refresh_dashboard(self):
         """
         Método para refrescar el dashboard manualmente.
-        Debe ser un método de instancia, no @api.model
+        Ahora sin depender de un registro específico.
         """
-        # Aquí podrías agregar lógica adicional como:
-        # - Limpiar caché
-        # - Recalcular estadísticas
-        # - Actualizar registros
-        
-        # Retornar una acción que recargue la vista actual
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'reload',
-        }
+        try:
+            # Retornar una acción que recargue la vista actual
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'reload',
+            }
+        except Exception as e:
+            _logger.error(f"Error en refresh_dashboard: {e}")
+            return False
 
     @api.model
     def action_refresh_dashboard_data(self):

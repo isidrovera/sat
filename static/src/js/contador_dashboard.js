@@ -285,11 +285,14 @@ export class ContadorDashboardController extends FormController {
         tr.className = 'table-row-hover';
         tr.dataset.equipoId = equipo.id;
 
-        // Determinar iconos y clases
-        const tipoIcon = equipo.tipo_equipo_detectado === 'color' ? '🎨' : '⚫';
+        // Determinar iconos y clases con Bootstrap Icons
+        const tipoIcon = equipo.tipo_equipo_detectado === 'color' ? 
+            '<i class="bi bi-palette-fill text-info"></i>' : 
+            '<i class="bi bi-circle-fill text-secondary"></i>';
+        
         const tipoClass = equipo.tipo_equipo_detectado === 'color' ? 'text-info' : 'text-secondary';
 
-        // Estado badge
+        // Estado badge con Bootstrap
         const estadoBadge = this.getEstadoBadge(equipo.estado_ultimo);
 
         // Fecha relativa
@@ -298,7 +301,7 @@ export class ContadorDashboardController extends FormController {
         tr.innerHTML = `
             <td class="px-3 py-2">
                 <div class="d-flex align-items-center">
-                    <span class="me-2 fs-4">${tipoIcon}</span>
+                    <span class="me-3 fs-4">${tipoIcon}</span>
                     <div>
                         <div class="fw-bold">${equipo.cliente_detectado || 'Cliente no detectado'}</div>
                         <small class="text-muted">Cliente #${index}</small>
@@ -307,7 +310,9 @@ export class ContadorDashboardController extends FormController {
             </td>
             <td class="px-3 py-2">
                 <div class="fw-bold text-primary">${equipo.serie_detectada || 'Sin serie'}</div>
-                <small class="text-muted">Nº Serie</small>
+                <small class="text-muted">
+                    <i class="bi bi-hash"></i> Nº Serie
+                </small>
             </td>
             <td class="px-3 py-2 text-center">
                 <span class="badge bg-light ${tipoClass} border">
@@ -316,22 +321,34 @@ export class ContadorDashboardController extends FormController {
             </td>
             <td class="px-3 py-2 text-center">
                 <div class="small">
-                    <div>⚫ BN: <strong>${(equipo.contador_bn_actual || 0).toLocaleString()}</strong></div>
+                    <div>
+                        <i class="bi bi-circle-fill text-dark me-1"></i>
+                        BN: <strong>${(equipo.contador_bn_actual || 0).toLocaleString()}</strong>
+                    </div>
                     ${equipo.tipo_equipo_detectado === 'color' ? 
-                        `<div>🎨 Color: <strong class="text-info">${(equipo.contador_color_actual || 0).toLocaleString()}</strong></div>` : ''}
-                    <div>📊 Total: <strong class="text-success">${(equipo.contador_total_actual || 0).toLocaleString()}</strong></div>
+                        `<div>
+                            <i class="bi bi-palette-fill text-info me-1"></i>
+                            Color: <strong class="text-info">${(equipo.contador_color_actual || 0).toLocaleString()}</strong>
+                        </div>` : ''}
+                    <div>
+                        <i class="bi bi-bar-chart-fill text-success me-1"></i>
+                        Total: <strong class="text-success">${(equipo.contador_total_actual || 0).toLocaleString()}</strong>
+                    </div>
                 </div>
             </td>
             <td class="px-3 py-2 text-center">
                 <div class="fw-bold small">${fechaRelativa}</div>
-                <small class="text-muted">${new Date(equipo.ultima_actualizacion).toLocaleDateString()}</small>
+                <small class="text-muted">
+                    <i class="bi bi-calendar3"></i>
+                    ${new Date(equipo.ultima_actualizacion).toLocaleDateString()}
+                </small>
             </td>
             <td class="px-3 py-2 text-center">
                 ${estadoBadge}
             </td>
             <td class="px-3 py-2 text-center">
                 <button type="button" class="btn btn-sm btn-outline-primary btn-detail" data-equipo-id="${equipo.id}">
-                    👁️ Ver
+                    <i class="bi bi-eye me-1"></i>Ver
                 </button>
             </td>
         `;
@@ -347,12 +364,12 @@ export class ContadorDashboardController extends FormController {
 
     getEstadoBadge(estado) {
         const badges = {
-            'procesado': '<span class="badge bg-success">✅ Procesado</span>',
-            'pendiente': '<span class="badge bg-warning">⏳ Pendiente</span>',
-            'error': '<span class="badge bg-danger">❌ Error</span>',
-            'manual': '<span class="badge bg-info">✋ Manual</span>'
+            'procesado': '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Procesado</span>',
+            'pendiente': '<span class="badge bg-warning"><i class="bi bi-clock me-1"></i>Pendiente</span>',
+            'error': '<span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error</span>',
+            'manual': '<span class="badge bg-info"><i class="bi bi-hand-index me-1"></i>Manual</span>'
         };
-        return badges[estado] || '<span class="badge bg-secondary">❓ Desconocido</span>';
+        return badges[estado] || '<span class="badge bg-secondary"><i class="bi bi-question-circle me-1"></i>Desconocido</span>';
     }
 
     getRelativeTime(dateString) {
@@ -518,21 +535,41 @@ export class ContadorDashboardController extends FormController {
         modalContent.innerHTML = `
             <div class="row">
                 <div class="col-md-6">
-                    <h6 class="text-primary mb-3">📋 Información del Equipo</h6>
+                    <h6 class="text-primary mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Información del Equipo
+                    </h6>
                     <table class="table table-sm">
-                        <tr><td><strong>Cliente:</strong></td><td>${detalle.cliente_detectado || 'No detectado'}</td></tr>
-                        <tr><td><strong>Serie:</strong></td><td class="text-primary">${detalle.serie_detectada || 'No detectada'}</td></tr>
-                        <tr><td><strong>Tipo:</strong></td><td>${detalle.tipo_equipo_detectado || 'No detectado'}</td></tr>
-                        <tr><td><strong>Estado:</strong></td><td>${this.getEstadoBadge(detalle.estado_ultimo)}</td></tr>
+                        <tr>
+                            <td><strong><i class="bi bi-building me-1"></i>Cliente:</strong></td>
+                            <td>${detalle.cliente_detectado || 'No detectado'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong><i class="bi bi-hash me-1"></i>Serie:</strong></td>
+                            <td class="text-primary">${detalle.serie_detectada || 'No detectada'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong><i class="bi bi-gear me-1"></i>Tipo:</strong></td>
+                            <td>${detalle.tipo_equipo_detectado || 'No detectado'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong><i class="bi bi-check-circle me-1"></i>Estado:</strong></td>
+                            <td>${this.getEstadoBadge(detalle.estado_ultimo)}</td>
+                        </tr>
                     </table>
                 </div>
                 <div class="col-md-6">
-                    <h6 class="text-success mb-3">📊 Contadores Actuales</h6>
+                    <h6 class="text-success mb-3">
+                        <i class="bi bi-bar-chart me-2"></i>
+                        Contadores Actuales
+                    </h6>
                     <div class="text-center">
                         <div class="row">
                             <div class="col-4">
                                 <div class="border rounded p-2 mb-2">
-                                    <div class="fs-1">⚫</div>
+                                    <div class="fs-1">
+                                        <i class="bi bi-circle-fill text-dark"></i>
+                                    </div>
                                     <h6>${(detalle.contador_bn_actual || 0).toLocaleString()}</h6>
                                     <small>B/N</small>
                                 </div>
@@ -540,7 +577,9 @@ export class ContadorDashboardController extends FormController {
                             ${detalle.tipo_equipo_detectado === 'color' ? `
                                 <div class="col-4">
                                     <div class="border rounded p-2 mb-2">
-                                        <div class="fs-1">🎨</div>
+                                        <div class="fs-1">
+                                            <i class="bi bi-palette-fill text-info"></i>
+                                        </div>
                                         <h6 class="text-info">${(detalle.contador_color_actual || 0).toLocaleString()}</h6>
                                         <small>Color</small>
                                     </div>
@@ -548,8 +587,19 @@ export class ContadorDashboardController extends FormController {
                             ` : ''}
                             <div class="col-4">
                                 <div class="border rounded p-2 mb-2">
-                                    <div class="fs-1">📊</div>
+                                    <div class="fs-1">
+                                        <i class="bi bi-bar-chart-fill text-success"></i>
+                                    </div>
                                     <h6 class="text-success">${(detalle.contador_total_actual || 0).toLocaleString()}</h6>
+                                    <small>Total</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }class="text-success">${(detalle.contador_total_actual || 0).toLocaleString()}</h6>
                                     <small>Total</small>
                                 </div>
                             </div>
