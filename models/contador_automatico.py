@@ -1486,11 +1486,11 @@ class ContadorAutomatico(models.Model):
             _logger.error(f"❌ Error encontrando patrón usado: {e}")
             return None
 
+    # REEMPLAZAR la sección fallback_por_tipo en buscar_patrones_contadores_dinamico
+
     def buscar_patrones_contadores_dinamico(self, texto):
         """
-        🔍 Busca patrones de contadores usando configuración dinámica,
-        con fallback tipo‑a‑tipo si no encuentra nada.
-        CORRECCIÓN: Mejorado para máquinas monocromas donde total=BN
+        LÓGICA CORREGIDA: Detecta contadores en el orden correcto para Color vs Monocroma
         """
         contadores = {}
         patrones_usados = []
@@ -1502,68 +1502,76 @@ class ContadorAutomatico(models.Model):
         total_patrones = self.env['patron.contador'].search_count([('activo', '=', True)])
         _logger.info(f"📊 Total de patrones activos disponibles: {total_patrones}")
 
-        # CORRECCIÓN: Detectar si es máquina monocroma antes de buscar
+        # Detectar si es máquina monocroma
         es_monocroma = self._detectar_maquina_monocroma(texto, self.idioma_detectado or 'desconocido')
         if es_monocroma:
             _logger.info("🖤 === MÁQUINA MONOCROMA DETECTADA ===")
             _logger.info("ℹ️ Buscando 'total' como contador B/N, omitiendo color")
 
+        # NUEVA LÓGICA: Detectar tipo de correo PRIMERO
+        es_correo_color = '[Total Color Counter]' in texto or '[Total Black Counter]' in texto
+        es_correo_monocroma = '[Total Counter]' in texto and not es_correo_color
+        
+        _logger.info(f"🔍 Análisis de tipo de correo:")
+        _logger.info(f"   Correo color (tiene Black/Color específicos): {es_correo_color}")
+        _logger.info(f"   Correo monocroma (solo Total genérico): {es_correo_monocroma}")
+
+        # PATRONES FALLBACK REORDENADOS POR TIPO DE CORREO
+        if es_correo_color:
+            # PARA CORREOS COLOR: Priorizar contadores específicos
+            fallback_por_tipo = {
+                'contador_bn': [
+                    # PRIORIDAD 1: Contador específico de Black
+                    r'\[Total Black Counter\][^0-9]*(\d{4,9})',
+                    # PRIORIDAD 2: Otros patrones BN
+                    r'(?:black|b\/w|mono).*?(\d{4,9})',
+                    r'T_TotalPrtPGS:\s*(\d{4,9})',
+                ],
+                'contador_color': [
+                    # PRIORIDAD 1: Contador específico de Color
+                    r'\[Total Color Counter\][^0-9]*(\d{4,9})',
+                    # PRIORIDAD 2: Otros patrones Color  
+                    r'(?:color|colour).*?(\d{4,9})',
+                    r'T_ColorPrtPGS:\s*(\d{4,9})'
+                ],
+                'contador_scan': [
+                    r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
+                    r'(?:scan|fax|copy).*?(\d{4,9})',
+                    r'T_ScanPGS:\s*(\d{4,9})'
+                ]
+            }
+            _logger.info("🌈 Usando patrones para CORREO COLOR")
+            
+        else:
+            # PARA CORREOS MONOCROMA: Total Counter va a BN
+            fallback_por_tipo = {
+                'contador_bn': [
+                    # PRIORIDAD 1: Para monocromas, Total Counter es BN
+                    r'\[Total Counter\][^0-9]*(\d{4,9})',
+                    # PRIORIDAD 2: Black específico si existe
+                    r'\[Total Black Counter\][^0-9]*(\d{4,9})',
+                    # PRIORIDAD 3: Otros patrones BN
+                    r'(?:black|b\/w|total).*?(\d{4,9})',
+                    r'T_TotalPrtPGS:\s*(\d{4,9})',
+                ],
+                'contador_color': [
+                    # Para monocromas, NO debe detectar color (será 0)
+                ],
+                'contador_scan': [
+                    r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
+                    r'(?:scan|fax|copy).*?(\d{4,9})',
+                    r'T_ScanPGS:\s*(\d{4,9})'
+                ]
+            }
+            _logger.info("🖤 Usando patrones para CORREO MONOCROMA")
+
         # Tipos de contador a buscar
         tipos = ['contador_bn', 'contador_color', 'contador_scan']
-        
-        # CORRECCIÓN: Fallback mejorado para máquinas monocromas
-        fallback_por_tipo = {
-            'contador_bn': [
-                # INGLÉS
-                r'\[Total Black Counter\][^0-9]*(\d{4,9})',
-                r'\[Total Counter\][^0-9]*(\d{4,9})',              # NUEVO: Para monocromas
-                r'(?:black|b\/w|total).*?(\d{4,9})',               # MEJORADO: Incluir "total"
-                
-                # ESPAÑOL 
-                r'\[Contador de negro total\][^0-9]*(\d{4,9})',    
-                r'\[Contador total\][^0-9]*(\d{4,9})',             # NUEVO: Para monocromas
-                r'\[Contador negro total\][^0-9]*(\d{4,9})',       
-                r'Contador\s*(?:de\s*)?(?:negro|total)[^0-9]*(\d{4,9})',  # MEJORADO
-                
-                # RICOH
-                r'T_TotalPrtPGS:\s*(\d{4,9})',                     
-                r'T_MonoPrtPGS:\s*(\d{4,9})'                       
-            ],
-            
-            'contador_color': [
-                # INGLÉS
-                r'\[Total Color Counter\][^0-9]*(\d{4,9})',
-                r'(?:color|colour).*?(\d{4,9})',
-                
-                # ESPAÑOL
-                r'\[Contador de color total\][^0-9]*(\d{4,9})',    
-                r'\[Contador color total\][^0-9]*(\d{4,9})',       
-                r'Contador\s*(?:de\s*)?color[^0-9]*(\d{4,9})',     
-                
-                # RICOH
-                r'T_ColorPrtPGS:\s*(\d{4,9})'                      
-            ],
-            
-            'contador_scan': [
-                # INGLÉS
-                r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
-                r'(?:scan|fax|copy).*?(\d{4,9})',
-                
-                # ESPAÑOL
-                r'\[Contador total de escaneo\/fax\][^0-9]*(\d{4,9})',  
-                r'\[Contador de escaneo total\][^0-9]*(\d{4,9})',       
-                r'\[Contador escaneo total\][^0-9]*(\d{4,9})',          
-                r'Contador.*(?:escaneo|fax)[^0-9]*(\d{4,9})',           
-                
-                # RICOH
-                r'T_ScanPGS:\s*(\d{4,9})'                              
-            ],
-        }
 
         for tipo in tipos:
             _logger.info(f"🔍 Buscando patrones para: {tipo}")
             
-            # CORRECCIÓN: Saltar color si es monocroma
+            # Saltar color si es monocroma
             if es_monocroma and tipo == 'contador_color':
                 _logger.info(f"⏭️ Saltando {tipo} - máquina monocroma detectada")
                 continue
@@ -1580,9 +1588,12 @@ class ContadorAutomatico(models.Model):
                     _logger.info(f"✅ {tipo} encontrado: {resultado}")
                 continue
 
-            # 2) Fallback específico si no hay detección dinámica
+            # 2) Fallback específico según tipo de correo
             _logger.warning(f"❌ No se encontró {tipo} con patrones dinámicos, intentando fallback...")
-            for pat in fallback_por_tipo[tipo]:
+            patrones_fallback = fallback_por_tipo.get(tipo, [])
+            
+            for pat in patrones_fallback:
+                _logger.info(f"🔍 Probando fallback para {tipo}: '{pat}'")
                 for match in re.finditer(pat, texto, re.IGNORECASE):
                     raw = match.group(1)
                     numero = int(re.sub(r'[^0-9]', '', raw))
@@ -1593,10 +1604,11 @@ class ContadorAutomatico(models.Model):
                         break
                 if tipo in contadores:
                     break
+            
             if tipo not in contadores:
                 _logger.info(f"❌ No se encontró {tipo} incluso en fallback")
 
-        # CORRECCIÓN: Si es monocroma y solo encontramos scan/total, asignarlo también a BN
+        # CORRECCIÓN FINAL: Si es monocroma y solo encontramos scan/total, asignarlo también a BN
         if es_monocroma and 'contador_scan' in contadores and 'contador_bn' not in contadores:
             contadores['contador_bn'] = contadores['contador_scan']
             patrones_usados.append("contador_bn: copiado de total (máquina monocroma)")
@@ -1609,6 +1621,49 @@ class ContadorAutomatico(models.Model):
 
         _logger.info(f"🎯 Resultado final de contadores: {contadores}")
         return contadores
+
+
+    # TAMBIÉN AGREGAR este método para verificar tipo de correo
+    def _detectar_tipo_correo_por_contenido(self, texto):
+        """
+        NUEVO: Detecta si es correo de máquina color o monocroma por el contenido
+        """
+        try:
+            _logger.info("🔍 === DETECTANDO TIPO DE CORREO POR CONTENIDO ===")
+            
+            # Buscar indicadores de correo color
+            indicadores_color = [
+                '[Total Color Counter]',
+                '[Total Black Counter]',
+                'T_ColorPrtPGS'
+            ]
+            
+            # Buscar indicadores de correo monocroma
+            indicadores_monocroma = [
+                '[Total Counter]'  # Solo si no hay color/black específicos
+            ]
+            
+            tiene_indicadores_color = any(ind in texto for ind in indicadores_color)
+            tiene_total_generico = '[Total Counter]' in texto
+            
+            if tiene_indicadores_color:
+                tipo = 'color'
+                razon = "Contiene contadores específicos Black/Color"
+            elif tiene_total_generico and not tiene_indicadores_color:
+                tipo = 'monocroma'
+                razon = "Solo contiene Total Counter genérico"
+            else:
+                tipo = 'desconocido'
+                razon = "No se detectaron patrones claros"
+            
+            _logger.info(f"🎯 Tipo de correo detectado: {tipo}")
+            _logger.info(f"💡 Razón: {razon}")
+            
+            return tipo, razon
+            
+        except Exception as e:
+            _logger.error(f"❌ Error detectando tipo de correo: {e}")
+            return 'desconocido', f"Error: {str(e)}"
 
     def buscar_equipo_por_serie(self, serie):
         """
