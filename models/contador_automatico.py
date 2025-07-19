@@ -2280,7 +2280,6 @@ class ContadorAutomatico(models.Model):
                     'type': 'danger'
                 }
             }
-     @api.model
     @api.model
     def cron_procesar_correos_perdidos(self):
         _logger.info("⏰ Iniciando cron_procesar_correos_perdidos")
