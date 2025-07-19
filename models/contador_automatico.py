@@ -1835,17 +1835,20 @@ class ContadorAutomatico(models.Model):
     @api.model
     def cron_procesar_correos_perdidos(self):
         """
-        CRON CON DETECCIÓN INCREMENTAL: Evita duplicados con contadores idénticos
+        CRON COMPLETO 24H CON LÓGICA ANTI-DUPLICADOS: 
+        - Busca correos de 24 horas
+        - Evita reprocesar correos ya procesados
+        - Detecta duplicados por contadores idénticos
         """
         try:
-            _logger.info("⏰ === INICIO CRON CON DETECCIÓN INCREMENTAL ===")
+            _logger.info("⏰ === INICIO CRON 24H CON LÓGICA ANTI-DUPLICADOS ===")
             
             ahora = fields.Datetime.now()
-            fecha_limite = ahora - timedelta(hours=2)  # Reducido a 2 horas
+            fecha_limite = ahora - timedelta(hours=24)  # 24 HORAS COMPLETAS
             
             _logger.info(f"🔍 Buscando correos desde: {fecha_limite}")
             
-            # Buscar TODOS los correos
+            # Buscar TODOS los correos de las últimas 24 horas
             todos_los_correos = self.env['mail.message'].search([
                 ('message_type', '=', 'email'),
                 ('date', '>=', fecha_limite)
@@ -1854,18 +1857,18 @@ class ContadorAutomatico(models.Model):
             _logger.info(f"📧 === LISTADO COMPLETO DE CORREOS ENCONTRADOS ===")
             _logger.info(f"📊 Total correos: {len(todos_los_correos)}")
             
-            # LISTAR TODOS LOS CORREOS PARA DIAGNÓSTICO
-            for i, correo in enumerate(todos_los_correos[:20], 1):  # Primeros 20
+            # LISTAR CORREOS PARA DIAGNÓSTICO
+            for i, correo in enumerate(todos_los_correos[:15], 1):  # Primeros 15
                 asunto = correo.subject or f'Sin asunto - {correo.id}'
                 remitente = correo.email_from or 'Sin remitente'
                 fecha_str = correo.date.strftime('%Y-%m-%d %H:%M') if correo.date else 'Sin fecha'
                 
                 _logger.info(f"📧 {i:2d}. '{asunto}' | {remitente} | {fecha_str}")
             
-            if len(todos_los_correos) > 20:
-                _logger.info(f"📧 ... y {len(todos_los_correos) - 20} correos más")
+            if len(todos_los_correos) > 15:
+                _logger.info(f"📧 ... y {len(todos_los_correos) - 15} correos más")
             
-            # Palabras clave SIMPLIFICADAS (más permisivas)
+            # Palabras clave AMPLIADAS para detectar correos de contadores
             palabras_clave_contadores = [
                 'counter list',
                 'counter page', 
@@ -1873,159 +1876,227 @@ class ContadorAutomatico(models.Model):
                 'counter report',
                 'usage report',
                 'printer counter',
+                'contador',
+                'contadores',
                 'ricoh',
-                'bizhub'
+                'bizhub',
+                'konica',
+                'minolta',
+                'serial number',
+                'número de serie',
+                'total pages',
+                'páginas totales',
+                'scan counter',
+                'contador escaneo'
             ]
             
-            def _es_correo_contador_diagnostico(asunto):
+            def _es_correo_contador_diagnostico(asunto, remitente):
                 """
-                Filtrado SIMPLE y permisivo con diagnóstico detallado
+                Filtrado INTELIGENTE: por asunto Y por remitente
                 """
                 if not asunto:
                     return False, "Sin asunto"
                 
                 asunto_lower = asunto.lower().strip()
+                remitente_lower = (remitente or '').lower()
                 
-                # Buscar coincidencias
+                # 1. Verificar por remitente conocido PRIMERO
+                remitentes_validos = [
+                    'printer@andescopiers.com.pe',
+                    'printer@',
+                    'admin@ricoh',
+                    'konica@',
+                    'bizhub@'
+                ]
+                
+                for rem_valido in remitentes_validos:
+                    if rem_valido in remitente_lower:
+                        return True, f"Remitente válido: {rem_valido}"
+                
+                # 2. Verificar por palabras clave en asunto
                 for palabra in palabras_clave_contadores:
                     if palabra in asunto_lower:
                         return True, f"Coincide con '{palabra}'"
                 
-                # Verificar si contiene "counter" genérico
+                # 3. Verificar "counter" genérico
                 if 'counter' in asunto_lower:
-                    # Lista de palabras que indican conversación (más específica)
-                    conversacion_indicators = ['gracias por', 'respuesta', 'actualiza esta']
+                    conversacion_indicators = ['gracias por', 'respuesta', 'actualiza esta', 're:', 'fwd:']
                     
                     for indicator in conversacion_indicators:
                         if indicator in asunto_lower:
                             return False, f"Conversación detectada: '{indicator}'"
                     
-                    return True, "Counter genérico en contexto válido"
+                    return True, "Counter genérico válido"
                 
-                return False, "No contiene palabras clave"
+                return False, "No es correo de contadores"
+            
+            # CREAR MAPA DE CORREOS YA PROCESADOS para evitar reprocesar
+            def _crear_mapa_correos_procesados():
+                """
+                Crea mapa de correos ya procesados para verificación rápida
+                """
+                _logger.info("📋 === CREANDO MAPA DE CORREOS YA PROCESADOS ===")
+                
+                # Buscar todos los registros procesados de las últimas 48 horas (margen extra)
+                fecha_mapa = ahora - timedelta(hours=48)
+                registros_procesados = self.env['contador.automatico'].search([
+                    ('create_date', '>=', fecha_mapa),
+                    ('estado', 'in', ['procesado', 'manual', 'error'])
+                ])
+                
+                mapa_procesados = {}
+                for registro in registros_procesados:
+                    # Crear clave única: asunto + remitente + día
+                    fecha_dia = registro.create_date.strftime('%Y-%m-%d') if registro.create_date else 'sin_fecha'
+                    clave = f"{registro.name}|{registro.remitente or ''}|{fecha_dia}"
+                    mapa_procesados[clave] = {
+                        'id': registro.id,
+                        'estado': registro.estado,
+                        'fecha': registro.create_date,
+                        'serie': registro.serie_detectada,
+                        'contadores': f"BN:{registro.contador_bn_detectado} C:{registro.contador_color_detectado} S:{registro.contador_scan_detectado}"
+                    }
+                
+                _logger.info(f"📋 Mapa creado: {len(mapa_procesados)} correos ya procesados en últimas 48h")
+                return mapa_procesados
+            
+            def _ya_fue_procesado(asunto, remitente, fecha_correo, mapa_procesados):
+                """
+                Verifica si este correo específico ya fue procesado
+                """
+                fecha_dia = fecha_correo.strftime('%Y-%m-%d')
+                clave = f"{asunto}|{remitente or ''}|{fecha_dia}"
+                
+                if clave in mapa_procesados:
+                    registro_previo = mapa_procesados[clave]
+                    _logger.info(f"⏭️ CORREO YA PROCESADO:")
+                    _logger.info(f"   Registro previo ID: {registro_previo['id']}")
+                    _logger.info(f"   Estado: {registro_previo['estado']}")
+                    _logger.info(f"   Fecha proceso: {registro_previo['fecha']}")
+                    _logger.info(f"   Serie: {registro_previo['serie']}")
+                    _logger.info(f"   Contadores: {registro_previo['contadores']}")
+                    return True
+                
+                return False
             
             # ANALIZAR Y CATEGORIZAR CORREOS
             _logger.info(f"📊 === ANÁLISIS DETALLADO DE CORREOS ===")
             
+            # Crear mapa de procesados
+            mapa_correos_procesados = _crear_mapa_correos_procesados()
+            
             correos_contadores = []
             correos_descartados = []
+            correos_ya_procesados = 0
             
             for correo in todos_los_correos:
                 asunto = correo.subject or f'Sin asunto - {correo.id}'
-                es_contador, razon = _es_correo_contador_diagnostico(asunto)
+                remitente = correo.email_from or 'Sin remitente'
                 
-                if es_contador:
-                    correos_contadores.append(correo)
-                    _logger.info(f"✅ CONTADOR: '{asunto[:60]}...' → {razon}")
-                else:
+                # 1. Verificar si es correo de contadores
+                es_contador, razon = _es_correo_contador_diagnostico(asunto, remitente)
+                
+                if not es_contador:
                     correos_descartados.append(correo)
-                    _logger.info(f"❌ DESCARTADO: '{asunto[:60]}...' → {razon}")
+                    _logger.info(f"❌ DESCARTADO: '{asunto[:50]}...' → {razon}")
+                    continue
+                
+                # 2. Verificar si ya fue procesado
+                if _ya_fue_procesado(asunto, remitente, correo.date, mapa_correos_procesados):
+                    correos_ya_procesados += 1
+                    continue
+                
+                # 3. Es correo válido y no procesado
+                correos_contadores.append(correo)
+                _logger.info(f"✅ NUEVO CONTADOR: '{asunto[:50]}...' → {razon}")
             
             _logger.info(f"📊 === RESUMEN FILTRADO ===")
-            _logger.info(f"✅ Correos de contadores: {len(correos_contadores)}")
+            _logger.info(f"✅ Correos nuevos de contadores: {len(correos_contadores)}")
+            _logger.info(f"⏭️ Correos ya procesados: {correos_ya_procesados}")
             _logger.info(f"❌ Correos descartados: {len(correos_descartados)}")
             
             if not correos_contadores:
-                _logger.info("ℹ️ No hay correos de contadores para procesar")
+                _logger.info("ℹ️ No hay correos nuevos de contadores para procesar")
                 return True
             
             def _diagnosticar_registros_existentes():
                 """
-                DIAGNÓSTICO: Muestra todos los registros existentes
+                DIAGNÓSTICO: Muestra registros recientes
                 """
-                _logger.info(f"📊 === DIAGNÓSTICO: TODOS LOS REGISTROS EXISTENTES ===")
+                _logger.info(f"📊 === DIAGNÓSTICO: REGISTROS RECIENTES ===")
                 
-                todos_registros = self.env['contador.automatico'].search([], order='create_date desc')
-                _logger.info(f"📋 Total registros en BD: {len(todos_registros)}")
+                registros_recientes = self.env['contador.automatico'].search([
+                    ('create_date', '>=', fecha_limite)
+                ], order='create_date desc', limit=10)
                 
-                for i, registro in enumerate(todos_registros[:10], 1):  # Primeros 10
-                    _logger.info(f"  {i:2d}. ID={registro.id} | '{registro.name[:40]}...'")
-                    _logger.info(f"      Serie: '{registro.serie_detectada}' | BN: {registro.contador_bn_detectado}")
-                    _logger.info(f"      Color: {registro.contador_color_detectado} | Scan: {registro.contador_scan_detectado}")
-                    _logger.info(f"      Estado: {registro.estado} | Fecha: {registro.create_date}")
+                _logger.info(f"📋 Registros de últimas 24h: {len(registros_recientes)}")
+                
+                for i, registro in enumerate(registros_recientes, 1):
+                    _logger.info(f"  {i:2d}. ID={registro.id} | '{registro.name[:35]}...'")
+                    _logger.info(f"      Serie: '{registro.serie_detectada}' | Estado: {registro.estado}")
+                    _logger.info(f"      BN: {registro.contador_bn_detectado} | Color: {registro.contador_color_detectado} | Scan: {registro.contador_scan_detectado}")
+                    _logger.info(f"      Fecha: {registro.create_date}")
                     _logger.info(f"      ---")
-                
-                if len(todos_registros) > 10:
-                    _logger.info(f"  ... y {len(todos_registros) - 10} registros más")
             
             def _ya_existe_registro_con_estos_datos_incremental(serie, contador_bn, contador_color, contador_scan, asunto, fecha_correo):
                 """
-                FUNCIÓN INTERNA CORREGIDA: Los contadores SIEMPRE deben incrementar diariamente
-                Solo es duplicado si serie + contadores son EXACTAMENTE iguales
+                LÓGICA INCREMENTAL: Solo es duplicado si serie + contadores son EXACTAMENTE iguales
                 """
-                _logger.info(f"🔍 === VERIFICANDO DUPLICADOS (LÓGICA INCREMENTAL) ===")
-                _logger.info(f"🎯 Datos del correo actual:")
-                _logger.info(f"   Serie: '{serie}'")
-                _logger.info(f"   Contadores nuevos: BN={contador_bn}, Color={contador_color}, Scan={contador_scan}")
-                _logger.info(f"   Fecha correo: {fecha_correo}")
+                _logger.info(f"🔍 === VERIFICANDO DUPLICADOS POR CONTADORES IDÉNTICOS ===")
+                _logger.info(f"🎯 Serie: '{serie}' | BN={contador_bn}, Color={contador_color}, Scan={contador_scan}")
                 
                 if not serie:
                     _logger.info(f"🔍 Serie vacía, no verificar duplicados")
                     return False
                 
-                # Buscar TODOS los registros de esta serie (sin filtro de fecha)
+                # Buscar registros exitosos de esta serie
                 registros_misma_serie = self.env['contador.automatico'].search([
                     ('serie_detectada', '=', serie),
-                    ('estado', 'in', ['procesado', 'manual'])  # Solo registros exitosos
-                ], order='create_date desc')  # Más recientes primero
+                    ('estado', 'in', ['procesado', 'manual'])
+                ], order='create_date desc')
                 
-                _logger.info(f"📊 Registros históricos encontrados para serie '{serie}': {len(registros_misma_serie)}")
+                _logger.info(f"📊 Registros históricos para serie '{serie}': {len(registros_misma_serie)}")
                 
                 if not registros_misma_serie:
-                    _logger.info(f"✅ Primera vez que se procesa esta serie - NO duplicado")
+                    _logger.info(f"✅ Primera vez procesando esta serie - NO duplicado")
                     return False
                 
-                # Verificar contra cada registro existente
-                for i, registro_existente in enumerate(registros_misma_serie):
-                    _logger.info(f"🔍 Comparando con registro #{i+1} (ID={registro_existente.id}):")
-                    _logger.info(f"   Fecha existente: {registro_existente.create_date}")
-                    _logger.info(f"   Contadores existentes: BN={registro_existente.contador_bn_detectado}, Color={registro_existente.contador_color_detectado}, Scan={registro_existente.contador_scan_detectado}")
+                # Verificar contadores exactos
+                bn_nuevo = contador_bn or 0
+                color_nuevo = contador_color or 0
+                scan_nuevo = contador_scan or 0
+                
+                for i, registro in enumerate(registros_misma_serie[:3]):  # Solo revisar últimos 3
+                    bn_existente = registro.contador_bn_detectado or 0
+                    color_existente = registro.contador_color_detectado or 0
+                    scan_existente = registro.contador_scan_detectado or 0
                     
-                    # REGLA PRINCIPAL: Si los contadores son EXACTAMENTE iguales = DUPLICADO
-                    bn_nuevo = contador_bn or 0
-                    color_nuevo = contador_color or 0
-                    scan_nuevo = contador_scan or 0
-                    
-                    bn_existente = registro_existente.contador_bn_detectado or 0
-                    color_existente = registro_existente.contador_color_detectado or 0
-                    scan_existente = registro_existente.contador_scan_detectado or 0
+                    _logger.info(f"🔍 Comparando con registro #{i+1} (ID={registro.id}):")
+                    _logger.info(f"   Existente: BN={bn_existente}, C={color_existente}, S={scan_existente}")
+                    _logger.info(f"   Nuevo: BN={bn_nuevo}, C={color_nuevo}, S={scan_nuevo}")
                     
                     if (bn_nuevo == bn_existente and 
                         color_nuevo == color_existente and 
                         scan_nuevo == scan_existente):
                         
-                        _logger.info(f"❌ DUPLICADO DETECTADO - Contadores idénticos:")
-                        _logger.info(f"   BN: {bn_nuevo} = {bn_existente}")
-                        _logger.info(f"   Color: {color_nuevo} = {color_existente}")
-                        _logger.info(f"   Scan: {scan_nuevo} = {scan_existente}")
-                        _logger.info(f"   → Este correo ya fue procesado anteriormente")
+                        _logger.info(f"❌ DUPLICADO - Contadores idénticos al registro ID={registro.id}")
                         return True
                     
-                    # VALIDACIÓN: Los contadores nuevos deben ser >= a los existentes
-                    if (bn_nuevo < bn_existente or 
-                        color_nuevo < color_existente or 
-                        scan_nuevo < scan_existente):
-                        
-                        _logger.warning(f"⚠️ ADVERTENCIA - Contadores menores que registro anterior:")
-                        _logger.warning(f"   BN: {bn_nuevo} < {bn_existente} = {bn_nuevo < bn_existente}")
-                        _logger.warning(f"   Color: {color_nuevo} < {color_existente} = {color_nuevo < color_existente}")
-                        _logger.warning(f"   Scan: {scan_nuevo} < {scan_existente} = {scan_nuevo < scan_existente}")
-                        _logger.warning(f"   → Posible error en lectura o equipo reseteado")
-                        # No bloquear, pero marcar para revisión manual
-                    
                     else:
-                        _logger.info(f"✅ Contadores incrementados correctamente:")
-                        _logger.info(f"   BN: {bn_existente} → {bn_nuevo} (+{bn_nuevo - bn_existente})")
-                        _logger.info(f"   Color: {color_existente} → {color_nuevo} (+{color_nuevo - color_existente})")
-                        _logger.info(f"   Scan: {scan_existente} → {scan_nuevo} (+{scan_nuevo - scan_existente})")
-                
-                _logger.info(f"✅ NO DUPLICADO - Contadores incrementados, correo legítimo")
-                return False
+                        incremento_bn = bn_nuevo - bn_existente
+                        incremento_color = color_nuevo - color_existente
+                        incremento_scan = scan_nuevo - scan_existente
                         
-            # PROCESAR CORREOS DE CONTADORES
-            _logger.info(f"🚀 === INICIANDO PROCESAMIENTO ===")
+                        _logger.info(f"✅ Contadores diferentes:")
+                        _logger.info(f"   BN: {incremento_bn:+d}, Color: {incremento_color:+d}, Scan: {incremento_scan:+d}")
+                
+                _logger.info(f"✅ NO DUPLICADO - Contadores únicos para esta serie")
+                return False
             
-            # DIAGNÓSTICO: Mostrar todos los registros existentes
+            # PROCESAR CORREOS NUEVOS DE CONTADORES
+            _logger.info(f"🚀 === INICIANDO PROCESAMIENTO DE CORREOS NUEVOS ===")
+            
+            # Diagnóstico
             _diagnosticar_registros_existentes()
             
             correos_procesados_exitosos = 0
@@ -2035,25 +2106,13 @@ class ContadorAutomatico(models.Model):
             
             for i, correo in enumerate(correos_contadores):
                 asunto = correo.subject or f'Sin asunto - {correo.id}'
-                remitente = correo.email_from or 'Origen desconocido'
+                remitente = correo.email_from or 'Sin remitente'
                 
-                _logger.info(f"📨 === PROCESANDO CORREO {i+1}/{len(correos_contadores)} ===")
+                _logger.info(f"📨 === PROCESANDO CORREO NUEVO {i+1}/{len(correos_contadores)} ===")
                 _logger.info(f"📧 Asunto: '{asunto}'")
                 _logger.info(f"👤 Remitente: '{remitente}'")
                 
                 try:
-                    # NUEVA VERIFICACIÓN: ¿Ya procesamos este correo exacto recientemente?
-                    duplicado_reciente = self.env['contador.automatico'].search([
-                        ('name', '=', asunto),
-                        ('remitente', '=', remitente),
-                        ('create_date', '>=', fecha_limite)
-                    ], limit=1)
-                    
-                    if duplicado_reciente:
-                        _logger.info(f"⏭️ CORREO YA PROCESADO RECIENTEMENTE")
-                        correos_duplicados += 1
-                        continue
-                    
                     # Crear registro temporal
                     contenido_mensaje = correo.body or asunto
                     
@@ -2074,28 +2133,26 @@ class ContadorAutomatico(models.Model):
                         contador_scan = registro_temp.contador_scan_detectado
                         
                         _logger.info(f"🎯 DATOS EXTRAÍDOS:")
-                        _logger.info(f"   Serie: '{serie}' (tipo: {type(serie)})")
-                        _logger.info(f"   BN: {contador_bn}")
-                        _logger.info(f"   Color: {contador_color}")
-                        _logger.info(f"   Scan: {contador_scan}")
+                        _logger.info(f"   Serie: '{serie}'")
+                        _logger.info(f"   BN: {contador_bn}, Color: {contador_color}, Scan: {contador_scan}")
                         _logger.info(f"   Estado: {registro_temp.estado}")
                         
                         # Verificar si extrajo datos válidos
                         if serie and (contador_bn or contador_color or contador_scan):
-                            # Verificar duplicados CON LÓGICA INCREMENTAL
+                            # Verificar duplicados por contadores idénticos
                             if _ya_existe_registro_con_estos_datos_incremental(serie, contador_bn, contador_color, contador_scan, asunto, correo.date):
-                                _logger.info(f"⏭️ DUPLICADO - Contadores idénticos a procesamiento anterior")
+                                _logger.info(f"⏭️ DUPLICADO - Contadores idénticos")
                                 registro_temp.unlink()
                                 correos_duplicados += 1
                             else:
-                                _logger.info(f"✅ NUEVO REGISTRO VÁLIDO - Contadores incrementados")
+                                _logger.info(f"✅ NUEVO REGISTRO VÁLIDO - Guardando")
                                 correos_procesados_exitosos += 1
                                 
-                                # Asegurar fecha
+                                # Asegurar fecha de procesamiento
                                 if not registro_temp.fecha_procesamiento:
                                     registro_temp.write({'fecha_procesamiento': ahora})
                         else:
-                            _logger.warning(f"⚠️ DATOS INSUFICIENTES - Serie: {serie}, Contadores: BN={contador_bn}, C={contador_color}, S={contador_scan}")
+                            _logger.warning(f"⚠️ DATOS INSUFICIENTES")
                             correos_sin_datos += 1
                             
                             # Mantener para revisión manual
@@ -2111,35 +2168,37 @@ class ContadorAutomatico(models.Model):
                     import traceback
                     _logger.error(f"Traceback: {traceback.format_exc()}")
             
-            # RESUMEN FINAL DETALLADO
-            _logger.info(f"📊 === RESUMEN FINAL INCREMENTAL ===")
+            # RESUMEN FINAL
+            _logger.info(f"📊 === RESUMEN FINAL 24H ===")
             _logger.info(f"📧 Total correos analizados: {len(todos_los_correos)}")
-            _logger.info(f"🎯 Correos de contadores detectados: {len(correos_contadores)}")
-            _logger.info(f"✅ Nuevos registros procesados: {correos_procesados_exitosos}")
-            _logger.info(f"⏭️ Duplicados evitados: {correos_duplicados}")
+            _logger.info(f"🎯 Correos de contadores encontrados: {len(correos_contadores) + correos_ya_procesados}")
+            _logger.info(f"⏭️ Ya procesados previamente: {correos_ya_procesados}")
+            _logger.info(f"🆕 Correos nuevos procesados: {len(correos_contadores)}")
+            _logger.info(f"✅ Procesados exitosamente: {correos_procesados_exitosos}")
+            _logger.info(f"⏭️ Duplicados por contadores: {correos_duplicados}")
             _logger.info(f"⚠️ Sin datos suficientes: {correos_sin_datos}")
             _logger.info(f"❌ Errores de procesamiento: {correos_fallidos}")
-            _logger.info(f"🚫 Correos descartados (no contadores): {len(correos_descartados)}")
+            _logger.info(f"🚫 Correos descartados: {len(correos_descartados)}")
             
             if len(correos_contadores) > 0:
                 eficiencia = (correos_procesados_exitosos / len(correos_contadores)) * 100
-                _logger.info(f"📈 Eficiencia: {eficiencia:.1f}%")
+                _logger.info(f"📈 Eficiencia procesamiento nuevos: {eficiencia:.1f}%")
             
             # Guardar estadísticas
             resumen = {
                 'fecha_ejecucion': ahora,
                 'correos_analizados': len(todos_los_correos),
-                'correos_validos': len(correos_contadores),
+                'correos_validos': len(correos_contadores) + correos_ya_procesados,
                 'correos_encontrados': len(correos_contadores),
                 'correos_procesados': correos_procesados_exitosos,
                 'correos_fallidos': correos_fallidos + correos_sin_datos,
-                'horas_revision': 2  # Cambiado a 2 horas
+                'horas_revision': 24
             }
             
             dummy_instance = self.browse(1) if self.search([], limit=1) else self.new()
             dummy_instance._guardar_estadisticas_cron_seguro(resumen)
             
-            _logger.info("⏰ === FIN CRON CON DETECCIÓN INCREMENTAL ===")
+            _logger.info("⏰ === FIN CRON 24H CON LÓGICA ANTI-DUPLICADOS ===")
             return True
             
         except Exception as e:
@@ -2147,7 +2206,6 @@ class ContadorAutomatico(models.Model):
             import traceback
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
-
 
     
     @api.model
