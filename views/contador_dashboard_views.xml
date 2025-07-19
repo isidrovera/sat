@@ -272,19 +272,11 @@
         </field>
     </record>
 
-    <!-- Acción SIN registro específico -->
-    <record id="action_contador_dashboard" model="ir.actions.act_window">
+    <!-- Acción SIN registro específico - Usar view_type diferente -->
+    <record id="action_contador_dashboard" model="ir.actions.client">
         <field name="name">Dashboard Contadores</field>
-        <field name="res_model">contador.automatico</field>
-        <field name="view_mode">form</field>
-        <field name="view_id" ref="view_contador_dashboard_main"/>
+        <field name="tag">contador_dashboard_view</field>
         <field name="target">current</field>
-        <field name="context">{
-            'create': False, 
-            'edit': False, 
-            'delete': False, 
-            'form_view_initial_mode': 'readonly'
-        }</field>
     </record>
 
     <!-- Menú -->
