@@ -2013,38 +2013,49 @@ class ContadorAutomatico(models.Model):
             
             def _ya_existe_registro_con_estos_datos_incremental(serie, contador_bn, contador_color, contador_scan, asunto, fecha_correo):
                 """
-                LÓGICA INCREMENTAL: Solo es duplicado si serie + contadores son EXACTAMENTE iguales
+                LÓGICA CORREGIDA: Permite UN registro por día, evita múltiples del mismo día
                 """
-                _logger.info(f"🔍 === VERIFICANDO DUPLICADOS POR CONTADORES IDÉNTICOS ===")
+                _logger.info(f"🔍 === VERIFICANDO DUPLICADOS (UN REGISTRO POR DÍA) ===")
                 _logger.info(f"🎯 Serie: '{serie}' | BN={contador_bn}, Color={contador_color}, Scan={contador_scan}")
+                _logger.info(f"📅 Fecha correo: {fecha_correo}")
                 
                 if not serie:
                     _logger.info(f"🔍 Serie vacía, no verificar duplicados")
                     return False
                 
-                # Buscar registros exitosos de esta serie
-                registros_misma_serie = self.env['contador.automatico'].search([
+                # Obtener día del correo actual
+                dia_correo_actual = fecha_correo.date() if fecha_correo else fields.Date.today()
+                _logger.info(f"📅 Día del correo actual: {dia_correo_actual}")
+                
+                # Buscar registros de esta serie del MISMO DÍA
+                fecha_inicio_dia = datetime.combine(dia_correo_actual, datetime.min.time())
+                fecha_fin_dia = fecha_inicio_dia + timedelta(days=1)
+                
+                registros_mismo_dia = self.env['contador.automatico'].search([
                     ('serie_detectada', '=', serie),
-                    ('estado', 'in', ['procesado', 'manual'])
-                ], order='create_date desc')
+                    ('estado', 'in', ['procesado', 'manual']),
+                    ('create_date', '>=', fecha_inicio_dia),
+                    ('create_date', '<', fecha_fin_dia)
+                ])
                 
-                _logger.info(f"📊 Registros históricos para serie '{serie}': {len(registros_misma_serie)}")
+                _logger.info(f"📊 Registros de la misma serie en el mismo día ({dia_correo_actual}): {len(registros_mismo_dia)}")
                 
-                if not registros_misma_serie:
-                    _logger.info(f"✅ Primera vez procesando esta serie - NO duplicado")
+                if not registros_mismo_dia:
+                    _logger.info(f"✅ NO HAY REGISTROS HOY - Permitir procesamiento")
                     return False
                 
-                # Verificar contadores exactos
+                # Si ya hay registros del mismo día, verificar si son idénticos
                 bn_nuevo = contador_bn or 0
                 color_nuevo = contador_color or 0
                 scan_nuevo = contador_scan or 0
                 
-                for i, registro in enumerate(registros_misma_serie[:3]):  # Solo revisar últimos 3
+                for i, registro in enumerate(registros_mismo_dia, 1):
                     bn_existente = registro.contador_bn_detectado or 0
                     color_existente = registro.contador_color_detectado or 0
                     scan_existente = registro.contador_scan_detectado or 0
                     
-                    _logger.info(f"🔍 Comparando con registro #{i+1} (ID={registro.id}):")
+                    _logger.info(f"🔍 Comparando con registro #{i} del mismo día (ID={registro.id}):")
+                    _logger.info(f"   Hora registro: {registro.create_date}")
                     _logger.info(f"   Existente: BN={bn_existente}, C={color_existente}, S={scan_existente}")
                     _logger.info(f"   Nuevo: BN={bn_nuevo}, C={color_nuevo}, S={scan_nuevo}")
                     
@@ -2052,18 +2063,15 @@ class ContadorAutomatico(models.Model):
                         color_nuevo == color_existente and 
                         scan_nuevo == scan_existente):
                         
-                        _logger.info(f"❌ DUPLICADO - Contadores idénticos al registro ID={registro.id}")
+                        _logger.info(f"❌ DUPLICADO MISMO DÍA - Ya existe registro idéntico hoy")
+                        _logger.info(f"   → Evitando duplicado del mismo día")
                         return True
-                    
                     else:
-                        incremento_bn = bn_nuevo - bn_existente
-                        incremento_color = color_nuevo - color_existente
-                        incremento_scan = scan_nuevo - scan_existente
-                        
-                        _logger.info(f"✅ Contadores diferentes:")
-                        _logger.info(f"   BN: {incremento_bn:+d}, Color: {incremento_color:+d}, Scan: {incremento_scan:+d}")
+                        _logger.info(f"✅ Contadores diferentes en el mismo día - Permitir")
+                        return False
                 
-                _logger.info(f"✅ NO DUPLICADO - Contadores únicos para esta serie")
+                # Si llegamos aquí, no hay duplicados
+                _logger.info(f"✅ NO DUPLICADO - Permitir procesamiento")
                 return False
             
             # PROCESAR CORREOS COUNTER LIST/PAGE NUEVOS
@@ -2180,7 +2188,174 @@ class ContadorAutomatico(models.Model):
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
 
+    def limpiar_duplicados_mismo_dia(self):
+        """
+        NUEVO: Limpia duplicados que fueron creados el mismo día
+        """
+        try:
+            _logger.info(f"🧹 === LIMPIANDO DUPLICADOS DEL MISMO DÍA ===")
+            
+            # Buscar todas las series
+            series_unicas = self.search([
+                ('serie_detectada', '!=', False),
+                ('estado', 'in', ['procesado', 'manual'])
+            ]).mapped('serie_detectada')
+            
+            series_unicas = list(set(series_unicas))  # Eliminar duplicados
+            _logger.info(f"🔍 Series únicas encontradas: {len(series_unicas)}")
+            
+            total_eliminados = 0
+            
+            for serie in series_unicas:
+                _logger.info(f"🔍 Analizando serie: {serie}")
+                
+                # Buscar todos los registros de esta serie de los últimos 7 días
+                fecha_limite = fields.Date.today() - timedelta(days=7)
+                registros_serie = self.search([
+                    ('serie_detectada', '=', serie),
+                    ('estado', 'in', ['procesado', 'manual']),
+                    ('create_date', '>=', fecha_limite)
+                ], order='create_date desc')
+                
+                if len(registros_serie) <= 1:
+                    continue
+                
+                # Agrupar por día
+                registros_por_dia = {}
+                for registro in registros_serie:
+                    dia = registro.create_date.date()
+                    if dia not in registros_por_dia:
+                        registros_por_dia[dia] = []
+                    registros_por_dia[dia].append(registro)
+                
+                # Revisar cada día que tenga múltiples registros
+                for dia, registros_dia in registros_por_dia.items():
+                    if len(registros_dia) <= 1:
+                        continue
+                    
+                    _logger.info(f"📅 Día {dia}: {len(registros_dia)} registros")
+                    
+                    # Agrupar por contadores idénticos
+                    grupos_contadores = {}
+                    for registro in registros_dia:
+                        clave = f"{registro.contador_bn_detectado}_{registro.contador_color_detectado}_{registro.contador_scan_detectado}"
+                        if clave not in grupos_contadores:
+                            grupos_contadores[clave] = []
+                        grupos_contadores[clave].append(registro)
+                    
+                    # Eliminar duplicados (mantener el más reciente)
+                    for clave, registros_grupo in grupos_contadores.items():
+                        if len(registros_grupo) > 1:
+                            # Ordenar por fecha (más reciente primero)
+                            registros_ordenados = sorted(registros_grupo, key=lambda r: r.create_date, reverse=True)
+                            
+                            # Mantener el primero, eliminar el resto
+                            for registro_dup in registros_ordenados[1:]:
+                                _logger.info(f"🗑️ Eliminando duplicado: ID={registro_dup.id}, Fecha={registro_dup.create_date}")
+                                _logger.info(f"   Contadores: BN={registro_dup.contador_bn_detectado}, C={registro_dup.contador_color_detectado}, S={registro_dup.contador_scan_detectado}")
+                                registro_dup.unlink()
+                                total_eliminados += 1
+            
+            _logger.info(f"✅ Limpieza completada: {total_eliminados} duplicados del mismo día eliminados")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Limpieza completada: {total_eliminados} duplicados del mismo día eliminados',
+                    'type': 'success'
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error limpiando duplicados del mismo día: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error en limpieza: {str(e)}',
+                    'type': 'danger'
+                }
+            }
 
+
+    # MÉTODO PARA FORZAR PROCESAMIENTO DE UN CORREO HOY
+    def forzar_procesamiento_hoy(self, serie_equipo):
+        """
+        NUEVO: Fuerza el procesamiento de un correo Counter List para hoy
+        """
+        try:
+            _logger.info(f"🔄 === FORZANDO PROCESAMIENTO PARA HOY ===")
+            _logger.info(f"🎯 Serie: {serie_equipo}")
+            
+            # Buscar correos Counter List recientes de esta serie
+            correos_serie = self.env['mail.message'].search([
+                ('message_type', '=', 'email'),
+                ('date', '>=', fields.Datetime.now() - timedelta(hours=24)),
+                '|', '|',
+                ('subject', 'ilike', 'counter list'),
+                ('subject', 'ilike', 'counter page'),
+                ('body', 'ilike', serie_equipo)
+            ], order='date desc', limit=1)
+            
+            if not correos_serie:
+                mensaje = f"No se encontraron correos Counter List recientes para la serie {serie_equipo}"
+                _logger.warning(f"⚠️ {mensaje}")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': mensaje,
+                        'type': 'warning'
+                    }
+                }
+            
+            correo = correos_serie[0]
+            asunto = correo.subject or f'Sin asunto - {correo.id}'
+            
+            _logger.info(f"📧 Procesando correo: '{asunto}'")
+            
+            # Crear registro forzado
+            registro = self.create({
+                'name': f"{asunto} (Forzado {fields.Date.today()})",
+                'remitente': correo.email_from,
+                'contenido_original': correo.body or asunto,
+                'estado': 'pendiente'
+            })
+            
+            # Procesar
+            if registro.procesar_correo_inteligente():
+                mensaje = f"✅ Procesamiento forzado exitoso para serie {serie_equipo}"
+                _logger.info(mensaje)
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': mensaje,
+                        'type': 'success'
+                    }
+                }
+            else:
+                mensaje = f"❌ Error en procesamiento forzado para serie {serie_equipo}"
+                _logger.warning(mensaje)
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': mensaje,
+                        'type': 'danger'
+                    }
+                }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error en procesamiento forzado: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
     # MÉTODO ADICIONAL: Buscar correos Counter List específicamente
     @api.model
     def buscar_correos_counter_list_especificos(self, horas=48):
