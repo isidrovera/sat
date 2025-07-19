@@ -107,6 +107,7 @@
                                 <group string="Serie y Equipo">
                                     <field name="serie_detectada"/>
                                     <field name="equipo_id"/>
+                                    <field name="original_mail_id"/>
                                 </group>
                                 
                                 <group string="Contadores Detectados">
