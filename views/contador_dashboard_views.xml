@@ -3,7 +3,7 @@
     <!-- Vista Dashboard Principal con estadísticas arriba y lista abajo -->
     <record id="view_contador_dashboard_main" model="ir.ui.view">
         <field name="name">contador.dashboard.main</field>
-        <field name="model">contador.dashboard</field>
+        <field name="model">contador.automatico</field>
         <field name="arch" type="xml">
             <form string="Dashboard Contadores" class="o_contador_dashboard_main">
                 <!-- Header con título y botón refresh -->
@@ -243,21 +243,21 @@
         </field>
     </record>
 
-   <!-- Acción principal del Dashboard -->
-<record id="action_contador_dashboard_main" model="ir.actions.act_window">
+  <record id="action_contador_dashboard" model="ir.actions.act_window">
     <field name="name">📊 Dashboard Contadores</field>
-    <field name="res_model">contador.dashboard</field>
+    <field name="res_model">contador.automatico</field>
     <field name="view_mode">form</field>
-    <field name="view_id" ref="view_contador_dashboard_main"/>
+    <field name="view_id" ref="view_contador_dashboard_main"/>  <!-- misma vista form HTML/OWL -->
     <field name="target">current</field>
-    <field name="res_id">1</field>  <!-- Forzar ID 1 -->
-    <field name="context">{
+    <field name="res_id" eval="False"/>  <!-- ningún registro concreto -->
+    <field name="context">{ 
         'create': False, 
         'edit': False, 
-        'delete': False,
-        'form_view_initial_mode': 'readonly'
+        'delete': False, 
+        'form_view_initial_mode': 'readonly' 
     }</field>
 </record>
+
     <!-- Menú principal actualizado -->
     <menuitem id="menu_contador_dashboard_root"
               name="📊 Dashboard Contadores"

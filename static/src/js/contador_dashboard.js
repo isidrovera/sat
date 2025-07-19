@@ -38,14 +38,14 @@ export class ContadorDashboardController extends FormController {
         try {
             // Cargar estadísticas
             const estadisticas = await this.orm.call(
-                "contador.dashboard",
+                "contador.automatico",
                 "obtener_estadisticas_dashboard",
                 []
             );
             
             // Cargar lista de equipos
             const equipos = await this.orm.call(
-                "contador.dashboard", 
+                "contador.automatico", 
                 "obtener_lista_equipos_dashboard",
                 []
             );
@@ -401,7 +401,7 @@ export class ContadorDashboardController extends FormController {
     async showDetail(equipoId) {
         try {
             const detalle = await this.orm.call(
-                "contador.dashboard",
+                "contador.automatico",
                 "obtener_detalle_equipo",
                 [parseInt(equipoId)]
             );

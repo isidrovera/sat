@@ -128,7 +128,3 @@ access_contador_automatico_user,contador.automatico.user,model_contador_automati
 access_contador_automatico_admin,contador.automatico.admin,model_contador_automatico,base.group_system,1,1,1,1
 access_patron_contador_user,patron.contador.user,model_patron_contador,base.group_user,1,0,0,0
 access_patron_contador_admin,patron.contador.admin,model_patron_contador,base.group_system,1,1,1,1
-access_contador_dashboard_user,contador.dashboard.user,model_contador_dashboard,base.group_user,1,0,0,0
-access_contador_dashboard_manager,contador.dashboard.manager,model_contador_dashboard,base.group_system,1,1,1,1
-access_contador_detalle_user,contador.detalle.user,model_contador_detalle,base.group_user,1,1,1,1
-access_contador_detalle_manager,contador.detalle.manager,model_contador_detalle,base.group_system,1,1,1,1
