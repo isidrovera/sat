@@ -24,8 +24,45 @@
         <field name="model">contador.automatico</field>
         <field name="arch" type="xml">
             <form string="Dashboard Contadores" class="o_contador_dashboard_main" js_class="contador_dashboard_form">
+                <!-- CSS Inline para compatibilidad -->
+                <style>
+                    .dashboard-header {
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border-radius: 0 0 20px 20px;
+                        margin: -16px -16px 20px -16px;
+                        padding: 2rem 0;
+                    }
+                    .stat-card {
+                        transition: transform 0.2s ease;
+                    }
+                    .stat-card:hover {
+                        transform: translateY(-5px);
+                    }
+                    .filter-btn.active {
+                        background-color: #0d6efd;
+                        color: white;
+                        border-color: #0d6efd;
+                    }
+                    .loading-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.5);
+                        z-index: 9999;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    }
+                    .d-none {
+                        display: none !important;
+                    }
+                </style>
+
                 <!-- Header con título y botón refresh -->
-                <div class="dashboard-header text-center py-4 mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 0 0 20px 20px; margin: -16px -16px 0 -16px;">
+                <div class="dashboard-header text-center">
                     <div class="container">
                         <h1 class="display-4 fw-bold mb-2">
                             📊 Dashboard de Contadores
@@ -40,60 +77,60 @@
                 </div>
 
                 <!-- Estadísticas principales -->
-                <div class="container mb-5">
-                    <div class="row g-4">
+                <div class="container-fluid mb-4">
+                    <div class="row g-3">
                         <!-- Equipos Activos Hoy -->
                         <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card text-center shadow-sm">
+                            <div class="card text-center shadow-sm stat-card">
                                 <div class="card-body">
                                     <div class="text-primary mb-3">
                                         <i class="fa fa-desktop fa-3x"></i>
                                     </div>
-                                    <h2 class="card-title" id="equipos_hoy">0</h2>
-                                    <p class="card-text">Equipos Actualizados Hoy</p>
-                                    <small class="text-muted">Últimas 24 horas</small>
+                                    <h2 class="card-title text-primary" id="equipos_hoy">0</h2>
+                                    <p class="card-text fw-bold">Equipos Actualizados Hoy</p>
+                                    <small class="text-muted">📅 Últimas 24 horas</small>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Equipos Semana -->
                         <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card text-center shadow-sm">
+                            <div class="card text-center shadow-sm stat-card">
                                 <div class="card-body">
                                     <div class="text-success mb-3">
                                         <i class="fa fa-calendar-week fa-3x"></i>
                                     </div>
-                                    <h2 class="card-title" id="equipos_semana">0</h2>
-                                    <p class="card-text">Equipos Esta Semana</p>
-                                    <small class="text-muted">Últimos 7 días</small>
+                                    <h2 class="card-title text-success" id="equipos_semana">0</h2>
+                                    <p class="card-text fw-bold">Equipos Esta Semana</p>
+                                    <small class="text-muted">📈 Últimos 7 días</small>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Total Equipos -->
                         <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card text-center shadow-sm">
+                            <div class="card text-center shadow-sm stat-card">
                                 <div class="card-body">
                                     <div class="text-info mb-3">
                                         <i class="fa fa-database fa-3x"></i>
                                     </div>
-                                    <h2 class="card-title" id="total_equipos">0</h2>
-                                    <p class="card-text">Total en Sistema</p>
-                                    <small class="text-muted">Todos los equipos</small>
+                                    <h2 class="card-title text-info" id="total_equipos">0</h2>
+                                    <p class="card-text fw-bold">Total en Sistema</p>
+                                    <small class="text-muted">🏢 Todos los equipos</small>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Eficiencia -->
                         <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card text-center shadow-sm">
+                            <div class="card text-center shadow-sm stat-card">
                                 <div class="card-body">
                                     <div class="text-warning mb-3">
                                         <i class="fa fa-percentage fa-3x"></i>
                                     </div>
-                                    <h2 class="card-title" id="eficiencia">0%</h2>
-                                    <p class="card-text">Eficiencia Sistema</p>
-                                    <small class="text-muted">Procesamiento automático</small>
+                                    <h2 class="card-title text-warning" id="eficiencia">0%</h2>
+                                    <p class="card-text fw-bold">Eficiencia Sistema</p>
+                                    <small class="text-muted">🤖 Procesamiento automático</small>
                                 </div>
                             </div>
                         </div>
@@ -101,27 +138,29 @@
                 </div>
 
                 <!-- Filtros rápidos -->
-                <div class="container mb-4">
+                <div class="container-fluid mb-4">
                     <div class="card">
                         <div class="card-body">
                             <div class="row align-items-center">
                                 <div class="col-md-8">
+                                    <h6 class="mb-3">🔍 Filtros rápidos:</h6>
                                     <div class="d-flex flex-wrap gap-2">
-                                        <button type="button" class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all">
+                                        <button type="button" name="filter_all" class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all">
                                             📋 Todos
                                         </button>
-                                        <button type="button" class="btn btn-outline-success btn-sm filter-btn" data-filter="hoy">
+                                        <button type="button" name="filter_hoy" class="btn btn-outline-success btn-sm filter-btn" data-filter="hoy">
                                             📅 Hoy
                                         </button>
-                                        <button type="button" class="btn btn-outline-info btn-sm filter-btn" data-filter="color">
+                                        <button type="button" name="filter_color" class="btn btn-outline-info btn-sm filter-btn" data-filter="color">
                                             🎨 Color
                                         </button>
-                                        <button type="button" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="mono">
+                                        <button type="button" name="filter_mono" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="mono">
                                             ⚫ Monocromáticas
                                         </button>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
+                                    <h6 class="mb-3">🔍 Búsqueda:</h6>
                                     <div class="input-group">
                                         <span class="input-group-text">🔍</span>
                                         <input type="text" 
@@ -136,7 +175,7 @@
                 </div>
 
                 <!-- Lista de máquinas -->
-                <div class="container">
+                <div class="container-fluid">
                     <div class="card">
                         <div class="card-header bg-primary text-white">
                             <div class="row align-items-center">
@@ -156,22 +195,23 @@
                                 <table class="table table-hover mb-0" id="machines_table">
                                     <thead class="table-light">
                                         <tr>
-                                            <th class="px-4 py-3">🏢 Cliente</th>
-                                            <th class="px-4 py-3">🔢 Serie</th>
-                                            <th class="px-4 py-3 text-center">⚙️ Tipo</th>
-                                            <th class="px-4 py-3 text-center">📊 Contadores</th>
-                                            <th class="px-4 py-3 text-center">🕒 Última Actualización</th>
-                                            <th class="px-4 py-3 text-center">📊 Estado</th>
-                                            <th class="px-4 py-3 text-center">👁️ Acciones</th>
+                                            <th class="px-3 py-3">🏢 Cliente</th>
+                                            <th class="px-3 py-3">🔢 Serie</th>
+                                            <th class="px-3 py-3 text-center">⚙️ Tipo</th>
+                                            <th class="px-3 py-3 text-center">📊 Contadores</th>
+                                            <th class="px-3 py-3 text-center">🕒 Última Actualización</th>
+                                            <th class="px-3 py-3 text-center">📊 Estado</th>
+                                            <th class="px-3 py-3 text-center">👁️ Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody id="machines_tbody">
-                                        <tr>
+                                        <tr id="loading_row">
                                             <td colspan="7" class="text-center py-5">
-                                                <div class="spinner-border text-primary" role="status">
+                                                <div class="spinner-border text-primary mb-3" role="status">
                                                     <span class="visually-hidden">Cargando...</span>
                                                 </div>
-                                                <p class="mt-3">Cargando datos del dashboard...</p>
+                                                <h5>Cargando datos del dashboard...</h5>
+                                                <p class="text-muted">Por favor espere un momento</p>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -190,7 +230,7 @@
                                 <div class="col-md-6">
                                     <nav>
                                         <ul class="pagination pagination-sm justify-content-end mb-0" id="pagination">
-                                            <!-- Paginación dinámica -->
+                                            <!-- Paginación dinámica generada por JavaScript -->
                                         </ul>
                                     </nav>
                                 </div>
@@ -205,13 +245,18 @@
                         <div class="modal-content">
                             <div class="modal-header bg-primary text-white">
                                 <h5 class="modal-title">📋 Detalle del Equipo</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                <button type="button" name="close_modal_btn" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                             </div>
                             <div class="modal-body" id="modal_content">
-                                <!-- Contenido dinámico -->
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Cargando...</span>
+                                    </div>
+                                    <p class="mt-2">Cargando detalle del equipo...</p>
+                                </div>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <button type="button" name="close_modal_footer" class="btn btn-secondary" data-bs-dismiss="modal">
                                     ❌ Cerrar
                                 </button>
                             </div>
@@ -220,15 +265,13 @@
                 </div>
 
                 <!-- Loading overlay -->
-                <div class="position-fixed top-0 start-0 w-100 h-100 d-none" 
-                     id="loading_overlay" 
-                     style="background: rgba(0,0,0,0.5); z-index: 9999;">
-                    <div class="d-flex justify-content-center align-items-center h-100">
-                        <div class="text-center text-white">
-                            <div class="spinner-border mb-3" style="width: 3rem; height: 3rem;"></div>
-                            <h5>Cargando datos...</h5>
-                            <p>Por favor espere un momento</p>
+                <div class="loading-overlay d-none" id="loading_overlay">
+                    <div class="text-center text-white">
+                        <div class="spinner-border mb-3" style="width: 3rem; height: 3rem;" role="status">
+                            <span class="visually-hidden">Cargando...</span>
                         </div>
+                        <h5>Actualizando datos...</h5>
+                        <p>Por favor espere un momento</p>
                     </div>
                 </div>
             </form>
