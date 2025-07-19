@@ -107,15 +107,17 @@ class ContadorAutomatico(models.Model):
 
             result = []
             for rec in unique_series.values():
-                # Mapear campos para que coincidan con el JavaScript
+                # Mapear campos existentes a los que espera el JavaScript
                 equipo_data = {
                     'id': rec.id,
                     'serie_detectada': rec.serie_detectada or 'Sin serie',
                     'cliente_detectado': rec.cliente_detectado or 'Cliente no detectado',
                     'tipo_equipo_detectado': rec.tipo_equipo_detectado or 'No detectado',
+                    # Mapear contadores existentes
                     'contador_bn_actual': rec.contador_bn_detectado or 0,
                     'contador_color_actual': rec.contador_color_detectado or 0,
                     'contador_total_actual': rec.contador_total_detectado or 0,
+                    # Usar create_date como fecha de actualización
                     'ultima_actualizacion': rec.create_date.isoformat() if rec.create_date else '',
                     'estado_ultimo': rec.estado or 'pendiente',
                 }
@@ -145,30 +147,64 @@ class ContadorAutomatico(models.Model):
                 'serie_detectada': equipo.serie_detectada or 'Sin serie',
                 'cliente_detectado': equipo.cliente_detectado or 'Cliente no detectado',
                 'tipo_equipo_detectado': equipo.tipo_equipo_detectado or 'No detectado',
+                # Mapear contadores existentes
                 'contador_bn_actual': equipo.contador_bn_detectado or 0,
                 'contador_color_actual': equipo.contador_color_detectado or 0,
                 'contador_total_actual': equipo.contador_total_detectado or 0,
+                # Usar create_date como última actualización
                 'ultima_actualizacion': equipo.create_date.isoformat() if equipo.create_date else '',
                 'estado_ultimo': equipo.estado or 'pendiente',
                 'archivo_origen': equipo.name or '',
                 'create_date': equipo.create_date.isoformat() if equipo.create_date else '',
                 'write_date': equipo.write_date.isoformat() if equipo.write_date else '',
+                # Información adicional del modelo existente
+                'remitente': equipo.remitente or '',
+                'marca_detectada': equipo.marca_detectada or '',
+                'idioma_detectado': equipo.idioma_detectado or '',
+                'confianza_deteccion': equipo.confianza_deteccion or 0,
             }
         except Exception as e:
             _logger.error(f"Error en obtener_detalle_equipo: {e}")
             return {}
 
-    @api.model
     def refresh_dashboard(self):
         """
         Método para refrescar el dashboard manualmente.
-        Puede incluir lógica adicional si es necesaria.
+        Debe ser un método de instancia, no @api.model
         """
         # Aquí podrías agregar lógica adicional como:
         # - Limpiar caché
         # - Recalcular estadísticas
         # - Actualizar registros
-        return True
+        
+        # Retornar una acción que recargue la vista actual
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'reload',
+        }
+
+    @api.model
+    def action_refresh_dashboard_data(self):
+        """
+        Método específico para refrescar datos del dashboard via RPC
+        """
+        try:
+            # Forzar recarga de datos
+            estadisticas = self.obtener_estadisticas_dashboard()
+            equipos = self.obtener_lista_equipos_dashboard()
+            
+            return {
+                'success': True,
+                'estadisticas': estadisticas,
+                'equipos': equipos,
+                'message': 'Dashboard actualizado correctamente'
+            }
+        except Exception as e:
+            _logger.error(f"Error actualizando dashboard: {e}")
+            return {
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }
 
     # Métodos adicionales de utilidad para el dashboard
 
