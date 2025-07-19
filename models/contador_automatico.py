@@ -1573,54 +1573,94 @@ class ContadorAutomatico(models.Model):
 
     def actualizar_contadores_equipo(self, equipo, contadores):
         """
-        Actualiza los contadores del equipo
-        CORRECCIÓN: Validación mejorada y logging detallado
+        Actualiza los contadores del equipo con validación de incrementos
+        CORREGIDO: Valida que los contadores incrementen naturalmente
         """
         try:
-            _logger.info(f"💾 === INICIANDO ACTUALIZACIÓN DE EQUIPO ===")
+            _logger.info(f"💾 === INICIANDO ACTUALIZACIÓN DE EQUIPO CON VALIDACIÓN ===")
             _logger.info(f"🎯 Equipo ID={equipo.id}, Serie={equipo.serie}")
             _logger.info(f"📊 Contadores a actualizar: {contadores}")
             
             # Guardar valores anteriores para comparación
             valores_anteriores = {
-                'contador_bn': getattr(equipo, 'contador_bn', 0),
-                'contador_color': getattr(equipo, 'contador_color', 0),
-                'contador_scan': getattr(equipo, 'contador_scan', 0)
+                'contador_bn': getattr(equipo, 'contador_bn', 0) or 0,
+                'contador_color': getattr(equipo, 'contador_color', 0) or 0,
+                'contador_scan': getattr(equipo, 'contador_scan', 0) or 0
             }
-            _logger.info(f"📋 Valores anteriores: {valores_anteriores}")
+            _logger.info(f"📋 Valores actuales del equipo: {valores_anteriores}")
             
             # Preparar valores para actualizar
             valores_actualizacion = {}
+            alertas = []
             
+            # Procesar contador B/N
             if 'contador_bn' in contadores:
                 nuevo_valor = contadores['contador_bn']
                 anterior = valores_anteriores.get('contador_bn', 0)
-                if nuevo_valor != anterior:
+                
+                if nuevo_valor > anterior:
                     valores_actualizacion['contador_bn'] = nuevo_valor
                     self.contador_bn_anterior = anterior
-                    _logger.info(f"✅ BN: {anterior} → {nuevo_valor} (diferencia: {nuevo_valor - anterior})")
-                else:
+                    _logger.info(f"✅ BN: {anterior} → {nuevo_valor} (+{nuevo_valor - anterior})")
+                elif nuevo_valor == anterior:
                     _logger.info(f"ℹ️ BN sin cambios: {nuevo_valor}")
+                else:
+                    # Valor menor - posible reset
+                    _logger.warning(f"⚠️ BN decrementó: {anterior} → {nuevo_valor}")
+                    if nuevo_valor > 0:  # Solo actualizar si no es 0
+                        valores_actualizacion['contador_bn'] = nuevo_valor
+                        self.contador_bn_anterior = anterior
+                        alertas.append("BN decrementó - posible reset de equipo")
+                        _logger.warning(f"⚠️ Actualizando BN pese a decremento")
+                    else:
+                        alertas.append("BN en 0 - no actualizado")
+                        _logger.warning(f"❌ No actualizando BN (valor 0)")
             
+            # Procesar contador Color
             if 'contador_color' in contadores:
                 nuevo_valor = contadores['contador_color']
                 anterior = valores_anteriores.get('contador_color', 0)
-                if nuevo_valor != anterior:
+                
+                if nuevo_valor > anterior:
                     valores_actualizacion['contador_color'] = nuevo_valor
                     self.contador_color_anterior = anterior
-                    _logger.info(f"✅ Color: {anterior} → {nuevo_valor} (diferencia: {nuevo_valor - anterior})")
-                else:
+                    _logger.info(f"✅ Color: {anterior} → {nuevo_valor} (+{nuevo_valor - anterior})")
+                elif nuevo_valor == anterior:
                     _logger.info(f"ℹ️ Color sin cambios: {nuevo_valor}")
+                else:
+                    # Valor menor - posible reset
+                    _logger.warning(f"⚠️ Color decrementó: {anterior} → {nuevo_valor}")
+                    if nuevo_valor > 0:  # Solo actualizar si no es 0
+                        valores_actualizacion['contador_color'] = nuevo_valor
+                        self.contador_color_anterior = anterior
+                        alertas.append("Color decrementó - posible reset de equipo")
+                        _logger.warning(f"⚠️ Actualizando Color pese a decremento")
+                    else:
+                        alertas.append("Color en 0 - no actualizado")
+                        _logger.warning(f"❌ No actualizando Color (valor 0)")
             
+            # Procesar contador Scan
             if 'contador_scan' in contadores:
                 nuevo_valor = contadores['contador_scan']
                 anterior = valores_anteriores.get('contador_scan', 0)
-                if nuevo_valor != anterior:
+                
+                if nuevo_valor > anterior:
                     valores_actualizacion['contador_scan'] = nuevo_valor
                     self.contador_scan_anterior = anterior
-                    _logger.info(f"✅ Scan: {anterior} → {nuevo_valor} (diferencia: {nuevo_valor - anterior})")
-                else:
+                    _logger.info(f"✅ Scan: {anterior} → {nuevo_valor} (+{nuevo_valor - anterior})")
+                elif nuevo_valor == anterior:
                     _logger.info(f"ℹ️ Scan sin cambios: {nuevo_valor}")
+                else:
+                    # Valor menor - posible reset
+                    _logger.warning(f"⚠️ Scan decrementó: {anterior} → {nuevo_valor}")
+                    if nuevo_valor > 0:  # Solo actualizar si no es 0
+                        valores_actualizacion['contador_scan'] = nuevo_valor
+                        self.contador_scan_anterior = anterior
+                        alertas.append("Scan decrementó - posible reset de equipo")
+                        _logger.warning(f"⚠️ Actualizando Scan pese a decremento")
+                    else:
+                        alertas.append("Scan en 0 - no actualizado")
+                        _logger.warning(f"❌ No actualizando Scan (valor 0)")
             
             # Realizar actualización solo si hay cambios
             if valores_actualizacion:
@@ -1630,6 +1670,15 @@ class ContadorAutomatico(models.Model):
             else:
                 _logger.info(f"ℹ️ No hay cambios que actualizar en el equipo")
             
+            # Registrar alertas si las hay
+            if alertas:
+                mensaje_alertas = "; ".join(alertas)
+                if not self.mensaje_error:
+                    self.mensaje_error = f"Alertas: {mensaje_alertas}"
+                else:
+                    self.mensaje_error += f" | Alertas: {mensaje_alertas}"
+                _logger.info(f"🔔 Alertas registradas: {mensaje_alertas}")
+            
             _logger.info(f"🎉 === ACTUALIZACIÓN DE EQUIPO COMPLETADA ===")
             
         except Exception as e:
@@ -1638,7 +1687,6 @@ class ContadorAutomatico(models.Model):
             import traceback
             _logger.error(f"Traceback: {traceback.format_exc()}")
             raise
-
     def _guardar_estadisticas_cron_seguro(self, resumen):
         """
         SOLUCIÓN: Guardar estadísticas de forma segura
@@ -1787,13 +1835,13 @@ class ContadorAutomatico(models.Model):
     @api.model
     def cron_procesar_correos_perdidos(self):
         """
-        CRON CON DIAGNÓSTICO COMPLETO: Lista todos los correos y diagnóstico detallado de duplicados
+        CRON CON DETECCIÓN INCREMENTAL: Evita duplicados con contadores idénticos
         """
         try:
-            _logger.info("⏰ === INICIO CRON CON DIAGNÓSTICO COMPLETO ===")
+            _logger.info("⏰ === INICIO CRON CON DETECCIÓN INCREMENTAL ===")
             
             ahora = fields.Datetime.now()
-            fecha_limite = ahora - timedelta(hours=24)
+            fecha_limite = ahora - timedelta(hours=2)  # Reducido a 2 horas
             
             _logger.info(f"🔍 Buscando correos desde: {fecha_limite}")
             
@@ -1900,64 +1948,80 @@ class ContadorAutomatico(models.Model):
                 if len(todos_registros) > 10:
                     _logger.info(f"  ... y {len(todos_registros) - 10} registros más")
             
-            def _ya_existe_registro_con_estos_datos(serie, contador_bn, contador_color, contador_scan, asunto, fecha_correo):
+            def _ya_existe_registro_con_estos_datos_incremental(serie, contador_bn, contador_color, contador_scan, asunto, fecha_correo):
                 """
-                LÓGICA CORREGIDA: Verifica duplicados por asunto + fecha, NO por contadores exactos
+                FUNCIÓN INTERNA CORREGIDA: Los contadores SIEMPRE deben incrementar diariamente
+                Solo es duplicado si serie + contadores son EXACTAMENTE iguales
                 """
-                _logger.info(f"🔍 === VERIFICANDO DUPLICADOS (LÓGICA CORREGIDA) ===")
-                _logger.info(f"🎯 Datos a verificar:")
+                _logger.info(f"🔍 === VERIFICANDO DUPLICADOS (LÓGICA INCREMENTAL) ===")
+                _logger.info(f"🎯 Datos del correo actual:")
                 _logger.info(f"   Serie: '{serie}'")
-                _logger.info(f"   Asunto: '{asunto}'") 
+                _logger.info(f"   Contadores nuevos: BN={contador_bn}, Color={contador_color}, Scan={contador_scan}")
                 _logger.info(f"   Fecha correo: {fecha_correo}")
-                _logger.info(f"   Contadores: BN={contador_bn}, Color={contador_color}, Scan={contador_scan}")
                 
                 if not serie:
                     _logger.info(f"🔍 Serie vacía, no verificar duplicados")
                     return False
                 
-                # NUEVA LÓGICA: Buscar por asunto + fecha cercana (mismo día)
-                fecha_inicio_dia = fecha_correo.replace(hour=0, minute=0, second=0, microsecond=0)
-                fecha_fin_dia = fecha_inicio_dia + timedelta(days=1)
+                # Buscar TODOS los registros de esta serie (sin filtro de fecha)
+                registros_misma_serie = self.env['contador.automatico'].search([
+                    ('serie_detectada', '=', serie),
+                    ('estado', 'in', ['procesado', 'manual'])  # Solo registros exitosos
+                ], order='create_date desc')  # Más recientes primero
                 
-                _logger.info(f"🔍 Buscando duplicados por asunto en el mismo día:")
-                _logger.info(f"   Desde: {fecha_inicio_dia}")
-                _logger.info(f"   Hasta: {fecha_fin_dia}")
+                _logger.info(f"📊 Registros históricos encontrados para serie '{serie}': {len(registros_misma_serie)}")
                 
-                # Buscar registros del mismo día con el mismo asunto
-                registros_mismo_dia = self.env['contador.automatico'].search([
-                    ('name', '=', asunto),
-                    ('create_date', '>=', fecha_inicio_dia),
-                    ('create_date', '<', fecha_fin_dia)
-                ])
+                if not registros_misma_serie:
+                    _logger.info(f"✅ Primera vez que se procesa esta serie - NO duplicado")
+                    return False
                 
-                _logger.info(f"📊 Registros encontrados con mismo asunto y día: {len(registros_mismo_dia)}")
-                
-                if registros_mismo_dia:
-                    _logger.info(f"📋 === DETALLES DE REGISTROS MISMO DÍA ===")
-                    for i, registro in enumerate(registros_mismo_dia, 1):
-                        _logger.info(f"  {i}. ID={registro.id}")
-                        _logger.info(f"     Serie: '{registro.serie_detectada}'")
-                        _logger.info(f"     Asunto: '{registro.name}'")
-                        _logger.info(f"     Fecha: {registro.create_date}")
-                        _logger.info(f"     BN: {registro.contador_bn_detectado}")
-                        _logger.info(f"     Color: {registro.contador_color_detectado}")
-                        _logger.info(f"     Scan: {registro.contador_scan_detectado}")
-                        
-                        # Verificar si es exactamente el mismo correo (misma serie + mismos contadores)
-                        if (registro.serie_detectada == serie and 
-                            registro.contador_bn_detectado == (contador_bn or 0) and
-                            registro.contador_color_detectado == (contador_color or 0) and
-                            registro.contador_scan_detectado == (contador_scan or 0)):
-                            
-                            _logger.info(f"❌ DUPLICADO EXACTO encontrado: mismo asunto, día, serie y contadores")
-                            return True
+                # Verificar contra cada registro existente
+                for i, registro_existente in enumerate(registros_misma_serie):
+                    _logger.info(f"🔍 Comparando con registro #{i+1} (ID={registro_existente.id}):")
+                    _logger.info(f"   Fecha existente: {registro_existente.create_date}")
+                    _logger.info(f"   Contadores existentes: BN={registro_existente.contador_bn_detectado}, Color={registro_existente.contador_color_detectado}, Scan={registro_existente.contador_scan_detectado}")
                     
-                    _logger.info(f"✅ Mismo asunto/día pero contadores diferentes - NO es duplicado")
-                    return False
-                else:
-                    _logger.info(f"✅ NO DUPLICADO - No se encontraron registros del mismo asunto en el mismo día")
-                    return False
-            
+                    # REGLA PRINCIPAL: Si los contadores son EXACTAMENTE iguales = DUPLICADO
+                    bn_nuevo = contador_bn or 0
+                    color_nuevo = contador_color or 0
+                    scan_nuevo = contador_scan or 0
+                    
+                    bn_existente = registro_existente.contador_bn_detectado or 0
+                    color_existente = registro_existente.contador_color_detectado or 0
+                    scan_existente = registro_existente.contador_scan_detectado or 0
+                    
+                    if (bn_nuevo == bn_existente and 
+                        color_nuevo == color_existente and 
+                        scan_nuevo == scan_existente):
+                        
+                        _logger.info(f"❌ DUPLICADO DETECTADO - Contadores idénticos:")
+                        _logger.info(f"   BN: {bn_nuevo} = {bn_existente}")
+                        _logger.info(f"   Color: {color_nuevo} = {color_existente}")
+                        _logger.info(f"   Scan: {scan_nuevo} = {scan_existente}")
+                        _logger.info(f"   → Este correo ya fue procesado anteriormente")
+                        return True
+                    
+                    # VALIDACIÓN: Los contadores nuevos deben ser >= a los existentes
+                    if (bn_nuevo < bn_existente or 
+                        color_nuevo < color_existente or 
+                        scan_nuevo < scan_existente):
+                        
+                        _logger.warning(f"⚠️ ADVERTENCIA - Contadores menores que registro anterior:")
+                        _logger.warning(f"   BN: {bn_nuevo} < {bn_existente} = {bn_nuevo < bn_existente}")
+                        _logger.warning(f"   Color: {color_nuevo} < {color_existente} = {color_nuevo < color_existente}")
+                        _logger.warning(f"   Scan: {scan_nuevo} < {scan_existente} = {scan_nuevo < scan_existente}")
+                        _logger.warning(f"   → Posible error en lectura o equipo reseteado")
+                        # No bloquear, pero marcar para revisión manual
+                    
+                    else:
+                        _logger.info(f"✅ Contadores incrementados correctamente:")
+                        _logger.info(f"   BN: {bn_existente} → {bn_nuevo} (+{bn_nuevo - bn_existente})")
+                        _logger.info(f"   Color: {color_existente} → {color_nuevo} (+{color_nuevo - color_existente})")
+                        _logger.info(f"   Scan: {scan_existente} → {scan_nuevo} (+{scan_nuevo - scan_existente})")
+                
+                _logger.info(f"✅ NO DUPLICADO - Contadores incrementados, correo legítimo")
+                return False
+                        
             # PROCESAR CORREOS DE CONTADORES
             _logger.info(f"🚀 === INICIANDO PROCESAMIENTO ===")
             
@@ -1978,6 +2042,18 @@ class ContadorAutomatico(models.Model):
                 _logger.info(f"👤 Remitente: '{remitente}'")
                 
                 try:
+                    # NUEVA VERIFICACIÓN: ¿Ya procesamos este correo exacto recientemente?
+                    duplicado_reciente = self.env['contador.automatico'].search([
+                        ('name', '=', asunto),
+                        ('remitente', '=', remitente),
+                        ('create_date', '>=', fecha_limite)
+                    ], limit=1)
+                    
+                    if duplicado_reciente:
+                        _logger.info(f"⏭️ CORREO YA PROCESADO RECIENTEMENTE")
+                        correos_duplicados += 1
+                        continue
+                    
                     # Crear registro temporal
                     contenido_mensaje = correo.body or asunto
                     
@@ -2006,13 +2082,13 @@ class ContadorAutomatico(models.Model):
                         
                         # Verificar si extrajo datos válidos
                         if serie and (contador_bn or contador_color or contador_scan):
-                            # Verificar duplicados CON DIAGNÓSTICO DETALLADO
-                            if _ya_existe_registro_con_estos_datos(serie, contador_bn, contador_color, contador_scan):
-                                _logger.info(f"⏭️ DUPLICADO - Ya existe con estos datos exactos")
+                            # Verificar duplicados CON LÓGICA INCREMENTAL
+                            if _ya_existe_registro_con_estos_datos_incremental(serie, contador_bn, contador_color, contador_scan, asunto, correo.date):
+                                _logger.info(f"⏭️ DUPLICADO - Contadores idénticos a procesamiento anterior")
                                 registro_temp.unlink()
                                 correos_duplicados += 1
                             else:
-                                _logger.info(f"✅ NUEVO REGISTRO VÁLIDO - Guardando definitivamente")
+                                _logger.info(f"✅ NUEVO REGISTRO VÁLIDO - Contadores incrementados")
                                 correos_procesados_exitosos += 1
                                 
                                 # Asegurar fecha
@@ -2036,11 +2112,11 @@ class ContadorAutomatico(models.Model):
                     _logger.error(f"Traceback: {traceback.format_exc()}")
             
             # RESUMEN FINAL DETALLADO
-            _logger.info(f"📊 === RESUMEN FINAL COMPLETO ===")
+            _logger.info(f"📊 === RESUMEN FINAL INCREMENTAL ===")
             _logger.info(f"📧 Total correos analizados: {len(todos_los_correos)}")
             _logger.info(f"🎯 Correos de contadores detectados: {len(correos_contadores)}")
             _logger.info(f"✅ Nuevos registros procesados: {correos_procesados_exitosos}")
-            _logger.info(f"⏭️ Duplicados saltados: {correos_duplicados}")
+            _logger.info(f"⏭️ Duplicados evitados: {correos_duplicados}")
             _logger.info(f"⚠️ Sin datos suficientes: {correos_sin_datos}")
             _logger.info(f"❌ Errores de procesamiento: {correos_fallidos}")
             _logger.info(f"🚫 Correos descartados (no contadores): {len(correos_descartados)}")
@@ -2057,13 +2133,13 @@ class ContadorAutomatico(models.Model):
                 'correos_encontrados': len(correos_contadores),
                 'correos_procesados': correos_procesados_exitosos,
                 'correos_fallidos': correos_fallidos + correos_sin_datos,
-                'horas_revision': 24
+                'horas_revision': 2  # Cambiado a 2 horas
             }
             
             dummy_instance = self.browse(1) if self.search([], limit=1) else self.new()
             dummy_instance._guardar_estadisticas_cron_seguro(resumen)
             
-            _logger.info("⏰ === FIN CRON CON DIAGNÓSTICO ===")
+            _logger.info("⏰ === FIN CRON CON DETECCIÓN INCREMENTAL ===")
             return True
             
         except Exception as e:
@@ -2072,6 +2148,8 @@ class ContadorAutomatico(models.Model):
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
 
+
+    
     @api.model
     def procesar_correos_directos_manual(self, horas=24):
         """
