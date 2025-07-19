@@ -801,8 +801,8 @@ class ContadorAutomatico(models.Model):
 
     def asignar_contadores_por_tipo_equipo(self, contadores_detectados, tipo_maquina):
         """
-        CORREGIDO: Asigna contadores con lógica especial para Konica Minolta
-        PROBLEMA SOLUCIONADO: Asignación correcta según el formato detectado
+        CORREGIDO DEFINITIVAMENTE: Asigna contadores SIN cálculos incorrectos
+        PROBLEMA SOLUCIONADO: Para COLOR, usar valores directos sin restar
         """
         try:
             _logger.info(f"📊 === ASIGNANDO CONTADORES CORREGIDO ===")
@@ -847,32 +847,70 @@ class ContadorAutomatico(models.Model):
                 elif tipo_maquina == 'color':
                     _logger.info("🌈 KONICA MINOLTA COLOR")
                     
-                    # Para Konica Minolta color:
-                    # [Total Counter] = Total impresiones (BN + Color)
+                    # CORRECCIÓN CRÍTICA: Para Konica Minolta COLOR con contadores separados
+                    # [Total Black Counter] = Páginas BN directas (NO restar nada)
+                    # [Total Color Counter] = Páginas color directas
                     # [Total Scan/Fax Counter] = Escaneos
-                    # Necesitamos separar BN y Color si es posible
                     
-                    total_impresiones = contadores_detectados.get('contador_bn', 0)
-                    total_scan = contadores_detectados.get('contador_scan', 0)
+                    # DETECTAR QUÉ TIPO DE CORREO COLOR ES
+                    tiene_black_separado = 'contador_bn' in contadores_detectados
+                    tiene_color_separado = 'contador_color' in contadores_detectados
                     
-                    # Si hay contador de color separado, usarlo
-                    if 'contador_color' in contadores_detectados and contadores_detectados['contador_color'] > 0:
-                        color_pages = contadores_detectados['contador_color']
-                        bn_pages = max(0, total_impresiones - color_pages)
+                    _logger.info(f"🔍 Análisis de contadores separados:")
+                    _logger.info(f"   Tiene Black separado: {tiene_black_separado}")
+                    _logger.info(f"   Tiene Color separado: {tiene_color_separado}")
+                    
+                    if tiene_black_separado and tiene_color_separado:
+                        # CASO 1: Contadores separados - USAR DIRECTAMENTE (SIN CALCULAR)
+                        _logger.info("✅ CASO: Contadores Black y Color separados")
                         
-                        contadores_finales['contador_bn'] = bn_pages
-                        contadores_finales['contador_color'] = color_pages
-                        _logger.info(f"🖤 BN calculado: {total_impresiones} - {color_pages} = {bn_pages}")
-                        _logger.info(f"🎨 Color detectado: {color_pages}")
-                    else:
-                        # Si no hay color separado, todo va a BN
-                        contadores_finales['contador_bn'] = total_impresiones
+                        contadores_finales['contador_bn'] = contadores_detectados['contador_bn']
+                        contadores_finales['contador_color'] = contadores_detectados['contador_color']
+                        
+                        _logger.info(f"🖤 [Total Black Counter] → BN: {contadores_detectados['contador_bn']} (DIRECTO)")
+                        _logger.info(f"🎨 [Total Color Counter] → Color: {contadores_detectados['contador_color']} (DIRECTO)")
+                        
+                    elif tiene_black_separado and not tiene_color_separado:
+                        # CASO 2: Solo Black separado
+                        _logger.info("⚠️ CASO: Solo Black separado, Color = 0")
+                        
+                        contadores_finales['contador_bn'] = contadores_detectados['contador_bn']
                         contadores_finales['contador_color'] = 0
-                        _logger.info(f"🖤 Total → BN: {total_impresiones}")
+                        
+                        _logger.info(f"🖤 [Total Black Counter] → BN: {contadores_detectados['contador_bn']}")
                         _logger.info("🎨 Color = 0 (no detectado por separado)")
+                        
+                    elif not tiene_black_separado and tiene_color_separado:
+                        # CASO 3: Solo Color separado (raro)
+                        _logger.info("⚠️ CASO: Solo Color separado, BN = 0")
+                        
+                        contadores_finales['contador_bn'] = 0
+                        contadores_finales['contador_color'] = contadores_detectados['contador_color']
+                        
+                        _logger.info("🖤 BN = 0 (no detectado por separado)")
+                        _logger.info(f"🎨 [Total Color Counter] → Color: {contadores_detectados['contador_color']}")
+                        
+                    else:
+                        # CASO 4: Ninguno separado - buscar total genérico
+                        _logger.info("⚠️ CASO: Sin contadores separados, buscando total genérico")
+                        
+                        # Podría haber un [Total Counter] genérico que necesita distribución
+                        total_generico = contadores_detectados.get('contador_total', 0)
+                        
+                        if total_generico > 0:
+                            # Distribuir de alguna manera - pero sin información no podemos
+                            contadores_finales['contador_bn'] = total_generico
+                            contadores_finales['contador_color'] = 0
+                            _logger.info(f"🖤 Total genérico → BN: {total_generico}")
+                            _logger.info("🎨 Color = 0 (sin información para distribuir)")
+                        else:
+                            contadores_finales['contador_bn'] = 0
+                            contadores_finales['contador_color'] = 0
+                            _logger.warning("⚠️ No se encontraron contadores válidos")
                     
-                    contadores_finales['contador_scan'] = total_scan
-                    _logger.info(f"📄 Scan: {total_scan}")
+                    # Scan siempre directo
+                    contadores_finales['contador_scan'] = contadores_detectados.get('contador_scan', 0)
+                    _logger.info(f"📄 Scan: {contadores_finales['contador_scan']}")
             
             elif formato == 'formato_ricoh':
                 _logger.info("🏭 === FORMATO RICOH ===")
@@ -936,7 +974,6 @@ class ContadorAutomatico(models.Model):
             import traceback
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return contadores_detectados
-   
     
     def procesar_correo_inteligente(self):
         """
