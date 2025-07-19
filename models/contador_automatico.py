@@ -2284,66 +2284,48 @@ class ContadorAutomatico(models.Model):
     @api.model
     def cron_procesar_correos_perdidos(self):
         _logger.info("⏰ Iniciando cron_procesar_correos_perdidos")
-
         ahora = fields.Datetime.now()
         fecha_limite = ahora - timedelta(hours=24)
 
-        # 1) Buscar todos los mails de las últimas 24h
+        # Buscar mails de las últimas 24h
         correos = self.env['mail.message'].search([
             ('message_type', '=', 'email'),
             ('date', '>=', fecha_limite),
         ], order='date desc')
         _logger.info("📧 Correos totales últimos 24h: %d", len(correos))
 
-        # 2) Excluir los que ya tienen original_mail_id
+        # Excluir ya procesados
         procesados = self.mapped('original_mail_id.id')
         correos = correos.filtered(lambda m: m.id not in procesados)
-        _logger.info("🔍 Correos nuevos candidatas: %d", len(correos))
+        _logger.info("🔍 Correos nuevos: %d", len(correos))
 
-        # 3) Filtrar por asunto que contenga 'counter' o 'contador'
+        # Filtrar por asunto
         claves = ['counter', 'contador']
-        def es_contador(m):
-            subj = (m.subject or '').lower()
-            return any(k in subj for k in claves)
+        correos = correos.filtered(lambda m: any(k in (m.subject or '').lower() for k in claves))
+        _logger.info("✅ Correos con clave en asunto: %d", len(correos))
 
-        correos_contadores = correos.filtered(es_contador)
-        _logger.info("✅ Correos con 'counter/contador' en asunto: %d", len(correos_contadores))
-
-        if not correos_contadores:
-            _logger.info("🔔 No hay correos de contadores para procesar")
-            return True
-
-        exitosos = errores = sin_datos = 0
-
-        for correo in correos_contadores:
-            _logger.info("📨 Procesando mail.id=%d subject=%s", correo.id, correo.subject)
+        exitosos = errors = no_data = 0
+        for mail in correos:
             try:
-                # Creo registro y vinculo el mail
                 reg = self.create({
-                    'name': correo.subject or 'Sin asunto',
-                    'remitente': correo.email_from,
-                    'contenido_original': correo.body or correo.subject,
+                    'name': mail.subject or 'Sin asunto',
+                    'remitente': mail.email_from,
+                    'contenido_original': mail.body or mail.subject,
                     'estado': 'pendiente',
-                    'original_mail_id': correo.id,
+                    'original_mail_id': mail.id,
                 })
-                # Intento procesamiento
                 if reg.procesar_correo_inteligente():
-                    if reg.serie_detectada and any((
-                        reg.contador_bn_detectado,
-                        reg.contador_color_detectado,
-                        reg.contador_scan_detectado
-                    )):
+                    if reg.serie_detectada and (reg.contador_bn_detectado or reg.contador_color_detectado or reg.contador_scan_detectado):
                         exitosos += 1
                     else:
-                        sin_datos += 1
+                        no_data += 1
                 else:
-                    sin_datos += 1
+                    no_data += 1
             except Exception as e:
-                errores += 1
-                _logger.error("❌ Error procesando mail.id=%d: %s", correo.id, e, exc_info=True)
+                errors += 1
+                _logger.error("❌ Error procesando mail.id=%d: %s", mail.id, e, exc_info=True)
 
-        _logger.info("🎯 Resumen cron: éxitos=%d sin_datos=%d errores=%d",
-                     exitosos, sin_datos, errores)
+        _logger.info("🎯 Resumen cron: éxitos=%d, sin datos=%d, errores=%d", exitosos, no_data, errors)
         return True
     def limpiar_duplicados_mismo_dia(self):
         """
