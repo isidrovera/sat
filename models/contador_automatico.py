@@ -1491,12 +1491,29 @@ class ContadorAutomatico(models.Model):
     def buscar_patrones_contadores_dinamico(self, texto):
         """
         LÓGICA CORREGIDA: Detecta contadores en el orden correcto para Color vs Monocroma
+        VERSIÓN DEBUG: Con logging detallado para encontrar origen de valores incorrectos
         """
         contadores = {}
         patrones_usados = []
 
         _logger.info("🔍 Iniciando búsqueda de contadores con patrones dinámicos...")
         _logger.info(f"📄 Texto a analizar (primeros 200 chars): {texto[:200]}...")
+        
+        # DEBUG: Verificar si 5763 está en el texto original
+        if '5763' in texto:
+            _logger.error(f"🔴 ALERTA: 5763 ENCONTRADO EN TEXTO ORIGINAL!")
+            # Encontrar contexto
+            pos_5763 = texto.find('5763')
+            inicio = max(0, pos_5763 - 50)
+            fin = min(len(texto), pos_5763 + 50)
+            contexto = texto[inicio:fin]
+            _logger.error(f"📄 Contexto de 5763: ...{contexto}...")
+        else:
+            _logger.info(f"✅ 5763 NO está en el texto original")
+
+        # DEBUG: Mostrar TODOS los números del texto
+        todos_numeros = re.findall(r'\d{4,9}', texto)
+        _logger.info(f"🔢 TODOS los números (4-9 dígitos) en el texto: {todos_numeros}")
 
         # Verificar si existen patrones configurados
         total_patrones = self.env['patron.contador'].search_count([('activo', '=', True)])
@@ -1569,7 +1586,7 @@ class ContadorAutomatico(models.Model):
         tipos = ['contador_bn', 'contador_color', 'contador_scan']
 
         for tipo in tipos:
-            _logger.info(f"🔍 Buscando patrones para: {tipo}")
+            _logger.info(f"🔍 === DETECTANDO {tipo.upper()} ===")
             
             # Saltar color si es monocroma
             if es_monocroma and tipo == 'contador_color':
@@ -1577,8 +1594,21 @@ class ContadorAutomatico(models.Model):
                 continue
             
             # 1) Intento con patrones dinámicos
+            _logger.info(f"🎯 Paso 1: Intentando patrones dinámicos para {tipo}")
             resultado = self.env['patron.contador'].buscar_por_tipo(tipo, texto)
             if resultado:
+                _logger.info(f"✅ {tipo} encontrado con patrón dinámico: {resultado}")
+                
+                # DEBUG: Verificar si es 5763
+                if resultado == 5763:
+                    _logger.error(f"🔴 ALERTA: Patrón dinámico devolvió 5763 para {tipo}!")
+                    _logger.error(f"🔍 Investigar qué patrón dinámico lo detectó")
+                    
+                    # Buscar qué patrón específico lo detectó
+                    patron_usado = self._encontrar_patron_usado(tipo, texto, resultado)
+                    if patron_usado:
+                        _logger.error(f"🔴 PATRÓN PROBLEMÁTICO: {patron_usado.name} - {patron_usado.patron_regex}")
+                    
                 contadores[tipo] = resultado
                 patron_usado = self._encontrar_patron_usado(tipo, texto, resultado)
                 if patron_usado:
@@ -1589,14 +1619,34 @@ class ContadorAutomatico(models.Model):
                 continue
 
             # 2) Fallback específico según tipo de correo
+            _logger.info(f"🎯 Paso 2: Intentando fallback para {tipo}")
             _logger.warning(f"❌ No se encontró {tipo} con patrones dinámicos, intentando fallback...")
             patrones_fallback = fallback_por_tipo.get(tipo, [])
             
-            for pat in patrones_fallback:
-                _logger.info(f"🔍 Probando fallback para {tipo}: '{pat}'")
-                for match in re.finditer(pat, texto, re.IGNORECASE):
+            for i, pat in enumerate(patrones_fallback, 1):
+                _logger.info(f"🔍 Probando fallback {i}/{len(patrones_fallback)} para {tipo}: '{pat}'")
+                
+                matches = list(re.finditer(pat, texto, re.IGNORECASE))
+                _logger.info(f"   Coincidencias encontradas: {len(matches)}")
+                
+                for j, match in enumerate(matches, 1):
                     raw = match.group(1)
                     numero = int(re.sub(r'[^0-9]', '', raw))
+                    _logger.info(f"   Match {j}: raw='{raw}' → numero={numero}")
+                    
+                    # DEBUG: Verificar si es 5763
+                    if numero == 5763:
+                        _logger.error(f"🔴 ALERTA: Fallback generó 5763!")
+                        _logger.error(f"🔴 Patrón problemático: '{pat}'")
+                        _logger.error(f"🔴 Match completo: '{match.group(0)}'")
+                        _logger.error(f"🔴 Posición en texto: {match.start()}-{match.end()}")
+                        
+                        # Contexto del match
+                        inicio_ctx = max(0, match.start() - 30)
+                        fin_ctx = min(len(texto), match.end() + 30)
+                        contexto_match = texto[inicio_ctx:fin_ctx]
+                        _logger.error(f"🔴 Contexto: ...{contexto_match}...")
+                    
                     if numero > 0:
                         contadores[tipo] = numero
                         patrones_usados.append(f"{tipo}: fallback '{pat}'")
@@ -1610,9 +1660,28 @@ class ContadorAutomatico(models.Model):
 
         # CORRECCIÓN FINAL: Si es monocroma y solo encontramos scan/total, asignarlo también a BN
         if es_monocroma and 'contador_scan' in contadores and 'contador_bn' not in contadores:
-            contadores['contador_bn'] = contadores['contador_scan']
+            valor_scan = contadores['contador_scan']
+            _logger.info(f"🔄 Máquina monocroma: copiando total ({valor_scan}) a contador BN")
+            
+            # DEBUG: Verificar si es 5763
+            if valor_scan == 5763:
+                _logger.error(f"🔴 ALERTA: Se va a copiar 5763 desde scan a BN!")
+            
+            contadores['contador_bn'] = valor_scan
             patrones_usados.append("contador_bn: copiado de total (máquina monocroma)")
-            _logger.info(f"🔄 Máquina monocroma: copiando total ({contadores['contador_scan']}) a contador BN")
+
+        # DEBUG FINAL: Verificar todos los valores detectados
+        _logger.info(f"🎯 === RESULTADO FINAL DETALLADO ===")
+        for tipo, valor in contadores.items():
+            _logger.info(f"📊 {tipo}: {valor}")
+            if valor == 5763:
+                _logger.error(f"🔴 PROBLEMA CONFIRMADO: {tipo} tiene valor 5763!")
+            
+            # Verificar si el valor existe en el texto original
+            if str(valor) not in texto:
+                _logger.error(f"🔴 PROBLEMA: {tipo}={valor} NO existe en el texto original!")
+            else:
+                _logger.info(f"✅ {tipo}={valor} SÍ existe en el texto original")
 
         # Guardamos el detalle de qué patrones se usaron
         if patrones_usados:
@@ -1623,6 +1692,204 @@ class ContadorAutomatico(models.Model):
         return contadores
 
 
+    def debuggear_patrones_dinamicos(self, serie_objetivo):
+        """
+        DEBUG: Investiga específicamente qué patrones dinámicos están detectando valores incorrectos
+        """
+        try:
+            _logger.info(f"🔬 === DEBUG PATRONES DINÁMICOS PARA SERIE {serie_objetivo} ===")
+            
+            # Buscar registro con esa serie
+            registro = self.env['contador.automatico'].search([
+                ('serie_detectada', '=', serie_objetivo)
+            ], limit=1)
+            
+            if not registro:
+                _logger.error(f"❌ No se encontró registro con serie {serie_objetivo}")
+                return
+            
+            texto = registro.contenido_procesado or registro.contenido_original or ""
+            if not texto:
+                _logger.error(f"❌ No hay contenido para analizar")
+                return
+            
+            _logger.info(f"📄 Contenido disponible: {len(texto)} caracteres")
+            
+            # Verificar todos los patrones activos
+            patrones_activos = self.env['patron.contador'].search([('activo', '=', True)])
+            _logger.info(f"📊 Total patrones activos: {len(patrones_activos)}")
+            
+            for tipo in ['contador_bn', 'contador_color', 'contador_scan']:
+                _logger.info(f"🔍 === ANALIZANDO PATRONES PARA {tipo.upper()} ===")
+                
+                patrones_tipo = patrones_activos.filtered(lambda p: p.tipo == tipo)
+                _logger.info(f"📋 Patrones de {tipo}: {len(patrones_tipo)}")
+                
+                for patron in patrones_tipo:
+                    _logger.info(f"🎯 Probando patrón: '{patron.name}' - '{patron.patron_regex}'")
+                    
+                    try:
+                        matches = re.finditer(patron.patron_regex, texto, re.IGNORECASE)
+                        match_count = 0
+                        
+                        for match in matches:
+                            match_count += 1
+                            if match.groups():
+                                valor_raw = match.group(1).strip()
+                                valor_num = int(re.sub(r'[^0-9]', '', valor_raw)) if valor_raw else 0
+                                
+                                _logger.info(f"   Match {match_count}: '{valor_raw}' → {valor_num}")
+                                
+                                # ALERTA SI ES 5763
+                                if valor_num == 5763:
+                                    _logger.error(f"🔴 PATRÓN PROBLEMÁTICO ENCONTRADO!")
+                                    _logger.error(f"🔴 Patrón: {patron.name} - {patron.patron_regex}")
+                                    _logger.error(f"🔴 Match completo: '{match.group(0)}'")
+                                    _logger.error(f"🔴 Valor extraído: {valor_num}")
+                                    
+                                    # Contexto
+                                    inicio = max(0, match.start() - 50)
+                                    fin = min(len(texto), match.end() + 50)
+                                    contexto = texto[inicio:fin]
+                                    _logger.error(f"🔴 Contexto: ...{contexto}...")
+                                    
+                                    # ¿Este patrón está activo?
+                                    _logger.error(f"🔴 Patrón activo: {patron.activo}")
+                                    _logger.error(f"🔴 Orden del patrón: {patron.orden}")
+                                    _logger.error(f"🔴 Auto-generado: {getattr(patron, 'auto_generado', 'N/A')}")
+                        
+                        if match_count == 0:
+                            _logger.info(f"   Sin coincidencias para este patrón")
+                            
+                    except Exception as e:
+                        _logger.error(f"❌ Error procesando patrón {patron.name}: {e}")
+            
+            # Verificar método buscar_por_tipo específicamente
+            _logger.info(f"🔍 === PROBANDO MÉTODO buscar_por_tipo DIRECTAMENTE ===")
+            
+            for tipo in ['contador_bn', 'contador_color', 'contador_scan']:
+                _logger.info(f"🎯 Ejecutando buscar_por_tipo('{tipo}', texto)")
+                resultado = self.env['patron.contador'].buscar_por_tipo(tipo, texto)
+                _logger.info(f"   Resultado: {resultado}")
+                
+                if resultado == 5763:
+                    _logger.error(f"🔴 buscar_por_tipo DEVOLVIÓ 5763 PARA {tipo}!")
+                    
+                    # Investigar qué patrón fue el primero en hacer match
+                    patrones_tipo = self.env['patron.contador'].search([
+                        ('tipo', '=', tipo),
+                        ('activo', '=', True)
+                    ], order='orden')
+                    
+                    for patron in patrones_tipo:
+                        try:
+                            matches = list(re.finditer(patron.patron_regex, texto, re.IGNORECASE))
+                            if matches:
+                                for match in matches:
+                                    if match.groups():
+                                        valor = match.group(1).strip()
+                                        numero = int(re.sub(r'[^0-9]', '', valor)) if valor else 0
+                                        if numero == resultado:
+                                            _logger.error(f"🔴 PATRÓN CULPABLE: {patron.name}")
+                                            _logger.error(f"🔴 Regex: {patron.patron_regex}")
+                                            _logger.error(f"🔴 Orden: {patron.orden}")
+                                            break
+                                break
+                        except:
+                            continue
+            
+            _logger.info(f"🔬 === FIN DEBUG PATRONES DINÁMICOS ===")
+            
+        except Exception as e:
+            _logger.error(f"❌ Error en debug de patrones dinámicos: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
+
+    def investigar_origen_5763_completo(self):
+        """
+        INVESTIGACIÓN COMPLETA: Busca el origen del valor 5763 en todo el sistema
+        """
+        try:
+            _logger.info(f"🕵️ === INVESTIGACIÓN COMPLETA DEL VALOR 5763 ===")
+            
+            # 1. Buscar en registros contador.automatico
+            registros_con_5763 = self.env['contador.automatico'].search([
+                '|', '|',
+                ('contador_bn_detectado', '=', 5763),
+                ('contador_color_detectado', '=', 5763),
+                ('contador_scan_detectado', '=', 5763)
+            ])
+            
+            _logger.info(f"📊 Registros con 5763: {len(registros_con_5763)}")
+            
+            for registro in registros_con_5763:
+                _logger.info(f"📋 Registro ID={registro.id}:")
+                _logger.info(f"   Serie: {registro.serie_detectada}")
+                _logger.info(f"   BN: {registro.contador_bn_detectado}")
+                _logger.info(f"   Color: {registro.contador_color_detectado}")
+                _logger.info(f"   Scan: {registro.contador_scan_detectado}")
+                _logger.info(f"   Fecha: {registro.create_date}")
+                _logger.info(f"   Estado: {registro.estado}")
+                
+                # Verificar si 5763 está en el contenido original
+                contenido = registro.contenido_procesado or registro.contenido_original or ""
+                if '5763' in contenido:
+                    _logger.error(f"🔴 5763 SÍ está en el contenido del registro {registro.id}")
+                    # Encontrar contexto
+                    pos = contenido.find('5763')
+                    inicio = max(0, pos - 50)
+                    fin = min(len(contenido), pos + 50)
+                    contexto = contenido[inicio:fin]
+                    _logger.error(f"📄 Contexto: ...{contexto}...")
+                else:
+                    _logger.error(f"🔴 5763 NO está en el contenido del registro {registro.id} - ¡PROBLEMA!")
+            
+            # 2. Buscar en equipos (modelo alquiler)
+            try:
+                equipos_con_5763 = self.env['alquiler'].search([
+                    '|', '|',
+                    ('contador_bn', '=', 5763),
+                    ('contador_color', '=', 5763),
+                    ('contador_scan', '=', 5763)
+                ])
+                
+                _logger.info(f"🏭 Equipos con 5763: {len(equipos_con_5763)}")
+                
+                for equipo in equipos_con_5763:
+                    _logger.info(f"🏭 Equipo ID={equipo.id}:")
+                    _logger.info(f"   Serie: {equipo.serie}")
+                    _logger.info(f"   BN: {getattr(equipo, 'contador_bn', 'N/A')}")
+                    _logger.info(f"   Color: {getattr(equipo, 'contador_color', 'N/A')}")
+                    _logger.info(f"   Scan: {getattr(equipo, 'contador_scan', 'N/A')}")
+                    
+            except Exception as e:
+                _logger.error(f"❌ Error buscando en equipos: {e}")
+            
+            # 3. Buscar en patrones
+            try:
+                patrones = self.env['patron.contador'].search([])
+                patrones_con_5763 = []
+                
+                for patron in patrones:
+                    if '5763' in (patron.patron_regex or '') or '5763' in (patron.ejemplo or ''):
+                        patrones_con_5763.append(patron)
+                
+                _logger.info(f"🎯 Patrones que contienen 5763: {len(patrones_con_5763)}")
+                
+                for patron in patrones_con_5763:
+                    _logger.info(f"🎯 Patrón sospechoso: {patron.name}")
+                    _logger.info(f"   Regex: {patron.patron_regex}")
+                    _logger.info(f"   Ejemplo: {patron.ejemplo}")
+                    
+            except Exception as e:
+                _logger.error(f"❌ Error buscando en patrones: {e}")
+            
+            _logger.info(f"🕵️ === FIN INVESTIGACIÓN 5763 ===")
+            
+        except Exception as e:
+            _logger.error(f"❌ Error en investigación completa: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
     # TAMBIÉN AGREGAR este método para verificar tipo de correo
     def _detectar_tipo_correo_por_contenido(self, texto):
         """
