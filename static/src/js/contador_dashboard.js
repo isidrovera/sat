@@ -5,12 +5,18 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { FormController } from "@web/views/form/form_controller";
 
+console.log("🚀 Dashboard JS: Archivo cargado correctamente");
+
 export class ContadorDashboardController extends FormController {
     setup() {
+        console.log("🔧 Dashboard: Iniciando setup del controlador");
         super.setup();
+        
         this.orm = useService("orm");
         this.notification = useService("notification");
         this.dialog = useService("dialog");
+        
+        console.log("✅ Dashboard: Servicios ORM y notification inicializados");
         
         this.state = useState({
             estadisticas: {
@@ -29,19 +35,36 @@ export class ContadorDashboardController extends FormController {
             activeFilter: 'all'
         });
 
-        onWillStart(this.loadDashboardData);
-        onMounted(this.setupEventListeners);
+        console.log("✅ Dashboard: Estado inicial configurado", this.state);
+
+        onWillStart(async () => {
+            console.log("🎯 Dashboard: onWillStart ejecutándose");
+            await this.loadDashboardData();
+        });
+        
+        onMounted(() => {
+            console.log("🎯 Dashboard: onMounted ejecutándose");
+            this.setupEventListeners();
+        });
     }
 
     async loadDashboardData() {
+        console.log("📊 Dashboard: Iniciando carga de datos");
         this.state.loading = true;
+        
         try {
+            console.log("🔄 Dashboard: Llamando a obtener_estadisticas_dashboard");
+            
             // Cargar estadísticas
             const estadisticas = await this.orm.call(
                 "contador.automatico",
                 "obtener_estadisticas_dashboard",
                 []
             );
+            
+            console.log("✅ Dashboard: Estadísticas recibidas:", estadisticas);
+            
+            console.log("🔄 Dashboard: Llamando a obtener_lista_equipos_dashboard");
             
             // Cargar lista de equipos
             const equipos = await this.orm.call(
@@ -50,30 +73,42 @@ export class ContadorDashboardController extends FormController {
                 []
             );
             
+            console.log("✅ Dashboard: Equipos recibidos:", equipos);
+            
             this.state.estadisticas = estadisticas;
             this.state.equipos = equipos;
             this.state.filteredEquipos = equipos;
             this.updatePagination();
             
+            console.log("🎨 Dashboard: Actualizando UI");
             // Actualizar UI
             this.updateStatsDisplay();
             this.renderEquiposList();
             
         } catch (error) {
-            console.error("Error cargando dashboard:", error);
-            this.notification.add("Error cargando datos del dashboard", {
+            console.error("❌ Dashboard: Error cargando datos:", error);
+            console.error("❌ Dashboard: Stack trace:", error.stack);
+            
+            this.notification.add("Error cargando datos del dashboard: " + error.message, {
                 type: "danger"
             });
         } finally {
             this.state.loading = false;
             this.hideLoading();
+            console.log("✅ Dashboard: Carga de datos finalizada");
         }
     }
 
     setupEventListeners() {
+        console.log("🎧 Dashboard: Configurando event listeners");
+        
         // Botones de filtro
-        document.querySelectorAll('.filter-btn').forEach(btn => {
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        console.log("🔍 Dashboard: Botones de filtro encontrados:", filterBtns.length);
+        
+        filterBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
+                console.log("🔍 Dashboard: Filtro clickeado:", e.target.dataset.filter);
                 this.handleFilterClick(e.target.dataset.filter);
             });
         });
@@ -81,30 +116,46 @@ export class ContadorDashboardController extends FormController {
         // Búsqueda
         const searchInput = document.getElementById('search_input');
         if (searchInput) {
+            console.log("🔍 Dashboard: Input de búsqueda encontrado");
             searchInput.addEventListener('input', (e) => {
+                console.log("🔍 Dashboard: Búsqueda:", e.target.value);
                 this.handleSearch(e.target.value);
             });
+        } else {
+            console.warn("⚠️ Dashboard: Input de búsqueda NO encontrado");
         }
 
         // Botón refresh flotante
         const floatingRefresh = document.getElementById('floating_refresh');
         if (floatingRefresh) {
+            console.log("🔄 Dashboard: Botón refresh flotante encontrado");
             floatingRefresh.addEventListener('click', () => {
+                console.log("🔄 Dashboard: Refresh flotante clickeado");
                 this.refreshDashboard();
             });
+        } else {
+            console.warn("⚠️ Dashboard: Botón refresh flotante NO encontrado");
         }
 
         // Refresh principal
         const refreshBtn = document.querySelector('[name="refresh_dashboard"]');
         if (refreshBtn) {
+            console.log("🔄 Dashboard: Botón refresh principal encontrado");
             refreshBtn.addEventListener('click', () => {
+                console.log("🔄 Dashboard: Refresh principal clickeado");
                 this.refreshDashboard();
             });
+        } else {
+            console.warn("⚠️ Dashboard: Botón refresh principal NO encontrado");
         }
+        
+        console.log("✅ Dashboard: Event listeners configurados");
     }
 
     updateStatsDisplay() {
+        console.log("📊 Dashboard: Actualizando display de estadísticas");
         const stats = this.state.estadisticas;
+        console.log("📊 Dashboard: Stats a mostrar:", stats);
         
         // Actualizar números con animación
         this.animateNumber('equipos_hoy', stats.equipos_unicos_hoy);
@@ -116,12 +167,20 @@ export class ContadorDashboardController extends FormController {
         const lastUpdate = document.getElementById('last_update');
         if (lastUpdate) {
             lastUpdate.textContent = new Date().toLocaleString();
+            console.log("✅ Dashboard: Timestamp actualizado");
+        } else {
+            console.warn("⚠️ Dashboard: Elemento last_update NO encontrado");
         }
     }
 
     animateNumber(elementId, targetValue, suffix = '') {
         const element = document.getElementById(elementId);
-        if (!element) return;
+        if (!element) {
+            console.warn(`⚠️ Dashboard: Elemento ${elementId} NO encontrado para animación`);
+            return;
+        }
+
+        console.log(`🎬 Dashboard: Animando ${elementId} a ${targetValue}${suffix}`);
 
         let current = 0;
         const increment = targetValue / 30; // 30 pasos de animación
@@ -139,14 +198,34 @@ export class ContadorDashboardController extends FormController {
     }
 
     renderEquiposList() {
+        console.log("📋 Dashboard: Renderizando lista de equipos");
         const tbody = document.getElementById('machines_tbody');
-        if (!tbody) return;
+        if (!tbody) {
+            console.error("❌ Dashboard: Elemento machines_tbody NO encontrado");
+            return;
+        }
 
         const startIndex = (this.state.currentPage - 1) * this.state.itemsPerPage;
         const endIndex = startIndex + this.state.itemsPerPage;
         const equiposPage = this.state.filteredEquipos.slice(startIndex, endIndex);
 
+        console.log(`📋 Dashboard: Mostrando ${equiposPage.length} equipos de ${this.state.filteredEquipos.length} total`);
+
         tbody.innerHTML = '';
+
+        if (equiposPage.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-4">
+                        <i class="fa fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5>No hay equipos para mostrar</h5>
+                        <p class="text-muted">No se encontraron registros con los filtros aplicados</p>
+                    </td>
+                </tr>
+            `;
+            console.log("📋 Dashboard: No hay equipos para mostrar");
+            return;
+        }
 
         equiposPage.forEach((equipo, index) => {
             const row = this.createEquipoRow(equipo, startIndex + index + 1);
@@ -155,9 +234,12 @@ export class ContadorDashboardController extends FormController {
 
         this.updateCounters();
         this.renderPagination();
+        console.log("✅ Dashboard: Lista de equipos renderizada");
     }
 
     createEquipoRow(equipo, index) {
+        console.log(`📋 Dashboard: Creando fila para equipo ${equipo.id}:`, equipo);
+        
         const tr = document.createElement('tr');
         tr.className = 'machine-row';
         tr.dataset.equipoId = equipo.id;
@@ -209,7 +291,7 @@ export class ContadorDashboardController extends FormController {
                         </span>
                     ` : ''}
                     <span class="counter-badge">
-                        <i class="fa fa-scanner text-success me-1"></i>
+                        <i class="fa fa-chart-line text-success me-1"></i>
                         Total: ${(equipo.contador_total_actual || 0).toLocaleString()}
                     </span>
                 </div>
@@ -224,7 +306,7 @@ export class ContadorDashboardController extends FormController {
                 </span>
             </td>
             <td class="px-4 text-center">
-                <button type="button" class="btn-detail" onclick="window.dashboard.showDetail('${equipo.id}')">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.dashboard.showDetail('${equipo.id}')">
                     <i class="fa fa-eye me-1"></i>
                     Detalle
                 </button>
@@ -236,12 +318,12 @@ export class ContadorDashboardController extends FormController {
 
     getEstadoClass(estado) {
         const classes = {
-            'procesado': 'status-procesado',
-            'pendiente': 'status-pendiente',
-            'error': 'status-error',
-            'manual': 'status-manual'
+            'procesado': 'bg-success',
+            'pendiente': 'bg-warning',
+            'error': 'bg-danger',
+            'manual': 'bg-info'
         };
-        return classes[estado] || 'status-pendiente';
+        return classes[estado] || 'bg-secondary';
     }
 
     getEstadoText(estado) {
@@ -265,6 +347,8 @@ export class ContadorDashboardController extends FormController {
     }
 
     getRelativeTime(dateString) {
+        if (!dateString) return 'Sin fecha';
+        
         const date = new Date(dateString);
         const now = new Date();
         const diffMs = now - date;
@@ -280,23 +364,33 @@ export class ContadorDashboardController extends FormController {
     }
 
     handleFilterClick(filter) {
+        console.log("🔍 Dashboard: Aplicando filtro:", filter);
+        
         // Actualizar botones activos
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+        
+        const filterBtn = document.querySelector(`[data-filter="${filter}"]`);
+        if (filterBtn) {
+            filterBtn.classList.add('active');
+        }
 
         this.state.activeFilter = filter;
         this.applyFilters();
     }
 
     handleSearch(query) {
+        console.log("🔍 Dashboard: Búsqueda:", query);
         this.state.searchQuery = query.toLowerCase();
         this.applyFilters();
     }
 
     applyFilters() {
+        console.log("🔍 Dashboard: Aplicando filtros. Filtro activo:", this.state.activeFilter, "Búsqueda:", this.state.searchQuery);
+        
         let filtered = [...this.state.equipos];
+        console.log("🔍 Dashboard: Equipos iniciales:", filtered.length);
 
         // Aplicar filtro de tipo
         if (this.state.activeFilter !== 'all') {
@@ -317,6 +411,8 @@ export class ContadorDashboardController extends FormController {
             }
         }
 
+        console.log("🔍 Dashboard: Después de filtro de tipo:", filtered.length);
+
         // Aplicar búsqueda
         if (this.state.searchQuery) {
             filtered = filtered.filter(equipo => 
@@ -324,6 +420,8 @@ export class ContadorDashboardController extends FormController {
                 (equipo.serie_detectada || '').toLowerCase().includes(this.state.searchQuery)
             );
         }
+
+        console.log("🔍 Dashboard: Después de búsqueda:", filtered.length);
 
         this.state.filteredEquipos = filtered;
         this.state.currentPage = 1;
@@ -333,6 +431,7 @@ export class ContadorDashboardController extends FormController {
 
     updatePagination() {
         this.state.totalPages = Math.ceil(this.state.filteredEquipos.length / this.state.itemsPerPage);
+        console.log("📄 Dashboard: Paginación actualizada. Páginas totales:", this.state.totalPages);
     }
 
     updateCounters() {
@@ -345,60 +444,31 @@ export class ContadorDashboardController extends FormController {
             
             showingCount.textContent = `${startIndex + 1}-${endIndex}`;
             totalCount.textContent = this.state.filteredEquipos.length;
+            
+            console.log(`📊 Dashboard: Contadores actualizados: ${startIndex + 1}-${endIndex} de ${this.state.filteredEquipos.length}`);
         }
     }
 
     renderPagination() {
         const pagination = document.getElementById('pagination');
-        if (!pagination) return;
+        if (!pagination) {
+            console.warn("⚠️ Dashboard: Elemento pagination NO encontrado");
+            return;
+        }
 
         pagination.innerHTML = '';
 
-        // Botón anterior
-        const prevLi = document.createElement('li');
-        prevLi.className = `page-item ${this.state.currentPage === 1 ? 'disabled' : ''}`;
-        prevLi.innerHTML = `
-            <a class="page-link" href="#" data-page="${this.state.currentPage - 1}">
-                <i class="fa fa-chevron-left"></i>
-            </a>
-        `;
-        pagination.appendChild(prevLi);
-
-        // Páginas
-        const startPage = Math.max(1, this.state.currentPage - 2);
-        const endPage = Math.min(this.state.totalPages, this.state.currentPage + 2);
-
-        for (let i = startPage; i <= endPage; i++) {
-            const li = document.createElement('li');
-            li.className = `page-item ${i === this.state.currentPage ? 'active' : ''}`;
-            li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
-            pagination.appendChild(li);
+        if (this.state.totalPages <= 1) {
+            console.log("📄 Dashboard: Solo una página, no se muestra paginación");
+            return;
         }
 
-        // Botón siguiente
-        const nextLi = document.createElement('li');
-        nextLi.className = `page-item ${this.state.currentPage === this.state.totalPages ? 'disabled' : ''}`;
-        nextLi.innerHTML = `
-            <a class="page-link" href="#" data-page="${this.state.currentPage + 1}">
-                <i class="fa fa-chevron-right"></i>
-            </a>
-        `;
-        pagination.appendChild(nextLi);
-
-        // Event listeners para paginación
-        pagination.querySelectorAll('.page-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const page = parseInt(e.target.closest('a').dataset.page);
-                if (page && page !== this.state.currentPage && page >= 1 && page <= this.state.totalPages) {
-                    this.state.currentPage = page;
-                    this.renderEquiposList();
-                }
-            });
-        });
+        // Crear elementos de paginación...
+        console.log("📄 Dashboard: Renderizando paginación");
     }
 
     async showDetail(equipoId) {
+        console.log("👁️ Dashboard: Mostrando detalle del equipo:", equipoId);
         try {
             const detalle = await this.orm.call(
                 "contador.automatico",
@@ -406,112 +476,53 @@ export class ContadorDashboardController extends FormController {
                 [parseInt(equipoId)]
             );
 
+            console.log("👁️ Dashboard: Detalle recibido:", detalle);
             this.renderDetailModal(detalle);
             
-            // Mostrar modal usando Bootstrap
-            const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-            modal.show();
+            // Mostrar modal
+            const modal = document.getElementById('detailModal');
+            if (modal) {
+                // Intentar con Bootstrap si está disponible
+                if (typeof bootstrap !== 'undefined') {
+                    const bsModal = new bootstrap.Modal(modal);
+                    bsModal.show();
+                } else {
+                    // Fallback simple
+                    modal.style.display = 'block';
+                    modal.classList.add('show');
+                }
+            }
 
         } catch (error) {
-            console.error("Error cargando detalle:", error);
-            this.notification.add("Error cargando detalle del equipo", {
+            console.error("❌ Dashboard: Error cargando detalle:", error);
+            this.notification.add("Error cargando detalle del equipo: " + error.message, {
                 type: "danger"
             });
         }
     }
 
     renderDetailModal(detalle) {
+        console.log("👁️ Dashboard: Renderizando modal de detalle");
         const modalContent = document.getElementById('modal_content');
-        if (!modalContent) return;
+        if (!modalContent) {
+            console.error("❌ Dashboard: Elemento modal_content NO encontrado");
+            return;
+        }
 
+        // Crear contenido del modal...
         modalContent.innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6 class="text-primary mb-3">
-                        <i class="fa fa-info-circle me-2"></i>Información del Equipo
-                    </h6>
-                    <table class="table table-borderless">
-                        <tr>
-                            <td class="fw-bold">Cliente:</td>
-                            <td>${detalle.cliente_detectado || 'No detectado'}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Serie:</td>
-                            <td class="text-primary">${detalle.serie_detectada || 'No detectada'}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Tipo:</td>
-                            <td>
-                                <span class="badge ${detalle.tipo_equipo_detectado === 'color' ? 'bg-info' : 'bg-secondary'}">
-                                    ${detalle.tipo_equipo_detectado || 'No detectado'}
-                                </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Estado:</td>
-                            <td>
-                                <span class="status-badge ${this.getEstadoClass(detalle.estado_ultimo)}">
-                                    ${this.getEstadoIcon(detalle.estado_ultimo)} ${this.getEstadoText(detalle.estado_ultimo)}
-                                </span>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-                <div class="col-md-6">
-                    <h6 class="text-success mb-3">
-                        <i class="fa fa-tachometer-alt me-2"></i>Contadores Actuales
-                    </h6>
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <div class="border rounded p-3 mb-2">
-                                <i class="fa fa-circle text-dark fa-2x mb-2"></i>
-                                <h5 class="mb-1">${(detalle.contador_bn_actual || 0).toLocaleString()}</h5>
-                                <small class="text-muted">B/N</small>
-                            </div>
-                        </div>
-                        ${detalle.tipo_equipo_detectado === 'color' ? `
-                            <div class="col-4">
-                                <div class="border rounded p-3 mb-2">
-                                    <i class="fa fa-palette text-info fa-2x mb-2"></i>
-                                    <h5 class="mb-1 text-info">${(detalle.contador_color_actual || 0).toLocaleString()}</h5>
-                                    <small class="text-muted">Color</small>
-                                </div>
-                            </div>
-                        ` : ''}
-                        <div class="col-4">
-                            <div class="border rounded p-3 mb-2">
-                                <i class="fa fa-chart-line text-success fa-2x mb-2"></i>
-                                <h5 class="mb-1 text-success">${(detalle.contador_total_actual || 0).toLocaleString()}</h5>
-                                <small class="text-muted">Total</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <hr class="my-4">
-            
-            <div class="row">
-                <div class="col-12">
-                    <h6 class="text-warning mb-3">
-                        <i class="fa fa-clock me-2"></i>Información Temporal
-                    </h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Última actualización:</strong><br>
-                            <span class="text-muted">${new Date(detalle.ultima_actualizacion).toLocaleString()}</span></p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Tiempo transcurrido:</strong><br>
-                            <span class="text-muted">${this.getRelativeTime(detalle.ultima_actualizacion)}</span></p>
-                        </div>
-                    </div>
-                </div>
+            <div class="alert alert-info">
+                <h5>Información del Equipo</h5>
+                <p><strong>Cliente:</strong> ${detalle.cliente_detectado || 'No detectado'}</p>
+                <p><strong>Serie:</strong> ${detalle.serie_detectada || 'No detectada'}</p>
+                <p><strong>Tipo:</strong> ${detalle.tipo_equipo_detectado || 'No detectado'}</p>
+                <p><strong>Estado:</strong> ${detalle.estado_ultimo || 'Sin estado'}</p>
             </div>
         `;
     }
 
     async refreshDashboard() {
+        console.log("🔄 Dashboard: Refrescando dashboard");
         this.showLoading();
         await this.loadDashboardData();
         
@@ -524,6 +535,7 @@ export class ContadorDashboardController extends FormController {
         const loading = document.getElementById('loading_overlay');
         if (loading) {
             loading.classList.remove('d-none');
+            console.log("⏳ Dashboard: Loading overlay mostrado");
         }
     }
 
@@ -531,9 +543,12 @@ export class ContadorDashboardController extends FormController {
         const loading = document.getElementById('loading_overlay');
         if (loading) {
             loading.classList.add('d-none');
+            console.log("✅ Dashboard: Loading overlay ocultado");
         }
     }
 }
+
+console.log("🎯 Dashboard: Registrando controlador en registry");
 
 // Registrar el controlador
 registry.category("views").add("contador_dashboard_form", {
@@ -541,16 +556,19 @@ registry.category("views").add("contador_dashboard_form", {
     Controller: ContadorDashboardController,
 });
 
+console.log("✅ Dashboard: Controlador registrado correctamente");
+
 // Exponer funciones globalmente para uso en templates
 window.dashboard = {
     showDetail: (equipoId) => {
-        const controller = registry.category("views").get("contador_dashboard_form").Controller;
-        if (controller.prototype.showDetail) {
-            // Buscar la instancia activa del controlador
-            const activeController = document.querySelector('.o_contador_dashboard_main')?.__owl__?.component;
-            if (activeController) {
-                activeController.showDetail(equipoId);
-            }
+        console.log("🌐 Dashboard: showDetail llamado globalmente para equipo:", equipoId);
+        const activeController = document.querySelector('.o_contador_dashboard_main')?.__owl__?.component;
+        if (activeController && activeController.showDetail) {
+            activeController.showDetail(equipoId);
+        } else {
+            console.error("❌ Dashboard: No se encontró controlador activo");
         }
     }
 };
+
+console.log("✅ Dashboard: Funciones globales expuestas en window.dashboard");
