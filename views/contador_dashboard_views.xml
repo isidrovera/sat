@@ -1,148 +1,157 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Vista Dashboard Kanban -->
-    <record id="view_contador_dashboard_kanban" model="ir.ui.view">
-        <field name="name">contador.dashboard.kanban</field>
+    <!-- Vista Tree para listar equipos -->
+    <record id="view_contador_dashboard_tree" model="ir.ui.view">
+        <field name="name">contador.dashboard.tree</field>
         <field name="model">contador.automatico</field>
         <field name="arch" type="xml">
-            <kanban class="o_kanban_dashboard" create="false" edit="false" delete="false">
-                <!-- Campos que necesitamos para el dashboard -->
-                <field name="id"/>
-                <field name="serie_detectada"/>
-                <field name="cliente_detectado"/>
-                <field name="tipo_equipo_detectado"/>
-                <field name="contador_bn_detectado"/>
-                <field name="contador_color_detectado"/>
-                <field name="contador_total_detectado"/>
-                <field name="create_date"/>
-                <field name="estado"/>
+            <tree string="Dashboard Contadores" 
+                  create="false" 
+                  edit="false" 
+                  delete="false"
+                  export_xlsx="true"
+                  decoration-success="estado == 'procesado'"
+                  decoration-warning="estado == 'pendiente'"
+                  decoration-danger="estado == 'error'">
                 
-                <templates>
-                    <t t-name="kanban-box">
-                        <div class="oe_kanban_global_click o_kanban_dashboard_item">
-                            
-                            <!-- Header del Dashboard -->
-                            <div class="container-fluid bg-primary text-white py-4 mb-4">
-                                <div class="row">
-                                    <div class="col-12 text-center">
-                                        <h1 class="display-4 mb-2">
-                                            <i class="fa fa-dashboard me-3"></i>
-                                            Dashboard de Contadores
-                                        </h1>
-                                        <p class="lead mb-3">Monitoreo en tiempo real de equipos de impresión</p>
-                                        <button class="btn btn-light btn-lg" type="object" name="refresh_dashboard">
-                                            <i class="fa fa-refresh me-2"></i>Actualizar Dashboard
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Estadísticas Principales -->
-                            <div class="container-fluid mb-4">
-                                <div class="row">
-                                    <!-- Equipos Hoy -->
-                                    <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
-                                        <div class="card text-center h-100">
-                                            <div class="card-body">
-                                                <i class="fa fa-desktop text-primary" style="font-size: 3rem;"></i>
-                                                <h2 class="card-title text-primary mt-3" id="equipos_hoy">
-                                                    <t t-esc="record.equipos_hoy.value or 0"/>
-                                                </h2>
-                                                <p class="card-text fw-bold">Equipos Actualizados Hoy</p>
-                                                <small class="text-muted">Últimas 24 horas</small>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Equipos Semana -->
-                                    <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
-                                        <div class="card text-center h-100">
-                                            <div class="card-body">
-                                                <i class="fa fa-calendar text-success" style="font-size: 3rem;"></i>
-                                                <h2 class="card-title text-success mt-3" id="equipos_semana">
-                                                    <t t-esc="record.equipos_semana.value or 0"/>
-                                                </h2>
-                                                <p class="card-text fw-bold">Equipos Esta Semana</p>
-                                                <small class="text-muted">Últimos 7 días</small>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Total Equipos -->
-                                    <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
-                                        <div class="card text-center h-100">
-                                            <div class="card-body">
-                                                <i class="fa fa-database text-info" style="font-size: 3rem;"></i>
-                                                <h2 class="card-title text-info mt-3" id="total_equipos">
-                                                    <t t-esc="record.total_equipos.value or 0"/>
-                                                </h2>
-                                                <p class="card-text fw-bold">Total en Sistema</p>
-                                                <small class="text-muted">Todos los equipos</small>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Eficiencia -->
-                                    <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
-                                        <div class="card text-center h-100">
-                                            <div class="card-body">
-                                                <i class="fa fa-percent text-warning" style="font-size: 3rem;"></i>
-                                                <h2 class="card-title text-warning mt-3" id="eficiencia">
-                                                    <t t-esc="record.eficiencia.value or 0"/>%
-                                                </h2>
-                                                <p class="card-text fw-bold">Eficiencia Sistema</p>
-                                                <small class="text-muted">Procesamiento automático</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Lista de Equipos -->
-                            <div class="container-fluid">
-                                <div class="card">
-                                    <div class="card-header bg-primary text-white">
-                                        <h4 class="mb-0">
-                                            <i class="fa fa-print me-2"></i>
-                                            Equipos de Impresión
-                                        </h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <!-- Aquí irían los equipos, pero en Kanban es mejor usar un widget o JS -->
-                                        <div class="text-center">
-                                            <p>Vista de equipos cargada dinámicamente</p>
-                                            <button class="btn btn-primary" onclick="window.location.reload();">
-                                                Ver Lista Detallada
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                    </t>
-                </templates>
-            </kanban>
+                <field name="cliente_detectado" string="Cliente"/>
+                <field name="serie_detectada" string="Serie"/>
+                <field name="tipo_equipo_detectado" string="Tipo" widget="badge"/>
+                <field name="contador_bn_detectado" string="Contador B/N" sum="Total B/N"/>
+                <field name="contador_color_detectado" string="Contador Color" sum="Total Color"/>
+                <field name="contador_total_detectado" string="Total" sum="Gran Total"/>
+                <field name="create_date" string="Fecha"/>
+                <field name="estado" string="Estado" widget="badge"/>
+                
+            </tree>
         </field>
     </record>
 
-    <!-- Acción Dashboard -->
+    <!-- Vista Search para filtros -->
+    <record id="view_contador_dashboard_search" model="ir.ui.view">
+        <field name="name">contador.dashboard.search</field>
+        <field name="model">contador.automatico</field>
+        <field name="arch" type="xml">
+            <search string="Filtros Dashboard">
+                
+                <!-- Filtros de búsqueda -->
+                <field name="cliente_detectado" string="Cliente"/>
+                <field name="serie_detectada" string="Serie"/>
+                <field name="tipo_equipo_detectado" string="Tipo"/>
+                <field name="estado" string="Estado"/>
+                
+                <!-- Filtros predefinidos -->
+                <filter string="Hoy" name="filter_hoy" 
+                        domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+                
+                <filter string="Esta Semana" name="filter_semana"
+                        domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                
+                <filter string="Color" name="filter_color"
+                        domain="[('tipo_equipo_detectado', '=', 'color')]"/>
+                
+                <filter string="Monocromáticas" name="filter_mono"
+                        domain="[('tipo_equipo_detectado', '=', 'monocromatica')]"/>
+                
+                <separator/>
+                
+                <filter string="Procesados" name="filter_procesados"
+                        domain="[('estado', '=', 'procesado')]"/>
+                
+                <filter string="Pendientes" name="filter_pendientes"
+                        domain="[('estado', '=', 'pendiente')]"/>
+                
+                <filter string="Con Errores" name="filter_errores"
+                        domain="[('estado', '=', 'error')]"/>
+                
+                <!-- Agrupaciones -->
+                <group expand="0" string="Agrupar por">
+                    <filter string="Cliente" name="group_cliente" 
+                            context="{'group_by': 'cliente_detectado'}"/>
+                    <filter string="Tipo" name="group_tipo" 
+                            context="{'group_by': 'tipo_equipo_detectado'}"/>
+                    <filter string="Estado" name="group_estado" 
+                            context="{'group_by': 'estado'}"/>
+                    <filter string="Fecha" name="group_fecha" 
+                            context="{'group_by': 'create_date:day'}"/>
+                </group>
+                
+            </search>
+        </field>
+    </record>
+
+    <!-- Vista Form simple para ver detalles -->
+    <record id="view_contador_dashboard_form" model="ir.ui.view">
+        <field name="name">contador.dashboard.form</field>
+        <field name="model">contador.automatico</field>
+        <field name="arch" type="xml">
+            <form string="Detalle Equipo" create="false" edit="false" delete="false">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="serie_detectada" readonly="1"/>
+                        </h1>
+                        <h2>
+                            <field name="cliente_detectado" readonly="1"/>
+                        </h2>
+                    </div>
+                    
+                    <group>
+                        <group string="Información del Equipo">
+                            <field name="tipo_equipo_detectado" readonly="1"/>
+                            <field name="marca_detectada" readonly="1"/>
+                            <field name="estado" readonly="1"/>
+                            <field name="confianza_deteccion" readonly="1"/>
+                        </group>
+                        <group string="Contadores">
+                            <field name="contador_bn_detectado" readonly="1"/>
+                            <field name="contador_color_detectado" readonly="1"/>
+                            <field name="contador_total_detectado" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group string="Fechas">
+                            <field name="create_date" readonly="1"/>
+                            <field name="write_date" readonly="1"/>
+                        </group>
+                        <group string="Origen">
+                            <field name="name" readonly="1"/>
+                            <field name="remitente" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción principal del dashboard -->
     <record id="action_contador_dashboard" model="ir.actions.act_window">
         <field name="name">Dashboard Contadores</field>
         <field name="res_model">contador.automatico</field>
-        <field name="view_mode">kanban</field>
-        <field name="view_id" ref="view_contador_dashboard_kanban"/>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="view_contador_dashboard_tree"/>
+        <field name="search_view_id" ref="view_contador_dashboard_search"/>
         <field name="target">current</field>
-        <field name="domain">[('id', '=', 1)]</field> <!-- Solo muestra un registro dummy -->
+        <field name="domain">[('serie_detectada', '!=', False)]</field>
         <field name="context">{
             'create': False,
             'edit': False,
             'delete': False,
-            'default_equipos_hoy': 0,
-            'default_equipos_semana': 0,
-            'default_total_equipos': 0,
-            'default_eficiencia': 0
+            'search_default_filter_semana': 1,
+            'search_default_group_cliente': 1
         }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay equipos para mostrar
+            </p>
+            <p>
+                Este dashboard muestra todos los equipos de impresión detectados automáticamente.
+                <br/>
+                Use los filtros para encontrar equipos específicos.
+            </p>
+        </field>
     </record>
 
     <!-- Menú -->
