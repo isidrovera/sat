@@ -2282,49 +2282,88 @@ class ContadorAutomatico(models.Model):
             }
     @api.model
     def cron_procesar_correos_perdidos(self):
-        _logger.info("⏰ Iniciando cron_procesar_correos_perdidos")
+        """
+        CRON: procesa sólo correos 'Counter List' / 'Counter Page',
+        registrando cada mail sólo una vez (usa original_mail_id).
+        """
         ahora = fields.Datetime.now()
         fecha_limite = ahora - timedelta(hours=24)
+        _logger.info("⏰ === INICIO CRON Específico COUNTER LIST/PAGE ===")
+        _logger.info("🔍 Buscando mails desde %s", fecha_limite)
 
-        # Buscar mails de las últimas 24h
-        correos = self.env['mail.message'].search([
+        # 1) Todos los mails de las últimas 24h
+        todos = self.env['mail.message'].search([
             ('message_type', '=', 'email'),
             ('date', '>=', fecha_limite),
         ], order='date desc')
-        _logger.info("📧 Correos totales últimos 24h: %d", len(correos))
+        _logger.info("📧 Total mails encontrados: %d", len(todos))
 
-        # Excluir ya procesados
-        procesados = self.mapped('original_mail_id.id')
-        correos = correos.filtered(lambda m: m.id not in procesados)
-        _logger.info("🔍 Correos nuevos: %d", len(correos))
+        # 2) IDs de mails ya procesados
+        procesados_ids = self.search([]).mapped('original_mail_id.id')
+        _logger.info("📋 Mails ya procesados (IDs): %s", procesados_ids)
 
-        # Filtrar por asunto
-        claves = ['counter', 'contador']
-        correos = correos.filtered(lambda m: any(k in (m.subject or '').lower() for k in claves))
-        _logger.info("✅ Correos con clave en asunto: %d", len(correos))
+        # 3) Filtrar sólo los no procesados
+        nuevos = todos.filtered(lambda m: m.id not in procesados_ids)
+        _logger.info("📧 Mails nuevos a procesar: %d", len(nuevos))
 
-        exitosos = errors = no_data = 0
-        for mail in correos:
+        # 4) Filtrado por asunto válido
+        claves = ['counter list', 'counter page', 'page counter', 'lista contador', 'contador página']
+        correos_validos = nuevos.filtered(lambda m:
+            m.subject and any(k in m.subject.lower() for k in claves)
+        )
+        _logger.info("✅ Mails válidos por asunto: %d", len(correos_validos))
+
+        if not correos_validos:
+            _logger.info("ℹ️ No hay nuevos counter list/page que procesar")
+            return True
+
+        # 5) Procesar cada mail válido
+        exitosos = errores = duplicados = 0
+        for mail in correos_validos:
             try:
-                reg = self.create({
+                # doble chequeo en caso de concurrencia
+                if self.search_count([('original_mail_id', '=', mail.id)]):
+                    _logger.info("⏭ Mail.id=%d ya procesado", mail.id)
+                    duplicados += 1
+                    continue
+
+                registro = self.create({
                     'name': mail.subject or 'Sin asunto',
                     'remitente': mail.email_from,
                     'contenido_original': mail.body or mail.subject,
                     'estado': 'pendiente',
                     'original_mail_id': mail.id,
                 })
-                if reg.procesar_correo_inteligente():
-                    if reg.serie_detectada and (reg.contador_bn_detectado or reg.contador_color_detectado or reg.contador_scan_detectado):
-                        exitosos += 1
-                    else:
-                        no_data += 1
+                if registro.procesar_correo_inteligente():
+                    exitosos += 1
+                    if not registro.fecha_procesamiento:
+                        registro.write({'fecha_procesamiento': ahora})
                 else:
-                    no_data += 1
-            except Exception as e:
-                errors += 1
-                _logger.error("❌ Error procesando mail.id=%d: %s", mail.id, e, exc_info=True)
+                    errores += 1
 
-        _logger.info("🎯 Resumen cron: éxitos=%d, sin datos=%d, errores=%d", exitosos, no_data, errors)
+            except Exception as e:
+                _logger.error("❌ Error procesando mail %d: %s", mail.id, e, exc_info=True)
+                errores += 1
+
+        _logger.info("📊 === Resumen cron ===")
+        _logger.info("✅ Éxitos: %d", exitosos)
+        _logger.info("⏭ Duplicados saltados: %d", duplicados)
+        _logger.info("❌ Errores: %d", errores)
+
+        # 6) Guardar estadísticas
+        resumen = {
+            'fecha_ejecucion': ahora,
+            'correos_analizados': len(todos),
+            'correos_encontrados': len(correos_validos),
+            'correos_procesados': exitosos,
+            'correos_fallidos': errores,
+            'horas_revision': 24,
+        }
+        # usamos una instancia dummy para invocar el helper
+        dummy = self.search([], limit=1) or self.new()
+        dummy._guardar_estadisticas_cron_seguro(resumen)
+
+        _logger.info("⏰ === FIN CRON COUNTER LIST/PAGE ===")
         return True
     def limpiar_duplicados_mismo_dia(self):
         """
