@@ -12,3 +12,4 @@ from . import levantamiento
 from . import permisos
 from . import api_contometros
 from . import solicitud_toner
+from . import controller_contadores
