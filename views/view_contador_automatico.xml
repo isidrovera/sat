@@ -24,7 +24,7 @@
                        decoration-muted="estado == 'filtrado'" optional="hide"/>
                 
                 <!-- Datos detectados -->
-                <field name="cliente_detectado" optional="show"/>
+                <field name="cliente_detectado"/>
                 <field name="equipo_id" string="Equipo" optional="show"/>
                 <field name="serie_detectada" string="Serie" optional="show"/>
                 <field name="contador_bn_detectado" string="Contador B/N" optional="show"/>
