@@ -126,12 +126,116 @@
         </field>
     </record>
 
+    <!-- Vista Kanban para dashboard visual -->
+    <record id="view_contador_dashboard_kanban" model="ir.ui.view">
+        <field name="name">contador.dashboard.kanban</field>
+        <field name="model">contador.automatico</field>
+        <field name="arch" type="xml">
+            <kanban string="Dashboard Equipos" create="false" edit="false" delete="false">
+                <field name="serie_detectada"/>
+                <field name="cliente_detectado"/>
+                <field name="tipo_equipo_detectado"/>
+                <field name="contador_bn_detectado"/>
+                <field name="contador_color_detectado"/>
+                <field name="contador_total_detectado"/>
+                <field name="estado"/>
+                <field name="create_date"/>
+                
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="oe_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="serie_detectada"/>
+                                        </strong>
+                                        <div class="o_kanban_record_subtitle text-muted">
+                                            <field name="cliente_detectado"/>
+                                        </div>
+                                    </div>
+                                    <div class="o_dropdown_kanban dropdown">
+                                        <span class="o_badge" t-attf-class="badge-#{record.estado.raw_value}">
+                                            <field name="estado"/>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="o_kanban_record_body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div class="text-muted">Tipo:</div>
+                                            <div><field name="tipo_equipo_detectado"/></div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-muted">Fecha:</div>
+                                            <div><field name="create_date"/></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mt-2">
+                                        <div class="col-4">
+                                            <div class="text-center">
+                                                <div class="text-muted small">B/N</div>
+                                                <div class="h5 mb-0"><field name="contador_bn_detectado"/></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="text-center">
+                                                <div class="text-muted small">Color</div>
+                                                <div class="h5 mb-0"><field name="contador_color_detectado"/></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="text-center">
+                                                <div class="text-muted small">Total</div>
+                                                <div class="h5 mb-0 text-primary"><field name="contador_total_detectado"/></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Vista Pivot para análisis -->
+    <record id="view_contador_dashboard_pivot" model="ir.ui.view">
+        <field name="name">contador.dashboard.pivot</field>
+        <field name="model">contador.automatico</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de Contadores">
+                <field name="cliente_detectado" type="row"/>
+                <field name="tipo_equipo_detectado" type="row"/>
+                <field name="create_date" type="col" interval="day"/>
+                <field name="contador_bn_detectado" type="measure"/>
+                <field name="contador_color_detectado" type="measure"/>
+                <field name="contador_total_detectado" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Vista Graph para gráficos -->
+    <record id="view_contador_dashboard_graph" model="ir.ui.view">
+        <field name="name">contador.dashboard.graph</field>
+        <field name="model">contador.automatico</field>
+        <field name="arch" type="xml">
+            <graph string="Estadísticas de Contadores" type="line">
+                <field name="create_date" type="row" interval="day"/>
+                <field name="contador_total_detectado" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
     <!-- Acción principal del dashboard -->
     <record id="action_contador_dashboard" model="ir.actions.act_window">
         <field name="name">Dashboard Contadores</field>
         <field name="res_model">contador.automatico</field>
-        <field name="view_mode">tree,form</field>
-        <field name="view_id" ref="view_contador_dashboard_tree"/>
+        <field name="view_mode">kanban,tree,graph,pivot,form</field>
+        <field name="view_id" ref="view_contador_dashboard_kanban"/>
         <field name="search_view_id" ref="view_contador_dashboard_search"/>
         <field name="target">current</field>
         <field name="domain">[('serie_detectada', '!=', False)]</field>
@@ -154,11 +258,28 @@
         </field>
     </record>
 
-    <!-- Menú -->
+    <!-- Acción para vista de estadísticas -->
+    <record id="action_contador_stats" model="ir.actions.act_window">
+        <field name="name">Estadísticas de Procesamiento</field>
+        <field name="res_model">contador.automatico</field>
+        <field name="view_mode">graph,pivot</field>
+        <field name="view_id" ref="view_contador_dashboard_graph"/>
+        <field name="domain">[('estado', '=', 'procesado')]</field>
+        <field name="context">{'search_default_group_fecha': 1}</field>
+    </record>
+
+    <!-- Menú principal -->
     <menuitem id="menu_contador_dashboard_root"
               name="Dashboard Contadores"
               parent="sat_menu_root"
               action="action_contador_dashboard"
               sequence="90"/>
+
+    <!-- Submenú para estadísticas -->
+    <menuitem id="menu_contador_stats"
+              name="Estadísticas"
+              parent="menu_contador_dashboard_root"
+              action="action_contador_stats"
+              sequence="10"/>
 
 </odoo>
