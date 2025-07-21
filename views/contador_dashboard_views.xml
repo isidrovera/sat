@@ -36,9 +36,9 @@
                                 Dashboard de Contadores
                             </h1>
                             <p class="lead mb-3">Monitoreo en tiempo real de equipos de impresión</p>
-                            <button type="button" 
-                                    class="btn btn-light btn-lg rounded-pill px-4"
-                                    onclick="if(window.dashboardController) window.dashboardController.refreshDashboard()">
+                            <button name="action_refresh_dashboard_data" 
+                                    type="object" 
+                                    class="btn btn-light btn-lg rounded-pill px-4">
                                 <i class="fa fa-sync-alt me-2"></i>
                                 Actualizar Dashboard
                             </button>
@@ -279,7 +279,9 @@
                     </div>
 
                     <!-- Botón flotante de refresh -->
-                    <button class="btn btn-primary rounded-circle position-fixed shadow" 
+                    <button name="action_refresh_dashboard_data" 
+                            type="object"
+                            class="btn btn-primary rounded-circle position-fixed shadow" 
                             id="floating_refresh" 
                             title="Actualizar datos"
                             style="bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1000;">
