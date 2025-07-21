@@ -107,6 +107,13 @@
                                 <field name="partes_solicitadas_count" widget="statinfo"
                                     string="Pedidos Partes" />
                             </button>
+                            <button name="action_open_contadores"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-list"
+                                    string="Contadores">
+                            <field name="contadores_count" widget="statinfo"/>
+                            </button>
                             <button class="oe_stat_button"
                                 type="object"
                                 name="action_view_toner_reports"

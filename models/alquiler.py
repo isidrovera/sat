@@ -2611,3 +2611,31 @@ class UnidadAlquiler(models.Model):
             'total_alquilados': self.search_count(base_domain),
             'gestion_automatica_activa': self.search_count(base_domain + [('name.gestionar_toner_automatico', '=', True)])
         }
+
+
+    #Esto muestra el boton de cantidad y acceso a contadores
+
+     # Número de registros de contador asociados
+    contadores_count = fields.Integer(
+        string='Contadores',
+        compute='_compute_contadores_count',
+        store=False,
+        help='Número de registros de contador generados para este equipo'
+    )
+
+    @api.depends()
+    def _compute_contadores_count(self):
+        for rec in self:
+            rec.contadores_count = self.env['contador.automatico'].search_count([
+                ('equipo_id', '=', rec.id)
+            ])
+
+    def action_open_contadores(self):
+        self.ensure_one()
+        return {
+            'name': 'Contadores',
+            'res_model': 'contador.automatico',
+            'view_mode': 'tree,form',
+            'type': 'ir.actions.act_window',
+            'domain': [('equipo_id', '=', self.id)],
+        }

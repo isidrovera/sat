@@ -27,9 +27,9 @@ class ContadorAutomatico(models.Model):
         help="Mail.message procesado para evitar duplicados"
     )
     # Contadores detectados
-    contador_bn_detectado = fields.Integer('Contador B/N detectado')
-    contador_color_detectado = fields.Integer('Contador Color detectado')
-    contador_scan_detectado = fields.Integer('Contador Scan detectado')
+    contador_bn_detectado = fields.Integer('Contador B/N')
+    contador_color_detectado = fields.Integer('Contador Color')
+    contador_scan_detectado = fields.Integer('Contador Scan')
     
     mensaje_error = fields.Text('Mensaje de error')
     procesado_automaticamente = fields.Boolean('Procesado automáticamente', default=False)
@@ -2019,16 +2019,18 @@ class ContadorAutomatico(models.Model):
             _logger.error(f"❌ Error buscando equipo: {e}")
             return None
 
+    from odoo import fields
+
     def actualizar_contadores_equipo(self, equipo, contadores):
         """
         Actualiza los contadores del equipo con validación de incrementos
-        CORREGIDO: Valida que los contadores incrementen naturalmente
+        y registra la fecha de última actualización.
         """
         try:
             _logger.info(f"💾 === INICIANDO ACTUALIZACIÓN DE EQUIPO CON VALIDACIÓN ===")
             _logger.info(f"🎯 Equipo ID={equipo.id}, Serie={equipo.serie}")
             _logger.info(f"📊 Contadores a actualizar: {contadores}")
-            
+
             # Guardar valores anteriores para comparación
             valores_anteriores = {
                 'contador_bn': getattr(equipo, 'contador_bn', 0) or 0,
@@ -2036,80 +2038,56 @@ class ContadorAutomatico(models.Model):
                 'contador_scan': getattr(equipo, 'contador_scan', 0) or 0
             }
             _logger.info(f"📋 Valores actuales del equipo: {valores_anteriores}")
-            
+
             # Preparar valores para actualizar
             valores_actualizacion = {}
             alertas = []
-            
+
             # Procesar contador B/N
             if 'contador_bn' in contadores:
                 nuevo_valor = contadores['contador_bn']
-                anterior = valores_anteriores.get('contador_bn', 0)
-                
+                anterior = valores_anteriores['contador_bn']
                 if nuevo_valor > anterior:
                     valores_actualizacion['contador_bn'] = nuevo_valor
                     self.contador_bn_anterior = anterior
                     _logger.info(f"✅ BN: {anterior} → {nuevo_valor} (+{nuevo_valor - anterior})")
-                elif nuevo_valor == anterior:
-                    _logger.info(f"ℹ️ BN sin cambios: {nuevo_valor}")
-                else:
-                    # Valor menor - posible reset
+                elif nuevo_valor < anterior and nuevo_valor > 0:
+                    valores_actualizacion['contador_bn'] = nuevo_valor
+                    self.contador_bn_anterior = anterior
+                    alertas.append("BN decrementó - posible reset de equipo")
                     _logger.warning(f"⚠️ BN decrementó: {anterior} → {nuevo_valor}")
-                    if nuevo_valor > 0:  # Solo actualizar si no es 0
-                        valores_actualizacion['contador_bn'] = nuevo_valor
-                        self.contador_bn_anterior = anterior
-                        alertas.append("BN decrementó - posible reset de equipo")
-                        _logger.warning(f"⚠️ Actualizando BN pese a decremento")
-                    else:
-                        alertas.append("BN en 0 - no actualizado")
-                        _logger.warning(f"❌ No actualizando BN (valor 0)")
-            
+
             # Procesar contador Color
             if 'contador_color' in contadores:
                 nuevo_valor = contadores['contador_color']
-                anterior = valores_anteriores.get('contador_color', 0)
-                
+                anterior = valores_anteriores['contador_color']
                 if nuevo_valor > anterior:
                     valores_actualizacion['contador_color'] = nuevo_valor
                     self.contador_color_anterior = anterior
                     _logger.info(f"✅ Color: {anterior} → {nuevo_valor} (+{nuevo_valor - anterior})")
-                elif nuevo_valor == anterior:
-                    _logger.info(f"ℹ️ Color sin cambios: {nuevo_valor}")
-                else:
-                    # Valor menor - posible reset
+                elif nuevo_valor < anterior and nuevo_valor > 0:
+                    valores_actualizacion['contador_color'] = nuevo_valor
+                    self.contador_color_anterior = anterior
+                    alertas.append("Color decrementó - posible reset de equipo")
                     _logger.warning(f"⚠️ Color decrementó: {anterior} → {nuevo_valor}")
-                    if nuevo_valor > 0:  # Solo actualizar si no es 0
-                        valores_actualizacion['contador_color'] = nuevo_valor
-                        self.contador_color_anterior = anterior
-                        alertas.append("Color decrementó - posible reset de equipo")
-                        _logger.warning(f"⚠️ Actualizando Color pese a decremento")
-                    else:
-                        alertas.append("Color en 0 - no actualizado")
-                        _logger.warning(f"❌ No actualizando Color (valor 0)")
-            
+
             # Procesar contador Scan
             if 'contador_scan' in contadores:
                 nuevo_valor = contadores['contador_scan']
-                anterior = valores_anteriores.get('contador_scan', 0)
-                
+                anterior = valores_anteriores['contador_scan']
                 if nuevo_valor > anterior:
                     valores_actualizacion['contador_scan'] = nuevo_valor
                     self.contador_scan_anterior = anterior
                     _logger.info(f"✅ Scan: {anterior} → {nuevo_valor} (+{nuevo_valor - anterior})")
-                elif nuevo_valor == anterior:
-                    _logger.info(f"ℹ️ Scan sin cambios: {nuevo_valor}")
-                else:
-                    # Valor menor - posible reset
+                elif nuevo_valor < anterior and nuevo_valor > 0:
+                    valores_actualizacion['contador_scan'] = nuevo_valor
+                    self.contador_scan_anterior = anterior
+                    alertas.append("Scan decrementó - posible reset de equipo")
                     _logger.warning(f"⚠️ Scan decrementó: {anterior} → {nuevo_valor}")
-                    if nuevo_valor > 0:  # Solo actualizar si no es 0
-                        valores_actualizacion['contador_scan'] = nuevo_valor
-                        self.contador_scan_anterior = anterior
-                        alertas.append("Scan decrementó - posible reset de equipo")
-                        _logger.warning(f"⚠️ Actualizando Scan pese a decremento")
-                    else:
-                        alertas.append("Scan en 0 - no actualizado")
-                        _logger.warning(f"❌ No actualizando Scan (valor 0)")
-            
+
+            # Siempre registrar la fecha de última actualización
+            valores_actualizacion['fecha_ultima_actualizacion'] = fields.Datetime.now()
+
             # Realizar actualización solo si hay cambios
             if valores_actualizacion:
                 _logger.info(f"💾 Ejecutando write() en equipo con: {valores_actualizacion}")
@@ -2117,24 +2095,19 @@ class ContadorAutomatico(models.Model):
                 _logger.info(f"✅ Write() ejecutado exitosamente")
             else:
                 _logger.info(f"ℹ️ No hay cambios que actualizar en el equipo")
-            
+
             # Registrar alertas si las hay
             if alertas:
                 mensaje_alertas = "; ".join(alertas)
-                if not self.mensaje_error:
-                    self.mensaje_error = f"Alertas: {mensaje_alertas}"
-                else:
-                    self.mensaje_error += f" | Alertas: {mensaje_alertas}"
+                self.mensaje_error = (self.mensaje_error or "") + f" | Alertas: {mensaje_alertas}"
                 _logger.info(f"🔔 Alertas registradas: {mensaje_alertas}")
-            
+
             _logger.info(f"🎉 === ACTUALIZACIÓN DE EQUIPO COMPLETADA ===")
-            
+
         except Exception as e:
-            _logger.error(f"❌ === ERROR ACTUALIZANDO EQUIPO ===")
-            _logger.error(f"Error: {e}")
-            import traceback
-            _logger.error(f"Traceback: {traceback.format_exc()}")
+            _logger.error(f"❌ === ERROR ACTUALIZANDO EQUIPO === {e}", exc_info=True)
             raise
+
     def _guardar_estadisticas_cron_seguro(self, resumen):
         """
         SOLUCIÓN: Guardar estadísticas de forma segura
