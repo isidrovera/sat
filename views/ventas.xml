@@ -423,9 +423,9 @@
                     domain="[('estado_ventas_id', '=', 'entregada')]"/>
             
             <filter name="filter_sin_entregada"
-        string="Sin Entregadas"
-        domain="[('estado_ventas_id', '!=', 'entregada')]"
-        default="1"/>
+                  string="Sin entregadas"
+                  domain="[('estado_ventas_id', '!=', 'entregada')]"
+                  default="1"/>
 
             <!-- Agrupamiento -->
             <group expand="0" string="Agrupar Por">
