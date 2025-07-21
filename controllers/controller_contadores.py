@@ -626,27 +626,52 @@ class ContadorDashboardController(http.Controller):
         """Página de detalle de un equipo específico"""
         try:
             ContadorModel = request.env['contador.automatico']
-            equipo = ContadorModel.browse(equipo_id)
+            equipo_obj = ContadorModel.browse(equipo_id)
             
-            if not equipo.exists():
+            if not equipo_obj.exists():
                 return request.not_found()
             
-            # Obtener historial del equipo
-            historial = ContadorModel.search([
-                ('serie_detectada', '=', equipo.serie_detectada)
+            # Convertir a diccionario
+            equipo = {
+                'id': equipo_obj.id,
+                'cliente_detectado': equipo_obj.cliente_detectado or '',
+                'serie_detectada': equipo_obj.serie_detectada or '',
+                'tipo_equipo_detectado': equipo_obj.tipo_equipo_detectado or '',
+                'contador_bn_detectado': equipo_obj.contador_bn_detectado or 0,
+                'contador_color_detectado': equipo_obj.contador_color_detectado or 0,
+                'estado': equipo_obj.estado or '',
+                'create_date': self._format_datetime(equipo_obj.create_date),
+                'write_date': self._format_datetime(equipo_obj.write_date),
+                'remitente': getattr(equipo_obj, 'remitente', '') or '',
+            }
+            
+            # Obtener historial del equipo y convertir también
+            historial_obj = ContadorModel.search([
+                ('serie_detectada', '=', equipo_obj.serie_detectada)
             ], order='create_date desc', limit=20)
+            
+            historial = []
+            for hist in historial_obj:
+                historial.append({
+                    'fecha': self._format_datetime(hist.create_date),
+                    'contador_bn': hist.contador_bn_detectado or 0,
+                    'contador_color': hist.contador_color_detectado or 0,
+                    'contador_total': (hist.contador_bn_detectado or 0) + (hist.contador_color_detectado or 0),
+                    'estado': hist.estado or '',
+                    'remitente': getattr(hist, 'remitente', '') or '',
+                })
             
             detalle = {
                 'equipo': equipo,
                 'historial': historial,
-                'page_title': f'Detalle - {equipo.serie_detectada or "Sin serie"}'
+                'page_title': f'Detalle - {equipo["serie_detectada"] or "Sin serie"}'
             }
             
             return request.render('sat.contador_detalle_template', detalle)
             
         except Exception as e:
             _logger.error(f"Error en detalle: {e}")
-            return request.redirect('/dashboard/contador')
+        return request.redirect('/dashboard/contador')
     
     @http.route('/dashboard/contador/export/excel', type='http', auth='user')
     def export_excel(self, search=None, filter_type=None, **kwargs):
