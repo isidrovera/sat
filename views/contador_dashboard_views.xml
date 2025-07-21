@@ -693,4 +693,158 @@
             </t>
         </t>
     </template>
+    <template id="contador_detalle_template" t-name="sat.contador_detalle_template">
+    <t t-call="website.layout">
+      <div class="container my-5">
+        <h1 class="mb-4"><t t-esc="page_title"/></h1>
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Información del Equipo</h5>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item"><strong>Cliente:</strong> <t t-esc="equipo.cliente_detectado"/></li>
+              <li class="list-group-item"><strong>Serie:</strong> <t t-esc="equipo.serie_detectada"/></li>
+              <li class="list-group-item"><strong>Tipo:</strong> <t t-esc="equipo.tipo_equipo_detectado"/></li>
+              <li class="list-group-item"><strong>Contador B/N:</strong> <t t-esc="equipo.contador_bn_actual"/></li>
+              <li class="list-group-item"><strong>Contador Color:</strong> <t t-esc="equipo.contador_color_actual"/></li>
+              <li class="list-group-item"><strong>Total:</strong> <t t-esc="equipo.contador_total_actual"/></li>
+              <li class="list-group-item"><strong>Estado:</strong> <t t-esc="equipo.estado_ultimo"/></li>
+              <li class="list-group-item"><strong>Última actualización:</strong> <t t-esc="equipo.ultima_actualizacion_formatted"/> (<t t-esc="equipo.tiempo_relativo"/>)</li>
+              <li class="list-group-item"><strong>Remitente:</strong> <t t-esc="equipo.remitente"/></li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Historial Reciente</h5>
+            <table class="table table-striped">
+              <thead>
+                <tr><th>Fecha</th><th>Estado</th><th>Total</th></tr>
+              </thead>
+              <tbody>
+                <t t-foreach="historial" t-as="h">
+                  <tr>
+                    <td><t t-esc="h.create_date.strftime('%d/%m/%Y %H:%M')"/></td>
+                    <td><t t-esc="h.estado"/></td>
+                    <td><t t-esc="(h.contador_bn_detectado or 0) + (h.contador_color_detectado or 0)"/></td>
+                  </tr>
+                </t>
+              </tbody>
+            </table>
+            <a class="btn btn-secondary" href="/dashboard/contador"><i class="bi bi-arrow-left"></i> Volver</a>
+          </div>
+        </div>
+      </div>
+    </t>
+  </template>
+  <template id="contador_dashboard_stats_template" t-name="sat.contador_dashboard_stats_template">
+    <t t-call="website.layout">
+      <div class="container my-5">
+        <h1 class="mb-4"><t t-esc="page_title"/></h1>
+        <!-- Estadísticas Principales -->
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <h5 class="card-title">Únicos Hoy</h5>
+                <p class="display-4"><t t-esc="estadisticas.equipos_unicos_hoy"/></p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <h5 class="card-title">Únicos Semana</h5>
+                <p class="display-4"><t t-esc="estadisticas.equipos_unicos_semana"/></p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <h5 class="card-title">Únicos Mes</h5>
+                <p class="display-4"><t t-esc="estadisticas.equipos_unicos_mes"/></p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <h5 class="card-title">Eficiencia (%)</h5>
+                <p class="display-4"><t t-esc="estadisticas.eficiencia_sistema"/></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Distribuciones -->
+        <div class="row">
+          <div class="col-md-6 mb-4">
+            <h3>Equipos por Estado</h3>
+            <table class="table table-bordered">
+              <thead><tr><th>Estado</th><th>Conteo</th></tr></thead>
+              <tbody>
+                <t t-foreach="stats_adicionales.equipos_por_estado.items()" t-as="item">
+                  <tr>
+                    <td><t t-esc="item[0]"/></td>
+                    <td><t t-esc="item[1]"/></td>
+                  </tr>
+                </t>
+              </tbody>
+            </table>
+          </div>
+          <div class="col-md-6 mb-4">
+            <h3>Equipos por Tipo</h3>
+            <table class="table table-bordered">
+              <thead><tr><th>Tipo</th><th>Conteo</th></tr></thead>
+              <tbody>
+                <t t-foreach="stats_adicionales.equipos_por_tipo.items()" t-as="item">
+                  <tr>
+                    <td><t t-esc="item[0]"/></td>
+                    <td><t t-esc="item[1]"/></td>
+                  </tr>
+                </t>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Tendencias -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <h3>Actividad Semanal</h3>
+            <table class="table table-striped">
+              <thead><tr><th>Fecha</th><th>Registros</th></tr></thead>
+              <tbody>
+                <t t-foreach="stats_adicionales.actividad_semanal.items()" t-as="entry">
+                  <tr>
+                    <td><t t-esc="entry[0]"/></td>
+                    <td><t t-esc="entry[1]"/></td>
+                  </tr>
+                </t>
+              </tbody>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <h3>Tendencias (24h vs 48h)</h3>
+            <ul class="list-group">
+              <li class="list-group-item"><strong>Últimas 24h:</strong> <t t-esc="stats_adicionales.tendencias.registros_24h"/></li>
+              <li class="list-group-item"><strong>24-48h:</strong> <t t-esc="stats_adicionales.tendencias.registros_48h"/></li>
+              <li class="list-group-item"><strong>Diferencia:</strong> <t t-esc="stats_adicionales.tendencias.diferencia"/></li>
+              <li class="list-group-item"><strong>Porcentaje:</strong> <t t-esc="stats_adicionales.tendencias.porcentaje"/></li>
+            </ul>
+          </div>
+        </div>
+        <!-- Top Clientes -->
+        <div class="mb-4">
+          <h3>Top Clientes</h3>
+          <ul class="list-group">
+            <t t-foreach="stats_adicionales.top_clientes" t-as="c">
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people-fill"></i> <t t-esc="c.cliente"/></span>
+                <span class="badge bg-primary rounded-pill"><t t-esc="c.count"/></span>
+              </li>
+            </t>
+          </ul>
+        </div>
+      </div>
+    </t>
+  </template>
 </odoo>
