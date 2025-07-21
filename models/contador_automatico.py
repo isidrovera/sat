@@ -10,7 +10,9 @@ _logger = logging.getLogger(__name__)
 class ContadorAutomatico(models.Model):
     _name = 'contador.automatico'
     _description = 'Procesamiento automático de contadores desde correos'
+    _order = 'id desc'
     _inherit = ['mail.thread']
+
     
     name = fields.Char('Asunto del correo', required=True, tracking=True)
     remitente = fields.Char('Remitente', tracking=True)

@@ -14,23 +14,25 @@
                   edit="1">
                 
                 <!-- Campos principales -->
-                <field name="name" string="Asunto del Correo"/>
-                <field name="remitente" string="Remitente"/>
+                <field name="name" string="Asunto del Correo" optional="hide"/>
+                <field name="remitente" string="Remitente" optional="hide"/>
                 <field name="estado" string="Estado"
                        decoration-success="estado == 'procesado'"
                        decoration-info="estado == 'pendiente'"
                        decoration-warning="estado == 'manual'"
                        decoration-danger="estado == 'error'"
-                       decoration-muted="estado == 'filtrado'"/>
+                       decoration-muted="estado == 'filtrado'" optional="hide"/>
                 
                 <!-- Datos detectados -->
+                <field name="cliente_detectado" optional="show"/>
+                <field name="equipo_id" string="Equipo" optional="show"/>
                 <field name="serie_detectada" string="Serie" optional="show"/>
                 <field name="contador_bn_detectado" string="Contador B/N" optional="show"/>
                 <field name="contador_color_detectado" string="Contador Color" optional="show"/>
                 <field name="contador_scan_detectado" string="Contador Scan" optional="show"/>
-                <field name="contador_total_detectado" string="Total"/>
-                <field name="equipo_id" string="Equipo" optional="show"/>
-                <field name="cliente_detectado"/>
+                <field name="contador_total_detectado" string="Total" optional="show"/>
+                
+                
                 
                 <!-- Sistema inteligente -->
                 <field name="idioma_detectado" string="Idioma" optional="hide"/>
@@ -236,26 +238,29 @@
 
     <!-- ACCIÓN VENTANA -->
     <record id="action_contador_automatico" model="ir.actions.act_window">
-        <field name="name">Contadores Automáticos</field>
-        <field name="res_model">contador.automatico</field>
-        <field name="view_mode">list,form</field>
-        <field name="context">{
-            'search_default_procesados': 1,
-            'search_default_group_estado': 1
-        }</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                ¡Comienza a procesar correos de contadores!
-            </p>
-            <p>
-                El sistema procesa automáticamente correos de contadores usando 
-                inteligencia artificial para detectar series, contadores y marcas.
-            </p>
-            <p>
-               
-            </p>
-        </field>
-    </record>
+    <field name="name">Contadores Automáticos</field>
+    <field name="res_model">contador.automatico</field>
+    <field name="view_mode">list,form</field>
+
+    <!-- Aplica sólo el filtro “Hoy” por defecto -->
+    <field name="context">{ 
+        'search_default_hoy': 1 
+    }</field>
+
+    <!-- Ordena siempre por ID descendente -->
+    <field name="order">id desc</field>
+
+    <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+            ¡Comienza a procesar correos de contadores!
+        </p>
+        <p>
+            El sistema procesa automáticamente correos de contadores usando 
+            inteligencia artificial para detectar series, contadores y marcas.
+        </p>
+    </field>
+</record>
+
 
     <!-- ========== MENÚS ========== -->
     
