@@ -10,19 +10,19 @@
                     <!-- Botones de acción en el header -->
                     <button name="action_refresh_dashboard_data" 
                             type="object" 
-                            string="Actualizar Dashboard" 
+                            string="🔄 Actualizar Dashboard" 
                             class="btn-primary"/>
                     <button name="obtener_estadisticas_dashboard" 
                             type="object" 
-                            string="Estadísticas Avanzadas" 
+                            string="📊 Estadísticas" 
                             class="btn-secondary"/>
                     <button name="limpiar_registros_antiguos" 
                             type="object" 
-                            string="Limpiar Registros" 
+                            string="🧹 Limpiar" 
                             class="btn-warning"/>
-                    <button name="diagnosticar_sistema" 
+                    <button name="ejecutar_diagnostico_completo" 
                             type="object" 
-                            string="Diagnóstico" 
+                            string="🔬 Diagnóstico" 
                             class="btn-info"/>
                 </header>
                 
