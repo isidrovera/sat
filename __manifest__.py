@@ -161,7 +161,7 @@
             'sat/static/src/css/parts_request_message.css',
             'sat/static/src/css/image-viewer.css',
             'sat/static/src/css/sat_table_styles.css',
-            'sat/static/src/scss/contador_dashboard.css',
+            'sat/static/src/css/contador_dashboard.css',
             
             # SCSS existente
             '/sat/static/src/scss/list_dashboard.scss',
