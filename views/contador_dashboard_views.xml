@@ -135,16 +135,28 @@
                                         <div class="row align-items-center">
                                             <div class="col-md-8">
                                                 <div class="d-flex flex-wrap gap-2">
-                                                    <button type="button" class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all">
+                                                    <button name="action_refresh_dashboard_data" 
+                                                            type="object" 
+                                                            class="btn btn-outline-primary btn-sm filter-btn active" 
+                                                            data-filter="all">
                                                         <i class="fa fa-list me-1"></i>Todos
                                                     </button>
-                                                    <button type="button" class="btn btn-outline-success btn-sm filter-btn" data-filter="hoy">
+                                                    <button name="action_refresh_dashboard_data" 
+                                                            type="object" 
+                                                            class="btn btn-outline-success btn-sm filter-btn" 
+                                                            data-filter="hoy">
                                                         <i class="fa fa-calendar-day me-1"></i>Hoy
                                                     </button>
-                                                    <button type="button" class="btn btn-outline-info btn-sm filter-btn" data-filter="color">
+                                                    <button name="action_refresh_dashboard_data" 
+                                                            type="object" 
+                                                            class="btn btn-outline-info btn-sm filter-btn" 
+                                                            data-filter="color">
                                                         <i class="fa fa-palette me-1"></i>Color
                                                     </button>
-                                                    <button type="button" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="mono">
+                                                    <button name="action_refresh_dashboard_data" 
+                                                            type="object" 
+                                                            class="btn btn-outline-secondary btn-sm filter-btn" 
+                                                            data-filter="mono">
                                                         <i class="fa fa-circle me-1"></i>Monocromáticas
                                                     </button>
                                                 </div>
@@ -267,10 +279,16 @@
                                     <!-- Contenido dinámico -->
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <button name="obtener_estadisticas_dashboard" 
+                                            type="object" 
+                                            class="btn btn-secondary" 
+                                            data-bs-dismiss="modal">
                                         <i class="fa fa-times me-1"></i>Cerrar
                                     </button>
-                                    <button type="button" class="btn btn-primary" id="btn_view_history">
+                                    <button name="obtener_estadisticas_dashboard" 
+                                            type="object" 
+                                            class="btn btn-primary" 
+                                            id="btn_view_history">
                                         <i class="fa fa-history me-1"></i>Ver Historial
                                     </button>
                                 </div>
