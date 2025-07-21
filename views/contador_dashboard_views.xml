@@ -11,6 +11,8 @@
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
                 <!-- Font Awesome 6 -->
                 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+                <!-- AOS Animation -->
+                <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet"/>
                 <!-- Chart.js -->
                 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                 <!-- CSS personalizado -->
@@ -35,9 +37,9 @@
                             </div>
                             <div class="col-md-4 text-end">
                                 <div class="header-actions">
-                                    <button class="btn btn-glass me-2" id="refreshBtn">
+                                    <a href="/dashboard/contador/refresh" class="btn btn-glass me-2" id="refreshBtn">
                                         <i class="fas fa-sync-alt me-2"></i>Actualizar
-                                    </button>
+                                    </a>
                                     <div class="btn-group">
                                         <button class="btn btn-glass dropdown-toggle" data-bs-toggle="dropdown">
                                             <i class="fas fa-cog me-2"></i>Opciones
@@ -52,6 +54,9 @@
                                             <li><hr class="dropdown-divider"/></li>
                                             <li><a class="dropdown-item" href="/dashboard/contador/export/excel">
                                                 <i class="fas fa-file-excel me-2"></i>Exportar Excel
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="/dashboard/contador/export/csv">
+                                                <i class="fas fa-file-csv me-2"></i>Exportar CSV
                                             </a></li>
                                         </ul>
                                     </div>
@@ -78,8 +83,8 @@
                                             <div class="stat-sublabel">Últimas 24 horas</div>
                                         </div>
                                         <div class="stat-trend">
-                                            <i class="fas fa-arrow-up"></i>
-                                            <span>+12%</span>
+                                            <i t-att-class="'fas ' + ('fa-arrow-up' if estadisticas.get('tendencia_hoy', 0) >= 0 else 'fa-arrow-down')"></i>
+                                            <span t-esc="'+' + str(estadisticas.get('porcentaje_tendencia', 0)) + '%' if estadisticas.get('tendencia_hoy', 0) >= 0 else str(estadisticas.get('porcentaje_tendencia', 0)) + '%'">+0%</span>
                                         </div>
                                     </div>
                                 </div>
@@ -163,36 +168,38 @@
                                 <div class="row align-items-center">
                                     <div class="col-lg-8">
                                         <div class="filter-buttons">
-                                            <button class="filter-btn active" data-filter="all">
+                                            <button class="filter-btn" t-att-class="'filter-btn ' + ('active' if not filter_type or filter_type == 'all' else '')" data-filter="all">
                                                 <i class="fas fa-list"></i>
                                                 <span>Todos</span>
-                                                <div class="filter-count" id="count-all">0</div>
+                                                <div class="filter-count" id="count-all" t-esc="filter_counts.get('all', 0)">0</div>
                                             </button>
-                                            <button class="filter-btn" data-filter="hoy">
+                                            <button class="filter-btn" t-att-class="'filter-btn ' + ('active' if filter_type == 'hoy' else '')" data-filter="hoy">
                                                 <i class="fas fa-calendar-day"></i>
                                                 <span>Hoy</span>
-                                                <div class="filter-count" id="count-hoy">0</div>
+                                                <div class="filter-count" id="count-hoy" t-esc="filter_counts.get('hoy', 0)">0</div>
                                             </button>
-                                            <button class="filter-btn" data-filter="color">
+                                            <button class="filter-btn" t-att-class="'filter-btn ' + ('active' if filter_type == 'color' else '')" data-filter="color">
                                                 <i class="fas fa-palette"></i>
                                                 <span>Color</span>
-                                                <div class="filter-count" id="count-color">0</div>
+                                                <div class="filter-count" id="count-color" t-esc="filter_counts.get('color', 0)">0</div>
                                             </button>
-                                            <button class="filter-btn" data-filter="mono">
+                                            <button class="filter-btn" t-att-class="'filter-btn ' + ('active' if filter_type == 'mono' else '')" data-filter="mono">
                                                 <i class="fas fa-circle"></i>
                                                 <span>Monocromáticas</span>
-                                                <div class="filter-count" id="count-mono">0</div>
+                                                <div class="filter-count" id="count-mono" t-esc="filter_counts.get('mono', 0)">0</div>
                                             </button>
-                                            <button class="filter-btn" data-filter="procesado">
+                                            <button class="filter-btn" t-att-class="'filter-btn ' + ('active' if filter_type == 'procesado' else '')" data-filter="procesado">
                                                 <i class="fas fa-check-circle"></i>
                                                 <span>Procesados</span>
-                                                <div class="filter-count" id="count-procesado">0</div>
+                                                <div class="filter-count" id="count-procesado" t-esc="filter_counts.get('procesado', 0)">0</div>
                                             </button>
                                         </div>
                                     </div>
                                     <div class="col-lg-4">
                                         <div class="search-container">
                                             <form method="GET" action="/dashboard/contador" class="search-form">
+                                                <input type="hidden" name="filter_type" t-att-value="filter_type or ''"/>
+                                                <input type="hidden" name="page" value="1"/>
                                                 <div class="search-input-group">
                                                     <input type="text" 
                                                            class="search-input" 
@@ -203,9 +210,9 @@
                                                     <button class="search-btn" type="submit">
                                                         <i class="fas fa-search"></i>
                                                     </button>
-                                                    <button type="button" class="clear-btn" id="clearSearch" t-if="search_query">
+                                                    <a t-if="search_query" href="/dashboard/contador" class="clear-btn" id="clearSearch">
                                                         <i class="fas fa-times"></i>
-                                                    </button>
+                                                    </a>
                                                 </div>
                                             </form>
                                         </div>
@@ -230,6 +237,8 @@
                                         <p class="table-subtitle">
                                             Mostrando <span class="text-primary" t-esc="len(equipos)">0</span> de 
                                             <span class="text-primary" t-esc="total_equipos">0</span> equipos
+                                            <t t-if="search_query"> para "<strong t-esc="search_query"/>"</t>
+                                            <t t-if="filter_type and filter_type != 'all'"> - Filtro: <strong t-esc="filter_type"/></t>
                                         </p>
                                     </div>
                                     <div class="col-md-6 text-end">
@@ -253,10 +262,22 @@
                                             <i class="fas fa-search"></i>
                                         </div>
                                         <h4 class="empty-title">No se encontraron equipos</h4>
-                                        <p class="empty-text">No hay registros que coincidan con los filtros aplicados</p>
-                                        <button class="btn btn-primary" onclick="window.location.reload()">
-                                            <i class="fas fa-refresh me-2"></i>Actualizar
-                                        </button>
+                                        <p class="empty-text">
+                                            <t t-if="search_query or filter_type">
+                                                No hay registros que coincidan con los filtros aplicados
+                                            </t>
+                                            <t t-else="">
+                                                No hay equipos registrados en el sistema
+                                            </t>
+                                        </p>
+                                        <div class="empty-actions">
+                                            <a href="/dashboard/contador" class="btn btn-primary me-2">
+                                                <i class="fas fa-refresh me-2"></i>Mostrar todos
+                                            </a>
+                                            <a href="/dashboard/contador/refresh" class="btn btn-outline-primary">
+                                                <i class="fas fa-sync-alt me-2"></i>Actualizar datos
+                                            </a>
+                                        </div>
                                     </div>
                                 </t>
 
@@ -309,7 +330,10 @@
                                                 <t t-foreach="equipos" t-as="equipo">
                                                     <tr class="table-row" 
                                                         t-att-data-tipo="equipo.tipo_equipo_detectado"
-                                                        t-att-data-estado="equipo.estado_ultimo">
+                                                        t-att-data-estado="equipo.estado_ultimo"
+                                                        t-att-data-cliente="equipo.cliente_detectado"
+                                                        t-att-data-serie="equipo.serie_detectada">
+                                                        
                                                         <!-- Cliente -->
                                                         <td class="cell-cliente">
                                                             <div class="client-info">
@@ -338,8 +362,8 @@
 
                                                         <!-- Tipo -->
                                                         <td class="text-center">
-                                                            <span t-att-class="'type-badge type-' + (equipo.tipo_equipo_detectado or 'unknown')">
-                                                                <i t-att-class="'fas me-1 ' + ('fa-palette' if equipo.tipo_equipo_detectado == 'color' else 'fa-circle')"></i>
+                                                            <span t-att-class="'type-badge type-' + (equipo.tipo_equipo_detectado or 'unknown').lower().replace(' ', '')">
+                                                                <i t-att-class="'fas me-1 ' + ('fa-palette' if equipo.tipo_equipo_detectado and 'color' in equipo.tipo_equipo_detectado.lower() else 'fa-circle')"></i>
                                                                 <t t-esc="equipo.tipo_equipo_detectado or 'N/A'"/>
                                                             </span>
                                                         </td>
@@ -375,7 +399,7 @@
                                                         <td class="text-center">
                                                             <div class="date-info">
                                                                 <div class="date-value" t-esc="equipo.ultima_actualizacion_formatted"/>
-                                                                <div class="date-relative" data-date="equipo.ultima_actualizacion_formatted">
+                                                                <div class="date-relative" t-esc="equipo.tiempo_relativo or 'Hace un momento'">
                                                                     Hace 2 horas
                                                                 </div>
                                                             </div>
@@ -383,7 +407,7 @@
 
                                                         <!-- Estado -->
                                                         <td class="text-center">
-                                                            <span t-att-class="'status-badge status-' + (equipo.estado_ultimo or 'unknown')">
+                                                            <span t-att-class="'status-badge status-' + (equipo.estado_ultimo or 'unknown').lower()">
                                                                 <i t-att-class="'fas me-1 ' + ('fa-check-circle' if equipo.estado_ultimo == 'procesado' else 'fa-clock' if equipo.estado_ultimo == 'pendiente' else 'fa-exclamation-circle' if equipo.estado_ultimo == 'error' else 'fa-question-circle')"></i>
                                                                 <t t-esc="equipo.estado_ultimo or 'N/A'"/>
                                                             </span>
@@ -402,15 +426,26 @@
                                                                    title="Ver historial">
                                                                     <i class="fas fa-history"></i>
                                                                 </a>
-                                                                <button class="action-btn action-btn-info" 
-                                                                        title="Más opciones"
-                                                                        data-bs-toggle="dropdown">
-                                                                    <i class="fas fa-ellipsis-v"></i>
-                                                                </button>
-                                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Editar</a></li>
-                                                                    <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i>Descargar</a></li>
-                                                                </ul>
+                                                                <div class="dropdown">
+                                                                    <button class="action-btn action-btn-info dropdown-toggle" 
+                                                                            title="Más opciones"
+                                                                            data-bs-toggle="dropdown"
+                                                                            aria-expanded="false">
+                                                                        <i class="fas fa-ellipsis-v"></i>
+                                                                    </button>
+                                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                                        <li><a class="dropdown-item" href="#" onclick="copyToClipboard(this)" t-att-data-text="equipo.serie_detectada">
+                                                                            <i class="fas fa-copy me-2"></i>Copiar Serie
+                                                                        </a></li>
+                                                                        <li><a class="dropdown-item" href="#" onclick="copyToClipboard(this)" t-att-data-text="equipo.cliente_detectado">
+                                                                            <i class="fas fa-copy me-2"></i>Copiar Cliente
+                                                                        </a></li>
+                                                                        <li><hr class="dropdown-divider"/></li>
+                                                                        <li><a class="dropdown-item text-primary" t-att-href="'/dashboard/contador/detalle/' + str(equipo.id)">
+                                                                            <i class="fas fa-info-circle me-2"></i>Ver detalles
+                                                                        </a></li>
+                                                                    </ul>
+                                                                </div>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -421,35 +456,71 @@
                                 </t>
                             </div>
 
-                            <!-- Paginación moderna -->
+                            <!-- Paginación mejorada -->
                             <div class="table-footer" t-if="total_pages and total_pages > 1">
                                 <div class="row align-items-center">
                                     <div class="col-md-6">
                                         <div class="pagination-info">
-                                            Mostrando <strong t-esc="(current_page - 1) * 20 + 1"/>-<strong t-esc="min(current_page * 20, total_equipos)"/> 
-                                            de <strong t-esc="total_equipos"/> registros
+                                            <span class="text-muted">
+                                                Mostrando 
+                                                <strong t-esc="(current_page - 1) * 20 + 1"/>
+                                                -
+                                                <strong t-esc="min(current_page * 20, total_equipos)"/> 
+                                                de 
+                                                <strong t-esc="total_equipos"/> 
+                                                registros
+                                            </span>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <nav class="pagination-nav">
-                                            <ul class="modern-pagination">
+                                            <ul class="modern-pagination pagination justify-content-end">
+                                                <!-- Botón Anterior -->
                                                 <li t-att-class="'page-item ' + ('disabled' if current_page == 1 else '')">
-                                                    <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(current_page - 1) + ('&amp;search=' + (search_query or '') if search_query else '')">
+                                                    <a class="page-link" 
+                                                       t-att-href="'/dashboard/contador?page=' + str(current_page - 1) + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')"
+                                                       aria-label="Anterior">
                                                         <i class="fas fa-chevron-left"></i>
                                                     </a>
                                                 </li>
                                                 
+                                                <!-- Primera página -->
+                                                <li t-if="current_page > 3" class="page-item">
+                                                    <a class="page-link" 
+                                                       t-att-href="'/dashboard/contador?page=1' + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')">
+                                                        1
+                                                    </a>
+                                                </li>
+                                                <li t-if="current_page > 4" class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                                
+                                                <!-- Páginas del rango -->
                                                 <t t-set="start_page" t-value="max(1, current_page - 2)"/>
                                                 <t t-set="end_page" t-value="min(total_pages + 1, current_page + 3)"/>
                                                 <t t-foreach="range(start_page, end_page)" t-as="page_num">
                                                     <li t-att-class="'page-item ' + ('active' if page_num == current_page else '')">
-                                                        <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(page_num) + ('&amp;search=' + (search_query or '') if search_query else '')"
+                                                        <a class="page-link" 
+                                                           t-att-href="'/dashboard/contador?page=' + str(page_num) + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')"
                                                            t-esc="page_num"/>
                                                     </li>
                                                 </t>
                                                 
+                                                <!-- Última página -->
+                                                <li t-if="current_page < total_pages - 3" class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                                <li t-if="current_page < total_pages - 2" class="page-item">
+                                                    <a class="page-link" 
+                                                       t-att-href="'/dashboard/contador?page=' + str(total_pages) + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')"
+                                                       t-esc="total_pages"/>
+                                                </li>
+                                                
+                                                <!-- Botón Siguiente -->
                                                 <li t-att-class="'page-item ' + ('disabled' if current_page == total_pages else '')">
-                                                    <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(current_page + 1) + ('&amp;search=' + (search_query or '') if search_query else '')">
+                                                    <a class="page-link" 
+                                                       t-att-href="'/dashboard/contador?page=' + str(current_page + 1) + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')"
+                                                       aria-label="Siguiente">
                                                         <i class="fas fa-chevron-right"></i>
                                                     </a>
                                                 </li>
@@ -462,22 +533,67 @@
                     </div>
                 </div>
 
-                <!-- FAB (Floating Action Button) -->
+                <!-- Información adicional -->
+                <div class="container-fluid mt-4 mb-5" t-if="equipos">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="info-card">
+                                <div class="info-card-body text-center">
+                                    <i class="fas fa-list-ul text-primary mb-2"></i>
+                                    <h6 class="text-muted mb-1">Total registros</h6>
+                                    <h4 class="text-primary mb-0" t-esc="total_equipos">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-card">
+                                <div class="info-card-body text-center">
+                                    <i class="fas fa-eye text-success mb-2"></i>
+                                    <h6 class="text-muted mb-1">Mostrando</h6>
+                                    <h4 class="text-success mb-0" t-esc="len(equipos)">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-card">
+                                <div class="info-card-body text-center">
+                                    <i class="fas fa-file-alt text-info mb-2"></i>
+                                    <h6 class="text-muted mb-1">Página</h6>
+                                    <h4 class="text-info mb-0"><t t-esc="current_page"/> de <t t-esc="total_pages"/></h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-card">
+                                <div class="info-card-body text-center">
+                                    <i class="fas fa-clock text-warning mb-2"></i>
+                                    <h6 class="text-muted mb-1">Actualizado</h6>
+                                    <h6 class="text-warning mb-0" t-esc="ultima_actualizacion">Ahora</h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAB (Floating Action Button) mejorado -->
                 <div class="fab-container">
-                    <button class="fab fab-primary" id="mainFab">
+                    <div class="fab-menu" id="fabMenu">
+                        <a href="/dashboard/contador/refresh" class="fab fab-secondary" title="Actualizar datos">
+                            <i class="fas fa-sync-alt"></i>
+                        </a>
+                        <a href="/dashboard/contador/export/excel" class="fab fab-secondary" title="Exportar Excel">
+                            <i class="fas fa-file-excel"></i>
+                        </a>
+                        <a href="/dashboard/contador/stats" class="fab fab-secondary" title="Ver estadísticas">
+                            <i class="fas fa-chart-bar"></i>
+                        </a>
+                        <a href="/dashboard/contador/diagnostico" class="fab fab-secondary" title="Diagnóstico">
+                            <i class="fas fa-stethoscope"></i>
+                        </a>
+                    </div>
+                    <button class="fab fab-primary" id="mainFab" title="Acciones rápidas">
                         <i class="fas fa-plus"></i>
                     </button>
-                    <div class="fab-menu" id="fabMenu">
-                        <button class="fab fab-secondary" onclick="window.location.reload()" title="Actualizar">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                        <button class="fab fab-secondary" onclick="window.location.href='/dashboard/contador/export/excel'" title="Exportar">
-                            <i class="fas fa-download"></i>
-                        </button>
-                        <button class="fab fab-secondary" onclick="window.location.href='/dashboard/contador/stats'" title="Estadísticas">
-                            <i class="fas fa-chart-bar"></i>
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -487,9 +603,93 @@
                 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
                 <!-- AOS Animation -->
                 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-                <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet"/>
                 <!-- Dashboard JS personalizado -->
                 <script src="/sat/static/src/js/contadores_dashboard.js"></script>
+                
+                <!-- Funciones adicionales inline -->
+                <script>
+                    // Función para copiar al portapapeles
+                    function copyToClipboard(element) {
+                        const text = element.getAttribute('data-text');
+                        if (navigator.clipboard) {
+                            navigator.clipboard.writeText(text).then(() =&gt; {
+                                showToast('Copiado: ' + text, 'success');
+                            });
+                        } else {
+                            // Fallback para navegadores más antiguos
+                            const textArea = document.createElement('textarea');
+                            textArea.value = text;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                            showToast('Copiado: ' + text, 'success');
+                        }
+                    }
+                    
+                    // Función básica para mostrar notificaciones
+                    function showToast(message, type = 'info') {
+                        const toast = document.createElement('div');
+                        toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} toast-notification`;
+                        toast.style.cssText = `
+                            position: fixed;
+                            top: 20px;
+                            right: 20px;
+                            z-index: 9999;
+                            min-width: 300px;
+                            opacity: 0;
+                            transition: opacity 0.3s ease;
+                        `;
+                        toast.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                                ${message}
+                                <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                            </div>
+                        `;
+                        
+                        document.body.appendChild(toast);
+                        
+                        // Mostrar con animación
+                        setTimeout(() =&gt; toast.style.opacity = '1', 100);
+                        
+                        // Auto-remover después de 3 segundos
+                        setTimeout(() =&gt; {
+                            toast.style.opacity = '0';
+                            setTimeout(() =&gt; {
+                                if (toast.parentNode) {
+                                    toast.parentNode.removeChild(toast);
+                                }
+                            }, 300);
+                        }, 3000);
+                    }
+
+                    // Filtros con navegación por URL
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const filterButtons = document.querySelectorAll('.filter-btn');
+                        
+                        filterButtons.forEach(btn =&gt; {
+                            btn.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                
+                                const filter = this.getAttribute('data-filter');
+                                const currentUrl = new URL(window.location);
+                                
+                                // Mantener búsqueda y resetear página
+                                currentUrl.searchParams.set('page', '1');
+                                
+                                if (filter === 'all') {
+                                    currentUrl.searchParams.delete('filter_type');
+                                } else {
+                                    currentUrl.searchParams.set('filter_type', filter);
+                                }
+                                
+                                // Navegar a la nueva URL
+                                window.location.href = currentUrl.toString();
+                            });
+                        });
+                    });
+                </script>
             </t>
         </t>
     </template>
