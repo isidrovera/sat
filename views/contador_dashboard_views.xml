@@ -592,158 +592,1263 @@
             </t>
         </t>
     </template>
-    <template id="contador_detalle_template" t-name="sat.contador_detalle_template">
-    <t t-call="website.layout">
-      <div class="container my-5">
-        <h1 class="mb-4"><t t-esc="page_title"/></h1>
-        <div class="card mb-4">
-          <div class="card-body">
-            <h5 class="card-title">Información del Equipo</h5>
-            <ul class="list-group list-group-flush">
-              <li class="list-group-item"><strong>Cliente:</strong> <t t-esc="equipo.cliente_detectado or 'Sin cliente'"/></li>
-              <li class="list-group-item"><strong>Serie:</strong> <t t-esc="equipo.serie_detectada or 'Sin serie'"/></li>
-              <li class="list-group-item"><strong>Tipo:</strong> <t t-esc="equipo.tipo_equipo_detectado or 'N/A'"/></li>
-              <li class="list-group-item"><strong>Contador B/N:</strong> <t t-esc="equipo.contador_bn_detectado or 0"/></li>
-              <li class="list-group-item"><strong>Contador Color:</strong> <t t-esc="equipo.contador_color_detectado or 0"/></li>
-              <li class="list-group-item"><strong>Total:</strong> <t t-esc="(equipo.contador_bn_detectado or 0) + (equipo.contador_color_detectado or 0)"/></li>
-              <li class="list-group-item"><strong>Estado:</strong> <t t-esc="equipo.estado or 'pendiente'"/></li>
-              <li class="list-group-item"><strong>Última actualización:</strong> <t t-esc="equipo.create_date.strftime('%d/%m/%Y %H:%M') if equipo.create_date else 'N/A'"/></li>
-              <li class="list-group-item"><strong>Remitente:</strong> <t t-esc="equipo.remitente or 'N/A'"/></li>
-            </ul>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-body">
-            <h5 class="card-title">Historial Reciente</h5>
-            <table class="table table-striped">
-              <thead>
-                <tr><th>Fecha</th><th>Estado</th><th>Total</th></tr>
-              </thead>
-              <tbody>
-                <t t-foreach="historial" t-as="h">
-                  <tr>
-                    <td><t t-esc="h.create_date.strftime('%d/%m/%Y %H:%M') if h.create_date else ''"/></td>
-                    <td><t t-esc="h.estado or ''"/></td>
-                    <td><t t-esc="(h.contador_bn_detectado or 0) + (h.contador_color_detectado or 0)"/></td>
-                  </tr>
-                </t>
-              </tbody>
-            </table>
-            <a class="btn btn-secondary" href="/dashboard/contador"><i class="bi bi-arrow-left"></i> Volver</a>
-          </div>
-        </div>
-      </div>
-    </t>
-  </template>
-  <template id="contador_dashboard_stats_template" t-name="sat.contador_dashboard_stats_template">
-    <t t-call="website.layout">
-      <div class="container my-5">
-        <h1 class="mb-4"><t t-esc="page_title"/></h1>
-        <!-- Estadísticas Principales -->
-        <div class="row mb-4">
-          <div class="col-md-3">
-            <div class="card text-center">
-              <div class="card-body">
-                <h5 class="card-title">Únicos Hoy</h5>
-                <p class="display-4"><t t-esc="estadisticas.equipos_unicos_hoy"/></p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="card text-center">
-              <div class="card-body">
-                <h5 class="card-title">Únicos Semana</h5>
-                <p class="display-4"><t t-esc="estadisticas.equipos_unicos_semana"/></p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="card text-center">
-              <div class="card-body">
-                <h5 class="card-title">Únicos Mes</h5>
-                <p class="display-4"><t t-esc="estadisticas.equipos_unicos_mes"/></p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="card text-center">
-              <div class="card-body">
-                <h5 class="card-title">Eficiencia (%)</h5>
-                <p class="display-4"><t t-esc="estadisticas.eficiencia_sistema"/></p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- Distribuciones -->
-        <div class="row">
-          <div class="col-md-6 mb-4">
-            <h3>Equipos por Estado</h3>
-            <table class="table table-bordered">
-              <thead><tr><th>Estado</th><th>Conteo</th></tr></thead>
-              <tbody>
-                <t t-foreach="stats_adicionales.equipos_por_estado.items()" t-as="item">
-                  <tr>
-                    <td><t t-esc="item[0]"/></td>
-                    <td><t t-esc="item[1]"/></td>
-                  </tr>
-                </t>
-              </tbody>
-            </table>
-          </div>
-          <div class="col-md-6 mb-4">
-            <h3>Equipos por Tipo</h3>
-            <table class="table table-bordered">
-              <thead><tr><th>Tipo</th><th>Conteo</th></tr></thead>
-              <tbody>
-                <t t-foreach="stats_adicionales.equipos_por_tipo.items()" t-as="item">
-                  <tr>
-                    <td><t t-esc="item[0]"/></td>
-                    <td><t t-esc="item[1]"/></td>
-                  </tr>
-                </t>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <!-- Tendencias -->
-        <div class="row mb-4">
-          <div class="col-md-6">
-            <h3>Actividad Semanal</h3>
-            <table class="table table-striped">
-              <thead><tr><th>Fecha</th><th>Registros</th></tr></thead>
-              <tbody>
-                <t t-foreach="stats_adicionales.actividad_semanal.items()" t-as="entry">
-                  <tr>
-                    <td><t t-esc="entry[0]"/></td>
-                    <td><t t-esc="entry[1]"/></td>
-                  </tr>
-                </t>
-              </tbody>
-            </table>
-          </div>
-          <div class="col-md-6">
-            <h3>Tendencias (24h vs 48h)</h3>
-            <ul class="list-group">
-              <li class="list-group-item"><strong>Últimas 24h:</strong> <t t-esc="stats_adicionales.tendencias.registros_24h"/></li>
-              <li class="list-group-item"><strong>24-48h:</strong> <t t-esc="stats_adicionales.tendencias.registros_48h"/></li>
-              <li class="list-group-item"><strong>Diferencia:</strong> <t t-esc="stats_adicionales.tendencias.diferencia"/></li>
-              <li class="list-group-item"><strong>Porcentaje:</strong> <t t-esc="stats_adicionales.tendencias.porcentaje"/></li>
-            </ul>
-          </div>
-        </div>
-        <!-- Top Clientes -->
-        <div class="mb-4">
-          <h3>Top Clientes</h3>
-          <ul class="list-group">
-            <t t-foreach="stats_adicionales.top_clientes" t-as="c">
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-people-fill"></i> <t t-esc="c.cliente"/></span>
-                <span class="badge bg-primary rounded-pill"><t t-esc="c.count"/></span>
-              </li>
+<template id="contador_detalle_template" name="Detalle de Equipo">
+        <t t-call="web.layout">
+            <t t-set="title" t-value="'Detalle - ' + (equipo.get('serie_detectada', 'Sin serie'))"/>
+            
+            <!-- Solo Bootstrap y Font Awesome -->
+            <t t-set="head">
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
             </t>
-          </ul>
-        </div>
-      </div>
-    </t>
-  </template>
+            
+            <!-- Container principal -->
+            <div class="container-fluid bg-light min-vh-100 py-4">
+                
+                <!-- Breadcrumb y navegación -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb bg-white rounded shadow-sm px-3 py-2 mb-3">
+                                <li class="breadcrumb-item">
+                                    <a href="/dashboard/contador" class="text-decoration-none">
+                                        <i class="fas fa-chart-line me-1"></i>Dashboard
+                                    </a>
+                                </li>
+                                <li class="breadcrumb-item active">
+                                    <i class="fas fa-info-circle me-1"></i>Detalle de Equipo
+                                </li>
+                            </ol>
+                        </nav>
+
+                        <!-- Botones de navegación -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <a href="/dashboard/contador" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+                                </a>
+                                <a t-att-href="'/dashboard/contador/historial/' + str(equipo.get('id', ''))" class="btn btn-outline-primary ms-2">
+                                    <i class="fas fa-history me-2"></i>Ver Historial
+                                </a>
+                            </div>
+                            <div>
+                                <button class="btn btn-outline-success" onclick="window.print()">
+                                    <i class="fas fa-print me-2"></i>Imprimir
+                                </button>
+                                <div class="btn-group ms-2">
+                                    <button class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-download me-2"></i>Exportar
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#" onclick="exportToPDF()">
+                                            <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="exportToExcel()">
+                                            <i class="fas fa-file-excel me-2"></i>Exportar Excel
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Header del equipo -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-4" 
+                                                 style="width: 80px; height: 80px;">
+                                                <i class="fas fa-printer text-primary fs-1"></i>
+                                            </div>
+                                            <div>
+                                                <h1 class="h3 text-primary mb-1" t-esc="equipo.get('serie_detectada', 'Sin serie')">Serie del Equipo</h1>
+                                                <h5 class="text-muted mb-1" t-esc="equipo.get('cliente_detectado', 'Sin cliente')">Cliente</h5>
+                                                <span t-att-class="'badge fs-6 ' + ('bg-info' if equipo.get('tipo_equipo_detectado') and 'color' in equipo.get('tipo_equipo_detectado', '').lower() else 'bg-secondary')">
+                                                    <i t-att-class="'fas me-1 ' + ('fa-palette' if equipo.get('tipo_equipo_detectado') and 'color' in equipo.get('tipo_equipo_detectado', '').lower() else 'fa-circle')"></i>
+                                                    <t t-esc="equipo.get('tipo_equipo_detectado', 'N/A')"/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div class="d-flex flex-column align-items-end">
+                                            <span t-att-class="'badge fs-6 mb-2 ' + ('bg-success' if equipo.get('estado') == 'procesado' else 'bg-warning' if equipo.get('estado') == 'pendiente' else 'bg-danger' if equipo.get('estado') == 'error' else 'bg-secondary')">
+                                                <i t-att-class="'fas me-1 ' + ('fa-check-circle' if equipo.get('estado') == 'procesado' else 'fa-clock' if equipo.get('estado') == 'pendiente' else 'fa-exclamation-circle' if equipo.get('estado') == 'error' else 'fa-question-circle')"></i>
+                                                <t t-esc="equipo.get('estado', 'N/A')"/>
+                                            </span>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                Actualizado: <t t-esc="equipo.get('create_date', 'N/A')"/>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información detallada -->
+                <div class="row mb-4">
+                    
+                    <!-- Información básica -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>Información Básica
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="border-bottom pb-3">
+                                            <label class="form-label text-muted small fw-bold">CLIENTE</label>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="fs-5" t-esc="equipo.get('cliente_detectado', 'Sin cliente')">Cliente</span>
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard(this)" t-att-data-text="equipo.get('cliente_detectado', '')">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="border-bottom pb-3">
+                                            <label class="form-label text-muted small fw-bold">NÚMERO DE SERIE</label>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="fs-5 font-monospace" t-esc="equipo.get('serie_detectada', 'Sin serie')">Serie</span>
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard(this)" t-att-data-text="equipo.get('serie_detectada', '')">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="border-bottom pb-3">
+                                            <label class="form-label text-muted small fw-bold">TIPO DE EQUIPO</label>
+                                            <div>
+                                                <span t-att-class="'badge fs-6 ' + ('bg-info' if equipo.get('tipo_equipo_detectado') and 'color' in equipo.get('tipo_equipo_detectado', '').lower() else 'bg-secondary')">
+                                                    <i t-att-class="'fas me-1 ' + ('fa-palette' if equipo.get('tipo_equipo_detectado') and 'color' in equipo.get('tipo_equipo_detectado', '').lower() else 'fa-circle')"></i>
+                                                    <t t-esc="equipo.get('tipo_equipo_detectado', 'N/A')"/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="border-bottom pb-3">
+                                            <label class="form-label text-muted small fw-bold">ESTADO ACTUAL</label>
+                                            <div>
+                                                <span t-att-class="'badge fs-6 ' + ('bg-success' if equipo.get('estado') == 'procesado' else 'bg-warning' if equipo.get('estado') == 'pendiente' else 'bg-danger' if equipo.get('estado') == 'error' else 'bg-secondary')">
+                                                    <i t-att-class="'fas me-1 ' + ('fa-check-circle' if equipo.get('estado') == 'procesado' else 'fa-clock' if equipo.get('estado') == 'pendiente' else 'fa-exclamation-circle' if equipo.get('estado') == 'error' else 'fa-question-circle')"></i>
+                                                    <t t-esc="equipo.get('estado', 'N/A')"/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label text-muted small fw-bold">REMITENTE</label>
+                                        <div>
+                                            <span class="fs-6" t-esc="equipo.get('remitente', 'N/A')">Remitente</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contadores -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-calculator me-2"></i>Contadores Actuales
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <!-- Contador B/N -->
+                                    <div class="col-12">
+                                        <div class="bg-light rounded p-4 text-center">
+                                            <div class="bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                                                 style="width: 60px; height: 60px;">
+                                                <i class="fas fa-circle text-secondary fs-3"></i>
+                                            </div>
+                                            <h3 class="text-secondary mb-1" t-esc="'{:,}'.format(equipo.get('contador_bn_detectado', 0))">0</h3>
+                                            <h6 class="text-muted mb-0">Contador Blanco y Negro</h6>
+                                        </div>
+                                    </div>
+
+                                    <!-- Contador Color -->
+                                    <div class="col-12">
+                                        <div class="bg-light rounded p-4 text-center">
+                                            <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                                                 style="width: 60px; height: 60px;">
+                                                <i class="fas fa-palette text-info fs-3"></i>
+                                            </div>
+                                            <h3 class="text-info mb-1" t-esc="'{:,}'.format(equipo.get('contador_color_detectado', 0))">0</h3>
+                                            <h6 class="text-muted mb-0">Contador Color</h6>
+                                        </div>
+                                    </div>
+
+                                    <!-- Total -->
+                                    <div class="col-12">
+                                        <div class="bg-primary bg-opacity-10 rounded p-4 text-center border border-primary border-opacity-25">
+                                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                                                 style="width: 60px; height: 60px;">
+                                                <i class="fas fa-plus text-primary fs-3"></i>
+                                            </div>
+                                            <h2 class="text-primary mb-1" t-esc="'{:,}'.format((equipo.get('contador_bn_detectado', 0) or 0) + (equipo.get('contador_color_detectado', 0) or 0))">0</h2>
+                                            <h5 class="text-primary mb-0 fw-bold">Total de Impresiones</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información técnica y fechas -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-cog me-2"></i>Información Técnica
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-4">
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                                 style="width: 50px; height: 50px;">
+                                                <i class="fas fa-calendar-plus text-primary"></i>
+                                            </div>
+                                            <h6 class="text-muted mb-1">Fecha de Registro</h6>
+                                            <p class="mb-0 fw-semibold" t-esc="equipo.get('create_date', 'N/A')">N/A</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                                 style="width: 50px; height: 50px;">
+                                                <i class="fas fa-sync-alt text-success"></i>
+                                            </div>
+                                            <h6 class="text-muted mb-1">Última Actualización</h6>
+                                            <p class="mb-0 fw-semibold" t-esc="equipo.get('write_date', equipo.get('create_date', 'N/A'))">N/A</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                                 style="width: 50px; height: 50px;">
+                                                <i class="fas fa-hashtag text-warning"></i>
+                                            </div>
+                                            <h6 class="text-muted mb-1">ID del Registro</h6>
+                                            <p class="mb-0 fw-semibold font-monospace" t-esc="equipo.get('id', 'N/A')">N/A</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                                 style="width: 50px; height: 50px;">
+                                                <i class="fas fa-envelope text-info"></i>
+                                            </div>
+                                            <h6 class="text-muted mb-1">Origen</h6>
+                                            <p class="mb-0 fw-semibold">Email Automático</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historial resumido -->
+                <div class="row mb-4" t-if="historial">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-history me-2"></i>Historial Resumido
+                                </h5>
+                                <a t-att-href="'/dashboard/contador/historial/' + str(equipo.get('id', ''))" class="btn btn-outline-light btn-sm">
+                                    <i class="fas fa-external-link-alt me-1"></i>Ver completo
+                                </a>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th><i class="fas fa-calendar me-1"></i>Fecha</th>
+                                                <th class="text-center"><i class="fas fa-circle me-1"></i>B/N</th>
+                                                <th class="text-center"><i class="fas fa-palette me-1"></i>Color</th>
+                                                <th class="text-center"><i class="fas fa-plus me-1"></i>Total</th>
+                                                <th class="text-center"><i class="fas fa-info-circle me-1"></i>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="historial[:5]" t-as="registro">
+                                                <tr>
+                                                    <td>
+                                                        <div class="fw-semibold" t-esc="registro.get('fecha', 'N/A')">Fecha</div>
+                                                        <small class="text-muted" t-esc="registro.get('remitente', 'N/A')">Remitente</small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-secondary" t-esc="'{:,}'.format(registro.get('contador_bn', 0))">0</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-info" t-esc="'{:,}'.format(registro.get('contador_color', 0))">0</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-primary" t-esc="'{:,}'.format(registro.get('contador_total', 0))">0</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span t-att-class="'badge ' + ('bg-success' if registro.get('estado') == 'procesado' else 'bg-warning' if registro.get('estado') == 'pendiente' else 'bg-danger')" 
+                                                              t-esc="registro.get('estado', 'N/A')">Estado</span>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <t t-if="len(historial) > 5">
+                                    <div class="text-center mt-3">
+                                        <a t-att-href="'/dashboard/contador/historial/' + str(equipo.get('id', ''))" class="btn btn-outline-primary">
+                                            <i class="fas fa-history me-2"></i>Ver los <t t-esc="len(historial) - 5"/> registros restantes
+                                        </a>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones rápidas -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-tools me-2"></i>Acciones Rápidas
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <button class="btn btn-outline-primary w-100" onclick="copyAllInfo()">
+                                            <i class="fas fa-copy d-block mb-2 fs-4"></i>
+                                            <span>Copiar toda la información</span>
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button class="btn btn-outline-success w-100" onclick="window.print()">
+                                            <i class="fas fa-print d-block mb-2 fs-4"></i>
+                                            <span>Imprimir detalle</span>
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <a t-att-href="'/dashboard/contador/historial/' + str(equipo.get('id', ''))" class="btn btn-outline-info w-100">
+                                            <i class="fas fa-history d-block mb-2 fs-4"></i>
+                                            <span>Ver historial completo</span>
+                                        </a>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <a href="/dashboard/contador" class="btn btn-outline-secondary w-100">
+                                            <i class="fas fa-arrow-left d-block mb-2 fs-4"></i>
+                                            <span>Volver al dashboard</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Scripts -->
+            <t t-set="scripts">
+                <!-- Bootstrap 5.3 JS -->
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+                
+                <!-- JavaScript básico -->
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Función para copiar al portapapeles
+                        window.copyToClipboard = function(element) {
+                            const text = element.getAttribute('data-text');
+                            if (navigator.clipboard &amp;&amp; text) {
+                                navigator.clipboard.writeText(text).then(() =&gt; {
+                                    showAlert('Copiado: ' + text, 'success');
+                                });
+                            }
+                        };
+
+                        // Función para copiar toda la información
+                        window.copyAllInfo = function() {
+                            const cliente = '<t t-esc="equipo.get('cliente_detectado', '')"/>';
+                            const serie = '<t t-esc="equipo.get('serie_detectada', '')"/>';
+                            const tipo = '<t t-esc="equipo.get('tipo_equipo_detectado', '')"/>';
+                            const bn = '<t t-esc="equipo.get('contador_bn_detectado', 0)"/>';
+                            const color = '<t t-esc="equipo.get('contador_color_detectado', 0)"/>';
+                            const total = '<t t-esc="(equipo.get('contador_bn_detectado', 0) or 0) + (equipo.get('contador_color_detectado', 0) or 0)"/>';
+                            
+                            const info = `DETALLE DEL EQUIPO
+Cliente: ${cliente}
+Serie: ${serie}
+Tipo: ${tipo}
+Contador B/N: ${bn}
+Contador Color: ${color}
+Total: ${total}`;
+                            
+                            if (navigator.clipboard) {
+                                navigator.clipboard.writeText(info).then(() =&gt; {
+                                    showAlert('Información completa copiada al portapapeles', 'success');
+                                });
+                            }
+                        };
+
+                        // Función para mostrar alertas
+                        window.showAlert = function(message, type = 'info') {
+                            const alertDiv = document.createElement('div');
+                            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+                            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                            alertDiv.innerHTML = `
+                                ${message}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            `;
+                            
+                            document.body.appendChild(alertDiv);
+                            
+                            setTimeout(() =&gt; {
+                                if (alertDiv.parentNode) {
+                                    alertDiv.remove();
+                                }
+                            }, 3000);
+                        };
+
+                        // Placeholder para exportaciones
+                        window.exportToPDF = function() {
+                            showAlert('Función de exportación PDF en desarrollo', 'info');
+                        };
+
+                        window.exportToExcel = function() {
+                            showAlert('Función de exportación Excel en desarrollo', 'info');
+                        };
+                    });
+                </script>
+            </t>
+        </t>
+    </template>
+
+    <template id="contador_historial_template" name="Historial de Equipo">
+        <t t-call="web.layout">
+            <t t-set="title" t-value="'Historial - ' + equipo.get('serie', 'Sin serie')"/>
+            
+            <!-- Solo Bootstrap y Font Awesome -->
+            <t t-set="head">
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            </t>
+            
+            <!-- Container principal -->
+            <div class="container-fluid bg-light min-vh-100 py-4">
+                
+                <!-- Breadcrumb y navegación -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb bg-white rounded shadow-sm px-3 py-2 mb-3">
+                                <li class="breadcrumb-item">
+                                    <a href="/dashboard/contador" class="text-decoration-none">
+                                        <i class="fas fa-chart-line me-1"></i>Dashboard
+                                    </a>
+                                </li>
+                                <li class="breadcrumb-item">
+                                    <a t-att-href="'/dashboard/contador/detalle/' + str(equipo.get('id', ''))" class="text-decoration-none">
+                                        <i class="fas fa-info-circle me-1"></i>Detalle
+                                    </a>
+                                </li>
+                                <li class="breadcrumb-item active">
+                                    <i class="fas fa-history me-1"></i>Historial
+                                </li>
+                            </ol>
+                        </nav>
+
+                        <!-- Botones de navegación -->
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="/dashboard/contador" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Dashboard
+                                </a>
+                                <a t-att-href="'/dashboard/contador/detalle/' + str(equipo.get('id', ''))" class="btn btn-outline-primary">
+                                    <i class="fas fa-info-circle me-2"></i>Ver Detalle
+                                </a>
+                                <button class="btn btn-outline-success" onclick="window.print()">
+                                    <i class="fas fa-print me-2"></i>Imprimir
+                                </button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="btn btn-outline-info" onclick="toggleChart()">
+                                    <i class="fas fa-chart-line me-2"></i>Gráfico
+                                </button>
+                                <div class="btn-group">
+                                    <button class="btn btn-outline-warning dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-download me-2"></i>Exportar
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#" onclick="exportToCSV()">
+                                            <i class="fas fa-file-csv me-2"></i>Exportar CSV
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="exportToExcel()">
+                                            <i class="fas fa-file-excel me-2"></i>Exportar Excel
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="exportToPDF()">
+                                            <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Header del equipo -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-4" 
+                                                 style="width: 70px; height: 70px;">
+                                                <i class="fas fa-history text-warning fs-1"></i>
+                                            </div>
+                                            <div>
+                                                <h1 class="h3 text-warning mb-1">Historial de <span t-esc="equipo.get('serie', 'Sin serie')">Serie</span></h1>
+                                                <h6 class="text-muted mb-1">Cliente: <span t-esc="equipo.get('cliente', 'Sin cliente')">Cliente</span></h6>
+                                                <span t-att-class="'badge ' + ('bg-info' if equipo.get('tipo') and 'color' in equipo.get('tipo', '').lower() else 'bg-secondary')">
+                                                    <i t-att-class="'fas me-1 ' + ('fa-palette' if equipo.get('tipo') and 'color' in equipo.get('tipo', '').lower() else 'fa-circle')"></i>
+                                                    <t t-esc="equipo.get('tipo', 'N/A')"/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div class="d-flex flex-column align-items-end">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="fas fa-list-ol text-primary me-2"></i>
+                                                <span class="badge bg-primary fs-6" t-esc="len(historial) if historial else 0">0</span>
+                                                <span class="ms-1 text-muted">registros</span>
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                Actualizado ahora
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen estadístico -->
+                <div class="row mb-4">
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="card border-0 shadow-sm text-center">
+                            <div class="card-body">
+                                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fas fa-list-ol text-primary"></i>
+                                </div>
+                                <h4 class="text-primary mb-1" t-esc="len(historial) if historial else 0">0</h4>
+                                <h6 class="text-muted mb-0">Total Registros</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="card border-0 shadow-sm text-center">
+                            <div class="card-body">
+                                <div class="bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fas fa-circle text-secondary"></i>
+                                </div>
+                                <h4 class="text-secondary mb-1" id="totalBN">0</h4>
+                                <h6 class="text-muted mb-0">Último B/N</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="card border-0 shadow-sm text-center">
+                            <div class="card-body">
+                                <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fas fa-palette text-info"></i>
+                                </div>
+                                <h4 class="text-info mb-1" id="totalColor">0</h4>
+                                <h6 class="text-muted mb-0">Último Color</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="card border-0 shadow-sm text-center">
+                            <div class="card-body">
+                                <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fas fa-plus text-success"></i>
+                                </div>
+                                <h4 class="text-success mb-1" id="totalGeneral">0</h4>
+                                <h6 class="text-muted mb-0">Total Último</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico (inicialmente oculto) -->
+                <div class="row mb-4" id="chartSection" style="display: none;">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-chart-line me-2"></i>Evolución de Contadores
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="historyChart" style="max-height: 400px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros y búsqueda -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button class="btn btn-outline-primary btn-sm active" onclick="filterByState('all')" id="filterAll">
+                                                <i class="fas fa-list me-1"></i>Todos
+                                            </button>
+                                            <button class="btn btn-outline-success btn-sm" onclick="filterByState('procesado')" id="filterProcesado">
+                                                <i class="fas fa-check-circle me-1"></i>Procesados
+                                            </button>
+                                            <button class="btn btn-outline-warning btn-sm" onclick="filterByState('pendiente')" id="filterPendiente">
+                                                <i class="fas fa-clock me-1"></i>Pendientes
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" onclick="filterByState('error')" id="filterError">
+                                                <i class="fas fa-exclamation-circle me-1"></i>Errores
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="searchInput" placeholder="Buscar por fecha, remitente o estado...">
+                                            <button class="btn btn-outline-secondary" onclick="clearSearch()">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de historial -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <h5 class="card-title mb-0">
+                                            <i class="fas fa-table me-2 text-primary"></i>
+                                            Historial Completo
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <small class="text-muted" id="recordCount">
+                                            Mostrando <span id="visibleCount" t-esc="len(historial) if historial else 0">0</span> 
+                                            de <span id="totalCount" t-esc="len(historial) if historial else 0">0</span> registros
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-0">
+                                <t t-if="not historial">
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-history text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+                                        <h4 class="text-muted mt-3">No hay historial disponible</h4>
+                                        <p class="text-muted">Este equipo no tiene registros históricos</p>
+                                        <a t-att-href="'/dashboard/contador/detalle/' + str(equipo.get('id', ''))" class="btn btn-primary">
+                                            <i class="fas fa-info-circle me-2"></i>Ver detalle del equipo
+                                        </a>
+                                    </div>
+                                </t>
+
+                                <t t-if="historial">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0" id="historyTable">
+                                            <thead class="table-dark sticky-top">
+                                                <tr>
+                                                    <th class="px-3 py-3">
+                                                        <div class="d-flex align-items-center">
+                                                            <i class="fas fa-calendar me-2"></i>Fecha y Hora
+                                                            <button class="btn btn-sm ms-auto text-white-50" onclick="sortTable('fecha')">
+                                                                <i class="fas fa-sort"></i>
+                                                            </button>
+                                                        </div>
+                                                    </th>
+                                                    <th class="px-3 py-3 text-center">
+                                                        <div class="d-flex align-items-center justify-content-center">
+                                                            <i class="fas fa-circle me-2"></i>B/N
+                                                            <button class="btn btn-sm ms-auto text-white-50" onclick="sortTable('bn')">
+                                                                <i class="fas fa-sort"></i>
+                                                            </button>
+                                                        </div>
+                                                    </th>
+                                                    <th class="px-3 py-3 text-center">
+                                                        <div class="d-flex align-items-center justify-content-center">
+                                                            <i class="fas fa-palette me-2"></i>Color
+                                                            <button class="btn btn-sm ms-auto text-white-50" onclick="sortTable('color')">
+                                                                <i class="fas fa-sort"></i>
+                                                            </button>
+                                                        </div>
+                                                    </th>
+                                                    <th class="px-3 py-3 text-center">
+                                                        <div class="d-flex align-items-center justify-content-center">
+                                                            <i class="fas fa-plus me-2"></i>Total
+                                                            <button class="btn btn-sm ms-auto text-white-50" onclick="sortTable('total')">
+                                                                <i class="fas fa-sort"></i>
+                                                            </button>
+                                                        </div>
+                                                    </th>
+                                                    <th class="px-3 py-3 text-center">
+                                                        <i class="fas fa-info-circle me-2"></i>Estado
+                                                    </th>
+                                                    <th class="px-3 py-3">
+                                                        <i class="fas fa-envelope me-2"></i>Remitente
+                                                    </th>
+                                                    <th class="px-3 py-3 text-center">
+                                                        <i class="fas fa-cogs me-2"></i>Acciones
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="historial" t-as="registro">
+                                                    <tr class="history-row" 
+                                                        t-att-data-estado="registro.get('estado', '')"
+                                                        t-att-data-fecha="registro.get('fecha', '')"
+                                                        t-att-data-remitente="registro.get('remitente', '')"
+                                                        t-att-data-bn="registro.get('contador_bn', 0)"
+                                                        t-att-data-color="registro.get('contador_color', 0)"
+                                                        t-att-data-total="registro.get('contador_total', 0)">
+                                                        
+                                                        <!-- Fecha -->
+                                                        <td class="px-3 py-3">
+                                                            <div>
+                                                                <div class="fw-semibold text-primary" t-esc="registro.get('fecha', 'N/A')">Fecha</div>
+                                                                <small class="text-muted">
+                                                                    <i class="fas fa-clock me-1"></i>
+                                                                    <span class="relative-time" t-att-data-date="registro.get('fecha', '')">Hace un momento</span>
+                                                                </small>
+                                                            </div>
+                                                        </td>
+
+                                                        <!-- Contador B/N -->
+                                                        <td class="px-3 py-3 text-center">
+                                                            <div class="d-flex flex-column align-items-center">
+                                                                <span class="badge bg-secondary fs-6 mb-1" t-esc="'{:,}'.format(registro.get('contador_bn', 0))">0</span>
+                                                                <div class="progress" style="width: 50px; height: 4px;">
+                                                                    <div class="progress-bar bg-secondary" style="width: 100%"></div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        <!-- Contador Color -->
+                                                        <td class="px-3 py-3 text-center">
+                                                            <div class="d-flex flex-column align-items-center">
+                                                                <span class="badge bg-info fs-6 mb-1" t-esc="'{:,}'.format(registro.get('contador_color', 0))">0</span>
+                                                                <div class="progress" style="width: 50px; height: 4px;">
+                                                                    <div class="progress-bar bg-info" style="width: 100%"></div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        <!-- Total -->
+                                                        <td class="px-3 py-3 text-center">
+                                                            <span class="badge bg-primary fs-6" t-esc="'{:,}'.format(registro.get('contador_total', 0))">0</span>
+                                                        </td>
+
+                                                        <!-- Estado -->
+                                                        <td class="px-3 py-3 text-center">
+                                                            <span t-att-class="'badge fs-6 ' + ('bg-success' if registro.get('estado') == 'procesado' else 'bg-warning' if registro.get('estado') == 'pendiente' else 'bg-danger' if registro.get('estado') == 'error' else 'bg-secondary')">
+                                                                <i t-att-class="'fas me-1 ' + ('fa-check-circle' if registro.get('estado') == 'procesado' else 'fa-clock' if registro.get('estado') == 'pendiente' else 'fa-exclamation-circle' if registro.get('estado') == 'error' else 'fa-question-circle')"></i>
+                                                                <t t-esc="registro.get('estado', 'N/A')"/>
+                                                            </span>
+                                                        </td>
+
+                                                        <!-- Remitente -->
+                                                        <td class="px-3 py-3">
+                                                            <div>
+                                                                <div class="fw-semibold small" t-esc="registro.get('remitente', 'N/A')">Remitente</div>
+                                                                <small class="text-muted">
+                                                                    <i class="fas fa-envelope me-1"></i>Email automático
+                                                                </small>
+                                                            </div>
+                                                        </td>
+
+                                                        <!-- Acciones -->
+                                                        <td class="px-3 py-3 text-center">
+                                                            <div class="btn-group btn-group-sm">
+                                                                <button class="btn btn-outline-primary btn-sm" 
+                                                                        onclick="copyRowData(this)" 
+                                                                        title="Copiar datos"
+                                                                        t-att-data-info="f'{registro.get(\"fecha\", \"\")} - B/N: {registro.get(\"contador_bn\", 0)}, Color: {registro.get(\"contador_color\", 0)}, Total: {registro.get(\"contador_total\", 0)}'">
+                                                                    <i class="fas fa-copy"></i>
+                                                                </button>
+                                                                <button class="btn btn-outline-info btn-sm dropdown-toggle" 
+                                                                        data-bs-toggle="dropdown"
+                                                                        title="Más opciones">
+                                                                    <i class="fas fa-ellipsis-v"></i>
+                                                                </button>
+                                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                                    <li><a class="dropdown-item" href="#" onclick="highlightRow(this)">
+                                                                        <i class="fas fa-highlight me-2"></i>Resaltar
+                                                                    </a></li>
+                                                                    <li><a class="dropdown-item" href="#" onclick="compareRow(this)">
+                                                                        <i class="fas fa-balance-scale me-2"></i>Comparar
+                                                                    </a></li>
+                                                                </ul>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </t>
+                            </div>
+
+                            <!-- Footer con estadísticas -->
+                            <div class="card-footer bg-light" t-if="historial">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <strong>Primer registro:</strong> 
+                                            <span t-esc="historial[-1].get('fecha', 'N/A') if historial else 'N/A'">N/A</span>
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <small class="text-muted">
+                                            <strong>Último registro:</strong> 
+                                            <span t-esc="historial[0].get('fecha', 'N/A') if historial else 'N/A'">N/A</span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Scripts -->
+            <t t-set="scripts">
+                <!-- Bootstrap 5.3 JS -->
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+                
+                <!-- JavaScript para historial -->
+                <script>
+                    let historyChart = null;
+                    let currentFilter = 'all';
+                    
+                    document.addEventListener('DOMContentLoaded', function() {
+                        updateSummaryStats();
+                        setupSearch();
+                        updateRelativeTimes();
+                        
+                        // Actualizar tiempos relativos cada minuto
+                        setInterval(updateRelativeTimes, 60000);
+                    });
+
+                    // Actualizar estadísticas de resumen
+                    function updateSummaryStats() {
+                        const rows = document.querySelectorAll('.history-row');
+                        if (rows.length &gt; 0) {
+                            const lastRow = rows[0]; // Primera fila (más reciente)
+                            const lastBN = lastRow.dataset.bn || 0;
+                            const lastColor = lastRow.dataset.color || 0;
+                            const lastTotal = lastRow.dataset.total || 0;
+                            
+                            document.getElementById('totalBN').textContent = parseInt(lastBN).toLocaleString();
+                            document.getElementById('totalColor').textContent = parseInt(lastColor).toLocaleString();
+                            document.getElementById('totalGeneral').textContent = parseInt(lastTotal).toLocaleString();
+                        }
+                    }
+
+                    // Filtrar por estado
+                    function filterByState(state) {
+                        currentFilter = state;
+                        const rows = document.querySelectorAll('.history-row');
+                        let visibleCount = 0;
+                        
+                        // Actualizar botones
+                        document.querySelectorAll('[onclick^="filterByState"]').forEach(btn => {
+                            btn.classList.remove('active');
+                        });
+                        document.getElementById('filter' + state.charAt(0).toUpperCase() + state.slice(1)).classList.add('active');
+                        
+                        rows.forEach(row =&gt; {
+                            if (state === 'all' || row.dataset.estado === state) {
+                                row.style.display = '';
+                                visibleCount++;
+                            } else {
+                                row.style.display = 'none';
+                            }
+                        });
+                        
+                        updateVisibleCount(visibleCount);
+                    }
+
+                    // Configurar búsqueda
+                    function setupSearch() {
+                        const searchInput = document.getElementById('searchInput');
+                        if (searchInput) {
+                            searchInput.addEventListener('input', function() {
+                                const searchTerm = this.value.toLowerCase();
+                                const rows = document.querySelectorAll('.history-row');
+                                let visibleCount = 0;
+                                
+                                rows.forEach(row =&gt; {
+                                    const fecha = row.dataset.fecha.toLowerCase();
+                                    const remitente = row.dataset.remitente.toLowerCase();
+                                    const estado = row.dataset.estado.toLowerCase();
+                                    
+                                    const matches = fecha.includes(searchTerm) || 
+                                                  remitente.includes(searchTerm) || 
+                                                  estado.includes(searchTerm);
+                                    
+                                    const stateMatches = currentFilter === 'all' || row.dataset.estado === currentFilter;
+                                    
+                                    if (matches && stateMatches) {
+                                        row.style.display = '';
+                                        visibleCount++;
+                                    } else {
+                                        row.style.display = 'none';
+                                    }
+                                });
+                                
+                                updateVisibleCount(visibleCount);
+                            });
+                        }
+                    }
+
+                    // Limpiar búsqueda
+                    function clearSearch() {
+                        document.getElementById('searchInput').value = '';
+                        filterByState(currentFilter);
+                    }
+
+                    // Actualizar contador visible
+                    function updateVisibleCount(count) {
+                        document.getElementById('visibleCount').textContent = count;
+                    }
+
+                    // Ordenar tabla
+                    function sortTable(column) {
+                        const table = document.getElementById('historyTable');
+                        const tbody = table.querySelector('tbody');
+                        const rows = Array.from(tbody.querySelectorAll('.history-row'));
+                        
+                        rows.sort((a, b) =&gt; {
+                            let aVal, bVal;
+                            
+                            switch(column) {
+                                case 'fecha':
+                                    aVal = new Date(a.dataset.fecha);
+                                    bVal = new Date(b.dataset.fecha);
+                                    break;
+                                case 'bn':
+                                    aVal = parseInt(a.dataset.bn);
+                                    bVal = parseInt(b.dataset.bn);
+                                    break;
+                                case 'color':
+                                    aVal = parseInt(a.dataset.color);
+                                    bVal = parseInt(b.dataset.color);
+                                    break;
+                                case 'total':
+                                    aVal = parseInt(a.dataset.total);
+                                    bVal = parseInt(b.dataset.total);
+                                    break;
+                                default:
+                                    return 0;
+                            }
+                            
+                            return bVal - aVal; // Orden descendente
+                        });
+                        
+                        rows.forEach(row =&gt; tbody.appendChild(row));
+                    }
+
+                    // Togglear gráfico
+                    function toggleChart() {
+                        const chartSection = document.getElementById('chartSection');
+                        const isVisible = chartSection.style.display !== 'none';
+                        
+                        if (isVisible) {
+                            chartSection.style.display = 'none';
+                        } else {
+                            chartSection.style.display = 'block';
+                            if (!historyChart) {
+                                createChart();
+                            }
+                        }
+                    }
+
+                    // Crear gráfico
+                    function createChart() {
+                        const ctx = document.getElementById('historyChart').getContext('2d');
+                        const rows = document.querySelectorAll('.history-row');
+                        
+                        const labels = [];
+                        const bnData = [];
+                        const colorData = [];
+                        const totalData = [];
+                        
+                        // Tomar los últimos 10 registros para el gráfico
+                        Array.from(rows).slice(0, 10).reverse().forEach(row => {
+                            labels.push(row.dataset.fecha.split(' ')[0]); // Solo fecha
+                            bnData.push(parseInt(row.dataset.bn));
+                            colorData.push(parseInt(row.dataset.color));
+                            totalData.push(parseInt(row.dataset.total));
+                        });
+                        
+                        historyChart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'B/N',
+                                    data: bnData,
+                                    borderColor: '#6c757d',
+                                    backgroundColor: 'rgba(108, 117, 125, 0.1)',
+                                    tension: 0.1
+                                }, {
+                                    label: 'Color',
+                                    data: colorData,
+                                    borderColor: '#0dcaf0',
+                                    backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                                    tension: 0.1
+                                }, {
+                                    label: 'Total',
+                                    data: totalData,
+                                    borderColor: '#0d6efd',
+                                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                                    tension: 0.1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: false
+                                    }
+                                },
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: 'Evolución de Contadores (Últimos 10 registros)'
+                                    },
+                                    legend: {
+                                        position: 'top'
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    // Actualizar tiempos relativos
+                    function updateRelativeTimes() {
+                        document.querySelectorAll('.relative-time').forEach(element =&gt; {
+                            const dateStr = element.dataset.date;
+                            if (dateStr) {
+                                element.textContent = getRelativeTime(dateStr);
+                            }
+                        });
+                    }
+
+                    // Calcular tiempo relativo
+                    function getRelativeTime(dateString) {
+                        try {
+                            const date = new Date(dateString.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1'));
+                            const now = new Date();
+                            const diffMs = now - date;
+                            const diffMins = Math.floor(diffMs / 60000);
+                            const diffHours = Math.floor(diffMins / 60);
+                            const diffDays = Math.floor(diffHours / 24);
+
+                            if (diffMins &lt; 1) return 'Ahora mismo';
+                            if (diffMins &lt; 60) return `Hace ${diffMins} min`;
+                            if (diffHours &lt; 24) return `Hace ${diffHours}h`;
+                            if (diffDays &lt; 7) return `Hace ${diffDays}d`;
+                            return `Hace ${Math.floor(diffDays / 7)}sem`;
+                        } catch (e) {
+                            return 'Hace un momento';
+                        }
+                    }
+
+                    // Copiar datos de fila
+                    function copyRowData(button) {
+                        const info = button.dataset.info;
+                        if (navigator.clipboard && info) {
+                            navigator.clipboard.writeText(info).then(() =&gt; {
+                                showAlert('Datos copiados: ' + info, 'success');
+                            });
+                        }
+                    }
+
+                    // Resaltar fila
+                    function highlightRow(element) {
+                        const row = element.closest('tr');
+                        row.classList.toggle('table-warning');
+                        showAlert('Fila resaltada', 'info');
+                    }
+
+                    // Comparar fila (placeholder)
+                    function compareRow(element) {
+                        showAlert('Función de comparación en desarrollo', 'info');
+                    }
+
+                    // Exportaciones
+                    function exportToCSV() {
+                        const rows = document.querySelectorAll('.history-row:not([style*="display: none"])');
+                        let csv = 'Fecha,B/N,Color,Total,Estado,Remitente\\n';
+                        
+                        rows.forEach(row =&gt; {
+                            const fecha = row.dataset.fecha;
+                            const bn = row.dataset.bn;
+                            const color = row.dataset.color;
+                            const total = row.dataset.total;
+                            const estado = row.dataset.estado;
+                            const remitente = row.dataset.remitente;
+                            
+                            csv += `"${fecha}","${bn}","${color}","${total}","${estado}","${remitente}"\\n`;
+                        });
+                        
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'historial_equipos.csv';
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        
+                        showAlert('Archivo CSV descargado', 'success');
+                    }
+
+                    function exportToExcel() {
+                        showAlert('Función de exportación Excel en desarrollo', 'info');
+                    }
+
+                    function exportToPDF() {
+                        showAlert('Función de exportación PDF en desarrollo', 'info');
+                    }
+
+                    // Función para mostrar alertas
+                    function showAlert(message, type = 'info') {
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+                        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                        alertDiv.innerHTML = `
+                            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                            ${message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        
+                        document.body.appendChild(alertDiv);
+                        
+                        setTimeout(() =&gt; {
+                            if (alertDiv.parentNode) {
+                                alertDiv.remove();
+                            }
+                        }, 3000);
+                    }
+
+                    // Función adicional para análisis de datos
+                    function analyzeGrowth() {
+                        const rows = document.querySelectorAll('.history-row');
+                        if (rows.length &lt; 2) {
+                            showAlert('Se necesitan al menos 2 registros para el análisis', 'warning');
+                            return;
+                        }
+
+                        const first = rows[rows.length - 1]; // Más antiguo
+                        const last = rows[0]; // Más reciente
+
+                        const firstTotal = parseInt(first.dataset.total);
+                        const lastTotal = parseInt(last.dataset.total);
+                        const growth = lastTotal - firstTotal;
+
+                        const message = growth &gt; 0 ? 
+                            `Crecimiento: +${growth.toLocaleString()} impresiones` : 
+                            `Sin crecimiento detectado`;
+
+                        showAlert(message, growth &gt; 0 ? 'success' : 'info');
+                    }
+
+                    // Función para detectar patrones
+                    function detectPatterns() {
+                        const rows = document.querySelectorAll('.history-row');
+                        const bnValues = Array.from(rows).map(row =&gt; parseInt(row.dataset.bn));
+                        const colorValues = Array.from(rows).map(row =&gt; parseInt(row.dataset.color));
+
+                        const bnTrend = bnValues.length &gt; 1 && bnValues[0] &gt; bnValues[bnValues.length - 1];
+                        const colorTrend = colorValues.length &gt; 1 && colorValues[0] &gt; colorValues[colorValues.length - 1];
+
+                        let message = 'Patrones detectados: ';
+                        if (bnTrend) message += 'Incremento en B/N ';
+                        if (colorTrend) message += 'Incremento en Color ';
+                        if (!bnTrend && !colorTrend) message += 'Sin patrones claros';
+
+                        showAlert(message, 'info');
+                    }
+
+                    // Agregar botones de análisis al cargar
+                    document.addEventListener('DOMContentLoaded', function() {
+                        setTimeout(() =&gt; {
+                            const cardFooter = document.querySelector('.card-footer');
+                            if (cardFooter) {
+                                const analysisButtons = document.createElement('div');
+                                analysisButtons.className = 'mt-3 text-center';
+                                analysisButtons.innerHTML = `
+                                    <button class="btn btn-outline-info btn-sm me-2" onclick="analyzeGrowth()">
+                                        <i class="fas fa-chart-line me-1"></i>Analizar Crecimiento
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm" onclick="detectPatterns()">
+                                        <i class="fas fa-search me-1"></i>Detectar Patrones
+                                    </button>
+                                `;
+                                cardFooter.appendChild(analysisButtons);
+                            }
+                        }, 100);
+                    });
+                </script>
+            </t>
+        </t>
+    </template>
 </odoo>
