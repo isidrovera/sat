@@ -422,6 +422,9 @@
             <filter name="filter_entregada" 
                     string="Entregada" 
                     domain="[('estado_ventas_id', '=', 'entregada')]"/>
+            <filter name="filter_stock" 
+                    string="Stock" 
+                    domain="[('estado_ventas_id', '!=', 'entregada')]"/>
             
             
 
@@ -649,7 +652,7 @@
       <field name="res_model">sat.sat</field>
       <field name="view_mode">list,kanban,form,pivot</field>
       <field name="context">{
-            'search_default_filter_entregada': 1
+            'search_default_filter_stock': 1
             
         }</field>
       <field name="help" type="html">
