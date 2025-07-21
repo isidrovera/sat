@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Template principal del Dashboard Moderno -->
-    <?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <!-- Template Dashboard Solo Bootstrap -->
+     <!-- Template Dashboard Solo Bootstrap -->
     <template id="contador_dashboard_template" name="Dashboard de Contadores">
         <t t-call="web.layout">
             <t t-set="title">Dashboard de Contadores</t>
