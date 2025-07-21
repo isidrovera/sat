@@ -564,56 +564,56 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         # Deshabilitar las reglas de acceso temporalmente para evitar restricciones
         self = self.sudo()
 
-        # Llamar manualmente a la función de validación para cada registro
         for record in self:
+            # 1) Cargar los contómetros automático solo si las fechas coinciden
+            unidad = record.product_alquiler
+            if unidad.fecha_ultima_actualizacion and record.agenda:
+                if unidad.fecha_ultima_actualizacion.date() == record.agenda.date():
+                    record.contometrok_id = str(unidad.contador_bn or 0)
+                    record.contometroc_id = str(unidad.contador_color or 0)
+                    record.contometros_id = str(unidad.contador_scan or 0)
+
+            # 2) Validar los valores de los contómetros
             record._check_contometro_values()
 
-        # Realizar las acciones necesarias antes de cambiar el estado
-        if self.line_ids:
-            self.create_sale_order()
+            # 3) Crear pedido de venta si hay líneas de productos
+            if record.line_ids:
+                record.create_sale_order()
 
-        # Enviar el correo con la plantilla de finalización
-        template4 = self.env.ref('sat.email_template_ticket_cliente_finalizacion')
-        template4.send_mail(self.id, force_send=True)
+            # 4) Enviar el correo con la plantilla de finalización al cliente
+            template4 = record.env.ref('sat.email_template_ticket_cliente_finalizacion')
+            template4.send_mail(record.id, force_send=True)
+            if record.retorno_id == 'no':
+                record.env.ref('sat.mail_template_retorno').send_mail(record.id, force_send=True)
 
-        # Verificar el valor de retorno_id
-        if self.retorno_id == 'no':
-            template5 = self.env.ref('sat.mail_template_retorno')
-            template5.send_mail(self.id, force_send=True)
+            # 5) Actualizar el estado del equipo de alquiler según el tipo de servicio
+            if record.tipo_servicio_id == 'alquiler' and unidad.estado_alquiler_id == 'sin_revisar':
+                unidad.write({'estado_alquiler_id': 'revisada'})
+            elif record.tipo_servicio_id == 'cambio_repuestos' and unidad.estado_alquiler_id == 'revisada':
+                anterior = record.search([
+                    ('product_alquiler', '=', unidad.id),
+                    ('tipo_servicio_id', '=', 'alquiler')
+                ], order="create_date desc", limit=1)
+                if anterior:
+                    unidad.write({'estado_alquiler_id': 'lista'})
+            elif record.tipo_servicio_id == 'retiro':
+                unidad.write({
+                    'estado_alquiler_id': 'sin_revisar',
+                    'direccion': 'AV Angelica Gamarra 2156',
+                    'contacto_id': 'Isidro',
+                    'celular': '975399303',
+                    'correo_': 'soporte@andescopiers.com.pe',
+                    'cliente_id': 1,
+                    'fecha_inicio': False,
+                })
 
-        # Condición 1: Cambiar estado en `alquiler` a 'revisada' si es 'preparar para alquiler' y está en 'sin revisar'
-        if self.tipo_servicio_id == 'alquiler' and self.product_alquiler.estado_alquiler_id == 'sin_revisar':
-            self.product_alquiler.write({'estado_alquiler_id': 'revisada'})
-
-        # Condición 2: Cambiar estado en `alquiler` a 'lista' si es 'cambio de repuestos' y el ticket anterior era 'preparar para alquiler'
-        elif self.tipo_servicio_id == 'cambio_repuestos' and self.product_alquiler.estado_alquiler_id == 'revisada':
-            ticket_anterior = self.search([
-                ('product_alquiler', '=', self.product_alquiler.id),
-                ('tipo_servicio_id', '=', 'alquiler')
-            ], order="create_date desc", limit=1)
-            
-            if ticket_anterior:
-                self.product_alquiler.write({'estado_alquiler_id': 'lista'})
-
-        # Condición 3: Si es 'retiro de máquina', actualizar los campos en `alquiler`
-        elif self.tipo_servicio_id == 'retiro':
-            self.product_alquiler.write({
-                'estado_alquiler_id': 'sin_revisar',
-                'direccion': 'AV Angelica Gamarra 2156',
-                'contacto_id': 'Isidro',
-                'celular': '975399303',
-                'correo_': 'soporte@andescopiers.com.pe',
-                'cliente_id': 1,
-                'fecha_inicio': ''
+            # 6) Marcar el ticket como 'finalizado' y restablecer la notificación pendiente
+            record.write({
+                'estado': 'finalizado',
+                'last_pending_notification': False,
             })
 
-        
-        # Cambiar el estado del ticket a 'finalizado' y restablecer la notificación pendiente
-        self.write({
-            'estado': 'finalizado',
-            'last_pending_notification': False  # Restablecer el campo de notificación
-        })
-        # Redirigir a la vista de lista de tickets después de finalizar
+        # 7) Volver a la vista de lista de tickets
         return {
             'type': 'ir.actions.act_window',
             'name': 'Tickets',
@@ -623,8 +623,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'target': 'main',
         }
 
-
-        
+            
 
     def create_ticket_wizard(self):
         return {

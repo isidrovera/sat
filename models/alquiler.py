@@ -2613,9 +2613,7 @@ class UnidadAlquiler(models.Model):
         }
 
 
-    #Esto muestra el boton de cantidad y acceso a contadores
-
-     # Número de registros de contador asociados
+    
     contadores_count = fields.Integer(
         string='Contadores',
         compute='_compute_contadores_count',
