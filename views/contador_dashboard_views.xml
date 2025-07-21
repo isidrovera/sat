@@ -28,7 +28,7 @@
                 
                 <!-- Contenido principal del dashboard -->
                 <div class="o_dashboard_view">
-                    <!-- Header con título y botón refresh -->
+                    <!-- Header con título -->
                     <div class="dashboard-header text-center py-4 mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                         <div class="container">
                             <h1 class="display-4 fw-bold mb-2">
@@ -36,12 +36,6 @@
                                 Dashboard de Contadores
                             </h1>
                             <p class="lead mb-3">Monitoreo en tiempo real de equipos de impresión</p>
-                            <button name="action_refresh_dashboard_data" 
-                                    type="object" 
-                                    class="btn btn-light btn-lg rounded-pill px-4">
-                                <i class="fa fa-sync-alt me-2"></i>
-                                Actualizar Dashboard
-                            </button>
                         </div>
                     </div>
 
@@ -135,30 +129,7 @@
                                         <div class="row align-items-center">
                                             <div class="col-md-8">
                                                 <div class="d-flex flex-wrap gap-2">
-                                                    <button name="action_refresh_dashboard_data" 
-                                                            type="object" 
-                                                            class="btn btn-outline-primary btn-sm filter-btn active" 
-                                                            data-filter="all">
-                                                        <i class="fa fa-list me-1"></i>Todos
-                                                    </button>
-                                                    <button name="action_refresh_dashboard_data" 
-                                                            type="object" 
-                                                            class="btn btn-outline-success btn-sm filter-btn" 
-                                                            data-filter="hoy">
-                                                        <i class="fa fa-calendar-day me-1"></i>Hoy
-                                                    </button>
-                                                    <button name="action_refresh_dashboard_data" 
-                                                            type="object" 
-                                                            class="btn btn-outline-info btn-sm filter-btn" 
-                                                            data-filter="color">
-                                                        <i class="fa fa-palette me-1"></i>Color
-                                                    </button>
-                                                    <button name="action_refresh_dashboard_data" 
-                                                            type="object" 
-                                                            class="btn btn-outline-secondary btn-sm filter-btn" 
-                                                            data-filter="mono">
-                                                        <i class="fa fa-circle me-1"></i>Monocromáticas
-                                                    </button>
+                                                    <span class="badge bg-primary">Filtros disponibles en JavaScript</span>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
@@ -204,33 +175,17 @@
                                     <table class="table table-hover mb-0" id="machines_table">
                                         <thead class="bg-light">
                                             <tr>
-                                                <th class="px-4 py-3 border-0">
-                                                    <i class="fa fa-building me-2 text-muted"></i>Cliente
-                                                </th>
-                                                <th class="px-4 py-3 border-0">
-                                                    <i class="fa fa-barcode me-2 text-muted"></i>Serie
-                                                </th>
-                                                <th class="px-4 py-3 border-0 text-center">
-                                                    <i class="fa fa-cog me-2 text-muted"></i>Tipo
-                                                </th>
-                                                <th class="px-4 py-3 border-0 text-center">
-                                                    <i class="fa fa-tachometer-alt me-2 text-muted"></i>Contadores
-                                                </th>
-                                                <th class="px-4 py-3 border-0 text-center">
-                                                    <i class="fa fa-clock me-2 text-muted"></i>Última Actualización
-                                                </th>
-                                                <th class="px-4 py-3 border-0 text-center">
-                                                    <i class="fa fa-tasks me-2 text-muted"></i>Estado
-                                                </th>
-                                                <th class="px-4 py-3 border-0 text-center">
-                                                    <i class="fa fa-eye me-2 text-muted"></i>Acciones
-                                                </th>
+                                                <th class="px-4 py-3 border-0">Cliente</th>
+                                                <th class="px-4 py-3 border-0">Serie</th>
+                                                <th class="px-4 py-3 border-0 text-center">Tipo</th>
+                                                <th class="px-4 py-3 border-0 text-center">Contadores</th>
+                                                <th class="px-4 py-3 border-0 text-center">Última Actualización</th>
+                                                <th class="px-4 py-3 border-0 text-center">Estado</th>
                                             </tr>
                                         </thead>
                                         <tbody id="machines_tbody">
-                                            <!-- Las filas se llenarán dinámicamente -->
                                             <tr>
-                                                <td colspan="7" class="text-center py-5">
+                                                <td colspan="6" class="text-center py-5">
                                                     <div class="text-muted">
                                                         <div class="spinner-border mb-3" role="status">
                                                             <span class="visually-hidden">Cargando...</span>
@@ -244,7 +199,7 @@
                                 </div>
                             </div>
 
-                            <!-- Footer con paginación -->
+                            <!-- Footer con información -->
                             <div class="card-footer bg-light">
                                 <div class="row align-items-center">
                                     <div class="col-md-6">
@@ -252,59 +207,17 @@
                                             Mostrando <span id="showing_count">0</span> de <span id="total_count">0</span> equipos
                                         </span>
                                     </div>
-                                    <div class="col-md-6">
-                                        <nav>
-                                            <ul class="pagination pagination-sm justify-content-end mb-0" id="pagination">
-                                                <!-- Paginación dinámica -->
-                                            </ul>
-                                        </nav>
+                                    <div class="col-md-6 text-end">
+                                        <button name="action_refresh_dashboard_data" 
+                                                type="object" 
+                                                class="btn btn-sm btn-primary">
+                                            <i class="fa fa-sync-alt me-1"></i>Actualizar Lista
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Modal de detalle -->
-                    <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-lg modal-dialog-centered">
-                            <div class="modal-content border-0 shadow">
-                                <div class="modal-header bg-primary text-white">
-                                    <h5 class="modal-title">
-                                        <i class="fa fa-info-circle me-2"></i>
-                                        Detalle del Equipo
-                                    </h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body" id="modal_content">
-                                    <!-- Contenido dinámico -->
-                                </div>
-                                <div class="modal-footer">
-                                    <button name="obtener_estadisticas_dashboard" 
-                                            type="object" 
-                                            class="btn btn-secondary" 
-                                            data-bs-dismiss="modal">
-                                        <i class="fa fa-times me-1"></i>Cerrar
-                                    </button>
-                                    <button name="obtener_estadisticas_dashboard" 
-                                            type="object" 
-                                            class="btn btn-primary" 
-                                            id="btn_view_history">
-                                        <i class="fa fa-history me-1"></i>Ver Historial
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Botón flotante de refresh -->
-                    <button name="action_refresh_dashboard_data" 
-                            type="object"
-                            class="btn btn-primary rounded-circle position-fixed shadow" 
-                            id="floating_refresh" 
-                            title="Actualizar datos"
-                            style="bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1000;">
-                        <i class="fa fa-sync-alt fa-lg"></i>
-                    </button>
 
                     <!-- Loading overlay -->
                     <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center d-none" 
@@ -333,14 +246,6 @@
                         transform: translateY(-5px);
                     }
                     
-                    .machine-row {
-                        transition: background-color 0.2s ease;
-                    }
-                    
-                    .machine-row:hover {
-                        background-color: rgba(0,123,255,0.05);
-                    }
-                    
                     .counter-item {
                         text-align: center;
                     }
@@ -353,17 +258,6 @@
                     .counter-label {
                         font-size: 0.7rem;
                         color: #6c757d;
-                    }
-                    
-                    .filter-btn.active {
-                        background-color: var(--bs-primary);
-                        color: white;
-                        border-color: var(--bs-primary);
-                    }
-                    
-                    .avatar-sm {
-                        width: 40px;
-                        height: 40px;
                     }
                     
                     @media (max-width: 768px) {
