@@ -33,7 +33,11 @@ class ContadorDashboardController(http.Controller):
                 ])
             
             # Obtener estadísticas
-            estadisticas = ContadorModel.obtener_estadisticas_dashboard()
+            try:
+                estadisticas = ContadorModel.obtener_estadisticas_dashboard()
+            except AttributeError:
+                # Si no existe el método, crear estadísticas básicas
+                estadisticas = self._get_estadisticas_basicas(ContadorModel)
             
             # Contar total de registros
             total_equipos = ContadorModel.search_count(domain)
@@ -48,10 +52,11 @@ class ContadorDashboardController(http.Controller):
                                              offset=offset, 
                                              order='create_date desc')
             
-            # Formatear datos de equipos
+            # Formatear datos de equipos como objetos simples para el template
             equipos = []
             for equipo in equipos_raw:
-                equipos.append({
+                # Crear un objeto simple que funcione con el template
+                equipo_data = type('obj', (object,), {
                     'id': equipo.id,
                     'cliente_detectado': equipo.cliente_detectado or 'Sin cliente',
                     'serie_detectada': equipo.serie_detectada or 'Sin serie',
@@ -61,7 +66,8 @@ class ContadorDashboardController(http.Controller):
                     'contador_total_actual': (equipo.contador_bn_detectado or 0) + (equipo.contador_color_detectado or 0),
                     'estado_ultimo': equipo.estado or 'pendiente',
                     'ultima_actualizacion_formatted': self._format_datetime(equipo.create_date),
-                })
+                })()
+                equipos.append(equipo_data)
             
             # Datos para el template
             values = {
@@ -85,6 +91,65 @@ class ContadorDashboardController(http.Controller):
                 'error_message': f'Error cargando dashboard: {str(e)}'
             })
     
+    def _get_estadisticas_basicas(self, ContadorModel):
+        """
+        Genera estadísticas básicas si no existe el método en el modelo
+        """
+        try:
+            # Obtener fecha de hoy y hace una semana
+            hoy = datetime.now().date()
+            hace_semana = hoy - timedelta(days=7)
+            
+            # Contar equipos únicos por período
+            equipos_hoy = ContadorModel.search([
+                ('create_date', '>=', hoy),
+                ('serie_detectada', '!=', False)
+            ])
+            
+            equipos_semana = ContadorModel.search([
+                ('create_date', '>=', hace_semana),
+                ('serie_detectada', '!=', False)
+            ])
+            
+            # Contar equipos únicos por serie
+            series_hoy = set()
+            series_semana = set()
+            
+            for equipo in equipos_hoy:
+                if equipo.serie_detectada:
+                    series_hoy.add(equipo.serie_detectada)
+            
+            for equipo in equipos_semana:
+                if equipo.serie_detectada:
+                    series_semana.add(equipo.serie_detectada)
+            
+            # Total de equipos únicos en el sistema
+            total_equipos = ContadorModel.search_count([('serie_detectada', '!=', False)])
+            
+            # Calcular eficiencia (equipos procesados vs total)
+            equipos_procesados = ContadorModel.search_count([
+                ('estado', '=', 'procesado'),
+                ('serie_detectada', '!=', False)
+            ])
+            
+            eficiencia = round((equipos_procesados / total_equipos * 100) if total_equipos > 0 else 0, 1)
+            
+            return {
+                'equipos_unicos_hoy': len(series_hoy),
+                'equipos_unicos_semana': len(series_semana),
+                'total_equipos_sistema': total_equipos,
+                'eficiencia_sistema': eficiencia,
+            }
+            
+        except Exception as e:
+            _logger.error(f"Error calculando estadísticas básicas: {e}")
+            return {
+                'equipos_unicos_hoy': 0,
+                'equipos_unicos_semana': 0,
+                'total_equipos_sistema': 0,
+                'eficiencia_sistema': 0,
+            }
+    
     @http.route('/dashboard/contador/refresh', type='http', auth='user', website=True)
     def dashboard_refresh(self, **kwargs):
         """
@@ -93,7 +158,12 @@ class ContadorDashboardController(http.Controller):
         try:
             # Ejecutar actualización de datos
             ContadorModel = request.env['contador.automatico']
-            ContadorModel.cron_procesar_correos_perdidos()
+            
+            # Verificar si existe el método de procesamiento
+            if hasattr(ContadorModel, 'cron_procesar_correos_perdidos'):
+                ContadorModel.cron_procesar_correos_perdidos()
+            else:
+                _logger.warning("Método cron_procesar_correos_perdidos no encontrado en el modelo")
             
             # Mensaje de éxito
             request.session['dashboard_message'] = {
@@ -120,13 +190,16 @@ class ContadorDashboardController(http.Controller):
             ContadorModel = request.env['contador.automatico']
             
             # Obtener estadísticas completas
-            estadisticas = ContadorModel.obtener_estadisticas_dashboard()
+            try:
+                estadisticas = ContadorModel.obtener_estadisticas_dashboard()
+            except AttributeError:
+                estadisticas = self._get_estadisticas_basicas(ContadorModel)
             
             # Estadísticas adicionales
             stats_adicionales = {
-                'registros_por_estado': ContadorModel.get_equipos_por_estado(),
-                'equipos_por_tipo': ContadorModel.get_equipos_por_tipo(),
-                'actividad_semanal': ContadorModel.get_actividad_semanal(),
+                'registros_por_estado': self._get_equipos_por_estado(ContadorModel),
+                'equipos_por_tipo': self._get_equipos_por_tipo(ContadorModel),
+                'actividad_semanal': self._get_actividad_semanal(ContadorModel),
             }
             
             values = {
@@ -141,6 +214,50 @@ class ContadorDashboardController(http.Controller):
             _logger.error(f"Error en estadísticas: {e}")
             return request.redirect('/dashboard/contador')
     
+    def _get_equipos_por_estado(self, ContadorModel):
+        """Obtiene conteo de equipos por estado"""
+        try:
+            estados = ContadorModel.read_group(
+                [('serie_detectada', '!=', False)],
+                ['estado'],
+                ['estado']
+            )
+            return {estado['estado']: estado['estado_count'] for estado in estados}
+        except:
+            return {}
+    
+    def _get_equipos_por_tipo(self, ContadorModel):
+        """Obtiene conteo de equipos por tipo"""
+        try:
+            tipos = ContadorModel.read_group(
+                [('serie_detectada', '!=', False)],
+                ['tipo_equipo_detectado'],
+                ['tipo_equipo_detectado']
+            )
+            return {tipo['tipo_equipo_detectado']: tipo['tipo_equipo_detectado_count'] for tipo in tipos}
+        except:
+            return {}
+    
+    def _get_actividad_semanal(self, ContadorModel):
+        """Obtiene actividad de la última semana"""
+        try:
+            hace_semana = datetime.now() - timedelta(days=7)
+            registros = ContadorModel.search([
+                ('create_date', '>=', hace_semana),
+                ('serie_detectada', '!=', False)
+            ])
+            
+            actividad = {}
+            for registro in registros:
+                fecha = registro.create_date.date()
+                if fecha not in actividad:
+                    actividad[fecha] = 0
+                actividad[fecha] += 1
+            
+            return actividad
+        except:
+            return {}
+    
     @http.route('/dashboard/contador/diagnostico', type='http', auth='user', website=True)
     def dashboard_diagnostico(self, **kwargs):
         """
@@ -149,8 +266,8 @@ class ContadorDashboardController(http.Controller):
         try:
             ContadorModel = request.env['contador.automatico']
             
-            # Ejecutar diagnóstico
-            diagnostico = ContadorModel.diagnosticar_sistema()
+            # Ejecutar diagnóstico básico
+            diagnostico = self._diagnosticar_sistema_basico(ContadorModel)
             
             values = {
                 'diagnostico': diagnostico,
@@ -163,6 +280,30 @@ class ContadorDashboardController(http.Controller):
             _logger.error(f"Error en diagnóstico: {e}")
             return request.redirect('/dashboard/contador')
     
+    def _diagnosticar_sistema_basico(self, ContadorModel):
+        """Diagnóstico básico del sistema"""
+        try:
+            total_registros = ContadorModel.search_count([])
+            registros_con_serie = ContadorModel.search_count([('serie_detectada', '!=', False)])
+            registros_sin_serie = total_registros - registros_con_serie
+            
+            # Registros por estado
+            estados = ['procesado', 'pendiente', 'error']
+            conteo_estados = {}
+            for estado in estados:
+                conteo_estados[estado] = ContadorModel.search_count([('estado', '=', estado)])
+            
+            return {
+                'total_registros': total_registros,
+                'registros_con_serie': registros_con_serie,
+                'registros_sin_serie': registros_sin_serie,
+                'estados': conteo_estados,
+                'porcentaje_procesados': round((conteo_estados.get('procesado', 0) / total_registros * 100) if total_registros > 0 else 0, 1)
+            }
+        except Exception as e:
+            _logger.error(f"Error en diagnóstico básico: {e}")
+            return {}
+    
     @http.route('/dashboard/contador/detalle/<int:equipo_id>', type='http', auth='user', website=True)
     def dashboard_detalle(self, equipo_id, **kwargs):
         """
@@ -171,15 +312,27 @@ class ContadorDashboardController(http.Controller):
         try:
             ContadorModel = request.env['contador.automatico']
             
-            # Obtener detalle del equipo
-            detalle = ContadorModel.obtener_detalle_equipo(equipo_id)
-            
-            if not detalle:
+            # Obtener equipo
+            equipo = ContadorModel.browse(equipo_id)
+            if not equipo.exists():
                 return request.not_found()
+            
+            # Preparar detalle
+            detalle = {
+                'id': equipo.id,
+                'serie_detectada': equipo.serie_detectada or 'Sin serie',
+                'cliente_detectado': equipo.cliente_detectado or 'Sin cliente',
+                'tipo_equipo_detectado': equipo.tipo_equipo_detectado or 'N/A',
+                'contador_bn_detectado': equipo.contador_bn_detectado or 0,
+                'contador_color_detectado': equipo.contador_color_detectado or 0,
+                'estado': equipo.estado or 'pendiente',
+                'create_date': self._format_datetime(equipo.create_date),
+                'remitente': getattr(equipo, 'remitente', 'N/A'),
+            }
             
             values = {
                 'equipo': detalle,
-                'page_title': f'Detalle Equipo {detalle.get("serie_detectada", "Sin serie")}',
+                'page_title': f'Detalle Equipo {detalle["serie_detectada"]}',
             }
             
             return request.render('sat.contador_dashboard_detalle_template', values)
@@ -196,7 +349,7 @@ class ContadorDashboardController(http.Controller):
         try:
             ContadorModel = request.env['contador.automatico']
             
-            # Obtener historial del equipo
+            # Obtener equipo
             equipo = ContadorModel.browse(equipo_id)
             if not equipo.exists():
                 return request.not_found()
@@ -215,7 +368,7 @@ class ContadorDashboardController(http.Controller):
                     'contador_color': registro.contador_color_detectado or 0,
                     'contador_total': (registro.contador_bn_detectado or 0) + (registro.contador_color_detectado or 0),
                     'estado': registro.estado,
-                    'remitente': registro.remitente,
+                    'remitente': getattr(registro, 'remitente', 'N/A'),
                 })
             
             values = {
@@ -242,7 +395,10 @@ class ContadorDashboardController(http.Controller):
         """
         try:
             ContadorModel = request.env['contador.automatico']
-            estadisticas = ContadorModel.obtener_estadisticas_dashboard()
+            try:
+                estadisticas = ContadorModel.obtener_estadisticas_dashboard()
+            except AttributeError:
+                estadisticas = self._get_estadisticas_basicas(ContadorModel)
             
             return {
                 'success': True,
