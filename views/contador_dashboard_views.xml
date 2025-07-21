@@ -125,7 +125,7 @@
                                 <div class="stat-icon bg-primary text-white mx-auto">
                                     <i class="fa fa-desktop fa-lg"></i>
                                 </div>
-                                <div class="stat-number text-primary" t-esc="estadisticas.equipos_unicos_hoy">0</div>
+                                <div class="stat-number text-primary" t-esc="estadisticas['equipos_unicos_hoy']">0</div>
                                 <h6 class="text-muted mb-0">Equipos Hoy</h6>
                                 <small class="text-muted">Últimas 24 horas</small>
                             </div>
