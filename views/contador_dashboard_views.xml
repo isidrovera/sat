@@ -701,15 +701,15 @@
           <div class="card-body">
             <h5 class="card-title">Información del Equipo</h5>
             <ul class="list-group list-group-flush">
-              <li class="list-group-item"><strong>Cliente:</strong> <t t-esc="equipo.cliente_detectado"/></li>
-              <li class="list-group-item"><strong>Serie:</strong> <t t-esc="equipo.serie_detectada"/></li>
-              <li class="list-group-item"><strong>Tipo:</strong> <t t-esc="equipo.tipo_equipo_detectado"/></li>
-              <li class="list-group-item"><strong>Contador B/N:</strong> <t t-esc="equipo.contador_bn_actual"/></li>
-              <li class="list-group-item"><strong>Contador Color:</strong> <t t-esc="equipo.contador_color_actual"/></li>
-              <li class="list-group-item"><strong>Total:</strong> <t t-esc="equipo.contador_total_actual"/></li>
-              <li class="list-group-item"><strong>Estado:</strong> <t t-esc="equipo.estado_ultimo"/></li>
-              <li class="list-group-item"><strong>Última actualización:</strong> <t t-esc="equipo.ultima_actualizacion_formatted"/> (<t t-esc="equipo.tiempo_relativo"/>)</li>
-              <li class="list-group-item"><strong>Remitente:</strong> <t t-esc="equipo.remitente"/></li>
+              <li class="list-group-item"><strong>Cliente:</strong> <t t-esc="equipo.cliente_detectado or 'Sin cliente'"/></li>
+              <li class="list-group-item"><strong>Serie:</strong> <t t-esc="equipo.serie_detectada or 'Sin serie'"/></li>
+              <li class="list-group-item"><strong>Tipo:</strong> <t t-esc="equipo.tipo_equipo_detectado or 'N/A'"/></li>
+              <li class="list-group-item"><strong>Contador B/N:</strong> <t t-esc="equipo.contador_bn_detectado or 0"/></li>
+              <li class="list-group-item"><strong>Contador Color:</strong> <t t-esc="equipo.contador_color_detectado or 0"/></li>
+              <li class="list-group-item"><strong>Total:</strong> <t t-esc="(equipo.contador_bn_detectado or 0) + (equipo.contador_color_detectado or 0)"/></li>
+              <li class="list-group-item"><strong>Estado:</strong> <t t-esc="equipo.estado or 'pendiente'"/></li>
+              <li class="list-group-item"><strong>Última actualización:</strong> <t t-esc="equipo.create_date.strftime('%d/%m/%Y %H:%M') if equipo.create_date else 'N/A'"/></li>
+              <li class="list-group-item"><strong>Remitente:</strong> <t t-esc="equipo.remitente or 'N/A'"/></li>
             </ul>
           </div>
         </div>
@@ -723,8 +723,8 @@
               <tbody>
                 <t t-foreach="historial" t-as="h">
                   <tr>
-                    <td><t t-esc="h.create_date.strftime('%d/%m/%Y %H:%M')"/></td>
-                    <td><t t-esc="h.estado"/></td>
+                    <td><t t-esc="h.create_date.strftime('%d/%m/%Y %H:%M') if h.create_date else ''"/></td>
+                    <td><t t-esc="h.estado or ''"/></td>
                     <td><t t-esc="(h.contador_bn_detectado or 0) + (h.contador_color_detectado or 0)"/></td>
                   </tr>
                 </t>
