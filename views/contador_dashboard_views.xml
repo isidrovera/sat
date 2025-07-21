@@ -495,32 +495,35 @@
                                                     <span class="page-link">...</span>
                                                 </li>
                                                 
-                                                <!-- Páginas del rango -->
+                            <!-- Paginación moderna -->
+                            <div class="table-footer" t-if="total_pages and total_pages > 1">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <div class="pagination-info">
+                                            Mostrando <strong t-esc="(current_page - 1) * 20 + 1"/>-<strong t-esc="min(current_page * 20, total_equipos)"/> 
+                                            de <strong t-esc="total_equipos"/> registros
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <nav class="pagination-nav">
+                                            <ul class="modern-pagination">
+                                                <li t-att-class="'page-item ' + ('disabled' if current_page == 1 else '')">
+                                                    <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(current_page - 1) + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')">
+                                                        <i class="fas fa-chevron-left"></i>
+                                                    </a>
+                                                </li>
+                                                
                                                 <t t-set="start_page" t-value="max(1, current_page - 2)"/>
                                                 <t t-set="end_page" t-value="min(total_pages + 1, current_page + 3)"/>
                                                 <t t-foreach="range(start_page, end_page)" t-as="page_num">
                                                     <li t-att-class="'page-item ' + ('active' if page_num == current_page else '')">
-                                                        <a class="page-link" 
-                                                           t-att-href="'/dashboard/contador?page=' + str(page_num) + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')"
+                                                        <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(page_num) + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')"
                                                            t-esc="page_num"/>
                                                     </li>
                                                 </t>
                                                 
-                                                <!-- Última página -->
-                                                <li t-if="current_page &lt; total_pages - 3" class="page-item disabled">
-                                                    <span class="page-link">...</span>
-                                                </li>
-                                                <li t-if="current_page &lt; total_pages - 2" class="page-item">
-                                                    <a class="page-link" 
-                                                       t-att-href="'/dashboard/contador?page=' + str(total_pages) + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')"
-                                                       t-esc="total_pages"/>
-                                                </li>
-                                                
-                                                <!-- Botón Siguiente -->
                                                 <li t-att-class="'page-item ' + ('disabled' if current_page == total_pages else '')">
-                                                    <a class="page-link" 
-                                                       t-att-href="'/dashboard/contador?page=' + str(current_page + 1) + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')"
-                                                       aria-label="Siguiente">
+                                                    <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(current_page + 1) + ('&amp;search=' + (search_query or '') if search_query else '') + ('&amp;filter_type=' + (filter_type or '') if filter_type else '')">
                                                         <i class="fas fa-chevron-right"></i>
                                                     </a>
                                                 </li>
@@ -534,66 +537,45 @@
                 </div>
 
                 <!-- Información adicional -->
-                <div class="container-fluid mt-4 mb-5" t-if="equipos">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <div class="info-card">
-                                <div class="info-card-body text-center">
-                                    <i class="fas fa-list-ul text-primary mb-2"></i>
-                                    <h6 class="text-muted mb-1">Total registros</h6>
-                                    <h4 class="text-primary mb-0" t-esc="total_equipos">0</h4>
+                <div class="container mt-4 mb-5">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">Total de registros</h6>
+                                    <h4 class="text-primary" t-esc="total_equipos">0</h4>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="info-card">
-                                <div class="info-card-body text-center">
-                                    <i class="fas fa-eye text-success mb-2"></i>
-                                    <h6 class="text-muted mb-1">Mostrando</h6>
-                                    <h4 class="text-success mb-0" t-esc="len(equipos)">0</h4>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="info-card">
-                                <div class="info-card-body text-center">
-                                    <i class="fas fa-file-alt text-info mb-2"></i>
-                                    <h6 class="text-muted mb-1">Página</h6>
-                                    <h4 class="text-info mb-0"><t t-esc="current_page"/> de <t t-esc="total_pages"/></h4>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="info-card">
-                                <div class="info-card-body text-center">
-                                    <i class="fas fa-clock text-warning mb-2"></i>
-                                    <h6 class="text-muted mb-1">Actualizado</h6>
-                                    <h6 class="text-warning mb-0" t-esc="ultima_actualizacion">Ahora</h6>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">Mostrando</h6>
+                                    <h4 class="text-success">
+                                        <t t-esc="len(equipos)"/> de <t t-esc="total_equipos"/>
+                                    </h4>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- FAB (Floating Action Button) mejorado -->
+                <!-- FAB (Floating Action Button) -->
                 <div class="fab-container">
-                    <div class="fab-menu" id="fabMenu">
-                        <a href="/dashboard/contador/refresh" class="fab fab-secondary" title="Actualizar datos">
-                            <i class="fas fa-sync-alt"></i>
-                        </a>
-                        <a href="/dashboard/contador/export/excel" class="fab fab-secondary" title="Exportar Excel">
-                            <i class="fas fa-file-excel"></i>
-                        </a>
-                        <a href="/dashboard/contador/stats" class="fab fab-secondary" title="Ver estadísticas">
-                            <i class="fas fa-chart-bar"></i>
-                        </a>
-                        <a href="/dashboard/contador/diagnostico" class="fab fab-secondary" title="Diagnóstico">
-                            <i class="fas fa-stethoscope"></i>
-                        </a>
-                    </div>
-                    <button class="fab fab-primary" id="mainFab" title="Acciones rápidas">
+                    <button class="fab fab-primary" id="mainFab">
                         <i class="fas fa-plus"></i>
                     </button>
+                    <div class="fab-menu" id="fabMenu">
+                        <button class="fab fab-secondary" onclick="window.location.reload()" title="Actualizar">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="fab fab-secondary" onclick="window.location.href='/dashboard/contador/export/excel'" title="Exportar">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="fab fab-secondary" onclick="window.location.href='/dashboard/contador/stats'" title="Estadísticas">
+                            <i class="fas fa-chart-bar"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -606,66 +588,10 @@
                 <!-- Dashboard JS personalizado -->
                 <script src="/sat/static/src/js/contadores_dashboard.js"></script>
                 
-                <!-- Funciones adicionales inline -->
+                <!-- Script básico para filtros -->
                 <script>
-                    // Función para copiar al portapapeles
-                    function copyToClipboard(element) {
-                        const text = element.getAttribute('data-text');
-                        if (navigator.clipboard) {
-                            navigator.clipboard.writeText(text).then(() =&gt; {
-                                showToast('Copiado: ' + text, 'success');
-                            });
-                        } else {
-                            // Fallback para navegadores más antiguos
-                            const textArea = document.createElement('textarea');
-                            textArea.value = text;
-                            document.body.appendChild(textArea);
-                            textArea.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(textArea);
-                            showToast('Copiado: ' + text, 'success');
-                        }
-                    }
-                    
-                    // Función básica para mostrar notificaciones
-                    function showToast(message, type = 'info') {
-                        const toast = document.createElement('div');
-                        toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} toast-notification`;
-                        toast.style.cssText = `
-                            position: fixed;
-                            top: 20px;
-                            right: 20px;
-                            z-index: 9999;
-                            min-width: 300px;
-                            opacity: 0;
-                            transition: opacity 0.3s ease;
-                        `;
-                        toast.innerHTML = `
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
-                                ${message}
-                                <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
-                            </div>
-                        `;
-                        
-                        document.body.appendChild(toast);
-                        
-                        // Mostrar con animación
-                        setTimeout(() =&gt; toast.style.opacity = '1', 100);
-                        
-                        // Auto-remover después de 3 segundos
-                        setTimeout(() =&gt; {
-                            toast.style.opacity = '0';
-                            setTimeout(() =&gt; {
-                                if (toast.parentNode) {
-                                    toast.parentNode.removeChild(toast);
-                                }
-                            }, 300);
-                        }, 3000);
-                    }
-
-                    // Filtros con navegación por URL
                     document.addEventListener('DOMContentLoaded', function() {
+                        // Filtros con navegación por URL
                         const filterButtons = document.querySelectorAll('.filter-btn');
                         
                         filterButtons.forEach(btn =&gt; {
@@ -675,7 +601,7 @@
                                 const filter = this.getAttribute('data-filter');
                                 const currentUrl = new URL(window.location);
                                 
-                                // Mantener búsqueda y resetear página
+                                // Resetear página y aplicar filtro
                                 currentUrl.searchParams.set('page', '1');
                                 
                                 if (filter === 'all') {
