@@ -1,285 +1,395 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Vista Tree para listar equipos -->
-    <record id="view_contador_dashboard_tree" model="ir.ui.view">
-        <field name="name">contador.dashboard.tree</field>
+    <!-- Vista Dashboard Principal -->
+    <record id="view_contador_dashboard_main" model="ir.ui.view">
+        <field name="name">contador.dashboard.main</field>
         <field name="model">contador.automatico</field>
         <field name="arch" type="xml">
-            <list string="Dashboard Contadores" 
-                  create="false" 
-                  edit="false" 
-                  delete="false"
-                  export_xlsx="true"
-                  decoration-success="estado == 'procesado'"
-                  decoration-warning="estado == 'pendiente'"
-                  decoration-danger="estado == 'error'">
+            <form string="Dashboard Contadores" class="o_contador_dashboard_main" js_class="contador_dashboard_form">
+                <header>
+                    <!-- Botones de acción en el header -->
+                    <button name="action_refresh_dashboard_data" 
+                            type="object" 
+                            string="Actualizar Dashboard" 
+                            class="btn-primary"/>
+                    <button name="obtener_estadisticas_dashboard" 
+                            type="object" 
+                            string="Estadísticas Avanzadas" 
+                            class="btn-secondary"/>
+                    <button name="limpiar_registros_antiguos" 
+                            type="object" 
+                            string="Limpiar Registros" 
+                            class="btn-warning"/>
+                    <button name="diagnosticar_sistema" 
+                            type="object" 
+                            string="Diagnóstico" 
+                            class="btn-info"/>
+                </header>
                 
-                <field name="cliente_detectado" string="Cliente"/>
-                <field name="serie_detectada" string="Serie"/>
-                <field name="tipo_equipo_detectado" string="Tipo" widget="badge"/>
-                <field name="contador_bn_detectado" string="Contador B/N" sum="Total B/N"/>
-                <field name="contador_color_detectado" string="Contador Color" sum="Total Color"/>
-                <field name="contador_total_detectado" string="Total" sum="Gran Total"/>
-                <field name="create_date" string="Fecha"/>
-                <field name="estado" string="Estado" widget="badge"/>
-                
-            </list>
-        </field>
-    </record>
-
-    <!-- Vista Search para filtros -->
-    <record id="view_contador_dashboard_search" model="ir.ui.view">
-        <field name="name">contador.dashboard.search</field>
-        <field name="model">contador.automatico</field>
-        <field name="arch" type="xml">
-            <search string="Filtros Dashboard">
-                
-                <!-- Filtros de búsqueda -->
-                <field name="cliente_detectado" string="Cliente"/>
-                <field name="serie_detectada" string="Serie"/>
-                <field name="tipo_equipo_detectado" string="Tipo"/>
-                <field name="estado" string="Estado"/>
-                
-                <!-- Filtros predefinidos -->
-                <filter string="Hoy" name="filter_hoy" 
-                        domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
-                
-                <filter string="Esta Semana" name="filter_semana"
-                        domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
-                
-                <filter string="Color" name="filter_color"
-                        domain="[('tipo_equipo_detectado', '=', 'color')]"/>
-                
-                <filter string="Monocromáticas" name="filter_mono"
-                        domain="[('tipo_equipo_detectado', '=', 'monocromatica')]"/>
-                
-                <separator/>
-                
-                <filter string="Procesados" name="filter_procesados"
-                        domain="[('estado', '=', 'procesado')]"/>
-                
-                <filter string="Pendientes" name="filter_pendientes"
-                        domain="[('estado', '=', 'pendiente')]"/>
-                
-                <filter string="Con Errores" name="filter_errores"
-                        domain="[('estado', '=', 'error')]"/>
-                
-                <!-- Agrupaciones -->
-                <group expand="0" string="Agrupar por">
-                    <filter string="Cliente" name="group_cliente" 
-                            context="{'group_by': 'cliente_detectado'}"/>
-                    <filter string="Tipo" name="group_tipo" 
-                            context="{'group_by': 'tipo_equipo_detectado'}"/>
-                    <filter string="Estado" name="group_estado" 
-                            context="{'group_by': 'estado'}"/>
-                    <filter string="Fecha" name="group_fecha" 
-                            context="{'group_by': 'create_date:day'}"/>
-                </group>
-                
-            </search>
-        </field>
-    </record>
-
-    <!-- Vista Form simple para ver detalles -->
-    <record id="view_contador_dashboard_form" model="ir.ui.view">
-        <field name="name">contador.dashboard.form</field>
-        <field name="model">contador.automatico</field>
-        <field name="arch" type="xml">
-            <form string="Detalle Equipo" create="false" edit="false" delete="false">
-                <sheet>
-                    <div class="oe_title">
-                        <h1>
-                            <field name="serie_detectada" readonly="1"/>
-                        </h1>
-                        <h2>
-                            <field name="cliente_detectado" readonly="1"/>
-                        </h2>
+                <!-- Contenido principal del dashboard -->
+                <div class="o_dashboard_view">
+                    <!-- Header con título y botón refresh -->
+                    <div class="dashboard-header text-center py-4 mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <div class="container">
+                            <h1 class="display-4 fw-bold mb-2">
+                                <i class="fa fa-chart-line me-3"></i>
+                                Dashboard de Contadores
+                            </h1>
+                            <p class="lead mb-3">Monitoreo en tiempo real de equipos de impresión</p>
+                            <button type="button" 
+                                    class="btn btn-light btn-lg rounded-pill px-4"
+                                    onclick="if(window.dashboardController) window.dashboardController.refreshDashboard()">
+                                <i class="fa fa-sync-alt me-2"></i>
+                                Actualizar Dashboard
+                            </button>
+                        </div>
                     </div>
-                    
-                    <group>
-                        <group string="Información del Equipo">
-                            <field name="tipo_equipo_detectado" readonly="1"/>
-                            <field name="marca_detectada" readonly="1"/>
-                            <field name="estado" readonly="1"/>
-                            <field name="confianza_deteccion" readonly="1"/>
-                        </group>
-                        <group string="Contadores">
-                            <field name="contador_bn_detectado" readonly="1"/>
-                            <field name="contador_color_detectado" readonly="1"/>
-                            <field name="contador_total_detectado" readonly="1"/>
-                        </group>
-                    </group>
-                    
-                    <group>
-                        <group string="Fechas">
-                            <field name="create_date" readonly="1"/>
-                            <field name="write_date" readonly="1"/>
-                        </group>
-                        <group string="Origen">
-                            <field name="name" readonly="1"/>
-                            <field name="remitente" readonly="1"/>
-                        </group>
-                    </group>
-                    
-                </sheet>
-            </form>
-        </field>
-    </record>
 
-    <!-- Vista Kanban para dashboard visual -->
-    <record id="view_contador_dashboard_kanban" model="ir.ui.view">
-        <field name="name">contador.dashboard.kanban</field>
-        <field name="model">contador.automatico</field>
-        <field name="arch" type="xml">
-            <kanban string="Dashboard Equipos" create="false" edit="false" delete="false">
-                <field name="serie_detectada"/>
-                <field name="cliente_detectado"/>
-                <field name="tipo_equipo_detectado"/>
-                <field name="contador_bn_detectado"/>
-                <field name="contador_color_detectado"/>
-                <field name="contador_total_detectado"/>
-                <field name="estado"/>
-                <field name="create_date"/>
-                
-                <templates>
-                    <t t-name="kanban-box">
-                        <div class="oe_kanban_card oe_kanban_global_click">
-                            <div class="oe_kanban_content">
-                                <div class="o_kanban_record_top">
-                                    <div class="o_kanban_record_headings">
-                                        <strong class="o_kanban_record_title">
-                                            <field name="serie_detectada"/>
-                                        </strong>
-                                        <div class="o_kanban_record_subtitle text-muted">
-                                            <field name="cliente_detectado"/>
+                    <!-- Estadísticas principales -->
+                    <div class="container mb-5">
+                        <div class="row g-4">
+                            <!-- Equipos Activos Hoy -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <div class="stat-icon bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                                <i class="fa fa-desktop fa-lg"></i>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="o_dropdown_kanban dropdown">
-                                        <span class="o_badge" t-attf-class="badge-#{record.estado.raw_value}">
-                                            <field name="estado"/>
-                                        </span>
+                                        <h3 class="stat-number mb-1" id="equipos_hoy">0</h3>
+                                        <p class="stat-label text-muted mb-2">Equipos Actualizados Hoy</p>
+                                        <div class="stat-subtitle text-muted small">
+                                            <i class="fa fa-calendar-day me-1"></i>
+                                            Últimas 24 horas
+                                        </div>
                                     </div>
                                 </div>
-                                
-                                <div class="o_kanban_record_body">
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <div class="text-muted">Tipo:</div>
-                                            <div><field name="tipo_equipo_detectado"/></div>
+                            </div>
+
+                            <!-- Equipos Semana -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <div class="stat-icon bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                                <i class="fa fa-calendar-week fa-lg"></i>
+                                            </div>
                                         </div>
-                                        <div class="col-6">
-                                            <div class="text-muted">Fecha:</div>
-                                            <div><field name="create_date"/></div>
+                                        <h3 class="stat-number mb-1" id="equipos_semana">0</h3>
+                                        <p class="stat-label text-muted mb-2">Equipos Esta Semana</p>
+                                        <div class="stat-subtitle text-muted small">
+                                            <i class="fa fa-chart-line me-1"></i>
+                                            Últimos 7 días
                                         </div>
                                     </div>
-                                    
-                                    <div class="row mt-2">
-                                        <div class="col-4">
-                                            <div class="text-center">
-                                                <div class="text-muted small">B/N</div>
-                                                <div class="h5 mb-0"><field name="contador_bn_detectado"/></div>
+                                </div>
+                            </div>
+
+                            <!-- Total Equipos -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <div class="stat-icon bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                                <i class="fa fa-database fa-lg"></i>
                                             </div>
                                         </div>
-                                        <div class="col-4">
-                                            <div class="text-center">
-                                                <div class="text-muted small">Color</div>
-                                                <div class="h5 mb-0"><field name="contador_color_detectado"/></div>
+                                        <h3 class="stat-number mb-1" id="total_equipos">0</h3>
+                                        <p class="stat-label text-muted mb-2">Total en Sistema</p>
+                                        <div class="stat-subtitle text-muted small">
+                                            <i class="fa fa-building me-1"></i>
+                                            Todos los equipos
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Eficiencia -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <div class="stat-icon bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                                <i class="fa fa-percentage fa-lg"></i>
                                             </div>
                                         </div>
-                                        <div class="col-4">
-                                            <div class="text-center">
-                                                <div class="text-muted small">Total</div>
-                                                <div class="h5 mb-0 text-primary"><field name="contador_total_detectado"/></div>
+                                        <h3 class="stat-number mb-1" id="eficiencia">0%</h3>
+                                        <p class="stat-label text-muted mb-2">Eficiencia Sistema</p>
+                                        <div class="stat-subtitle text-muted small">
+                                            <i class="fa fa-thumbs-up me-1"></i>
+                                            Procesamiento automático
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filtros rápidos -->
+                    <div class="container mb-4">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card shadow-sm border-0">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-8">
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all">
+                                                        <i class="fa fa-list me-1"></i>Todos
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-success btn-sm filter-btn" data-filter="hoy">
+                                                        <i class="fa fa-calendar-day me-1"></i>Hoy
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-info btn-sm filter-btn" data-filter="color">
+                                                        <i class="fa fa-palette me-1"></i>Color
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="mono">
+                                                        <i class="fa fa-circle me-1"></i>Monocromáticas
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">
+                                                        <i class="fa fa-search"></i>
+                                                    </span>
+                                                    <input type="text" 
+                                                           class="form-control" 
+                                                           placeholder="Buscar cliente o serie..."
+                                                           id="search_input"/>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </t>
-                </templates>
-            </kanban>
+                    </div>
+
+                    <!-- Lista de máquinas -->
+                    <div class="container">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-white">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <h4 class="mb-0">
+                                            <i class="fa fa-list me-2 text-primary"></i>
+                                            Equipos de Impresión
+                                        </h4>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <span class="badge bg-light text-dark px-3 py-2">
+                                            <i class="fa fa-clock me-1"></i>
+                                            Actualizado: <span id="last_update">Cargando...</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0" id="machines_table">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th class="px-4 py-3 border-0">
+                                                    <i class="fa fa-building me-2 text-muted"></i>Cliente
+                                                </th>
+                                                <th class="px-4 py-3 border-0">
+                                                    <i class="fa fa-barcode me-2 text-muted"></i>Serie
+                                                </th>
+                                                <th class="px-4 py-3 border-0 text-center">
+                                                    <i class="fa fa-cog me-2 text-muted"></i>Tipo
+                                                </th>
+                                                <th class="px-4 py-3 border-0 text-center">
+                                                    <i class="fa fa-tachometer-alt me-2 text-muted"></i>Contadores
+                                                </th>
+                                                <th class="px-4 py-3 border-0 text-center">
+                                                    <i class="fa fa-clock me-2 text-muted"></i>Última Actualización
+                                                </th>
+                                                <th class="px-4 py-3 border-0 text-center">
+                                                    <i class="fa fa-tasks me-2 text-muted"></i>Estado
+                                                </th>
+                                                <th class="px-4 py-3 border-0 text-center">
+                                                    <i class="fa fa-eye me-2 text-muted"></i>Acciones
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="machines_tbody">
+                                            <!-- Las filas se llenarán dinámicamente -->
+                                            <tr>
+                                                <td colspan="7" class="text-center py-5">
+                                                    <div class="text-muted">
+                                                        <div class="spinner-border mb-3" role="status">
+                                                            <span class="visually-hidden">Cargando...</span>
+                                                        </div>
+                                                        <p>Cargando equipos...</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Footer con paginación -->
+                            <div class="card-footer bg-light">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <span class="text-muted">
+                                            Mostrando <span id="showing_count">0</span> de <span id="total_count">0</span> equipos
+                                        </span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <nav>
+                                            <ul class="pagination pagination-sm justify-content-end mb-0" id="pagination">
+                                                <!-- Paginación dinámica -->
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal de detalle -->
+                    <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content border-0 shadow">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">
+                                        <i class="fa fa-info-circle me-2"></i>
+                                        Detalle del Equipo
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body" id="modal_content">
+                                    <!-- Contenido dinámico -->
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fa fa-times me-1"></i>Cerrar
+                                    </button>
+                                    <button type="button" class="btn btn-primary" id="btn_view_history">
+                                        <i class="fa fa-history me-1"></i>Ver Historial
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón flotante de refresh -->
+                    <button class="btn btn-primary rounded-circle position-fixed shadow" 
+                            id="floating_refresh" 
+                            title="Actualizar datos"
+                            style="bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1000;">
+                        <i class="fa fa-sync-alt fa-lg"></i>
+                    </button>
+
+                    <!-- Loading overlay -->
+                    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center d-none" 
+                         id="loading_overlay"
+                         style="background-color: rgba(0,0,0,0.5); z-index: 9999;">
+                        <div class="text-center text-white">
+                            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                            <h5>Cargando datos...</h5>
+                            <p class="text-muted">Por favor espere un momento</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CSS personalizado -->
+                <style>
+                    .o_contador_dashboard_main {
+                        min-height: 100vh;
+                        background-color: #f8f9fa;
+                    }
+                    
+                    .stat-card {
+                        transition: transform 0.2s ease-in-out;
+                    }
+                    
+                    .stat-card:hover {
+                        transform: translateY(-5px);
+                    }
+                    
+                    .machine-row {
+                        transition: background-color 0.2s ease;
+                    }
+                    
+                    .machine-row:hover {
+                        background-color: rgba(0,123,255,0.05);
+                    }
+                    
+                    .counter-item {
+                        text-align: center;
+                    }
+                    
+                    .counter-value {
+                        font-weight: bold;
+                        font-size: 0.9rem;
+                    }
+                    
+                    .counter-label {
+                        font-size: 0.7rem;
+                        color: #6c757d;
+                    }
+                    
+                    .filter-btn.active {
+                        background-color: var(--bs-primary);
+                        color: white;
+                        border-color: var(--bs-primary);
+                    }
+                    
+                    .avatar-sm {
+                        width: 40px;
+                        height: 40px;
+                    }
+                    
+                    @media (max-width: 768px) {
+                        .dashboard-header h1 {
+                            font-size: 2rem;
+                        }
+                        
+                        .stat-number {
+                            font-size: 1.5rem;
+                        }
+                        
+                        .container {
+                            padding-left: 15px;
+                            padding-right: 15px;
+                        }
+                    }
+                </style>
+            </form>
         </field>
     </record>
 
-    <!-- Vista Pivot para análisis -->
-    <record id="view_contador_dashboard_pivot" model="ir.ui.view">
-        <field name="name">contador.dashboard.pivot</field>
-        <field name="model">contador.automatico</field>
-        <field name="arch" type="xml">
-            <pivot string="Análisis de Contadores">
-                <field name="cliente_detectado" type="row"/>
-                <field name="tipo_equipo_detectado" type="row"/>
-                <field name="create_date" type="col" interval="day"/>
-                <field name="contador_bn_detectado" type="measure"/>
-                <field name="contador_color_detectado" type="measure"/>
-                <field name="contador_total_detectado" type="measure"/>
-            </pivot>
-        </field>
-    </record>
-
-    <!-- Vista Graph para gráficos -->
-    <record id="view_contador_dashboard_graph" model="ir.ui.view">
-        <field name="name">contador.dashboard.graph</field>
-        <field name="model">contador.automatico</field>
-        <field name="arch" type="xml">
-            <graph string="Estadísticas de Contadores" type="line">
-                <field name="create_date" type="row" interval="day"/>
-                <field name="contador_total_detectado" type="measure"/>
-            </graph>
-        </field>
-    </record>
-
-    <!-- Acción principal del dashboard -->
-    <record id="action_contador_dashboard" model="ir.actions.act_window">
-        <field name="name">Dashboard Contadores</field>
+    <!-- Acción principal del Dashboard -->
+    <record id="action_contador_dashboard_main" model="ir.actions.act_window">
+        <field name="name">📊 Dashboard Contadores</field>
         <field name="res_model">contador.automatico</field>
-        <field name="view_mode">kanban,tree,graph,pivot,form</field>
-        <field name="view_id" ref="view_contador_dashboard_kanban"/>
-        <field name="search_view_id" ref="view_contador_dashboard_search"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_contador_dashboard_main"/>
         <field name="target">current</field>
-        <field name="domain">[('serie_detectada', '!=', False)]</field>
-        <field name="context">{
-            'create': False,
-            'edit': False,
-            'delete': False,
-            'search_default_filter_semana': 1,
-            'search_default_group_cliente': 1
-        }</field>
+        <field name="context">{}</field>
+        
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No hay equipos para mostrar
+            <p class="o_view_nocontent_smiling_face text-center">
+                <i class="fa fa-chart-line fa-3x text-primary mb-3"></i>
             </p>
-            <p>
-                Este dashboard muestra todos los equipos de impresión detectados automáticamente.
-                <br/>
-                Use los filtros para encontrar equipos específicos.
+            <h3 class="text-center">¡Bienvenido al Dashboard de Contadores!</h3>
+            <p class="text-center text-muted">
+                Monitorea el estado de todos tus equipos de impresión en tiempo real.
             </p>
         </field>
     </record>
 
-    <!-- Acción para vista de estadísticas -->
-    <record id="action_contador_stats" model="ir.actions.act_window">
-        <field name="name">Estadísticas de Procesamiento</field>
-        <field name="res_model">contador.automatico</field>
-        <field name="view_mode">graph,pivot</field>
-        <field name="view_id" ref="view_contador_dashboard_graph"/>
-        <field name="domain">[('estado', '=', 'procesado')]</field>
-        <field name="context">{'search_default_group_fecha': 1}</field>
-    </record>
-
-    <!-- Menú principal -->
+    <!-- Menú principal actualizado -->
     <menuitem id="menu_contador_dashboard_root"
-              name="Dashboard Contadores"
+              name="📊 Dashboard Contadores"
               parent="sat_menu_root"
-              action="action_contador_dashboard"
+              action="action_contador_dashboard_main"
               sequence="90"/>
-
-    <!-- Submenú para estadísticas -->
-    <menuitem id="menu_contador_stats"
-              name="Estadísticas"
-              parent="menu_contador_dashboard_root"
-              action="action_contador_stats"
-              sequence="10"/>
 
 </odoo>
