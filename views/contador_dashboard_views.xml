@@ -1,6 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Vista Dashboard Principal -->
+    <!-- Vista Tree para listar registros -->
+    <record id="view_contador_dashboard_tree" model="ir.ui.view">
+        <field name="name">contador.dashboard.tree</field>
+        <field name="model">contador.automatico</field>
+        <field name="arch" type="xml">
+            <list string="Lista de Contadores" 
+                  create="false" 
+                  edit="false" 
+                  delete="false"
+                  decoration-success="estado == 'procesado'"
+                  decoration-warning="estado == 'pendiente'"
+                  decoration-danger="estado == 'error'">
+                
+                <field name="cliente_detectado" string="Cliente"/>
+                <field name="serie_detectada" string="Serie"/>
+                <field name="tipo_equipo_detectado" string="Tipo"/>
+                <field name="contador_bn_detectado" string="B/N"/>
+                <field name="contador_color_detectado" string="Color"/>
+                <field name="contador_total_detectado" string="Total"/>
+                <field name="create_date" string="Fecha"/>
+                <field name="estado" string="Estado" widget="badge"/>
+                
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista Search para filtros -->
+    <record id="view_contador_dashboard_search" model="ir.ui.view">
+        <field name="name">contador.dashboard.search</field>
+        <field name="model">contador.automatico</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Contadores">
+                <field name="cliente_detectado" string="Cliente"/>
+                <field name="serie_detectada" string="Serie"/>
+                <field name="estado" string="Estado"/>
+                
+                <filter string="Procesados" name="filter_procesados"
+                        domain="[('estado', '=', 'procesado')]"/>
+                <filter string="Hoy" name="filter_hoy" 
+                        domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+                
+                <group expand="0" string="Agrupar por">
+                    <filter string="Cliente" name="group_cliente" 
+                            context="{'group_by': 'cliente_detectado'}"/>
+                    <filter string="Estado" name="group_estado" 
+                            context="{'group_by': 'estado'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
     <record id="view_contador_dashboard_main" model="ir.ui.view">
         <field name="name">contador.dashboard.main</field>
         <field name="model">contador.automatico</field>
@@ -283,10 +332,16 @@
     <record id="action_contador_dashboard_main" model="ir.actions.act_window">
         <field name="name">📊 Dashboard Contadores</field>
         <field name="res_model">contador.automatico</field>
-        <field name="view_mode">form</field>
-        <field name="view_id" ref="view_contador_dashboard_main"/>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="view_contador_dashboard_tree"/>
+        <field name="search_view_id" ref="view_contador_dashboard_search"/>
         <field name="target">current</field>
-        <field name="context">{}</field>
+        <field name="domain">[]</field>
+        <field name="context">{
+            'create': False,
+            'delete': False,
+            'search_default_filter_procesados': 1
+        }</field>
         
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face text-center">
@@ -295,6 +350,8 @@
             <h3 class="text-center">¡Bienvenido al Dashboard de Contadores!</h3>
             <p class="text-center text-muted">
                 Monitorea el estado de todos tus equipos de impresión en tiempo real.
+                <br/>
+                Aquí puedes ver todos los registros procesados de contadores.
             </p>
         </field>
     </record>
