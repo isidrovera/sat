@@ -2287,7 +2287,7 @@ class ContadorAutomatico(models.Model):
         registrando cada mail sólo una vez (usa original_mail_id).
         """
         ahora = fields.Datetime.now()
-        fecha_limite = ahora - timedelta(hours=24)
+        fecha_limite = ahora - timedelta(hours=48)
         _logger.info("⏰ === INICIO CRON Específico COUNTER LIST/PAGE ===")
         _logger.info("🔍 Buscando mails desde %s", fecha_limite)
 
@@ -2357,7 +2357,7 @@ class ContadorAutomatico(models.Model):
             'correos_encontrados': len(correos_validos),
             'correos_procesados': exitosos,
             'correos_fallidos': errores,
-            'horas_revision': 24,
+            'horas_revision': 48,
         }
         # usamos una instancia dummy para invocar el helper
         dummy = self.search([], limit=1) or self.new()
