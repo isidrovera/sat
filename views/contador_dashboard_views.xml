@@ -1,448 +1,496 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Template principal del Dashboard -->
+    <!-- Template principal del Dashboard Moderno -->
     <template id="contador_dashboard_template" name="Dashboard de Contadores">
         <t t-call="web.layout">
             <t t-set="title">Dashboard de Contadores</t>
             
-            <!-- CSS personalizado -->
-            <style>
-                .dashboard-header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 3rem 0;
-                }
-                
-                .stat-card {
-                    background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    transition: transform 0.3s ease;
-                    border: none;
-                    overflow: hidden;
-                }
-                
-                .stat-card:hover {
-                    transform: translateY(-5px);
-                }
-                
-                .stat-icon {
-                    width: 60px;
-                    height: 60px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-bottom: 1rem;
-                }
-                
-                .stat-number {
-                    font-size: 2.5rem;
-                    font-weight: 700;
-                    margin-bottom: 0.5rem;
-                }
-                
-                .machine-row:hover {
-                    background-color: rgba(102, 126, 234, 0.05);
-                }
-                
-                .refresh-btn {
-                    position: fixed;
-                    bottom: 30px;
-                    right: 30px;
-                    width: 60px;
-                    height: 60px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #667eea, #764ba2);
-                    color: white;
-                    border: none;
-                    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-                    z-index: 1000;
-                }
-                
-                .refresh-btn:hover {
-                    transform: scale(1.1);
-                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-                }
-                
-                .filter-btn {
-                    border-radius: 20px;
-                    margin: 0 0.25rem;
-                    transition: all 0.2s ease;
-                }
-                
-                .filter-btn.active {
-                    background: linear-gradient(135deg, #667eea, #764ba2);
-                    color: white;
-                    border-color: #667eea;
-                }
-                
-                @media (max-width: 768px) {
-                    .dashboard-header h1 {
-                        font-size: 2rem;
-                    }
-                    .stat-number {
-                        font-size: 1.8rem;
-                    }
-                }
-            </style>
+            <!-- Enlaces a CSS externos -->
+            <t t-set="head">
+                <!-- Bootstrap 5.3 -->
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+                <!-- Font Awesome 6 -->
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+                <!-- Chart.js -->
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <!-- CSS personalizado -->
+                <link rel="stylesheet" type="text/css" href="/sat/static/src/css/contadores_dashboard.css"/>
+            </t>
             
-            <div class="container-fluid">
-                <!-- Header del Dashboard -->
+            <div class="dashboard-container">
+                <!-- Header moderno con gradiente -->
                 <div class="dashboard-header">
-                    <div class="container">
-                        <div class="row">
-                            <div class="col-12 text-center">
-                                <h1 class="display-4 mb-3">
-                                    <i class="fa fa-chart-line me-3"></i>
-                                    Dashboard de Contadores
-                                </h1>
-                                <p class="lead mb-4">Monitoreo en tiempo real de equipos de impresión</p>
-                                
-                                <!-- Botones de acción -->
-                                <div class="btn-group" role="group">
-                                    <a href="/dashboard/contador/refresh" class="btn btn-light btn-lg me-2">
-                                        <i class="fa fa-sync-alt me-2"></i>Actualizar
-                                    </a>
-                                    <a href="/dashboard/contador/stats" class="btn btn-outline-light btn-lg me-2">
-                                        <i class="fa fa-chart-bar me-2"></i>Estadísticas
-                                    </a>
-                                    <a href="/dashboard/contador/diagnostico" class="btn btn-outline-light btn-lg">
-                                        <i class="fa fa-stethoscope me-2"></i>Diagnóstico
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Estadísticas principales -->
-                <div class="container my-5">
-                    <div class="row g-4">
-                        <!-- Equipos Hoy -->
-                        <div class="col-xl-3 col-lg-6">
-                            <div class="stat-card text-center p-4">
-                                <div class="stat-icon bg-primary text-white mx-auto">
-                                    <i class="fa fa-desktop fa-lg"></i>
-                                </div>
-                                <div class="stat-number text-primary" t-esc="estadisticas.get('equipos_unicos_hoy', 0)">0</div>
-                                <h6 class="text-muted mb-0">Equipos Hoy</h6>
-                                <small class="text-muted">Últimas 24 horas</small>
-                            </div>
-                        </div>
-                        
-                        <!-- Equipos Semana -->
-                        <div class="col-xl-3 col-lg-6">
-                            <div class="stat-card text-center p-4">
-                                <div class="stat-icon bg-success text-white mx-auto">
-                                    <i class="fa fa-calendar-week fa-lg"></i>
-                                </div>
-                                <div class="stat-number text-success" t-esc="estadisticas.get('equipos_unicos_semana', 0)">0</div>
-                                <h6 class="text-muted mb-0">Equipos Esta Semana</h6>
-                                <small class="text-muted">Últimos 7 días</small>
-                            </div>
-                        </div>
-                        
-                        <!-- Total Equipos -->
-                        <div class="col-xl-3 col-lg-6">
-                            <div class="stat-card text-center p-4">
-                                <div class="stat-icon bg-info text-white mx-auto">
-                                    <i class="fa fa-database fa-lg"></i>
-                                </div>
-                                <div class="stat-number text-info" t-esc="estadisticas.get('total_equipos_sistema', 0)">0</div>
-                                <h6 class="text-muted mb-0">Total Sistema</h6>
-                                <small class="text-muted">Todos los equipos</small>
-                            </div>
-                        </div>
-                        
-                        <!-- Eficiencia -->
-                        <div class="col-xl-3 col-lg-6">
-                            <div class="stat-card text-center p-4">
-                                <div class="stat-icon bg-warning text-white mx-auto">
-                                    <i class="fa fa-percentage fa-lg"></i>
-                                </div>
-                                <div class="stat-number text-warning">
-                                    <t t-esc="estadisticas.get('eficiencia_sistema', 0)"/>%
-                                </div>
-                                <h6 class="text-muted mb-0">Eficiencia</h6>
-                                <small class="text-muted">Procesamiento automático</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Filtros -->
-                <div class="container mb-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
-                                    <div class="d-flex flex-wrap">
-                                        <button class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all">
-                                            <i class="fa fa-list me-1"></i>Todos
-                                        </button>
-                                        <button class="btn btn-outline-success btn-sm filter-btn" data-filter="hoy">
-                                            <i class="fa fa-calendar-day me-1"></i>Hoy
-                                        </button>
-                                        <button class="btn btn-outline-info btn-sm filter-btn" data-filter="color">
-                                            <i class="fa fa-palette me-1"></i>Color
-                                        </button>
-                                        <button class="btn btn-outline-secondary btn-sm filter-btn" data-filter="mono">
-                                            <i class="fa fa-circle me-1"></i>Monocromáticas
-                                        </button>
+                    <div class="container-fluid">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <div class="header-content">
+                                    <div class="header-icon">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <div class="header-text">
+                                        <h1 class="dashboard-title">Dashboard de Contadores</h1>
+                                        <p class="dashboard-subtitle">Monitoreo en tiempo real de equipos de impresión</p>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <form method="GET" action="/dashboard/contador">
-                                        <div class="input-group">
-                                            <input type="text" 
-                                                   class="form-control" 
-                                                   name="search" 
-                                                   placeholder="Buscar cliente o serie..."
-                                                   t-att-value="search_query or ''"/>
-                                            <button class="btn btn-outline-secondary" type="submit">
-                                                <i class="fa fa-search"></i>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="header-actions">
+                                    <button class="btn btn-glass me-2" id="refreshBtn">
+                                        <i class="fas fa-sync-alt me-2"></i>Actualizar
+                                    </button>
+                                    <div class="btn-group">
+                                        <button class="btn btn-glass dropdown-toggle" data-bs-toggle="dropdown">
+                                            <i class="fas fa-cog me-2"></i>Opciones
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="/dashboard/contador/stats">
+                                                <i class="fas fa-chart-bar me-2"></i>Estadísticas Detalladas
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="/dashboard/contador/diagnostico">
+                                                <i class="fas fa-stethoscope me-2"></i>Diagnóstico del Sistema
+                                            </a></li>
+                                            <li><hr class="dropdown-divider"/></li>
+                                            <li><a class="dropdown-item" href="/dashboard/contador/export/excel">
+                                                <i class="fas fa-file-excel me-2"></i>Exportar Excel
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estadísticas principales con diseño moderno -->
+                <div class="stats-section">
+                    <div class="container-fluid">
+                        <div class="row g-4">
+                            <!-- Equipos Hoy -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+                                <div class="stat-card stat-card-primary" data-aos="fade-up" data-aos-delay="100">
+                                    <div class="stat-card-body">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-desktop"></i>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-number" t-esc="estadisticas.get('equipos_unicos_hoy', 0)">0</div>
+                                            <div class="stat-label">Equipos Hoy</div>
+                                            <div class="stat-sublabel">Últimas 24 horas</div>
+                                        </div>
+                                        <div class="stat-trend">
+                                            <i class="fas fa-arrow-up"></i>
+                                            <span>+12%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Equipos Semana -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+                                <div class="stat-card stat-card-success" data-aos="fade-up" data-aos-delay="200">
+                                    <div class="stat-card-body">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-calendar-week"></i>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-number" t-esc="estadisticas.get('equipos_unicos_semana', 0)">0</div>
+                                            <div class="stat-label">Esta Semana</div>
+                                            <div class="stat-sublabel">Últimos 7 días</div>
+                                        </div>
+                                        <div class="stat-trend">
+                                            <i class="fas fa-arrow-up"></i>
+                                            <span>+8%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Total Equipos -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+                                <div class="stat-card stat-card-info" data-aos="fade-up" data-aos-delay="300">
+                                    <div class="stat-card-body">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-database"></i>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-number" t-esc="estadisticas.get('total_equipos_sistema', 0)">0</div>
+                                            <div class="stat-label">Total Sistema</div>
+                                            <div class="stat-sublabel">Todos los equipos</div>
+                                        </div>
+                                        <div class="stat-trend">
+                                            <i class="fas fa-minus"></i>
+                                            <span>0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Eficiencia -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+                                <div class="stat-card stat-card-warning" data-aos="fade-up" data-aos-delay="400">
+                                    <div class="stat-card-body">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-gauge-high"></i>
+                                        </div>
+                                        <div class="stat-content">
+                                            <div class="stat-number">
+                                                <t t-esc="estadisticas.get('eficiencia_sistema', 0)"/>%
+                                            </div>
+                                            <div class="stat-label">Eficiencia</div>
+                                            <div class="stat-sublabel">Procesamiento</div>
+                                        </div>
+                                        <div class="stat-trend positive">
+                                            <i class="fas fa-arrow-up"></i>
+                                            <span>+5%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel de filtros moderno -->
+                <div class="filters-section">
+                    <div class="container-fluid">
+                        <div class="filter-card">
+                            <div class="filter-header">
+                                <h5 class="filter-title">
+                                    <i class="fas fa-filter me-2"></i>Filtros y Búsqueda
+                                </h5>
+                            </div>
+                            <div class="filter-body">
+                                <div class="row align-items-center">
+                                    <div class="col-lg-8">
+                                        <div class="filter-buttons">
+                                            <button class="filter-btn active" data-filter="all">
+                                                <i class="fas fa-list"></i>
+                                                <span>Todos</span>
+                                                <div class="filter-count" id="count-all">0</div>
+                                            </button>
+                                            <button class="filter-btn" data-filter="hoy">
+                                                <i class="fas fa-calendar-day"></i>
+                                                <span>Hoy</span>
+                                                <div class="filter-count" id="count-hoy">0</div>
+                                            </button>
+                                            <button class="filter-btn" data-filter="color">
+                                                <i class="fas fa-palette"></i>
+                                                <span>Color</span>
+                                                <div class="filter-count" id="count-color">0</div>
+                                            </button>
+                                            <button class="filter-btn" data-filter="mono">
+                                                <i class="fas fa-circle"></i>
+                                                <span>Monocromáticas</span>
+                                                <div class="filter-count" id="count-mono">0</div>
+                                            </button>
+                                            <button class="filter-btn" data-filter="procesado">
+                                                <i class="fas fa-check-circle"></i>
+                                                <span>Procesados</span>
+                                                <div class="filter-count" id="count-procesado">0</div>
                                             </button>
                                         </div>
-                                    </form>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <div class="search-container">
+                                            <form method="GET" action="/dashboard/contador" class="search-form">
+                                                <div class="search-input-group">
+                                                    <input type="text" 
+                                                           class="search-input" 
+                                                           name="search" 
+                                                           placeholder="Buscar cliente, serie o tipo..."
+                                                           t-att-value="search_query or ''"
+                                                           autocomplete="off"/>
+                                                    <button class="search-btn" type="submit">
+                                                        <i class="fas fa-search"></i>
+                                                    </button>
+                                                    <button type="button" class="clear-btn" id="clearSearch" t-if="search_query">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Lista de equipos -->
-                <div class="container">
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="row align-items-center">
-                                <div class="col-md-6">
-                                    <h5 class="mb-0">
-                                        <i class="fa fa-printer me-2 text-primary"></i>
-                                        Equipos de Impresión
-                                    </h5>
-                                </div>
-                                <div class="col-md-6 text-end">
-                                    <span class="badge bg-light text-dark">
-                                        <i class="fa fa-clock me-1"></i>
-                                        Última actualización: <t t-esc="ultima_actualizacion"/>
-                                    </span>
+
+                <!-- Tabla de equipos moderna -->
+                <div class="table-section">
+                    <div class="container-fluid">
+                        <div class="table-card">
+                            <div class="table-header">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <h5 class="table-title">
+                                            <i class="fas fa-printer me-2"></i>
+                                            Equipos de Impresión
+                                        </h5>
+                                        <p class="table-subtitle">
+                                            Mostrando <span class="text-primary" t-esc="len(equipos)">0</span> de 
+                                            <span class="text-primary" t-esc="total_equipos">0</span> equipos
+                                        </p>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <div class="table-actions">
+                                            <button class="btn btn-outline-secondary btn-sm me-2" id="viewToggle">
+                                                <i class="fas fa-th-large me-1"></i>Vista
+                                            </button>
+                                            <span class="last-update">
+                                                <i class="fas fa-clock me-1"></i>
+                                                <t t-esc="ultima_actualizacion"/>
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th class="px-4 py-3">Cliente</th>
-                                            <th class="px-4 py-3">Serie</th>
-                                            <th class="px-4 py-3 text-center">Tipo</th>
-                                            <th class="px-4 py-3 text-center">Contadores</th>
-                                            <th class="px-4 py-3 text-center">Última Actualización</th>
-                                            <th class="px-4 py-3 text-center">Estado</th>
-                                            <th class="px-4 py-3 text-center">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-if="not equipos">
-                                            <tr>
-                                                <td colspan="7" class="text-center py-5">
-                                                    <div class="text-muted">
-                                                        <i class="fa fa-search fa-3x mb-3 d-block"></i>
-                                                        <h5>No se encontraron equipos</h5>
-                                                        <p>No hay registros que coincidan con los filtros aplicados</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </t>
-                                        
-                                        <t t-foreach="equipos" t-as="equipo">
-                                            <tr class="machine-row">
-                                                <td class="px-4 py-3">
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="me-3">
-                                                            <div class="avatar bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                                <i class="fa fa-building text-primary"></i>
+
+                            <div class="table-body">
+                                <t t-if="not equipos">
+                                    <div class="empty-state">
+                                        <div class="empty-icon">
+                                            <i class="fas fa-search"></i>
+                                        </div>
+                                        <h4 class="empty-title">No se encontraron equipos</h4>
+                                        <p class="empty-text">No hay registros que coincidan con los filtros aplicados</p>
+                                        <button class="btn btn-primary" onclick="window.location.reload()">
+                                            <i class="fas fa-refresh me-2"></i>Actualizar
+                                        </button>
+                                    </div>
+                                </t>
+
+                                <t t-if="equipos">
+                                    <div class="table-responsive">
+                                        <table class="modern-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="sortable" data-sort="cliente">
+                                                        <div class="th-content">
+                                                            <i class="fas fa-building me-2"></i>Cliente
+                                                            <i class="fas fa-sort sort-icon"></i>
+                                                        </div>
+                                                    </th>
+                                                    <th class="sortable" data-sort="serie">
+                                                        <div class="th-content">
+                                                            <i class="fas fa-barcode me-2"></i>Serie
+                                                            <i class="fas fa-sort sort-icon"></i>
+                                                        </div>
+                                                    </th>
+                                                    <th class="text-center">
+                                                        <div class="th-content">
+                                                            <i class="fas fa-tag me-2"></i>Tipo
+                                                        </div>
+                                                    </th>
+                                                    <th class="text-center">
+                                                        <div class="th-content">
+                                                            <i class="fas fa-calculator me-2"></i>Contadores
+                                                        </div>
+                                                    </th>
+                                                    <th class="text-center sortable" data-sort="fecha">
+                                                        <div class="th-content">
+                                                            <i class="fas fa-clock me-2"></i>Actualización
+                                                            <i class="fas fa-sort sort-icon"></i>
+                                                        </div>
+                                                    </th>
+                                                    <th class="text-center">
+                                                        <div class="th-content">
+                                                            <i class="fas fa-info-circle me-2"></i>Estado
+                                                        </div>
+                                                    </th>
+                                                    <th class="text-center">
+                                                        <div class="th-content">
+                                                            <i class="fas fa-cogs me-2"></i>Acciones
+                                                        </div>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="equipos" t-as="equipo">
+                                                    <tr class="table-row" 
+                                                        t-att-data-tipo="equipo.tipo_equipo_detectado"
+                                                        t-att-data-estado="equipo.estado_ultimo">
+                                                        <!-- Cliente -->
+                                                        <td class="cell-cliente">
+                                                            <div class="client-info">
+                                                                <div class="client-avatar">
+                                                                    <i class="fas fa-building"></i>
+                                                                </div>
+                                                                <div class="client-details">
+                                                                    <div class="client-name" t-esc="equipo.cliente_detectado"/>
+                                                                    <div class="client-label">Cliente</div>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        <div>
-                                                            <div class="fw-semibold" t-esc="equipo.cliente_detectado"/>
-                                                            <small class="text-muted">Cliente</small>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td class="px-4 py-3">
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="me-3">
-                                                            <div class="avatar bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                                <i class="fa fa-barcode text-white"></i>
+                                                        </td>
+
+                                                        <!-- Serie -->
+                                                        <td class="cell-serie">
+                                                            <div class="serie-info">
+                                                                <div class="serie-avatar">
+                                                                    <i class="fas fa-barcode"></i>
+                                                                </div>
+                                                                <div class="serie-details">
+                                                                    <div class="serie-number" t-esc="equipo.serie_detectada"/>
+                                                                    <div class="serie-label">N° Serie</div>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        <div>
-                                                            <div class="fw-semibold font-monospace" t-esc="equipo.serie_detectada"/>
-                                                            <small class="text-muted">Número de serie</small>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td class="px-4 py-3 text-center">
-                                                    <span class="badge bg-light text-dark">
-                                                        <i t-att-class="'fa me-1 ' + ('fa-palette' if equipo.tipo_equipo_detectado == 'color' else 'fa-circle')"></i>
-                                                        <t t-esc="equipo.tipo_equipo_detectado"/>
-                                                    </span>
-                                                </td>
-                                                <td class="px-4 py-3 text-center">
-                                                    <div class="row g-1">
-                                                        <div class="col-4">
-                                                            <small class="d-block">B/N</small>
-                                                            <strong t-esc="'{:,}'.format(equipo.contador_bn_actual)"/>
-                                                        </div>
-                                                        <div class="col-4">
-                                                            <small class="d-block">Color</small>
-                                                            <strong t-esc="'{:,}'.format(equipo.contador_color_actual)"/>
-                                                        </div>
-                                                        <div class="col-4">
-                                                            <small class="d-block text-primary">Total</small>
-                                                            <strong class="text-primary" t-esc="'{:,}'.format(equipo.contador_total_actual)"/>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td class="px-4 py-3 text-center">
-                                                    <small class="text-muted">
-                                                        <i class="fa fa-clock me-1"></i>
-                                                        <t t-esc="equipo.ultima_actualizacion_formatted"/>
-                                                    </small>
-                                                </td>
-                                                <td class="px-4 py-3 text-center">
-                                                    <span t-att-class="'badge ' + ('bg-success' if equipo.estado_ultimo == 'procesado' else 'bg-warning' if equipo.estado_ultimo == 'pendiente' else 'bg-danger' if equipo.estado_ultimo == 'error' else 'bg-info')"
-                                                          t-esc="equipo.estado_ultimo"/>
-                                                </td>
-                                                <td class="px-4 py-3 text-center">
-                                                    <div class="btn-group btn-group-sm">
-                                                        <a t-att-href="'/dashboard/contador/detalle/' + str(equipo.id)" 
-                                                           class="btn btn-outline-primary" 
-                                                           title="Ver detalle">
-                                                            <i class="fa fa-eye"></i>
-                                                        </a>
-                                                        <a t-att-href="'/dashboard/contador/historial/' + str(equipo.id)" 
-                                                           class="btn btn-outline-secondary" 
-                                                           title="Ver historial">
-                                                            <i class="fa fa-history"></i>
-                                                        </a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </t>
-                                    </tbody>
-                                </table>
+                                                        </td>
+
+                                                        <!-- Tipo -->
+                                                        <td class="text-center">
+                                                            <span t-att-class="'type-badge type-' + (equipo.tipo_equipo_detectado or 'unknown')">
+                                                                <i t-att-class="'fas me-1 ' + ('fa-palette' if equipo.tipo_equipo_detectado == 'color' else 'fa-circle')"></i>
+                                                                <t t-esc="equipo.tipo_equipo_detectado or 'N/A'"/>
+                                                            </span>
+                                                        </td>
+
+                                                        <!-- Contadores -->
+                                                        <td class="text-center">
+                                                            <div class="counters-grid">
+                                                                <div class="counter-item">
+                                                                    <div class="counter-icon">
+                                                                        <i class="fas fa-circle"></i>
+                                                                    </div>
+                                                                    <div class="counter-value" t-esc="'{:,}'.format(equipo.contador_bn_actual)"/>
+                                                                    <div class="counter-label">B/N</div>
+                                                                </div>
+                                                                <div class="counter-item">
+                                                                    <div class="counter-icon color">
+                                                                        <i class="fas fa-palette"></i>
+                                                                    </div>
+                                                                    <div class="counter-value" t-esc="'{:,}'.format(equipo.contador_color_actual)"/>
+                                                                    <div class="counter-label">Color</div>
+                                                                </div>
+                                                                <div class="counter-item total">
+                                                                    <div class="counter-icon">
+                                                                        <i class="fas fa-plus"></i>
+                                                                    </div>
+                                                                    <div class="counter-value" t-esc="'{:,}'.format(equipo.contador_total_actual)"/>
+                                                                    <div class="counter-label">Total</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        <!-- Fecha -->
+                                                        <td class="text-center">
+                                                            <div class="date-info">
+                                                                <div class="date-value" t-esc="equipo.ultima_actualizacion_formatted"/>
+                                                                <div class="date-relative" data-date="equipo.ultima_actualizacion_formatted">
+                                                                    Hace 2 horas
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        <!-- Estado -->
+                                                        <td class="text-center">
+                                                            <span t-att-class="'status-badge status-' + (equipo.estado_ultimo or 'unknown')">
+                                                                <i t-att-class="'fas me-1 ' + ('fa-check-circle' if equipo.estado_ultimo == 'procesado' else 'fa-clock' if equipo.estado_ultimo == 'pendiente' else 'fa-exclamation-circle' if equipo.estado_ultimo == 'error' else 'fa-question-circle')"></i>
+                                                                <t t-esc="equipo.estado_ultimo or 'N/A'"/>
+                                                            </span>
+                                                        </td>
+
+                                                        <!-- Acciones -->
+                                                        <td class="text-center">
+                                                            <div class="action-buttons">
+                                                                <a t-att-href="'/dashboard/contador/detalle/' + str(equipo.id)" 
+                                                                   class="action-btn action-btn-primary" 
+                                                                   title="Ver detalle">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </a>
+                                                                <a t-att-href="'/dashboard/contador/historial/' + str(equipo.id)" 
+                                                                   class="action-btn action-btn-secondary" 
+                                                                   title="Ver historial">
+                                                                    <i class="fas fa-history"></i>
+                                                                </a>
+                                                                <button class="action-btn action-btn-info" 
+                                                                        title="Más opciones"
+                                                                        data-bs-toggle="dropdown">
+                                                                    <i class="fas fa-ellipsis-v"></i>
+                                                                </button>
+                                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Editar</a></li>
+                                                                    <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i>Descargar</a></li>
+                                                                </ul>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </t>
                             </div>
-                        </div>
-                        
-                        <!-- Paginación -->
-                        <div class="card-footer" t-if="total_pages and total_pages > 1">
-                            <nav>
-                                <ul class="pagination justify-content-center mb-0">
-                                    <li t-att-class="'page-item ' + ('disabled' if current_page == 1 else '')">
-                                        <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(current_page - 1) + ('&amp;search=' + (search_query or '') if search_query else '')">
-                                            <i class="fa fa-chevron-left"></i>
-                                        </a>
-                                    </li>
-                                    
-                                    <t t-set="start_page" t-value="max(1, current_page - 2)"/>
-                                    <t t-set="end_page" t-value="min(total_pages + 1, current_page + 3)"/>
-                                    <t t-foreach="range(start_page, end_page)" t-as="page_num">
-                                        <li t-att-class="'page-item ' + ('active' if page_num == current_page else '')">
-                                            <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(page_num) + ('&amp;search=' + (search_query or '') if search_query else '')"
-                                               t-esc="page_num"/>
-                                        </li>
-                                    </t>
-                                    
-                                    <li t-att-class="'page-item ' + ('disabled' if current_page == total_pages else '')">
-                                        <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(current_page + 1) + ('&amp;search=' + (search_query or '') if search_query else '')">
-                                            <i class="fa fa-chevron-right"></i>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Información adicional -->
-                <div class="container mt-4 mb-5">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body text-center">
-                                    <h6 class="text-muted">Total de registros</h6>
-                                    <h4 class="text-primary" t-esc="total_equipos">0</h4>
+
+                            <!-- Paginación moderna -->
+                            <div class="table-footer" t-if="total_pages and total_pages > 1">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <div class="pagination-info">
+                                            Mostrando <strong t-esc="(current_page - 1) * 20 + 1"/>-<strong t-esc="min(current_page * 20, total_equipos)"/> 
+                                            de <strong t-esc="total_equipos"/> registros
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <nav class="pagination-nav">
+                                            <ul class="modern-pagination">
+                                                <li t-att-class="'page-item ' + ('disabled' if current_page == 1 else '')">
+                                                    <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(current_page - 1) + ('&amp;search=' + (search_query or '') if search_query else '')">
+                                                        <i class="fas fa-chevron-left"></i>
+                                                    </a>
+                                                </li>
+                                                
+                                                <t t-set="start_page" t-value="max(1, current_page - 2)"/>
+                                                <t t-set="end_page" t-value="min(total_pages + 1, current_page + 3)"/>
+                                                <t t-foreach="range(start_page, end_page)" t-as="page_num">
+                                                    <li t-att-class="'page-item ' + ('active' if page_num == current_page else '')">
+                                                        <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(page_num) + ('&amp;search=' + (search_query or '') if search_query else '')"
+                                                           t-esc="page_num"/>
+                                                    </li>
+                                                </t>
+                                                
+                                                <li t-att-class="'page-item ' + ('disabled' if current_page == total_pages else '')">
+                                                    <a class="page-link" t-att-href="'/dashboard/contador?page=' + str(current_page + 1) + ('&amp;search=' + (search_query or '') if search_query else '')">
+                                                        <i class="fas fa-chevron-right"></i>
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body text-center">
-                                    <h6 class="text-muted">Mostrando</h6>
-                                    <h4 class="text-success">
-                                        <t t-esc="len(equipos)"/> de <t t-esc="total_equipos"/>
-                                    </h4>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
-                
-                <!-- Botón flotante de refresh -->
-                <a href="/dashboard/contador/refresh" class="refresh-btn d-flex align-items-center justify-content-center" title="Actualizar dashboard">
-                    <i class="fa fa-sync-alt fa-lg"></i>
-                </a>
+
+                <!-- FAB (Floating Action Button) -->
+                <div class="fab-container">
+                    <button class="fab fab-primary" id="mainFab">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <div class="fab-menu" id="fabMenu">
+                        <button class="fab fab-secondary" onclick="window.location.reload()" title="Actualizar">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="fab fab-secondary" onclick="window.location.href='/dashboard/contador/export/excel'" title="Exportar">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="fab fab-secondary" onclick="window.location.href='/dashboard/contador/stats'" title="Estadísticas">
+                            <i class="fas fa-chart-bar"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
-            
-            <!-- JavaScript para filtros -->
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    // Filtros de equipos
-                    const filterButtons = document.querySelectorAll('.filter-btn');
-                    filterButtons.forEach(button =&gt; {
-                        button.addEventListener('click', function() {
-                            // Remover active de todos
-                            filterButtons.forEach(btn =&gt; btn.classList.remove('active'));
-                            // Agregar active al clickeado
-                            this.classList.add('active');
-                            
-                            const filter = this.getAttribute('data-filter');
-                            filterEquipos(filter);
-                        });
-                    });
-                    
-                    function filterEquipos(filter) {
-                        const rows = document.querySelectorAll('.machine-row');
-                        
-                        rows.forEach(row =&gt; {
-                            let show = true;
-                            
-                            if (filter === 'hoy') {
-                                // Lógica para mostrar solo equipos de hoy
-                                // Se puede implementar verificando la fecha
-                            } else if (filter === 'color') {
-                                const tipoCell = row.querySelector('td:nth-child(3)');
-                                show = tipoCell.textContent.toLowerCase().includes('color');
-                            } else if (filter === 'mono') {
-                                const tipoCell = row.querySelector('td:nth-child(3)');
-                                show = tipoCell.textContent.toLowerCase().includes('monocromatica');
-                            }
-                            
-                            row.style.display = show ? '' : 'none';
-                        });
-                    }
-                    
-                    // Auto-refresh cada 5 minutos
-                    setInterval(function() {
-                        window.location.reload();
-                    }, 5 * 60 * 1000);
-                });
-            </script>
+
+            <!-- Scripts -->
+            <t t-set="scripts">
+                <!-- Bootstrap 5.3 JS -->
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+                <!-- AOS Animation -->
+                <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+                <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet"/>
+                <!-- Dashboard JS personalizado -->
+                <script src="/sat/static/src/js/contadores_dashboard.js"></script>
+            </t>
         </t>
     </template>
 </odoo>
