@@ -5,7 +5,7 @@
         <field name="name">contador.dashboard.main</field>
         <field name="model">contador.automatico</field>
         <field name="arch" type="xml">
-            <form string="Dashboard Contadores" class="o_contador_dashboard_main" js_class="contador_dashboard_form">
+            <form string="Dashboard Contadores" class="o_contador_dashboard_main">
                 <header>
                     <!-- Botones de acción en el header -->
                     <button name="action_refresh_dashboard_data" 
