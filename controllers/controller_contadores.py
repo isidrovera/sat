@@ -9,8 +9,7 @@ _logger = logging.getLogger(__name__)
 
 class ContadorDashboardController(http.Controller):
     
-    @http.route(['/dashboard/contador', '/<string:lang>/dashboard/contador'], 
-            type='http', auth='user', website=True, multilang=True)
+    @http.route('/dashboard/contador', type='http', auth='user', website=True)
     def dashboard_main(self, page=1, search=None, **kwargs):
         """
         Ruta principal del dashboard de contadores
