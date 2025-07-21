@@ -137,7 +137,7 @@
                                 <div class="stat-icon bg-success text-white mx-auto">
                                     <i class="fa fa-calendar-week fa-lg"></i>
                                 </div>
-                                <div class="stat-number text-success" t-esc="estadisticas.equipos_unicos_semana">0</div>
+                                <div class="stat-number text-success" t-esc="estadisticas['equipos_unicos_semana']">0</div>
                                 <h6 class="text-muted mb-0">Equipos Esta Semana</h6>
                                 <small class="text-muted">Últimos 7 días</small>
                             </div>
@@ -149,7 +149,7 @@
                                 <div class="stat-icon bg-info text-white mx-auto">
                                     <i class="fa fa-database fa-lg"></i>
                                 </div>
-                                <div class="stat-number text-info" t-esc="estadisticas.total_equipos_sistema">0</div>
+                                <div class="stat-number text-info" t-esc="estadisticas['total_equipos_sistema']">0</div>
                                 <h6 class="text-muted mb-0">Total Sistema</h6>
                                 <small class="text-muted">Todos los equipos</small>
                             </div>
@@ -162,7 +162,7 @@
                                     <i class="fa fa-percentage fa-lg"></i>
                                 </div>
                                 <div class="stat-number text-warning">
-                                    <t t-esc="estadisticas.eficiencia_sistema"/>%
+                                    <t t-esc="estadisticas['eficiencia_sistema']"/>%
                                 </div>
                                 <h6 class="text-muted mb-0">Eficiencia</h6>
                                 <small class="text-muted">Procesamiento automático</small>
