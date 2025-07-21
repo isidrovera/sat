@@ -161,7 +161,7 @@
             'sat/static/src/css/parts_request_message.css',
             'sat/static/src/css/image-viewer.css',
             'sat/static/src/css/sat_table_styles.css',
-            'sat/static/src/css/contador_dashboard.css',
+            'sat/static/src/css/contadores_dashboard.css',
             
             # SCSS existente
             '/sat/static/src/scss/list_dashboard.scss',
@@ -181,7 +181,7 @@
             'sat/static/src/js/image-viewer_v1.js',
             'sat/static/src/js/equipment_visit_report.js',
             'sat/static/src/js/sat_table_enhancements.js',
-            'sat/static/src/js/contador_dashboard.js',
+            'sat/static/src/js/contadores_dashboard.js',
             
           
             
