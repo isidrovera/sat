@@ -1254,7 +1254,7 @@ Total: ${total}`;
                                     </div>
                                     <div class="col-md-6">
                                         <div class="input-group">
-                                            <input type="text" class="form-control" id="searchInput" placeholder="Buscar por fecha, remitente o estado...">
+                                            <input type="text" class="form-control" id="searchInput" placeholder="Buscar por fecha, remitente o estado..."/>
                                             <button class="btn btn-outline-secondary" onclick="clearSearch()">
                                                 <i class="fas fa-times"></i>
                                             </button>
@@ -1415,12 +1415,12 @@ Total: ${total}`;
                                                         <td class="px-3 py-3 text-center">
                                                             <div class="btn-group btn-group-sm">
                                                                 <button class="btn btn-outline-primary btn-sm" 
-                                                                        onclick="copyRowData(this)" 
-                                                                        title="Copiar datos"
-                                                                        t-att-data-info="f'{registro.get(\"fecha\", \"\")} - B/N: {registro.get(\"contador_bn\", 0)}, Color: {registro.get(\"contador_color\", 0)}, Total: {registro.get(\"contador_total\", 0)}'">
-                                                                    <i class="fas fa-copy"></i>
+                                                                    onclick="copyRowData(this)" 
+                                                                    title="Copiar datos"
+                                                                    t-att-data-info="registro.get('fecha', '') + ' - B/N: ' + str(registro.get('contador_bn', 0)) + ', Color: ' + str(registro.get('contador_color', 0)) + ', Total: ' + str(registro.get('contador_total', 0))">
+                                                                <i class="fas fa-copy"></i>
                                                                 </button>
-                                                                <button class="btn btn-outline-info btn-sm dropdown-toggle" 
+                                                                                                                                <button class="btn btn-outline-info btn-sm dropdown-toggle" 
                                                                         data-bs-toggle="dropdown"
                                                                         title="Más opciones">
                                                                     <i class="fas fa-ellipsis-v"></i>
@@ -1507,7 +1507,7 @@ Total: ${total}`;
                         let visibleCount = 0;
                         
                         // Actualizar botones
-                        document.querySelectorAll('[onclick^="filterByState"]').forEach(btn => {
+                        document.querySelectorAll('[onclick^="filterByState"]').forEach(btn =&gt; {
                             btn.classList.remove('active');
                         });
                         document.getElementById('filter' + state.charAt(0).toUpperCase() + state.slice(1)).classList.add('active');
@@ -1544,7 +1544,7 @@ Total: ${total}`;
                                     
                                     const stateMatches = currentFilter === 'all' || row.dataset.estado === currentFilter;
                                     
-                                    if (matches && stateMatches) {
+                                    if (matches &amp;&amp; stateMatches) {
                                         row.style.display = '';
                                         visibleCount++;
                                     } else {
@@ -1630,7 +1630,7 @@ Total: ${total}`;
                         const totalData = [];
                         
                         // Tomar los últimos 10 registros para el gráfico
-                        Array.from(rows).slice(0, 10).reverse().forEach(row => {
+                        Array.from(rows).slice(0, 10).reverse().forEach(row =&gt; {
                             labels.push(row.dataset.fecha.split(' ')[0]); // Solo fecha
                             bnData.push(parseInt(row.dataset.bn));
                             colorData.push(parseInt(row.dataset.color));
@@ -1715,7 +1715,7 @@ Total: ${total}`;
                     // Copiar datos de fila
                     function copyRowData(button) {
                         const info = button.dataset.info;
-                        if (navigator.clipboard && info) {
+                        if (navigator.clipboard &amp;&amp; info) {
                             navigator.clipboard.writeText(info).then(() =&gt; {
                                 showAlert('Datos copiados: ' + info, 'success');
                             });
@@ -1817,13 +1817,13 @@ Total: ${total}`;
                         const bnValues = Array.from(rows).map(row =&gt; parseInt(row.dataset.bn));
                         const colorValues = Array.from(rows).map(row =&gt; parseInt(row.dataset.color));
 
-                        const bnTrend = bnValues.length &gt; 1 && bnValues[0] &gt; bnValues[bnValues.length - 1];
-                        const colorTrend = colorValues.length &gt; 1 && colorValues[0] &gt; colorValues[colorValues.length - 1];
+                        const bnTrend = bnValues.length &gt; 1 &amp;&amp; bnValues[0] &gt; bnValues[bnValues.length - 1];
+                        const colorTrend = colorValues.length &gt; 1 &amp;&amp; colorValues[0] &gt; colorValues[colorValues.length - 1];
 
                         let message = 'Patrones detectados: ';
                         if (bnTrend) message += 'Incremento en B/N ';
                         if (colorTrend) message += 'Incremento en Color ';
-                        if (!bnTrend && !colorTrend) message += 'Sin patrones claros';
+                        if (!bnTrend &amp;&amp; !colorTrend) message += 'Sin patrones claros';
 
                         showAlert(message, 'info');
                     }
