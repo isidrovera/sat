@@ -2635,7 +2635,7 @@ class UnidadAlquiler(models.Model):
         return {
             'name': 'Contadores',
             'res_model': 'contador.automatico',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'type': 'ir.actions.act_window',
             'domain': [('equipo_id', '=', self.id)],
         }
