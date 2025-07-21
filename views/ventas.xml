@@ -440,10 +440,7 @@
                         string="Ubicación" 
                         context="{'group_by': 'ubicacion_id'}"/>
             </group>
-            <filter name="filter_sin_entregada"
-                  string="Sin entregadas"
-                  domain="[('estado_ventas_id', '!=', 'entregada')]"
-                  default="1"/>
+            
            <!-- <searchpanel>            
               <field name="estado_ventas_id" string="Estado" icon="fa-hourglass-start" enable_counters="1" colors='{"sin_revisar": "red", "en_revision": "blue", "finalizado": "green", "entregada": "purple"}'/>
               <field name="disponibilidad_id" string="Disponibilidad" icon="fa-check-circle" enable_counters="1" colors='{"disponible": "green", "separada": "orange", "no_disponible": "red"}'/>                                 
