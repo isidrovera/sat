@@ -75,7 +75,7 @@ class ContadorDashboardController(http.Controller):
                 'page_title': 'Dashboard de Contadores',
             }
             
-            return request.render('tu_modulo.contador_dashboard_template', values)
+            return request.render('sat.contador_dashboard_template', values)
             
         except Exception as e:
             _logger.error(f"Error en dashboard principal: {e}")
