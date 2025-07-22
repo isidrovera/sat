@@ -11,7 +11,7 @@ class PrintTrackerConfig(models.Model):
 
     name = fields.Char('Nombre de Configuración', required=True, default='PrintTracker Pro Config')
     api_url = fields.Char('URL Base API', required=True, 
-                         default='https://api.printtrackerpro.com/v1',
+                         default='https://papi.printtrackerpro.com/v1',
                          help='URL base de la API de PrintTracker Pro')
     api_key = fields.Char('API Key', required=True,
                          help='Token de autenticación para la API')
