@@ -11,7 +11,7 @@ class PrintTrackerConfig(models.Model):
 
     name = fields.Char('Nombre de Configuración', required=True, default='PrintTracker Pro Config')
     api_url = fields.Char('URL Base API', required=True, 
-                         default='https://api.printtrackerpro.com',
+                         default='https://api.printtrackerpro.com/v1',
                          help='URL base de la API de PrintTracker Pro')
     api_key = fields.Char('API Key', required=True,
                          help='Token de autenticación para la API')
@@ -47,33 +47,46 @@ class PrintTrackerConfig(models.Model):
     def test_connection(self):
         """Prueba la conexión con PrintTracker API"""
         try:
+            _logger.info(f"🔍 Probando conexión a {self.api_url} con entidad {self.entity_bbbb_id}")
+            
             headers = {
-                'Authorization': f'Bearer {self.api_key}',
+                'x-api-key': self.api_key,  # ← CORRECCIÓN: usar x-api-key
                 'Content-Type': 'application/json'
             }
             
+            # URL correcta según documentación: /entity/{entityId}
             response = requests.get(
-                f'{self.api_url.rstrip("/")}/entities/{self.entity_bbbb_id}',
+                f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}',  # ← CORRECCIÓN: /entity/ no /entities/
                 headers=headers,
                 timeout=self.timeout_seconds
             )
             
+            _logger.info(f"📡 Respuesta API: {response.status_code}")
+            
             if response.status_code == 200:
+                data = response.json()
+                entity_name = data.get('name', 'Sin nombre')
+                
                 self.write({
                     'connection_status': 'connected',
                     'last_error': False,
                     'last_sync_date': fields.Datetime.now()
                 })
+                
+                _logger.info(f"✅ Conexión exitosa con entidad: {entity_name}")
+                
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'message': 'Conexión exitosa con PrintTracker Pro',
+                        'message': f'✅ Conexión exitosa con PrintTracker Pro\nEntidad: {entity_name}',
                         'type': 'success'
                     }
                 }
             else:
                 error_msg = f'Error HTTP {response.status_code}: {response.text}'
+                _logger.error(f"❌ Error de conexión: {error_msg}")
+                
                 self.write({
                     'connection_status': 'error',
                     'last_error': error_msg
@@ -82,13 +95,15 @@ class PrintTrackerConfig(models.Model):
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'message': f'Error de conexión: {error_msg}',
+                        'message': f'❌ Error de conexión: {error_msg}',
                         'type': 'danger'
                     }
                 }
                 
         except Exception as e:
             error_msg = str(e)
+            _logger.error(f"❌ Excepción en test_connection: {error_msg}")
+            
             self.write({
                 'connection_status': 'error',
                 'last_error': error_msg
@@ -97,7 +112,7 @@ class PrintTrackerConfig(models.Model):
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'message': f'Error: {error_msg}',
+                    'message': f'❌ Error: {error_msg}',
                     'type': 'danger'
                 }
             }
@@ -105,7 +120,7 @@ class PrintTrackerConfig(models.Model):
     def get_api_headers(self):
         """Retorna headers para requests a la API"""
         return {
-            'Authorization': f'Bearer {self.api_key}',
+            'x-api-key': self.api_key,  # ← CORRECCIÓN: usar x-api-key en lugar de Authorization
             'Content-Type': 'application/json'
         }
     
