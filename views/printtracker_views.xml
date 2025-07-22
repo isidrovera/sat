@@ -81,8 +81,52 @@
                             type="object" 
                             string="Probar Conexión" 
                             class="btn-primary"/>
+
+                    <button name="test_connection" 
+                            type="object" 
+                            string="Probar Conexión" 
+                            class="btn-primary"/>
+                    <button name="sync_all_data" 
+                            type="object" 
+                            string="Sincronizar Todo" 
+                            class="btn-success"
+                            invisible="connection_status != 'connected'"/>
                 </header>
                 <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="sync_all_entities" 
+                                    type="object" 
+                                    class="oe_stat_button" 
+                                    icon="fa-sitemap"
+                                    invisible="connection_status != 'connected'">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Sincronizar</span>
+                                    <span class="o_stat_text">Entidades</span>
+                                </div>
+                            </button>
+                            
+                            <button name="sync_all_devices" 
+                                    type="object" 
+                                    class="oe_stat_button" 
+                                    icon="fa-print"
+                                    invisible="connection_status != 'connected'">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Sincronizar</span>
+                                    <span class="o_stat_text">Dispositivos</span>
+                                </div>
+                            </button>
+                            
+                            <button name="sync_current_meters" 
+                                    type="object" 
+                                    class="oe_stat_button" 
+                                    icon="fa-tachometer"
+                                    invisible="connection_status != 'connected'">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Sincronizar</span>
+                                    <span class="o_stat_text">Medidores</span>
+                                </div>
+                            </button>
+                        </div>
                     <widget name="web_ribbon" 
                             title="Conectado" 
                             bg_color="bg-success" 

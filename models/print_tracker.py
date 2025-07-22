@@ -116,6 +116,346 @@ class PrintTrackerConfig(models.Model):
                     'type': 'danger'
                 }
             }
+
+    def sync_all_entities(self):
+        """Sincroniza todas las entidades desde PrintTracker"""
+        try:
+            _logger.info(f"🔄 Iniciando sincronización de entidades...")
+            
+            response = requests.get(
+                f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}',
+                headers=self.get_api_headers(),
+                params={'includeChildren': True},
+                timeout=self.timeout_seconds
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Crear/actualizar entidad principal
+                self._sync_entity(data)
+                
+                # Sincronizar entidades hijas
+                children_synced = 0
+                if 'children' in data:
+                    for child in data['children']:
+                        # Obtener datos completos de cada entidad hija
+                        child_response = requests.get(
+                            f'{self.api_url.rstrip("/")}/entity/{child["id"]}',
+                            headers=self.get_api_headers(),
+                            timeout=self.timeout_seconds
+                        )
+                        
+                        if child_response.status_code == 200:
+                            child_data = child_response.json()
+                            self._sync_entity(child_data, parent_entity_id=data['id'])
+                            children_synced += 1
+                
+                self.last_sync_date = fields.Datetime.now()
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': f'✅ Sincronización completa: 1 entidad principal + {children_synced} entidades hijas',
+                        'type': 'success'
+                    }
+                }
+            else:
+                error_msg = f'Error HTTP {response.status_code}: {response.text}'
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': f'❌ Error sincronizando entidades: {error_msg}',
+                        'type': 'danger'
+                    }
+                }
+                
+        except Exception as e:
+            _logger.error(f"❌ Error sincronizando entidades: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'❌ Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+    def _sync_entity(self, entity_data, parent_entity_id=None):
+        """Sincroniza una entidad individual"""
+        try:
+            # Buscar si ya existe
+            existing_entity = self.env['printtracker.entity'].search([
+                ('pt_entity_id', '=', entity_data['id'])
+            ], limit=1)
+            
+            # Buscar entidad padre
+            parent_entity = None
+            if parent_entity_id:
+                parent_entity = self.env['printtracker.entity'].search([
+                    ('pt_entity_id', '=', parent_entity_id)
+                ], limit=1)
+            
+            entity_values = {
+                'pt_entity_id': entity_data['id'],
+                'name': entity_data.get('name', 'Sin nombre'),
+                'genealogy': str(entity_data.get('genealogy', [])),
+                'parent_id': parent_entity.id if parent_entity else False,
+                'last_sync': fields.Datetime.now(),
+                'sync_error': False,
+                'is_active': True
+            }
+            
+            if existing_entity:
+                existing_entity.write(entity_values)
+                _logger.info(f"📝 Entidad actualizada: {entity_data.get('name')}")
+            else:
+                new_entity = self.env['printtracker.entity'].create(entity_values)
+                _logger.info(f"🆕 Entidad creada: {entity_data.get('name')}")
+                
+                # Sincronizar direcciones y labels
+                if 'addresses' in entity_data:
+                    new_entity._sync_addresses(entity_data['addresses'])
+                if 'labels' in entity_data:
+                    new_entity._sync_labels(entity_data['labels'])
+                    
+        except Exception as e:
+            _logger.error(f"❌ Error sincronizando entidad {entity_data.get('name')}: {e}")
+
+    def sync_all_devices(self):
+        """Sincroniza todos los dispositivos desde PrintTracker"""
+        try:
+            _logger.info(f"🔄 Iniciando sincronización de dispositivos...")
+            
+            response = requests.get(
+                f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/device',
+                headers=self.get_api_headers(),
+                params={
+                    'includeChildren': True,
+                    'excludeDisabled': False,
+                    'limit': self.max_records_per_request
+                },
+                timeout=self.timeout_seconds
+            )
+            
+            if response.status_code == 200:
+                devices = response.json()
+                devices_synced = 0
+                devices_updated = 0
+                
+                for device_data in devices:
+                    result = self._sync_device(device_data)
+                    if result == 'created':
+                        devices_synced += 1
+                    elif result == 'updated':
+                        devices_updated += 1
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': f'✅ Dispositivos sincronizados: {devices_synced} nuevos, {devices_updated} actualizados',
+                        'type': 'success'
+                    }
+                }
+            else:
+                error_msg = f'Error HTTP {response.status_code}: {response.text}'
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': f'❌ Error sincronizando dispositivos: {error_msg}',
+                        'type': 'danger'
+                    }
+                }
+                
+        except Exception as e:
+            _logger.error(f"❌ Error sincronizando dispositivos: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'❌ Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+    def _sync_device(self, device_data):
+        """Sincroniza un dispositivo individual"""
+        try:
+            # Buscar equipo existente por serial number
+            existing_device = self.env['alquiler'].search([
+                ('serie', '=', device_data.get('serialNumber'))
+            ], limit=1)
+            
+            # Buscar entidad correspondiente
+            entity = self.env['printtracker.entity'].search([
+                ('pt_entity_id', '=', device_data.get('entityKey'))
+            ], limit=1)
+            
+            if existing_device:
+                # Actualizar campos de PrintTracker en el equipo existente
+                existing_device.write({
+                    'pt_device_id': device_data.get('id'),
+                    'pt_entity_id': entity.id if entity else False,
+                    'mac_address': device_data.get('macAddress'),
+                    'ip_address': device_data.get('ipAddress'),
+                    'custom_location': device_data.get('customLocation'),
+                    'asset_id': device_data.get('assetID'),
+                    'is_managed': device_data.get('managed', True)
+                })
+                return 'updated'
+            else:
+                _logger.warning(f"⚠️ Dispositivo no encontrado en alquiler: {device_data.get('serialNumber')}")
+                return 'not_found'
+                
+        except Exception as e:
+            _logger.error(f"❌ Error sincronizando dispositivo: {e}")
+            return 'error'
+
+    def sync_current_meters(self):
+        """Sincroniza medidores actuales desde PrintTracker"""
+        try:
+            _logger.info(f"🔄 Iniciando sincronización de medidores actuales...")
+            
+            response = requests.get(
+                f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/currentMeter',
+                headers=self.get_api_headers(),
+                params={
+                    'includeChildren': True,
+                    'excludeDisabled': False,
+                    'limit': self.max_records_per_request
+                },
+                timeout=self.timeout_seconds
+            )
+            
+            if response.status_code == 200:
+                meters = response.json()
+                meters_synced = 0
+                
+                for meter_data in meters:
+                    if self._sync_meter(meter_data):
+                        meters_synced += 1
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': f'✅ Medidores sincronizados: {meters_synced} lecturas actualizadas',
+                        'type': 'success'
+                    }
+                }
+            else:
+                error_msg = f'Error HTTP {response.status_code}: {response.text}'
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': f'❌ Error sincronizando medidores: {error_msg}',
+                        'type': 'danger'
+                    }
+                }
+                
+        except Exception as e:
+            _logger.error(f"❌ Error sincronizando medidores: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'❌ Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+    def _sync_meter(self, meter_data):
+        """Sincroniza un medidor individual"""
+        try:
+            # Buscar dispositivo por deviceKey
+            device = self.env['alquiler'].search([
+                ('pt_device_id', '=', meter_data.get('deviceKey'))
+            ], limit=1)
+            
+            if not device:
+                _logger.warning(f"⚠️ Dispositivo no encontrado para medidor: {meter_data.get('deviceKey')}")
+                return False
+            
+            # Crear o actualizar registro de medidor
+            existing_meter = self.env['printtracker.meter'].search([
+                ('pt_meter_id', '=', meter_data.get('id'))
+            ], limit=1)
+            
+            # Extraer contadores de páginas
+            page_counts = meter_data.get('pageCounts', {})
+            life_counts = page_counts.get('life', {})
+            equiv_counts = page_counts.get('equiv', {})
+            
+            meter_values = {
+                'pt_meter_id': meter_data.get('id'),
+                'device_id': device.id,
+                'reading_date': meter_data.get('timestamp'),
+                'console_status': meter_data.get('console'),
+                'total_pages_life': life_counts.get('total', {}).get('value', 0),
+                'black_pages_life': life_counts.get('totalBlack', {}).get('value', 0),
+                'color_pages_life': life_counts.get('totalColor', {}).get('value', 0),
+                'total_pages_equiv': equiv_counts.get('total', {}).get('value', 0),
+                'black_pages_equiv': equiv_counts.get('totalBlack', {}).get('value', 0),
+                'color_pages_equiv': equiv_counts.get('totalColor', {}).get('value', 0),
+                'sync_source': 'api',
+                'last_sync': fields.Datetime.now()
+            }
+            
+            if existing_meter:
+                existing_meter.write(meter_values)
+            else:
+                new_meter = self.env['printtracker.meter'].create(meter_values)
+                # Actualizar contadores del dispositivo
+                new_meter.update_device_counters()
+            
+            return True
+            
+        except Exception as e:
+            _logger.error(f"❌ Error sincronizando medidor: {e}")
+            return False
+
+    def sync_all_data(self):
+        """Sincroniza todos los datos: entidades, dispositivos y medidores"""
+        try:
+            _logger.info(f"🔄 === SINCRONIZACIÓN COMPLETA INICIADA ===")
+            
+            # 1. Sincronizar entidades
+            entities_result = self.sync_all_entities()
+            if entities_result['params']['type'] != 'success':
+                return entities_result
+            
+            # 2. Sincronizar dispositivos
+            devices_result = self.sync_all_devices()
+            if devices_result['params']['type'] != 'success':
+                return devices_result
+            
+            # 3. Sincronizar medidores
+            meters_result = self.sync_current_meters()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': '🎉 Sincronización completa finalizada exitosamente\nRevisa los menús de PrintTracker para ver los datos.',
+                    'type': 'success'
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error en sincronización completa: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'❌ Error en sincronización completa: {str(e)}',
+                    'type': 'danger'
+                }
+            }
     
     def get_api_headers(self):
         """Retorna headers para requests a la API"""
