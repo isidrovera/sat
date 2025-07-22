@@ -2262,7 +2262,7 @@ class ContadorAutomatico(models.Model):
         registrando cada mail sólo una vez (usa original_mail_id).
         """
         ahora = fields.Datetime.now()
-        fecha_limite = ahora - timedelta(hours=48)
+        fecha_limite = ahora - timedelta(hours=288)
         _logger.info("⏰ === INICIO CRON Específico COUNTER LIST/PAGE ===")
         _logger.info("🔍 Buscando mails desde %s", fecha_limite)
 

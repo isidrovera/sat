@@ -562,85 +562,113 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
     def action_finalizar(self):
         _logger.info("=== Iniciando action_finalizar para tickets %s ===", self.ids)
-        # Trabajar en modo sudo para evitar restricciones de acceso
         tickets = self.sudo()
         today = fields.Datetime.now().date()
-        _logger.debug("Fecha de hoy: %s", today)
+        _logger.debug("Fecha actual: %s", today)
 
         for ticket in tickets:
             _logger.info("Procesando ticket ID %s (estado=%s)", ticket.id, ticket.estado)
 
             unidad = ticket.product_alquiler
             if not unidad:
-                _logger.warning("Ticket %s no tiene product_alquiler asignado, se omite carga de contómetros", ticket.id)
+                _logger.warning("Ticket %s no tiene un equipo asignado, omitiendo carga de contómetros", ticket.id)
             else:
-                _logger.debug("UnidadAlquiler ID %s - fecha_ultima_actualizacion=%s", unidad.id, unidad.fecha_ultima_actualizacion)
-                _logger.debug("Ticket agenda: %s", ticket.agenda)
+                _logger.debug(
+                    "UnidadAlquiler %s — contador_bn=%s, contador_color=%s, contador_scan=%s, fecha_ultima_actualizacion=%s",
+                    unidad.id, unidad.contador_bn, unidad.contador_color, unidad.contador_scan, unidad.fecha_ultima_actualizacion
+                )
+                _logger.debug("Ticket.agenda: %s", ticket.agenda)
 
-                # 1) Precargar contómetros sólo si las fechas coinciden
+                # 1) Precargar contómetros en el ticket SOLO si la fecha de visita coincide con hoy
                 if unidad.fecha_ultima_actualizacion and ticket.agenda and unidad.fecha_ultima_actualizacion.date() == ticket.agenda.date():
-                    _logger.info("Fechas coinciden para ticket %s, cargando contómetros desde UnidadAlquiler %s", ticket.id, unidad.id)
-                    ticket.contometrok_id = str(unidad.contador_bn or 0)
-                    ticket.contometroc_id = str(unidad.contador_color or 0)
-                    ticket.contometros_id = str(unidad.contador_scan or 0)
-                    _logger.debug("Contómetros cargados: K=%s, Color=%s, Scanner=%s",
-                                ticket.contometrok_id, ticket.contometroc_id, ticket.contometros_id)
-                else:
-                    _logger.info("Fechas NO coinciden o faltan datos para ticket %s, no se cargan contómetros", ticket.id)
+                    _logger.info("Fechas coinciden para ticket %s, cargando contómetros...", ticket.id)
 
-            # 2) Validar valores de contómetros
-            _logger.info("Validando contómetros del ticket %s", ticket.id)
+                    if unidad.contador_bn > 0:
+                        ticket.contometrok_id = str(unidad.contador_bn)
+                        _logger.debug("→ contometrok_id cargado: %s", ticket.contometrok_id)
+                    else:
+                        _logger.debug("→ contador_bn es 0 en unidad, se salta contometrok_id")
+
+                    if ticket.tipo_id == 'color':
+                        if unidad.contador_color > 0:
+                            ticket.contometroc_id = str(unidad.contador_color)
+                            _logger.debug("→ contometroc_id cargado: %s", ticket.contometroc_id)
+                        else:
+                            _logger.debug("→ contador_color es 0 en unidad, se salta contometroc_id")
+
+                    if unidad.contador_scan > 0:
+                        ticket.contometros_id = str(unidad.contador_scan)
+                        _logger.debug("→ contometros_id cargado: %s", ticket.contometros_id)
+                    else:
+                        _logger.debug("→ contador_scan es 0 en unidad, se salta contometros_id")
+
+                else:
+                    _logger.info(
+                        "No se cargan contómetros para ticket %s: fechas no coinciden o faltan datos "
+                        "(unidad.fecha_ultima_actualizacion.date=%s, ticket.agenda.date=%s)",
+                        ticket.id,
+                        unidad.fecha_ultima_actualizacion.date() if unidad.fecha_ultima_actualizacion else None,
+                        ticket.agenda.date() if ticket.agenda else None,
+                    )
+
+            # 2) Validar valores de contómetros (lanza error si no pasa)
+            _logger.info("Validando contómetros del ticket %s...", ticket.id)
             try:
                 ticket._check_contometro_values()
-                _logger.info("Validación de contómetros exitosa para ticket %s", ticket.id)
-            except Exception as e:
-                _logger.error("Error en validación de contómetros para ticket %s: %s", ticket.id, e)
+                _logger.info("Validación exitosa contómetros para ticket %s", ticket.id)
+            except Exception:
+                _logger.exception("Error en validación de contómetros para ticket %s", ticket.id)
                 raise
 
             # 3) Crear pedido de venta si hay líneas
             if ticket.line_ids:
-                _logger.info("Ticket %s tiene %d línea(s), creando pedido de venta...", ticket.id, len(ticket.line_ids))
+                _logger.info("Ticket %s tiene %d línea(s), creando pedido de venta", ticket.id, len(ticket.line_ids))
                 ticket.create_sale_order()
                 _logger.info("Pedido de venta creado para ticket %s", ticket.id)
             else:
-                _logger.debug("Ticket %s no tiene líneas de producto, se omite create_sale_order", ticket.id)
+                _logger.debug("Ticket %s no tiene líneas, se omite create_sale_order", ticket.id)
 
-            # 4) Enviar correo de finalización al cliente
+            # 4) Enviar correo de finalización
             _logger.info("Enviando correo de finalización para ticket %s", ticket.id)
-            template_fin = ticket.env.ref('sat.email_template_ticket_cliente_finalizacion')
-            template_fin.send_mail(ticket.id, force_send=True)
+            tmpl_fin = ticket.env.ref('sat.email_template_ticket_cliente_finalizacion')
+            tmpl_fin.send_mail(ticket.id, force_send=True)
             _logger.info("Correo de finalización enviado para ticket %s", ticket.id)
+
             if ticket.retorno_id == 'no':
-                _logger.info("Ticket %s retorno_id='no', enviando mail_template_retorno", ticket.id)
+                _logger.info("ticket.retorno_id='no', enviando mail_template_retorno para ticket %s", ticket.id)
                 ticket.env.ref('sat.mail_template_retorno').send_mail(ticket.id, force_send=True)
                 _logger.info("Correo de retorno enviado para ticket %s", ticket.id)
 
             # 5) Actualizar estado de la unidad según tipo de servicio
-            _logger.info("Actualizando estado de UnidadAlquiler %s según tipo_servicio_id=%s", unidad and unidad.id, ticket.tipo_servicio_id)
-            if ticket.tipo_servicio_id == 'alquiler' and unidad and unidad.estado_alquiler_id == 'sin_revisar':
-                unidad.write({'estado_alquiler_id': 'revisada'})
-                _logger.info("UnidadAlquiler %s pasada a 'revisada'", unidad.id)
-            elif ticket.tipo_servicio_id == 'cambio_repuestos' and unidad and unidad.estado_alquiler_id == 'revisada':
-                anterior = ticket.search([
-                    ('product_alquiler', '=', unidad.id),
-                    ('tipo_servicio_id', '=', 'alquiler')
-                ], order="create_date desc", limit=1)
-                if anterior:
-                    unidad.write({'estado_alquiler_id': 'lista'})
-                    _logger.info("UnidadAlquiler %s pasada a 'lista' (ticket anterior %s)", unidad.id, anterior.id)
-            elif ticket.tipo_servicio_id == 'retiro' and unidad:
-                unidad.write({
-                    'estado_alquiler_id': 'sin_revisar',
-                    'direccion': 'AV Angelica Gamarra 2156',
-                    'contacto_id': 'Isidro',
-                    'celular': '975399303',
-                    'correo_': 'soporte@andescopiers.com.pe',
-                    'cliente_id': 1,
-                    'fecha_inicio': False,
-                })
-                _logger.info("UnidadAlquiler %s reseteada por 'retiro'", unidad.id)
+            if unidad:
+                _logger.info(
+                    "Actualizando estado de UnidadAlquiler %s según tipo_servicio_id=%s",
+                    unidad.id, ticket.tipo_servicio_id
+                )
+                if ticket.tipo_servicio_id == 'alquiler' and unidad.estado_alquiler_id == 'sin_revisar':
+                    unidad.write({'estado_alquiler_id': 'revisada'})
+                    _logger.info("Unidad %s pasada a 'revisada'", unidad.id)
+                elif ticket.tipo_servicio_id == 'cambio_repuestos' and unidad.estado_alquiler_id == 'revisada':
+                    prev = ticket.search([
+                        ('product_alquiler', '=', unidad.id),
+                        ('tipo_servicio_id', '=', 'alquiler')
+                    ], order="create_date desc", limit=1)
+                    if prev:
+                        unidad.write({'estado_alquiler_id': 'lista'})
+                        _logger.info("Unidad %s pasada a 'lista' (ticket previo %s)", unidad.id, prev.id)
+                elif ticket.tipo_servicio_id == 'retiro':
+                    unidad.write({
+                        'estado_alquiler_id': 'sin_revisar',
+                        'direccion': 'AV Angelica Gamarra 2156',
+                        'contacto_id': 'Isidro',
+                        'celular': '975399303',
+                        'correo_': 'soporte@andescopiers.com.pe',
+                        'cliente_id': 1,
+                        'fecha_inicio': False,
+                    })
+                    _logger.info("Unidad %s reseteada por 'retiro'", unidad.id)
 
-            # 6) Marcar el ticket como finalizado
+            # 6) Marcar ticket como finalizado y resetear notificación
             _logger.info("Marcando ticket %s como 'finalizado'", ticket.id)
             ticket.write({
                 'estado': 'finalizado',
@@ -648,7 +676,6 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             })
 
         _logger.info("=== action_finalizar completado para tickets %s ===", self.ids)
-        # 7) Volver a la vista de lista de tickets
         return {
             'type': 'ir.actions.act_window',
             'name': 'Tickets',
@@ -657,7 +684,6 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'view_id': False,
             'target': 'main',
         }
-
 
             
 
