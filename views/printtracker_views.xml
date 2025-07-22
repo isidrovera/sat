@@ -17,18 +17,6 @@
                             class="btn-primary"/>
                 </header>
                 <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button name="sync_all_entities" 
-                                type="object" 
-                                class="oe_stat_button" 
-                                icon="fa-refresh">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text">Sincronizar</span>
-                                <span class="o_stat_text">Todo</span>
-                            </div>
-                        </button>
-                    </div>
-                    
                     <widget name="web_ribbon" 
                             title="Conectado" 
                             bg_color="bg-success" 
@@ -59,9 +47,6 @@
                         <group>
                             <field name="timeout_seconds"/>
                             <field name="max_records_per_request"/>
-                        </group>
-                        <group>
-                            <!-- Espacio para futuras configuraciones -->
                         </group>
                     </group>
                     
@@ -131,16 +116,14 @@
                     <div class="oe_button_box" name="button_box">
                         <button name="%(action_printtracker_meter)d" 
                                 type="action" 
-                                context="{'default_entity_id': active_id}"
+                                context="{'search_default_device_entity': active_id}"
                                 class="oe_stat_button" 
                                 icon="fa-tachometer">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_text">Medidores</span>
                             </div>
                         </button>
-                        <button name="action_view_devices" 
-                                type="object" 
-                                class="oe_stat_button" 
+                        <button class="oe_stat_button" 
                                 icon="fa-print">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_value">
@@ -372,18 +355,6 @@
                             invisible="is_replaced or not low_supply_alert"/>
                 </header>
                 <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button name="action_view_purchase_orders" 
-                                type="object" 
-                                class="oe_stat_button" 
-                                icon="fa-shopping-cart">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text">Órdenes</span>
-                                <span class="o_stat_text">Compra</span>
-                            </div>
-                        </button>
-                    </div>
-                    
                     <widget name="web_ribbon" 
                             title="Reemplazado" 
                             bg_color="bg-secondary" 
