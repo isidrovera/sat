@@ -283,20 +283,27 @@ class PrintTrackerConfig(models.Model):
             }
 
     def _sync_device(self, device_data):
-        """Sincroniza un dispositivo individual"""
+        """Sincroniza un dispositivo individual - Solo equipos existentes"""
         try:
-            # Buscar equipo existente por serial number
-            existing_device = self.env['alquiler'].search([
-                ('serie', '=', device_data.get('serialNumber'))
-            ], limit=1)
+            serial_number = device_data.get('serialNumber')
             
-            # Buscar entidad correspondiente
-            entity = self.env['printtracker.entity'].search([
-                ('pt_entity_id', '=', device_data.get('entityKey'))
+            # ✅ FILTRAR series inválidas
+            if not serial_number or serial_number in ['notavailable', 'None', '', None]:
+                _logger.info(f"⏭️ Saltando dispositivo con serie inválida: {serial_number}")
+                return 'invalid_serial'
+            
+            # ✅ Buscar equipo existente por serial number
+            existing_device = self.env['alquiler'].search([
+                ('serie', '=', serial_number)
             ], limit=1)
             
             if existing_device:
-                # Actualizar campos de PrintTracker en el equipo existente
+                # ✅ Buscar entidad correspondiente
+                entity = self.env['printtracker.entity'].search([
+                    ('pt_entity_id', '=', device_data.get('entityKey'))
+                ], limit=1)
+                
+                # ✅ SOLO actualizar campos de PrintTracker
                 existing_device.write({
                     'pt_device_id': device_data.get('id'),
                     'pt_entity_id': entity.id if entity else False,
@@ -306,15 +313,16 @@ class PrintTrackerConfig(models.Model):
                     'asset_id': device_data.get('assetID'),
                     'is_managed': device_data.get('managed', True)
                 })
+                _logger.info(f"📝 Equipo actualizado: {serial_number}")
                 return 'updated'
             else:
-                _logger.warning(f"⚠️ Dispositivo no encontrado en alquiler: {device_data.get('serialNumber')}")
-                return 'not_found'
+                # ✅ NO crear automáticamente, solo loggear
+                _logger.info(f"📋 Equipo en PrintTracker no registrado en Odoo: {serial_number}")
+                return 'not_in_odoo'
                 
         except Exception as e:
             _logger.error(f"❌ Error sincronizando dispositivo: {e}")
             return 'error'
-
     def sync_current_meters(self):
         """Sincroniza medidores actuales desde PrintTracker"""
         try:
