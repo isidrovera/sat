@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- =============================================== -->
+    <!-- PRINTTRACKER CONFIG - CONFIGURACIÓN API -->
+    <!-- =============================================== -->
+    
+    <!-- Vista Form - PrintTracker Config -->
+    <record id="view_printtracker_config_form" model="ir.ui.view">
+        <field name="name">printtracker.config.form</field>
+        <field name="model">printtracker.config</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="test_connection" 
+                            type="object" 
+                            string="Probar Conexión" 
+                            class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="sync_all_entities" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-refresh">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Sincronizar</span>
+                                <span class="o_stat_text">Todo</span>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <widget name="web_ribbon" 
+                            title="Conectado" 
+                            bg_color="bg-success" 
+                            invisible="connection_status != 'connected'"/>
+                    <widget name="web_ribbon" 
+                            title="Error" 
+                            bg_color="bg-danger" 
+                            invisible="connection_status != 'error'"/>
+                    
+                    <group>
+                        <group name="basic_config">
+                            <field name="name"/>
+                            <field name="api_url" placeholder="https://api.printtrackerpro.com"/>
+                            <field name="api_key" password="True"/>
+                            <field name="entity_bbbb_id"/>
+                            <field name="connection_status"/>
+                        </group>
+                        <group name="sync_config">
+                            <field name="sync_enabled"/>
+                            <field name="sync_interval"/>
+                            <field name="last_sync_date" readonly="True"/>
+                            <field name="incluir_entidades_hijas"/>
+                            <field name="solo_equipos_gestionados"/>
+                        </group>
+                    </group>
+                    
+                    <group name="advanced_config" string="Configuración Avanzada">
+                        <group>
+                            <field name="timeout_seconds"/>
+                            <field name="max_records_per_request"/>
+                        </group>
+                        <group>
+                            <!-- Espacio para futuras configuraciones -->
+                        </group>
+                    </group>
+                    
+                    <group name="error_info" 
+                           string="Información de Errores" 
+                           invisible="not last_error">
+                        <field name="last_error" readonly="True" widget="text"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Vista List - PrintTracker Config -->
+    <record id="view_printtracker_config_list" model="ir.ui.view">
+        <field name="name">printtracker.config.list</field>
+        <field name="model">printtracker.config</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="api_url"/>
+                <field name="entity_bbbb_id"/>
+                <field name="sync_enabled" widget="boolean_toggle"/>
+                <field name="connection_status" 
+                       decoration-success="connection_status == 'connected'"
+                       decoration-danger="connection_status == 'error'"
+                       decoration-muted="connection_status == 'not_tested'"/>
+                <field name="last_sync_date"/>
+                <field name="sync_interval" string="Intervalo (min)"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- Acción - PrintTracker Config -->
+    <record id="action_printtracker_config" model="ir.actions.act_window">
+        <field name="name">Configuración PrintTracker</field>
+        <field name="res_model">printtracker.config</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Configura la conexión con PrintTracker Pro
+            </p>
+            <p>
+                Configura tu API key y entidad principal para sincronizar 
+                automáticamente con PrintTracker Pro.
+            </p>
+        </field>
+    </record>
+    
+    <!-- =============================================== -->
+    <!-- PRINTTRACKER ENTITIES - ENTIDADES -->
+    <!-- =============================================== -->
+    
+    <!-- Vista Form - PrintTracker Entity -->
+    <record id="view_printtracker_entity_form" model="ir.ui.view">
+        <field name="name">printtracker.entity.form</field>
+        <field name="model">printtracker.entity</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="sync_with_printtracker" 
+                            type="object" 
+                            string="Sincronizar" 
+                            class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="%(action_printtracker_meter)d" 
+                                type="action" 
+                                context="{'default_entity_id': active_id}"
+                                class="oe_stat_button" 
+                                icon="fa-tachometer">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Medidores</span>
+                            </div>
+                        </button>
+                        <button name="action_view_devices" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-print">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="device_count"/>
+                                </span>
+                                <span class="o_stat_text">Equipos</span>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <widget name="web_ribbon" 
+                            title="Inactiva" 
+                            bg_color="bg-danger" 
+                            invisible="is_active"/>
+                    
+                    <group>
+                        <group name="basic_info">
+                            <field name="name"/>
+                            <field name="pt_entity_id"/>
+                            <field name="parent_id"/>
+                            <field name="partner_id"/>
+                            <field name="level" readonly="True"/>
+                        </group>
+                        <group name="sync_info">
+                            <field name="is_active"/>
+                            <field name="last_sync" readonly="True"/>
+                            <field name="device_count" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group name="hierarchy_info" 
+                           string="Información Jerárquica" 
+                           invisible="not genealogy">
+                        <field name="genealogy" readonly="True" widget="text"/>
+                    </group>
+                    
+                    <group name="error_info" 
+                           string="Errores de Sincronización" 
+                           invisible="not sync_error">
+                        <field name="sync_error" readonly="True" widget="text"/>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Entidades Hijas" name="children">
+                            <field name="child_ids">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="pt_entity_id"/>
+                                    <field name="partner_id"/>
+                                    <field name="device_count"/>
+                                    <field name="is_active" widget="boolean_toggle"/>
+                                </list>
+                            </field>
+                        </page>
+                        
+                        <page string="Direcciones" name="addresses">
+                            <field name="address_ids">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="address1"/>
+                                    <field name="city"/>
+                                    <field name="country"/>
+                                </list>
+                            </field>
+                        </page>
+                        
+                        <page string="Etiquetas" name="labels">
+                            <field name="label_ids">
+                                <list>
+                                    <field name="key"/>
+                                    <field name="value"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Vista List - PrintTracker Entity -->
+    <record id="view_printtracker_entity_list" model="ir.ui.view">
+        <field name="name">printtracker.entity.list</field>
+        <field name="model">printtracker.entity</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="pt_entity_id"/>
+                <field name="parent_id"/>
+                <field name="partner_id"/>
+                <field name="device_count"/>
+                <field name="level"/>
+                <field name="is_active" widget="boolean_toggle"/>
+                <field name="last_sync"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- Acción - PrintTracker Entity -->
+    <record id="action_printtracker_entity" model="ir.actions.act_window">
+        <field name="name">Entidades PrintTracker</field>
+        <field name="res_model">printtracker.entity</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay entidades sincronizadas
+            </p>
+            <p>
+                Las entidades se sincronizan automáticamente desde PrintTracker Pro.
+                Configura la API para comenzar.
+            </p>
+        </field>
+    </record>
+    
+    <!-- =============================================== -->
+    <!-- PRINTTRACKER METERS - MEDIDORES -->
+    <!-- =============================================== -->
+    
+    <!-- Vista Form - PrintTracker Meter -->
+    <record id="view_printtracker_meter_form" model="ir.ui.view">
+        <field name="name">printtracker.meter.form</field>
+        <field name="model">printtracker.meter</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="update_device_counters" 
+                            type="object" 
+                            string="Actualizar Equipo" 
+                            class="btn-primary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group name="device_info">
+                            <field name="device_id"/>
+                            <field name="pt_meter_id"/>
+                            <field name="reading_date"/>
+                            <field name="console_status"/>
+                            <field name="sync_source"/>
+                        </group>
+                        <group name="sync_info">
+                            <field name="last_sync" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Contadores Life (Reales)">
+                        <group>
+                            <field name="total_pages_life"/>
+                            <field name="black_pages_life"/>
+                            <field name="color_pages_life"/>
+                        </group>
+                        <group>
+                            <field name="pages_increment" readonly="True"/>
+                            <field name="black_increment" readonly="True"/>
+                            <field name="color_increment" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Contadores Equivalentes (Facturación)">
+                        <group>
+                            <field name="total_pages_equiv"/>
+                            <field name="black_pages_equiv"/>
+                            <field name="color_pages_equiv"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Otros Contadores">
+                        <group>
+                            <field name="scan_pages"/>
+                            <field name="fax_pages"/>
+                            <field name="copy_pages"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Vista List - PrintTracker Meter -->
+    <record id="view_printtracker_meter_list" model="ir.ui.view">
+        <field name="name">printtracker.meter.list</field>
+        <field name="model">printtracker.meter</field>
+        <field name="arch" type="xml">
+            <list default_order="reading_date desc">
+                <field name="device_id"/>
+                <field name="reading_date"/>
+                <field name="total_pages_life"/>
+                <field name="black_pages_life"/>
+                <field name="color_pages_life"/>
+                <field name="scan_pages"/>
+                <field name="pages_increment" 
+                       decoration-success="pages_increment > 0"
+                       decoration-muted="pages_increment == 0"/>
+                <field name="sync_source"/>
+                <field name="console_status"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- Acción - PrintTracker Meter -->
+    <record id="action_printtracker_meter" model="ir.actions.act_window">
+        <field name="name">Medidores PrintTracker</field>
+        <field name="res_model">printtracker.meter</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay lecturas de medidores
+            </p>
+            <p>
+                Las lecturas se sincronizan automáticamente desde PrintTracker Pro.
+            </p>
+        </field>
+    </record>
+    
+    <!-- =============================================== -->
+    <!-- PRINTTRACKER SUPPLIES - SUMINISTROS -->
+    <!-- =============================================== -->
+    
+    <!-- Vista Form - PrintTracker Supply -->
+    <record id="view_printtracker_supply_form" model="ir.ui.view">
+        <field name="name">printtracker.supply.form</field>
+        <field name="model">printtracker.supply</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="create_purchase_order" 
+                            type="object" 
+                            string="Crear OC" 
+                            class="btn-primary"
+                            invisible="is_replaced or not low_supply_alert"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_purchase_orders" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-shopping-cart">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Órdenes</span>
+                                <span class="o_stat_text">Compra</span>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <widget name="web_ribbon" 
+                            title="Reemplazado" 
+                            bg_color="bg-secondary" 
+                            invisible="not is_replaced"/>
+                    <widget name="web_ribbon" 
+                            title="Crítico" 
+                            bg_color="bg-danger" 
+                            invisible="not low_supply_alert"/>
+                    <widget name="web_ribbon" 
+                            title="Inactivo" 
+                            bg_color="bg-warning" 
+                            invisible="is_active"/>
+                    
+                    <group>
+                        <group name="device_info">
+                            <field name="device_id"/>
+                            <field name="supply_key"/>
+                            <field name="supply_type"/>
+                            <field name="supply_color"/>
+                            <field name="product_id"/>
+                        </group>
+                        <group name="supply_info">
+                            <field name="part_number"/>
+                            <field name="serial_number"/>
+                            <field name="displayable_name"/>
+                            <field name="description"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Estado Actual">
+                        <group>
+                            <field name="current_level"/>
+                            <field name="max_level"/>
+                            <field name="percent_remaining" widget="percentage"/>
+                            <field name="is_active"/>
+                        </group>
+                        <group>
+                            <field name="is_replaced" readonly="True"/>
+                            <field name="low_supply_alert" readonly="True"/>
+                            <field name="skip_alerts"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Fechas Importantes">
+                        <group>
+                            <field name="installed_date"/>
+                            <field name="replaced_date"/>
+                            <field name="confirmed_replaced_date"/>
+                        </group>
+                        <group>
+                            <field name="estimated_depletion_date"/>
+                            <field name="last_sync" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Configuración y Costos">
+                        <group>
+                            <field name="supply_cost" widget="monetary"/>
+                            <field name="expected_yield"/>
+                            <field name="expected_fill_rate"/>
+                            <field name="actual_fill_rate"/>
+                        </group>
+                        <group>
+                            <field name="pages_printed"/>
+                            <field name="actual_cost_per_page" widget="monetary"/>
+                            <field name="lost_pages"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Vista List - PrintTracker Supply -->
+    <record id="view_printtracker_supply_list" model="ir.ui.view">
+        <field name="name">printtracker.supply.list</field>
+        <field name="model">printtracker.supply</field>
+        <field name="arch" type="xml">
+            <list default_order="device_id, supply_type, installed_date desc">
+                <field name="device_id"/>
+                <field name="supply_type"/>
+                <field name="supply_color"/>
+                <field name="displayable_name"/>
+                <field name="percent_remaining" 
+                       widget="percentage"
+                       decoration-danger="percent_remaining &lt; 10"
+                       decoration-warning="percent_remaining &lt; 25"/>
+                <field name="estimated_depletion_date"/>
+                <field name="is_active" widget="boolean_toggle"/>
+                <field name="is_replaced"/>
+                <field name="low_supply_alert" 
+                       decoration-danger="low_supply_alert"/>
+                <field name="supply_cost" widget="monetary" optional="hide"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- Acción - PrintTracker Supply -->
+    <record id="action_printtracker_supply" model="ir.actions.act_window">
+        <field name="name">Suministros PrintTracker</field>
+        <field name="res_model">printtracker.supply</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay suministros sincronizados
+            </p>
+            <p>
+                Los suministros se sincronizan automáticamente desde PrintTracker Pro.
+            </p>
+        </field>
+    </record>
+    
+    <!-- =============================================== -->
+    <!-- MENÚS -->
+    <!-- =============================================== -->
+    
+    <!-- Menú PrintTracker Pro -->
+    <menuitem id="menu_printtracker_root"
+              name="PrintTracker Pro"
+              parent="menu_contador_automatico_root"
+              sequence="90"/>
+    
+    <!-- Configuración -->
+    <menuitem id="menu_printtracker_config"
+              name="Configuración API"
+              parent="menu_printtracker_root"
+              action="action_printtracker_config"
+              sequence="10"/>
+    
+    <!-- Entidades -->
+    <menuitem id="menu_printtracker_entities"
+              name="Entidades"
+              parent="menu_printtracker_root"
+              action="action_printtracker_entity"
+              sequence="20"/>
+    
+    <!-- Medidores -->
+    <menuitem id="menu_printtracker_meters"
+              name="Medidores"
+              parent="menu_printtracker_root"
+              action="action_printtracker_meter"
+              sequence="30"/>
+    
+    <!-- Suministros -->
+    <menuitem id="menu_printtracker_supplies"
+              name="Suministros"
+              parent="menu_printtracker_root"
+              action="action_printtracker_supply"
+              sequence="40"/>
+
+</odoo>

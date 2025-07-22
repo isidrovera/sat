@@ -122,6 +122,7 @@
         'views/view_contador_automatico.xml',
         'views/view_patron_contador.xml',
         'views/contador_dashboard_views.xml',
+        'views/printtracker_views.xml',
     ],
     
     'assets': {

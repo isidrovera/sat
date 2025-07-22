@@ -128,3 +128,15 @@ access_contador_automatico_user,contador.automatico.user,model_contador_automati
 access_contador_automatico_admin,contador.automatico.admin,model_contador_automatico,base.group_system,1,1,1,1
 access_patron_contador_user,patron.contador.user,model_patron_contador,base.group_user,1,0,0,0
 access_patron_contador_admin,patron.contador.admin,model_patron_contador,base.group_system,1,1,1,1
+access_printtracker_config_user,printtracker.config.user,model_printtracker_config,base.group_user,1,0,0,0
+access_printtracker_config_admin,printtracker.config.admin,model_printtracker_config,base.group_system,1,1,1,1
+access_printtracker_entity_user,printtracker.entity.user,model_printtracker_entity,base.group_user,1,0,0,0
+access_printtracker_entity_admin,printtracker.entity.admin,model_printtracker_entity,base.group_system,1,1,1,1
+access_printtracker_entity_address_user,printtracker.entity.address.user,model_printtracker_entity_address,base.group_user,1,0,0,0
+access_printtracker_entity_address_admin,printtracker.entity.address.admin,model_printtracker_entity_address,base.group_system,1,1,1,1
+access_printtracker_entity_label_user,printtracker.entity.label.user,model_printtracker_entity_label,base.group_user,1,0,0,0
+access_printtracker_entity_label_admin,printtracker.entity.label.admin,model_printtracker_entity_label,base.group_system,1,1,1,1
+access_printtracker_meter_user,printtracker.meter.user,model_printtracker_meter,base.group_user,1,0,0,0
+access_printtracker_meter_admin,printtracker.meter.admin,model_printtracker_meter,base.group_system,1,1,1,1
+access_printtracker_supply_user,printtracker.supply.user,model_printtracker_supply,base.group_user,1,0,0,0
+access_printtracker_supply_admin,printtracker.supply.admin,model_printtracker_supply,base.group_system,1,1,1,1
