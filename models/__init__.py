@@ -37,5 +37,5 @@ from . import contador_automatico
 from . import patron_contador
 from . import contador_dashboard
 from . import print_tracker
-
+from . import alquiler_printtracker
 
