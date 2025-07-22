@@ -1,6 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- =============================================== -->
+    <!-- ACCIONES - DEFINIDAS PRIMERO -->
+    <!-- =============================================== -->
+    
+    <!-- Acción - PrintTracker Config -->
+    <record id="action_printtracker_config" model="ir.actions.act_window">
+        <field name="name">Configuración PrintTracker</field>
+        <field name="res_model">printtracker.config</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Configura la conexión con PrintTracker Pro
+            </p>
+            <p>
+                Configura tu API key y entidad principal para sincronizar 
+                automáticamente con PrintTracker Pro.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Acción - PrintTracker Entity -->
+    <record id="action_printtracker_entity" model="ir.actions.act_window">
+        <field name="name">Entidades PrintTracker</field>
+        <field name="res_model">printtracker.entity</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay entidades sincronizadas
+            </p>
+            <p>
+                Las entidades se sincronizan automáticamente desde PrintTracker Pro.
+                Configura la API para comenzar.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Acción - PrintTracker Meter -->
+    <record id="action_printtracker_meter" model="ir.actions.act_window">
+        <field name="name">Medidores PrintTracker</field>
+        <field name="res_model">printtracker.meter</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay lecturas de medidores
+            </p>
+            <p>
+                Las lecturas se sincronizan automáticamente desde PrintTracker Pro.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Acción - PrintTracker Supply -->
+    <record id="action_printtracker_supply" model="ir.actions.act_window">
+        <field name="name">Suministros PrintTracker</field>
+        <field name="res_model">printtracker.supply</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay suministros sincronizados
+            </p>
+            <p>
+                Los suministros se sincronizan automáticamente desde PrintTracker Pro.
+            </p>
+        </field>
+    </record>
+
+    <!-- =============================================== -->
     <!-- PRINTTRACKER CONFIG - CONFIGURACIÓN API -->
     <!-- =============================================== -->
     
@@ -80,22 +146,6 @@
         </field>
     </record>
     
-    <!-- Acción - PrintTracker Config -->
-    <record id="action_printtracker_config" model="ir.actions.act_window">
-        <field name="name">Configuración PrintTracker</field>
-        <field name="res_model">printtracker.config</field>
-        <field name="view_mode">list,form</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Configura la conexión con PrintTracker Pro
-            </p>
-            <p>
-                Configura tu API key y entidad principal para sincronizar 
-                automáticamente con PrintTracker Pro.
-            </p>
-        </field>
-    </record>
-    
     <!-- =============================================== -->
     <!-- PRINTTRACKER ENTITIES - ENTIDADES -->
     <!-- =============================================== -->
@@ -116,7 +166,6 @@
                     <div class="oe_button_box" name="button_box">
                         <button name="%(action_printtracker_meter)d" 
                                 type="action" 
-                                context="{'search_default_device_entity': active_id}"
                                 class="oe_stat_button" 
                                 icon="fa-tachometer">
                             <div class="o_field_widget o_stat_info">
@@ -222,22 +271,6 @@
         </field>
     </record>
     
-    <!-- Acción - PrintTracker Entity -->
-    <record id="action_printtracker_entity" model="ir.actions.act_window">
-        <field name="name">Entidades PrintTracker</field>
-        <field name="res_model">printtracker.entity</field>
-        <field name="view_mode">list,form</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No hay entidades sincronizadas
-            </p>
-            <p>
-                Las entidades se sincronizan automáticamente desde PrintTracker Pro.
-                Configura la API para comenzar.
-            </p>
-        </field>
-    </record>
-    
     <!-- =============================================== -->
     <!-- PRINTTRACKER METERS - MEDIDORES -->
     <!-- =============================================== -->
@@ -319,21 +352,6 @@
                 <field name="sync_source"/>
                 <field name="console_status"/>
             </list>
-        </field>
-    </record>
-    
-    <!-- Acción - PrintTracker Meter -->
-    <record id="action_printtracker_meter" model="ir.actions.act_window">
-        <field name="name">Medidores PrintTracker</field>
-        <field name="res_model">printtracker.meter</field>
-        <field name="view_mode">list,form</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No hay lecturas de medidores
-            </p>
-            <p>
-                Las lecturas se sincronizan automáticamente desde PrintTracker Pro.
-            </p>
         </field>
     </record>
     
@@ -449,21 +467,6 @@
                        decoration-danger="low_supply_alert"/>
                 <field name="supply_cost" widget="monetary" optional="hide"/>
             </list>
-        </field>
-    </record>
-    
-    <!-- Acción - PrintTracker Supply -->
-    <record id="action_printtracker_supply" model="ir.actions.act_window">
-        <field name="name">Suministros PrintTracker</field>
-        <field name="res_model">printtracker.supply</field>
-        <field name="view_mode">list,form</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No hay suministros sincronizados
-            </p>
-            <p>
-                Los suministros se sincronizan automáticamente desde PrintTracker Pro.
-            </p>
         </field>
     </record>
     
