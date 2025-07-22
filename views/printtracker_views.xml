@@ -521,8 +521,8 @@
     <!-- Menú PrintTracker Pro -->
     <menuitem id="menu_printtracker_root"
               name="PrintTracker Pro"
-              parent="menu_contador_automatico_root"
-              sequence="90"/>
+              parent="sat_menu_root"
+              sequence="100"/>
     
     <!-- Configuración -->
     <menuitem id="menu_printtracker_config"
