@@ -2,7 +2,8 @@
 <odoo>
     
     <!-- VISTA LISTA -->
-   <record id="view_contador_automatico_list" model="ir.ui.view">
+   <!-- VISTA LISTA MODERNA PARA CONTADORES DE IMPRESORAS -->
+<record id="view_contador_automatico_list" model="ir.ui.view">
     <field name="name">contador.automatico.list</field>
     <field name="model">contador.automatico</field>
     <field name="arch" type="xml">
@@ -13,21 +14,19 @@
               create="1"
               delete="1"
               edit="1"
-              decoration-bf="estado == 'procesado'"
-              js_class="o_list_view">
+              decoration-bf="estado == 'procesado'">
             
-            <!-- SECCIÓN PRINCIPAL - Información Clave -->
+            <!-- BOTONES DE ACCIÓN EN HEADER -->
             <header>
                 <button name="procesar_masivo" type="object" 
                         string="🚀 Procesar Seleccionados" 
-                        class="btn-primary" 
-                        context="{'default_estado': 'procesado'}"/>
+                        class="btn-primary"/>
                 <button name="marcar_revisado" type="object" 
                         string="✅ Marcar como Revisado" 
                         class="btn-secondary"/>
             </header>
 
-            <!-- Estado con badges modernos -->
+            <!-- ESTADO CON BADGES MODERNOS -->
             <field name="estado" string="Estado" width="120px"
                    decoration-success="estado == 'procesado'"
                    decoration-info="estado == 'pendiente'"
@@ -36,14 +35,13 @@
                    decoration-muted="estado == 'filtrado'"
                    widget="badge"/>
             
-            <!-- Cliente y equipo con iconos -->
+            <!-- CLIENTE Y EQUIPO CON ICONOS -->
             <field name="cliente_detectado" string="👤 Cliente" 
                    decoration-bf="cliente_detectado" 
                    optional="show"/>
             
             <field name="equipo_id" string="🖨️ Impresora" 
-                   optional="show"
-                   context="{'show_address': 1, 'show_email': 1}"/>
+                   optional="show"/>
             
             <field name="serie_detectada" string="🔢 N° Serie" 
                    optional="show"/>
@@ -75,7 +73,7 @@
                    class="fw-bold"/>
 
             <!-- SISTEMA INTELIGENTE -->
-            <field name="confianza_deteccion" string="🎯 Confianza" 
+            <field name="confianza_deteccion" string="🎯 Confianza %" 
                    optional="hide"
                    widget="progressbar"
                    decoration-danger="confianza_deteccion &lt; 70"
@@ -106,8 +104,7 @@
             <!-- FECHAS -->
             <field name="fecha_procesamiento" string="⏰ Procesado" 
                    optional="show"
-                   widget="datetime"
-                   decoration-muted="not fecha_procesamiento"/>
+                   widget="datetime"/>
             
             <field name="create_date" string="📅 Recibido" 
                    optional="hide"
@@ -116,22 +113,10 @@
             <!-- CONTROL PERSONALIZADO -->
             <control>
                 <create name="add_contador_manual" 
-                        string="➕ Registro Manual"
-                        context="{'default_estado': 'manual'}"/>
+                        string="➕ Registro Manual"/>
                 <create name="import_contador" 
-                        string="📥 Importar desde Email"
-                        context="{'default_estado': 'pendiente'}"/>
+                        string="📥 Importar desde Email"/>
             </control>
-
-            <!-- FILTROS RÁPIDOS -->
-            <searchpanel>
-                <field name="estado" string="Estado" 
-                       select="multi" 
-                       icon="fa-filter"/>
-                <field name="marca_detectada" string="Marca" 
-                       select="multi" 
-                       icon="fa-tags"/>
-            </searchpanel>
 
         </list>
     </field>
