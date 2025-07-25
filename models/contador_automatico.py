@@ -1558,25 +1558,25 @@ class ContadorAutomatico(models.Model):
                 'contador_bn': [
                     # PRIORIDAD 1: Contador específico de Black
                     r'\[Total Black Counter\][^0-9]*(\d{4,9})',
-                    # PRIORIDAD 2: Nuevo formato Total_BW
-                    r'Total_BW\s*:\s*(\d{4,9})',  # NUEVO: Total_BW:141078
+                    # PRIORIDAD 2: Total_BW con espacios opcionales alrededor de ':'
+                    r'Total_BW\s*:\s*(\d{4,9})',    # Total_BW : 141078 o Total_BW: 141078
                     # PRIORIDAD 3: Otros patrones BN
                     r'(?:black|b\/w|mono).*?(\d{4,9})',
-                    r'T_TotalPrtPGS:\s*(\d{4,9})',
+                    r'T_TotalPrtPGS\s*:\s*(\d{4,9})',
                 ],
                 'contador_color': [
                     # PRIORIDAD 1: Contador específico de Color
                     r'\[Total Color Counter\][^0-9]*(\d{4,9})',
-                    # PRIORIDAD 2: Nuevo formato Total_Color
-                    r'Total_Color\s*:\s*(\d{4,9})',  # NUEVO: Total_Color:148948
+                    # PRIORIDAD 2: Total_Color con espacios opcionales alrededor de ':'
+                    r'Total_Color\s*:\s*(\d{4,9})',  # Total_Color : 148948 o Total_Color:148948
                     # PRIORIDAD 3: Otros patrones Color  
                     r'(?:color|colour).*?(\d{4,9})',
-                    r'T_ColorPrtPGS:\s*(\d{4,9})'
+                    r'T_ColorPrtPGS\s*:\s*(\d{4,9})'
                 ],
                 'contador_scan': [
                     r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
                     r'(?:scan|fax|copy).*?(\d{4,9})',
-                    r'T_ScanPGS:\s*(\d{4,9})'
+                    r'T_ScanPGS\s*:\s*(\d{4,9})'
                 ]
             }
             _logger.info("🌈 Usando patrones para CORREO COLOR")
