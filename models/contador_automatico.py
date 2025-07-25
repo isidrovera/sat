@@ -1538,14 +1538,30 @@ class ContadorAutomatico(models.Model):
         _logger.info(f"📊 Total de patrones activos disponibles: {total_patrones}")
 
         # Detectar si es máquina monocroma
-        es_monocroma = self._detectar_maquina_monocroma(texto, self.idioma_detectado or 'desconocido')
-        if es_monocroma:
-            _logger.info("🖤 === MÁQUINA MONOCROMA DETECTADA ===")
-            _logger.info("ℹ️ Buscando 'total' como contador B/N, omitiendo color")
+        # CORRECCIÓN: Si el correo tiene Total_Color, definitivamente NO es monocroma
+        tiene_total_color = 'Total_Color:' in texto
+        if tiene_total_color:
+            es_monocroma = False
+            _logger.info("🌈 Correo con Total_Color detectado - forzando detección COLOR")
+        else:
+            es_monocroma = self._detectar_maquina_monocroma(texto, self.idioma_detectado or 'desconocido')
+            if es_monocroma:
+                _logger.info("🖤 === MÁQUINA MONOCROMA DETECTADA ===")
+                _logger.info("ℹ️ Buscando 'total' como contador B/N, omitiendo color")
 
-        # NUEVA LÓGICA: Detectar tipo de correo PRIMERO
-        es_correo_color = '[Total Color Counter]' in texto or '[Total Black Counter]' in texto
-        es_correo_monocroma = '[Total Counter]' in texto and not es_correo_color
+        # NUEVA LÓGICA: Detectar tipo de correo CORREGIDA
+        es_correo_color = (
+            '[Total Color Counter]' in texto or 
+            '[Total Black Counter]' in texto or
+            'Total_Color:' in texto or           # NUEVO: Detectar formato Total_Color:
+            'Total_BW:' in texto                 # NUEVO: Detectar formato Total_BW:
+        )
+        
+        es_correo_monocroma = (
+            '[Total Counter]' in texto and 
+            not es_correo_color and
+            'Total_Color:' not in texto          # NUEVO: Asegurar que no tenga color
+        )
         
         _logger.info(f"🔍 Análisis de tipo de correo:")
         _logger.info(f"   Correo color (tiene Black/Color específicos): {es_correo_color}")
@@ -1714,7 +1730,6 @@ class ContadorAutomatico(models.Model):
 
         _logger.info(f"🎯 Resultado final de contadores: {contadores}")
         return contadores
-
 
         
     def buscar_equipo_por_serie(self, serie):
