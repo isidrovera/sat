@@ -1505,7 +1505,6 @@ class ContadorAutomatico(models.Model):
             _logger.error(f"❌ Error encontrando patrón usado: {e}")
             return None
 
-    # REEMPLAZAR la sección fallback_por_tipo en buscar_patrones_contadores_dinamico
 
     def buscar_patrones_contadores_dinamico(self, texto):
         """
@@ -1559,14 +1558,18 @@ class ContadorAutomatico(models.Model):
                 'contador_bn': [
                     # PRIORIDAD 1: Contador específico de Black
                     r'\[Total Black Counter\][^0-9]*(\d{4,9})',
-                    # PRIORIDAD 2: Otros patrones BN
+                    # PRIORIDAD 2: Nuevo formato Total_BW
+                    r'Total_BW\s*:\s*(\d{4,9})',  # NUEVO: Total_BW:141078
+                    # PRIORIDAD 3: Otros patrones BN
                     r'(?:black|b\/w|mono).*?(\d{4,9})',
                     r'T_TotalPrtPGS:\s*(\d{4,9})',
                 ],
                 'contador_color': [
                     # PRIORIDAD 1: Contador específico de Color
                     r'\[Total Color Counter\][^0-9]*(\d{4,9})',
-                    # PRIORIDAD 2: Otros patrones Color  
+                    # PRIORIDAD 2: Nuevo formato Total_Color
+                    r'Total_Color\s*:\s*(\d{4,9})',  # NUEVO: Total_Color:148948
+                    # PRIORIDAD 3: Otros patrones Color  
                     r'(?:color|colour).*?(\d{4,9})',
                     r'T_ColorPrtPGS:\s*(\d{4,9})'
                 ],
@@ -1581,24 +1584,26 @@ class ContadorAutomatico(models.Model):
         else:
             # PARA CORREOS MONOCROMA: Total Counter va a BN
             fallback_por_tipo = {
-                'contador_bn': [
-                    # PRIORIDAD 1: Para monocromas, Total Counter es BN
-                    r'\[Total Counter\][^0-9]*(\d{4,9})',
-                    # PRIORIDAD 2: Black específico si existe
-                    r'\[Total Black Counter\][^0-9]*(\d{4,9})',
-                    # PRIORIDAD 3: Otros patrones BN
-                    r'(?:black|b\/w|total).*?(\d{4,9})',
-                    r'T_TotalPrtPGS:\s*(\d{4,9})',
-                ],
-                'contador_color': [
-                    # Para monocromas, NO debe detectar color (será 0)
-                ],
-                'contador_scan': [
-                    r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
-                    r'(?:scan|fax|copy).*?(\d{4,9})',
-                    r'T_ScanPGS:\s*(\d{4,9})'
-                ]
-            }
+                    'contador_bn': [
+                        # PRIORIDAD 1: Para monocromas, Total Counter es BN
+                        r'\[Total Counter\][^0-9]*(\d{4,9})',
+                        # PRIORIDAD 2: Nuevo formato Total_BW (también puede ser monocroma)
+                        r'Total_BW\s*:\s*(\d{4,9})',  # NUEVO: Total_BW:141078
+                        # PRIORIDAD 3: Black específico si existe
+                        r'\[Total Black Counter\][^0-9]*(\d{4,9})',
+                        # PRIORIDAD 4: Otros patrones BN
+                        r'(?:black|b\/w|total).*?(\d{4,9})',
+                        r'T_TotalPrtPGS:\s*(\d{4,9})',
+                    ],
+                    'contador_color': [
+                        # Para monocromas, NO debe detectar color (será 0)
+                    ],
+                    'contador_scan': [
+                        r'\[Total Scan\/Fax Counter\][^0-9]*(\d{4,9})',
+                        r'(?:scan|fax|copy).*?(\d{4,9})',
+                        r'T_ScanPGS:\s*(\d{4,9})'
+                    ]
+                }
             _logger.info("🖤 Usando patrones para CORREO MONOCROMA")
 
         # Tipos de contador a buscar
