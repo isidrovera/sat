@@ -2,13 +2,12 @@
 <odoo>
     
     <!-- VISTA LISTA -->
-   <!-- VISTA LISTA MODERNA PARA CONTADORES DE IMPRESORAS -->
+ <!-- VISTA LISTA MODERNA PARA CONTADORES DE IMPRESORAS -->
 <record id="view_contador_automatico_list" model="ir.ui.view">
     <field name="name">contador.automatico.list</field>
     <field name="model">contador.automatico</field>
     <field name="arch" type="xml">
-        <list string="📊 Contadores de Impresoras" 
-              default_order="fecha_procesamiento desc"
+        <list string="📊 Contadores Automáticos" 
               multi_edit="1"
               sample="1"
               create="1"
@@ -16,108 +15,41 @@
               edit="1"
               decoration-bf="estado == 'procesado'">
             
-            <!-- BOTONES DE ACCIÓN EN HEADER -->
-            <header>
-                <button name="procesar_masivo" type="object" 
-                        string="🚀 Procesar Seleccionados" 
-                        class="btn-primary"/>
-                <button name="marcar_revisado" type="object" 
-                        string="✅ Marcar como Revisado" 
-                        class="btn-secondary"/>
-            </header>
-
-            <!-- ESTADO CON BADGES MODERNOS -->
-            <field name="estado" string="Estado" width="120px"
+            <!-- Campos principales -->
+            <field name="name" string="📧 Asunto del Correo" optional="hide"/>
+            <field name="remitente" string="👤 Remitente" optional="hide"/>
+            <field name="estado" string="Estado"
                    decoration-success="estado == 'procesado'"
                    decoration-info="estado == 'pendiente'"
                    decoration-warning="estado == 'manual'"
                    decoration-danger="estado == 'error'"
-                   decoration-muted="estado == 'filtrado'"
-                   widget="badge"/>
-            
-            <!-- CLIENTE Y EQUIPO CON ICONOS -->
-            <field name="cliente_detectado" string="👤 Cliente" 
-                   decoration-bf="cliente_detectado" 
-                   optional="show"/>
-            
-            <field name="equipo_id" string="🖨️ Impresora" 
-                   optional="show"/>
-            
-            <field name="serie_detectada" string="🔢 N° Serie" 
-                   optional="show"/>
-
-            <!-- CONTADORES CON FORMATO VISUAL -->
-            <field name="contador_bn_detectado" string="⚫ B/N" 
-                   optional="show"
-                   sum="Total B/N"
-                   widget="integer"
-                   decoration-bf="contador_bn_detectado > 0"/>
-            
-            <field name="contador_color_detectado" string="🌈 Color" 
-                   optional="show"
-                   sum="Total Color"
-                   widget="integer"
-                   decoration-bf="contador_color_detectado > 0"/>
-            
-            <field name="contador_scan_detectado" string="📄 Scan" 
-                   optional="show"
-                   sum="Total Scan"
-                   widget="integer"
-                   decoration-bf="contador_scan_detectado > 0"/>
-            
-            <field name="contador_total_detectado" string="📊 Total General" 
-                   optional="show"
-                   sum="Gran Total"
-                   widget="integer"
-                   decoration-bf="contador_total_detectado > 0"
-                   class="fw-bold"/>
-
-            <!-- SISTEMA INTELIGENTE -->
-            <field name="confianza_deteccion" string="🎯 Confianza %" 
-                   optional="hide"
-                   widget="progressbar"
-                   decoration-danger="confianza_deteccion &lt; 70"
-                   decoration-warning="confianza_deteccion &lt; 85"
-                   decoration-success="confianza_deteccion &gt;= 85"/>
-            
-            <field name="requiere_aprendizaje" string="🧠 IA Learning" 
-                   widget="boolean_toggle" 
-                   optional="hide"/>
-
-            <!-- INFORMACIÓN TÉCNICA -->
-            <field name="marca_detectada" string="🏷️ Marca" 
+                   decoration-muted="estado == 'filtrado'" 
                    optional="hide"/>
             
-            <field name="idioma_detectado" string="🌐 Idioma" 
-                   optional="hide"/>
+            <!-- Datos detectados -->
+            <field name="cliente_detectado" string="👤 Cliente"/>
+            <field name="equipo_id" string="🖨️ Equipo" optional="show"/>
+            <field name="serie_detectada" string="🔢 Serie" optional="show"/>
+            <field name="contador_bn_detectado" string="⚫ Contador B/N" optional="show"/>
+            <field name="contador_color_detectado" string="🌈 Contador Color" optional="show"/>
+            <field name="contador_scan_detectado" string="📄 Contador Scan" optional="show"/>
+            <field name="contador_total_detectado" string="📊 Total" optional="show"/>
             
-            <field name="formato_detectado" string="📋 Formato" 
-                   optional="hide"/>
-
-            <!-- DATOS DEL CORREO -->
-            <field name="name" string="📧 Asunto" 
-                   optional="hide"/>
+            <!-- Sistema inteligente -->
+            <field name="idioma_detectado" string="🌐 Idioma" optional="hide"/>
+            <field name="marca_detectada" string="🏷️ Marca" optional="hide"/>
+            <field name="formato_detectado" string="📋 Formato" optional="hide"/>
+            <field name="confianza_deteccion" string="🎯 Confianza %" optional="hide"/>
+            <field name="requiere_aprendizaje" string="🧠 Requiere Aprendizaje" widget="boolean_toggle" optional="hide"/>
             
-            <field name="remitente" string="👤 Remitente" 
-                   optional="hide"/>
-
-            <!-- FECHAS -->
-            <field name="fecha_procesamiento" string="⏰ Procesado" 
-                   optional="show"
-                   widget="datetime"/>
+            <!-- Fechas -->
+            <field name="fecha_procesamiento" string="⏰ Fecha Procesamiento" optional="show"/>
+            <field name="create_date" string="📅 Fecha Creación" optional="hide"/>
             
-            <field name="create_date" string="📅 Recibido" 
-                   optional="hide"
-                   widget="datetime"/>
-
-            <!-- CONTROL PERSONALIZADO -->
+            <!-- Control original -->
             <control>
-                <create name="add_contador_manual" 
-                        string="➕ Registro Manual"/>
-                <create name="import_contador" 
-                        string="📥 Importar desde Email"/>
+                <create name="add_contador" string="➕ Nuevo Registro"/>
             </control>
-
         </list>
     </field>
 </record>
