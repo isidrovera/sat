@@ -40,3 +40,5 @@ from . import print_tracker
 from . import alquiler_printtracker
 from . import mail_message_inherit
 from . import alquiler_maintenance
+from . import alquiler_consumables
+from . import alquiler_blocking
