@@ -169,6 +169,7 @@ class UnidadAlquiler(models.Model):
 
 
 
+    
     @api.depends('fecha_inicio', 'intervalo_meses', 'patron_recurrencia', 'semana_mes', 'dia_semana', 'usar_fecha_recurrente_como_base')
     def _compute_fecha_recurrente(self):
         """
@@ -185,19 +186,21 @@ class UnidadAlquiler(models.Model):
 
             # DETECCIÓN DE PROBLEMAS: Imprimir valores involucrados en el cálculo
             _logger.info(f"VALORES DE ENTRADA: fecha_inicio={record.fecha_inicio}, "
-                         f"fecha_recurrente={record.fecha_recurrente}, "
-                         f"intervalo_meses={record.intervalo_meses}, "
-                         f"patron_recurrencia={record.patron_recurrencia}, "
-                         f"semana_mes={record.semana_mes}, "
-                         f"dia_semana={record.dia_semana}, "
-                         f"usar_fecha_recurrente_como_base={record.usar_fecha_recurrente_como_base}")
+                        f"fecha_recurrente={record.fecha_recurrente}, "
+                        f"intervalo_meses={record.intervalo_meses}, "
+                        f"patron_recurrencia={record.patron_recurrencia}, "
+                        f"semana_mes={record.semana_mes}, "
+                        f"dia_semana={record.dia_semana}, "
+                        f"usar_fecha_recurrente_como_base={record.usar_fecha_recurrente_como_base}")
 
-            # Determinar la fecha base para el cálculo - MODIFICADO
-            # Solo usar fecha_recurrente si el campo usar_fecha_recurrente_como_base está activado
-            if record.usar_fecha_recurrente_como_base and record.fecha_recurrente and record.fecha_recurrente > fields.Date.today():
-                base_date = record.fecha_recurrente
+            # ✅ CAMBIO PRINCIPAL: Determinar la fecha base para el cálculo
+            # QUITAR la condición "record.fecha_recurrente > fields.Date.today()"
+            if record.usar_fecha_recurrente_como_base and record.fecha_recurrente:
+                base_date = record.fecha_recurrente  # ← Ahora SÍ usará fechas vencidas como base
+                _logger.info(f"USANDO FECHA_RECURRENTE COMO BASE: {base_date}")
             else:
                 base_date = record.fecha_inicio
+                _logger.info(f"USANDO FECHA_INICIO COMO BASE: {base_date}")
 
             # Asegurarse que intervalo_meses sea un valor válido - IMPORTANTE
             intervalo_str = record.intervalo_meses or '1'
@@ -288,7 +291,7 @@ class UnidadAlquiler(models.Model):
 
             # Log para depuración detallada
             dia_nombre = ['Lunes', 'Martes', 'Miércoles',
-                          'Jueves', 'Viernes', 'Sábado', 'Domingo']
+                        'Jueves', 'Viernes', 'Sábado', 'Domingo']
             dia_semana_nombre = ""
             if record.dia_semana:
                 try:
@@ -297,7 +300,7 @@ class UnidadAlquiler(models.Model):
                     dia_semana_nombre = f"Día {record.dia_semana}"
 
             _logger.info(
-                f"CÁLCULO FECHA: Base={base_date}, "
+                f"✅ CÁLCULO FECHA CORREGIDO: Base={base_date}, "
                 f"Intervalo={meses} meses, "
                 f"Mes objetivo={target_month}/{target_year}, "
                 f"Patrón={record.patron_recurrencia}, "
@@ -323,7 +326,6 @@ class UnidadAlquiler(models.Model):
                         body=f"⚠️ Nueva fecha de mantenimiento calculada: {record.fecha_recurrente.strftime('%d/%m/%Y')}",
                         message_type='notification'
                     )
-
 
     def iniciar_calculo_recurrente(self):
         """
@@ -355,28 +357,44 @@ class UnidadAlquiler(models.Model):
     def update_fecha_recurrente(self):
         """
         Actualiza la fecha de mantenimiento recurrente para registros con fechas pasadas.
+        VERSIÓN CORREGIDA: Activa el uso de fecha_recurrente como base para cálculos futuros.
         """
         today = fields.Date.today()
+        
+        # Buscar registros con fechas vencidas
         records = self.search([
             ('fecha_recurrente', '<=', today),
             ('estado_programacion', 'in', ['confirmado', 'pendiente']),
             ('control_mantenimiento', '=', True)
         ])
+        
+        _logger.info(f"🔍 ENCONTRADOS {len(records)} registros con fechas vencidas para actualizar")
 
         for record in records:
-            # Simplemente activar el cálculo del compute
+            fecha_vencida = record.fecha_recurrente
+            
+            _logger.info(f"📅 PROCESANDO: {record.name or 'Sin nombre'} - Fecha vencida: {fecha_vencida}")
+            
+            # ✅ CAMBIO CLAVE: Activar el flag para usar fecha_recurrente como base
             record.write({
+                'usar_fecha_recurrente_como_base': True,  # ← ESTO ES LO IMPORTANTE
                 'estado_programacion': 'pendiente',
                 'fecha_confirmacion': False
             })
 
             # Forzar recálculo de la fecha recurrente
+            # Ahora usará la fecha vencida como base gracias al flag activado
             record._compute_fecha_recurrente()
 
+            _logger.info(f"✅ ACTUALIZADO: Nueva fecha calculada: {record.fecha_recurrente}")
+            
             record.message_post(
-                body=f"🔄 Mantenimiento actualizado para: {record.fecha_recurrente.strftime('%d/%m/%Y')}",
+                body=f"🔄 Mantenimiento actualizado de {fecha_vencida.strftime('%d/%m/%Y')} → {record.fecha_recurrente.strftime('%d/%m/%Y')}",
                 message_type='notification'
             )
+
+        _logger.info(f"🎯 ACTUALIZACIÓN COMPLETADA: {len(records)} registros procesados")
+
 
     @api.model
     def send_maintenance_reminders(self):
