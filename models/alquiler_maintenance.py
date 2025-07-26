@@ -472,6 +472,7 @@ class UnidadAlquiler(models.Model):
         """
         Aplica la configuración de mantenimiento del registro actual a todos
         los otros equipos del mismo cliente.
+        VERSIÓN CORREGIDA: Evita recálculos múltiples no deseados.
         """
         self.ensure_one()
 
@@ -496,27 +497,39 @@ class UnidadAlquiler(models.Model):
             raise UserError(
                 _("No se encontraron otros equipos con mantenimiento activado para este cliente."))
 
-        # Valores a copiar
-        valores = {
+        # ✅ CAMBIO PRINCIPAL: Resetear TODOS los equipos primero (sin recálculos)
+        _logger.info(f"🔄 APLICANDO configuración a {len(otros_equipos)} equipos del cliente {self.cliente_id.name}")
+        
+        # Valores a copiar (SIN usar_fecha_recurrente_como_base para evitar problemas)
+        valores_base = {
             'fecha_inicio': self.fecha_inicio,
             'intervalo_meses': self.intervalo_meses,
             'patron_recurrencia': self.patron_recurrencia,
-            'usar_fecha_recurrente_como_base': self.usar_fecha_recurrente_como_base
+            'usar_fecha_recurrente_como_base': False,  # ← RESETEAR a False
+            'estado_programacion': 'pendiente',
+            'fecha_confirmacion': False
         }
 
         # Si el patrón es "día específico de la semana", también copiar estos campos
         if self.patron_recurrencia == 'semana_dia':
-            valores.update({
+            valores_base.update({
                 'semana_mes': self.semana_mes,
                 'dia_semana': self.dia_semana
             })
 
-        # Aplicar la configuración a todos los otros equipos
-        otros_equipos.write(valores)
+        # ✅ IMPORTANTE: Usar with_context para evitar triggers no deseados
+        try:
+            # Aplicar la configuración base a todos los equipos (esto forzará recálculo desde fecha_inicio)
+            otros_equipos.with_context(skip_compute=True).write(valores_base)
+            
+            # Forzar recálculo manual UNA SOLA VEZ para cada equipo
+            for equipo in otros_equipos:
+                equipo._compute_fecha_recurrente()
+                _logger.info(f"✅ Equipo {equipo.id}: Nueva fecha_recurrente = {equipo.fecha_recurrente}")
 
-        # Forzar el recálculo de la fecha recurrente en todos los equipos actualizados
-        for equipo in otros_equipos:
-            equipo._compute_fecha_recurrente()
+        except Exception as e:
+            _logger.error(f"❌ Error aplicando configuración: {str(e)}")
+            raise UserError(_(f"Error al aplicar configuración: {str(e)}"))
 
         # Mostrar mensaje de confirmación
         message = _(
@@ -527,6 +540,8 @@ class UnidadAlquiler(models.Model):
             body=f"✅ {message}",
             message_type='notification'
         )
+
+        _logger.info(f"🎯 CONFIGURACIÓN APLICADA EXITOSAMENTE a {len(otros_equipos)} equipos")
 
         # Mostrar mensaje al usuario
         return {
@@ -539,6 +554,7 @@ class UnidadAlquiler(models.Model):
                 'type': 'success',
             }
         }
+
 
     def _create_maintenance_tickets(self):
         """Crear tickets de mantenimiento para todos los equipos del cliente"""
