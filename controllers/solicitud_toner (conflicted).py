@@ -442,7 +442,7 @@ Recibirá confirmación de la fecha de entrega.
 
     def _notify_internal_team_rejection(self, datos_formulario, validation_result):
         """Notifica al equipo interno sobre solicitud rechazada"""
-        mail_server = self._get_office_mail_server()
+            mail_server = self._get_office_mail_server()
         try:
             # Email interno sobre rechazo
             body_html = f"""
@@ -535,4 +535,6 @@ Recibirá confirmación de la fecha de entrega.
             
         except Exception as e:
             _logger.error(f"Error enviando mensaje de WhatsApp para tóner: {str(e)}")
-            return F
+            return False
+
+
