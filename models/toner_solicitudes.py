@@ -1186,7 +1186,7 @@ class TonerCounterSubmission(models.Model):
             submission_vals = {
                 'equipment_id': equipment_id,
                 'client_name': web_data.get('client_name'),
-                'client_email': web_data.get('client_email', 'solicitud@web.com'),  # Email por defecto si no viene
+                'client_email': web_data.get('client_email', 'soporte@andescopiers.com.pe'),  # Email por defecto si no viene
                 'client_phone': web_data.get('client_phone'),
                 'counter_bn': int(web_data.get('counter_bn', 0)),
                 'counter_color': int(web_data.get('counter_color', 0)),

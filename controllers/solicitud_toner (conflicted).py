@@ -329,7 +329,7 @@ Andes Copier"""
             web_data = {
                 'equipment_id': int(post_data.get('id_registro')),
                 'client_name': post_data.get('nombre'),
-                'client_email': post_data.get('email', 'solicitud@web.com'),  # Email por defecto
+                'client_email': post_data.get('email', 'soporte@andescopiers.com.pe'),  # Email por defecto
                 'client_phone': self.clean_phone_number(post_data.get('celular')),
                 'counter_bn': int(post_data.get('contometro_black', 0)),
                 'counter_color': int(post_data.get('contometro_color', 0)),
@@ -494,7 +494,7 @@ Recibirá confirmación de la fecha de entrega.
             mail_values = {
                 'subject': f"✅ Solicitud Tóner Aprobada - {creation_result['secuencia']}",
                 'body_html': body_html,
-                'email_from': 'sistema@andescopiers.com.pe',
+                'email_from': 'soporte@andescopiers.com.pe',
                 'email_to': 'jamilet.roggero@andescopiers.com.pe',
                 'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',
                 'mail_server_id': mail_server.id if mail_server else False,
