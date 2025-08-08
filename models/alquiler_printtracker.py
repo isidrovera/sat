@@ -1,3 +1,6 @@
+# CORRECCIÓN EN AlquilerPrintTracker
+# Eliminar campos duplicados y usar los campos base correctos
+
 from odoo import models, fields, api
 import requests
 import logging
