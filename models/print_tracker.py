@@ -283,7 +283,10 @@ class PrintTrackerConfig(models.Model):
             }
 
     def _sync_device(self, device_data):
-        """Sincroniza un dispositivo individual - Solo equipos existentes"""
+        """
+        MÉTODO CORREGIDO: Sincroniza un dispositivo individual - Solo equipos existentes
+        Busca por serie y actualiza campos correctos
+        """
         try:
             serial_number = device_data.get('serialNumber')
             
@@ -292,7 +295,7 @@ class PrintTrackerConfig(models.Model):
                 _logger.info(f"⏭️ Saltando dispositivo con serie inválida: {serial_number}")
                 return 'invalid_serial'
             
-            # ✅ Buscar equipo existente por serial number
+            # ✅ Buscar equipo existente por serie (campo correcto)
             existing_device = self.env['alquiler'].search([
                 ('serie', '=', serial_number)
             ], limit=1)
@@ -303,17 +306,38 @@ class PrintTrackerConfig(models.Model):
                     ('pt_entity_id', '=', device_data.get('entityKey'))
                 ], limit=1)
                 
-                # ✅ SOLO actualizar campos de PrintTracker
-                existing_device.write({
-                    'pt_device_id': device_data.get('id'),
-                    'pt_entity_id': entity.id if entity else False,
-                    'mac_address': device_data.get('macAddress'),
-                    'ip_address': device_data.get('ipAddress'),
-                    'custom_location': device_data.get('customLocation'),
-                    'asset_id': device_data.get('assetID'),
-                    'is_managed': device_data.get('managed', True)
-                })
-                _logger.info(f"📝 Equipo actualizado: {serial_number}")
+                # ✅ PREPARAR CAMPOS DE ACTUALIZACIÓN
+                update_values = {}
+                
+                # Campos de PrintTracker (solo si existen en el modelo)
+                if hasattr(existing_device, 'pt_device_id'):
+                    update_values['pt_device_id'] = device_data.get('id')
+                
+                if hasattr(existing_device, 'pt_entity_id'):
+                    update_values['pt_entity_id'] = entity.id if entity else False
+                
+                if hasattr(existing_device, 'mac_address'):
+                    update_values['mac_address'] = device_data.get('macAddress')
+                
+                if hasattr(existing_device, 'ip_address'):
+                    update_values['ip_address'] = device_data.get('ipAddress')
+                
+                if hasattr(existing_device, 'custom_location'):
+                    update_values['custom_location'] = device_data.get('customLocation')
+                
+                if hasattr(existing_device, 'asset_id'):
+                    update_values['asset_id'] = device_data.get('assetID')
+                
+                if hasattr(existing_device, 'is_managed'):
+                    update_values['is_managed'] = device_data.get('managed', True)
+                
+                # ✅ SOLO ACTUALIZAR SI HAY CAMPOS VÁLIDOS
+                if update_values:
+                    existing_device.sudo().write(update_values)
+                    _logger.info(f"📝 Equipo actualizado: {serial_number} con campos PrintTracker")
+                else:
+                    _logger.info(f"📝 Equipo encontrado: {serial_number} (sin campos PrintTracker para actualizar)")
+                
                 return 'updated'
             else:
                 # ✅ NO crear automáticamente, solo loggear
@@ -741,25 +765,163 @@ class PrintTrackerMeter(models.Model):
                 meter.black_increment = meter.black_pages_life or 0
                 meter.color_increment = meter.color_pages_life or 0
     
+   
     def update_device_counters(self):
-        """Actualiza los contadores del equipo con esta lectura"""
-        if not self.device_id:
-            return False
-        
+        """
+        MÉTODO CORREGIDO: Actualiza los contadores del equipo con validación de incrementos
+        y búsqueda por serie, usando los campos correctos del modelo alquiler
+        """
         try:
-            self.device_id.write({
+            _logger.info(f"💾 === INICIANDO ACTUALIZACIÓN PRINTTRACKER ===")
+            
+            # 1. OBTENER SERIE DEL DISPOSITIVO
+            if not self.device_id:
+                _logger.error("❌ No hay device_id asociado al medidor")
+                return False
+            
+            # 2. BUSCAR EQUIPO POR SERIE (como hacen los otros métodos)
+            serie_equipo = self.device_id.serie
+            if not serie_equipo:
+                _logger.error("❌ El dispositivo no tiene serie definida")
+                return False
+            
+            # Buscar equipo en el modelo alquiler por serie
+            equipo = self.env['alquiler'].search([('serie', '=', serie_equipo)], limit=1)
+            if not equipo:
+                _logger.error(f"❌ No se encontró equipo con serie: {serie_equipo}")
+                return False
+            
+            _logger.info(f"🎯 Equipo encontrado: ID={equipo.id}, Serie={serie_equipo}")
+            
+            # 3. PREPARAR NUEVOS VALORES DESDE PRINTTRACKER
+            nuevos_valores = {
                 'contador_bn': self.black_pages_life or 0,
                 'contador_color': self.color_pages_life or 0,
-                'contador_scan': self.scan_pages or 0,
-                'fecha_ultima_lectura': self.reading_date,
-                'ultimo_medidor_pt': self.id
-            })
+                'contador_scan': self.scan_pages or 0
+            }
             
-            _logger.info(f"✅ Contadores actualizados para equipo {self.device_id.serie}")
+            _logger.info(f"📊 Nuevos valores desde PrintTracker: {nuevos_valores}")
+            
+            # 4. OBTENER VALORES ACTUALES DEL EQUIPO
+            valores_actuales = {
+                'contador_bn': equipo.contador_bn or 0,
+                'contador_color': equipo.contador_color or 0,
+                'contador_scan': equipo.contador_scan or 0
+            }
+            
+            _logger.info(f"📋 Valores actuales del equipo: {valores_actuales}")
+            
+            # 5. VALIDAR INCREMENTOS Y PREPARAR ACTUALIZACIÓN
+            valores_actualizacion = {}
+            alertas = []
+            hay_cambios = False
+            
+            # Validar contador B/N
+            nuevo_bn = nuevos_valores['contador_bn']
+            actual_bn = valores_actuales['contador_bn']
+            
+            if nuevo_bn > actual_bn:
+                valores_actualizacion['contador_bn'] = nuevo_bn
+                hay_cambios = True
+                _logger.info(f"✅ BN: {actual_bn} → {nuevo_bn} (+{nuevo_bn - actual_bn})")
+            elif nuevo_bn < actual_bn and nuevo_bn > 0:
+                # Permitir decrementos (posible reset de equipo)
+                valores_actualizacion['contador_bn'] = nuevo_bn
+                alertas.append("BN decrementó - posible reset de equipo")
+                hay_cambios = True
+                _logger.warning(f"⚠️ BN decrementó: {actual_bn} → {nuevo_bn}")
+            elif nuevo_bn == actual_bn:
+                _logger.info(f"📍 BN sin cambios: {actual_bn}")
+            else:
+                _logger.info(f"⏭️ BN no actualizado: nuevo({nuevo_bn}) <= actual({actual_bn})")
+            
+            # Validar contador Color
+            nuevo_color = nuevos_valores['contador_color']
+            actual_color = valores_actuales['contador_color']
+            
+            if nuevo_color > actual_color:
+                valores_actualizacion['contador_color'] = nuevo_color
+                hay_cambios = True
+                _logger.info(f"✅ Color: {actual_color} → {nuevo_color} (+{nuevo_color - actual_color})")
+            elif nuevo_color < actual_color and nuevo_color > 0:
+                valores_actualizacion['contador_color'] = nuevo_color
+                alertas.append("Color decrementó - posible reset de equipo")
+                hay_cambios = True
+                _logger.warning(f"⚠️ Color decrementó: {actual_color} → {nuevo_color}")
+            elif nuevo_color == actual_color:
+                _logger.info(f"📍 Color sin cambios: {actual_color}")
+            else:
+                _logger.info(f"⏭️ Color no actualizado: nuevo({nuevo_color}) <= actual({actual_color})")
+            
+            # Validar contador Scan
+            nuevo_scan = nuevos_valores['contador_scan']
+            actual_scan = valores_actuales['contador_scan']
+            
+            if nuevo_scan > actual_scan:
+                valores_actualizacion['contador_scan'] = nuevo_scan
+                hay_cambios = True
+                _logger.info(f"✅ Scan: {actual_scan} → {nuevo_scan} (+{nuevo_scan - actual_scan})")
+            elif nuevo_scan < actual_scan and nuevo_scan > 0:
+                valores_actualizacion['contador_scan'] = nuevo_scan
+                alertas.append("Scan decrementó - posible reset de equipo")
+                hay_cambios = True
+                _logger.warning(f"⚠️ Scan decrementó: {actual_scan} → {nuevo_scan}")
+            elif nuevo_scan == actual_scan:
+                _logger.info(f"📍 Scan sin cambios: {actual_scan}")
+            else:
+                _logger.info(f"⏭️ Scan no actualizado: nuevo({nuevo_scan}) <= actual({actual_scan})")
+            
+            # 6. SIEMPRE ACTUALIZAR FECHA (USAR CAMPO CORRECTO)
+            valores_actualizacion['fecha_ultima_actualizacion'] = self.reading_date or fields.Datetime.now()
+            
+            # 7. EJECUTAR ACTUALIZACIÓN SI HAY CAMBIOS
+            if hay_cambios or valores_actualizacion:
+                _logger.info(f"💾 Ejecutando actualización: {valores_actualizacion}")
+                
+                # Usar sudo() para asegurar permisos de escritura
+                equipo.sudo().write(valores_actualizacion)
+                
+                _logger.info(f"✅ Equipo actualizado exitosamente")
+                
+                # 8. REGISTRAR EN CHATTER DEL EQUIPO
+                mensaje_cambios = []
+                if 'contador_bn' in valores_actualizacion:
+                    mensaje_cambios.append(f"BN: {valores_actuales['contador_bn']} → {valores_actualizacion['contador_bn']}")
+                if 'contador_color' in valores_actualizacion:
+                    mensaje_cambios.append(f"Color: {valores_actuales['contador_color']} → {valores_actualizacion['contador_color']}")
+                if 'contador_scan' in valores_actualizacion:
+                    mensaje_cambios.append(f"Scan: {valores_actuales['contador_scan']} → {valores_actualizacion['contador_scan']}")
+                
+                mensaje = f"📊 Contadores actualizados vía PrintTracker:\n" + "\n".join(mensaje_cambios)
+                if alertas:
+                    mensaje += f"\n\n⚠️ Alertas: " + "; ".join(alertas)
+                
+                equipo.message_post(
+                    body=mensaje,
+                    message_type='notification',
+                    subtype_xmlid='mail.mt_note'
+                )
+                
+            else:
+                _logger.info(f"ℹ️ No hay cambios que aplicar al equipo")
+            
+            # 9. ACTUALIZAR RELACIÓN PRINTTRACKER (SOLO REFERENCIAS)
+            # Actualizar campos de PrintTracker en el registro heredado si existe
+            try:
+                if hasattr(equipo, 'ultimo_medidor_pt'):
+                    equipo.sudo().write({'ultimo_medidor_pt': self.id})
+                if hasattr(equipo, 'fecha_ultima_lectura'):
+                    equipo.sudo().write({'fecha_ultima_lectura': self.reading_date})
+            except Exception as e:
+                _logger.warning(f"⚠️ No se pudieron actualizar campos adicionales de PrintTracker: {e}")
+            
+            _logger.info(f"🎉 === ACTUALIZACIÓN PRINTTRACKER COMPLETADA ===")
             return True
             
         except Exception as e:
-            _logger.error(f"❌ Error actualizando contadores: {e}")
+            _logger.error(f"❌ === ERROR ACTUALIZANDO EQUIPO === {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
     
     @api.model
