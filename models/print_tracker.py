@@ -463,22 +463,57 @@ class PrintTrackerConfig(models.Model):
     def _sync_meter(self, meter_data):
         """
         MÉTODO CORREGIDO: Sincroniza un medidor individual
-        CORRECCIÓN: Siempre actualizar contadores del equipo (nuevos Y existentes)
+        SOLUCIÓN: Crear mapeo entre deviceKey de PrintTracker y serie de Odoo
         """
         try:
             _logger.info(f"🔍 === PROCESANDO MEDIDOR ===")
             _logger.info(f"📊 Medidor ID: {meter_data.get('id', 'Sin ID')}")
-            _logger.info(f"🎯 Device Key: {meter_data.get('deviceKey', 'Sin deviceKey')}")
             
-            # Buscar dispositivo por deviceKey
-            device = self.env['alquiler'].search([
-                ('pt_device_id', '=', meter_data.get('deviceKey'))
-            ], limit=1)
+            device_key = meter_data.get('deviceKey')
+            _logger.info(f"🎯 Device Key: {device_key}")
             
-            if not device:
-                _logger.warning(f"⚠️ Dispositivo no encontrado para medidor: {meter_data.get('deviceKey')}")
+            if not device_key:
+                _logger.error("❌ No se proporcionó deviceKey en los datos del medidor")
                 return False
             
+            # ✅ ESTRATEGIA 1: Buscar por pt_device_id (si existe)
+            device = self.env['alquiler'].search([
+                ('pt_device_id', '=', device_key)
+            ], limit=1)
+            
+            if device:
+                _logger.info(f"✅ Dispositivo encontrado por pt_device_id: {device.serie} (ID: {device.id})")
+            else:
+                # ✅ ESTRATEGIA 2: Obtener la serie desde PrintTracker Devices API
+                _logger.info(f"🔄 Dispositivo no encontrado por pt_device_id, consultando PrintTracker...")
+                
+                serie_equipo = self._get_serie_from_printtracker(device_key)
+                
+                if serie_equipo:
+                    _logger.info(f"📋 Serie obtenida de PrintTracker: {serie_equipo}")
+                    
+                    # Buscar por serie en Odoo
+                    device = self.env['alquiler'].search([
+                        ('serie', '=', serie_equipo)
+                    ], limit=1)
+                    
+                    if device:
+                        _logger.info(f"✅ Dispositivo encontrado por serie: {device.serie} (ID: {device.id})")
+                        
+                        # ✅ IMPORTANTE: Actualizar pt_device_id para futuras sincronizaciones
+                        try:
+                            device.write({'pt_device_id': device_key})
+                            _logger.info(f"🔗 pt_device_id actualizado: {device.serie} → {device_key}")
+                        except Exception as e:
+                            _logger.warning(f"⚠️ No se pudo actualizar pt_device_id: {e}")
+                    else:
+                        _logger.error(f"❌ Equipo con serie {serie_equipo} no encontrado en Odoo")
+                        return False
+                else:
+                    _logger.error(f"❌ No se pudo obtener serie de PrintTracker para deviceKey: {device_key}")
+                    return False
+            
+            # ✅ CONTINUAR CON PROCESAMIENTO NORMAL
             _logger.info(f"✅ Dispositivo encontrado: {device.serie} (ID: {device.id})")
             
             # Crear o actualizar registro de medidor
@@ -512,7 +547,7 @@ class PrintTrackerConfig(models.Model):
                 'last_sync': fields.Datetime.now()
             }
             
-            # ✅ CORRECCIÓN PRINCIPAL: Actualizar o crear medidor
+            # ✅ ACTUALIZAR O CREAR MEDIDOR
             meter_record = None
             if existing_meter:
                 _logger.info(f"📝 Actualizando medidor existente: {existing_meter.pt_meter_id}")
@@ -522,7 +557,7 @@ class PrintTrackerConfig(models.Model):
                 _logger.info(f"🆕 Creando nuevo medidor: {meter_data.get('id')}")
                 meter_record = self.env['printtracker.meter'].create(meter_values)
             
-            # ✅ CORRECCIÓN CRÍTICA: SIEMPRE actualizar contadores (nuevos Y existentes)
+            # ✅ SIEMPRE actualizar contadores del equipo
             _logger.info(f"🔄 Actualizando contadores del equipo...")
             if meter_record.update_device_counters():
                 _logger.info(f"✅ Contadores del equipo actualizados exitosamente")
@@ -536,6 +571,38 @@ class PrintTrackerConfig(models.Model):
             import traceback
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
+
+    def _get_serie_from_printtracker(self, device_key):
+        """
+        NUEVO MÉTODO: Obtiene la serie de un dispositivo desde PrintTracker API
+        """
+        try:
+            _logger.info(f"🔍 Consultando PrintTracker para deviceKey: {device_key}")
+            
+            # Consultar dispositivo específico
+            response = requests.get(
+                f'{self.api_url.rstrip("/")}/device/{device_key}',
+                headers=self.get_api_headers(),
+                timeout=self.timeout_seconds
+            )
+            
+            if response.status_code == 200:
+                device_data = response.json()
+                serie = device_data.get('serialNumber')
+                
+                if serie and serie not in ['notavailable', 'None', '', None]:
+                    _logger.info(f"✅ Serie obtenida de PrintTracker: {serie}")
+                    return serie
+                else:
+                    _logger.warning(f"⚠️ Serie inválida en PrintTracker: {serie}")
+                    return None
+            else:
+                _logger.error(f"❌ Error consultando dispositivo en PrintTracker: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            _logger.error(f"❌ Error obteniendo serie de PrintTracker: {e}")
+            return None
 
     def sync_all_data(self):
         """Sincroniza todos los datos: entidades, dispositivos y medidores"""
