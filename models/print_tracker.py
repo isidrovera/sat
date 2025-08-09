@@ -350,19 +350,25 @@ class PrintTrackerConfig(models.Model):
     def sync_current_meters(self):
         """
         MÉTODO CORREGIDO: Sincroniza medidores actuales desde PrintTracker
-        CORRECCIÓN: Agregado logging detallado para debug
+        CORRECCIÓN: Agregado parámetro 'page' requerido por la API
         """
         try:
             _logger.info(f"🔄 Iniciando sincronización de medidores actuales...")
             
+            # ✅ CORRECCIÓN: Agregar parámetro 'page' requerido por la API
+            params = {
+                'includeChildren': True,
+                'excludeDisabled': False,
+                'limit': self.max_records_per_request,
+                'page': 1  # ← NUEVO: PrintTracker requiere page >= 1
+            }
+            
+            _logger.info(f"📊 Parámetros de consulta: {params}")
+            
             response = requests.get(
                 f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/currentMeter',
                 headers=self.get_api_headers(),
-                params={
-                    'includeChildren': True,
-                    'excludeDisabled': False,
-                    'limit': self.max_records_per_request
-                },
+                params=params,
                 timeout=self.timeout_seconds
             )
             
@@ -426,6 +432,12 @@ class PrintTrackerConfig(models.Model):
             else:
                 error_msg = f'Error HTTP {response.status_code}: {response.text}'
                 _logger.error(f"❌ Error de API: {error_msg}")
+                
+                # ✅ LOGGING ADICIONAL PARA DEBUG
+                _logger.error(f"🔍 URL consultada: {self.api_url.rstrip('/')}/entity/{self.entity_bbbb_id}/currentMeter")
+                _logger.error(f"🔍 Headers: {self.get_api_headers()}")
+                _logger.error(f"🔍 Parámetros: {params}")
+                
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
