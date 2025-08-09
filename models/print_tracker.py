@@ -463,7 +463,7 @@ class PrintTrackerConfig(models.Model):
     def _sync_meter(self, meter_data):
         """
         MÉTODO CORREGIDO: Sincroniza un medidor individual
-        SOLUCIÓN: Crear mapeo entre deviceKey de PrintTracker y serie de Odoo
+        SOLUCIÓN FINAL: Usar datos de sincronización de dispositivos existentes
         """
         try:
             _logger.info(f"🔍 === PROCESANDO MEDIDOR ===")
@@ -484,13 +484,14 @@ class PrintTrackerConfig(models.Model):
             if device:
                 _logger.info(f"✅ Dispositivo encontrado por pt_device_id: {device.serie} (ID: {device.id})")
             else:
-                # ✅ ESTRATEGIA 2: Obtener la serie desde PrintTracker Devices API
-                _logger.info(f"🔄 Dispositivo no encontrado por pt_device_id, consultando PrintTracker...")
+                # ✅ ESTRATEGIA 2: Buscar en los datos de dispositivos sincronizados
+                _logger.info(f"🔄 Dispositivo no encontrado por pt_device_id, buscando en datos sincronizados...")
                 
-                serie_equipo = self._get_serie_from_printtracker(device_key)
+                # Obtener lista completa de dispositivos de PrintTracker
+                serie_equipo = self._find_serie_in_synced_devices(device_key)
                 
                 if serie_equipo:
-                    _logger.info(f"📋 Serie obtenida de PrintTracker: {serie_equipo}")
+                    _logger.info(f"📋 Serie encontrada en datos sincronizados: {serie_equipo}")
                     
                     # Buscar por serie en Odoo
                     device = self.env['alquiler'].search([
@@ -510,11 +511,12 @@ class PrintTrackerConfig(models.Model):
                         _logger.error(f"❌ Equipo con serie {serie_equipo} no encontrado en Odoo")
                         return False
                 else:
-                    _logger.error(f"❌ No se pudo obtener serie de PrintTracker para deviceKey: {device_key}")
+                    _logger.error(f"❌ No se encontró serie para deviceKey: {device_key}")
+                    _logger.error(f"💡 SOLUCIÓN: Ejecutar 'Sincronizar Dispositivos' primero")
                     return False
             
             # ✅ CONTINUAR CON PROCESAMIENTO NORMAL
-            _logger.info(f"✅ Dispositivo encontrado: {device.serie} (ID: {device.id})")
+            # ... resto del código de procesamiento de medidor
             
             # Crear o actualizar registro de medidor
             existing_meter = self.env['printtracker.meter'].search([
@@ -572,36 +574,49 @@ class PrintTrackerConfig(models.Model):
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
 
-    def _get_serie_from_printtracker(self, device_key):
+    def _find_serie_in_synced_devices(self, device_key):
         """
-        NUEVO MÉTODO: Obtiene la serie de un dispositivo desde PrintTracker API
+        NUEVO MÉTODO: Busca la serie en los datos de dispositivos ya sincronizados
         """
         try:
-            _logger.info(f"🔍 Consultando PrintTracker para deviceKey: {device_key}")
+            _logger.info(f"🔍 Buscando serie para deviceKey: {device_key} en datos sincronizados")
             
-            # Consultar dispositivo específico
+            # Obtener lista de dispositivos de PrintTracker (usando la misma API que sync_all_devices)
             response = requests.get(
-                f'{self.api_url.rstrip("/")}/device/{device_key}',
+                f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/device',
                 headers=self.get_api_headers(),
+                params={
+                    'includeChildren': True,
+                    'excludeDisabled': False,
+                    'limit': 1000  # Límite alto para obtener todos los dispositivos
+                },
                 timeout=self.timeout_seconds
             )
             
             if response.status_code == 200:
-                device_data = response.json()
-                serie = device_data.get('serialNumber')
+                devices = response.json()
+                _logger.info(f"📊 Dispositivos obtenidos: {len(devices)}")
                 
-                if serie and serie not in ['notavailable', 'None', '', None]:
-                    _logger.info(f"✅ Serie obtenida de PrintTracker: {serie}")
-                    return serie
-                else:
-                    _logger.warning(f"⚠️ Serie inválida en PrintTracker: {serie}")
-                    return None
+                # Buscar el deviceKey en la lista
+                for device_data in devices:
+                    if device_data.get('id') == device_key:
+                        serie = device_data.get('serialNumber')
+                        
+                        if serie and serie not in ['notavailable', 'None', '', None]:
+                            _logger.info(f"✅ Serie encontrada: {serie} para deviceKey: {device_key}")
+                            return serie
+                        else:
+                            _logger.warning(f"⚠️ Serie inválida para deviceKey {device_key}: {serie}")
+                            return None
+                
+                _logger.warning(f"❌ DeviceKey {device_key} no encontrado en {len(devices)} dispositivos")
+                return None
             else:
-                _logger.error(f"❌ Error consultando dispositivo en PrintTracker: {response.status_code} - {response.text}")
+                _logger.error(f"❌ Error obteniendo dispositivos: {response.status_code} - {response.text}")
                 return None
                 
         except Exception as e:
-            _logger.error(f"❌ Error obteniendo serie de PrintTracker: {e}")
+            _logger.error(f"❌ Error buscando serie en datos sincronizados: {e}")
             return None
 
     def sync_all_data(self):
