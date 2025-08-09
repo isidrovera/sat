@@ -43,7 +43,15 @@ class PrintTrackerConfig(models.Model):
     timeout_seconds = fields.Integer('Timeout (segundos)', default=30)
     max_records_per_request = fields.Integer('Registros por Petición', default=100,
                                            help='Máximo registros por petición API')
-    
+    def _safe_int(self, value, default=0):
+        """Convierte un valor a entero de forma segura"""
+        try:
+            if value is None or value == '' or value == 'N/A':
+                return default
+            return int(value)
+        except (ValueError, TypeError):
+            _logger.warning(f"⚠️ No se pudo convertir '{value}' a entero, usando {default}")
+            return default
     def test_connection(self):
         """Prueba la conexión con PrintTracker API"""
         try:
@@ -830,9 +838,9 @@ class PrintTrackerConfig(models.Model):
             life_counts = page_counts.get('life', {})
             
             # Obtener valores de contadores
-            total_pages = life_counts.get('total', {}).get('value', 0)
-            black_pages = life_counts.get('totalBlack', {}).get('value', 0)
-            color_pages = life_counts.get('totalColor', {}).get('value', 0)
+            total_pages = self._safe_int(life_counts.get('total', {}).get('value', 0))
+            black_pages = self._safe_int(life_counts.get('totalBlack', {}).get('value', 0))
+            color_pages = self._safe_int(life_counts.get('totalColor', {}).get('value', 0))
             
             # Calcular scan como diferencia o usar campo específico si existe
             scan_pages = meter_data.get('scanPages', 0)
@@ -1267,6 +1275,7 @@ class PrintTrackerMeter(models.Model):
         """
         MÉTODO COMPLETO: Actualiza los contadores del equipo con validación de incrementos,
         verificación post-actualización y manejo de campos con tracking
+        CORREGIDO: Uso de invalidate_cache() en lugar de refresh()
         """
         try:
             _logger.info(f"💾 === INICIANDO ACTUALIZACIÓN PRINTTRACKER ===")
@@ -1426,8 +1435,9 @@ class PrintTrackerMeter(models.Model):
                     # ✅ VERIFICACIÓN INMEDIATA POST-ACTUALIZACIÓN
                     _logger.info(f"🔍 === VERIFICACIÓN POST-ACTUALIZACIÓN ===")
                     
-                    # Recargar desde base de datos
-                    equipo.refresh()
+                    # ✅ CORRECCIÓN: Usar invalidate_cache() en lugar de refresh()
+                    equipo.invalidate_cache()
+                    equipo = self.env['alquiler'].browse(equipo.id)
                     
                     _logger.info(f"📊 Estado actual del equipo después de write():")
                     _logger.info(f"   Serie: {equipo.serie}")
@@ -1492,7 +1502,10 @@ class PrintTrackerMeter(models.Model):
                             )
                             equipo_bypass.write(valores_actualizacion)
                             
-                            equipo.refresh()
+                            # ✅ CORRECCIÓN: Usar invalidate_cache() aquí también
+                            equipo.invalidate_cache()
+                            equipo = self.env['alquiler'].browse(equipo.id)
+                            
                             _logger.info(f"✅ Actualización exitosa con contexto de bypass")
                             _logger.info(f"   BN: {equipo.contador_bn}, Color: {equipo.contador_color}, Scan: {equipo.contador_scan}")
                             
