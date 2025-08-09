@@ -1435,8 +1435,8 @@ class PrintTrackerMeter(models.Model):
                     # ✅ VERIFICACIÓN INMEDIATA POST-ACTUALIZACIÓN
                     _logger.info(f"🔍 === VERIFICACIÓN POST-ACTUALIZACIÓN ===")
                     
-                    # ✅ CORRECCIÓN: Usar invalidate_cache() en lugar de refresh()
-                    equipo.invalidate_cache()
+                    # ✅ CORRECCIÓN: Usar _invalidate_cache() en lugar de refresh()
+                    equipo._invalidate_cache()
                     equipo = self.env['alquiler'].browse(equipo.id)
                     
                     _logger.info(f"📊 Estado actual del equipo después de write():")
@@ -1502,8 +1502,8 @@ class PrintTrackerMeter(models.Model):
                             )
                             equipo_bypass.write(valores_actualizacion)
                             
-                            # ✅ CORRECCIÓN: Usar invalidate_cache() aquí también
-                            equipo.invalidate_cache()
+                            # ✅ CORRECCIÓN: Usar _invalidate_cache() aquí también
+                            equipo._invalidate_cache()
                             equipo = self.env['alquiler'].browse(equipo.id)
                             
                             _logger.info(f"✅ Actualización exitosa con contexto de bypass")
