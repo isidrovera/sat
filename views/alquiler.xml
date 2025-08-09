@@ -1082,6 +1082,10 @@
                     <field name="marca" column_invisible="1" />
                     <field name="name" string="Modelo" required="1" />
                     <field name="serie" />
+                    <field name="contador_bn" />
+                    <field name="contador_color" />
+                    <field name="contador_scan" />
+                    <field name="fecha_ultima_actualizacion" />
                     <field name="direccion" column_invisible="1" />
                     <field name="contacto_id" column_invisible="1" />
                     <field name="celular" widget="phone" column_invisible="1" />
