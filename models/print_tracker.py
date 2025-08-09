@@ -495,7 +495,7 @@ class PrintTrackerConfig(models.Model):
     def _sync_meter(self, meter_data):
         """
         MÉTODO CORREGIDO: Sincroniza un medidor individual
-        SOLUCIÓN FINAL: Usar datos de sincronización de dispositivos existentes
+        MODIFICADO: Integración con contador.automatico - crear o actualizar registro del día
         """
         try:
             _logger.info(f"🔍 === PROCESANDO MEDIDOR ===")
@@ -547,9 +547,39 @@ class PrintTrackerConfig(models.Model):
                     _logger.error(f"💡 SOLUCIÓN: Ejecutar 'Sincronizar Dispositivos' primero")
                     return False
             
-            # ✅ CONTINUAR CON PROCESAMIENTO NORMAL
-            # ... resto del código de procesamiento de medidor
+            # ===== NUEVA LÓGICA: INTEGRACIÓN CON CONTADOR.AUTOMATICO =====
+            if device and device.serie:
+                _logger.info(f"🔄 === VERIFICANDO REGISTRO CONTADOR.AUTOMATICO ===")
+                _logger.info(f"📊 Serie del equipo: {device.serie}")
+                
+                # BUSCAR si ya existe registro del día para esta serie
+                registro_del_dia = self.env['contador.automatico'].buscar_registro_del_dia(device.serie)
+                
+                if registro_del_dia:
+                    _logger.info(f"📝 EXISTE registro contador.automatico para {device.serie}")
+                    _logger.info(f"📋 Registro ID: {registro_del_dia.id}")
+                    _logger.info(f"📅 Fecha registro: {registro_del_dia.fecha_procesamiento}")
+                    _logger.info(f"🔗 Origen registro: {getattr(registro_del_dia, 'origen', 'No definido')}")
+                    _logger.info(f"📊 Estado registro: {registro_del_dia.estado}")
+                    
+                    # ACTUALIZAR registro existente con datos de PrintTracker
+                    actualizado = self._actualizar_registro_contador_automatico(registro_del_dia, meter_data, device)
+                    if actualizado:
+                        _logger.info(f"✅ Registro contador.automatico actualizado desde PrintTracker")
+                    else:
+                        _logger.info(f"ℹ️ Registro contador.automatico no requirió actualización")
+                else:
+                    _logger.info(f"🆕 NO EXISTE registro contador.automatico para {device.serie}")
+                    _logger.info(f"🔄 Creando registro desde PrintTracker...")
+                    
+                    # CREAR nuevo registro desde PrintTracker
+                    creado = self._crear_registro_contador_automatico(device, meter_data)
+                    if creado:
+                        _logger.info(f"✅ Registro contador.automatico creado desde PrintTracker")
+                    else:
+                        _logger.error(f"❌ No se pudo crear registro contador.automatico")
             
+            # ===== LÓGICA ORIGINAL: CONTINUAR CON PROCESAMIENTO PRINTTRACKER.METER =====
             # Crear o actualizar registro de medidor
             existing_meter = self.env['printtracker.meter'].search([
                 ('pt_meter_id', '=', meter_data.get('id'))
@@ -569,7 +599,7 @@ class PrintTrackerConfig(models.Model):
             meter_values = {
                 'pt_meter_id': meter_data.get('id'),
                 'device_id': device.id,
-                'reading_date': self._parse_printtracker_datetime(meter_data.get('timestamp')),  # ← CORRECCIÓN
+                'reading_date': self._parse_printtracker_datetime(meter_data.get('timestamp')),
                 'console_status': meter_data.get('console'),
                 'total_pages_life': life_counts.get('total', {}).get('value', 0),
                 'black_pages_life': life_counts.get('totalBlack', {}).get('value', 0),
@@ -657,6 +687,267 @@ class PrintTrackerConfig(models.Model):
             _logger.error(f"❌ Error en búsqueda optimizada: {e}")
             return None
 
+    def _actualizar_registro_contador_automatico(self, registro, meter_data, device):
+        """
+        Actualiza un registro existente de contador.automatico con datos de PrintTracker
+        Solo actualiza campos que estén vacíos o con valores menores
+        
+        Args:
+            registro: Registro de contador.automatico existente
+            meter_data: Datos del medidor desde PrintTracker
+            device: Equipo relacionado
+        
+        Returns:
+            bool: True si se actualizó algo, False si no
+        """
+        try:
+            _logger.info(f"📝 === ACTUALIZANDO REGISTRO CONTADOR.AUTOMATICO ===")
+            _logger.info(f"📋 Registro ID: {registro.id}")
+            _logger.info(f"🎯 Serie: {registro.serie_detectada}")
+            
+            # Extraer datos del medidor PrintTracker
+            page_counts = meter_data.get('pageCounts', {})
+            life_counts = page_counts.get('life', {})
+            
+            # Calcular valores PrintTracker
+            valores_pt = {
+                'total': life_counts.get('total', {}).get('value', 0),
+                'black': life_counts.get('totalBlack', {}).get('value', 0),
+                'color': life_counts.get('totalColor', {}).get('value', 0),
+            }
+            
+            # Calcular scan como diferencia (total - black - color) o usar campo específico si existe
+            scan_pages = meter_data.get('scanPages', 0)  # Campo directo si existe
+            if not scan_pages:
+                # Calcular como diferencia si no hay campo directo
+                scan_pages = max(0, valores_pt['total'] - valores_pt['black'] - valores_pt['color'])
+            
+            valores_pt['scan'] = scan_pages
+            
+            _logger.info(f"📊 Valores desde PrintTracker:")
+            _logger.info(f"   Total: {valores_pt['total']}")
+            _logger.info(f"   Black: {valores_pt['black']}")
+            _logger.info(f"   Color: {valores_pt['color']}")
+            _logger.info(f"   Scan: {valores_pt['scan']}")
+            
+            # Valores actuales del registro
+            valores_actuales = {
+                'black': registro.contador_bn_detectado or 0,
+                'color': registro.contador_color_detectado or 0,
+                'scan': registro.contador_scan_detectado or 0
+            }
+            
+            _logger.info(f"📋 Valores actuales del registro:")
+            _logger.info(f"   Black: {valores_actuales['black']}")
+            _logger.info(f"   Color: {valores_actuales['color']}")
+            _logger.info(f"   Scan: {valores_actuales['scan']}")
+            
+            # Determinar qué campos actualizar
+            valores_actualizacion = {}
+            campos_actualizados = []
+            
+            # Actualizar BN si está vacío o PrintTracker tiene valor mayor
+            if valores_actuales['black'] == 0 or valores_pt['black'] > valores_actuales['black']:
+                if valores_pt['black'] > 0:
+                    valores_actualizacion['contador_bn_detectado'] = valores_pt['black']
+                    campos_actualizados.append(f"BN: {valores_actuales['black']} → {valores_pt['black']}")
+            
+            # Actualizar Color si está vacío o PrintTracker tiene valor mayor
+            if valores_actuales['color'] == 0 or valores_pt['color'] > valores_actuales['color']:
+                if valores_pt['color'] > 0:
+                    valores_actualizacion['contador_color_detectado'] = valores_pt['color']
+                    campos_actualizados.append(f"Color: {valores_actuales['color']} → {valores_pt['color']}")
+            
+            # Actualizar Scan si está vacío o PrintTracker tiene valor mayor
+            if valores_actuales['scan'] == 0 or valores_pt['scan'] > valores_actuales['scan']:
+                if valores_pt['scan'] > 0:
+                    valores_actualizacion['contador_scan_detectado'] = valores_pt['scan']
+                    campos_actualizados.append(f"Scan: {valores_actuales['scan']} → {valores_pt['scan']}")
+            
+            # Actualizar información adicional de PrintTracker
+            if not getattr(registro, 'marca_detectada', None) or registro.marca_detectada == 'Desconocida':
+                valores_actualizacion['marca_detectada'] = 'PrintTracker'
+            
+            # Marcar como híbrido si se está enriqueciendo desde PrintTracker
+            origen_actual = getattr(registro, 'origen', 'correo')
+            if campos_actualizados and origen_actual == 'correo':
+                valores_actualizacion['origen'] = 'hibrido'
+            
+            # Aplicar actualizaciones si las hay
+            if valores_actualizacion:
+                _logger.info(f"💾 Aplicando actualizaciones:")
+                for campo in campos_actualizados:
+                    _logger.info(f"   📊 {campo}")
+                
+                if 'origen' in valores_actualizacion:
+                    _logger.info(f"   🔗 Origen: {origen_actual} → {valores_actualizacion['origen']}")
+                
+                # Ejecutar actualización
+                registro.sudo().write(valores_actualizacion)
+                
+                # Actualizar contadores del equipo si hay cambios en contadores
+                if any(key.startswith('contador_') for key in valores_actualizacion.keys()):
+                    _logger.info(f"🔄 Actualizando contadores del equipo desde registro híbrido...")
+                    
+                    contadores_finales = {
+                        'contador_bn': registro.contador_bn_detectado,
+                        'contador_color': registro.contador_color_detectado,
+                        'contador_scan': registro.contador_scan_detectado
+                    }
+                    
+                    registro.actualizar_contadores_equipo(device, contadores_finales)
+                    _logger.info(f"✅ Equipo actualizado con datos híbridos")
+                
+                _logger.info(f"✅ Registro actualizado exitosamente: {len(campos_actualizados)} campos")
+                return True
+            else:
+                _logger.info(f"ℹ️ No se requieren actualizaciones - registro ya completo")
+                return False
+                
+        except Exception as e:
+            _logger.error(f"❌ Error actualizando registro contador automático: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
+            return False
+    def _crear_registro_contador_automatico(self, device, meter_data):
+        """
+        Crea un nuevo registro en contador.automatico desde PrintTracker
+        Para máquinas que NO envían correo automático
+        
+        Args:
+            device: Equipo de alquiler
+            meter_data: Datos del medidor desde PrintTracker
+        
+        Returns:
+            bool: True si se creó exitosamente, False si no
+        """
+        try:
+            _logger.info(f"🆕 === CREANDO REGISTRO DESDE PRINTTRACKER ===")
+            _logger.info(f"🎯 Equipo: ID={device.id}, Serie={device.serie}")
+            
+            # Extraer datos del medidor PrintTracker
+            page_counts = meter_data.get('pageCounts', {})
+            life_counts = page_counts.get('life', {})
+            
+            # Obtener valores de contadores
+            total_pages = life_counts.get('total', {}).get('value', 0)
+            black_pages = life_counts.get('totalBlack', {}).get('value', 0)
+            color_pages = life_counts.get('totalColor', {}).get('value', 0)
+            
+            # Calcular scan como diferencia o usar campo específico si existe
+            scan_pages = meter_data.get('scanPages', 0)
+            if not scan_pages:
+                scan_pages = max(0, total_pages - black_pages - color_pages)
+            
+            _logger.info(f"📊 Datos extraídos de PrintTracker:")
+            _logger.info(f"   Total: {total_pages}")
+            _logger.info(f"   Black: {black_pages}")
+            _logger.info(f"   Color: {color_pages}")
+            _logger.info(f"   Scan (calculado): {scan_pages}")
+            
+            # Determinar tipo de equipo para ajustar contadores
+            tipo_equipo = getattr(device, 'tipo_maquina_id', None)
+            cliente = getattr(device, 'cliente_id', None)
+            modelo = getattr(device, 'name', None)
+            
+            _logger.info(f"📋 Información del equipo:")
+            _logger.info(f"   Tipo: {tipo_equipo}")
+            _logger.info(f"   Cliente: {cliente.name if cliente else 'Sin cliente'}")
+            _logger.info(f"   Modelo: {modelo.name if modelo else 'Sin modelo'}")
+            
+            # Ajustar contadores según tipo de equipo
+            if tipo_equipo == 'monocromatica':
+                # Para monocromas: todo el total va a BN, color = 0
+                contador_bn_final = total_pages
+                contador_color_final = 0
+                _logger.info(f"🖤 Equipo monocromático - Total → BN: {contador_bn_final}")
+            else:
+                # Para color: usar contadores separados
+                contador_bn_final = black_pages
+                contador_color_final = color_pages
+                _logger.info(f"🌈 Equipo color - BN: {contador_bn_final}, Color: {contador_color_final}")
+            
+            # Preparar datos del registro
+            nombre_registro = f"PrintTracker - {device.serie}"
+            if cliente:
+                nombre_registro += f" - {cliente.name}"
+            
+            timestamp_pt = meter_data.get('timestamp')
+            fecha_lectura = self._parse_printtracker_datetime(timestamp_pt) if timestamp_pt else fields.Datetime.now()
+            
+            datos_registro = {
+                'name': nombre_registro,
+                'serie_detectada': device.serie,
+                'equipo_id': device.id,
+                'contador_bn_detectado': contador_bn_final,
+                'contador_color_detectado': contador_color_final,
+                'contador_scan_detectado': scan_pages,
+                'fecha_procesamiento': fecha_lectura,
+                'estado': 'procesado',
+                'procesado_automaticamente': True,
+                'origen': 'printtracker',
+                'marca_detectada': 'PrintTracker',
+                'idioma_detectado': 'sistema',
+                'formato_detectado': 'api_printtracker',
+                'tipo_equipo_detectado': tipo_equipo,
+                'cliente_detectado': cliente.name if cliente else None,
+                'confianza_deteccion': 100.0,  # Alta confianza en datos de API
+                'contenido_procesado': f'Datos automáticos desde PrintTracker API para {device.serie}',
+                'remitente': 'PrintTracker API',
+                'contador_total_detectado': total_pages
+            }
+            
+            _logger.info(f"📝 Creando registro con datos:")
+            for campo, valor in datos_registro.items():
+                if valor:
+                    _logger.info(f"   {campo}: {valor}")
+            
+            # Crear el registro
+            nuevo_registro = self.env['contador.automatico'].create(datos_registro)
+            
+            if nuevo_registro:
+                _logger.info(f"✅ Registro contador.automatico creado: ID={nuevo_registro.id}")
+                
+                # Actualizar contadores del equipo
+                contadores_para_equipo = {
+                    'contador_bn': contador_bn_final,
+                    'contador_color': contador_color_final,
+                    'contador_scan': scan_pages
+                }
+                
+                _logger.info(f"🔄 Actualizando contadores del equipo...")
+                nuevo_registro.actualizar_contadores_equipo(device, contadores_para_equipo)
+                _logger.info(f"✅ Equipo actualizado con datos de PrintTracker")
+                
+                # Registrar en el chatter del equipo
+                mensaje_chatter = f"""📊 Contadores actualizados automáticamente desde PrintTracker:
+    • Total: {total_pages:,} páginas
+    • B/N: {contador_bn_final:,} páginas  
+    • Color: {contador_color_final:,} páginas
+    • Scan: {scan_pages:,} páginas
+    • Fuente: PrintTracker API
+    • Registro: contador.automatico ID {nuevo_registro.id}"""
+                
+                try:
+                    device.message_post(
+                        body=mensaje_chatter,
+                        message_type='notification',
+                        subtype_xmlid='mail.mt_note'
+                    )
+                    _logger.info(f"📝 Mensaje registrado en chatter del equipo")
+                except Exception as chatter_error:
+                    _logger.warning(f"⚠️ Error registrando en chatter: {chatter_error}")
+                
+                return True
+            else:
+                _logger.error(f"❌ No se pudo crear el registro")
+                return False
+                
+        except Exception as e:
+            _logger.error(f"❌ Error creando registro contador automático: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
+            return False
     def sync_all_data(self):
         """Sincroniza todos los datos: entidades, dispositivos y medidores"""
         try:

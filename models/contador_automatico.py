@@ -67,7 +67,14 @@ class ContadorAutomatico(models.Model):
         store=True,
         help="Suma de BN + Color (o solo BN para monocromáticas)"
     )
+    # Agregar este campo en la clase ContadorAutomatico
 
+    origen = fields.Selection([
+        ('correo', 'Correo automático'),
+        ('printtracker', 'PrintTracker'),
+        ('hibrido', 'Correo + PrintTracker')
+    ], string='Origen de datos', default='correo', tracking=True,
+    help="Indica la fuente de donde provienen los datos del registro")
     @api.depends('contador_bn_detectado', 'contador_color_detectado', 'tipo_equipo_detectado')
     def _compute_contador_total(self):
         """
@@ -986,7 +993,7 @@ class ContadorAutomatico(models.Model):
     def procesar_correo_inteligente(self):
         """
         Procesamiento inteligente del correo con análisis y generación automática
-        CORREGIDO: Asignación correcta de contadores a los campos del registro
+        MODIFICADO: Verificación de registro existente del día antes de procesar
         """
         try:
             _logger.info(f"🧠 === INICIO PROCESAMIENTO INTELIGENTE ===")
@@ -1037,9 +1044,34 @@ class ContadorAutomatico(models.Model):
                 _logger.warning(f"💥 Serie descartada tras validación: '{serie_encontrada}'")
                 serie_encontrada = None
 
+            # ===== NUEVA LÓGICA: VERIFICACIÓN DE REGISTRO EXISTENTE =====
+            if serie_encontrada:
+                _logger.info(f"🔍 === VERIFICANDO REGISTRO EXISTENTE DEL DÍA ===")
+                _logger.info(f"🎯 Serie detectada: {serie_encontrada}")
+                
+                # BUSCAR si ya existe registro del día para esta serie
+                registro_existente = self.buscar_registro_del_dia(serie_encontrada)
+                
+                if registro_existente:
+                    _logger.warning(f"🚫 YA EXISTE registro para serie {serie_encontrada} hoy")
+                    _logger.warning(f"📋 Registro existente: ID={registro_existente.id}")
+                    _logger.warning(f"📅 Fecha registro existente: {registro_existente.fecha_procesamiento}")
+                    _logger.warning(f"📊 Estado registro existente: {registro_existente.estado}")
+                    _logger.warning(f"🔗 Origen registro existente: {getattr(registro_existente, 'origen', 'No definido')}")
+                    
+                    # Marcar este correo como filtrado
+                    self.estado = 'filtrado'
+                    self.mensaje_error = f'Ya existe registro del día para esta serie (ID: {registro_existente.id})'
+                    self.write({'fecha_procesamiento': fields.Datetime.now()})
+                    
+                    _logger.info(f"🚫 Correo descartado - Registro del día ya existe")
+                    return False
+                else:
+                    _logger.info(f"✅ No existe registro para {serie_encontrada} hoy - Continuando procesamiento")
+
             contadores_encontrados = self.buscar_patrones_contadores_dinamico(texto_limpio)
 
-            # ===== NUEVA LÓGICA: IDENTIFICACIÓN DE TIPO DE EQUIPO =====
+            # ===== LÓGICA ORIGINAL: IDENTIFICACIÓN DE TIPO DE EQUIPO =====
             equipo_detectado = None
             tipo_maquina_detectado = None
             cliente_detectado = None
@@ -1047,18 +1079,18 @@ class ContadorAutomatico(models.Model):
             if serie_encontrada:
                 _logger.info(f"🎯 === IDENTIFICANDO TIPO DE EQUIPO POR SERIE ===")
                 
-                # NUEVO: Identificar tipo de equipo por serie
+                # Identificar tipo de equipo por serie
                 equipo_detectado, tipo_maquina_detectado, cliente_detectado = self.identificar_tipo_equipo_por_serie(serie_encontrada)
                 
                 if equipo_detectado and tipo_maquina_detectado:
                     _logger.info(f"🎯 Equipo identificado: {equipo_detectado.id} - Tipo: {tipo_maquina_detectado}")
                     
-                    # NUEVO: Asignar contadores según tipo de equipo
+                    # Asignar contadores según tipo de equipo
                     contadores_encontrados = self.asignar_contadores_por_tipo_equipo(
                         contadores_encontrados, tipo_maquina_detectado
                     )
                     
-                    # CORRECCIÓN: Actualizar campos del registro INMEDIATAMENTE
+                    # Actualizar campos del registro INMEDIATAMENTE
                     _logger.info(f"📊 === ACTUALIZANDO CAMPOS DEL REGISTRO ===")
                     _logger.info(f"📊 Contadores procesados: {contadores_encontrados}")
                     
@@ -1079,7 +1111,7 @@ class ContadorAutomatico(models.Model):
                         self.contador_scan_detectado = contadores_encontrados['contador_scan']
                         _logger.info(f"✅ Scan asignado: {self.contador_scan_detectado}")
                     
-                    # NUEVO: Guardar información adicional del equipo
+                    # Guardar información adicional del equipo
                     self.tipo_equipo_detectado = tipo_maquina_detectado
                     if cliente_detectado:
                         self.cliente_detectado = cliente_detectado.name
@@ -1128,7 +1160,7 @@ class ContadorAutomatico(models.Model):
                 if equipo and contadores_encontrados:
                     self.equipo_id = equipo.id
                     
-                    # CORRECCIÓN: Pasar contadores_encontrados que ya están procesados
+                    # Pasar contadores_encontrados que ya están procesados
                     self.actualizar_contadores_equipo(equipo, contadores_encontrados)
                     self.estado = 'procesado'
                     self.procesado_automaticamente = True
@@ -1865,3 +1897,56 @@ class ContadorAutomatico(models.Model):
             _logger.error(f"❌ === ERROR ACTUALIZANDO EQUIPO === {e}", exc_info=True)
             raise
 
+    @api.model
+    def buscar_registro_del_dia(self, serie, fecha=None):
+        """
+        Busca si ya existe un registro para esta serie en el día especificado
+        
+        Args:
+            serie (str): Número de serie del equipo
+            fecha (date, optional): Fecha a verificar. Si no se proporciona, usa hoy
+        
+        Returns:
+            recordset: Registro encontrado o False si no existe
+        """
+        try:
+            if not serie:
+                _logger.warning("⚠️ No se proporcionó serie para buscar registro del día")
+                return False
+            
+            # Si no se proporciona fecha, usar hoy
+            if not fecha:
+                fecha = fields.Date.today()
+            
+            # Convertir fecha a datetime para el rango del día
+            inicio_dia = datetime.combine(fecha, datetime.min.time())
+            fin_dia = datetime.combine(fecha, datetime.max.time())
+            
+            _logger.info(f"🔍 Buscando registro del día para:")
+            _logger.info(f"   Serie: {serie}")
+            _logger.info(f"   Fecha: {fecha}")
+            _logger.info(f"   Rango: {inicio_dia} - {fin_dia}")
+            
+            # Buscar registro en el rango del día
+            registro = self.search([
+                ('serie_detectada', '=', serie),
+                ('fecha_procesamiento', '>=', inicio_dia),
+                ('fecha_procesamiento', '<=', fin_dia)
+            ], limit=1)
+            
+            if registro:
+                _logger.info(f"✅ Registro encontrado:")
+                _logger.info(f"   ID: {registro.id}")
+                _logger.info(f"   Estado: {registro.estado}")
+                _logger.info(f"   Fecha procesamiento: {registro.fecha_procesamiento}")
+                _logger.info(f"   Origen: {getattr(registro, 'origen', 'No definido')}")
+                return registro
+            else:
+                _logger.info(f"❌ No se encontró registro del día para serie {serie}")
+                return False
+                
+        except Exception as e:
+            _logger.error(f"❌ Error buscando registro del día: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
+            return False
