@@ -348,7 +348,10 @@ class PrintTrackerConfig(models.Model):
             _logger.error(f"❌ Error sincronizando dispositivo: {e}")
             return 'error'
     def sync_current_meters(self):
-        """Sincroniza medidores actuales desde PrintTracker"""
+        """
+        MÉTODO CORREGIDO: Sincroniza medidores actuales desde PrintTracker
+        CORRECCIÓN: Agregado logging detallado para debug
+        """
         try:
             _logger.info(f"🔄 Iniciando sincronización de medidores actuales...")
             
@@ -363,24 +366,66 @@ class PrintTrackerConfig(models.Model):
                 timeout=self.timeout_seconds
             )
             
+            _logger.info(f"📡 Respuesta API medidores: Status {response.status_code}")
+            
             if response.status_code == 200:
                 meters = response.json()
+                
+                # ✅ LOGGING CRÍTICO PARA DEBUG
+                _logger.info(f"📊 Respuesta API medidores: {len(meters)} medidores recibidos")
+                
+                if not meters:
+                    _logger.warning("⚠️ No se recibieron medidores de la API")
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'message': '⚠️ No se encontraron medidores en PrintTracker',
+                            'type': 'warning'
+                        }
+                    }
+                
                 meters_synced = 0
                 
-                for meter_data in meters:
-                    if self._sync_meter(meter_data):
-                        meters_synced += 1
+                for i, meter_data in enumerate(meters):
+                    _logger.info(f"🔍 === PROCESANDO MEDIDOR {i+1}/{len(meters)} ===")
+                    _logger.info(f"📊 Medidor ID: {meter_data.get('id', 'Sin ID')}")
+                    _logger.info(f"🎯 Device Key: {meter_data.get('deviceKey', 'Sin deviceKey')}")
+                    
+                    # ✅ LOGGING DE ESTRUCTURA DE DATOS
+                    page_counts = meter_data.get('pageCounts', {})
+                    life_counts = page_counts.get('life', {})
+                    _logger.info(f"📄 Datos de contadores disponibles:")
+                    _logger.info(f"   Total: {life_counts.get('total', {}).get('value', 'N/A')}")
+                    _logger.info(f"   Black: {life_counts.get('totalBlack', {}).get('value', 'N/A')}")
+                    _logger.info(f"   Color: {life_counts.get('totalColor', {}).get('value', 'N/A')}")
+                    
+                    try:
+                        if self._sync_meter(meter_data):
+                            meters_synced += 1
+                            _logger.info(f"✅ Medidor {i+1} procesado exitosamente")
+                        else:
+                            _logger.warning(f"⚠️ Medidor {i+1} no pudo ser procesado")
+                    except Exception as e:
+                        _logger.error(f"❌ Error procesando medidor {i+1}: {e}")
+                
+                # ✅ RESULTADO FINAL DETALLADO
+                _logger.info(f"🎯 === RESUMEN SINCRONIZACIÓN MEDIDORES ===")
+                _logger.info(f"📊 Total recibidos: {len(meters)}")
+                _logger.info(f"✅ Procesados exitosamente: {meters_synced}")
+                _logger.info(f"❌ Fallidos: {len(meters) - meters_synced}")
                 
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'message': f'✅ Medidores sincronizados: {meters_synced} lecturas actualizadas',
+                        'message': f'✅ Medidores sincronizados: {meters_synced} de {len(meters)} lecturas procesadas',
                         'type': 'success'
                     }
                 }
             else:
                 error_msg = f'Error HTTP {response.status_code}: {response.text}'
+                _logger.error(f"❌ Error de API: {error_msg}")
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -392,6 +437,8 @@ class PrintTrackerConfig(models.Model):
                 
         except Exception as e:
             _logger.error(f"❌ Error sincronizando medidores: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -402,8 +449,15 @@ class PrintTrackerConfig(models.Model):
             }
 
     def _sync_meter(self, meter_data):
-        """Sincroniza un medidor individual"""
+        """
+        MÉTODO CORREGIDO: Sincroniza un medidor individual
+        CORRECCIÓN: Siempre actualizar contadores del equipo (nuevos Y existentes)
+        """
         try:
+            _logger.info(f"🔍 === PROCESANDO MEDIDOR ===")
+            _logger.info(f"📊 Medidor ID: {meter_data.get('id', 'Sin ID')}")
+            _logger.info(f"🎯 Device Key: {meter_data.get('deviceKey', 'Sin deviceKey')}")
+            
             # Buscar dispositivo por deviceKey
             device = self.env['alquiler'].search([
                 ('pt_device_id', '=', meter_data.get('deviceKey'))
@@ -412,6 +466,8 @@ class PrintTrackerConfig(models.Model):
             if not device:
                 _logger.warning(f"⚠️ Dispositivo no encontrado para medidor: {meter_data.get('deviceKey')}")
                 return False
+            
+            _logger.info(f"✅ Dispositivo encontrado: {device.serie} (ID: {device.id})")
             
             # Crear o actualizar registro de medidor
             existing_meter = self.env['printtracker.meter'].search([
@@ -422,6 +478,12 @@ class PrintTrackerConfig(models.Model):
             page_counts = meter_data.get('pageCounts', {})
             life_counts = page_counts.get('life', {})
             equiv_counts = page_counts.get('equiv', {})
+            
+            # ✅ LOGGING DE DATOS EXTRAÍDOS
+            _logger.info(f"📊 Contadores extraídos de PrintTracker:")
+            _logger.info(f"   Total Life: {life_counts.get('total', {}).get('value', 0)}")
+            _logger.info(f"   Black Life: {life_counts.get('totalBlack', {}).get('value', 0)}")
+            _logger.info(f"   Color Life: {life_counts.get('totalColor', {}).get('value', 0)}")
             
             meter_values = {
                 'pt_meter_id': meter_data.get('id'),
@@ -438,17 +500,29 @@ class PrintTrackerConfig(models.Model):
                 'last_sync': fields.Datetime.now()
             }
             
+            # ✅ CORRECCIÓN PRINCIPAL: Actualizar o crear medidor
+            meter_record = None
             if existing_meter:
+                _logger.info(f"📝 Actualizando medidor existente: {existing_meter.pt_meter_id}")
                 existing_meter.write(meter_values)
+                meter_record = existing_meter
             else:
-                new_meter = self.env['printtracker.meter'].create(meter_values)
-                # Actualizar contadores del dispositivo
-                new_meter.update_device_counters()
+                _logger.info(f"🆕 Creando nuevo medidor: {meter_data.get('id')}")
+                meter_record = self.env['printtracker.meter'].create(meter_values)
+            
+            # ✅ CORRECCIÓN CRÍTICA: SIEMPRE actualizar contadores (nuevos Y existentes)
+            _logger.info(f"🔄 Actualizando contadores del equipo...")
+            if meter_record.update_device_counters():
+                _logger.info(f"✅ Contadores del equipo actualizados exitosamente")
+            else:
+                _logger.warning(f"⚠️ No se pudieron actualizar los contadores del equipo")
             
             return True
             
         except Exception as e:
             _logger.error(f"❌ Error sincronizando medidor: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
 
     def sync_all_data(self):
