@@ -347,6 +347,38 @@ class PrintTrackerConfig(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error sincronizando dispositivo: {e}")
             return 'error'
+    # AGREGAR ESTE MÉTODO A PrintTrackerConfig
+
+    def _parse_printtracker_datetime(self, datetime_str):
+        """
+        Convierte fecha de PrintTracker (ISO 8601) a formato Odoo
+        """
+        try:
+            if not datetime_str:
+                return None
+            
+            # PrintTracker format: '2023-09-01T20:25:58.672Z'
+            # Odoo format: '2023-09-01 20:25:58'
+            
+            from datetime import datetime
+            import re
+            
+            # Remover microsegundos y Z
+            clean_datetime = re.sub(r'\.\d+Z?$', '', datetime_str)
+            clean_datetime = clean_datetime.replace('T', ' ')
+            clean_datetime = clean_datetime.replace('Z', '')
+            
+            # Verificar formato válido
+            try:
+                parsed_dt = datetime.strptime(clean_datetime, '%Y-%m-%d %H:%M:%S')
+                return parsed_dt.strftime('%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                _logger.error(f"❌ Formato de fecha inválido: {datetime_str}")
+                return None
+                
+        except Exception as e:
+            _logger.error(f"❌ Error parseando fecha: {e}")
+            return None
     def sync_current_meters(self):
         """
         MÉTODO CORREGIDO: Sincroniza medidores actuales desde PrintTracker
@@ -537,7 +569,7 @@ class PrintTrackerConfig(models.Model):
             meter_values = {
                 'pt_meter_id': meter_data.get('id'),
                 'device_id': device.id,
-                'reading_date': meter_data.get('timestamp'),
+                'reading_date': self._parse_printtracker_datetime(meter_data.get('timestamp')),  # ← CORRECCIÓN
                 'console_status': meter_data.get('console'),
                 'total_pages_life': life_counts.get('total', {}).get('value', 0),
                 'black_pages_life': life_counts.get('totalBlack', {}).get('value', 0),
@@ -576,47 +608,53 @@ class PrintTrackerConfig(models.Model):
 
     def _find_serie_in_synced_devices(self, device_key):
         """
-        NUEVO MÉTODO: Busca la serie en los datos de dispositivos ya sincronizados
+        OPTIMIZADO: Busca la serie en datos sincronizados con cache
         """
         try:
-            _logger.info(f"🔍 Buscando serie para deviceKey: {device_key} en datos sincronizados")
-            
-            # Obtener lista de dispositivos de PrintTracker (usando la misma API que sync_all_devices)
-            response = requests.get(
-                f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/device',
-                headers=self.get_api_headers(),
-                params={
-                    'includeChildren': True,
-                    'excludeDisabled': False,
-                    'limit': 1000  # Límite alto para obtener todos los dispositivos
-                },
-                timeout=self.timeout_seconds
-            )
-            
-            if response.status_code == 200:
-                devices = response.json()
-                _logger.info(f"📊 Dispositivos obtenidos: {len(devices)}")
+            # Cache estático para evitar múltiples consultas API
+            if not hasattr(self, '_device_cache'):
+                _logger.info(f"🔍 Cargando cache de dispositivos...")
                 
-                # Buscar el deviceKey en la lista
-                for device_data in devices:
-                    if device_data.get('id') == device_key:
+                response = requests.get(
+                    f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/device',
+                    headers=self.get_api_headers(),
+                    params={
+                        'includeChildren': True,
+                        'excludeDisabled': False,
+                        'limit': 2000  # Límite alto para obtener todos
+                    },
+                    timeout=self.timeout_seconds
+                )
+                
+                if response.status_code == 200:
+                    devices = response.json()
+                    _logger.info(f"📊 Cache cargado: {len(devices)} dispositivos")
+                    
+                    # Crear diccionario para búsqueda rápida
+                    self._device_cache = {}
+                    for device_data in devices:
+                        device_id = device_data.get('id')
                         serie = device_data.get('serialNumber')
                         
-                        if serie and serie not in ['notavailable', 'None', '', None]:
-                            _logger.info(f"✅ Serie encontrada: {serie} para deviceKey: {device_key}")
-                            return serie
-                        else:
-                            _logger.warning(f"⚠️ Serie inválida para deviceKey {device_key}: {serie}")
-                            return None
-                
-                _logger.warning(f"❌ DeviceKey {device_key} no encontrado en {len(devices)} dispositivos")
-                return None
+                        if device_id and serie and serie not in ['notavailable', 'None', '', None]:
+                            self._device_cache[device_id] = serie
+                    
+                    _logger.info(f"📋 Cache procesado: {len(self._device_cache)} dispositivos válidos")
+                else:
+                    _logger.error(f"❌ Error cargando cache: {response.status_code}")
+                    self._device_cache = {}
+            
+            # Buscar en cache
+            serie = self._device_cache.get(device_key)
+            if serie:
+                _logger.info(f"✅ Serie encontrada en cache: {serie} para deviceKey: {device_key}")
+                return serie
             else:
-                _logger.error(f"❌ Error obteniendo dispositivos: {response.status_code} - {response.text}")
+                _logger.warning(f"❌ DeviceKey {device_key} no encontrado en cache de {len(self._device_cache)} dispositivos")
                 return None
                 
         except Exception as e:
-            _logger.error(f"❌ Error buscando serie en datos sincronizados: {e}")
+            _logger.error(f"❌ Error en búsqueda optimizada: {e}")
             return None
 
     def sync_all_data(self):
