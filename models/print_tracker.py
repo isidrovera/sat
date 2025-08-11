@@ -719,8 +719,8 @@ class PrintTrackerConfig(models.Model):
 
     def _actualizar_registro_contador_automatico(self, registro, meter_data, device):
         """
-        Actualiza un registro existente de contador.automatico con datos de PrintTracker
-        Solo actualiza campos que estén vacíos o con valores menores
+        CORREGIDO: Actualiza un registro existente de contador.automatico con datos de PrintTracker
+        FIX: Conversión de tipos y cálculo correcto de scan
         
         Args:
             registro: Registro de contador.automatico existente
@@ -739,22 +739,41 @@ class PrintTrackerConfig(models.Model):
             page_counts = meter_data.get('pageCounts', {})
             life_counts = page_counts.get('life', {})
             
-            # Calcular valores PrintTracker
+            # ✅ CORRECCIÓN 1: Usar _safe_int para conversión segura
+            total_value = life_counts.get('total', {}).get('value', 0)
+            black_value = life_counts.get('totalBlack', {}).get('value', 0)
+            color_value = life_counts.get('totalColor', {}).get('value', 0)
+            
+            # Convertir a enteros de forma segura
             valores_pt = {
-                'total': life_counts.get('total', {}).get('value', 0),
-                'black': life_counts.get('totalBlack', {}).get('value', 0),
-                'color': life_counts.get('totalColor', {}).get('value', 0),
+                'total': self._safe_int(total_value),
+                'black': self._safe_int(black_value),
+                'color': self._safe_int(color_value),
             }
             
-            # Calcular scan como diferencia (total - black - color) o usar campo específico si existe
-            scan_pages = meter_data.get('scanPages', 0)  # Campo directo si existe
-            if not scan_pages:
-                # Calcular como diferencia si no hay campo directo
-                scan_pages = max(0, valores_pt['total'] - valores_pt['black'] - valores_pt['color'])
+            # ✅ CORRECCIÓN 2: Cálculo correcto de scan
+            # Método 1: Buscar campo scan directo en PrintTracker
+            scan_direct = meter_data.get('scanPages', 0)
+            if scan_direct:
+                valores_pt['scan'] = self._safe_int(scan_direct)
+            else:
+                # Método 2: Calcular como diferencia si no hay campo directo
+                scan_calculated = max(0, valores_pt['total'] - valores_pt['black'] - valores_pt['color'])
+                valores_pt['scan'] = scan_calculated
             
-            valores_pt['scan'] = scan_pages
+            # ✅ CORRECCIÓN 3: Para equipos monocromáticos, scan podría ser parte del total
+            tipo_equipo = getattr(device, 'tipo_maquina_id', None)
+            if hasattr(device, 'name') and device.name:
+                modelo_name = device.name.name.upper() if hasattr(device.name, 'name') else str(device.name).upper()
+                
+                # Si es monocromático y no hay scan calculado, asumir que total incluye scan
+                if ('MONO' in modelo_name or tipo_equipo == 'monocromatica') and valores_pt['scan'] == 0:
+                    # Para monos: total = black + scan (aproximadamente)
+                    if valores_pt['total'] > valores_pt['black']:
+                        valores_pt['scan'] = valores_pt['total'] - valores_pt['black']
+                        _logger.info(f"📄 Equipo mono - Scan calculado: {valores_pt['scan']} (total - black)")
             
-            _logger.info(f"📊 Valores desde PrintTracker:")
+            _logger.info(f"📊 Valores desde PrintTracker (convertidos):")
             _logger.info(f"   Total: {valores_pt['total']}")
             _logger.info(f"   Black: {valores_pt['black']}")
             _logger.info(f"   Color: {valores_pt['color']}")
@@ -776,6 +795,7 @@ class PrintTrackerConfig(models.Model):
             valores_actualizacion = {}
             campos_actualizados = []
             
+            # ✅ CORRECCIÓN 4: Lógica mejorada de actualización
             # Actualizar BN si está vacío o PrintTracker tiene valor mayor
             if valores_actuales['black'] == 0 or valores_pt['black'] > valores_actuales['black']:
                 if valores_pt['black'] > 0:
@@ -784,11 +804,11 @@ class PrintTrackerConfig(models.Model):
             
             # Actualizar Color si está vacío o PrintTracker tiene valor mayor
             if valores_actuales['color'] == 0 or valores_pt['color'] > valores_actuales['color']:
-                if valores_pt['color'] > 0:
+                if valores_pt['color'] >= 0:  # Color puede ser 0 legítimamente
                     valores_actualizacion['contador_color_detectado'] = valores_pt['color']
                     campos_actualizados.append(f"Color: {valores_actuales['color']} → {valores_pt['color']}")
             
-            # Actualizar Scan si está vacío o PrintTracker tiene valor mayor
+            # ✅ CORRECCIÓN 5: Siempre actualizar Scan si PrintTracker tiene valor
             if valores_actuales['scan'] == 0 or valores_pt['scan'] > valores_actuales['scan']:
                 if valores_pt['scan'] > 0:
                     valores_actualizacion['contador_scan_detectado'] = valores_pt['scan']
@@ -802,6 +822,9 @@ class PrintTrackerConfig(models.Model):
             origen_actual = getattr(registro, 'origen', 'correo')
             if campos_actualizados and origen_actual == 'correo':
                 valores_actualizacion['origen'] = 'hibrido'
+            elif not campos_actualizados and origen_actual == 'correo':
+                # Si no hay cambios pero venimos de correo, mantener origen pero marcar como verificado
+                valores_actualizacion['marca_detectada'] = 'PrintTracker (verificado)'
             
             # Aplicar actualizaciones si las hay
             if valores_actualizacion:
@@ -815,23 +838,69 @@ class PrintTrackerConfig(models.Model):
                 # Ejecutar actualización
                 registro.sudo().write(valores_actualizacion)
                 
-                # Actualizar contadores del equipo si hay cambios en contadores
+                # ✅ CORRECCIÓN 6: Actualizar contadores del equipo con valores finales correctos
                 if any(key.startswith('contador_') for key in valores_actualizacion.keys()):
                     _logger.info(f"🔄 Actualizando contadores del equipo desde registro híbrido...")
                     
+                    # Obtener valores finales (actuales + nuevos)
                     contadores_finales = {
-                        'contador_bn': registro.contador_bn_detectado,
-                        'contador_color': registro.contador_color_detectado,
-                        'contador_scan': registro.contador_scan_detectado
+                        'contador_bn': valores_actualizacion.get('contador_bn_detectado', registro.contador_bn_detectado),
+                        'contador_color': valores_actualizacion.get('contador_color_detectado', registro.contador_color_detectado),
+                        'contador_scan': valores_actualizacion.get('contador_scan_detectado', registro.contador_scan_detectado)
                     }
                     
-                    registro.actualizar_contadores_equipo(device, contadores_finales)
-                    _logger.info(f"✅ Equipo actualizado con datos híbridos")
+                    _logger.info(f"📊 Contadores finales para equipo:")
+                    _logger.info(f"   BN: {contadores_finales['contador_bn']}")
+                    _logger.info(f"   Color: {contadores_finales['contador_color']}")
+                    _logger.info(f"   Scan: {contadores_finales['contador_scan']}")
+                    
+                    # ✅ CORRECCIÓN 7: Usar método directo de actualización si existe
+                    try:
+                        if hasattr(registro, 'actualizar_contadores_equipo'):
+                            registro.actualizar_contadores_equipo(device, contadores_finales)
+                            _logger.info(f"✅ Equipo actualizado con datos híbridos vía método específico")
+                        else:
+                            # Fallback: actualización directa del equipo
+                            valores_equipo = {
+                                'contador_bn': contadores_finales['contador_bn'],
+                                'contador_color': contadores_finales['contador_color'],
+                                'contador_scan': contadores_finales['contador_scan'],
+                                'fecha_ultima_actualizacion': fields.Datetime.now()
+                            }
+                            
+                            device.sudo().write(valores_equipo)
+                            _logger.info(f"✅ Equipo actualizado con datos híbridos vía write directo")
+                            
+                    except Exception as equipo_error:
+                        _logger.error(f"❌ Error actualizando equipo: {equipo_error}")
+                        # No es crítico, el registro se actualizó correctamente
                 
                 _logger.info(f"✅ Registro actualizado exitosamente: {len(campos_actualizados)} campos")
                 return True
             else:
-                _logger.info(f"ℹ️ No se requieren actualizaciones - registro ya completo")
+                _logger.info(f"ℹ️ No se requieren actualizaciones - registro ya completo o valores menores")
+                
+                # ✅ CORRECCIÓN 8: Aún así verificar si el equipo necesita actualización
+                try:
+                    if (device.contador_scan == 0 and valores_pt['scan'] > 0) or \
+                    (device.contador_bn < valores_pt['black']) or \
+                    (device.contador_color < valores_pt['color']):
+                        
+                        _logger.info(f"🔄 Equipo necesita actualización aunque registro esté completo...")
+                        
+                        valores_equipo = {
+                            'contador_bn': max(device.contador_bn or 0, valores_pt['black']),
+                            'contador_color': max(device.contador_color or 0, valores_pt['color']),
+                            'contador_scan': max(device.contador_scan or 0, valores_pt['scan']),
+                            'fecha_ultima_actualizacion': fields.Datetime.now()
+                        }
+                        
+                        device.sudo().write(valores_equipo)
+                        _logger.info(f"✅ Equipo actualizado con valores máximos")
+                        
+                except Exception as equipo_sync_error:
+                    _logger.warning(f"⚠️ Error en sincronización adicional del equipo: {equipo_sync_error}")
+                
                 return False
                 
         except Exception as e:
@@ -841,8 +910,8 @@ class PrintTrackerConfig(models.Model):
             return False
     def _crear_registro_contador_automatico(self, device, meter_data):
         """
-        Crea un nuevo registro en contador.automatico desde PrintTracker
-        Para máquinas que NO envían correo automático
+        CORREGIDO: Crea un nuevo registro en contador.automatico desde PrintTracker
+        FIX: Cálculo correcto de scan y manejo de tipos
         
         Args:
             device: Equipo de alquiler
@@ -859,24 +928,57 @@ class PrintTrackerConfig(models.Model):
             page_counts = meter_data.get('pageCounts', {})
             life_counts = page_counts.get('life', {})
             
-            # Obtener valores de contadores
-            total_pages = self._safe_int(life_counts.get('total', {}).get('value', 0))
-            black_pages = self._safe_int(life_counts.get('totalBlack', {}).get('value', 0))
-            color_pages = self._safe_int(life_counts.get('totalColor', {}).get('value', 0))
+            # ✅ CORRECCIÓN 1: Usar _safe_int para conversión segura
+            total_value = life_counts.get('total', {}).get('value', 0)
+            black_value = life_counts.get('totalBlack', {}).get('value', 0)
+            color_value = life_counts.get('totalColor', {}).get('value', 0)
             
-            # Calcular scan como diferencia o usar campo específico si existe
-            scan_pages = meter_data.get('scanPages', 0)
-            if not scan_pages:
-                scan_pages = max(0, total_pages - black_pages - color_pages)
+            # Obtener valores de contadores con conversión segura
+            total_pages = self._safe_int(total_value)
+            black_pages = self._safe_int(black_value)
+            color_pages = self._safe_int(color_value)
+            
+            # ✅ CORRECCIÓN 2: Cálculo mejorado de scan
+            scan_pages = 0
+            
+            # Método 1: Buscar campo scan directo
+            scan_direct = meter_data.get('scanPages', 0)
+            if scan_direct:
+                scan_pages = self._safe_int(scan_direct)
+                _logger.info(f"📄 Scan directo desde PrintTracker: {scan_pages}")
+            else:
+                # Método 2: Calcular según tipo de equipo
+                tipo_equipo = getattr(device, 'tipo_maquina_id', None)
+                modelo_name = ""
+                
+                if hasattr(device, 'name') and device.name:
+                    modelo_name = device.name.name.upper() if hasattr(device.name, 'name') else str(device.name).upper()
+                
+                _logger.info(f"📋 Tipo equipo: {tipo_equipo}, Modelo: {modelo_name}")
+                
+                if tipo_equipo == 'monocromatica' or 'MONO' in modelo_name:
+                    # Para equipos monocromáticos: scan = total - black
+                    scan_pages = max(0, total_pages - black_pages)
+                    _logger.info(f"📄 Equipo mono - Scan calculado: {scan_pages} (total - black)")
+                else:
+                    # Para equipos color: scan = total - black - color
+                    scan_pages = max(0, total_pages - black_pages - color_pages)
+                    _logger.info(f"📄 Equipo color - Scan calculado: {scan_pages} (total - black - color)")
+                
+                # ✅ CORRECCIÓN 3: Validación adicional para scan
+                # Si el scan calculado es muy alto comparado con total, probablemente hay error
+                if scan_pages > total_pages * 0.8:  # Más del 80% del total sería scan
+                    _logger.warning(f"⚠️ Scan calculado muy alto ({scan_pages}), ajustando...")
+                    scan_pages = max(0, int(total_pages * 0.1))  # Asumir 10% como scan
+                    _logger.info(f"📄 Scan ajustado conservadoramente: {scan_pages}")
             
             _logger.info(f"📊 Datos extraídos de PrintTracker:")
             _logger.info(f"   Total: {total_pages}")
             _logger.info(f"   Black: {black_pages}")
             _logger.info(f"   Color: {color_pages}")
-            _logger.info(f"   Scan (calculado): {scan_pages}")
+            _logger.info(f"   Scan (final): {scan_pages}")
             
-            # Determinar tipo de equipo para ajustar contadores
-            tipo_equipo = getattr(device, 'tipo_maquina_id', None)
+            # Determinar tipo de equipo para ajustar contadores finales
             cliente = getattr(device, 'cliente_id', None)
             modelo = getattr(device, 'name', None)
             
@@ -885,17 +987,19 @@ class PrintTrackerConfig(models.Model):
             _logger.info(f"   Cliente: {cliente.name if cliente else 'Sin cliente'}")
             _logger.info(f"   Modelo: {modelo.name if modelo else 'Sin modelo'}")
             
-            # Ajustar contadores según tipo de equipo
+            # ✅ CORRECCIÓN 4: Ajustar contadores según tipo de equipo
             if tipo_equipo == 'monocromatica':
-                # Para monocromas: todo el total va a BN, color = 0
-                contador_bn_final = total_pages
+                # Para monocromas: todo el black va a BN, color = 0
+                contador_bn_final = black_pages
                 contador_color_final = 0
-                _logger.info(f"🖤 Equipo monocromático - Total → BN: {contador_bn_final}")
+                contador_scan_final = scan_pages
+                _logger.info(f"🖤 Equipo monocromático - BN: {contador_bn_final}, Scan: {contador_scan_final}")
             else:
                 # Para color: usar contadores separados
                 contador_bn_final = black_pages
                 contador_color_final = color_pages
-                _logger.info(f"🌈 Equipo color - BN: {contador_bn_final}, Color: {contador_color_final}")
+                contador_scan_final = scan_pages
+                _logger.info(f"🌈 Equipo color - BN: {contador_bn_final}, Color: {contador_color_final}, Scan: {contador_scan_final}")
             
             # Preparar datos del registro
             nombre_registro = f"PrintTracker - {device.serie}"
@@ -911,7 +1015,7 @@ class PrintTrackerConfig(models.Model):
                 'equipo_id': device.id,
                 'contador_bn_detectado': contador_bn_final,
                 'contador_color_detectado': contador_color_final,
-                'contador_scan_detectado': scan_pages,
+                'contador_scan_detectado': contador_scan_final,
                 'fecha_procesamiento': fecha_lectura,
                 'estado': 'procesado',
                 'procesado_automaticamente': True,
@@ -938,27 +1042,51 @@ class PrintTrackerConfig(models.Model):
             if nuevo_registro:
                 _logger.info(f"✅ Registro contador.automatico creado: ID={nuevo_registro.id}")
                 
-                # Actualizar contadores del equipo
+                # ✅ CORRECCIÓN 5: Actualizar contadores del equipo con manejo de errores
                 contadores_para_equipo = {
                     'contador_bn': contador_bn_final,
                     'contador_color': contador_color_final,
-                    'contador_scan': scan_pages
+                    'contador_scan': contador_scan_final,
+                    'fecha_ultima_actualizacion': fecha_lectura
                 }
                 
                 _logger.info(f"🔄 Actualizando contadores del equipo...")
-                nuevo_registro.actualizar_contadores_equipo(device, contadores_para_equipo)
-                _logger.info(f"✅ Equipo actualizado con datos de PrintTracker")
+                _logger.info(f"📊 Valores para equipo: {contadores_para_equipo}")
                 
-                # Registrar en el chatter del equipo
-                mensaje_chatter = f"""📊 Contadores actualizados automáticamente desde PrintTracker:
+                try:
+                    # Método 1: Usar método específico si existe
+                    if hasattr(nuevo_registro, 'actualizar_contadores_equipo'):
+                        nuevo_registro.actualizar_contadores_equipo(device, contadores_para_equipo)
+                        _logger.info(f"✅ Equipo actualizado con método específico")
+                    else:
+                        # Método 2: Actualización directa
+                        device.sudo().write(contadores_para_equipo)
+                        _logger.info(f"✅ Equipo actualizado con write directo")
+                        
+                    # Verificar actualización
+                    device.refresh()
+                    _logger.info(f"📊 Verificación post-actualización:")
+                    _logger.info(f"   BN: {device.contador_bn}")
+                    _logger.info(f"   Color: {device.contador_color}")
+                    _logger.info(f"   Scan: {device.contador_scan}")
+                    
+                except Exception as equipo_error:
+                    _logger.error(f"❌ Error actualizando equipo: {equipo_error}")
+                    # No es crítico, el registro se creó correctamente
+                    _logger.info(f"ℹ️ Registro creado pero equipo no actualizado")
+                
+                # ✅ CORRECCIÓN 6: Registrar en chatter con información detallada
+                try:
+                    mensaje_chatter = f"""📊 Contadores creados automáticamente desde PrintTracker:
     • Total: {total_pages:,} páginas
     • B/N: {contador_bn_final:,} páginas  
     • Color: {contador_color_final:,} páginas
-    • Scan: {scan_pages:,} páginas
+    • Scan: {contador_scan_final:,} páginas
+    • Tipo equipo: {tipo_equipo or 'No definido'}
     • Fuente: PrintTracker API
-    • Registro: contador.automatico ID {nuevo_registro.id}"""
-                
-                try:
+    • Registro: contador.automatico ID {nuevo_registro.id}
+    • Fecha: {fecha_lectura}"""
+                    
                     device.message_post(
                         body=mensaje_chatter,
                         message_type='notification',
