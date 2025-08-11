@@ -281,9 +281,10 @@ class PrintTrackerMeter(models.Model):
         
         # Obtener todos los dispositivos con lecturas
         devices_with_readings = self.env['alquiler'].search([
-            ('pt_device_id', '!=', False)  # Solo equipos con ID PrintTracker
+            ('pt_device_id', '!=', False),
+            ('pt_device_id', '!=', '')
         ])
-        
+                
         offline_devices = []
         
         for device in devices_with_readings:

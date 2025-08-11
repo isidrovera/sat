@@ -98,6 +98,24 @@ class UnidadAlquiler(models.Model):
         help='Entidad PrintTracker asociada a este equipo',
         index=True
 )
+    pt_device_id = fields.Char(
+        string='ID Dispositivo PrintTracker',
+        help='ID único del dispositivo en PrintTracker Pro',
+        index=True
+    )
+
+    pt_last_sync = fields.Datetime(
+        string='Última Sincronización PT',
+        help='Última vez que se sincronizó con PrintTracker',
+        readonly=True
+    )
+
+    # Campos adicionales opcionales (si quieres más datos de PrintTracker):
+    mac_address = fields.Char(string='Dirección MAC', help='MAC Address del dispositivo')
+    ip_address = fields.Char(string='Dirección IP', help='IP Address del dispositivo')
+    custom_location = fields.Char(string='Ubicación Personalizada', help='Ubicación en PrintTracker')
+    asset_id = fields.Char(string='Asset ID', help='ID de activo en PrintTracker')
+    is_managed = fields.Boolean(string='Gestionado', default=True, help='Si el equipo está gestionado en PrintTracker')
     ticket_count = fields.Integer(
         string='Ticket Count', compute='_compute_counts')
 
