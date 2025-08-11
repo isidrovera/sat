@@ -81,11 +81,6 @@
                             type="object" 
                             string="Probar Conexión" 
                             class="btn-primary"/>
-
-                    <button name="test_connection" 
-                            type="object" 
-                            string="Probar Conexión" 
-                            class="btn-primary"/>
                     <button name="sync_all_data" 
                             type="object" 
                             string="Sincronizar Todo" 
@@ -93,40 +88,41 @@
                             invisible="connection_status != 'connected'"/>
                 </header>
                 <sheet>
-                        <div class="oe_button_box" name="button_box">
-                            <button name="sync_all_entities" 
-                                    type="object" 
-                                    class="oe_stat_button" 
-                                    icon="fa-sitemap"
-                                    invisible="connection_status != 'connected'">
-                                <div class="o_field_widget o_stat_info">
-                                    <span class="o_stat_text">Sincronizar</span>
-                                    <span class="o_stat_text">Entidades</span>
-                                </div>
-                            </button>
-                            
-                            <button name="sync_all_devices" 
-                                    type="object" 
-                                    class="oe_stat_button" 
-                                    icon="fa-print"
-                                    invisible="connection_status != 'connected'">
-                                <div class="o_field_widget o_stat_info">
-                                    <span class="o_stat_text">Sincronizar</span>
-                                    <span class="o_stat_text">Dispositivos</span>
-                                </div>
-                            </button>
-                            
-                            <button name="sync_current_meters" 
-                                    type="object" 
-                                    class="oe_stat_button" 
-                                    icon="fa-tachometer"
-                                    invisible="connection_status != 'connected'">
-                                <div class="o_field_widget o_stat_info">
-                                    <span class="o_stat_text">Sincronizar</span>
-                                    <span class="o_stat_text">Medidores</span>
-                                </div>
-                            </button>
-                        </div>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="sync_all_entities" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-sitemap"
+                                invisible="connection_status != 'connected'">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Sincronizar</span>
+                                <span class="o_stat_text">Entidades</span>
+                            </div>
+                        </button>
+                        
+                        <button name="sync_all_devices" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-print"
+                                invisible="connection_status != 'connected'">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Sincronizar</span>
+                                <span class="o_stat_text">Dispositivos</span>
+                            </div>
+                        </button>
+                        
+                        <button name="sync_current_meters" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-tachometer"
+                                invisible="connection_status != 'connected'">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Sincronizar</span>
+                                <span class="o_stat_text">Medidores</span>
+                            </div>
+                        </button>
+                    </div>
+                    
                     <widget name="web_ribbon" 
                             title="Conectado" 
                             bg_color="bg-success" 
@@ -157,6 +153,8 @@
                         <group>
                             <field name="timeout_seconds"/>
                             <field name="max_records_per_request"/>
+                            <field name="max_retries"/>
+                            <field name="retry_delay"/>
                         </group>
                     </group>
                     
@@ -170,31 +168,275 @@
         </field>
     </record>
     
-    <!-- Vista List - PrintTracker Config -->
-    <record id="view_printtracker_config_list" model="ir.ui.view">
-        <field name="name">printtracker.config.list</field>
-        <field name="model">printtracker.config</field>
+    <!-- Vista List - PrintTracker Meter CORREGIDA -->
+    <record id="view_printtracker_meter_list" model="ir.ui.view">
+        <field name="name">printtracker.meter.list</field>
+        <field name="model">printtracker.meter</field>
         <field name="arch" type="xml">
-            <list>
-                <field name="name"/>
-                <field name="api_url"/>
-                <field name="entity_bbbb_id"/>
-                <field name="sync_enabled" widget="boolean_toggle"/>
-                <field name="connection_status" 
-                       decoration-success="connection_status == 'connected'"
-                       decoration-danger="connection_status == 'error'"
-                       decoration-muted="connection_status == 'not_tested'"/>
-                <field name="last_sync_date"/>
-                <field name="sync_interval" string="Intervalo (min)"/>
+            <list default_order="reading_date desc">
+                <field name="device_id"/>
+                <field name="reading_date"/>
+                <field name="total_pages_life"/>
+                <field name="black_pages_life"/>
+                <field name="color_pages_life"/>
+                <field name="scan_pages"/>
+                <field name="copy_pages"/>
+                <field name="fax_pages"/>
+                <field name="pages_increment" 
+                       decoration-success="pages_increment > 0"
+                       decoration-muted="pages_increment == 0"/>
+                <field name="sync_source"/>
+                <field name="console_status"/>
+                <field name="is_current" widget="boolean_toggle"/>
             </list>
         </field>
     </record>
     
-    <!-- =============================================== -->
-    <!-- PRINTTRACKER ENTITIES - ENTIDADES -->
-    <!-- =============================================== -->
+    <!-- Vista Form - PrintTracker Meter CORREGIDA -->
+    <record id="view_printtracker_meter_form" model="ir.ui.view">
+        <field name="name">printtracker.meter.form</field>
+        <field name="model">printtracker.meter</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_view_device_history" 
+                            type="object" 
+                            string="Ver Histórico" 
+                            class="btn-secondary"/>
+                    <button name="action_view_usage_analysis" 
+                            type="object" 
+                            string="Análisis de Uso" 
+                            class="btn-info"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" 
+                            title="Lectura Actual" 
+                            bg_color="bg-success" 
+                            invisible="not is_current"/>
+                    
+                    <group>
+                        <group name="device_info">
+                            <field name="device_id"/>
+                            <field name="pt_meter_id"/>
+                            <field name="reading_date"/>
+                            <field name="console_status"/>
+                            <field name="sync_source"/>
+                            <field name="is_current" readonly="True"/>
+                        </group>
+                        <group name="sync_info">
+                            <field name="last_sync" readonly="True"/>
+                            <field name="daily_usage" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Contadores Principales">
+                        <group>
+                            <field name="total_pages_life"/>
+                            <field name="black_pages_life"/>
+                            <field name="color_pages_life"/>
+                        </group>
+                        <group>
+                            <field name="scan_pages"/>
+                            <field name="copy_pages"/>
+                            <field name="fax_pages"/>
+                            <field name="print_pages"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Incrementos vs Lectura Anterior">
+                        <group>
+                            <field name="pages_increment" readonly="True"/>
+                            <field name="black_increment" readonly="True"/>
+                            <field name="color_increment" readonly="True"/>
+                        </group>
+                        <group>
+                            <field name="scan_increment" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Contadores Equivalentes (Facturación)" 
+                           invisible="not total_pages_equiv">
+                        <group>
+                            <field name="total_pages_equiv"/>
+                            <field name="black_pages_equiv"/>
+                            <field name="color_pages_equiv"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
     
-    <!-- Vista Form - PrintTracker Entity -->
+    <!-- Vista List - PrintTracker Supply CORREGIDA -->
+    <record id="view_printtracker_supply_list" model="ir.ui.view">
+        <field name="name">printtracker.supply.list</field>
+        <field name="model">printtracker.supply</field>
+        <field name="arch" type="xml">
+            <list default_order="device_id, supply_type, installed_date desc">
+                <field name="device_id"/>
+                <field name="supply_type"/>
+                <field name="supply_color"/>
+                <field name="displayable_name"/>
+                <field name="percent_remaining" 
+                       widget="percentage"
+                       decoration-danger="percent_remaining &lt; 10"
+                       decoration-warning="percent_remaining &lt; 25"/>
+                <field name="predicted_depletion_date"/>
+                <field name="days_until_depletion"/>
+                <field name="supply_status" 
+                       decoration-danger="supply_status == 'critical'"
+                       decoration-warning="supply_status == 'low'"
+                       decoration-success="supply_status == 'normal'"
+                       decoration-muted="supply_status == 'replaced'"/>
+                <field name="is_active" widget="boolean_toggle"/>
+                <field name="low_supply_alert" 
+                       decoration-danger="low_supply_alert"/>
+                <field name="critical_supply_alert" 
+                       decoration-danger="critical_supply_alert"/>
+                <field name="supply_cost" widget="monetary" optional="hide"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- Vista Form - PrintTracker Supply CORREGIDA -->
+    <record id="view_printtracker_supply_form" model="ir.ui.view">
+        <field name="name">printtracker.supply.form</field>
+        <field name="model">printtracker.supply</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_create_purchase_order" 
+                            type="object" 
+                            string="Crear Orden de Compra" 
+                            class="btn-primary"
+                            invisible="is_replaced or not low_supply_alert"/>
+                    <button name="action_mark_as_replaced" 
+                            type="object" 
+                            string="Marcar como Reemplazado" 
+                            class="btn-secondary"
+                            invisible="is_replaced"/>
+                    <button name="action_skip_alerts" 
+                            type="object" 
+                            string="Omitir Alertas" 
+                            class="btn-warning"
+                            invisible="is_replaced"/>
+                    <button name="action_view_device_meters" 
+                            type="object" 
+                            string="Ver Medidores" 
+                            class="btn-info"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" 
+                            title="Reemplazado" 
+                            bg_color="bg-secondary" 
+                            invisible="not is_replaced"/>
+                    <widget name="web_ribbon" 
+                            title="Crítico" 
+                            bg_color="bg-danger" 
+                            invisible="supply_status != 'critical'"/>
+                    <widget name="web_ribbon" 
+                            title="Bajo" 
+                            bg_color="bg-warning" 
+                            invisible="supply_status != 'low'"/>
+                    <widget name="web_ribbon" 
+                            title="Inactivo" 
+                            bg_color="bg-secondary" 
+                            invisible="is_active"/>
+                    
+                    <group>
+                        <group name="device_info">
+                            <field name="device_id"/>
+                            <field name="supply_key"/>
+                            <field name="supply_type"/>
+                            <field name="supply_color"/>
+                            <field name="product_id"/>
+                        </group>
+                        <group name="supply_info">
+                            <field name="part_number"/>
+                            <field name="serial_number"/>
+                            <field name="displayable_name"/>
+                            <field name="description"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Estado Actual">
+                        <group>
+                            <field name="current_level"/>
+                            <field name="max_level"/>
+                            <field name="percent_remaining" widget="percentage"/>
+                            <field name="supply_status" readonly="True"/>
+                        </group>
+                        <group>
+                            <field name="is_active"/>
+                            <field name="is_replaced" readonly="True"/>
+                            <field name="low_supply_alert" readonly="True"/>
+                            <field name="critical_supply_alert" readonly="True"/>
+                            <field name="skip_alerts"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Predicciones">
+                        <group>
+                            <field name="predicted_depletion_date" readonly="True"/>
+                            <field name="days_until_depletion" readonly="True"/>
+                        </group>
+                        <group>
+                            <field name="estimated_depletion_date"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Fechas Importantes">
+                        <group>
+                            <field name="installed_date"/>
+                            <field name="replaced_date"/>
+                            <field name="confirmed_replaced_date"/>
+                        </group>
+                        <group>
+                            <field name="last_sync" readonly="True"/>
+                            <field name="sync_source" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Configuración y Costos">
+                        <group>
+                            <field name="supply_cost" widget="monetary"/>
+                            <field name="expected_yield"/>
+                            <field name="expected_fill_rate"/>
+                            <field name="actual_fill_rate"/>
+                        </group>
+                        <group>
+                            <field name="pages_printed"/>
+                            <field name="actual_cost_per_page" widget="monetary"/>
+                            <field name="lost_pages"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Vista List - PrintTracker Entity CORREGIDA -->
+    <record id="view_printtracker_entity_list" model="ir.ui.view">
+        <field name="name">printtracker.entity.list</field>
+        <field name="model">printtracker.entity</field>
+        <field name="arch" type="xml">
+            <list default_order="parent_id, name">
+                <field name="name"/>
+                <field name="complete_path"/>
+                <field name="pt_entity_id"/>
+                <field name="partner_id"/>
+                <field name="device_count"/>
+                <field name="total_devices"/>
+                <field name="level"/>
+                <field name="has_low_supplies" decoration-warning="has_low_supplies"/>
+                <field name="last_device_activity"/>
+                <field name="is_active" widget="boolean_toggle"/>
+                <field name="last_sync"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- Vista Form - PrintTracker Entity CORREGIDA -->
     <record id="view_printtracker_entity_form" model="ir.ui.view">
         <field name="name">printtracker.entity.form</field>
         <field name="model">printtracker.entity</field>
@@ -205,24 +447,55 @@
                             type="object" 
                             string="Sincronizar" 
                             class="btn-primary"/>
+                    <button name="action_sync_children" 
+                            type="object" 
+                            string="Sincronizar Hijos" 
+                            class="btn-secondary"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="%(action_printtracker_meter)d" 
-                                type="action" 
+                        <button name="action_view_devices" 
+                                type="object" 
                                 class="oe_stat_button" 
-                                icon="fa-tachometer">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text">Medidores</span>
-                            </div>
-                        </button>
-                        <button class="oe_stat_button" 
                                 icon="fa-print">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_value">
                                     <field name="device_count"/>
                                 </span>
-                                <span class="o_stat_text">Equipos</span>
+                                <span class="o_stat_text">Equipos Directos</span>
+                            </div>
+                        </button>
+                        
+                        <button name="action_view_all_devices" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-sitemap">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="total_devices"/>
+                                </span>
+                                <span class="o_stat_text">Total Equipos</span>
+                            </div>
+                        </button>
+                        
+                        <button name="action_view_supplies_status" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-tint"
+                                invisible="not has_low_supplies">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Suministros</span>
+                                <span class="o_stat_text">Bajos</span>
+                            </div>
+                        </button>
+                        
+                        <button name="action_view_meters" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-tachometer">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Medidores</span>
                             </div>
                         </button>
                     </div>
@@ -231,19 +504,36 @@
                             title="Inactiva" 
                             bg_color="bg-danger" 
                             invisible="is_active"/>
+                    <widget name="web_ribbon" 
+                            title="Suministros Bajos" 
+                            bg_color="bg-warning" 
+                            invisible="not has_low_supplies"/>
                     
                     <group>
                         <group name="basic_info">
                             <field name="name"/>
                             <field name="pt_entity_id"/>
+                            <field name="complete_path" readonly="True"/>
                             <field name="parent_id"/>
                             <field name="partner_id"/>
-                            <field name="level" readonly="True"/>
                         </group>
-                        <group name="sync_info">
+                        <group name="stats_info">
+                            <field name="level" readonly="True"/>
+                            <field name="child_count" readonly="True"/>
+                            <field name="active_devices" readonly="True"/>
+                            <field name="last_device_activity" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group name="status_group">
+                        <group name="status_info">
                             <field name="is_active"/>
+                            <field name="auto_sync"/>
                             <field name="last_sync" readonly="True"/>
-                            <field name="device_count" readonly="True"/>
+                        </group>
+                        <group name="additional_info">
+                            <field name="description"/>
+                            <field name="notes"/>
                         </group>
                     </group>
                     
@@ -267,6 +557,8 @@
                                     <field name="pt_entity_id"/>
                                     <field name="partner_id"/>
                                     <field name="device_count"/>
+                                    <field name="total_devices"/>
+                                    <field name="has_low_supplies" decoration-warning="has_low_supplies"/>
                                     <field name="is_active" widget="boolean_toggle"/>
                                 </list>
                             </field>
@@ -297,199 +589,6 @@
         </field>
     </record>
     
-    <!-- Vista List - PrintTracker Entity -->
-    <record id="view_printtracker_entity_list" model="ir.ui.view">
-        <field name="name">printtracker.entity.list</field>
-        <field name="model">printtracker.entity</field>
-        <field name="arch" type="xml">
-            <list>
-                <field name="name"/>
-                <field name="pt_entity_id"/>
-                <field name="parent_id"/>
-                <field name="partner_id"/>
-                <field name="device_count"/>
-                <field name="level"/>
-                <field name="is_active" widget="boolean_toggle"/>
-                <field name="last_sync"/>
-            </list>
-        </field>
-    </record>
-    
-    <!-- =============================================== -->
-    <!-- PRINTTRACKER METERS - MEDIDORES -->
-    <!-- =============================================== -->
-    
-    <!-- Vista Form - PrintTracker Meter -->
-    <record id="view_printtracker_meter_form" model="ir.ui.view">
-        <field name="name">printtracker.meter.form</field>
-        <field name="model">printtracker.meter</field>
-        <field name="arch" type="xml">
-            <form>
-                <header>
-                    <button name="update_device_counters" 
-                            type="object" 
-                            string="Actualizar Equipo" 
-                            class="btn-primary"/>
-                </header>
-                <sheet>
-                    <group>
-                        <group name="device_info">
-                            <field name="device_id"/>
-                            <field name="pt_meter_id"/>
-                            <field name="reading_date"/>
-                            <field name="console_status"/>
-                            <field name="sync_source"/>
-                        </group>
-                        <group name="sync_info">
-                            <field name="last_sync" readonly="True"/>
-                        </group>
-                    </group>
-                    
-                    <group string="Contadores Life (Reales)">
-                        <group>
-                            <field name="total_pages_life"/>
-                            <field name="black_pages_life"/>
-                            <field name="color_pages_life"/>
-                        </group>
-                        <group>
-                            <field name="pages_increment" readonly="True"/>
-                            <field name="black_increment" readonly="True"/>
-                            <field name="color_increment" readonly="True"/>
-                        </group>
-                    </group>
-                    
-                    <group string="Contadores Equivalentes (Facturación)">
-                        <group>
-                            <field name="total_pages_equiv"/>
-                            <field name="black_pages_equiv"/>
-                            <field name="color_pages_equiv"/>
-                        </group>
-                    </group>
-                    
-                    <group string="Otros Contadores">
-                        <group>
-                            <field name="scan_pages"/>
-                            <field name="fax_pages"/>
-                            <field name="copy_pages"/>
-                        </group>
-                    </group>
-                </sheet>
-            </form>
-        </field>
-    </record>
-    
-    <!-- Vista List - PrintTracker Meter -->
-    <record id="view_printtracker_meter_list" model="ir.ui.view">
-        <field name="name">printtracker.meter.list</field>
-        <field name="model">printtracker.meter</field>
-        <field name="arch" type="xml">
-            <list default_order="reading_date desc">
-                <field name="device_id"/>
-                <field name="reading_date"/>
-                <field name="total_pages_life"/>
-                <field name="black_pages_life"/>
-                <field name="color_pages_life"/>
-                <field name="scan_pages"/>
-                <field name="pages_increment" 
-                       decoration-success="pages_increment > 0"
-                       decoration-muted="pages_increment == 0"/>
-                <field name="sync_source"/>
-                <field name="console_status"/>
-            </list>
-        </field>
-    </record>
-    
-    <!-- =============================================== -->
-    <!-- PRINTTRACKER SUPPLIES - SUMINISTROS -->
-    <!-- =============================================== -->
-    
-    <!-- Vista Form - PrintTracker Supply -->
-    <record id="view_printtracker_supply_form" model="ir.ui.view">
-        <field name="name">printtracker.supply.form</field>
-        <field name="model">printtracker.supply</field>
-        <field name="arch" type="xml">
-            <form>
-                <header>
-                    <button name="create_purchase_order" 
-                            type="object" 
-                            string="Crear OC" 
-                            class="btn-primary"
-                            invisible="is_replaced or not low_supply_alert"/>
-                </header>
-                <sheet>
-                    <widget name="web_ribbon" 
-                            title="Reemplazado" 
-                            bg_color="bg-secondary" 
-                            invisible="not is_replaced"/>
-                    <widget name="web_ribbon" 
-                            title="Crítico" 
-                            bg_color="bg-danger" 
-                            invisible="not low_supply_alert"/>
-                    <widget name="web_ribbon" 
-                            title="Inactivo" 
-                            bg_color="bg-warning" 
-                            invisible="is_active"/>
-                    
-                    <group>
-                        <group name="device_info">
-                            <field name="device_id"/>
-                            <field name="supply_key"/>
-                            <field name="supply_type"/>
-                            <field name="supply_color"/>
-                            <field name="product_id"/>
-                        </group>
-                        <group name="supply_info">
-                            <field name="part_number"/>
-                            <field name="serial_number"/>
-                            <field name="displayable_name"/>
-                            <field name="description"/>
-                        </group>
-                    </group>
-                    
-                    <group string="Estado Actual">
-                        <group>
-                            <field name="current_level"/>
-                            <field name="max_level"/>
-                            <field name="percent_remaining" widget="percentage"/>
-                            <field name="is_active"/>
-                        </group>
-                        <group>
-                            <field name="is_replaced" readonly="True"/>
-                            <field name="low_supply_alert" readonly="True"/>
-                            <field name="skip_alerts"/>
-                        </group>
-                    </group>
-                    
-                    <group string="Fechas Importantes">
-                        <group>
-                            <field name="installed_date"/>
-                            <field name="replaced_date"/>
-                            <field name="confirmed_replaced_date"/>
-                        </group>
-                        <group>
-                            <field name="estimated_depletion_date"/>
-                            <field name="last_sync" readonly="True"/>
-                        </group>
-                    </group>
-                    
-                    <group string="Configuración y Costos">
-                        <group>
-                            <field name="supply_cost" widget="monetary"/>
-                            <field name="expected_yield"/>
-                            <field name="expected_fill_rate"/>
-                            <field name="actual_fill_rate"/>
-                        </group>
-                        <group>
-                            <field name="pages_printed"/>
-                            <field name="actual_cost_per_page" widget="monetary"/>
-                            <field name="lost_pages"/>
-                        </group>
-                    </group>
-                </sheet>
-            </form>
-        </field>
-    </record>
-    
     <!-- Vista List - PrintTracker Supply -->
     <record id="view_printtracker_supply_list" model="ir.ui.view">
         <field name="name">printtracker.supply.list</field>
@@ -513,6 +612,601 @@
             </list>
         </field>
     </record>
+
+    <record id="action_printtracker_daily_reading" model="ir.actions.act_window">
+        <field name="name">Lecturas Diarias Consolidadas</field>
+        <field name="res_model">printtracker.daily.reading</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay lecturas consolidadas
+            </p>
+            <p>
+                Las lecturas diarias se crean automáticamente consolidando datos
+                de correos (contador.automatico) y PrintTracker API.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Acción - PrintTracker Alert -->
+    <record id="action_printtracker_alert" model="ir.actions.act_window">
+        <field name="name">Alertas PrintTracker</field>
+        <field name="res_model">printtracker.alert</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay alertas activas
+            </p>
+            <p>
+                Las alertas se generan automáticamente cada 5 minutos para detectar
+                suministros bajos, equipos offline y otros problemas.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Acción - PrintTracker Consolidator -->
+    <record id="action_printtracker_consolidator" model="ir.actions.act_window">
+        <field name="name">Consolidador de Datos</field>
+        <field name="res_model">printtracker.consolidator</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Consolidador de Datos PrintTracker
+            </p>
+            <p>
+                Ejecuta manualmente el proceso de consolidación que normalmente
+                se ejecuta automáticamente cada 2 horas.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Acción - PrintTracker Alert Manager -->
+    <record id="action_printtracker_alert_manager" model="ir.actions.act_window">
+        <field name="name">Gestor de Alertas</field>
+        <field name="res_model">printtracker.alert.manager</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Gestor de Alertas PrintTracker
+            </p>
+            <p>
+                Ejecuta manualmente el proceso de revisión de alertas que normalmente
+                se ejecuta automáticamente cada 5 minutos.
+            </p>
+        </field>
+    </record>
+
+    <!-- =============================================== -->
+    <!-- PRINTTRACKER DAILY READING - LECTURAS DIARIAS -->
+    <!-- =============================================== -->
+    
+    <!-- Vista Form - PrintTracker Daily Reading -->
+    <record id="view_printtracker_daily_reading_form" model="ir.ui.view">
+        <field name="name">printtracker.daily.reading.form</field>
+        <field name="model">printtracker.daily.reading</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_aplicar_manual" 
+                            type="object" 
+                            string="Aplicar al Equipo" 
+                            class="btn-primary"
+                            invisible="estado == 'aplicado'"/>
+                    <button name="action_view_equipo" 
+                            type="object" 
+                            string="Ver Equipo" 
+                            class="btn-secondary"
+                            invisible="not equipo_id"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="borrador,validado,aplicado"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_equipo" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-print"
+                                invisible="not equipo_id">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Equipo</span>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <widget name="web_ribbon" 
+                            title="Aplicado" 
+                            bg_color="bg-success" 
+                            invisible="not aplicado_a_equipo"/>
+                    <widget name="web_ribbon" 
+                            title="Conflicto" 
+                            bg_color="bg-warning" 
+                            invisible="not conflicto_detectado"/>
+                    <widget name="web_ribbon" 
+                            title="Error" 
+                            bg_color="bg-danger" 
+                            invisible="estado != 'error'"/>
+                    
+                    <group>
+                        <group name="basic_info">
+                            <field name="fecha"/>
+                            <field name="serie"/>
+                            <field name="equipo_id" readonly="True"/>
+                            <field name="fuente_origen"/>
+                        </group>
+                        <group name="status_info">
+                            <field name="aplicado_a_equipo" readonly="True"/>
+                            <field name="fecha_aplicacion" readonly="True"/>
+                            <field name="consolidado_por" readonly="True"/>
+                            <field name="fecha_procesamiento" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Contadores Consolidados">
+                        <group>
+                            <field name="contador_bn"/>
+                            <field name="contador_color"/>
+                            <field name="contador_scan"/>
+                        </group>
+                        <group>
+                            <field name="contador_copy"/>
+                            <field name="contador_fax"/>
+                            <field name="contador_total" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Incrementos Diarios" 
+                           invisible="incremento_total == 0">
+                        <group>
+                            <field name="incremento_bn" readonly="True"/>
+                            <field name="incremento_color" readonly="True"/>
+                        </group>
+                        <group>
+                            <field name="incremento_scan" readonly="True"/>
+                            <field name="incremento_total" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Información del Equipo" 
+                           invisible="not cliente_nombre">
+                        <group>
+                            <field name="cliente_nombre" readonly="True"/>
+                            <field name="modelo_equipo" readonly="True"/>
+                        </group>
+                        <group>
+                            <field name="tipo_equipo" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Referencias de Origen">
+                        <group>
+                            <field name="contador_automatico_id" readonly="True"/>
+                            <field name="printtracker_meter_id" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Resolución de Conflictos" 
+                           invisible="not conflicto_detectado">
+                        <field name="detalle_conflicto" readonly="True" widget="text"/>
+                        <field name="resolucion_aplicada" readonly="True"/>
+                    </group>
+                    
+                    <group string="Errores" 
+                           invisible="not mensaje_error">
+                        <field name="mensaje_error" readonly="True" widget="text"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Vista List - PrintTracker Daily Reading -->
+    <record id="view_printtracker_daily_reading_list" model="ir.ui.view">
+        <field name="name">printtracker.daily.reading.list</field>
+        <field name="model">printtracker.daily.reading</field>
+        <field name="arch" type="xml">
+            <list default_order="fecha desc, serie">
+                <field name="fecha"/>
+                <field name="serie"/>
+                <field name="cliente_nombre"/>
+                <field name="contador_total" 
+                       decoration-bf="incremento_total > 1000"/>
+                <field name="contador_bn"/>
+                <field name="contador_color"/>
+                <field name="contador_scan"/>
+                <field name="incremento_total" 
+                       decoration-success="incremento_total > 0"
+                       decoration-muted="incremento_total == 0"/>
+                <field name="fuente_origen" 
+                       decoration-info="fuente_origen == 'consolidado'"
+                       decoration-primary="fuente_origen == 'printtracker'"
+                       decoration-warning="fuente_origen == 'correo'"/>
+                <field name="estado" 
+                       decoration-success="estado == 'aplicado'"
+                       decoration-warning="estado == 'validado'"
+                       decoration-danger="estado == 'error'"/>
+                <field name="conflicto_detectado" 
+                       decoration-warning="conflicto_detectado"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- =============================================== -->
+    <!-- PRINTTRACKER ALERT - ALERTAS -->
+    <!-- =============================================== -->
+    
+    <!-- Vista Form - PrintTracker Alert -->
+    <record id="view_printtracker_alert_form" model="ir.ui.view">
+        <field name="name">printtracker.alert.form</field>
+        <field name="model">printtracker.alert</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_resolver" 
+                            type="object" 
+                            string="Resolver" 
+                            class="btn-success"
+                            invisible="estado in ['resuelta', 'cerrada']"/>
+                    <button name="action_asignar" 
+                            type="object" 
+                            string="Asignar" 
+                            class="btn-primary"
+                            invisible="estado in ['resuelta', 'cerrada']"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="nueva,notificada,en_proceso,resuelta"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_equipo" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-print"
+                                invisible="not equipo_id">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Equipo</span>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <widget name="web_ribbon" 
+                            title="URGENTE" 
+                            bg_color="bg-danger" 
+                            invisible="prioridad != 'urgente'"/>
+                    <widget name="web_ribbon" 
+                            title="CRÍTICA" 
+                            bg_color="bg-danger" 
+                            invisible="prioridad != 'critica'"/>
+                    <widget name="web_ribbon" 
+                            title="Resuelta" 
+                            bg_color="bg-success" 
+                            invisible="estado != 'resuelta'"/>
+                    
+                    <group>
+                        <group name="basic_info">
+                            <field name="serie_equipo"/>
+                            <field name="equipo_id" readonly="True"/>
+                            <field name="tipo_alerta"/>
+                            <field name="prioridad" 
+                                   decoration-danger="prioridad in ['urgente', 'critica']"
+                                   decoration-warning="prioridad == 'alta'"/>
+                        </group>
+                        <group name="dates_info">
+                            <field name="fecha_creacion" readonly="True"/>
+                            <field name="fecha_deteccion"/>
+                            <field name="fecha_vencimiento"/>
+                            <field name="asignado_a"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Contenido de la Alerta">
+                        <field name="titulo" readonly="True"/>
+                        <field name="descripcion" readonly="True" widget="text"/>
+                    </group>
+                    
+                    <group string="Información del Equipo" 
+                           invisible="not cliente_nombre">
+                        <group>
+                            <field name="cliente_nombre" readonly="True"/>
+                            <field name="modelo_equipo" readonly="True"/>
+                        </group>
+                        <group>
+                            <field name="ubicacion_equipo" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Información Específica" 
+                           invisible="not suministro_id and not dias_sin_lecturas and not contador_actual">
+                        <group>
+                            <field name="suministro_id" 
+                                   invisible="not suministro_id"/>
+                            <field name="porcentaje_suministro" 
+                                   widget="percentage"
+                                   invisible="not porcentaje_suministro"/>
+                            <field name="dias_sin_lecturas" 
+                                   invisible="not dias_sin_lecturas"/>
+                            <field name="ultima_lectura" 
+                                   invisible="not ultima_lectura"/>
+                        </group>
+                        <group>
+                            <field name="contador_actual" 
+                                   invisible="not contador_actual"/>
+                            <field name="contador_anterior" 
+                                   invisible="not contador_anterior"/>
+                            <field name="diferencia_contador" 
+                                   invisible="not diferencia_contador"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Notificaciones">
+                        <group>
+                            <field name="notificar_email"/>
+                            <field name="notificar_chatter"/>
+                        </group>
+                        <group>
+                            <field name="email_enviado" readonly="True"/>
+                            <field name="chatter_enviado" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Acciones Automáticas">
+                        <group>
+                            <field name="accion_automatica"/>
+                            <field name="accion_ejecutada" readonly="True"/>
+                        </group>
+                        <group>
+                            <field name="resultado_accion" 
+                                   readonly="True" 
+                                   widget="text"
+                                   invisible="not resultado_accion"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Control de Repetición">
+                        <group>
+                            <field name="es_recurrente"/>
+                            <field name="frecuencia_revision"/>
+                        </group>
+                        <group>
+                            <field name="contador_repeticiones" readonly="True"/>
+                            <field name="max_repeticiones"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Resolución" 
+                           invisible="estado not in ['resuelta', 'cerrada']">
+                        <group>
+                            <field name="resuelto_por" readonly="True"/>
+                            <field name="fecha_resolucion" readonly="True"/>
+                        </group>
+                        <group>
+                            <field name="notas_resolucion" 
+                                   readonly="True" 
+                                   widget="text"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Mensaje Detallado" 
+                           invisible="not mensaje_detallado">
+                        <field name="mensaje_detallado" 
+                               readonly="True" 
+                               widget="html"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Vista List - PrintTracker Alert -->
+    <record id="view_printtracker_alert_list" model="ir.ui.view">
+        <field name="name">printtracker.alert.list</field>
+        <field name="model">printtracker.alert</field>
+        <field name="arch" type="xml">
+            <list default_order="fecha_creacion desc, prioridad desc">
+                <field name="fecha_creacion"/>
+                <field name="serie_equipo"/>
+                <field name="cliente_nombre"/>
+                <field name="tipo_alerta"/>
+                <field name="titulo"/>
+                <field name="prioridad" 
+                       decoration-danger="prioridad in ['urgente', 'critica']"
+                       decoration-warning="prioridad == 'alta'"
+                       decoration-info="prioridad == 'media'"
+                       decoration-muted="prioridad == 'baja'"/>
+                <field name="estado" 
+                       decoration-success="estado == 'resuelta'"
+                       decoration-info="estado == 'en_proceso'"
+                       decoration-warning="estado == 'notificada'"
+                       decoration-danger="estado == 'nueva'"/>
+                <field name="porcentaje_suministro" 
+                       widget="percentage"
+                       invisible="tipo_alerta not in ['suministro_bajo', 'suministro_critico']"
+                       decoration-danger="porcentaje_suministro &lt; 5"
+                       decoration-warning="porcentaje_suministro &lt; 15"/>
+                <field name="dias_sin_lecturas" 
+                       invisible="tipo_alerta != 'equipo_offline'"
+                       decoration-danger="dias_sin_lecturas &gt;= 7"
+                       decoration-warning="dias_sin_lecturas &gt;= 3"/>
+                <field name="asignado_a"/>
+                <field name="fecha_resolucion"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- =============================================== -->
+    <!-- PRINTTRACKER CONSOLIDATOR - CONSOLIDADOR -->
+    <!-- =============================================== -->
+    
+    <!-- Vista Form - PrintTracker Consolidator -->
+    <record id="view_printtracker_consolidator_form" model="ir.ui.view">
+        <field name="name">printtracker.consolidator.form</field>
+        <field name="model">printtracker.consolidator</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_ejecutar_manual" 
+                            type="object" 
+                            string="Ejecutar Consolidación" 
+                            class="btn-primary"/>
+                    <button name="action_view_log" 
+                            type="object" 
+                            string="Ver Log Detallado" 
+                            class="btn-secondary"
+                            invisible="not log_procesamiento"/>
+                </header>
+                <sheet>
+                    <group string="Configuración">
+                        <group>
+                            <field name="fecha_inicio"/>
+                            <field name="fecha_fin"/>
+                        </group>
+                        <group>
+                            <field name="serie_especifica" 
+                                   placeholder="Dejar vacío para todas las series"/>
+                            <field name="forzar_reproceso"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Resultados del Procesamiento" 
+                           invisible="not registros_contador_automatico and not registros_printtracker">
+                        <group>
+                            <field name="registros_contador_automatico" readonly="True"/>
+                            <field name="registros_printtracker" readonly="True"/>
+                            <field name="lecturas_consolidadas" readonly="True"/>
+                        </group>
+                        <group>
+                            <field name="conflictos_resueltos" readonly="True"/>
+                            <field name="equipos_actualizados" readonly="True"/>
+                            <field name="errores_encontrados" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Log de Procesamiento" 
+                           invisible="not log_procesamiento">
+                        <field name="log_procesamiento" 
+                               readonly="True" 
+                               widget="text" 
+                               nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- =============================================== -->
+    <!-- PRINTTRACKER ALERT MANAGER - GESTOR ALERTAS -->
+    <!-- =============================================== -->
+    
+    <!-- Vista Form - PrintTracker Alert Manager -->
+    <record id="view_printtracker_alert_manager_form" model="ir.ui.view">
+        <field name="name">printtracker.alert.manager.form</field>
+        <field name="model">printtracker.alert.manager</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_ejecutar_manual" 
+                            type="object" 
+                            string="Ejecutar Revisión de Alertas" 
+                            class="btn-primary"/>
+                    <button name="action_view_log" 
+                            type="object" 
+                            string="Ver Log Detallado" 
+                            class="btn-secondary"
+                            invisible="not log_ejecucion"/>
+                </header>
+                <sheet>
+                    <group string="Tipos de Revisión">
+                        <group>
+                            <field name="revisar_suministros"/>
+                            <field name="revisar_equipos_offline"/>
+                        </group>
+                        <group>
+                            <field name="revisar_uso_anomalo"/>
+                            <field name="revisar_contadores_decrecen"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Umbrales de Alertas">
+                        <group>
+                            <field name="umbral_suministro_bajo" widget="percentage"/>
+                            <field name="umbral_suministro_critico" widget="percentage"/>
+                        </group>
+                        <group>
+                            <field name="dias_offline_alerta"/>
+                            <field name="dias_offline_critico"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Resultados de la Ejecución" 
+                           invisible="not alertas_suministros and not alertas_offline and not alertas_uso_anomalo and not alertas_contadores">
+                        <group>
+                            <field name="alertas_suministros" readonly="True"/>
+                            <field name="alertas_offline" readonly="True"/>
+                            <field name="alertas_uso_anomalo" readonly="True"/>
+                            <field name="alertas_contadores" readonly="True"/>
+                        </group>
+                        <group>
+                            <field name="notificaciones_enviadas" readonly="True"/>
+                            <field name="errores_encontrados" readonly="True"/>
+                            <field name="tiempo_ejecucion" readonly="True"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Log de Ejecución" 
+                           invisible="not log_ejecucion">
+                        <field name="log_ejecucion" 
+                               readonly="True" 
+                               widget="text" 
+                               nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- =============================================== -->
+    <!-- MENÚS ACTUALIZADOS -->
+    <!-- =============================================== -->
+    
+    <!-- Separador para nuevos módulos -->
+    <menuitem id="menu_printtracker_consolidation"
+              name="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              parent="menu_printtracker_root"
+              sequence="50"/>
+    
+    <!-- Lecturas Diarias -->
+    <menuitem id="menu_printtracker_daily_readings"
+              name="Lecturas Diarias Consolidadas"
+              parent="menu_printtracker_root"
+              action="action_printtracker_daily_reading"
+              sequence="60"/>
+    
+    <!-- Alertas -->
+    <menuitem id="menu_printtracker_alerts"
+              name="Alertas del Sistema"
+              parent="menu_printtracker_root"
+              action="action_printtracker_alert"
+              sequence="70"/>
+    
+    <!-- Separador para herramientas -->
+    <menuitem id="menu_printtracker_tools"
+              name="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              parent="menu_printtracker_root"
+              sequence="80"/>
+    
+    <!-- Consolidador Manual -->
+    <menuitem id="menu_printtracker_consolidator"
+              name="Ejecutar Consolidación"
+              parent="menu_printtracker_root"
+              action="action_printtracker_consolidator"
+              sequence="90"/>
+    
+    <!-- Gestor de Alertas Manual -->
+    <menuitem id="menu_printtracker_alert_manager"
+              name="Ejecutar Revisión de Alertas"
+              parent="menu_printtracker_root"
+              action="action_printtracker_alert_manager"
+              sequence="100"/>
     
     <!-- =============================================== -->
     <!-- MENÚS -->

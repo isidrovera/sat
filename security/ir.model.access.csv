@@ -140,3 +140,11 @@ access_printtracker_meter_user,printtracker.meter.user,model_printtracker_meter,
 access_printtracker_meter_admin,printtracker.meter.admin,model_printtracker_meter,base.group_system,1,1,1,1
 access_printtracker_supply_user,printtracker.supply.user,model_printtracker_supply,base.group_user,1,0,0,0
 access_printtracker_supply_admin,printtracker.supply.admin,model_printtracker_supply,base.group_system,1,1,1,1
+access_printtracker_daily_reading_user,printtracker.daily.reading user,model_printtracker_daily_reading,base.group_user,1,0,0,0
+access_printtracker_daily_reading_admin,printtracker.daily.reading admin,model_printtracker_daily_reading,base.group_system,1,1,1,1
+access_printtracker_alert_user,printtracker.alert user,model_printtracker_alert,base.group_user,1,1,0,0
+access_printtracker_alert_admin,printtracker.alert admin,model_printtracker_alert,base.group_system,1,1,1,1
+access_printtracker_consolidator_user,printtracker.consolidator user,model_printtracker_consolidator,base.group_user,1,0,0,0
+access_printtracker_consolidator_admin,printtracker.consolidator admin,model_printtracker_consolidator,base.group_system,1,1,1,1
+access_printtracker_alert_manager_user,printtracker.alert.manager user,model_printtracker_alert_manager,base.group_user,1,0,0,0
+access_printtracker_alert_manager_admin,printtracker.alert.manager admin,model_printtracker_alert_manager,base.group_system,1,1,1,1

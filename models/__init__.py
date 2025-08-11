@@ -46,3 +46,7 @@ from . import printtracker_entity_address
 from . import printtracker_entity_label
 from . import printtracker_meter
 from . import printtracker_supply
+from . import printtracker_alert
+from . import printtracker_alert_manager
+from . import printtracker_consolidator
+from . import printtracker_daily_reading

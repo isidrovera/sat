@@ -45,5 +45,24 @@
             <field name="interval_number">1</field>
             <field name="interval_type">hours</field>
         </record>
+        <!-- Cron Consolidador - cada 2 horas -->
+<record id="cron_consolidador_printtracker" model="ir.cron">
+    <field name="name">PrintTracker - Consolidador de Datos</field>
+    <field name="model_id" ref="model_printtracker_consolidator"/>
+    <field name="code">model.ejecutar_consolidacion_automatica()</field>
+    <field name="interval_number">2</field>
+    <field name="interval_type">hours</field>
+    <field name="active">True</field>
+</record>
+
+<!-- Cron Alertas - cada 5 minutos -->
+<record id="cron_alertas_printtracker" model="ir.cron">
+    <field name="name">PrintTracker - Gestor de Alertas</field>
+    <field name="model_id" ref="model_printtracker_alert_manager"/>
+    <field name="code">model.ejecutar_revision_automatica()</field>
+    <field name="interval_number">5</field>
+    <field name="interval_type">minutes</field>
+    <field name="active">True</field>
+</record>
     </data>
 </odoo>
