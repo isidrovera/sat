@@ -610,3 +610,27 @@ class PrintTrackerAlert(models.Model):
             stats['por_estado'][estado] = count
         
         return stats
+
+
+    def action_view_equipo(self):
+        """Acción para ver el equipo relacionado"""
+        self.ensure_one()
+        
+        if not self.equipo_id:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': 'No se encontró equipo para esta serie',
+                    'type': 'warning'
+                }
+            }
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': f'Equipo - {self.serie_equipo}',
+            'res_model': 'alquiler',
+            'res_id': self.equipo_id.id,
+            'view_mode': 'form',
+            'target': 'current'
+        }
