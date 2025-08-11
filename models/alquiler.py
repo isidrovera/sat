@@ -91,7 +91,13 @@ class UnidadAlquiler(models.Model):
 
     cliente_id = fields.Many2one(
         'res.partner', string='Cliente', required=False, tracking=True)
-
+    # Agregar este campo en la clase UnidadAlquiler
+    pt_entity_id = fields.Many2one(
+        'printtracker.entity', 
+        string='Entidad PrintTracker',
+        help='Entidad PrintTracker asociada a este equipo',
+        index=True
+)
     ticket_count = fields.Integer(
         string='Ticket Count', compute='_compute_counts')
 
