@@ -172,18 +172,36 @@ class PrintTrackerEntity(models.Model):
 
     def _get_all_children(self):
         """
-        Obtiene todas las entidades hijas recursivamente
+        Devuelve todas las entidades descendientes (hijas, nietas, etc.) sin incluir self.
+        A prueba de ciclos.
         """
-        all_children = self.env['printtracker.entity']
-        
-        def collect_children(entity):
-            children = entity.child_ids
-            all_children |= children
-            for child in children:
-                collect_children(child)
-        
-        collect_children(self)
-        return all_children
+        self.ensure_one()
+        Entity = self.env['printtracker.entity']
+
+        visited = Entity.browse()     # acumulador de descendientes
+        frontier = self.child_ids     # siguiente nivel a visitar
+
+        # Límite de seguridad para árboles anómalos
+        max_iters = 1000
+        iters = 0
+
+        while frontier:
+            iters += 1
+            if iters > max_iters:
+                _logger.warning("Árbol muy profundo o ciclo inusual en entidad %s (%s)", self.name, self.id)
+                break
+
+            # Evita re-procesar nodos ya visitados
+            new = frontier - visited
+            if not new:
+                break
+
+            visited |= new
+            # Próxima frontera: hijos de los nuevos
+            frontier = new.mapped('child_ids')
+
+        return visited
+
 
     def sync_with_printtracker(self):
         """
