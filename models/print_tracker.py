@@ -233,9 +233,12 @@ class PrintTrackerConfig(models.Model):
             _logger.error(f"❌ Error sincronizando entidad {entity_data.get('name')}: {e}")
 
     def sync_all_devices(self):
-        """Sincroniza todos los dispositivos desde PrintTracker"""
+        """Sincroniza todos los dispositivos desde PrintTracker y limpia cache"""
         try:
             _logger.info(f"🔄 Iniciando sincronización de dispositivos...")
+            
+            # ✅ LIMPIAR cache antes de sincronizar
+            self.clear_device_cache()
             
             response = requests.get(
                 f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/device',
@@ -259,6 +262,9 @@ class PrintTrackerConfig(models.Model):
                         devices_synced += 1
                     elif result == 'updated':
                         devices_updated += 1
+                
+                # ✅ LIMPIAR cache después de sincronizar para forzar recarga
+                self.clear_device_cache()
                 
                 return {
                     'type': 'ir.actions.client',
@@ -646,11 +652,15 @@ class PrintTrackerConfig(models.Model):
 
     def _find_serie_in_synced_devices(self, device_key):
         """
-        OPTIMIZADO: Busca la serie en datos sincronizados con cache
+        CORREGIDO: Busca la serie en datos sincronizados con cache estático
+        FIX: Usar cache a nivel de clase en lugar de instancia
         """
         try:
-            # Cache estático para evitar múltiples consultas API
-            if not hasattr(self, '_device_cache'):
+            # ✅ CORRECCIÓN: Cache estático a nivel de clase
+            cache_key = f'_device_cache_{self.id}'
+            
+            # Verificar si el cache existe en el contexto global
+            if not hasattr(self.__class__, cache_key):
                 _logger.info(f"🔍 Cargando cache de dispositivos...")
                 
                 response = requests.get(
@@ -669,31 +679,43 @@ class PrintTrackerConfig(models.Model):
                     _logger.info(f"📊 Cache cargado: {len(devices)} dispositivos")
                     
                     # Crear diccionario para búsqueda rápida
-                    self._device_cache = {}
+                    device_cache = {}
                     for device_data in devices:
                         device_id = device_data.get('id')
                         serie = device_data.get('serialNumber')
                         
                         if device_id and serie and serie not in ['notavailable', 'None', '', None]:
-                            self._device_cache[device_id] = serie
+                            device_cache[device_id] = serie
                     
-                    _logger.info(f"📋 Cache procesado: {len(self._device_cache)} dispositivos válidos")
+                    # ✅ GUARDAR en cache de clase
+                    setattr(self.__class__, cache_key, device_cache)
+                    _logger.info(f"📋 Cache procesado: {len(device_cache)} dispositivos válidos")
                 else:
                     _logger.error(f"❌ Error cargando cache: {response.status_code}")
-                    self._device_cache = {}
+                    setattr(self.__class__, cache_key, {})
+            
+            # ✅ OBTENER cache de clase
+            device_cache = getattr(self.__class__, cache_key, {})
             
             # Buscar en cache
-            serie = self._device_cache.get(device_key)
+            serie = device_cache.get(device_key)
             if serie:
                 _logger.info(f"✅ Serie encontrada en cache: {serie} para deviceKey: {device_key}")
                 return serie
             else:
-                _logger.warning(f"❌ DeviceKey {device_key} no encontrado en cache de {len(self._device_cache)} dispositivos")
+                _logger.warning(f"❌ DeviceKey {device_key} no encontrado en cache de {len(device_cache)} dispositivos")
                 return None
                 
         except Exception as e:
             _logger.error(f"❌ Error en búsqueda optimizada: {e}")
             return None
+
+    def clear_device_cache(self):
+        """Limpia el cache de dispositivos"""
+        cache_key = f'_device_cache_{self.id}'
+        if hasattr(self.__class__, cache_key):
+            delattr(self.__class__, cache_key)
+            _logger.info(f"🗑️ Cache de dispositivos limpiado")
 
     def _actualizar_registro_contador_automatico(self, registro, meter_data, device):
         """
@@ -1269,7 +1291,205 @@ class PrintTrackerMeter(models.Model):
                 meter.pages_increment = meter.total_pages_life or 0
                 meter.black_increment = meter.black_pages_life or 0
                 meter.color_increment = meter.color_pages_life or 0
+    def debug_write_issue(self, meter_data, device):
+        """
+        NUEVO: Diagnóstico para identificar por qué write() resetea contadores
+        """
+        try:
+            _logger.info(f"🔍 === DIAGNÓSTICO DETALLADO WRITE() ===")
+            
+            # 1. VERIFICAR ESTADO ACTUAL DEL EQUIPO
+            _logger.info(f"📊 Estado ANTES de cualquier operación:")
+            _logger.info(f"   ID: {device.id}")
+            _logger.info(f"   Serie: {device.serie}")
+            _logger.info(f"   contador_bn: {device.contador_bn}")
+            _logger.info(f"   contador_color: {device.contador_color}")
+            _logger.info(f"   contador_scan: {device.contador_scan}")
+            
+            # 2. PREPARAR VALORES EXACTOS
+            page_counts = meter_data.get('pageCounts', {})
+            life_counts = page_counts.get('life', {})
+            
+            valores_nuevos = {
+                'contador_bn': life_counts.get('totalBlack', {}).get('value', 0),
+                'contador_color': life_counts.get('totalColor', {}).get('value', 0),
+                'contador_scan': 0,
+                'fecha_ultima_actualizacion': fields.Datetime.now()
+            }
+            
+            _logger.info(f"📊 Valores a escribir: {valores_nuevos}")
+            
+            # 3. VERIFICAR DEFINICIÓN DE CAMPOS
+            _logger.info(f"🔍 === VERIFICANDO DEFINICIÓN DE CAMPOS ===")
+            
+            field_info = device.fields_get(['contador_bn', 'contador_color', 'contador_scan'])
+            for field_name, field_data in field_info.items():
+                _logger.info(f"📋 {field_name}:")
+                _logger.info(f"   Tipo: {field_data.get('type')}")
+                _logger.info(f"   Store: {field_data.get('store', True)}")
+                _logger.info(f"   Readonly: {field_data.get('readonly', False)}")
+                _logger.info(f"   Required: {field_data.get('required', False)}")
+                
+                # ❌ PROBLEMA COMÚN: Campos computados sin store
+                if 'compute' in field_data and not field_data.get('store', True):
+                    _logger.error(f"❌ PROBLEMA: {field_name} es computado sin store=True")
+                    _logger.error(f"💡 SOLUCIÓN: Los campos computados sin store se recalculan y pierden valores")
+            
+            # 4. PROBAR WRITE MÍNIMO
+            _logger.info(f"🧪 === PRUEBA 1: WRITE MÍNIMO ===")
+            try:
+                # Solo actualizar fecha para probar write básico
+                device.write({'fecha_ultima_actualizacion': fields.Datetime.now()})
+                _logger.info(f"✅ Write mínimo exitoso")
+                
+                # Verificar que los contadores NO se perdieron
+                device.refresh()
+                _logger.info(f"📊 Después de write mínimo:")
+                _logger.info(f"   contador_bn: {device.contador_bn}")
+                _logger.info(f"   contador_color: {device.contador_color}")
+                _logger.info(f"   contador_scan: {device.contador_scan}")
+                
+                if device.contador_bn == 0 and device.contador_color == 0 and device.contador_scan == 0:
+                    _logger.error(f"❌ PROBLEMA CONFIRMADO: Write mínimo resetea contadores")
+                    _logger.error(f"💡 Probable causa: Campos computados o método write() personalizado")
+                    return False
+                else:
+                    _logger.info(f"✅ Write mínimo preserva contadores")
+                    
+            except Exception as write_error:
+                _logger.error(f"❌ Error en write mínimo: {write_error}")
+                return False
+            
+            # 5. VERIFICAR MÉTODO WRITE PERSONALIZADO
+            _logger.info(f"🔍 === VERIFICANDO MÉTODO WRITE PERSONALIZADO ===")
+            
+            alquiler_model = type(device)
+            if hasattr(alquiler_model, 'write'):
+                import inspect
+                write_method = getattr(alquiler_model, 'write')
+                
+                # Verificar si el write está sobrescrito
+                if write_method.__module__ != 'odoo.models':
+                    _logger.warning(f"⚠️ ENCONTRADO: write() personalizado en {write_method.__module__}")
+                    _logger.warning(f"🔍 Archivo: {inspect.getfile(write_method)}")
+                    _logger.warning(f"💡 REVISAR: El write personalizado puede estar interfiriendo")
+                else:
+                    _logger.info(f"✅ write() usa el método estándar de Odoo")
+            
+            return True
+            
+        except Exception as e:
+            _logger.error(f"❌ Error en diagnóstico: {e}")
+            return False
     
+    def update_device_counters_safe(self):
+        """
+        NUEVO: Actualización segura con múltiples estrategias
+        """
+        try:
+            _logger.info(f"💾 === ACTUALIZACIÓN SEGURA DE CONTADORES ===")
+            
+            if not self.device_id:
+                _logger.error("❌ No hay device_id asociado")
+                return False
+            
+            # Buscar equipo
+            equipo = self.env['alquiler'].search([('serie', '=', self.device_id.serie)], limit=1)
+            if not equipo:
+                _logger.error(f"❌ No se encontró equipo con serie: {self.device_id.serie}")
+                return False
+            
+            _logger.info(f"🎯 Equipo encontrado: {equipo.serie} (ID: {equipo.id})")
+            
+            # Preparar valores
+            nuevos_valores = {
+                'contador_bn': self.black_pages_life or 0,
+                'contador_color': self.color_pages_life or 0,
+                'fecha_ultima_actualizacion': self.reading_date or fields.Datetime.now()
+            }
+            
+            # ✅ ESTRATEGIA 1: Contexto que deshabilita recálculos
+            try:
+                _logger.info(f"📝 Intentando actualización con contexto seguro...")
+                
+                equipo_ctx = equipo.with_context(
+                    # Desactivar recompute de campos computados
+                    recompute=False,
+                    # Sin validaciones de tracking si causan problemas
+                    tracking_disable=True,
+                    # Sin mail tracking
+                    mail_notrack=True,
+                    # Marcar como actualización automática
+                    automatic_update=True
+                )
+                
+                equipo_ctx.write(nuevos_valores)
+                
+                # Verificar resultado
+                equipo.refresh()
+                
+                if (equipo.contador_bn == nuevos_valores['contador_bn'] and 
+                    equipo.contador_color == nuevos_valores['contador_color']):
+                    _logger.info(f"✅ Actualización exitosa con contexto seguro")
+                    return True
+                else:
+                    _logger.warning(f"⚠️ Contexto seguro no preservó valores")
+                    
+            except Exception as ctx_error:
+                _logger.warning(f"⚠️ Error con contexto seguro: {ctx_error}")
+            
+            # ✅ ESTRATEGIA 2: Actualización campo por campo
+            try:
+                _logger.info(f"📝 Intentando actualización campo por campo...")
+                
+                success_count = 0
+                
+                # BN
+                if nuevos_valores['contador_bn'] > 0:
+                    equipo.write({'contador_bn': nuevos_valores['contador_bn']})
+                    equipo.refresh()
+                    if equipo.contador_bn == nuevos_valores['contador_bn']:
+                        success_count += 1
+                        _logger.info(f"✅ contador_bn actualizado: {equipo.contador_bn}")
+                    else:
+                        _logger.error(f"❌ contador_bn falló")
+                
+                # Color
+                if nuevos_valores['contador_color'] >= 0:
+                    equipo.write({'contador_color': nuevos_valores['contador_color']})
+                    equipo.refresh()
+                    if equipo.contador_color == nuevos_valores['contador_color']:
+                        success_count += 1
+                        _logger.info(f"✅ contador_color actualizado: {equipo.contador_color}")
+                    else:
+                        _logger.error(f"❌ contador_color falló")
+                
+                # Fecha
+                equipo.write({'fecha_ultima_actualizacion': nuevos_valores['fecha_ultima_actualizacion']})
+                success_count += 1
+                
+                if success_count >= 2:
+                    _logger.info(f"✅ Actualización campo por campo exitosa ({success_count}/3)")
+                    return True
+                    
+            except Exception as field_error:
+                _logger.error(f"❌ Error en actualización campo por campo: {field_error}")
+            
+            # Si llegamos aquí, hay un problema serio
+            _logger.error(f"❌ === TODAS LAS ESTRATEGIAS DE ACTUALIZACIÓN FALLARON ===")
+            _logger.error(f"💡 RECOMENDACIÓN: Revisar modelo 'alquiler' por:")
+            _logger.error(f"   1. Método write() personalizado problemático")
+            _logger.error(f"   2. Campos computados que se recalculan")
+            _logger.error(f"   3. Constrains que validan valores")
+            _logger.error(f"   4. Triggers que modifican datos")
+            
+            return False
+            
+        except Exception as e:
+            _logger.error(f"❌ Error en actualización segura: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
+            return False
    
     def update_device_counters(self):
         """
