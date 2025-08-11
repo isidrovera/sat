@@ -37,8 +37,12 @@ from . import contador_automatico
 from . import patron_contador
 from . import contador_dashboard
 from . import print_tracker
-from . import alquiler_printtracker
 from . import mail_message_inherit
 from . import alquiler_maintenance
 from . import alquiler_consumables
 from . import alquiler_blocking
+from . import printtracker_entity
+from . import printtracker_entity_address
+from . import printtracker_entity_label
+from . import printtracker_meter
+from . import printtracker_supply
