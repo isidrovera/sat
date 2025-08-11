@@ -257,55 +257,139 @@ class PrintTrackerConfig(models.Model):
             _logger.error(f"❌ Error sincronizando entidad {entity_data.get('name')}: {e}")
 
     def sync_all_devices(self):
-        """Sincroniza todos los dispositivos desde PrintTracker - SIMPLIFICADO"""
+        """Sincroniza todos los dispositivos desde PrintTracker - CON PAGINACIÓN"""
         try:
             _logger.info(f"🔄 Iniciando sincronización de dispositivos...")
             
-            def _devices_call():
-                return requests.get(
-                    f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/device',
-                    headers=self.get_api_headers(),
-                    params={
-                        'includeChildren': True,
-                        'excludeDisabled': not self.solo_equipos_gestionados,
-                        'limit': self.max_records_per_request
-                    },
-                    timeout=self.timeout_seconds
-                )
+            all_devices = []
+            page = 1
+            total_pages_processed = 0
             
-            response = self._retry_api_call(_devices_call)
-            
-            if response.status_code == 200:
-                devices = response.json()
-                devices_synced = 0
-                devices_updated = 0
+            # PAGINACIÓN COMPLETA: Obtener todos los dispositivos
+            while True:
+                _logger.info(f"📄 === PROCESANDO PÁGINA {page} ===")
                 
-                for device_data in devices:
+                params = {
+                    'includeChildren': True,
+                    'excludeDisabled': not self.solo_equipos_gestionados,
+                    'limit': self.max_records_per_request,
+                    'page': page  # ← ESTE PARÁMETRO FALTABA
+                }
+                
+                def _devices_call():
+                    return requests.get(
+                        f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/device',
+                        headers=self.get_api_headers(),
+                        params=params,
+                        timeout=self.timeout_seconds
+                    )
+                
+                response = self._retry_api_call(_devices_call)
+                
+                _logger.info(f"📡 Respuesta API página {page}: Status {response.status_code}")
+                
+                if response.status_code == 200:
+                    devices_page = response.json()
+                    
+                    _logger.info(f"📊 Página {page}: {len(devices_page)} dispositivos recibidos")
+                    
+                    if not devices_page:
+                        _logger.info(f"📄 Página {page} vacía - Fin de datos")
+                        break
+                    
+                    all_devices.extend(devices_page)
+                    total_pages_processed += 1
+                    
+                    # Si la página está incompleta, es la última
+                    if len(devices_page) < self.max_records_per_request:
+                        _logger.info(f"📄 Página {page} incompleta - Última página")
+                        break
+                    
+                    page += 1
+                    
+                    # Límite de seguridad
+                    if page > 50:
+                        _logger.warning(f"⚠️ Límite de seguridad alcanzado: {page-1} páginas")
+                        break
+                        
+                else:
+                    error_msg = f'Error HTTP {response.status_code} en página {page}: {response.text}'
+                    _logger.error(f"❌ Error de API: {error_msg}")
+                    
+                    if page == 1:
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'message': f'❌ Error sincronizando dispositivos: {error_msg}',
+                                'type': 'danger'
+                            }
+                        }
+                    else:
+                        _logger.warning(f"⚠️ Error en página {page}, continuando con {len(all_devices)} dispositivos")
+                        break
+            
+            # PROCESAR TODOS LOS DISPOSITIVOS OBTENIDOS
+            _logger.info(f"🔄 === PROCESANDO {len(all_devices)} DISPOSITIVOS ===")
+            
+            devices_synced = 0
+            devices_updated = 0
+            devices_not_in_odoo = 0
+            devices_invalid_serial = 0
+            devices_error = 0
+            
+            for i, device_data in enumerate(all_devices):
+                try:
                     result = self._sync_device(device_data)
                     if result == 'created':
                         devices_synced += 1
                     elif result == 'updated':
                         devices_updated += 1
+                    elif result == 'not_in_odoo':
+                        devices_not_in_odoo += 1
+                    elif result == 'invalid_serial':
+                        devices_invalid_serial += 1
+                    else:
+                        devices_error += 1
+                except Exception as e:
+                    devices_error += 1
+                    _logger.error(f"❌ Error procesando dispositivo {i+1}: {e}")
                 
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': f'✅ Dispositivos sincronizados: {devices_synced} nuevos, {devices_updated} actualizados',
-                        'type': 'success'
-                    }
-                }
+                # Progreso cada 10 dispositivos
+                if (i + 1) % 10 == 0:
+                    _logger.info(f"📊 Progreso: {i+1}/{len(all_devices)} dispositivos procesados")
+            
+            # RESULTADO FINAL DETALLADO
+            _logger.info(f"🎯 === RESUMEN FINAL ===")
+            _logger.info(f"📄 Páginas: {total_pages_processed}")
+            _logger.info(f"📊 Total: {len(all_devices)}")
+            _logger.info(f"✅ Creados: {devices_synced}")
+            _logger.info(f"📝 Actualizados: {devices_updated}")
+            _logger.info(f"❌ No en Odoo: {devices_not_in_odoo}")
+            _logger.info(f"⚠️ Series inválidas: {devices_invalid_serial}")
+            _logger.info(f"💥 Errores: {devices_error}")
+            
+            total_processed = devices_synced + devices_updated
+            
+            if total_processed > 0:
+                message_type = 'success'
+                if devices_not_in_odoo > 0:
+                    message = f'✅ Dispositivos procesados: {devices_synced} nuevos, {devices_updated} actualizados, {devices_not_in_odoo} no están en Odoo'
+                else:
+                    message = f'🎉 Sincronización completa: {devices_synced} nuevos, {devices_updated} actualizados'
             else:
-                error_msg = f'Error HTTP {response.status_code}: {response.text}'
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': f'❌ Error sincronizando dispositivos: {error_msg}',
-                        'type': 'danger'
-                    }
+                message_type = 'warning'
+                message = f'⚠️ No se pudo procesar ningún dispositivo. {devices_not_in_odoo} no están en Odoo, {devices_invalid_serial} series inválidas'
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': message,
+                    'type': message_type
                 }
-                
+            }
+            
         except Exception as e:
             _logger.error(f"❌ Error sincronizando dispositivos: {e}")
             return {
@@ -316,7 +400,6 @@ class PrintTrackerConfig(models.Model):
                     'type': 'danger'
                 }
             }
-
     def _sync_device(self, device_data):
         """
         LIMPIO: Sincroniza un dispositivo individual - Solo mapeo con alquiler
