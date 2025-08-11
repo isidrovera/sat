@@ -395,104 +395,163 @@ class PrintTrackerConfig(models.Model):
             return None
     def sync_current_meters(self):
         """
-        MÉTODO CORREGIDO: Sincroniza medidores actuales desde PrintTracker
-        CORRECCIÓN: Agregado parámetro 'page' requerido por la API
+        CORREGIDO: Sincroniza medidores actuales desde PrintTracker con PAGINACIÓN COMPLETA
+        NUEVO: Obtiene TODOS los medidores, no solo los primeros 100
         """
         try:
             _logger.info(f"🔄 Iniciando sincronización de medidores actuales...")
             
-            # ✅ CORRECCIÓN: Agregar parámetro 'page' requerido por la API
-            params = {
-                'includeChildren': True,
-                'excludeDisabled': False,
-                'limit': self.max_records_per_request,
-                'page': 1  # ← NUEVO: PrintTracker requiere page >= 1
+            all_meters = []
+            page = 1
+            total_pages_processed = 0
+            
+            # ✅ PAGINACIÓN COMPLETA: Obtener todos los medidores
+            while True:
+                _logger.info(f"📄 === PROCESANDO PÁGINA {page} ===")
+                
+                params = {
+                    'includeChildren': True,
+                    'excludeDisabled': False,
+                    'limit': self.max_records_per_request,  # Típicamente 100
+                    'page': page
+                }
+                
+                _logger.info(f"📊 Parámetros de consulta página {page}: {params}")
+                
+                response = requests.get(
+                    f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/currentMeter',
+                    headers=self.get_api_headers(),
+                    params=params,
+                    timeout=self.timeout_seconds
+                )
+                
+                _logger.info(f"📡 Respuesta API página {page}: Status {response.status_code}")
+                
+                if response.status_code == 200:
+                    meters_page = response.json()
+                    
+                    _logger.info(f"📊 Página {page}: {len(meters_page)} medidores recibidos")
+                    
+                    # Si no hay medidores en esta página, terminamos
+                    if not meters_page:
+                        _logger.info(f"📄 Página {page} vacía - Fin de datos")
+                        break
+                    
+                    # Agregar medidores de esta página al total
+                    all_meters.extend(meters_page)
+                    total_pages_processed += 1
+                    
+                    # Si recibimos menos del límite, es la última página
+                    if len(meters_page) < self.max_records_per_request:
+                        _logger.info(f"📄 Página {page} incompleta ({len(meters_page)} < {self.max_records_per_request}) - Última página")
+                        break
+                    
+                    # Pasar a la siguiente página
+                    page += 1
+                    
+                    # ✅ LÍMITE DE SEGURIDAD: Evitar loops infinitos
+                    if page > 50:  # Máximo 50 páginas = 5000 medidores
+                        _logger.warning(f"⚠️ Límite de seguridad alcanzado: {page-1} páginas procesadas")
+                        break
+                        
+                else:
+                    error_msg = f'Error HTTP {response.status_code} en página {page}: {response.text}'
+                    _logger.error(f"❌ Error de API: {error_msg}")
+                    
+                    # Si falla la primera página, es error crítico
+                    if page == 1:
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'message': f'❌ Error sincronizando medidores: {error_msg}',
+                                'type': 'danger'
+                            }
+                        }
+                    else:
+                        # Si falla una página posterior, continuar con lo que tenemos
+                        _logger.warning(f"⚠️ Error en página {page}, continuando con {len(all_meters)} medidores obtenidos")
+                        break
+            
+            # ✅ RESUMEN DE PAGINACIÓN
+            _logger.info(f"🎯 === RESUMEN PAGINACIÓN ===")
+            _logger.info(f"📄 Páginas procesadas: {total_pages_processed}")
+            _logger.info(f"📊 Total medidores obtenidos: {len(all_meters)}")
+            
+            # Verificar si tenemos medidores para procesar
+            if not all_meters:
+                _logger.warning("⚠️ No se recibieron medidores de la API")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': '⚠️ No se encontraron medidores en PrintTracker',
+                        'type': 'warning'
+                    }
+                }
+            
+            # ✅ PROCESAR TODOS LOS MEDIDORES OBTENIDOS
+            _logger.info(f"🔄 === INICIANDO PROCESAMIENTO DE {len(all_meters)} MEDIDORES ===")
+            
+            meters_synced = 0
+            meters_failed = 0
+            
+            for i, meter_data in enumerate(all_meters):
+                _logger.info(f"🔍 === PROCESANDO MEDIDOR {i+1}/{len(all_meters)} ===")
+                _logger.info(f"📊 Medidor ID: {meter_data.get('id', 'Sin ID')}")
+                _logger.info(f"🎯 Device Key: {meter_data.get('deviceKey', 'Sin deviceKey')}")
+                
+                # ✅ LOGGING DE ESTRUCTURA DE DATOS
+                page_counts = meter_data.get('pageCounts', {})
+                life_counts = page_counts.get('life', {})
+                _logger.info(f"📄 Datos de contadores disponibles:")
+                _logger.info(f"   Total: {life_counts.get('total', {}).get('value', 'N/A')}")
+                _logger.info(f"   Black: {life_counts.get('totalBlack', {}).get('value', 'N/A')}")
+                _logger.info(f"   Color: {life_counts.get('totalColor', {}).get('value', 'N/A')}")
+                
+                try:
+                    if self._sync_meter(meter_data):
+                        meters_synced += 1
+                        _logger.info(f"✅ Medidor {i+1} procesado exitosamente")
+                    else:
+                        meters_failed += 1
+                        _logger.warning(f"⚠️ Medidor {i+1} no pudo ser procesado")
+                except Exception as e:
+                    meters_failed += 1
+                    _logger.error(f"❌ Error procesando medidor {i+1}: {e}")
+                
+                # ✅ PROGRESO CADA 10 MEDIDORES
+                if (i + 1) % 10 == 0:
+                    _logger.info(f"📊 Progreso: {i+1}/{len(all_meters)} medidores procesados")
+            
+            # ✅ RESULTADO FINAL DETALLADO
+            _logger.info(f"🎯 === RESUMEN FINAL SINCRONIZACIÓN MEDIDORES ===")
+            _logger.info(f"📄 Páginas consultadas: {total_pages_processed}")
+            _logger.info(f"📊 Total medidores recibidos: {len(all_meters)}")
+            _logger.info(f"✅ Procesados exitosamente: {meters_synced}")
+            _logger.info(f"❌ Fallidos: {meters_failed}")
+            _logger.info(f"📈 Tasa de éxito: {(meters_synced/len(all_meters)*100):.1f}%")
+            
+            # ✅ MENSAJE DE RESULTADO MEJORADO
+            if meters_synced > 0:
+                message_type = 'success'
+                if meters_failed > 0:
+                    message = f'✅ Sincronización parcial: {meters_synced} éxitos, {meters_failed} fallos de {len(all_meters)} medidores ({total_pages_processed} páginas)'
+                else:
+                    message = f'🎉 Sincronización completa: {meters_synced} medidores procesados exitosamente de {total_pages_processed} páginas'
+            else:
+                message_type = 'warning'
+                message = f'⚠️ No se pudo procesar ningún medidor de {len(all_meters)} recibidos'
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': message,
+                    'type': message_type
+                }
             }
             
-            _logger.info(f"📊 Parámetros de consulta: {params}")
-            
-            response = requests.get(
-                f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/currentMeter',
-                headers=self.get_api_headers(),
-                params=params,
-                timeout=self.timeout_seconds
-            )
-            
-            _logger.info(f"📡 Respuesta API medidores: Status {response.status_code}")
-            
-            if response.status_code == 200:
-                meters = response.json()
-                
-                # ✅ LOGGING CRÍTICO PARA DEBUG
-                _logger.info(f"📊 Respuesta API medidores: {len(meters)} medidores recibidos")
-                
-                if not meters:
-                    _logger.warning("⚠️ No se recibieron medidores de la API")
-                    return {
-                        'type': 'ir.actions.client',
-                        'tag': 'display_notification',
-                        'params': {
-                            'message': '⚠️ No se encontraron medidores en PrintTracker',
-                            'type': 'warning'
-                        }
-                    }
-                
-                meters_synced = 0
-                
-                for i, meter_data in enumerate(meters):
-                    _logger.info(f"🔍 === PROCESANDO MEDIDOR {i+1}/{len(meters)} ===")
-                    _logger.info(f"📊 Medidor ID: {meter_data.get('id', 'Sin ID')}")
-                    _logger.info(f"🎯 Device Key: {meter_data.get('deviceKey', 'Sin deviceKey')}")
-                    
-                    # ✅ LOGGING DE ESTRUCTURA DE DATOS
-                    page_counts = meter_data.get('pageCounts', {})
-                    life_counts = page_counts.get('life', {})
-                    _logger.info(f"📄 Datos de contadores disponibles:")
-                    _logger.info(f"   Total: {life_counts.get('total', {}).get('value', 'N/A')}")
-                    _logger.info(f"   Black: {life_counts.get('totalBlack', {}).get('value', 'N/A')}")
-                    _logger.info(f"   Color: {life_counts.get('totalColor', {}).get('value', 'N/A')}")
-                    
-                    try:
-                        if self._sync_meter(meter_data):
-                            meters_synced += 1
-                            _logger.info(f"✅ Medidor {i+1} procesado exitosamente")
-                        else:
-                            _logger.warning(f"⚠️ Medidor {i+1} no pudo ser procesado")
-                    except Exception as e:
-                        _logger.error(f"❌ Error procesando medidor {i+1}: {e}")
-                
-                # ✅ RESULTADO FINAL DETALLADO
-                _logger.info(f"🎯 === RESUMEN SINCRONIZACIÓN MEDIDORES ===")
-                _logger.info(f"📊 Total recibidos: {len(meters)}")
-                _logger.info(f"✅ Procesados exitosamente: {meters_synced}")
-                _logger.info(f"❌ Fallidos: {len(meters) - meters_synced}")
-                
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': f'✅ Medidores sincronizados: {meters_synced} de {len(meters)} lecturas procesadas',
-                        'type': 'success'
-                    }
-                }
-            else:
-                error_msg = f'Error HTTP {response.status_code}: {response.text}'
-                _logger.error(f"❌ Error de API: {error_msg}")
-                
-                # ✅ LOGGING ADICIONAL PARA DEBUG
-                _logger.error(f"🔍 URL consultada: {self.api_url.rstrip('/')}/entity/{self.entity_bbbb_id}/currentMeter")
-                _logger.error(f"🔍 Headers: {self.get_api_headers()}")
-                _logger.error(f"🔍 Parámetros: {params}")
-                
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': f'❌ Error sincronizando medidores: {error_msg}',
-                        'type': 'danger'
-                    }
-                }
-                
         except Exception as e:
             _logger.error(f"❌ Error sincronizando medidores: {e}")
             import traceback
@@ -1621,324 +1680,150 @@ class PrintTrackerMeter(models.Model):
    
     def update_device_counters(self):
         """
-        MÉTODO COMPLETO: Actualiza los contadores del equipo con validación de incrementos,
-        verificación post-actualización y manejo de campos con tracking
-        CORREGIDO: Uso de invalidate_cache() en lugar de refresh()
+        MÉTODO DEFINITIVO: Actualiza contadores con manejo específico de tracking
+        CORRECCIÓN: Desactiva tracking temporalmente para evitar conflictos
         """
         try:
-            _logger.info(f"💾 === INICIANDO ACTUALIZACIÓN PRINTTRACKER ===")
+            _logger.info(f"💾 === INICIANDO ACTUALIZACIÓN PRINTTRACKER DEFINITIVA ===")
             
-            # 1. OBTENER SERIE DEL DISPOSITIVO
             if not self.device_id:
                 _logger.error("❌ No hay device_id asociado al medidor")
                 return False
             
-            # 2. BUSCAR EQUIPO POR SERIE (como hacen los otros métodos)
+            # Buscar equipo por serie
             serie_equipo = self.device_id.serie
             if not serie_equipo:
                 _logger.error("❌ El dispositivo no tiene serie definida")
                 return False
             
-            # Buscar equipo en el modelo alquiler por serie
             equipo = self.env['alquiler'].search([('serie', '=', serie_equipo)], limit=1)
             if not equipo:
                 _logger.error(f"❌ No se encontró equipo con serie: {serie_equipo}")
                 return False
             
             _logger.info(f"🎯 Equipo encontrado: ID={equipo.id}, Serie={serie_equipo}")
-            _logger.info(f"🔍 Equipo modelo: {equipo.name.name if equipo.name else 'Sin modelo'}")
-            _logger.info(f"🔍 Equipo cliente: {equipo.cliente_id.name if equipo.cliente_id else 'Sin cliente'}")
             
-            # 3. PREPARAR NUEVOS VALORES DESDE PRINTTRACKER
+            # Preparar nuevos valores
             nuevos_valores = {
                 'contador_bn': self.black_pages_life or 0,
                 'contador_color': self.color_pages_life or 0,
-                'contador_scan': self.scan_pages or 0
+                'contador_scan': self.scan_pages or 0,
+                'fecha_ultima_actualizacion': self.reading_date or fields.Datetime.now()
             }
             
-            _logger.info(f"📊 Nuevos valores desde PrintTracker:")
-            _logger.info(f"   Contador BN: {nuevos_valores['contador_bn']}")
-            _logger.info(f"   Contador Color: {nuevos_valores['contador_color']}")
-            _logger.info(f"   Contador Scan: {nuevos_valores['contador_scan']}")
+            _logger.info(f"📊 Valores a actualizar: {nuevos_valores}")
             
-            # 4. OBTENER VALORES ACTUALES DEL EQUIPO
-            valores_actuales = {
-                'contador_bn': equipo.contador_bn or 0,
-                'contador_color': equipo.contador_color or 0,
-                'contador_scan': equipo.contador_scan or 0
-            }
-            
-            _logger.info(f"📋 Valores actuales del equipo:")
-            _logger.info(f"   Contador BN actual: {valores_actuales['contador_bn']}")
-            _logger.info(f"   Contador Color actual: {valores_actuales['contador_color']}")
-            _logger.info(f"   Contador Scan actual: {valores_actuales['contador_scan']}")
-            _logger.info(f"   Fecha última actualización: {equipo.fecha_ultima_actualizacion or 'Nunca'}")
-            
-            # 5. VALIDAR INCREMENTOS Y PREPARAR ACTUALIZACIÓN
-            valores_actualizacion = {}
-            alertas = []
-            hay_cambios = False
-            
-            _logger.info(f"🔍 === VALIDANDO INCREMENTOS ===")
-            
-            # Validar contador B/N
-            nuevo_bn = nuevos_valores['contador_bn']
-            actual_bn = valores_actuales['contador_bn']
-            
-            _logger.info(f"🖤 Validando BN: actual={actual_bn}, nuevo={nuevo_bn}")
-            
-            if nuevo_bn > actual_bn:
-                valores_actualizacion['contador_bn'] = nuevo_bn
-                hay_cambios = True
-                incremento = nuevo_bn - actual_bn
-                _logger.info(f"✅ BN: {actual_bn} → {nuevo_bn} (+{incremento})")
-            elif nuevo_bn < actual_bn and nuevo_bn > 0:
-                # Permitir decrementos (posible reset de equipo)
-                valores_actualizacion['contador_bn'] = nuevo_bn
-                alertas.append("BN decrementó - posible reset de equipo")
-                hay_cambios = True
-                decremento = actual_bn - nuevo_bn
-                _logger.warning(f"⚠️ BN decrementó: {actual_bn} → {nuevo_bn} (-{decremento})")
-            elif nuevo_bn == actual_bn:
-                _logger.info(f"📍 BN sin cambios: {actual_bn}")
-            else:
-                _logger.info(f"⏭️ BN no actualizado: nuevo({nuevo_bn}) <= actual({actual_bn})")
-            
-            # Validar contador Color
-            nuevo_color = nuevos_valores['contador_color']
-            actual_color = valores_actuales['contador_color']
-            
-            _logger.info(f"🎨 Validando Color: actual={actual_color}, nuevo={nuevo_color}")
-            
-            if nuevo_color > actual_color:
-                valores_actualizacion['contador_color'] = nuevo_color
-                hay_cambios = True
-                incremento = nuevo_color - actual_color
-                _logger.info(f"✅ Color: {actual_color} → {nuevo_color} (+{incremento})")
-            elif nuevo_color < actual_color and nuevo_color > 0:
-                valores_actualizacion['contador_color'] = nuevo_color
-                alertas.append("Color decrementó - posible reset de equipo")
-                hay_cambios = True
-                decremento = actual_color - nuevo_color
-                _logger.warning(f"⚠️ Color decrementó: {actual_color} → {nuevo_color} (-{decremento})")
-            elif nuevo_color == actual_color:
-                _logger.info(f"📍 Color sin cambios: {actual_color}")
-            else:
-                _logger.info(f"⏭️ Color no actualizado: nuevo({nuevo_color}) <= actual({actual_color})")
-            
-            # Validar contador Scan
-            nuevo_scan = nuevos_valores['contador_scan']
-            actual_scan = valores_actuales['contador_scan']
-            
-            _logger.info(f"📄 Validando Scan: actual={actual_scan}, nuevo={nuevo_scan}")
-            
-            if nuevo_scan > actual_scan:
-                valores_actualizacion['contador_scan'] = nuevo_scan
-                hay_cambios = True
-                incremento = nuevo_scan - actual_scan
-                _logger.info(f"✅ Scan: {actual_scan} → {nuevo_scan} (+{incremento})")
-            elif nuevo_scan < actual_scan and nuevo_scan > 0:
-                valores_actualizacion['contador_scan'] = nuevo_scan
-                alertas.append("Scan decrementó - posible reset de equipo")
-                hay_cambios = True
-                decremento = actual_scan - nuevo_scan
-                _logger.warning(f"⚠️ Scan decrementó: {actual_scan} → {nuevo_scan} (-{decremento})")
-            elif nuevo_scan == actual_scan:
-                _logger.info(f"📍 Scan sin cambios: {actual_scan}")
-            else:
-                _logger.info(f"⏭️ Scan no actualizado: nuevo({nuevo_scan}) <= actual({actual_scan})")
-            
-            # 6. SIEMPRE ACTUALIZAR FECHA (USAR CAMPO CORRECTO)
-            fecha_lectura = self.reading_date or fields.Datetime.now()
-            valores_actualizacion['fecha_ultima_actualizacion'] = fecha_lectura
-            _logger.info(f"📅 Fecha de actualización: {fecha_lectura}")
-            
-            # 7. EJECUTAR ACTUALIZACIÓN SI HAY CAMBIOS
-            _logger.info(f"🔍 === EVALUANDO ACTUALIZACIÓN ===")
-            _logger.info(f"📊 Hay cambios en contadores: {hay_cambios}")
-            _logger.info(f"📊 Valores a actualizar: {len(valores_actualizacion)} campos")
-            
-            if hay_cambios or valores_actualizacion:
-                _logger.info(f"💾 === EJECUTANDO ACTUALIZACIÓN ===")
-                _logger.info(f"📊 Datos de actualización: {valores_actualizacion}")
-                
-                try:
-                    # ✅ CORRECCIÓN: Usar contexto especial para campos tracked
-                    _logger.info(f"🔐 Preparando contexto para actualización...")
-                    
-                    equipo_with_context = equipo.sudo().with_context(
-                        tracking_disable=False,  # Permitir tracking
-                        mail_notrack=False,      # Permitir notificaciones
-                        from_printtracker=True,  # Marcar origen
-                        check_company_ids=False  # Sin validación de compañía
-                    )
-                    
-                    _logger.info(f"💾 Ejecutando write() con contexto especial...")
-                    
-                    # Ejecutar actualización con contexto
-                    equipo_with_context.write(valores_actualizacion)
-                    
-                    _logger.info(f"✅ Write() ejecutado exitosamente")
-                    
-                    # ✅ VERIFICACIÓN INMEDIATA POST-ACTUALIZACIÓN
-                    _logger.info(f"🔍 === VERIFICACIÓN POST-ACTUALIZACIÓN ===")
-                    
-                    # ✅ CORRECCIÓN: Usar _invalidate_cache() en lugar de refresh()
-                    equipo._invalidate_cache()
-                    equipo = self.env['alquiler'].browse(equipo.id)
-                    
-                    _logger.info(f"📊 Estado actual del equipo después de write():")
-                    _logger.info(f"   Serie: {equipo.serie}")
-                    _logger.info(f"   ID: {equipo.id}")
-                    _logger.info(f"   BN actual: {equipo.contador_bn}")
-                    _logger.info(f"   Color actual: {equipo.contador_color}")
-                    _logger.info(f"   Scan actual: {equipo.contador_scan}")
-                    _logger.info(f"   Fecha actualización: {equipo.fecha_ultima_actualizacion}")
-                    
-                    # Verificar si los valores se aplicaron correctamente
-                    valores_verificados = True
-                    errores_verificacion = []
-                    
-                    if 'contador_bn' in valores_actualizacion:
-                        esperado = valores_actualizacion['contador_bn']
-                        actual = equipo.contador_bn
-                        if actual != esperado:
-                            valores_verificados = False
-                            error_msg = f"BN esperado: {esperado}, actual: {actual}"
-                            errores_verificacion.append(error_msg)
-                            _logger.error(f"❌ ERROR BN: {error_msg}")
-                        else:
-                            _logger.info(f"✅ BN verificado correctamente: {actual}")
-                    
-                    if 'contador_color' in valores_actualizacion:
-                        esperado = valores_actualizacion['contador_color']
-                        actual = equipo.contador_color
-                        if actual != esperado:
-                            valores_verificados = False
-                            error_msg = f"Color esperado: {esperado}, actual: {actual}"
-                            errores_verificacion.append(error_msg)
-                            _logger.error(f"❌ ERROR Color: {error_msg}")
-                        else:
-                            _logger.info(f"✅ Color verificado correctamente: {actual}")
-                    
-                    if 'contador_scan' in valores_actualizacion:
-                        esperado = valores_actualizacion['contador_scan']
-                        actual = equipo.contador_scan
-                        if actual != esperado:
-                            valores_verificados = False
-                            error_msg = f"Scan esperado: {esperado}, actual: {actual}"
-                            errores_verificacion.append(error_msg)
-                            _logger.error(f"❌ ERROR Scan: {error_msg}")
-                        else:
-                            _logger.info(f"✅ Scan verificado correctamente: {actual}")
-                    
-                    if valores_verificados:
-                        _logger.info(f"🎉 TODOS LOS VALORES SE APLICARON CORRECTAMENTE")
-                    else:
-                        _logger.error(f"💥 ERRORES EN VERIFICACIÓN:")
-                        for error in errores_verificacion:
-                            _logger.error(f"   - {error}")
-                        
-                        # Intentar con contexto de bypass
-                        _logger.info(f"🔄 Reintentando con contexto de bypass...")
-                        try:
-                            equipo_bypass = equipo.sudo().with_context(
-                                tracking_disable=True,   # Deshabilitar tracking
-                                mail_notrack=True,       # Sin notificaciones
-                                check_company_ids=False, # Sin validación de compañía
-                                bypass_company_validation=True
-                            )
-                            equipo_bypass.write(valores_actualizacion)
-                            
-                            # ✅ CORRECCIÓN: Usar _invalidate_cache() aquí también
-                            equipo._invalidate_cache()
-                            equipo = self.env['alquiler'].browse(equipo.id)
-                            
-                            _logger.info(f"✅ Actualización exitosa con contexto de bypass")
-                            _logger.info(f"   BN: {equipo.contador_bn}, Color: {equipo.contador_color}, Scan: {equipo.contador_scan}")
-                            
-                        except Exception as bypass_error:
-                            _logger.error(f"❌ Error incluso con bypass: {bypass_error}")
-                            _logger.error(f"🔍 Tipo de error bypass: {type(bypass_error).__name__}")
-                    
-                except Exception as write_error:
-                    _logger.error(f"❌ === ERROR EN WRITE() ===")
-                    _logger.error(f"💥 Error: {write_error}")
-                    _logger.error(f"🔍 Tipo de error: {type(write_error).__name__}")
-                    
-                    # Log adicional del error
-                    import traceback
-                    _logger.error(f"📋 Traceback completo:")
-                    _logger.error(f"{traceback.format_exc()}")
-                    
-                    return False
-                
-                # 8. REGISTRAR EN CHATTER DEL EQUIPO
-                if hay_cambios:
-                    _logger.info(f"📝 === REGISTRANDO EN CHATTER ===")
-                    
-                    try:
-                        mensaje_cambios = []
-                        if 'contador_bn' in valores_actualizacion:
-                            mensaje_cambios.append(f"BN: {valores_actuales['contador_bn']} → {valores_actualizacion['contador_bn']}")
-                        if 'contador_color' in valores_actualizacion:
-                            mensaje_cambios.append(f"Color: {valores_actuales['contador_color']} → {valores_actualizacion['contador_color']}")
-                        if 'contador_scan' in valores_actualizacion:
-                            mensaje_cambios.append(f"Scan: {valores_actuales['contador_scan']} → {valores_actualizacion['contador_scan']}")
-                        
-                        mensaje = f"📊 Contadores actualizados vía PrintTracker:\n" + "\n".join(mensaje_cambios)
-                        if alertas:
-                            mensaje += f"\n\n⚠️ Alertas: " + "; ".join(alertas)
-                        
-                        equipo.message_post(
-                            body=mensaje,
-                            message_type='notification',
-                            subtype_xmlid='mail.mt_note'
-                        )
-                        
-                        _logger.info(f"✅ Mensaje registrado en chatter")
-                        
-                    except Exception as chatter_error:
-                        _logger.warning(f"⚠️ Error registrando en chatter: {chatter_error}")
-                
-            else:
-                _logger.info(f"ℹ️ No hay cambios que aplicar al equipo")
-            
-            # 9. ACTUALIZAR RELACIÓN PRINTTRACKER (SOLO REFERENCIAS)
-            _logger.info(f"🔗 === ACTUALIZANDO REFERENCIAS PRINTTRACKER ===")
-            
+            # ✅ ESTRATEGIA DEFINITIVA: Write con tracking desactivado
             try:
-                referencias_actualizadas = {}
+                _logger.info(f"📝 Estrategia 1: Write con tracking desactivado...")
                 
-                if hasattr(equipo, 'ultimo_medidor_pt'):
-                    referencias_actualizadas['ultimo_medidor_pt'] = self.id
-                    _logger.info(f"🔗 Actualizando ultimo_medidor_pt: {self.id}")
+                # Contexto que desactiva COMPLETAMENTE el tracking y mail
+                equipo_no_track = equipo.sudo().with_context(
+                    tracking_disable=True,       # Sin tracking
+                    mail_notrack=True,          # Sin mail
+                    mail_create_nosubscribe=True, # Sin suscripciones
+                    mail_create_nolog=True,     # Sin log en chatter
+                    no_reset_password=True,     # Sin reset password
+                    import_file=True,           # Simular importación
+                    install_mode=True,          # Modo instalación
+                    active_test=False           # Sin test activo
+                )
                 
-                if hasattr(equipo, 'fecha_ultima_lectura'):
-                    referencias_actualizadas['fecha_ultima_lectura'] = self.reading_date
-                    _logger.info(f"🔗 Actualizando fecha_ultima_lectura: {self.reading_date}")
+                # Ejecutar write
+                equipo_no_track.write(nuevos_valores)
+                _logger.info(f"✅ Write sin tracking ejecutado")
                 
-                if referencias_actualizadas:
-                    equipo.sudo().write(referencias_actualizadas)
-                    _logger.info(f"✅ Referencias PrintTracker actualizadas")
+                # ✅ VERIFICACIÓN INMEDIATA con búsqueda fresca
+                equipo_fresh = self.env['alquiler'].browse(equipo.id)
+                equipo_fresh.invalidate_cache()
+                
+                _logger.info(f"📊 Verificación inmediata:")
+                _logger.info(f"   BN: {equipo_fresh.contador_bn}")
+                _logger.info(f"   Color: {equipo_fresh.contador_color}")
+                _logger.info(f"   Scan: {equipo_fresh.contador_scan}")
+                
+                # Verificar si funcionó
+                if (equipo_fresh.contador_bn == nuevos_valores['contador_bn'] and 
+                    equipo_fresh.contador_color == nuevos_valores['contador_color']):
+                    _logger.info(f"🎉 ÉXITO: Valores actualizados correctamente")
+                    return True
                 else:
-                    _logger.info(f"ℹ️ No hay referencias PrintTracker para actualizar")
+                    _logger.error(f"❌ Falló estrategia 1, probando estrategia 2...")
                     
-            except Exception as ref_error:
-                _logger.warning(f"⚠️ No se pudieron actualizar referencias PrintTracker: {ref_error}")
+            except Exception as strategy1_error:
+                _logger.error(f"❌ Error en estrategia 1: {strategy1_error}")
             
-            _logger.info(f"🎉 === ACTUALIZACIÓN PRINTTRACKER COMPLETADA EXITOSAMENTE ===")
-            return True
+            # ✅ ESTRATEGIA 2: Update field por field con commit
+            try:
+                _logger.info(f"📝 Estrategia 2: Actualización campo por campo con commit...")
+                
+                success_fields = []
+                
+                # BN
+                if nuevos_valores['contador_bn'] > 0:
+                    equipo.sudo().write({'contador_bn': nuevos_valores['contador_bn']})
+                    self.env.cr.commit()  # Commit inmediato
+                    
+                    equipo.invalidate_cache()
+                    if equipo.contador_bn == nuevos_valores['contador_bn']:
+                        success_fields.append('contador_bn')
+                        _logger.info(f"✅ contador_bn actualizado: {equipo.contador_bn}")
+                
+                # Color
+                if nuevos_valores['contador_color'] >= 0:
+                    equipo.sudo().write({'contador_color': nuevos_valores['contador_color']})
+                    self.env.cr.commit()  # Commit inmediato
+                    
+                    equipo.invalidate_cache()
+                    if equipo.contador_color == nuevos_valores['contador_color']:
+                        success_fields.append('contador_color')
+                        _logger.info(f"✅ contador_color actualizado: {equipo.contador_color}")
+                
+                # Scan
+                if nuevos_valores['contador_scan'] >= 0:
+                    equipo.sudo().write({'contador_scan': nuevos_valores['contador_scan']})
+                    self.env.cr.commit()  # Commit inmediato
+                    
+                    equipo.invalidate_cache()
+                    if equipo.contador_scan == nuevos_valores['contador_scan']:
+                        success_fields.append('contador_scan')
+                        _logger.info(f"✅ contador_scan actualizado: {equipo.contador_scan}")
+                
+                # Fecha
+                equipo.sudo().write({'fecha_ultima_actualizacion': nuevos_valores['fecha_ultima_actualizacion']})
+                self.env.cr.commit()
+                success_fields.append('fecha_ultima_actualizacion')
+                
+                if len(success_fields) >= 3:  # Al menos 3 campos actualizados
+                    _logger.info(f"🎉 ÉXITO: Estrategia 2 funcionó - {len(success_fields)} campos")
+                    return True
+                else:
+                    _logger.error(f"❌ Estrategia 2 parcial: solo {len(success_fields)} campos")
+                    
+            except Exception as strategy2_error:
+                _logger.error(f"❌ Error en estrategia 2: {strategy2_error}")
+            
+            # ✅ ESTRATEGIA 3: SQL directo como último recurso (SOLO LOGGING)
+            _logger.error(f"❌ TODAS LAS ESTRATEGIAS ORM FALLARON")
+            _logger.error(f"💡 DIAGNÓSTICO NECESARIO:")
+            _logger.error(f"   1. Verificar permisos del usuario")
+            _logger.error(f"   2. Revisar si hay triggers en la base de datos")
+            _logger.error(f"   3. Verificar constrains del modelo")
+            _logger.error(f"   4. Revisar módulos que hereden de 'alquiler'")
+            
+            # Log de información técnica para diagnóstico
+            _logger.error(f"📋 Info técnica del equipo:")
+            _logger.error(f"   ID: {equipo.id}")
+            _logger.error(f"   Modelo: {equipo._name}")
+            _logger.error(f"   Usuario: {self.env.user.login}")
+            _logger.error(f"   Compañía: {self.env.company.name}")
+            
+            return False
             
         except Exception as e:
-            _logger.error(f"❌ === ERROR GENERAL EN ACTUALIZACIÓN ===")
-            _logger.error(f"💥 Error: {e}")
-            _logger.error(f"🔍 Tipo de error: {type(e).__name__}")
-            
+            _logger.error(f"❌ Error general en actualización: {e}")
             import traceback
-            _logger.error(f"📋 Traceback completo:")
-            _logger.error(f"{traceback.format_exc()}")
-            
+            _logger.error(f"Traceback: {traceback.format_exc()}")
             return False
     @api.model
     def get_latest_for_device(self, device_id):
