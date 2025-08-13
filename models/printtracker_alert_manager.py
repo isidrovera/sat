@@ -321,7 +321,7 @@ class PrintTrackerAlertManager(models.TransientModel):
     # FUNCIONES AUXILIARES PARA API - NUEVAS
     def _get_printtracker_api_config(self):
         """
-        Obtiene configuración de API desde el modelo printtracker.entity
+        Obtiene configuración de API desde el modelo printtracker.entity - CORREGIDO
         """
         try:
             # Buscar la entidad PrintTracker configurada
@@ -333,24 +333,174 @@ class PrintTrackerAlertManager(models.TransientModel):
                 _logger.error("❌ No se encontró entidad PrintTracker activa")
                 return None
             
-            if not entity.api_url or not entity.entity_id:
-                _logger.error(f"❌ Entidad PrintTracker sin configuración completa: {entity.name}")
+            # CORRECCIÓN: Verificar campos disponibles y usar URL base de parámetros del sistema
+            if not entity.entity_id:
+                _logger.error(f"❌ Entidad PrintTracker sin entity_id: {entity.name}")
+                return None
+            
+            # Obtener URL base desde parámetros del sistema como fallback
+            config_params = self.env['ir.config_parameter'].sudo()
+            base_url = config_params.get_param('printtracker.api.base_url', 'https://papi.printtrackerpro.com/v1')
+            
+            # Verificar si la entidad tiene campos de API, sino usar parámetros del sistema
+            api_token = getattr(entity, 'api_token', None) or config_params.get_param('printtracker.api.key')
+            
+            if not api_token:
+                _logger.error(f"❌ No se encontró token de API en entidad ni parámetros del sistema")
                 return None
             
             api_config = {
-                'base_url': entity.api_url.rstrip('/'),
+                'base_url': base_url.rstrip('/'),
                 'entity_id': entity.entity_id,
-                'api_key': entity.api_token,  # Asumiendo que existe este campo
+                'api_key': api_token,
                 'timeout': 30
             }
             
-            _logger.info(f"✅ Configuración API obtenida: {entity.name}")
+            _logger.info(f"✅ Configuración API obtenida desde entidad: {entity.name}")
+            _logger.debug(f"🔧 Config: base_url={base_url}, entity_id={entity.entity_id}")
             return api_config
             
         except Exception as e:
             _logger.error(f"❌ Error obteniendo configuración API: {e}")
-            return None
-
+            # FALLBACK: Intentar obtener todo desde parámetros del sistema
+            try:
+                config_params = self.env['ir.config_parameter'].sudo()
+                fallback_config = {
+                    'base_url': config_params.get_param('printtracker.api.base_url', 'https://papi.printtrackerpro.com/v1'),
+                    'entity_id': config_params.get_param('printtracker.api.entity_id'),
+                    'api_key': config_params.get_param('printtracker.api.key'),
+                    'timeout': 30
+                }
+                
+                if fallback_config['entity_id'] and fallback_config['api_key']:
+                    _logger.info(f"✅ Usando configuración fallback desde parámetros del sistema")
+                    return fallback_config
+                else:
+                    _logger.error(f"❌ Configuración fallback incompleta")
+                    return None
+                    
+            except Exception as fallback_error:
+                _logger.error(f"❌ Error en configuración fallback: {fallback_error}")
+                return None
+    @api.model
+    def crear_alerta_equipo_offline(self, serie_equipo, dias_sin_lecturas, ultima_lectura=None):
+        """
+        Crea alerta para equipo offline (CORREGIDO CON MANEJO DE CONCURRENCIA)
+        """
+        # Agregar retry en caso de error de concurrencia
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                _logger.info(f"📵 Procesando equipo offline: {serie_equipo} ({dias_sin_lecturas} días sin lecturas)")
+                
+                # Usar with_for_update para evitar concurrencia
+                existing_alert = self.search([
+                    ('serie_equipo', '=', serie_equipo),
+                    ('tipo_alerta', '=', 'equipo_offline'),
+                    ('origen_datos', '=', 'interno'),
+                    ('estado', 'in', ['nueva', 'notificada', 'en_proceso'])
+                ], limit=1)
+                
+                # Si existe, usar transacción para actualizar de forma segura
+                if existing_alert:
+                    _logger.info(f"🔄 Alerta offline existente: {existing_alert.display_name} (rep: {existing_alert.contador_repeticiones}/{existing_alert.max_repeticiones})")
+                    
+                    # VERIFICAR LÍMITE antes de incrementar
+                    if existing_alert.contador_repeticiones < existing_alert.max_repeticiones:
+                        update_vals = {
+                            'dias_sin_lecturas': dias_sin_lecturas,
+                            'contador_repeticiones': existing_alert.contador_repeticiones + 1,
+                            'ultima_revision': fields.Datetime.now()
+                        }
+                        
+                        # Escalamiento según días
+                        if dias_sin_lecturas >= 14 and existing_alert.prioridad != 'urgente':
+                            update_vals.update({
+                                'prioridad': 'urgente',
+                                'titulo': f"🚨 URGENTE: Equipo offline {dias_sin_lecturas} días - {serie_equipo}"
+                            })
+                            _logger.error(f"🚨 Alerta offline escalada a URGENTE: {serie_equipo}")
+                        elif dias_sin_lecturas >= 7 and existing_alert.prioridad not in ['critica', 'urgente']:
+                            update_vals.update({
+                                'prioridad': 'critica',
+                                'titulo': f"🔴 CRÍTICO: Equipo offline {dias_sin_lecturas} días - {serie_equipo}"
+                            })
+                            _logger.warning(f"⬆️ Alerta offline escalada a CRÍTICA: {serie_equipo}")
+                        
+                        # TRANSACCIÓN SEGURA para evitar concurrencia
+                        with self.env.cr.savepoint():
+                            existing_alert.write(update_vals)
+                            self.env.cr.commit()
+                        
+                        _logger.info(f"✅ Alerta offline actualizada: {existing_alert.display_name}")
+                        return existing_alert
+                    else:
+                        # Límite alcanzado - escalar a urgente y marcar como en proceso
+                        _logger.warning(f"🚨 Alerta offline {existing_alert.display_name} alcanzó máximo repeticiones")
+                        
+                        with self.env.cr.savepoint():
+                            existing_alert.write({
+                                'prioridad': 'urgente',
+                                'estado': 'en_proceso',
+                                'notas_resolucion': f'Equipo offline {dias_sin_lecturas} días. Máximo repeticiones alcanzado. Requiere intervención técnica urgente.',
+                                'accion_automatica': 'notificar_tecnico'
+                            })
+                            self.env.cr.commit()
+                        
+                        _logger.error(f"🔥 Alerta offline escalada por límite: {serie_equipo}")
+                        return existing_alert
+                
+                # Determinar prioridad según días offline (resto de la función igual)
+                if dias_sin_lecturas >= 14:
+                    prioridad = 'urgente'
+                    titulo = f"🚨 URGENTE: Equipo offline {dias_sin_lecturas} días - {serie_equipo}"
+                    _logger.error(f"🚨 EQUIPO OFFLINE URGENTE: {serie_equipo} ({dias_sin_lecturas} días)")
+                elif dias_sin_lecturas >= 7:
+                    prioridad = 'critica'
+                    titulo = f"🔴 CRÍTICO: Equipo offline {dias_sin_lecturas} días - {serie_equipo}"
+                    _logger.warning(f"🔴 EQUIPO OFFLINE CRÍTICO: {serie_equipo} ({dias_sin_lecturas} días)")
+                elif dias_sin_lecturas >= 3:
+                    prioridad = 'alta'
+                    titulo = f"📵 Equipo offline {dias_sin_lecturas} días - {serie_equipo}"
+                    _logger.warning(f"🟠 EQUIPO OFFLINE: {serie_equipo} ({dias_sin_lecturas} días)")
+                else:
+                    prioridad = 'media'
+                    titulo = f"📵 Equipo offline {dias_sin_lecturas} días - {serie_equipo}"
+                    _logger.info(f"🟡 Equipo offline detectado: {serie_equipo} ({dias_sin_lecturas} días)")
+                
+                # Crear nueva alerta con transacción segura
+                with self.env.cr.savepoint():
+                    nueva_alerta = self.create({
+                        'serie_equipo': serie_equipo,
+                        'tipo_alerta': 'equipo_offline',
+                        'prioridad': prioridad,
+                        'titulo': titulo,
+                        'descripcion': f"El equipo no ha reportado lecturas en {dias_sin_lecturas} días. Última lectura: {ultima_lectura or 'No disponible'}",
+                        'dias_sin_lecturas': dias_sin_lecturas,
+                        'ultima_lectura': ultima_lectura,
+                        'fecha_deteccion': fields.Datetime.now(),
+                        'origen_datos': 'interno',
+                        'accion_automatica': 'notificar_tecnico' if dias_sin_lecturas >= 3 else 'ninguna'
+                    })
+                    self.env.cr.commit()
+                
+                _logger.info(f"📵 Nueva alerta offline creada: {nueva_alerta.display_name}")
+                return nueva_alerta
+                
+            except Exception as e:
+                if 'could not serialize access due to concurrent update' in str(e) and attempt < max_retries - 1:
+                    _logger.warning(f"⚠️ Error de concurrencia en intento {attempt + 1}, reintentando...")
+                    import time
+                    time.sleep(0.1 * (attempt + 1))  # Backoff exponencial
+                    continue
+                else:
+                    _logger.error(f"❌ Error creando alerta offline (intento {attempt + 1}): {e}")
+                    import traceback
+                    _logger.error(f"Traceback: {traceback.format_exc()}")
+                    return False
+        
+        _logger.error(f"❌ Falló después de {max_retries} intentos para {serie_equipo}")
+        return False
     def _get_active_devices(self):
         """
         Obtiene lista de devices activos que tienen configuración de PrintTracker
