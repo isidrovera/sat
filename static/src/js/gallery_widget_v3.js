@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const gallery = {
         // Nueva propiedad para acumular fotos
         capturedPhotos: [],
+        currentSession: null,
         
         init() {
             console.log('Iniciando galería...');
@@ -167,6 +168,133 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Eventos vinculados correctamente');
         },
 
+        // NUEVA FUNCIÓN: Validar sesión antes de subir
+        async validateUploadSession(files) {
+            console.log(`Validando sesión de subida para ${files.length} archivos`);
+            
+            const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+            console.log(`Tamaño total: ${totalSize} bytes`);
+            
+            try {
+                const response = await fetch(`/gallery/upload/validate/${this.reparacionId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file_count: files.length,
+                        total_size: totalSize
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error de servidor: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Respuesta de validación:', data);
+
+                if (!data.success) {
+                    // Manejar errores específicos de autenticación
+                    if (data.code === 'AUTH_REQUIRED') {
+                        this.showAuthError();
+                        return null;
+                    }
+                    throw new Error(data.error || 'Error en validación');
+                }
+
+                this.currentSession = data.session_id;
+                console.log(`Sesión validada: ${this.currentSession}`);
+                return data;
+
+            } catch (error) {
+                console.error('Error en validación:', error);
+                this.showError('Error de Validación', error.message);
+                return null;
+            }
+        },
+
+        // NUEVA FUNCIÓN: Mostrar error de autenticación específico
+        showAuthError() {
+            console.log('Mostrando error de autenticación');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sesión Expirada',
+                text: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+                confirmButtonText: 'Iniciar Sesión',
+                showCancelButton: true,
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Redirigir a login o recargar página
+                    window.location.href = '/web/login?redirect=' + encodeURIComponent(window.location.pathname);
+                }
+            });
+        },
+
+        // NUEVA FUNCIÓN: Subir archivo individual con progreso
+        async uploadSingleFile(file, sessionId) {
+            console.log(`Subiendo archivo individual: ${file.name}`);
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`/gallery/upload/single/${sessionId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error de servidor: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Respuesta de subida individual:', data);
+
+                if (!data.success) {
+                    // Manejar error de sesión expirada durante subida
+                    if (data.code === 'SESSION_EXPIRED') {
+                        this.showAuthError();
+                        return null;
+                    }
+                    throw new Error(data.error || 'Error en subida');
+                }
+
+                return data;
+
+            } catch (error) {
+                console.error(`Error subiendo ${file.name}:`, error);
+                return { success: false, error: error.message, filename: file.name };
+            }
+        },
+
+        // NUEVA FUNCIÓN: Finalizar sesión de subida
+        async completeUploadSession(sessionId) {
+            console.log(`Finalizando sesión: ${sessionId}`);
+            
+            try {
+                const response = await fetch(`/gallery/upload/complete/${sessionId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error de servidor: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Sesión finalizada:', data);
+                return data;
+
+            } catch (error) {
+                console.error('Error finalizando sesión:', error);
+                return null;
+            }
+        },
+
         handleCameraButtonClick() {
             console.log(`Estado actual: ${this.capturedPhotos.length} fotos capturadas`);
             
@@ -295,7 +423,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
 
-        uploadAllCapturedPhotos() {
+        // MEJORADA: Subida de fotos de cámara con nuevo sistema
+        async uploadAllCapturedPhotos() {
             console.log(`Subiendo ${this.capturedPhotos.length} fotos capturadas`);
             
             if (this.capturedPhotos.length === 0) {
@@ -303,47 +432,71 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // Validar sesión primero
+            const validation = await this.validateUploadSession(this.capturedPhotos);
+            if (!validation) {
+                console.log('Validación fallida, cancelando subida');
+                return;
+            }
+
             this.showUploadProgress(this.capturedPhotos.length);
             
-            const formData = new FormData();
-            this.capturedPhotos.forEach((file, index) => {
-                console.log(`Agregando foto ${index + 1} al FormData: ${file.name}, tamaño: ${file.size} bytes`);
-                formData.append('files[]', file);
-            });
+            let uploadedCount = 0;
+            let failedCount = 0;
+            const results = [];
 
-            console.log(`Enviando ${this.capturedPhotos.length} fotos al servidor: /gallery/upload/${this.reparacionId}`);
-            fetch(`/gallery/upload/${this.reparacionId}`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                console.log(`Respuesta recibida del servidor: ${response.status} ${response.statusText}`);
-                if (!response.ok) {
-                    throw new Error(`Error de servidor: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Respuesta procesada:', data);
-                if (data.success) {
-                    console.log('Fotos de cámara subidas exitosamente');
-                    this.showSuccess('Fotos Subidas', `Se subieron ${this.capturedPhotos.length} fotos correctamente`);
-                    // Limpiar sesión de cámara
-                    this.capturedPhotos = [];
-                    this.updateCameraButton();
-                    setTimeout(() => window.location.reload(), 1500);
+            // Subir archivos individualmente
+            for (let i = 0; i < this.capturedPhotos.length; i++) {
+                const file = this.capturedPhotos[i];
+                console.log(`Subiendo foto ${i + 1}/${this.capturedPhotos.length}: ${file.name}`);
+                
+                const result = await this.uploadSingleFile(file, this.currentSession);
+                
+                if (result && result.success) {
+                    uploadedCount++;
+                    console.log(`Foto ${i + 1} subida exitosamente`);
                 } else {
-                    console.error(`Error reportado por el servidor: ${data.error || 'Error desconocido'}`);
-                    throw new Error(data.error || 'Error en la subida de fotos de cámara');
+                    failedCount++;
+                    console.log(`Foto ${i + 1} falló: ${result ? result.error : 'Error desconocido'}`);
                 }
-            })
-            .catch(error => {
-                console.error('Error en subida de fotos de cámara:', error);
-                this.showError('Error', error.message || 'Ocurrió un error durante la subida de fotos de cámara');
-            });
+                
+                results.push(result);
+                
+                // Actualizar progreso
+                const progress = ((i + 1) / this.capturedPhotos.length) * 100;
+                this.updateUploadProgress(progress, uploadedCount + failedCount, this.capturedPhotos.length);
+                
+                // Si hay error de autenticación, salir del bucle
+                if (result && result.code === 'SESSION_EXPIRED') {
+                    break;
+                }
+            }
+
+            // Finalizar sesión
+            await this.completeUploadSession(this.currentSession);
+
+            // Mostrar resultado final
+            if (uploadedCount > 0) {
+                console.log(`Subida completada: ${uploadedCount} exitosos, ${failedCount} fallidos`);
+                this.showSuccess(
+                    'Fotos Subidas', 
+                    failedCount === 0 
+                        ? `Se subieron las ${uploadedCount} fotos correctamente`
+                        : `Se subieron ${uploadedCount} de ${this.capturedPhotos.length} fotos`
+                );
+                
+                // Limpiar sesión de cámara
+                this.capturedPhotos = [];
+                this.currentSession = null;
+                this.updateCameraButton();
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                this.showError('Error', 'No se pudieron subir las fotos');
+            }
         },
 
-        handleMassiveUpload(event) {
+        // MEJORADA: Subida masiva con nuevo sistema
+        async handleMassiveUpload(event) {
             console.log('Iniciando proceso de subida masiva de archivos de galería');
             const files = Array.from(event.target.files);
             console.log(`Total de archivos seleccionados de galería: ${files.length}`);
@@ -361,67 +514,68 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            this.showUploadProgress(validFiles.length);
-
-            // Dividir archivos en lotes para evitar problemas de tamaño
-            const batchSize = 5;
-            const batches = [];
-            for (let i = 0; i < validFiles.length; i += batchSize) {
-                batches.push(validFiles.slice(i, i + batchSize));
-            }
-            console.log(`Lotes de archivos para subir: ${batches.length}`);
-
-            this.processBatches(batches, 0, validFiles.length);
-        },
-
-        processBatches(batches, uploadedCount, totalFiles) {
-            console.log(`Procesando lotes: ${batches.length} lotes pendientes, ${uploadedCount}/${totalFiles} archivos subidos`);
-            
-            if (batches.length === 0) {
-                console.log('Todos los lotes procesados. Subida completa.');
-                this.showSuccess('Subida Completada', `Se subieron ${uploadedCount} fotos correctamente`);
-                setTimeout(() => window.location.reload(), 1500);
+            // Validar sesión primero
+            const validation = await this.validateUploadSession(validFiles);
+            if (!validation) {
+                console.log('Validación fallida, cancelando subida');
                 return;
             }
 
-            const currentBatch = batches.shift();
-            console.log(`Procesando lote con ${currentBatch.length} archivos`);
-            
-            const formData = new FormData();
-            currentBatch.forEach(file => {
-                console.log(`Agregando archivo al FormData: ${file.name}, tamaño: ${file.size} bytes`);
-                formData.append('files[]', file);
-            });
+            this.showUploadProgress(validFiles.length);
 
-            console.log(`Enviando lote al servidor: /gallery/upload/${this.reparacionId}`);
-            fetch(`/gallery/upload/${this.reparacionId}`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                console.log(`Respuesta recibida del servidor: ${response.status} ${response.statusText}`);
-                if (!response.ok) {
-                    throw new Error(`Error de servidor: ${response.status}`);
+            let uploadedCount = 0;
+            let failedCount = 0;
+            const results = [];
+
+            // Subir archivos individualmente con límite de concurrencia
+            const batchSize = 3; // Subir máximo 3 archivos simultáneamente
+            for (let i = 0; i < validFiles.length; i += batchSize) {
+                const batch = validFiles.slice(i, i + batchSize);
+                console.log(`Procesando lote ${Math.floor(i/batchSize) + 1}: ${batch.length} archivos`);
+                
+                const batchPromises = batch.map(file => this.uploadSingleFile(file, this.currentSession));
+                const batchResults = await Promise.all(batchPromises);
+                
+                batchResults.forEach((result, index) => {
+                    if (result && result.success) {
+                        uploadedCount++;
+                        console.log(`Archivo ${batch[index].name} subido exitosamente`);
+                    } else {
+                        failedCount++;
+                        console.log(`Archivo ${batch[index].name} falló: ${result ? result.error : 'Error desconocido'}`);
+                    }
+                    results.push(result);
+                });
+                
+                // Actualizar progreso
+                const progress = ((i + batch.length) / validFiles.length) * 100;
+                this.updateUploadProgress(Math.min(progress, 100), uploadedCount + failedCount, validFiles.length);
+                
+                // Verificar si hay errores de autenticación
+                if (batchResults.some(result => result && result.code === 'SESSION_EXPIRED')) {
+                    break;
                 }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Respuesta procesada:', data);
-                if (data.success) {
-                    const newUploadedCount = uploadedCount + currentBatch.length;
-                    const progress = (newUploadedCount / totalFiles) * 100;
-                    console.log(`Subida en progreso: ${newUploadedCount}/${totalFiles} (${progress.toFixed(1)}%)`);
-                    this.updateUploadProgress(progress, newUploadedCount, totalFiles);
-                    this.processBatches(batches, newUploadedCount, totalFiles);
-                } else {
-                    console.error(`Error reportado por el servidor: ${data.error || 'Error desconocido'}`);
-                    throw new Error(data.error || 'Error en la subida');
-                }
-            })
-            .catch(error => {
-                console.error('Error en proceso de subida:', error);
-                this.showError('Error', error.message || 'Ocurrió un error durante la subida');
-            });
+            }
+
+            // Finalizar sesión
+            await this.completeUploadSession(this.currentSession);
+
+            // Mostrar resultado final
+            if (uploadedCount > 0) {
+                console.log(`Subida masiva completada: ${uploadedCount} exitosos, ${failedCount} fallidos`);
+                this.showSuccess(
+                    'Subida Completada', 
+                    failedCount === 0 
+                        ? `Se subieron los ${uploadedCount} archivos correctamente`
+                        : `Se subieron ${uploadedCount} de ${validFiles.length} archivos`
+                );
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                this.showError('Error', 'No se pudieron subir los archivos');
+            }
+
+            // Limpiar session
+            this.currentSession = null;
         },
 
         validateFile(file) {
@@ -698,6 +852,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         setTimeout(() => window.location.reload(), 1500);
                     }
                 } else {
+                    // Manejar error de autenticación en eliminación
+                    if (data.code === 'AUTH_REQUIRED') {
+                        this.showAuthError();
+                        return;
+                    }
                     console.error(`Error reportado por el servidor: ${data.error || 'Error desconocido'}`);
                     throw new Error(data.error || 'Error al eliminar la foto');
                 }
@@ -764,6 +923,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             const img = entry.target;
                             if (!img.classList.contains('loaded')) {
                                 img.classList.add('loaded');
+                                
+                                // NUEVO: Manejar errores de carga de imagen con endpoint de preview
+                                img.addEventListener('error', () => {
+                                    console.log('Error cargando imagen, intentando con placeholder');
+                                    const photoId = img.closest('.photo-card')?.dataset.photoId;
+                                    if (photoId) {
+                                        img.src = `/gallery/preview/${photoId}`;
+                                    }
+                                });
                             }
                         }
                     });
@@ -781,14 +949,68 @@ document.addEventListener('DOMContentLoaded', function() {
                     const img = card.querySelector('img');
                     if (img && !img.classList.contains('loaded')) {
                         img.classList.add('loaded');
+                        
+                        // NUEVO: Manejar errores de carga de imagen
+                        img.addEventListener('error', () => {
+                            console.log('Error cargando imagen, intentando con placeholder');
+                            const photoId = img.closest('.photo-card')?.dataset.photoId;
+                            if (photoId) {
+                                img.src = `/gallery/preview/${photoId}`;
+                            }
+                        });
                     }
                 });
             }
             
             console.log('Inicialización de vistas previas completada');
+        },
+
+        // NUEVA FUNCIÓN: Verificar estado de autenticación periódicamente
+        startAuthCheck() {
+            console.log('Iniciando verificación periódica de autenticación');
+            
+            setInterval(() => {
+                // Verificar cada 5 minutos si el usuario sigue autenticado
+                fetch('/web/session/get_session_info')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data || !data.uid || data.uid === false) {
+                            console.log('Sesión expirada detectada');
+                            this.showAuthError();
+                        }
+                    })
+                    .catch(error => {
+                        console.warn('Error verificando autenticación:', error);
+                    });
+            }, 5 * 60 * 1000); // 5 minutos
+        },
+
+        // NUEVA FUNCIÓN: Reintentar operación fallida
+        retryOperation(operationType, ...args) {
+            console.log(`Reintentando operación: ${operationType}`);
+            
+            switch (operationType) {
+                case 'upload_camera':
+                    this.uploadAllCapturedPhotos();
+                    break;
+                case 'upload_files':
+                    this.handleMassiveUpload(args[0]);
+                    break;
+                case 'delete_photo':
+                    this.deletePhoto(args[0]);
+                    break;
+                case 'sync':
+                    this.handleSync();
+                    break;
+                default:
+                    console.warn(`Tipo de operación desconocido: ${operationType}`);
+            }
         }
     };
 
     // Inicializar galería
     gallery.init();
+    
+    // NUEVO: Iniciar verificación de autenticación
+    gallery.startAuthCheck();
 });
