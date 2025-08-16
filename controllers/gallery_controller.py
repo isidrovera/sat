@@ -98,7 +98,7 @@ class GalleryController(http.Controller):
             _logger.error("[PLACEHOLDER] Error: %s", str(e))
         return Response(status=404)
 
-    @http.route('/gallery/upload/validate/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
+    @http.route('/gallery/upload/validate/<int:reparacion_id>', type='json', auth='public', methods=['POST'])
     def validate_upload(self, reparacion_id, file_count=0, total_size=0):
         """Valida si la subida es posible antes de comenzar"""
         try:
