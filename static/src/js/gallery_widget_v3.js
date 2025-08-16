@@ -194,8 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 console.log('Respuesta de validación:', data);
 
-                if (!data.success) {
-                    // Manejar errores específicos de autenticación
+                if (data.success === false) {  // ← ESTE ES EL CAMBIO
                     if (data.code === 'AUTH_REQUIRED') {
                         this.showAuthError();
                         return null;
