@@ -221,13 +221,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 icon: 'warning',
                 title: 'Sesión Expirada',
                 text: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
-                confirmButtonText: 'Iniciar Sesión',
+                confirmButtonText: 'Recargar Página',
                 showCancelButton: true,
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
                     // Redirigir a login o recargar página
-                    window.location.href = '/web/login?redirect=' + encodeURIComponent(window.location.pathname);
+                    window.location.reload();
                 }
             });
         },
