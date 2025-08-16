@@ -275,15 +275,79 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         },
+        // NUEVA FUNCIÓN: Obtener la siguiente secuencia disponible
+        async getNextSequence() {
+            console.log(`Obteniendo siguiente secuencia para reparación ${this.reparacionId}`);
+            
+            try {
+                const response = await fetch(`/gallery/next-sequence/${this.reparacionId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error obteniendo secuencia: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Manejar formato JSON-RPC de Odoo
+                const result = data.result || data;
+                const nextSequence = result.next_sequence || 1;
+                
+                console.log(`Siguiente secuencia obtenida: ${nextSequence}`);
+                return nextSequence;
+                
+            } catch (error) {
+                console.error('Error obteniendo secuencia:', error);
+                // Fallback: usar timestamp como secuencia única
+                return Date.now() % 10000;
+            }
+        },
+        // NUEVA FUNCIÓN: Limpiar secuencias duplicadas (función de utilidad)
+        async cleanupDuplicateSequences() {
+            console.log(`Limpiando secuencias duplicadas para reparación ${this.reparacionId}`);
+            
+            try {
+                const response = await fetch(`/gallery/cleanup-sequences/${this.reparacionId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error en limpieza: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const result = data.result || data;
+                
+                console.log('Limpieza de secuencias completada:', result);
+                return result;
+                
+            } catch (error) {
+                console.error('Error limpiando secuencias:', error);
+                return null;
+            }
+        },
 
-        // NUEVA FUNCIÓN: Subir archivo individual con progreso
+        // MODIFICAR: Función uploadSingleFile completa
         async uploadSingleFile(file, sessionId) {
             console.log(`Subiendo archivo individual: ${file.name}`);
             
-            const formData = new FormData();
-            formData.append('file', file);
-            
             try {
+                // NUEVO: Obtener la siguiente secuencia disponible antes de subir
+                const nextSequence = await this.getNextSequence();
+                console.log(`Secuencia asignada para ${file.name}: ${nextSequence}`);
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('sequence', nextSequence);
+                formData.append('reparacion_id', this.reparacionId);
+                
                 const response = await fetch(`/gallery/upload/single/${sessionId}`, {
                     method: 'POST',
                     body: formData
@@ -296,23 +360,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 console.log('Respuesta de subida individual:', data);
 
-                if (!data.success) {
-                    // Manejar error de sesión expirada durante subida
-                    if (data.code === 'SESSION_EXPIRED') {
+                // Manejar formato JSON-RPC de Odoo
+                const result = data.result || data;
+                
+                if (!result.success) {
+                    if (result.code === 'SESSION_EXPIRED') {
                         this.showAuthError();
                         return null;
                     }
-                    throw new Error(data.error || 'Error en subida');
+                    throw new Error(result.error || 'Error en subida');
                 }
 
-                return data;
+                console.log(`Archivo ${file.name} subido exitosamente con secuencia ${nextSequence}`);
+                return result;
 
             } catch (error) {
                 console.error(`Error subiendo ${file.name}:`, error);
                 return { success: false, error: error.message, filename: file.name };
             }
         },
-
         // NUEVA FUNCIÓN: Finalizar sesión de subida
         async completeUploadSession(sessionId) {
             console.log(`Finalizando sesión: ${sessionId}`);
@@ -467,7 +533,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
 
-        // MEJORADA: Subida de fotos de cámara con nuevo sistema
+        // MODIFICAR: Función uploadAllCapturedPhotos completa
         async uploadAllCapturedPhotos() {
             console.log(`Subiendo ${this.capturedPhotos.length} fotos capturadas`);
             
@@ -489,7 +555,9 @@ document.addEventListener('DOMContentLoaded', function() {
             let failedCount = 0;
             const results = [];
 
-            // Subir archivos individualmente
+            // CAMBIO PRINCIPAL: Subir archivos SECUENCIALMENTE para evitar duplicados de secuencia
+            console.log('Iniciando subida secuencial de fotos de cámara...');
+            
             for (let i = 0; i < this.capturedPhotos.length; i++) {
                 const file = this.capturedPhotos[i];
                 console.log(`Subiendo foto ${i + 1}/${this.capturedPhotos.length}: ${file.name}`);
@@ -512,7 +580,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Si hay error de autenticación, salir del bucle
                 if (result && result.code === 'SESSION_EXPIRED') {
+                    console.log('Sesión expirada detectada, deteniendo subida');
                     break;
+                }
+                
+                // Pequeña pausa entre subidas para evitar condiciones de carrera
+                if (i < this.capturedPhotos.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
             }
 
@@ -540,6 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         // MEJORADA: Subida masiva con nuevo sistema
+        
         async handleMassiveUpload(event) {
             console.log('Iniciando proceso de subida masiva de archivos de galería');
             const files = Array.from(event.target.files);
@@ -571,33 +646,38 @@ document.addEventListener('DOMContentLoaded', function() {
             let failedCount = 0;
             const results = [];
 
-            // Subir archivos individualmente con límite de concurrencia
-            const batchSize = 3; // Subir máximo 3 archivos simultáneamente
-            for (let i = 0; i < validFiles.length; i += batchSize) {
-                const batch = validFiles.slice(i, i + batchSize);
-                console.log(`Procesando lote ${Math.floor(i/batchSize) + 1}: ${batch.length} archivos`);
+            // CAMBIO PRINCIPAL: Subir archivos SECUENCIALMENTE para evitar duplicados de secuencia
+            console.log('Iniciando subida secuencial de archivos...');
+            
+            for (let i = 0; i < validFiles.length; i++) {
+                const file = validFiles[i];
+                console.log(`Procesando archivo ${i + 1}/${validFiles.length}: ${file.name}`);
                 
-                const batchPromises = batch.map(file => this.uploadSingleFile(file, this.currentSession));
-                const batchResults = await Promise.all(batchPromises);
+                const result = await this.uploadSingleFile(file, this.currentSession);
                 
-                batchResults.forEach((result, index) => {
-                    if (result && result.success) {
-                        uploadedCount++;
-                        console.log(`Archivo ${batch[index].name} subido exitosamente`);
-                    } else {
-                        failedCount++;
-                        console.log(`Archivo ${batch[index].name} falló: ${result ? result.error : 'Error desconocido'}`);
-                    }
-                    results.push(result);
-                });
+                if (result && result.success) {
+                    uploadedCount++;
+                    console.log(`Archivo ${file.name} subido exitosamente`);
+                } else {
+                    failedCount++;
+                    console.log(`Archivo ${file.name} falló: ${result ? result.error : 'Error desconocido'}`);
+                }
+                
+                results.push(result);
                 
                 // Actualizar progreso
-                const progress = ((i + batch.length) / validFiles.length) * 100;
-                this.updateUploadProgress(Math.min(progress, 100), uploadedCount + failedCount, validFiles.length);
+                const progress = ((i + 1) / validFiles.length) * 100;
+                this.updateUploadProgress(progress, uploadedCount + failedCount, validFiles.length);
                 
                 // Verificar si hay errores de autenticación
-                if (batchResults.some(result => result && result.code === 'SESSION_EXPIRED')) {
+                if (result && result.code === 'SESSION_EXPIRED') {
+                    console.log('Sesión expirada detectada, deteniendo subida');
                     break;
+                }
+                
+                // Pequeña pausa entre subidas para evitar condiciones de carrera
+                if (i < validFiles.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
             }
 
@@ -620,6 +700,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Limpiar session
             this.currentSession = null;
+            
+            // Limpiar input para permitir seleccionar los mismos archivos nuevamente
+            if (event.target) {
+                event.target.value = '';
+            }
         },
 
         validateFile(file) {

@@ -15,6 +15,27 @@ class GalleryController(http.Controller):
     
     # Cache para sesiones de subida
     _upload_sessions = {}
+
+    def _get_safe_sequence(self, reparacion_id, preferred_sequence=None):
+        """Obtiene una secuencia segura para usar, evitando duplicados"""
+        foto_obj = request.env['reparaciones.foto'].sudo()
+        
+        if preferred_sequence:
+            # Verificar si la secuencia preferida está disponible
+            existing = foto_obj.search([
+                ('reparacion_id', '=', reparacion_id),
+                ('sequence', '=', preferred_sequence)
+            ], limit=1)
+            
+            if not existing:
+                return preferred_sequence
+        
+        # Buscar la siguiente secuencia disponible
+        max_sequence = foto_obj.search([
+            ('reparacion_id', '=', reparacion_id)
+        ], order='sequence desc', limit=1)
+        
+        return (max_sequence.sequence if max_sequence else 0) + 1
     
     @http.route('/gallery/<int:reparacion_id>', type='http', auth='public', website=True)
     def gallery_page(self, reparacion_id, **kwargs):
@@ -174,6 +195,23 @@ class GalleryController(http.Controller):
             
             file = files[0]  # Solo procesamos un archivo
             
+            # NUEVO: Obtener secuencia del formulario o calcular automáticamente
+            sequence = request.httprequest.form.get('sequence')
+            if not sequence:
+                # Si no se proporciona secuencia, obtener la siguiente disponible
+                foto_obj = request.env['reparaciones.foto'].sudo()
+                max_sequence = foto_obj.search([
+                    ('reparacion_id', '=', session_data['reparacion_id'])
+                ], order='sequence desc', limit=1)
+                sequence = (max_sequence.sequence if max_sequence else 0) + 1
+            else:
+                try:
+                    sequence = int(sequence)
+                except ValueError:
+                    sequence = 1
+            
+            _logger.info("[UPLOAD_SINGLE] Usando secuencia %s para archivo: %s", sequence, file.filename)
+            
             # Validar archivo individual
             validation_result = self._validate_single_file(file)
             if not validation_result['valid']:
@@ -199,7 +237,24 @@ class GalleryController(http.Controller):
                     'reparacion_id': session_data['reparacion_id'],
                     'nombre_foto': file.filename,
                     'foto_binario': base64.b64encode(file.read()),
+                    'sequence': sequence,  # NUEVO: Asignar secuencia específica
                 }
+                
+                # Verificar si ya existe una foto con esa secuencia y manejar duplicados
+                existing_foto = request.env['reparaciones.foto'].sudo().search([
+                    ('reparacion_id', '=', session_data['reparacion_id']),
+                    ('sequence', '=', sequence)
+                ], limit=1)
+                
+                if existing_foto:
+                    # Si existe, buscar la siguiente secuencia libre
+                    _logger.warning("[UPLOAD_SINGLE] Secuencia %s ya existe, buscando siguiente libre", sequence)
+                    max_sequence = request.env['reparaciones.foto'].sudo().search([
+                        ('reparacion_id', '=', session_data['reparacion_id'])
+                    ], order='sequence desc', limit=1)
+                    sequence = (max_sequence.sequence if max_sequence else 0) + 1
+                    foto_data['sequence'] = sequence
+                    _logger.info("[UPLOAD_SINGLE] Nueva secuencia asignada: %s", sequence)
                 
                 foto = request.env['reparaciones.foto'].sudo().create(foto_data)
                 
@@ -209,13 +264,16 @@ class GalleryController(http.Controller):
                         'filename': file.filename,
                         'success': True,
                         'foto_id': foto.id,
+                        'sequence': foto.sequence,
                         'url': foto.url_foto
                     })
-                    _logger.info("[UPLOAD_SINGLE] Archivo subido exitosamente: %s -> ID:%s", file.filename, foto.id)
+                    _logger.info("[UPLOAD_SINGLE] Archivo subido exitosamente: %s -> ID:%s, Secuencia:%s", 
+                            file.filename, foto.id, foto.sequence)
                     
                     return self._json_response({
                         'success': True,
                         'foto_id': foto.id,
+                        'sequence': foto.sequence,
                         'filename': file.filename,
                         'progress': self._get_session_progress(session_id)
                     })
@@ -223,17 +281,18 @@ class GalleryController(http.Controller):
                     raise Exception("No se pudo crear el registro de foto")
                     
             except Exception as e:
-                _logger.error("[UPLOAD_SINGLE] Error procesando archivo %s: %s", file.filename, str(e))
+                error_msg = str(e)
+                _logger.error("[UPLOAD_SINGLE] Error procesando archivo %s: %s", file.filename, error_msg)
                 session_data['failed'] += 1
                 session_data['results'].append({
                     'filename': file.filename,
                     'success': False,
-                    'error': str(e)
+                    'error': error_msg
                 })
                 
                 return self._json_response({
                     'success': False,
-                    'error': f'Error procesando {file.filename}: {str(e)}',
+                    'error': f'Error procesando {file.filename}: {error_msg}',
                     'code': 'PROCESSING_ERROR',
                     'progress': self._get_session_progress(session_id)
                 })
@@ -520,3 +579,87 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception("Error al descargar todas las fotos: %s", str(e))
             return request.not_found()
+
+
+
+
+    @http.route('/gallery/next-sequence/<int:reparacion_id>', type='json', auth='user', methods=['GET'])
+    def get_next_sequence(self, reparacion_id):
+        """Obtiene la siguiente secuencia disponible para una reparación"""
+        try:
+            _logger.info("[NEXT_SEQUENCE] Obteniendo siguiente secuencia para reparación: %s", reparacion_id)
+            
+            # Verificar autenticación
+            if not request.env.user or request.env.user._is_public():
+                return {'success': False, 'error': 'Sesión expirada', 'code': 'AUTH_REQUIRED'}
+            
+            # Verificar que la reparación existe
+            reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                return {'success': False, 'error': 'Reparación no encontrada', 'code': 'REPARACION_NOT_FOUND'}
+            
+            # Obtener la secuencia máxima actual + 1
+            foto_obj = request.env['reparaciones.foto'].sudo()
+            max_sequence = foto_obj.search([
+                ('reparacion_id', '=', reparacion_id)
+            ], order='sequence desc', limit=1)
+            
+            next_sequence = (max_sequence.sequence if max_sequence else 0) + 1
+            
+            _logger.info("[NEXT_SEQUENCE] Siguiente secuencia para reparación %s: %s", reparacion_id, next_sequence)
+            
+            return {
+                'success': True,
+                'next_sequence': next_sequence,
+                'reparacion_id': reparacion_id
+            }
+            
+        except Exception as e:
+            _logger.exception("[NEXT_SEQUENCE] Error: %s", str(e))
+            return {'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'}
+
+    @http.route('/gallery/cleanup-sequences/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
+    def cleanup_duplicate_sequences(self, reparacion_id):
+        """Limpia secuencias duplicadas y reorganiza las existentes"""
+        try:
+            _logger.info("[CLEANUP_SEQUENCES] Limpiando secuencias para reparación: %s", reparacion_id)
+            
+            # Verificar autenticación
+            if not request.env.user or request.env.user._is_public():
+                return {'success': False, 'error': 'Sesión expirada', 'code': 'AUTH_REQUIRED'}
+            
+            # Verificar que la reparación existe
+            reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                return {'success': False, 'error': 'Reparación no encontrada', 'code': 'REPARACION_NOT_FOUND'}
+            
+            foto_obj = request.env['reparaciones.foto'].sudo()
+            
+            # Obtener todas las fotos de la reparación ordenadas por fecha de creación
+            fotos = foto_obj.search([
+                ('reparacion_id', '=', reparacion_id)
+            ], order='create_date asc')
+            
+            if not fotos:
+                return {'success': True, 'message': 'No hay fotos para limpiar'}
+            
+            # Reorganizar secuencias secuencialmente
+            cleaned_count = 0
+            for index, foto in enumerate(fotos, start=1):
+                if foto.sequence != index:
+                    foto.write({'sequence': index})
+                    cleaned_count += 1
+            
+            _logger.info("[CLEANUP_SEQUENCES] Limpieza completada para reparación %s: %s fotos reorganizadas", 
+                        reparacion_id, cleaned_count)
+            
+            return {
+                'success': True,
+                'cleaned_count': cleaned_count,
+                'total_fotos': len(fotos),
+                'message': f'Se reorganizaron {cleaned_count} fotos'
+            }
+            
+        except Exception as e:
+            _logger.exception("[CLEANUP_SEQUENCES] Error: %s", str(e))
+            return {'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'}
