@@ -583,7 +583,7 @@ class GalleryController(http.Controller):
 
 
 
-    @http.route('/gallery/next-sequence/<int:reparacion_id>', type='json', auth='user', methods=['GET'])
+    @http.route('/gallery/next-sequence/<int:reparacion_id>', type='http', auth='user', methods=['GET'])
     def get_next_sequence(self, reparacion_id):
         """Obtiene la siguiente secuencia disponible para una reparación"""
         try:
@@ -591,12 +591,12 @@ class GalleryController(http.Controller):
             
             # Verificar autenticación
             if not request.env.user or request.env.user._is_public():
-                return {'success': False, 'error': 'Sesión expirada', 'code': 'AUTH_REQUIRED'}
+                return self._json_response({'success': False, 'error': 'Sesión expirada', 'code': 'AUTH_REQUIRED'})
             
             # Verificar que la reparación existe
             reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
             if not reparacion.exists():
-                return {'success': False, 'error': 'Reparación no encontrada', 'code': 'REPARACION_NOT_FOUND'}
+                return self._json_response({'success': False, 'error': 'Reparación no encontrada', 'code': 'REPARACION_NOT_FOUND'})
             
             # Obtener la secuencia máxima actual + 1
             foto_obj = request.env['reparaciones.foto'].sudo()
@@ -608,16 +608,17 @@ class GalleryController(http.Controller):
             
             _logger.info("[NEXT_SEQUENCE] Siguiente secuencia para reparación %s: %s", reparacion_id, next_sequence)
             
-            return {
+            response_data = {
                 'success': True,
                 'next_sequence': next_sequence,
                 'reparacion_id': reparacion_id
             }
             
+            return self._json_response(response_data)
+            
         except Exception as e:
             _logger.exception("[NEXT_SEQUENCE] Error: %s", str(e))
-            return {'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'}
-
+            return self._json_response({'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'})
     @http.route('/gallery/cleanup-sequences/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
     def cleanup_duplicate_sequences(self, reparacion_id):
         """Limpia secuencias duplicadas y reorganiza las existentes"""
