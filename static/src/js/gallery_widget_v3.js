@@ -194,17 +194,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 console.log('Respuesta de validación:', data);
 
-                if (data.success === false) {  // ← ESTE ES EL CAMBIO
-                    if (data.code === 'AUTH_REQUIRED') {
+                // NUEVO: Manejar formato JSON-RPC de Odoo
+                if (data.error) {
+                    if (data.error.message === 'Odoo Session Expired') {
                         this.showAuthError();
                         return null;
                     }
-                    throw new Error(data.error || 'Error en validación');
+                    throw new Error(data.error.message || 'Error en validación');
                 }
 
-                this.currentSession = data.session_id;
+                // Si es respuesta JSON-RPC exitosa, los datos están en 'result'
+                const result = data.result || data;
+                
+                if (result.success === false) {
+                    if (result.code === 'AUTH_REQUIRED') {
+                        this.showAuthError();
+                        return null;
+                    }
+                    throw new Error(result.error || 'Error en validación');
+                }
+
+                this.currentSession = result.session_id;
                 console.log(`Sesión validada: ${this.currentSession}`);
-                return data;
+                return result;
 
             } catch (error) {
                 console.error('Error en validación:', error);
