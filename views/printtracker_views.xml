@@ -699,11 +699,7 @@
                             string="Ver Equipo" 
                             class="btn-secondary"
                             invisible="not equipo_id"/>
-                    <button name="action_diagnostico_consolidacion" 
-                            type="object"
-                            string="Debug" 
-                            class="btn-secondary"
-                           />
+                    <button name="action_diagnostico_consolidacion" type="object" string="Debug" class="btn-secondary"/>
                     <field name="estado" widget="statusbar" statusbar_visible="borrador,validado,aplicado"/>
                 </header>
                 <sheet>
