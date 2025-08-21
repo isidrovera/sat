@@ -183,6 +183,7 @@ class PrintTrackerDailyReading(models.Model):
     def crear_desde_contador_automatico(self, registro_contador):
         """
         Crea una lectura diaria desde un registro de contador.automatico
+        CORREGIDO: Actualiza registro de PrintTracker si ya existe
         """
         try:
             _logger.info(f"📧 Creando lectura desde contador automático: {registro_contador.serie_detectada}")
@@ -201,10 +202,18 @@ class PrintTrackerDailyReading(models.Model):
             ], limit=1)
             
             if existing:
-                _logger.warning(f"⚠️ Ya existe lectura para {registro_contador.serie_detectada} en {fecha_lectura}")
-                return existing
+                if existing.fuente_origen == 'printtracker':
+                    # CASO 1: ACTUALIZAR registro de PrintTracker con datos de correo
+                    _logger.info(f"📧 Actualizando registro de PrintTracker con datos de correo: {registro_contador.serie_detectada} - {fecha_lectura}")
+                    return self._actualizar_lectura_printtracker_con_correo(existing, registro_contador)
+                else:
+                    # CASO 2: Ya existe correo, no duplicar
+                    _logger.warning(f"⚠️ Ya existe lectura de correo para {registro_contador.serie_detectada} en {fecha_lectura}")
+                    return existing
             
-            # Crear nueva lectura
+            # CASO 3: No existe registro, crear nuevo
+            _logger.info(f"🆕 Creando nuevo registro desde correo: {registro_contador.serie_detectada} - {fecha_lectura}")
+            
             valores = {
                 'fecha': fecha_lectura,
                 'serie': registro_contador.serie_detectada,
@@ -225,10 +234,55 @@ class PrintTrackerDailyReading(models.Model):
             _logger.error(f"❌ Error creando lectura desde contador automático: {e}")
             return False
 
+    def _actualizar_lectura_printtracker_con_correo(self, lectura_pt, registro_contador):
+        """
+        NUEVO: Actualiza registro de PrintTracker existente con datos de correo
+        """
+        try:
+            _logger.info(f"📧 === ACTUALIZANDO PRINTTRACKER CON CORREO ===")
+            _logger.info(f"🔄 PrintTracker actual: BN={lectura_pt.contador_bn}, Color={lectura_pt.contador_color}, Scan={lectura_pt.contador_scan}")
+            _logger.info(f"📧 Correo: BN={registro_contador.contador_bn_detectado}, Color={registro_contador.contador_color_detectado}, Scan={registro_contador.contador_scan_detectado}")
+            
+            # Preparar valores a actualizar
+            valores_actualizar = {}
+            
+            # REGLA: Si PrintTracker tiene 0 en algún contador, usar valor de correo
+            if lectura_pt.contador_bn == 0 and (registro_contador.contador_bn_detectado or 0) > 0:
+                valores_actualizar['contador_bn'] = registro_contador.contador_bn_detectado
+                _logger.info(f"✅ Actualizando BN: 0 → {registro_contador.contador_bn_detectado}")
+            
+            if lectura_pt.contador_color == 0 and (registro_contador.contador_color_detectado or 0) > 0:
+                valores_actualizar['contador_color'] = registro_contador.contador_color_detectado
+                _logger.info(f"✅ Actualizando Color: 0 → {registro_contador.contador_color_detectado}")
+            
+            # REGLA ESPECIAL: Si correo tiene scan y PrintTracker no, actualizar
+            if lectura_pt.contador_scan == 0 and (registro_contador.contador_scan_detectado or 0) > 0:
+                valores_actualizar['contador_scan'] = registro_contador.contador_scan_detectado
+                _logger.info(f"✅ Actualizando Scan: 0 → {registro_contador.contador_scan_detectado}")
+            
+            # Cambiar fuente y agregar referencia correo
+            valores_actualizar.update({
+                'fuente_origen': 'consolidado',
+                'contador_automatico_id': registro_contador.id,
+                'fecha_procesamiento': fields.Datetime.now()
+            })
+            
+            if valores_actualizar:
+                lectura_pt.write(valores_actualizar)
+                _logger.info(f"✅ Lectura de PrintTracker actualizada con correo: {lectura_pt.display_name}")
+            else:
+                _logger.info(f"ℹ️ No hay valores de correo para actualizar")
+            
+            return lectura_pt
+            
+        except Exception as e:
+            _logger.error(f"❌ Error actualizando PrintTracker con correo: {e}")
+            return lectura_pt
     @api.model
     def crear_desde_printtracker(self, meter_record):
         """
         Crea una lectura diaria desde un registro de printtracker.meter
+        CORREGIDO: Actualiza registro de correo si ya existe
         """
         try:
             _logger.info(f"🔄 Creando lectura desde PrintTracker: {meter_record.device_id.serie}")
@@ -248,10 +302,18 @@ class PrintTrackerDailyReading(models.Model):
             ], limit=1)
             
             if existing:
-                _logger.warning(f"⚠️ Ya existe lectura para {serie} en {fecha_lectura}")
-                return existing
+                if existing.fuente_origen == 'correo':
+                    # CASO 1: ACTUALIZAR registro de correo con datos PrintTracker
+                    _logger.info(f"🔄 Actualizando registro de correo con datos PrintTracker: {serie} - {fecha_lectura}")
+                    return self._actualizar_lectura_correo_con_printtracker(existing, meter_record)
+                else:
+                    # CASO 2: Ya existe PrintTracker, no duplicar
+                    _logger.warning(f"⚠️ Ya existe lectura de PrintTracker para {serie} en {fecha_lectura}")
+                    return existing
             
-            # Crear nueva lectura
+            # CASO 3: No existe registro, crear nuevo
+            _logger.info(f"🆕 Creando nuevo registro desde PrintTracker: {serie} - {fecha_lectura}")
+            
             valores = {
                 'fecha': fecha_lectura,
                 'serie': serie,
@@ -273,7 +335,56 @@ class PrintTrackerDailyReading(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error creando lectura desde PrintTracker: {e}")
             return False
-
+    def _actualizar_lectura_correo_con_printtracker(self, lectura_correo, meter_record):
+        """
+        NUEVO: Actualiza registro de correo existente con datos de PrintTracker
+        """
+        try:
+            _logger.info(f"🔄 === ACTUALIZANDO CORREO CON PRINTTRACKER ===")
+            _logger.info(f"📧 Correo actual: BN={lectura_correo.contador_bn}, Color={lectura_correo.contador_color}, Scan={lectura_correo.contador_scan}")
+            _logger.info(f"🔄 PrintTracker: BN={meter_record.black_pages_life}, Color={meter_record.color_pages_life}, Scan={meter_record.scan_pages}")
+            
+            # Preparar valores a actualizar
+            valores_actualizar = {}
+            
+            # REGLA: Si correo tiene 0 en algún contador, usar valor de PrintTracker
+            if lectura_correo.contador_scan == 0 and (meter_record.scan_pages or 0) > 0:
+                valores_actualizar['contador_scan'] = meter_record.scan_pages
+                _logger.info(f"✅ Actualizando Scan: 0 → {meter_record.scan_pages}")
+            
+            if lectura_correo.contador_bn == 0 and (meter_record.black_pages_life or 0) > 0:
+                valores_actualizar['contador_bn'] = meter_record.black_pages_life
+                _logger.info(f"✅ Actualizando BN: 0 → {meter_record.black_pages_life}")
+            
+            if lectura_correo.contador_color == 0 and (meter_record.color_pages_life or 0) > 0:
+                valores_actualizar['contador_color'] = meter_record.color_pages_life
+                _logger.info(f"✅ Actualizando Color: 0 → {meter_record.color_pages_life}")
+            
+            # Siempre agregar contadores que solo tiene PrintTracker
+            if (meter_record.copy_pages or 0) > 0:
+                valores_actualizar['contador_copy'] = meter_record.copy_pages
+            
+            if (meter_record.fax_pages or 0) > 0:
+                valores_actualizar['contador_fax'] = meter_record.fax_pages
+            
+            # Cambiar fuente y agregar referencia PrintTracker
+            valores_actualizar.update({
+                'fuente_origen': 'consolidado',
+                'printtracker_meter_id': meter_record.id,
+                'fecha_procesamiento': fields.Datetime.now()
+            })
+            
+            if valores_actualizar:
+                lectura_correo.write(valores_actualizar)
+                _logger.info(f"✅ Lectura de correo actualizada con PrintTracker: {lectura_correo.display_name}")
+            else:
+                _logger.info(f"ℹ️ No hay valores de PrintTracker para actualizar")
+            
+            return lectura_correo
+            
+        except Exception as e:
+            _logger.error(f"❌ Error actualizando correo con PrintTracker: {e}")
+            return lectura_correo
     @api.model
     def consolidar_lecturas(self, fecha_objetivo=None, serie_objetivo=None):
         """

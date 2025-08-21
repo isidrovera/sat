@@ -150,10 +150,34 @@ class PrintTrackerMeter(models.Model):
 
     @api.model
     def create(self, vals):
-        """Override create para marcar como lectura actual"""
+        """Override create para marcar como lectura actual Y crear lectura diaria"""
         meter = super().create(vals)
         meter._update_current_flag()
+        
+        # NUEVO: Crear o actualizar lectura diaria automáticamente
+        meter._crear_o_actualizar_lectura_diaria()
+        
         return meter
+
+
+    def _crear_o_actualizar_lectura_diaria(self):
+        """
+        NUEVO: Crea o actualiza lectura diaria cuando se crea meter PrintTracker
+        """
+        try:
+            self.ensure_one()
+            _logger.info(f"🔄 Trigger: Creando/actualizando lectura diaria para {self.device_id.serie}")
+            
+            # Llamar al método que ya maneja la lógica de actualización
+            resultado = self.env['printtracker.daily.reading'].crear_desde_printtracker(self)
+            
+            if resultado:
+                _logger.info(f"✅ Lectura diaria procesada automáticamente: {self.device_id.serie}")
+            else:
+                _logger.warning(f"⚠️ No se pudo procesar lectura diaria para: {self.device_id.serie}")
+                
+        except Exception as e:
+            _logger.error(f"❌ Error en trigger de lectura diaria: {e}")
 
     def write(self, vals):
         """Override write para marcar como lectura actual"""
