@@ -662,6 +662,8 @@ class PrintTrackerDailyReading(models.Model):
         """
         Botón para diagnosticar problemas de consolidación
         """
+        self.ensure_one()
+        
         try:
             # Buscar datos
             correos = self.env['printtracker.daily.reading'].search([
@@ -680,7 +682,7 @@ class PrintTrackerDailyReading(models.Model):
                 mensaje += f"Primera fecha correo: {correos[0].fecha}\n"
             
             if meters:
-                mensaje += f"Primera serie PT: {meters[0].device_id.serie}\n"
+                mensaje += f"Primera serie PT: {meters[0].device_id.serie if meters[0].device_id else 'N/A'}\n"
                 mensaje += f"Primera fecha PT: {meters[0].reading_date}\n"
             
             # Buscar coincidencias
@@ -690,7 +692,7 @@ class PrintTrackerDailyReading(models.Model):
             if correos and meters:
                 for correo in correos:
                     for meter in meters:
-                        if correo.serie == meter.device_id.serie:
+                        if meter.device_id and correo.serie == meter.device_id.serie:
                             coincidencias += 1
                             if len(ejemplos_coincidencias) < 3:
                                 ejemplos_coincidencias.append(correo.serie)
@@ -706,7 +708,7 @@ class PrintTrackerDailyReading(models.Model):
                 
                 # Buscar meter que coincida con el correo
                 for meter in meters:
-                    if meter.device_id.serie == correo_test.serie:
+                    if meter.device_id and meter.device_id.serie == correo_test.serie:
                         meter_test = meter
                         break
                 
@@ -714,11 +716,11 @@ class PrintTrackerDailyReading(models.Model):
                     mensaje += f"\n=== TEST ACTUALIZACIÓN ===\n"
                     mensaje += f"Probando actualizar serie: {correo_test.serie}\n"
                     mensaje += f"Correo Scan antes: {correo_test.contador_scan}\n"
-                    mensaje += f"PrintTracker Scan: {meter_test.scan_pages}\n"
+                    mensaje += f"PrintTracker Scan: {meter_test.scan_pages or 0}\n"
                     
                     try:
                         # Intentar actualización
-                        resultado = correo_test._actualizar_lectura_correo_con_printtracker(meter_test)
+                        resultado = self._actualizar_lectura_correo_con_printtracker(correo_test, meter_test)
                         mensaje += f"Resultado actualización: {'Éxito' if resultado else 'Falló'}\n"
                         mensaje += f"Correo Scan después: {correo_test.contador_scan}\n"
                         mensaje += f"Fuente después: {correo_test.fuente_origen}\n"
@@ -745,7 +747,6 @@ class PrintTrackerDailyReading(models.Model):
                     'type': 'danger'
                 }
             }
-
     def action_view_equipo(self):
         """Acción para ver el equipo relacionado"""
         self.ensure_one()
