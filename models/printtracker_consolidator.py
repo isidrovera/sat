@@ -170,9 +170,12 @@ class PrintTrackerConsolidator(models.TransientModel):
                         if existing_reading.fuente_origen == 'printtracker':
                             # CASO 1: Actualizar registro de PrintTracker con correo
                             log_lines.append(f"🔄 Actualizando PrintTracker con correo: {registro.serie_detectada} - {fecha_lectura}")
-                            updated_reading = self.env['printtracker.daily.reading']._actualizar_lectura_printtracker_con_correo(
+                            
+                            # CORREGIDO: Llamar método en la instancia, no en la clase
+                            updated_reading = existing_reading._actualizar_lectura_printtracker_con_correo(
                                 existing_reading, registro
                             )
+                            
                             if updated_reading:
                                 log_lines.append(f"✅ PrintTracker actualizado con correo: {registro.serie_detectada}")
                                 procesados += 1
@@ -214,6 +217,9 @@ class PrintTrackerConsolidator(models.TransientModel):
                     
                 except Exception as e:
                     log_lines.append(f"❌ Error procesando {registro.serie_detectada}: {e}")
+                    _logger.error(f"❌ Error detallado procesando contador {registro.id}: {e}")
+                    import traceback
+                    _logger.error(f"Traceback: {traceback.format_exc()}")
                     self.errores_encontrados = (self.errores_encontrados or 0) + 1
             
             log_lines.append(f"✅ Procesados {procesados} registros de contador automático")
@@ -226,6 +232,8 @@ class PrintTrackerConsolidator(models.TransientModel):
         except Exception as e:
             error_msg = f"❌ Error procesando contador automático: {e}"
             _logger.error(error_msg)
+            import traceback
+            _logger.error(f"Traceback completo: {traceback.format_exc()}")
             return {
                 'procesados': 0,
                 'log': [error_msg]
@@ -269,9 +277,12 @@ class PrintTrackerConsolidator(models.TransientModel):
                         if existing_reading.fuente_origen == 'correo':
                             # CASO 1: Actualizar registro de correo con PrintTracker
                             log_lines.append(f"📧 Actualizando correo con PrintTracker: {serie} - {fecha_lectura}")
-                            updated_reading = self.env['printtracker.daily.reading']._actualizar_lectura_correo_con_printtracker(
+                            
+                            # CORREGIDO: Llamar método en la instancia, no en la clase
+                            updated_reading = existing_reading._actualizar_lectura_correo_con_printtracker(
                                 existing_reading, meter
                             )
+                            
                             if updated_reading:
                                 log_lines.append(f"✅ Correo actualizado con PrintTracker: {serie}")
                                 procesados += 1
@@ -315,6 +326,9 @@ class PrintTrackerConsolidator(models.TransientModel):
                     
                 except Exception as e:
                     log_lines.append(f"❌ Error procesando {meter.device_id.serie}: {e}")
+                    _logger.error(f"❌ Error detallado procesando meter {meter.id}: {e}")
+                    import traceback
+                    _logger.error(f"Traceback: {traceback.format_exc()}")
                     self.errores_encontrados = (self.errores_encontrados or 0) + 1
             
             log_lines.append(f"✅ Procesados {procesados} registros de PrintTracker")
@@ -327,6 +341,8 @@ class PrintTrackerConsolidator(models.TransientModel):
         except Exception as e:
             error_msg = f"❌ Error procesando PrintTracker: {e}"
             _logger.error(error_msg)
+            import traceback
+            _logger.error(f"Traceback completo: {traceback.format_exc()}")
             return {
                 'procesados': 0,
                 'log': [error_msg]
