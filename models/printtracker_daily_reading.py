@@ -94,7 +94,7 @@ class PrintTrackerDailyReading(models.Model):
         ('valid_date', 'CHECK(fecha <= CURRENT_DATE)', 
          'La fecha no puede ser futura')
     ]
-
+    
     @api.depends('serie')
     def _compute_equipo_id(self):
         """Busca el equipo por serie"""
@@ -657,6 +657,94 @@ class PrintTrackerDailyReading(models.Model):
                 'type': 'success' if success else 'danger'
             }
         }
+
+    def action_diagnostico_consolidacion(self):
+        """
+        Botón para diagnosticar problemas de consolidación
+        """
+        try:
+            # Buscar datos
+            correos = self.env['printtracker.daily.reading'].search([
+                ('fuente_origen', '=', 'correo')
+            ])
+            
+            meters = self.env['printtracker.meter'].search([])
+            
+            # Crear mensaje de diagnóstico
+            mensaje = "=== DIAGNÓSTICO CONSOLIDACIÓN ===\n"
+            mensaje += f"Total correos: {len(correos)}\n"
+            mensaje += f"Total PrintTracker: {len(meters)}\n"
+            
+            if correos:
+                mensaje += f"Primera serie correo: {correos[0].serie}\n"
+                mensaje += f"Primera fecha correo: {correos[0].fecha}\n"
+            
+            if meters:
+                mensaje += f"Primera serie PT: {meters[0].device_id.serie}\n"
+                mensaje += f"Primera fecha PT: {meters[0].reading_date}\n"
+            
+            # Buscar coincidencias
+            coincidencias = 0
+            ejemplos_coincidencias = []
+            
+            if correos and meters:
+                for correo in correos:
+                    for meter in meters:
+                        if correo.serie == meter.device_id.serie:
+                            coincidencias += 1
+                            if len(ejemplos_coincidencias) < 3:
+                                ejemplos_coincidencias.append(correo.serie)
+                            break
+            
+            mensaje += f"Series que coinciden: {coincidencias}\n"
+            mensaje += f"Ejemplos: {ejemplos_coincidencias}\n"
+            
+            # TEST: Intentar actualización manual
+            if correos and meters:
+                correo_test = correos[0]
+                meter_test = None
+                
+                # Buscar meter que coincida con el correo
+                for meter in meters:
+                    if meter.device_id.serie == correo_test.serie:
+                        meter_test = meter
+                        break
+                
+                if meter_test:
+                    mensaje += f"\n=== TEST ACTUALIZACIÓN ===\n"
+                    mensaje += f"Probando actualizar serie: {correo_test.serie}\n"
+                    mensaje += f"Correo Scan antes: {correo_test.contador_scan}\n"
+                    mensaje += f"PrintTracker Scan: {meter_test.scan_pages}\n"
+                    
+                    try:
+                        # Intentar actualización
+                        resultado = correo_test._actualizar_lectura_correo_con_printtracker(meter_test)
+                        mensaje += f"Resultado actualización: {'Éxito' if resultado else 'Falló'}\n"
+                        mensaje += f"Correo Scan después: {correo_test.contador_scan}\n"
+                        mensaje += f"Fuente después: {correo_test.fuente_origen}\n"
+                    except Exception as e:
+                        mensaje += f"Error en actualización: {str(e)}\n"
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Diagnóstico Consolidación',
+                    'message': mensaje,
+                    'type': 'info',
+                    'sticky': True
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error en diagnóstico: {str(e)}',
+                    'type': 'danger'
+                }
+            }
 
     def action_view_equipo(self):
         """Acción para ver el equipo relacionado"""
