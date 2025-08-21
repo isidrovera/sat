@@ -337,7 +337,8 @@ class PrintTrackerDailyReading(models.Model):
             return False
     def _actualizar_lectura_correo_con_printtracker(self, lectura_correo, meter_record):
         """
-        NUEVO: Actualiza registro de correo existente con datos de PrintTracker
+        CORREGIDO: Actualiza registro de correo existente con datos de PrintTracker
+        NUEVA LÓGICA: PrintTracker SIEMPRE gana para scan/copy/fax
         """
         try:
             _logger.info(f"🔄 === ACTUALIZANDO CORREO CON PRINTTRACKER ===")
@@ -347,43 +348,58 @@ class PrintTrackerDailyReading(models.Model):
             # Preparar valores a actualizar
             valores_actualizar = {}
             
-            # REGLA: Si correo tiene 0 en algún contador, usar valor de PrintTracker
-            if lectura_correo.contador_scan == 0 and (meter_record.scan_pages or 0) > 0:
+            # NUEVA REGLA 1: PrintTracker SIEMPRE gana para scan (correo no lo detecta bien)
+            if (meter_record.scan_pages or 0) > 0:
                 valores_actualizar['contador_scan'] = meter_record.scan_pages
-                _logger.info(f"✅ Actualizando Scan: 0 → {meter_record.scan_pages}")
+                _logger.info(f"✅ Actualizando Scan (PrintTracker gana): {lectura_correo.contador_scan} → {meter_record.scan_pages}")
+            elif lectura_correo.contador_scan == 0:
+                # Si PrintTracker tampoco tiene scan, mantener 0 pero registrarlo
+                _logger.info(f"ℹ️ Ambos tienen Scan=0, manteniendo 0")
             
-            if lectura_correo.contador_bn == 0 and (meter_record.black_pages_life or 0) > 0:
-                valores_actualizar['contador_bn'] = meter_record.black_pages_life
-                _logger.info(f"✅ Actualizando BN: 0 → {meter_record.black_pages_life}")
-            
-            if lectura_correo.contador_color == 0 and (meter_record.color_pages_life or 0) > 0:
-                valores_actualizar['contador_color'] = meter_record.color_pages_life
-                _logger.info(f"✅ Actualizando Color: 0 → {meter_record.color_pages_life}")
-            
-            # Siempre agregar contadores que solo tiene PrintTracker
+            # NUEVA REGLA 2: PrintTracker SIEMPRE gana para copy/fax (correo no los tiene)
             if (meter_record.copy_pages or 0) > 0:
                 valores_actualizar['contador_copy'] = meter_record.copy_pages
+                _logger.info(f"✅ Agregando Copy: {meter_record.copy_pages}")
             
             if (meter_record.fax_pages or 0) > 0:
                 valores_actualizar['contador_fax'] = meter_record.fax_pages
+                _logger.info(f"✅ Agregando Fax: {meter_record.fax_pages}")
             
-            # Cambiar fuente y agregar referencia PrintTracker
+            # REGLA 3: Para BN/Color, usar correo SI tiene valores, sino PrintTracker
+            if lectura_correo.contador_bn == 0 and (meter_record.black_pages_life or 0) > 0:
+                valores_actualizar['contador_bn'] = meter_record.black_pages_life
+                _logger.info(f"✅ Actualizando BN (correo=0): 0 → {meter_record.black_pages_life}")
+            elif lectura_correo.contador_bn > 0 and (meter_record.black_pages_life or 0) > lectura_correo.contador_bn:
+                # Si PrintTracker tiene valor mayor, usarlo
+                valores_actualizar['contador_bn'] = meter_record.black_pages_life
+                _logger.info(f"✅ Actualizando BN (PT mayor): {lectura_correo.contador_bn} → {meter_record.black_pages_life}")
+            
+            if lectura_correo.contador_color == 0 and (meter_record.color_pages_life or 0) > 0:
+                valores_actualizar['contador_color'] = meter_record.color_pages_life
+                _logger.info(f"✅ Actualizando Color (correo=0): 0 → {meter_record.color_pages_life}")
+            elif lectura_correo.contador_color > 0 and (meter_record.color_pages_life or 0) > lectura_correo.contador_color:
+                # Si PrintTracker tiene valor mayor, usarlo
+                valores_actualizar['contador_color'] = meter_record.color_pages_life
+                _logger.info(f"✅ Actualizando Color (PT mayor): {lectura_correo.contador_color} → {meter_record.color_pages_life}")
+            
+            # SIEMPRE cambiar fuente y agregar referencia PrintTracker
             valores_actualizar.update({
                 'fuente_origen': 'consolidado',
                 'printtracker_meter_id': meter_record.id,
                 'fecha_procesamiento': fields.Datetime.now()
             })
             
-            if valores_actualizar:
-                lectura_correo.write(valores_actualizar)
-                _logger.info(f"✅ Lectura de correo actualizada con PrintTracker: {lectura_correo.display_name}")
-            else:
-                _logger.info(f"ℹ️ No hay valores de PrintTracker para actualizar")
+            # SIEMPRE aplicar actualización (aunque sea solo cambiar fuente)
+            lectura_correo.write(valores_actualizar)
+            _logger.info(f"✅ Lectura de correo actualizada con PrintTracker: {lectura_correo.display_name}")
+            _logger.info(f"📊 Valores finales: BN={lectura_correo.contador_bn}, Color={lectura_correo.contador_color}, Scan={lectura_correo.contador_scan}")
             
             return lectura_correo
             
         except Exception as e:
             _logger.error(f"❌ Error actualizando correo con PrintTracker: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
             return lectura_correo
     @api.model
     def consolidar_lecturas(self, fecha_objetivo=None, serie_objetivo=None):
