@@ -173,9 +173,9 @@ class PrintTrackerConsolidator(models.TransientModel):
                             
                             # CORREGIDO: Llamar método en la instancia, no en la clase
                             updated_reading = existing_reading._actualizar_lectura_printtracker_con_correo(
-                                existing_reading, registro
+                                registro
                             )
-                            
+                                                        
                             if updated_reading:
                                 log_lines.append(f"✅ PrintTracker actualizado con correo: {registro.serie_detectada}")
                                 procesados += 1
@@ -278,9 +278,9 @@ class PrintTrackerConsolidator(models.TransientModel):
                             # CASO 1: Actualizar registro de correo con PrintTracker
                             log_lines.append(f"📧 Actualizando correo con PrintTracker: {serie} - {fecha_lectura}")
                             
-                            # CORREGIDO: Llamar método en la instancia, no en la clase
+                            # CORREGIDO: Pasar parámetros correctos (lectura_correo, meter_record)
                             updated_reading = existing_reading._actualizar_lectura_correo_con_printtracker(
-                                existing_reading, meter
+                                meter
                             )
                             
                             if updated_reading:
