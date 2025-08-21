@@ -136,6 +136,7 @@ class PrintTrackerConsolidator(models.TransientModel):
     def _procesar_contador_automatico(self):
         """
         Procesa registros nuevos de contador.automatico
+        CORREGIDO: Actualiza registros de PrintTracker existentes
         """
         try:
             log_lines = []
@@ -159,37 +160,57 @@ class PrintTrackerConsolidator(models.TransientModel):
                 try:
                     fecha_lectura = registro.fecha_procesamiento.date()
                     
-                    # Verificar si ya existe lectura diaria
+                    # CORREGIDO: Buscar CUALQUIER lectura existente (no solo correo)
                     existing_reading = self.env['printtracker.daily.reading'].search([
                         ('fecha', '=', fecha_lectura),
-                        ('serie', '=', registro.serie_detectada),
-                        ('fuente_origen', '=', 'correo')
+                        ('serie', '=', registro.serie_detectada)
                     ], limit=1)
                     
-                    if existing_reading and not self.forzar_reproceso:
-                        log_lines.append(f"⏭️ Ya existe lectura de correo para {registro.serie_detectada} - {fecha_lectura}")
-                        continue
-                    
-                    # Crear o actualizar lectura diaria
-                    if existing_reading and self.forzar_reproceso:
-                        # Actualizar existente
-                        existing_reading.write({
-                            'contador_bn': registro.contador_bn_detectado or 0,
-                            'contador_color': registro.contador_color_detectado or 0,
-                            'contador_scan': registro.contador_scan_detectado or 0,
-                            'fecha_procesamiento': fields.Datetime.now()
-                        })
-                        log_lines.append(f"📝 Actualizado: {registro.serie_detectada} - {fecha_lectura}")
-                    else:
-                        # Crear nuevo
-                        nueva_lectura = self.env['printtracker.daily.reading'].crear_desde_contador_automatico(registro)
-                        if nueva_lectura:
-                            log_lines.append(f"🆕 Creado: {registro.serie_detectada} - {fecha_lectura}")
-                        else:
-                            log_lines.append(f"❌ Error creando lectura para {registro.serie_detectada}")
+                    if existing_reading:
+                        if existing_reading.fuente_origen == 'printtracker':
+                            # CASO 1: Actualizar registro de PrintTracker con correo
+                            log_lines.append(f"🔄 Actualizando PrintTracker con correo: {registro.serie_detectada} - {fecha_lectura}")
+                            updated_reading = self.env['printtracker.daily.reading']._actualizar_lectura_printtracker_con_correo(
+                                existing_reading, registro
+                            )
+                            if updated_reading:
+                                log_lines.append(f"✅ PrintTracker actualizado con correo: {registro.serie_detectada}")
+                                procesados += 1
+                            else:
+                                log_lines.append(f"❌ Error actualizando PrintTracker: {registro.serie_detectada}")
                             continue
+                            
+                        elif existing_reading.fuente_origen == 'correo' and not self.forzar_reproceso:
+                            # CASO 2: Ya existe correo, saltar
+                            log_lines.append(f"⏭️ Ya existe lectura de correo para {registro.serie_detectada} - {fecha_lectura}")
+                            continue
+                            
+                        elif existing_reading.fuente_origen == 'correo' and self.forzar_reproceso:
+                            # CASO 3: Forzar actualización de correo
+                            existing_reading.write({
+                                'contador_bn': registro.contador_bn_detectado or 0,
+                                'contador_color': registro.contador_color_detectado or 0,
+                                'contador_scan': registro.contador_scan_detectado or 0,
+                                'fecha_procesamiento': fields.Datetime.now()
+                            })
+                            log_lines.append(f"📝 Actualizado correo: {registro.serie_detectada} - {fecha_lectura}")
+                            procesados += 1
+                            continue
+                            
+                        elif existing_reading.fuente_origen == 'consolidado':
+                            # CASO 4: Ya está consolidado, saltar salvo que se fuerce
+                            if not self.forzar_reproceso:
+                                log_lines.append(f"⏭️ Ya consolidado: {registro.serie_detectada} - {fecha_lectura}")
+                                continue
                     
-                    procesados += 1
+                    # CASO 5: No existe registro, crear nuevo desde correo
+                    log_lines.append(f"🆕 Creando nuevo desde correo: {registro.serie_detectada} - {fecha_lectura}")
+                    nueva_lectura = self.env['printtracker.daily.reading'].crear_desde_contador_automatico(registro)
+                    if nueva_lectura:
+                        log_lines.append(f"✅ Creado desde correo: {registro.serie_detectada}")
+                        procesados += 1
+                    else:
+                        log_lines.append(f"❌ Error creando lectura para {registro.serie_detectada}")
                     
                 except Exception as e:
                     log_lines.append(f"❌ Error procesando {registro.serie_detectada}: {e}")
@@ -213,6 +234,7 @@ class PrintTrackerConsolidator(models.TransientModel):
     def _procesar_printtracker_meters(self):
         """
         Procesa registros nuevos de printtracker.meter
+        CORREGIDO: Actualiza registros de correo existentes
         """
         try:
             log_lines = []
@@ -237,39 +259,59 @@ class PrintTrackerConsolidator(models.TransientModel):
                     fecha_lectura = meter.reading_date.date()
                     serie = meter.device_id.serie
                     
-                    # Verificar si ya existe lectura diaria
+                    # CORREGIDO: Buscar CUALQUIER lectura existente (no solo PrintTracker)
                     existing_reading = self.env['printtracker.daily.reading'].search([
                         ('fecha', '=', fecha_lectura),
-                        ('serie', '=', serie),
-                        ('fuente_origen', '=', 'printtracker')
+                        ('serie', '=', serie)
                     ], limit=1)
                     
-                    if existing_reading and not self.forzar_reproceso:
-                        log_lines.append(f"⏭️ Ya existe lectura de PrintTracker para {serie} - {fecha_lectura}")
-                        continue
-                    
-                    # Crear o actualizar lectura diaria
-                    if existing_reading and self.forzar_reproceso:
-                        # Actualizar existente
-                        existing_reading.write({
-                            'contador_bn': meter.black_pages_life or 0,
-                            'contador_color': meter.color_pages_life or 0,
-                            'contador_scan': meter.scan_pages or 0,
-                            'contador_copy': meter.copy_pages or 0,
-                            'contador_fax': meter.fax_pages or 0,
-                            'fecha_procesamiento': fields.Datetime.now()
-                        })
-                        log_lines.append(f"📝 Actualizado: {serie} - {fecha_lectura}")
-                    else:
-                        # Crear nuevo
-                        nueva_lectura = self.env['printtracker.daily.reading'].crear_desde_printtracker(meter)
-                        if nueva_lectura:
-                            log_lines.append(f"🆕 Creado: {serie} - {fecha_lectura}")
-                        else:
-                            log_lines.append(f"❌ Error creando lectura para {serie}")
+                    if existing_reading:
+                        if existing_reading.fuente_origen == 'correo':
+                            # CASO 1: Actualizar registro de correo con PrintTracker
+                            log_lines.append(f"📧 Actualizando correo con PrintTracker: {serie} - {fecha_lectura}")
+                            updated_reading = self.env['printtracker.daily.reading']._actualizar_lectura_correo_con_printtracker(
+                                existing_reading, meter
+                            )
+                            if updated_reading:
+                                log_lines.append(f"✅ Correo actualizado con PrintTracker: {serie}")
+                                procesados += 1
+                            else:
+                                log_lines.append(f"❌ Error actualizando correo: {serie}")
                             continue
+                            
+                        elif existing_reading.fuente_origen == 'printtracker' and not self.forzar_reproceso:
+                            # CASO 2: Ya existe PrintTracker, saltar
+                            log_lines.append(f"⏭️ Ya existe lectura de PrintTracker para {serie} - {fecha_lectura}")
+                            continue
+                            
+                        elif existing_reading.fuente_origen == 'printtracker' and self.forzar_reproceso:
+                            # CASO 3: Forzar actualización de PrintTracker
+                            existing_reading.write({
+                                'contador_bn': meter.black_pages_life or 0,
+                                'contador_color': meter.color_pages_life or 0,
+                                'contador_scan': meter.scan_pages or 0,
+                                'contador_copy': meter.copy_pages or 0,
+                                'contador_fax': meter.fax_pages or 0,
+                                'fecha_procesamiento': fields.Datetime.now()
+                            })
+                            log_lines.append(f"📝 Actualizado PrintTracker: {serie} - {fecha_lectura}")
+                            procesados += 1
+                            continue
+                            
+                        elif existing_reading.fuente_origen == 'consolidado':
+                            # CASO 4: Ya está consolidado, saltar salvo que se fuerce
+                            if not self.forzar_reproceso:
+                                log_lines.append(f"⏭️ Ya consolidado: {serie} - {fecha_lectura}")
+                                continue
                     
-                    procesados += 1
+                    # CASO 5: No existe registro, crear nuevo desde PrintTracker
+                    log_lines.append(f"🆕 Creando nuevo desde PrintTracker: {serie} - {fecha_lectura}")
+                    nueva_lectura = self.env['printtracker.daily.reading'].crear_desde_printtracker(meter)
+                    if nueva_lectura:
+                        log_lines.append(f"✅ Creado desde PrintTracker: {serie}")
+                        procesados += 1
+                    else:
+                        log_lines.append(f"❌ Error creando lectura para {serie}")
                     
                 except Exception as e:
                     log_lines.append(f"❌ Error procesando {meter.device_id.serie}: {e}")
