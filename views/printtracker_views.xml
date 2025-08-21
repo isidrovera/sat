@@ -700,7 +700,7 @@
                             class="btn-secondary"
                             invisible="not equipo_id"/>
                     <button name="action_diagnostico_consolidacion" 
-                            type="object" 
+                            type="object"
                             string="Debug" 
                             class="btn-secondary"
                            />
