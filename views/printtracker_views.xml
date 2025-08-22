@@ -191,7 +191,64 @@
             </list>
         </field>
     </record>
-    
+    <record id="view_printtracker_meter_search" model="ir.ui.view">
+    <field name="name">printtracker.meter.search</field>
+    <field name="model">printtracker.meter</field>
+    <field name="arch" type="xml">
+        <search string="Buscar lecturas de contadores">
+            <!-- Texto -->
+            <field name="device_id" string="Equipo"/>
+
+            <!-- Rango de fechas (usa widgets nativos de Odoo: Hoy, Esta semana, etc.) -->
+            <filter name="by_reading_date" string="Fecha de lectura" date="reading_date"/>
+
+            <!-- Filtros rápidos -->
+            <separator/>
+            <filter name="inc_positive" string="Incremento &gt; 0"
+                    domain="[('pages_increment', '&gt;', 0)]"/>
+            <filter name="inc_zero" string="Sin incremento"
+                    domain="[('pages_increment', '=', 0)]"/>
+            <filter name="only_current" string="Solo actuales"
+                    domain="[('is_current', '=', True)]"/>
+
+            <!-- Estado de consola (genéricos para no depender de valores exactos) -->
+            <separator/>
+            <filter name="with_console_status" string="Con estado de consola"
+                    domain="[('console_status','!=',False),('console_status','!=','')]"/>
+            <filter name="without_console_status" string="Sin estado de consola"
+                    domain="['|',('console_status','=',False),('console_status','=','')]"/>
+
+            <!-- Origen de sincronización disponible para búsqueda libre -->
+            <field name="sync_source" string="Origen"/>
+
+            <!-- Agrupar por -->
+            <group expand="0" string="Agrupar por">
+                <filter name="grp_reading_day" string="Fecha (día)"
+                        context="{'group_by':'reading_date'}"/>
+                <filter name="grp_reading_week" string="Fecha (semana)"
+                        context="{'group_by':'reading_date:week'}"/>
+                <filter name="grp_reading_month" string="Fecha (mes)"
+                        context="{'group_by':'reading_date:month'}"/>
+
+                <filter name="grp_device" string="Equipo"
+                        context="{'group_by':'device_id'}"/>
+                <filter name="grp_sync_source" string="Origen"
+                        context="{'group_by':'sync_source'}"/>
+                <filter name="grp_console_status" string="Estado de consola"
+                        context="{'group_by':'console_status'}"/>
+                <filter name="grp_is_current" string="Actual"
+                        context="{'group_by':'is_current'}"/>
+            </group>
+
+            <!-- Favoritos / atajos -->
+            <separator/>
+            <filter name="fav_latest_per_device" string="Últimas por equipo"
+                    domain="[('is_current','=',True)]"
+                    context="{'group_by':'device_id'}"/>
+        </search>
+    </field>
+</record>
+
     <!-- Vista Form - PrintTracker Meter CORREGIDA -->
     <record id="view_printtracker_meter_form" model="ir.ui.view">
         <field name="name">printtracker.meter.form</field>
@@ -833,6 +890,82 @@
         </field>
     </record>
 
+    <!-- Search view -->
+<record id="view_printtracker_daily_reading_search" model="ir.ui.view">
+    <field name="name">printtracker.daily.reading.search</field>
+    <field name="model">printtracker.daily.reading</field>
+    <field name="arch" type="xml">
+        <search string="Buscar lecturas">
+            <!-- Búsqueda por texto -->
+            <field name="serie"/>
+            <field name="cliente_nombre" string="Cliente"/>
+
+            <!-- Filtro de fecha (widget nativo con rangos: Hoy, Esta semana, Este mes, etc.) -->
+            <filter name="fecha_filter" string="Fecha" date="fecha"/>
+
+            <!-- Filtros rápidos por estado -->
+            <separator/>
+            <filter name="estado_aplicado" string="Aplicado"
+                    domain="[('estado', '=', 'aplicado')]"/>
+            <filter name="estado_validado" string="Validado"
+                    domain="[('estado', '=', 'validado')]"/>
+            <filter name="estado_error" string="Con error"
+                    domain="[('estado', '=', 'error')]"/>
+
+            <!-- Filtros por fuente de origen -->
+            <separator/>
+            <filter name="origen_consolidado" string="Consolidado"
+                    domain="[('fuente_origen', '=', 'consolidado')]"/>
+            <filter name="origen_printtracker" string="PrintTracker"
+                    domain="[('fuente_origen', '=', 'printtracker')]"/>
+            <filter name="origen_correo" string="Correo"
+                    domain="[('fuente_origen', '=', 'correo')]"/>
+
+            <!-- Filtros por incrementos -->
+            <separator/>
+            <filter name="inc_positivos" string="Incremento &gt; 0"
+                    domain="[('incremento_total', '&gt;', 0)]"/>
+            <filter name="inc_cero" string="Sin incremento"
+                    domain="[('incremento_total', '=', 0)]"/>
+            <filter name="inc_altos" string="Incremento &gt; 1000"
+                    domain="[('incremento_total', '&gt;', 1000)]"/>
+
+            <!-- Conflictos -->
+            <separator/>
+            <filter name="con_conflicto" string="Con conflicto"
+                    domain="[('conflicto_detectado', '=', True)]"/>
+
+            <!-- Agrupar por -->
+            <group expand="0" string="Agrupar por">
+                <!-- Fecha (día / semana / mes) -->
+                <filter name="grp_fecha_dia" string="Fecha (día)"
+                        context="{'group_by': 'fecha'}"/>
+                <filter name="grp_fecha_semana" string="Fecha (semana)"
+                        context="{'group_by': 'fecha:week'}"/>
+                <filter name="grp_fecha_mes" string="Fecha (mes)"
+                        context="{'group_by': 'fecha:month'}"/>
+
+                <!-- Otros campos -->
+                <filter name="grp_cliente" string="Cliente"
+                        context="{'group_by': 'cliente_nombre'}"/>
+                <filter name="grp_serie" string="Serie"
+                        context="{'group_by': 'serie'}"/>
+                <filter name="grp_fuente" string="Fuente"
+                        context="{'group_by': 'fuente_origen'}"/>
+                <filter name="grp_estado" string="Estado"
+                        context="{'group_by': 'estado'}"/>
+            </group>
+
+            <!-- Favoritos (guardados) -->
+            <separator/>
+            <filter name="fav_mes_actual" string="Mes actual · agrupado"
+                    domain="[]"
+                    context="{'group_by': 'fecha:month'}"/>
+        </search>
+    </field>
+</record>
+
+
     <!-- =============================================== -->
     <!-- PRINTTRACKER ALERT - ALERTAS -->
     <!-- =============================================== -->
@@ -1093,6 +1226,61 @@
             </form>
         </field>
     </record>
+    <record id="view_printtracker_consolidator_search" model="ir.ui.view">
+    <field name="name">printtracker.consolidator.search</field>
+    <field name="model">printtracker.consolidator</field>
+    <field name="arch" type="xml">
+        <search string="Buscar consolidaciones">
+            <!-- Texto -->
+            <field name="serie_especifica" string="Serie"/>
+
+            <!-- Fechas: usar fecha_inicio como ancla de rangos (Hoy, Esta semana, etc.) -->
+            <filter name="rango_fechas" string="Fecha inicio" date="fecha_inicio"/>
+
+            <!-- Banderas -->
+            <separator/>
+            <filter name="forzadas" string="Forzadas" domain="[('forzar_reproceso', '=', True)]"/>
+            <filter name="con_log" string="Con log" domain="[('log_procesamiento', '!=', False), ('log_procesamiento', '!=', '')]"/>
+
+            <!-- Resultados / métricas -->
+            <separator/>
+            <filter name="tuvo_reg_auto" string="Contador Automático &gt; 0"
+                    domain="[('registros_contador_automatico', '>', 0)]"/>
+            <filter name="tuvo_reg_pt" string="PrintTracker &gt; 0"
+                    domain="[('registros_printtracker', '>', 0)]"/>
+            <filter name="tuvo_lecturas" string="Lecturas consolidadas &gt; 0"
+                    domain="[('lecturas_consolidadas', '>', 0)]"/>
+            <filter name="tuvo_conflictos" string="Conflictos resueltos &gt; 0"
+                    domain="[('conflictos_resueltos', '>', 0)]"/>
+            <filter name="actualizo_eq" string="Equipos actualizados &gt; 0"
+                    domain="[('equipos_actualizados', '>', 0)]"/>
+            <filter name="con_errores" string="Con errores"
+                    domain="[('errores_encontrados', '>', 0)]"/>
+
+            <!-- Atajos de fecha por fin (opcional) -->
+            <separator/>
+            <filter name="fin_mes_actual" string="Fin: mes actual" domain="[]"
+                    context="{'search_default_last_month': 0, 'group_by': 'fecha_fin:month'}"/>
+            <filter name="fin_semana" string="Fin: esta semana" domain="[]"
+                    context="{'group_by': 'fecha_fin:week'}"/>
+
+            <!-- Agrupar por -->
+            <group expand="0" string="Agrupar por">
+                <filter name="grp_inicio_dia" string="Inicio (día)" context="{'group_by': 'fecha_inicio'}"/>
+                <filter name="grp_inicio_semana" string="Inicio (semana)" context="{'group_by': 'fecha_inicio:week'}"/>
+                <filter name="grp_inicio_mes" string="Inicio (mes)" context="{'group_by': 'fecha_inicio:month'}"/>
+                <filter name="grp_fin_mes" string="Fin (mes)" context="{'group_by': 'fecha_fin:month'}"/>
+                <filter name="grp_serie" string="Serie" context="{'group_by': 'serie_especifica'}"/>
+                <filter name="grp_forzado" string="Forzado" context="{'group_by': 'forzar_reproceso'}"/>
+            </group>
+
+            <!-- Favoritos / vistas guardadas -->
+            <separator/>
+            <filter name="favorito_mes_actual" string="Este mes (inicio) · agrupado"
+                    domain="[]" context="{'group_by': 'fecha_inicio:month'}"/>
+        </search>
+    </field>
+</record>
 
     <!-- =============================================== -->
     <!-- PRINTTRACKER ALERT MANAGER - GESTOR ALERTAS -->
