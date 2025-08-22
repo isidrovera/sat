@@ -645,45 +645,45 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'target': 'main',
         }
     # Campo computed para controlar la visibilidad del botón
-mostrar_boton_contadores = fields.Boolean(
-    string='Mostrar Botón Contadores',
-    compute='_compute_mostrar_boton_contadores',
-    store=False,
-    help='Controla si se muestra el botón para cargar contadores'
-)
+    mostrar_boton_contadores = fields.Boolean(
+        string='Mostrar Botón Contadores',
+        compute='_compute_mostrar_boton_contadores',
+        store=False,
+        help='Controla si se muestra el botón para cargar contadores'
+    )
 
-@api.depends('estado', 'agenda', 'product_alquiler.fecha_ultima_actualizacion', 
-             'product_alquiler.contador_bn', 'product_alquiler.contador_color', 
-             'product_alquiler.contador_scan')
-def _compute_mostrar_boton_contadores(self):
-    """
-    Computed field para mostrar/ocultar el botón de cargar contadores
-    """
-    for record in self:
-        mostrar = False
-        
-        # Solo mostrar si está en proceso
-        if record.estado == 'proceso':
-            # Verificar que existe unidad y fechas
-            if (record.product_alquiler and 
-                record.agenda and 
-                record.product_alquiler.fecha_ultima_actualizacion):
-                
-                # Verificar que las fechas coinciden
-                fecha_agenda = record.agenda.date()
-                fecha_actualizacion = record.product_alquiler.fecha_ultima_actualizacion.date()
-                
-                if fecha_agenda == fecha_actualizacion:
-                    # Verificar que hay contadores disponibles
-                    unidad = record.product_alquiler
-                    tiene_contadores = (
-                        unidad.contador_bn > 0 or 
-                        unidad.contador_color > 0 or 
-                        unidad.contador_scan > 0
-                    )
-                    mostrar = tiene_contadores
-        
-        record.mostrar_boton_contadores = mostrar
+    @api.depends('estado', 'agenda', 'product_alquiler.fecha_ultima_actualizacion', 
+                'product_alquiler.contador_bn', 'product_alquiler.contador_color', 
+                'product_alquiler.contador_scan')
+    def _compute_mostrar_boton_contadores(self):
+        """
+        Computed field para mostrar/ocultar el botón de cargar contadores
+        """
+        for record in self:
+            mostrar = False
+            
+            # Solo mostrar si está en proceso
+            if record.estado == 'proceso':
+                # Verificar que existe unidad y fechas
+                if (record.product_alquiler and 
+                    record.agenda and 
+                    record.product_alquiler.fecha_ultima_actualizacion):
+                    
+                    # Verificar que las fechas coinciden
+                    fecha_agenda = record.agenda.date()
+                    fecha_actualizacion = record.product_alquiler.fecha_ultima_actualizacion.date()
+                    
+                    if fecha_agenda == fecha_actualizacion:
+                        # Verificar que hay contadores disponibles
+                        unidad = record.product_alquiler
+                        tiene_contadores = (
+                            unidad.contador_bn > 0 or 
+                            unidad.contador_color > 0 or 
+                            unidad.contador_scan > 0
+                        )
+                        mostrar = tiene_contadores
+            
+            record.mostrar_boton_contadores = mostrar
 
     def action_cargar_contadores(self):
         """
