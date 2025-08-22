@@ -5,12 +5,12 @@ from datetime import datetime, timedelta, date
 _logger = logging.getLogger(__name__)
 
 
-class PrintTrackerConsolidator(models.TransientModel):
-    _name = 'printtracker.consolidator'
-    _description = 'Consolidador de Datos PrintTracker'
+class PrintTrackerProcessor(models.TransientModel):
+    _name = 'printtracker.processor'
+    _description = 'Procesador de Datos PrintTracker'
 
     # ========================================
-    # CAMPOS DEL MODELO
+    # CAMPOS DEL MODELO SIMPLIFICADOS
     # ========================================
     
     # Campos para configurar el procesamiento
@@ -18,30 +18,28 @@ class PrintTrackerConsolidator(models.TransientModel):
     fecha_fin = fields.Date('Fecha Fin', default=lambda self: date.today())
     serie_especifica = fields.Char('Serie Específica', help='Dejar vacío para procesar todas')
     forzar_reproceso = fields.Boolean('Forzar Reproceso', default=False,
-                                     help='Reprocesar registros ya consolidados')
+                                     help='Reprocesar registros ya procesados')
     
-    # Resultados del procesamiento
-    registros_contador_automatico = fields.Integer('Registros Contador Automático', readonly=True)
+    # Resultados del procesamiento (simplificados)
     registros_printtracker = fields.Integer('Registros PrintTracker', readonly=True)
-    lecturas_consolidadas = fields.Integer('Lecturas Consolidadas', readonly=True)
-    conflictos_resueltos = fields.Integer('Conflictos Resueltos', readonly=True)
+    lecturas_procesadas = fields.Integer('Lecturas Procesadas', readonly=True)
     equipos_actualizados = fields.Integer('Equipos Actualizados', readonly=True)
     errores_encontrados = fields.Integer('Errores Encontrados', readonly=True)
     
     log_procesamiento = fields.Text('Log de Procesamiento', readonly=True)
 
     # ========================================
-    # PARTE 1: MÉTODOS PRINCIPALES Y AUTOMATIZACIÓN
+    # MÉTODOS PRINCIPALES SIMPLIFICADOS
     # ========================================
 
     @api.model
-    def ejecutar_consolidacion_automatica(self):
+    def ejecutar_procesamiento_automatico(self):
         """
-        PARTE 1 - CORREGIDO: Método ejecutado por el cron cada 2 horas
-        Consolida datos de las últimas 24 horas
+        SIMPLIFICADO: Método ejecutado por el cron 
+        Procesa datos PrintTracker de las últimas 24 horas
         """
         try:
-            _logger.info("🔄 ===== INICIANDO CONSOLIDACIÓN AUTOMÁTICA =====")
+            _logger.info("🔄 ===== INICIANDO PROCESAMIENTO AUTOMÁTICO =====")
             _logger.info(f"🕐 Hora de ejecución: {datetime.now()}")
             
             # Configurar fechas de procesamiento (últimas 24 horas)
@@ -50,63 +48,59 @@ class PrintTrackerConsolidator(models.TransientModel):
             
             _logger.info(f"📅 Período automático: {fecha_inicio} a {fecha_fin}")
             
-            # Crear registro de consolidación temporal
-            consolidador = self.create({
+            # Crear registro de procesamiento temporal
+            procesador = self.create({
                 'fecha_inicio': fecha_inicio,
                 'fecha_fin': fecha_fin,
-                'forzar_reproceso': False  # Automático no fuerza reproceso
+                'forzar_reproceso': False
             })
             
-            _logger.info(f"🆕 Consolidador creado: ID={consolidador.id}")
+            _logger.info(f"🆕 Procesador creado: ID={procesador.id}")
             
-            # Ejecutar consolidación
-            _logger.info(f"🚀 Iniciando ejecución de consolidación...")
-            resultado = consolidador.ejecutar_consolidacion()
+            # Ejecutar procesamiento
+            _logger.info(f"🚀 Iniciando ejecución de procesamiento...")
+            resultado = procesador.ejecutar_procesamiento()
             
             if resultado:
-                _logger.info(f"✅ ===== CONSOLIDACIÓN AUTOMÁTICA EXITOSA =====")
-                _logger.info(f"📊 Contador automático: {consolidador.registros_contador_automatico} registros")
-                _logger.info(f"📊 PrintTracker: {consolidador.registros_printtracker} registros")
-                _logger.info(f"📊 Consolidadas: {consolidador.lecturas_consolidadas} lecturas")
-                _logger.info(f"📊 Conflictos resueltos: {consolidador.conflictos_resueltos}")
-                _logger.info(f"📊 Equipos actualizados: {consolidador.equipos_actualizados}")
-                _logger.info(f"📊 Errores: {consolidador.errores_encontrados}")
+                _logger.info(f"✅ ===== PROCESAMIENTO AUTOMÁTICO EXITOSO =====")
+                _logger.info(f"📊 PrintTracker: {procesador.registros_printtracker} registros")
+                _logger.info(f"📊 Procesadas: {procesador.lecturas_procesadas} lecturas")
+                _logger.info(f"📊 Equipos actualizados: {procesador.equipos_actualizados}")
+                _logger.info(f"📊 Errores: {procesador.errores_encontrados}")
                 
-                # Log de resumen en una línea para fácil búsqueda
-                _logger.info(f"📈 RESUMEN: C={consolidador.registros_contador_automatico}, "
-                           f"PT={consolidador.registros_printtracker}, "
-                           f"CON={consolidador.lecturas_consolidadas}, "
-                           f"CONF={consolidador.conflictos_resueltos}, "
-                           f"EQ={consolidador.equipos_actualizados}, "
-                           f"ERR={consolidador.errores_encontrados}")
+                # Log de resumen en una línea
+                _logger.info(f"📈 RESUMEN: PT={procesador.registros_printtracker}, "
+                           f"PROC={procesador.lecturas_procesadas}, "
+                           f"EQ={procesador.equipos_actualizados}, "
+                           f"ERR={procesador.errores_encontrados}")
             else:
-                _logger.error(f"❌ ===== ERROR EN CONSOLIDACIÓN AUTOMÁTICA =====")
-                _logger.error(f"📊 Errores: {consolidador.errores_encontrados}")
-                _logger.error(f"📋 Log: {consolidador.log_procesamiento}")
+                _logger.error(f"❌ ===== ERROR EN PROCESAMIENTO AUTOMÁTICO =====")
+                _logger.error(f"📊 Errores: {procesador.errores_encontrados}")
+                _logger.error(f"📋 Log: {procesador.log_procesamiento}")
             
             return resultado
             
         except Exception as e:
-            _logger.error(f"❌ ERROR CRÍTICO en consolidación automática: {str(e)}")
+            _logger.error(f"❌ ERROR CRÍTICO en procesamiento automático: {str(e)}")
             import traceback
             _logger.error(f"❌ Traceback: {traceback.format_exc()}")
             return False
 
-    def ejecutar_consolidacion(self):
+    def ejecutar_procesamiento(self):
         """
-        PARTE 1 - CORREGIDO: Ejecuta el proceso completo de consolidación
+        SIMPLIFICADO: Ejecuta el proceso de PrintTracker sin consolidación
         """
         try:
             inicio_tiempo = datetime.now()
             log_lines = []
             
-            _logger.info(f"🔄 ===== INICIANDO PROCESO DE CONSOLIDACIÓN =====")
-            _logger.info(f"🆔 Consolidador ID: {self.id}")
+            _logger.info(f"🔄 ===== INICIANDO PROCESO PRINTTRACKER =====")
+            _logger.info(f"🆔 Procesador ID: {self.id}")
             _logger.info(f"📅 Período: {self.fecha_inicio} a {self.fecha_fin}")
             _logger.info(f"🎯 Serie: {self.serie_especifica or 'TODAS'}")
             _logger.info(f"🔄 Forzar reproceso: {'SÍ' if self.forzar_reproceso else 'NO'}")
             
-            log_lines.append(f"🔄 === INICIANDO CONSOLIDACIÓN ===")
+            log_lines.append(f"🔄 === INICIANDO PROCESAMIENTO ===")
             log_lines.append(f"📅 Período: {self.fecha_inicio} a {self.fecha_fin}")
             log_lines.append(f"🎯 Serie: {self.serie_especifica or 'TODAS LAS SERIES'}")
             log_lines.append(f"🔄 Forzar reproceso: {'SÍ' if self.forzar_reproceso else 'NO'}")
@@ -114,69 +108,43 @@ class PrintTrackerConsolidator(models.TransientModel):
             log_lines.append("")
             
             # Inicializar contadores
-            self.registros_contador_automatico = 0
             self.registros_printtracker = 0
-            self.lecturas_consolidadas = 0
-            self.conflictos_resueltos = 0
+            self.lecturas_procesadas = 0
             self.equipos_actualizados = 0
             self.errores_encontrados = 0
             
-            # PASO 1: Procesar registros de contador.automatico
-            _logger.info("📧 === INICIANDO PASO 1: CONTADOR.AUTOMATICO ===")
-            log_lines.append("📧 === PASO 1: PROCESANDO CONTADOR.AUTOMATICO ===")
-            
-            resultado_contador = self._procesar_contador_automatico()
-            log_lines.extend(resultado_contador['log'])
-            self.registros_contador_automatico = resultado_contador['procesados']
-            self.errores_encontrados += resultado_contador.get('errores', 0)
-            
-            _logger.info(f"📧 Paso 1 completado: {self.registros_contador_automatico} procesados")
-            
-            # PASO 2: Procesar registros de PrintTracker
-            _logger.info("🔄 === INICIANDO PASO 2: PRINTTRACKER ===")
-            log_lines.append("🔄 === PASO 2: PROCESANDO PRINTTRACKER ===")
+            # PASO 1: Procesar registros de PrintTracker
+            _logger.info("🔄 === INICIANDO PASO 1: PRINTTRACKER ===")
+            log_lines.append("🔄 === PASO 1: PROCESANDO PRINTTRACKER ===")
             
             resultado_pt = self._procesar_printtracker_meters()
             log_lines.extend(resultado_pt['log'])
             self.registros_printtracker = resultado_pt['procesados']
             self.errores_encontrados += resultado_pt.get('errores', 0)
             
-            _logger.info(f"🔄 Paso 2 completado: {self.registros_printtracker} procesados")
+            _logger.info(f"🔄 Paso 1 completado: {self.registros_printtracker} procesados")
             
-            # PASO 3: Consolidar lecturas con conflictos
-            _logger.info("⚖️ === INICIANDO PASO 3: CONSOLIDACIÓN ===")
-            log_lines.append("⚖️ === PASO 3: CONSOLIDANDO Y RESOLVIENDO CONFLICTOS ===")
-            
-            resultado_consolidacion = self._consolidar_lecturas_periodo()
-            log_lines.extend(resultado_consolidacion['log'])
-            self.lecturas_consolidadas = resultado_consolidacion['consolidadas']
-            self.conflictos_resueltos = resultado_consolidacion['conflictos']
-            self.errores_encontrados += resultado_consolidacion.get('errores', 0)
-            
-            _logger.info(f"⚖️ Paso 3 completado: {self.lecturas_consolidadas} consolidadas, {self.conflictos_resueltos} conflictos")
-            
-            # PASO 4: Aplicar a equipos
-            _logger.info("💾 === INICIANDO PASO 4: APLICACIÓN A EQUIPOS ===")
-            log_lines.append("💾 === PASO 4: APLICANDO A EQUIPOS ===")
+            # PASO 2: Aplicar a equipos
+            _logger.info("💾 === INICIANDO PASO 2: APLICACIÓN A EQUIPOS ===")
+            log_lines.append("💾 === PASO 2: APLICANDO A EQUIPOS ===")
             
             resultado_equipos = self._aplicar_a_equipos()
             log_lines.extend(resultado_equipos['log'])
             self.equipos_actualizados = resultado_equipos['actualizados']
+            self.lecturas_procesadas = resultado_equipos.get('procesadas', 0)
             self.errores_encontrados += resultado_equipos.get('errores', 0)
             
-            _logger.info(f"💾 Paso 4 completado: {self.equipos_actualizados} equipos actualizados")
+            _logger.info(f"💾 Paso 2 completado: {self.equipos_actualizados} equipos actualizados")
             
-            # PASO 5: Estadísticas finales
+            # PASO 3: Estadísticas finales
             _logger.info("📊 === GENERANDO ESTADÍSTICAS FINALES ===")
-            log_lines.append("📊 === PASO 5: ESTADÍSTICAS FINALES ===")
+            log_lines.append("📊 === PASO 3: ESTADÍSTICAS FINALES ===")
             
             tiempo_total = (datetime.now() - inicio_tiempo).total_seconds()
             
             log_lines.append(f"⏱️ Tiempo total: {tiempo_total:.2f} segundos")
-            log_lines.append(f"📧 Contador automático: {self.registros_contador_automatico} registros")
             log_lines.append(f"🔄 PrintTracker: {self.registros_printtracker} registros")
-            log_lines.append(f"⚖️ Consolidadas: {self.lecturas_consolidadas} lecturas")
-            log_lines.append(f"⚠️ Conflictos resueltos: {self.conflictos_resueltos}")
+            log_lines.append(f"📋 Lecturas procesadas: {self.lecturas_procesadas}")
             log_lines.append(f"💾 Equipos actualizados: {self.equipos_actualizados}")
             log_lines.append(f"❌ Errores: {self.errores_encontrados}")
             log_lines.append("")
@@ -184,24 +152,23 @@ class PrintTrackerConsolidator(models.TransientModel):
             # Determinar éxito/fracaso
             exito = self.errores_encontrados == 0
             if exito:
-                log_lines.append("✅ === CONSOLIDACIÓN COMPLETADA EXITOSAMENTE ===")
-                _logger.info(f"✅ ===== CONSOLIDACIÓN COMPLETADA EXITOSAMENTE =====")
+                log_lines.append("✅ === PROCESAMIENTO COMPLETADO EXITOSAMENTE ===")
+                _logger.info(f"✅ ===== PROCESAMIENTO COMPLETADO EXITOSAMENTE =====")
             else:
-                log_lines.append(f"⚠️ === CONSOLIDACIÓN COMPLETADA CON {self.errores_encontrados} ERRORES ===")
-                _logger.warning(f"⚠️ ===== CONSOLIDACIÓN COMPLETADA CON {self.errores_encontrados} ERRORES =====")
+                log_lines.append(f"⚠️ === PROCESAMIENTO COMPLETADO CON {self.errores_encontrados} ERRORES ===")
+                _logger.warning(f"⚠️ ===== PROCESAMIENTO COMPLETADO CON {self.errores_encontrados} ERRORES =====")
             
             # Guardar log completo
             self.log_procesamiento = "\n".join(log_lines)
             
-            _logger.info(f"📊 Resumen final: C={self.registros_contador_automatico}, "
-                        f"PT={self.registros_printtracker}, CON={self.lecturas_consolidadas}, "
-                        f"CONF={self.conflictos_resueltos}, EQ={self.equipos_actualizados}, "
+            _logger.info(f"📊 Resumen final: PT={self.registros_printtracker}, "
+                        f"PROC={self.lecturas_procesadas}, EQ={self.equipos_actualizados}, "
                         f"ERR={self.errores_encontrados}, T={tiempo_total:.1f}s")
             
             return exito
             
         except Exception as e:
-            error_msg = f"❌ ERROR CRÍTICO en consolidación: {str(e)}"
+            error_msg = f"❌ ERROR CRÍTICO en procesamiento: {str(e)}"
             _logger.error(error_msg)
             import traceback
             _logger.error(f"❌ Traceback: {traceback.format_exc()}")
@@ -212,60 +179,58 @@ class PrintTrackerConsolidator(models.TransientModel):
                 self.log_procesamiento = current_log + f"\n{error_msg}\n{traceback.format_exc()}"
                 self.errores_encontrados = (self.errores_encontrados or 0) + 1
             except:
-                _logger.error("❌ No se pudo guardar error en log del consolidador")
+                _logger.error("❌ No se pudo guardar error en log del procesador")
             
             return False
 
     def action_ejecutar_manual(self):
         """
-        PARTE 1 - MEJORADO: Acción para ejecutar consolidación manual desde la interfaz
+        SIMPLIFICADO: Acción para ejecutar procesamiento manual
         """
         self.ensure_one()
         
         try:
-            _logger.info(f"✋ ===== CONSOLIDACIÓN MANUAL SOLICITADA =====")
-            _logger.info(f"🆔 Consolidador ID: {self.id}")
+            _logger.info(f"✋ ===== PROCESAMIENTO MANUAL SOLICITADO =====")
+            _logger.info(f"🆔 Procesador ID: {self.id}")
             _logger.info(f"📅 Período: {self.fecha_inicio} a {self.fecha_fin}")
             _logger.info(f"🎯 Serie: {self.serie_especifica or 'TODAS'}")
             _logger.info(f"🔄 Forzar: {self.forzar_reproceso}")
             
-            resultado = self.ejecutar_consolidacion()
+            resultado = self.ejecutar_procesamiento()
             
             if resultado:
-                message = f"""✅ CONSOLIDACIÓN EJECUTADA EXITOSAMENTE
+                message = f"""✅ PROCESAMIENTO EJECUTADO EXITOSAMENTE
 
 📊 RESUMEN DE RESULTADOS:
-• Período: {self.fecha_inicio} a {self.fecha_fin}
-• Serie: {self.serie_especifica or 'TODAS'}
+- Período: {self.fecha_inicio} a {self.fecha_fin}
+- Serie: {self.serie_especifica or 'TODAS'}
 
-📧 Contador automático: {self.registros_contador_automatico} registros
-🔄 PrintTracker: {self.registros_printtracker} registros  
-⚖️ Consolidadas: {self.lecturas_consolidadas} lecturas
-⚠️ Conflictos resueltos: {self.conflictos_resueltos}
+🔄 PrintTracker: {self.registros_printtracker} registros
+📋 Lecturas procesadas: {self.lecturas_procesadas}
 💾 Equipos actualizados: {self.equipos_actualizados}
 ❌ Errores: {self.errores_encontrados}
 
 Ver log completo para detalles."""
                 
                 message_type = 'success'
-                _logger.info(f"✅ Consolidación manual exitosa")
+                _logger.info(f"✅ Procesamiento manual exitoso")
             else:
-                message = f"""❌ CONSOLIDACIÓN COMPLETADA CON ERRORES
+                message = f"""❌ PROCESAMIENTO COMPLETADO CON ERRORES
 
 📊 RESUMEN:
-• Errores encontrados: {self.errores_encontrados}
-• Procesados parcialmente: {self.registros_contador_automatico + self.registros_printtracker}
+- Errores encontrados: {self.errores_encontrados}
+- Procesados parcialmente: {self.registros_printtracker}
 
 ⚠️ Revisar log completo para detalles de errores."""
                 
                 message_type = 'warning'
-                _logger.warning(f"⚠️ Consolidación manual con errores")
+                _logger.warning(f"⚠️ Procesamiento manual con errores")
             
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': 'Consolidación PrintTracker',
+                    'title': 'Procesamiento PrintTracker',
                     'message': message,
                     'type': message_type,
                     'sticky': True
@@ -273,14 +238,14 @@ Ver log completo para detalles."""
             }
             
         except Exception as e:
-            error_msg = f'❌ ERROR EJECUTANDO CONSOLIDACIÓN: {str(e)}'
+            error_msg = f'❌ ERROR EJECUTANDO PROCESAMIENTO: {str(e)}'
             _logger.error(error_msg)
             
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': 'Error Consolidación',
+                    'title': 'Error Procesamiento',
                     'message': error_msg,
                     'type': 'danger',
                     'sticky': True
@@ -288,15 +253,13 @@ Ver log completo para detalles."""
             }
 
     def action_view_log(self):
-        """
-        PARTE 1 - SIN CAMBIOS: Acción para ver el log detallado en una ventana
-        """
+        """Ver el log detallado en una ventana"""
         self.ensure_one()
         
         return {
             'type': 'ir.actions.act_window',
-            'name': f'Log de Consolidación - {self.fecha_inicio} a {self.fecha_fin}',
-            'res_model': 'printtracker.consolidator',
+            'name': f'Log de Procesamiento - {self.fecha_inicio} a {self.fecha_fin}',
+            'res_model': 'printtracker.processor',
             'res_id': self.id,
             'view_mode': 'form',
             'target': 'new',
@@ -306,155 +269,13 @@ Ver log completo para detalles."""
         }
 
     # ========================================
-    # PARTE 2: PROCESAMIENTO DE CONTADOR AUTOMÁTICO Y PRINTTRACKER
+    # PROCESAMIENTO DE PRINTTRACKER SIMPLIFICADO
     # ========================================
-
-    def _procesar_contador_automatico(self):
-        """
-        PARTE 2 - CORREGIDO: Procesa registros nuevos de contador.automatico
-        NUEVA LÓGICA: Usa métodos crear_desde_* sin actualizaciones automáticas
-        """
-        try:
-            log_lines = []
-            procesados = 0
-            errores = 0
-            
-            _logger.info("📧 ===== INICIANDO PROCESAMIENTO CONTADOR AUTOMÁTICO =====")
-            
-            # Construir dominio de búsqueda
-            domain = [
-                ('estado', '=', 'procesado'),
-                ('fecha_procesamiento', '>=', datetime.combine(self.fecha_inicio, datetime.min.time())),
-                ('fecha_procesamiento', '<=', datetime.combine(self.fecha_fin, datetime.max.time())),
-                ('serie_detectada', '!=', False)
-            ]
-            
-            if self.serie_especifica:
-                domain.append(('serie_detectada', '=', self.serie_especifica))
-                _logger.info(f"📧 Filtrando por serie específica: {self.serie_especifica}")
-            
-            # Buscar registros de contador automático
-            _logger.info(f"📧 Buscando registros contador automático en período...")
-            registros_contador = self.env['contador.automatico'].search(domain)
-            
-            _logger.info(f"📧 Encontrados {len(registros_contador)} registros de contador automático")
-            log_lines.append(f"📧 Encontrados {len(registros_contador)} registros de contador automático")
-            
-            if not registros_contador:
-                log_lines.append("ℹ️ No hay registros de contador automático para procesar")
-                _logger.info("ℹ️ No hay registros de contador automático para procesar")
-                return {
-                    'procesados': 0,
-                    'errores': 0,
-                    'log': log_lines
-                }
-            
-            # Procesar cada registro
-            for i, registro in enumerate(registros_contador, 1):
-                try:
-                    _logger.info(f"📧 --- Procesando registro {i}/{len(registros_contador)}: {registro.serie_detectada} ---")
-                    
-                    fecha_lectura = registro.fecha_procesamiento.date() if registro.fecha_procesamiento else date.today()
-                    
-                    _logger.info(f"📧 Registro ID: {registro.id}")
-                    _logger.info(f"📧 Serie: {registro.serie_detectada}")
-                    _logger.info(f"📧 Fecha lectura: {fecha_lectura}")
-                    _logger.info(f"📧 Contadores: BN={registro.contador_bn_detectado}, Color={registro.contador_color_detectado}, Scan={registro.contador_scan_detectado}")
-                    
-                    # NUEVA LÓGICA: Buscar CUALQUIER lectura existente para esta fecha/serie
-                    existing_readings = self.env['printtracker.daily.reading'].search([
-                        ('fecha', '=', fecha_lectura),
-                        ('serie', '=', registro.serie_detectada)
-                    ])
-                    
-                    _logger.info(f"📧 Lecturas existentes encontradas: {len(existing_readings)}")
-                    
-                    if existing_readings:
-                        for j, reading in enumerate(existing_readings):
-                            _logger.info(f"📧 Lectura existente {j+1}: ID={reading.id}, Fuente={reading.fuente_origen}, Estado={reading.estado}")
-                        
-                        # CASO 1: Ya existe(n) lectura(s) para esta fecha/serie
-                        if not self.forzar_reproceso:
-                            _logger.info(f"📧 Saltando {registro.serie_detectada} - {fecha_lectura} (ya existe, no forzado)")
-                            log_lines.append(f"⏭️ Ya existe lectura para {registro.serie_detectada} - {fecha_lectura}")
-                            continue
-                        else:
-                            # CASO 2: Forzar reproceso - buscar lectura de correo para actualizar
-                            lectura_correo = existing_readings.filtered(lambda l: l.fuente_origen == 'correo')
-                            
-                            if lectura_correo:
-                                _logger.info(f"📧 Forzando actualización de lectura de correo existente")
-                                lectura_correo = lectura_correo[0]  # Tomar la primera si hay múltiples
-                                
-                                lectura_correo.write({
-                                    'contador_bn': registro.contador_bn_detectado or 0,
-                                    'contador_color': registro.contador_color_detectado or 0,
-                                    'contador_scan': registro.contador_scan_detectado or 0,
-                                    'contador_automatico_id': registro.id,
-                                    'fecha_procesamiento': fields.Datetime.now()
-                                })
-                                
-                                log_lines.append(f"📝 FORZADO: Actualizada lectura correo {registro.serie_detectada} - {fecha_lectura}")
-                                _logger.info(f"✅ Actualización forzada completada para {registro.serie_detectada}")
-                                procesados += 1
-                                continue
-                            else:
-                                _logger.info(f"📧 No hay lectura de correo para forzar, intentando crear nueva")
-                                # Continuar al CASO 3 (crear nueva)
-                    
-                    # CASO 3: No existe lectura O no hay lectura de correo para forzar - crear nueva
-                    _logger.info(f"📧 Creando nueva lectura desde contador automático")
-                    
-                    nueva_lectura = self.env['printtracker.daily.reading'].crear_desde_contador_automatico(registro)
-                    
-                    if nueva_lectura:
-                        _logger.info(f"✅ Lectura creada exitosamente: ID={nueva_lectura.id}")
-                        log_lines.append(f"✅ Creada desde correo: {registro.serie_detectada} - {fecha_lectura}")
-                        procesados += 1
-                    else:
-                        _logger.error(f"❌ Error creando lectura para {registro.serie_detectada}")
-                        log_lines.append(f"❌ Error creando lectura para {registro.serie_detectada} - {fecha_lectura}")
-                        errores += 1
-                    
-                except Exception as e:
-                    error_msg = f"❌ Error procesando registro contador {registro.serie_detectada}: {str(e)}"
-                    _logger.error(error_msg)
-                    import traceback
-                    _logger.error(f"❌ Traceback: {traceback.format_exc()}")
-                    
-                    log_lines.append(f"❌ Error procesando {registro.serie_detectada}: {str(e)}")
-                    errores += 1
-            
-            # Resumen final
-            _logger.info(f"📧 ===== PROCESAMIENTO CONTADOR AUTOMÁTICO COMPLETADO =====")
-            _logger.info(f"📧 Total registros: {len(registros_contador)}")
-            _logger.info(f"📧 Procesados exitosamente: {procesados}")
-            _logger.info(f"📧 Errores: {errores}")
-            
-            log_lines.append(f"✅ Procesamiento contador automático completado: {procesados}/{len(registros_contador)} exitosos, {errores} errores")
-            
-            return {
-                'procesados': procesados,
-                'errores': errores,
-                'log': log_lines
-            }
-            
-        except Exception as e:
-            error_msg = f"❌ ERROR CRÍTICO procesando contador automático: {str(e)}"
-            _logger.error(error_msg)
-            import traceback
-            _logger.error(f"❌ Traceback: {traceback.format_exc()}")
-            
-            return {
-                'procesados': 0,
-                'errores': 1,
-                'log': [error_msg]
-            }
 
     def _procesar_printtracker_meters(self):
         """
-        PARTE 2 - CORREGIDO: Procesa registros nuevos de printtracker.meter
-        NUEVA LÓGICA: Usa métodos crear_desde_* sin actualizaciones automáticas
+        SIMPLIFICADO: Procesa registros de printtracker.meter
+        Sin consolidación - flujo directo
         """
         try:
             log_lines = []
@@ -502,52 +323,41 @@ Ver log completo para detalles."""
                     _logger.info(f"🔄 Meter ID: {meter.id}")
                     _logger.info(f"🔄 Serie: {serie}")
                     _logger.info(f"🔄 Fecha lectura: {fecha_lectura}")
-                    _logger.info(f"🔄 Contadores: BN={meter.black_pages_life}, Color={meter.color_pages_life}, Scan={meter.scan_pages}, Copy={meter.copy_pages}, Fax={meter.fax_pages}")
+                    _logger.info(f"🔄 Contadores: BN={meter.black_pages_life}, Color={meter.color_pages_life}, Scan={meter.scan_pages}")
                     
-                    # NUEVA LÓGICA: Buscar CUALQUIER lectura existente para esta fecha/serie
-                    existing_readings = self.env['printtracker.daily.reading'].search([
+                    # Buscar lectura existente
+                    existing_reading = self.env['printtracker.daily.reading'].search([
                         ('fecha', '=', fecha_lectura),
                         ('serie', '=', serie)
-                    ])
+                    ], limit=1)
                     
-                    _logger.info(f"🔄 Lecturas existentes encontradas: {len(existing_readings)}")
-                    
-                    if existing_readings:
-                        for j, reading in enumerate(existing_readings):
-                            _logger.info(f"🔄 Lectura existente {j+1}: ID={reading.id}, Fuente={reading.fuente_origen}, Estado={reading.estado}")
+                    if existing_reading:
+                        _logger.info(f"🔄 Lectura existente encontrada: ID={existing_reading.id}")
                         
-                        # CASO 1: Ya existe(n) lectura(s) para esta fecha/serie
                         if not self.forzar_reproceso:
                             _logger.info(f"🔄 Saltando {serie} - {fecha_lectura} (ya existe, no forzado)")
                             log_lines.append(f"⏭️ Ya existe lectura para {serie} - {fecha_lectura}")
                             continue
                         else:
-                            # CASO 2: Forzar reproceso - buscar lectura de PrintTracker para actualizar
-                            lectura_pt = existing_readings.filtered(lambda l: l.fuente_origen == 'printtracker')
+                            # Forzar reproceso: actualizar lectura existente
+                            _logger.info(f"🔄 Forzando actualización de lectura existente")
                             
-                            if lectura_pt:
-                                _logger.info(f"🔄 Forzando actualización de lectura PrintTracker existente")
-                                lectura_pt = lectura_pt[0]  # Tomar la primera si hay múltiples
-                                
-                                lectura_pt.write({
-                                    'contador_bn': meter.black_pages_life or 0,
-                                    'contador_color': meter.color_pages_life or 0,
-                                    'contador_scan': meter.scan_pages or 0,
-                                    'contador_copy': meter.copy_pages or 0,
-                                    'contador_fax': meter.fax_pages or 0,
-                                    'printtracker_meter_id': meter.id,
-                                    'fecha_procesamiento': fields.Datetime.now()
-                                })
-                                
-                                log_lines.append(f"📝 FORZADO: Actualizada lectura PrintTracker {serie} - {fecha_lectura}")
-                                _logger.info(f"✅ Actualización forzada completada para {serie}")
-                                procesados += 1
-                                continue
-                            else:
-                                _logger.info(f"🔄 No hay lectura de PrintTracker para forzar, intentando crear nueva")
-                                # Continuar al CASO 3 (crear nueva)
+                            existing_reading.write({
+                                'contador_bn': meter.black_pages_life or 0,
+                                'contador_color': meter.color_pages_life or 0,
+                                'contador_scan': meter.scan_pages or 0,
+                                'contador_copy': meter.copy_pages or 0,
+                                'contador_fax': meter.fax_pages or 0,
+                                'printtracker_meter_id': meter.id,
+                                'fecha_procesamiento': fields.Datetime.now()
+                            })
+                            
+                            log_lines.append(f"📝 FORZADO: Actualizada lectura {serie} - {fecha_lectura}")
+                            _logger.info(f"✅ Actualización forzada completada para {serie}")
+                            procesados += 1
+                            continue
                     
-                    # CASO 3: No existe lectura O no hay lectura de PrintTracker para forzar - crear nueva
+                    # Crear nueva lectura usando el método simplificado
                     _logger.info(f"🔄 Creando nueva lectura desde PrintTracker")
                     
                     nueva_lectura = self.env['printtracker.daily.reading'].crear_desde_printtracker(meter)
@@ -597,14 +407,14 @@ Ver log completo para detalles."""
                 'log': [error_msg]
             }
 
-    def _verificar_registros_duplicados(self):
+    def _verificar_registros_inconsistentes(self):
         """
-        PARTE 2 - NUEVO: Verifica y reporta registros duplicados en el período
+        NUEVO: Verifica registros con inconsistencias en el período
         """
         try:
             log_lines = []
             
-            _logger.info("🔍 ===== VERIFICANDO REGISTROS DUPLICADOS =====")
+            _logger.info("🔍 ===== VERIFICANDO INCONSISTENCIAS =====")
             
             # Buscar lecturas del período
             domain = [
@@ -617,206 +427,187 @@ Ver log completo para detalles."""
             
             lecturas = self.env['printtracker.daily.reading'].search(domain)
             
-            # Agrupar por fecha/serie
-            grupos = {}
-            for lectura in lecturas:
-                key = (lectura.fecha, lectura.serie)
-                if key not in grupos:
-                    grupos[key] = []
-                grupos[key].append(lectura)
+            _logger.info(f"🔍 Analizando {len(lecturas)} lecturas...")
             
-            # Identificar duplicados
-            duplicados = {k: v for k, v in grupos.items() if len(v) > 1}
+            # Verificar problemas
+            problemas = {
+                'sin_equipo': len(lecturas.filtered(lambda l: not l.equipo_id)),
+                'en_error': len(lecturas.filtered(lambda l: l.estado == 'error')),
+                'sin_aplicar': len(lecturas.filtered(lambda l: l.estado == 'validado' and not l.aplicado_a_equipo)),
+                'contadores_negativos': len(lecturas.filtered(lambda l: 
+                    (l.contador_bn or 0) < 0 or (l.contador_color or 0) < 0 or (l.contador_scan or 0) < 0))
+            }
             
-            _logger.info(f"🔍 Total grupos fecha/serie: {len(grupos)}")
-            _logger.info(f"🔍 Grupos con duplicados: {len(duplicados)}")
+            _logger.info(f"🔍 Problemas encontrados: {problemas}")
             
-            log_lines.append(f"🔍 Verificación de duplicados:")
-            log_lines.append(f"• Total grupos fecha/serie: {len(grupos)}")
-            log_lines.append(f"• Grupos con duplicados: {len(duplicados)}")
+            log_lines.append(f"🔍 Verificación de inconsistencias:")
+            log_lines.append(f"• Total lecturas analizadas: {len(lecturas)}")
+            log_lines.append(f"• Sin equipo asociado: {problemas['sin_equipo']}")
+            log_lines.append(f"• En estado error: {problemas['en_error']}")
+            log_lines.append(f"• Sin aplicar: {problemas['sin_aplicar']}")
+            log_lines.append(f"• Contadores negativos: {problemas['contadores_negativos']}")
             
-            if duplicados:
-                log_lines.append(f"⚠️ DUPLICADOS ENCONTRADOS:")
-                for (fecha, serie), lecturas_grupo in list(duplicados.items())[:10]:  # Mostrar solo primeros 10
-                    fuentes = [l.fuente_origen for l in lecturas_grupo]
-                    log_lines.append(f"  • {serie} - {fecha}: {fuentes}")
-                    _logger.warning(f"🔍 Duplicado: {serie} - {fecha}: {fuentes}")
-                
-                if len(duplicados) > 10:
-                    log_lines.append(f"  ... y {len(duplicados) - 10} más")
+            total_problemas = sum(problemas.values())
+            
+            if total_problemas > 0:
+                log_lines.append(f"⚠️ Total problemas encontrados: {total_problemas}")
+                _logger.warning(f"⚠️ Total problemas encontrados: {total_problemas}")
             else:
-                log_lines.append("✅ No se encontraron duplicados")
-                _logger.info("✅ No se encontraron duplicados")
+                log_lines.append("✅ No se encontraron inconsistencias")
+                _logger.info("✅ No se encontraron inconsistencias")
             
             return {
-                'total_grupos': len(grupos),
-                'duplicados': len(duplicados),
+                'total_lecturas': len(lecturas),
+                'problemas': problemas,
+                'total_problemas': total_problemas,
                 'log': log_lines
             }
             
         except Exception as e:
-            error_msg = f"❌ Error verificando duplicados: {str(e)}"
+            error_msg = f"❌ Error verificando inconsistencias: {str(e)}"
             _logger.error(error_msg)
             
             return {
-                'total_grupos': 0,
-                'duplicados': 0,
+                'total_lecturas': 0,
+                'problemas': {},
+                'total_problemas': 0,
                 'log': [error_msg]
             }
 
-    # ========================================
-    # PARTE 3: CONSOLIDACIÓN Y APLICACIÓN A EQUIPOS
-    # ========================================
-
-    def _consolidar_lecturas_periodo(self):
+    def _sincronizar_con_api(self):
         """
-        PARTE 3 - CORREGIDO: Consolida lecturas del período aplicando reglas de conflicto
-        USA los métodos corregidos de consolidación
+        NUEVO: Sincroniza con la API de PrintTracker antes del procesamiento
         """
         try:
             log_lines = []
-            consolidadas = 0
-            conflictos = 0
-            errores = 0
-            ya_consolidadas = 0
-            aplicadas_directas = 0
-            sin_datos = 0
+            _logger.info("🔄 ===== SINCRONIZANDO CON API PRINTTRACKER =====")
             
-            _logger.info("⚖️ ===== INICIANDO CONSOLIDACIÓN DE LECTURAS =====")
-            _logger.info(f"⚖️ Período: {self.fecha_inicio} a {self.fecha_fin}")
+            # Obtener configuración activa
+            config = self.env['printtracker.config'].search([
+                ('sync_enabled', '=', True)
+            ], limit=1)
             
-            # Iterar por cada fecha del período
-            fecha_actual = self.fecha_inicio
-            total_dias = (self.fecha_fin - self.fecha_inicio).days + 1
+            if not config:
+                error_msg = "❌ No se encontró configuración activa de PrintTracker"
+                _logger.error(error_msg)
+                log_lines.append(error_msg)
+                return {
+                    'dispositivos': 0,
+                    'medidores': 0,
+                    'errores': 1,
+                    'log': log_lines
+                }
             
-            _logger.info(f"⚖️ Total días a procesar: {total_dias}")
-            log_lines.append(f"⚖️ Consolidando período: {self.fecha_inicio} a {self.fecha_fin} ({total_dias} días)")
+            _logger.info(f"🔄 Usando configuración: {config.name}")
+            log_lines.append(f"🔄 Sincronizando con configuración: {config.name}")
             
-            while fecha_actual <= self.fecha_fin:
-                try:
-                    _logger.info(f"⚖️ --- Procesando fecha: {fecha_actual} ---")
-                    
-                    # Obtener series únicas para esta fecha
-                    domain = [('fecha', '=', fecha_actual)]
-                    if self.serie_especifica:
-                        domain.append(('serie', '=', self.serie_especifica))
-                    
-                    lecturas_fecha = self.env['printtracker.daily.reading'].search(domain)
-                    series_fecha = list(set(lecturas_fecha.mapped('serie')))
-                    
-                    _logger.info(f"⚖️ Fecha {fecha_actual}: {len(lecturas_fecha)} lecturas, {len(series_fecha)} series únicas")
-                    
-                    if not series_fecha:
-                        _logger.info(f"⚖️ No hay series para procesar en {fecha_actual}")
-                        fecha_actual += timedelta(days=1)
-                        continue
-                    
-                    log_lines.append(f"📅 {fecha_actual}: {len(series_fecha)} series")
-                    
-                    # Procesar cada serie en esta fecha
-                    for i, serie in enumerate(series_fecha, 1):
-                        try:
-                            _logger.info(f"⚖️ Procesando serie {i}/{len(series_fecha)}: {serie}")
-                            
-                            # Llamar al método de consolidación corregido
-                            resultado = self.env['printtracker.daily.reading'].consolidar_lecturas(
-                                fecha_objetivo=fecha_actual,
-                                serie_objetivo=serie
-                            )
-                            
-                            if resultado:
-                                # Procesar resultados según el nuevo formato
-                                if resultado.get('consolidadas', 0) > 0:
-                                    consolidadas += resultado['consolidadas']
-                                    _logger.info(f"✅ Serie {serie}: CONSOLIDADA")
-                                
-                                if resultado.get('conflictos', 0) > 0:
-                                    conflictos += resultado['conflictos']
-                                    log_lines.append(f"⚠️ Conflicto resuelto: {serie} - {fecha_actual}")
-                                    _logger.warning(f"⚠️ Serie {serie}: CONFLICTO RESUELTO")
-                                
-                                if resultado.get('ya_consolidadas', 0) > 0:
-                                    ya_consolidadas += resultado['ya_consolidadas']
-                                    _logger.info(f"ℹ️ Serie {serie}: YA CONSOLIDADA")
-                                
-                                if resultado.get('aplicadas_directas', 0) > 0:
-                                    aplicadas_directas += resultado['aplicadas_directas']
-                                    _logger.info(f"➡️ Serie {serie}: APLICADA DIRECTA")
-                                
-                                if resultado.get('sin_datos', 0) > 0:
-                                    sin_datos += resultado['sin_datos']
-                                    _logger.info(f"➖ Serie {serie}: SIN DATOS")
-                                
-                                if resultado.get('errores', 0) > 0:
-                                    errores += resultado['errores']
-                                    log_lines.append(f"❌ Error consolidando: {serie} - {fecha_actual}")
-                                    _logger.error(f"❌ Serie {serie}: ERROR")
-                            else:
-                                _logger.error(f"❌ Error en consolidación de {serie} - {fecha_actual}: resultado nulo")
-                                log_lines.append(f"❌ Error consolidando: {serie} - {fecha_actual}")
-                                errores += 1
-                        
-                        except Exception as e:
-                            error_msg = f"❌ Error consolidando serie {serie} en {fecha_actual}: {str(e)}"
-                            _logger.error(error_msg)
-                            import traceback
-                            _logger.error(f"❌ Traceback: {traceback.format_exc()}")
-                            
-                            log_lines.append(f"❌ Error: {serie} - {fecha_actual}")
-                            errores += 1
-                    
-                except Exception as e:
-                    error_msg = f"❌ Error procesando fecha {fecha_actual}: {str(e)}"
-                    _logger.error(error_msg)
-                    log_lines.append(error_msg)
-                    errores += 1
+            dispositivos_sync = 0
+            medidores_sync = 0
+            errores_sync = 0
+            
+            try:
+                # Sincronizar dispositivos
+                _logger.info("📱 Sincronizando dispositivos...")
+                resultado_devices = config.sync_all_devices()
                 
-                fecha_actual += timedelta(days=1)
+                if resultado_devices and resultado_devices.get('params', {}).get('type') == 'success':
+                    dispositivos_sync = 1  # Éxito en sincronización
+                    log_lines.append("✅ Dispositivos sincronizados")
+                    _logger.info("✅ Dispositivos sincronizados exitosamente")
+                else:
+                    errores_sync += 1
+                    log_lines.append("❌ Error sincronizando dispositivos")
+                    _logger.error("❌ Error sincronizando dispositivos")
+                
+            except Exception as e:
+                errores_sync += 1
+                _logger.error(f"❌ Error en sincronización de dispositivos: {str(e)}")
+                log_lines.append(f"❌ Error dispositivos: {str(e)}")
             
-            # Resumen final
-            _logger.info(f"⚖️ ===== CONSOLIDACIÓN DE LECTURAS COMPLETADA =====")
-            _logger.info(f"⚖️ Consolidadas: {consolidadas}")
-            _logger.info(f"⚖️ Conflictos: {conflictos}")
-            _logger.info(f"⚖️ Ya consolidadas: {ya_consolidadas}")
-            _logger.info(f"⚖️ Aplicadas directas: {aplicadas_directas}")
-            _logger.info(f"⚖️ Sin datos: {sin_datos}")
-            _logger.info(f"⚖️ Errores: {errores}")
+            try:
+                # Sincronizar medidores
+                _logger.info("📊 Sincronizando medidores...")
+                resultado_meters = config.sync_current_meters()
+                
+                if resultado_meters and resultado_meters.get('params', {}).get('type') == 'success':
+                    medidores_sync = 1  # Éxito en sincronización
+                    log_lines.append("✅ Medidores sincronizados")
+                    _logger.info("✅ Medidores sincronizados exitosamente")
+                else:
+                    errores_sync += 1
+                    log_lines.append("❌ Error sincronizando medidores")
+                    _logger.error("❌ Error sincronizando medidores")
+                
+            except Exception as e:
+                errores_sync += 1
+                _logger.error(f"❌ Error en sincronización de medidores: {str(e)}")
+                log_lines.append(f"❌ Error medidores: {str(e)}")
             
-            log_lines.append(f"✅ Consolidación completada:")
-            log_lines.append(f"  • Consolidadas: {consolidadas}")
-            log_lines.append(f"  • Conflictos resueltos: {conflictos}")
-            log_lines.append(f"  • Ya consolidadas: {ya_consolidadas}")
-            log_lines.append(f"  • Aplicadas directas: {aplicadas_directas}")
-            log_lines.append(f"  • Sin datos: {sin_datos}")
-            log_lines.append(f"  • Errores: {errores}")
+            # Resumen
+            _logger.info(f"🔄 Sincronización completada: {errores_sync} errores")
+            if errores_sync == 0:
+                log_lines.append("✅ Sincronización API completada exitosamente")
+            else:
+                log_lines.append(f"⚠️ Sincronización completada con {errores_sync} errores")
             
             return {
-                'consolidadas': consolidadas,
-                'conflictos': conflictos,
-                'errores': errores,
-                'ya_consolidadas': ya_consolidadas,
-                'aplicadas_directas': aplicadas_directas,
-                'sin_datos': sin_datos,
+                'dispositivos': dispositivos_sync,
+                'medidores': medidores_sync,
+                'errores': errores_sync,
                 'log': log_lines
             }
             
         except Exception as e:
-            error_msg = f"❌ ERROR CRÍTICO en consolidación de lecturas: {str(e)}"
+            error_msg = f"❌ ERROR CRÍTICO en sincronización API: {str(e)}"
             _logger.error(error_msg)
             import traceback
             _logger.error(f"❌ Traceback: {traceback.format_exc()}")
             
             return {
-                'consolidadas': 0,
-                'conflictos': 0,
+                'dispositivos': 0,
+                'medidores': 0,
                 'errores': 1,
                 'log': [error_msg]
             }
 
+    @api.model
+    def ejecutar_sincronizacion_completa(self):
+        """
+        NUEVO: Método específico para sincronización completa con API
+        """
+        try:
+            _logger.info("🔄 ===== SINCRONIZACIÓN COMPLETA INICIADA =====")
+            
+            # Crear procesador temporal para sincronización
+            procesador = self.create({
+                'fecha_inicio': date.today(),
+                'fecha_fin': date.today(),
+                'forzar_reproceso': False
+            })
+            
+            # Ejecutar sincronización
+            resultado = procesador._sincronizar_con_api()
+            
+            # Log del resultado
+            if resultado['errores'] == 0:
+                _logger.info("✅ Sincronización completa exitosa")
+                return True
+            else:
+                _logger.warning(f"⚠️ Sincronización con {resultado['errores']} errores")
+                return False
+                
+        except Exception as e:
+            _logger.error(f"❌ Error en sincronización completa: {str(e)}")
+            return False
+
+    # ========================================
+    # APLICACIÓN A EQUIPOS Y UTILIDADES SIMPLIFICADAS
+    # ========================================
+
     def _aplicar_a_equipos(self):
         """
-        PARTE 3 - CORREGIDO: Aplica lecturas consolidadas pendientes a los equipos
-        USA el método _aplicar_lectura_a_equipo corregido
+        SIMPLIFICADO: Aplica lecturas pendientes a los equipos
+        Sin lógica de consolidación - aplicación directa
         """
         try:
             log_lines = []
@@ -824,6 +615,7 @@ Ver log completo para detalles."""
             errores = 0
             ya_aplicados = 0
             sin_equipo = 0
+            procesadas = 0
             
             _logger.info("💾 ===== INICIANDO APLICACIÓN A EQUIPOS =====")
             _logger.info(f"💾 Período: {self.fecha_inicio} a {self.fecha_fin}")
@@ -832,7 +624,8 @@ Ver log completo para detalles."""
             domain = [
                 ('fecha', '>=', self.fecha_inicio),
                 ('fecha', '<=', self.fecha_fin),
-                ('estado', 'in', ['validado', 'borrador'])  # Solo validadas o borradores, no aplicadas
+                ('estado', '=', 'validado'),
+                ('aplicado_a_equipo', '=', False)
             ]
             
             if self.serie_especifica:
@@ -841,15 +634,15 @@ Ver log completo para detalles."""
             lecturas_pendientes = self.env['printtracker.daily.reading'].search(domain)
             
             _logger.info(f"💾 Lecturas pendientes encontradas: {len(lecturas_pendientes)}")
-            log_lines.append(f"💾 Encontradas {len(lecturas_pendientes)} lecturas pendientes de aplicar")
+            log_lines.append(f"💾 Encontradas {len(lecturas_pendientes)} lecturas pendientes")
             
-            # Verificar también lecturas ya aplicadas para estadísticas
+            # Verificar lecturas ya aplicadas para estadísticas
             domain_aplicadas = domain.copy()
-            domain_aplicadas[2] = ('estado', '=', 'aplicado')
+            domain_aplicadas[2] = ('aplicado_a_equipo', '=', True)
             lecturas_aplicadas = self.env['printtracker.daily.reading'].search(domain_aplicadas)
             ya_aplicados = len(lecturas_aplicadas)
             
-            _logger.info(f"💾 Lecturas ya aplicadas en período: {ya_aplicados}")
+            _logger.info(f"💾 Lecturas ya aplicadas: {ya_aplicados}")
             log_lines.append(f"💾 Ya aplicadas en período: {ya_aplicados}")
             
             if not lecturas_pendientes:
@@ -858,6 +651,7 @@ Ver log completo para detalles."""
                 
                 return {
                     'actualizados': 0,
+                    'procesadas': ya_aplicados,
                     'errores': 0,
                     'ya_aplicados': ya_aplicados,
                     'sin_equipo': 0,
@@ -867,12 +661,7 @@ Ver log completo para detalles."""
             # Procesar cada lectura pendiente
             for i, lectura in enumerate(lecturas_pendientes, 1):
                 try:
-                    _logger.info(f"💾 --- Aplicando lectura {i}/{len(lecturas_pendientes)}: {lectura.serie} ---")
-                    _logger.info(f"💾 Lectura ID: {lectura.id}")
-                    _logger.info(f"💾 Fecha: {lectura.fecha}")
-                    _logger.info(f"💾 Fuente: {lectura.fuente_origen}")
-                    _logger.info(f"💾 Estado actual: {lectura.estado}")
-                    _logger.info(f"💾 Ya aplicado: {lectura.aplicado_a_equipo}")
+                    _logger.info(f"💾 --- Aplicando {i}/{len(lecturas_pendientes)}: {lectura.serie} ---")
                     
                     # Verificar si tiene equipo
                     if not lectura.equipo_id:
@@ -881,51 +670,51 @@ Ver log completo para detalles."""
                         sin_equipo += 1
                         continue
                     
-                    # Verificar si ya fue aplicada (doble verificación)
-                    if lectura.aplicado_a_equipo:
-                        _logger.info(f"💾 Ya aplicada: {lectura.serie}")
-                        ya_aplicados += 1
-                        continue
-                    
-                    # Aplicar al equipo usando el método corregido
-                    _logger.info(f"💾 Llamando _aplicar_lectura_a_equipo...")
+                    # Aplicar al equipo
+                    _logger.info(f"💾 Aplicando lectura al equipo...")
                     resultado_aplicacion = lectura._aplicar_lectura_a_equipo(lectura)
                     
                     if resultado_aplicacion:
                         _logger.info(f"✅ Aplicada exitosamente: {lectura.serie}")
-                        log_lines.append(f"✅ Aplicado: {lectura.serie} - {lectura.fecha} → {lectura.equipo_id.name}")
+                        log_lines.append(f"✅ {lectura.serie} → {lectura.equipo_id.name}")
                         actualizados += 1
+                        procesadas += 1
                     else:
                         _logger.error(f"❌ Error aplicando: {lectura.serie}")
                         error_detail = lectura.mensaje_error or "Error desconocido"
-                        log_lines.append(f"❌ Error aplicando: {lectura.serie} - {lectura.fecha} ({error_detail})")
+                        log_lines.append(f"❌ Error: {lectura.serie} ({error_detail})")
                         errores += 1
                         
                 except Exception as e:
-                    error_msg = f"❌ Error aplicando lectura {lectura.serie}: {str(e)}"
+                    error_msg = f"❌ Error aplicando {lectura.serie}: {str(e)}"
                     _logger.error(error_msg)
                     import traceback
                     _logger.error(f"❌ Traceback: {traceback.format_exc()}")
                     
-                    log_lines.append(f"❌ Error aplicando: {lectura.serie} - {lectura.fecha}")
+                    log_lines.append(f"❌ Error: {lectura.serie}")
                     errores += 1
+            
+            # Incluir ya aplicadas en el total procesadas
+            procesadas += ya_aplicados
             
             # Resumen final
             _logger.info(f"💾 ===== APLICACIÓN A EQUIPOS COMPLETADA =====")
-            _logger.info(f"💾 Total pendientes: {len(lecturas_pendientes)}")
-            _logger.info(f"💾 Aplicadas exitosamente: {actualizados}")
+            _logger.info(f"💾 Nuevas aplicadas: {actualizados}")
             _logger.info(f"💾 Ya aplicadas: {ya_aplicados}")
+            _logger.info(f"💾 Total procesadas: {procesadas}")
             _logger.info(f"💾 Sin equipo: {sin_equipo}")
             _logger.info(f"💾 Errores: {errores}")
             
             log_lines.append(f"✅ Aplicación completada:")
-            log_lines.append(f"  • Aplicadas exitosamente: {actualizados}")
+            log_lines.append(f"  • Nuevas aplicadas: {actualizados}")
             log_lines.append(f"  • Ya aplicadas: {ya_aplicados}")
+            log_lines.append(f"  • Total procesadas: {procesadas}")
             log_lines.append(f"  • Sin equipo: {sin_equipo}")
             log_lines.append(f"  • Errores: {errores}")
             
             return {
                 'actualizados': actualizados,
+                'procesadas': procesadas,
                 'errores': errores,
                 'ya_aplicados': ya_aplicados,
                 'sin_equipo': sin_equipo,
@@ -940,17 +729,18 @@ Ver log completo para detalles."""
             
             return {
                 'actualizados': 0,
+                'procesadas': 0,
                 'errores': 1,
                 'log': [error_msg]
             }
 
     @api.model
-    def obtener_estadisticas_consolidacion(self, dias=7):
+    def obtener_estadisticas_sistema(self, dias=7):
         """
-        PARTE 3 - MEJORADO: Obtiene estadísticas detalladas de consolidación
+        SIMPLIFICADO: Estadísticas del sistema PrintTracker
         """
         try:
-            _logger.info(f"📊 Generando estadísticas de consolidación para últimos {dias} días")
+            _logger.info(f"📊 Generando estadísticas para últimos {dias} días")
             
             fecha_inicio = date.today() - timedelta(days=dias)
             
@@ -961,24 +751,20 @@ Ver log completo para detalles."""
             
             _logger.info(f"📊 Total lecturas encontradas: {len(lecturas)}")
             
-            # Estadísticas por fuente
+            # Estadísticas por fuente (simplificadas)
             lecturas_por_fuente = {
-                'correo': len(lecturas.filtered(lambda l: l.fuente_origen == 'correo')),
                 'printtracker': len(lecturas.filtered(lambda l: l.fuente_origen == 'printtracker')),
-                'consolidado': len(lecturas.filtered(lambda l: l.fuente_origen == 'consolidado')),
                 'manual': len(lecturas.filtered(lambda l: l.fuente_origen == 'manual'))
             }
             
             # Estadísticas por estado
             lecturas_por_estado = {
-                'borrador': len(lecturas.filtered(lambda l: l.estado == 'borrador')),
                 'validado': len(lecturas.filtered(lambda l: l.estado == 'validado')),
                 'aplicado': len(lecturas.filtered(lambda l: l.estado == 'aplicado')),
                 'error': len(lecturas.filtered(lambda l: l.estado == 'error'))
             }
             
             # Estadísticas adicionales
-            conflictos_detectados = len(lecturas.filtered('conflicto_detectado'))
             lecturas_aplicadas = len(lecturas.filtered('aplicado_a_equipo'))
             series_unicas = len(set(lecturas.mapped('serie')))
             equipos_con_actividad = len(set(lecturas.filtered('equipo_id').mapped('equipo_id')))
@@ -999,10 +785,10 @@ Ver log completo para detalles."""
                 },
                 'por_fuente': lecturas_por_fuente,
                 'por_estado': lecturas_por_estado,
-                'consolidacion': {
-                    'conflictos_detectados': conflictos_detectados,
+                'procesamiento': {
                     'lecturas_aplicadas': lecturas_aplicadas,
-                    'pendientes_aplicar': len(lecturas.filtered(lambda l: l.estado == 'validado' and not l.aplicado_a_equipo))
+                    'pendientes_aplicar': len(lecturas.filtered(lambda l: l.estado == 'validado' and not l.aplicado_a_equipo)),
+                    'tasa_exito': (lecturas_aplicadas / len(lecturas) * 100) if len(lecturas) > 0 else 0
                 }
             }
             
@@ -1030,21 +816,21 @@ Ver log completo para detalles."""
             _logger.error(f"❌ Traceback: {traceback.format_exc()}")
             return {}
 
-    def action_diagnostico_completo(self):
+    def action_diagnostico_sistema(self):
         """
-        PARTE 3 - NUEVO: Diagnóstico completo del sistema
+        SIMPLIFICADO: Diagnóstico completo del sistema
         """
         try:
-            _logger.info("🔍 ===== INICIANDO DIAGNÓSTICO COMPLETO =====")
+            _logger.info("🔍 ===== INICIANDO DIAGNÓSTICO SISTEMA =====")
             
             # Obtener estadísticas
-            stats = self.obtener_estadisticas_consolidacion(dias=7)
+            stats = self.obtener_estadisticas_sistema(dias=7)
             
-            # Verificar duplicados
-            duplicados_info = self._verificar_registros_duplicados()
+            # Verificar inconsistencias
+            inconsistencias_info = self._verificar_registros_inconsistentes()
             
             # Crear mensaje de diagnóstico
-            mensaje = "🔍 === DIAGNÓSTICO COMPLETO CONSOLIDACIÓN ===\n\n"
+            mensaje = "🔍 === DIAGNÓSTICO SISTEMA PRINTTRACKER ===\n\n"
             
             if stats:
                 mensaje += f"📅 PERÍODO: {stats['periodo']['fecha_inicio']} a {stats['periodo']['fecha_fin']}\n\n"
@@ -1065,39 +851,42 @@ Ver log completo para detalles."""
                     mensaje += f"• {estado.title()}: {count}\n"
                 mensaje += "\n"
                 
-                mensaje += "⚖️ CONSOLIDACIÓN:\n"
-                mensaje += f"• Conflictos detectados: {stats['consolidacion']['conflictos_detectados']}\n"
-                mensaje += f"• Lecturas aplicadas: {stats['consolidacion']['lecturas_aplicadas']}\n"
-                mensaje += f"• Pendientes aplicar: {stats['consolidacion']['pendientes_aplicar']}\n\n"
+                mensaje += "💾 PROCESAMIENTO:\n"
+                mensaje += f"• Lecturas aplicadas: {stats['procesamiento']['lecturas_aplicadas']}\n"
+                mensaje += f"• Pendientes aplicar: {stats['procesamiento']['pendientes_aplicar']}\n"
+                mensaje += f"• Tasa éxito: {stats['procesamiento']['tasa_exito']:.1f}%\n\n"
             
-            if duplicados_info:
-                mensaje += f"🔍 DUPLICADOS:\n"
-                mensaje += f"• Total grupos: {duplicados_info['total_grupos']}\n"
-                mensaje += f"• Con duplicados: {duplicados_info['duplicados']}\n\n"
+            if inconsistencias_info:
+                mensaje += f"🔍 INCONSISTENCIAS:\n"
+                mensaje += f"• Total lecturas analizadas: {inconsistencias_info['total_lecturas']}\n"
+                for problema, count in inconsistencias_info['problemas'].items():
+                    if count > 0:
+                        mensaje += f"• {problema.replace('_', ' ').title()}: {count}\n"
+                mensaje += "\n"
             
             # Recomendaciones
             mensaje += "💡 RECOMENDACIONES:\n"
-            if stats and stats['consolidacion']['pendientes_aplicar'] > 0:
-                mensaje += f"• Ejecutar aplicación a equipos ({stats['consolidacion']['pendientes_aplicar']} pendientes)\n"
-            if duplicados_info and duplicados_info['duplicados'] > 0:
-                mensaje += f"• Revisar {duplicados_info['duplicados']} grupos duplicados\n"
+            if stats and stats['procesamiento']['pendientes_aplicar'] > 0:
+                mensaje += f"• Ejecutar aplicación a equipos ({stats['procesamiento']['pendientes_aplicar']} pendientes)\n"
+            if inconsistencias_info and inconsistencias_info['total_problemas'] > 0:
+                mensaje += f"• Revisar {inconsistencias_info['total_problemas']} inconsistencias\n"
             if stats and stats['totales']['lecturas_sin_equipo'] > 0:
                 mensaje += f"• Revisar {stats['totales']['lecturas_sin_equipo']} lecturas sin equipo\n"
             
             if not any([
-                stats and stats['consolidacion']['pendientes_aplicar'] > 0,
-                duplicados_info and duplicados_info['duplicados'] > 0,
+                stats and stats['procesamiento']['pendientes_aplicar'] > 0,
+                inconsistencias_info and inconsistencias_info['total_problemas'] > 0,
                 stats and stats['totales']['lecturas_sin_equipo'] > 0
             ]):
                 mensaje += "• Sistema funcionando correctamente ✅\n"
             
-            _logger.info("✅ Diagnóstico completo generado")
+            _logger.info("✅ Diagnóstico sistema generado")
             
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': 'Diagnóstico Completo',
+                    'title': 'Diagnóstico Sistema',
                     'message': mensaje,
                     'type': 'info',
                     'sticky': True
@@ -1106,6 +895,114 @@ Ver log completo para detalles."""
             
         except Exception as e:
             error_msg = f'❌ Error en diagnóstico: {str(e)}'
+            _logger.error(error_msg)
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': error_msg,
+                    'type': 'danger'
+                }
+            }
+
+    @api.model
+    def limpiar_datos_antiguos(self, dias=30):
+        """
+        NUEVO: Limpia datos antiguos del sistema
+        """
+        try:
+            fecha_limite = date.today() - timedelta(days=dias)
+            _logger.info(f"🗑️ Iniciando limpieza de datos anteriores a: {fecha_limite}")
+            
+            # Limpiar lecturas diarias antiguas en estado 'aplicado'
+            lecturas_antiguas = self.env['printtracker.daily.reading'].search([
+                ('fecha', '<', fecha_limite),
+                ('estado', '=', 'aplicado'),
+                ('aplicado_a_equipo', '=', True)
+            ])
+            
+            count_lecturas = len(lecturas_antiguas)
+            
+            # Limpiar meters antiguos (mantener solo últimos 30 días)
+            meters_antiguos = self.env['printtracker.meter'].search([
+                ('reading_date', '<', datetime.combine(fecha_limite, datetime.min.time()))
+            ])
+            
+            count_meters = len(meters_antiguos)
+            
+            if count_lecturas > 0:
+                lecturas_antiguas.unlink()
+                _logger.info(f"✅ Limpieza lecturas: {count_lecturas} registros eliminados")
+            
+            if count_meters > 0:
+                meters_antiguos.unlink()
+                _logger.info(f"✅ Limpieza meters: {count_meters} registros eliminados")
+            
+            if count_lecturas == 0 and count_meters == 0:
+                _logger.info(f"ℹ️ No hay datos antiguos para eliminar")
+            
+            return {
+                'lecturas_eliminadas': count_lecturas,
+                'meters_eliminados': count_meters,
+                'fecha_limite': fecha_limite
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error en limpieza: {str(e)}")
+            return {
+                'lecturas_eliminadas': 0,
+                'meters_eliminados': 0,
+                'error': str(e)
+            }
+
+    def action_sincronizar_api(self):
+        """
+        NUEVO: Acción manual para sincronizar con API
+        """
+        self.ensure_one()
+        
+        try:
+            _logger.info("🔄 Sincronización manual con API solicitada")
+            
+            resultado = self._sincronizar_con_api()
+            
+            if resultado['errores'] == 0:
+                mensaje = f"""✅ SINCRONIZACIÓN API EXITOSA
+
+📊 RESULTADOS:
+- Dispositivos: {'✅' if resultado['dispositivos'] else '⚠️'}
+- Medidores: {'✅' if resultado['medidores'] else '⚠️'}
+- Errores: {resultado['errores']}
+
+La sincronización se completó correctamente."""
+                
+                message_type = 'success'
+            else:
+                mensaje = f"""⚠️ SINCRONIZACIÓN CON ERRORES
+
+📊 RESULTADOS:
+- Dispositivos: {'✅' if resultado['dispositivos'] else '❌'}
+- Medidores: {'✅' if resultado['medidores'] else '❌'}
+- Errores: {resultado['errores']}
+
+Revisar configuración de PrintTracker."""
+                
+                message_type = 'warning'
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Sincronización API',
+                    'message': mensaje,
+                    'type': message_type,
+                    'sticky': True
+                }
+            }
+            
+        except Exception as e:
+            error_msg = f'❌ Error en sincronización: {str(e)}'
             _logger.error(error_msg)
             
             return {

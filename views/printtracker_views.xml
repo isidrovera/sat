@@ -777,10 +777,7 @@
                             title="Aplicado" 
                             bg_color="bg-success" 
                             invisible="not aplicado_a_equipo"/>
-                    <widget name="web_ribbon" 
-                            title="Conflicto" 
-                            bg_color="bg-warning" 
-                            invisible="not conflicto_detectado"/>
+                    
                     <widget name="web_ribbon" 
                             title="Error" 
                             bg_color="bg-danger" 
@@ -796,7 +793,7 @@
                         <group name="status_info">
                             <field name="aplicado_a_equipo" readonly="True"/>
                             <field name="fecha_aplicacion" readonly="True"/>
-                            <field name="consolidado_por" readonly="True"/>
+                          
                             <field name="fecha_procesamiento" readonly="True"/>
                         </group>
                     </group>
@@ -844,10 +841,6 @@
                         </group>
                     </group>
                     
-                    <group string="Resolución de Conflictos" 
-                           invisible="not conflicto_detectado">
-                        <field name="detalle_conflicto" readonly="True" widget="text"/>
-                        <field name="resolucion_aplicada" readonly="True"/>
                     </group>
                     
                     <group string="Errores" 
@@ -884,8 +877,7 @@
                        decoration-success="estado == 'aplicado'"
                        decoration-warning="estado == 'validado'"
                        decoration-danger="estado == 'error'"/>
-                <field name="conflicto_detectado" 
-                       decoration-warning="conflicto_detectado"/>
+                
             </list>
         </field>
     </record>
@@ -932,9 +924,7 @@
 
             <!-- Conflictos -->
             <separator/>
-            <filter name="con_conflicto" string="Con conflicto"
-                    domain="[('conflicto_detectado', '=', True)]"/>
-
+            
             <!-- Agrupar por -->
             <group expand="0" string="Agrupar por">
                 <!-- Fecha (día / semana / mes) -->
@@ -1201,19 +1191,7 @@
                         </group>
                     </group>
                     
-                    <group string="Resultados del Procesamiento" 
-                           invisible="not registros_contador_automatico and not registros_printtracker">
-                        <group>
-                            <field name="registros_contador_automatico" readonly="True"/>
-                            <field name="registros_printtracker" readonly="True"/>
-                            <field name="lecturas_consolidadas" readonly="True"/>
-                        </group>
-                        <group>
-                            <field name="conflictos_resueltos" readonly="True"/>
-                            <field name="equipos_actualizados" readonly="True"/>
-                            <field name="errores_encontrados" readonly="True"/>
-                        </group>
-                    </group>
+                    
                     
                     <group string="Log de Procesamiento" 
                            invisible="not log_procesamiento">
@@ -1244,14 +1222,11 @@
 
             <!-- Resultados / métricas -->
             <separator/>
-            <filter name="tuvo_reg_auto" string="Contador Automático &gt; 0"
-                    domain="[('registros_contador_automatico', '>', 0)]"/>
+            
             <filter name="tuvo_reg_pt" string="PrintTracker &gt; 0"
                     domain="[('registros_printtracker', '>', 0)]"/>
-            <filter name="tuvo_lecturas" string="Lecturas consolidadas &gt; 0"
-                    domain="[('lecturas_consolidadas', '>', 0)]"/>
-            <filter name="tuvo_conflictos" string="Conflictos resueltos &gt; 0"
-                    domain="[('conflictos_resueltos', '>', 0)]"/>
+            
+            
             <filter name="actualizo_eq" string="Equipos actualizados &gt; 0"
                     domain="[('equipos_actualizados', '>', 0)]"/>
             <filter name="con_errores" string="Con errores"
