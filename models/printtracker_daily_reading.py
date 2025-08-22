@@ -11,6 +11,10 @@ class PrintTrackerDailyReading(models.Model):
     _order = 'fecha desc, serie'
     _rec_name = 'display_name'
 
+    # ========================================
+    # CAMPOS DEL MODELO (SIN CAMBIOS)
+    # ========================================
+    
     # Identificación principal
     fecha = fields.Date('Fecha', required=True, index=True)
     serie = fields.Char('Serie del Equipo', required=True, index=True)
@@ -94,6 +98,208 @@ class PrintTrackerDailyReading(models.Model):
         ('valid_date', 'CHECK(fecha <= CURRENT_DATE)', 
          'La fecha no puede ser futura')
     ]
+
+    # ========================================
+    # PARTE 1: MÉTODOS DE CREACIÓN CORREGIDOS
+    # ========================================
+
+    @api.model
+    def crear_desde_contador_automatico(self, registro_contador):
+        """
+        PARTE 1 - CORREGIDO: Crea una lectura diaria desde un registro de contador.automatico
+        CAMBIO PRINCIPAL: Solo crea, NO actualiza automáticamente
+        """
+        try:
+            _logger.info(f"📧 ===== INICIANDO CREACIÓN DESDE CORREO =====")
+            _logger.info(f"📧 Serie detectada: {registro_contador.serie_detectada}")
+            _logger.info(f"📧 ID registro contador: {registro_contador.id}")
+            _logger.info(f"📧 Fecha procesamiento: {registro_contador.fecha_procesamiento}")
+            
+            # Validación inicial
+            if not registro_contador.serie_detectada:
+                _logger.error("❌ CORREO - Registro sin serie detectada")
+                _logger.error(f"❌ CORREO - Registro ID: {registro_contador.id}")
+                _logger.error(f"❌ CORREO - Campos disponibles: {list(registro_contador._fields.keys())}")
+                return False
+            
+            # Obtener fecha de lectura
+            fecha_lectura = registro_contador.fecha_procesamiento.date() if registro_contador.fecha_procesamiento else date.today()
+            _logger.info(f"📧 Fecha de lectura calculada: {fecha_lectura}")
+            
+            # Extraer valores de contadores
+            contador_bn = registro_contador.contador_bn_detectado or 0
+            contador_color = registro_contador.contador_color_detectado or 0
+            contador_scan = registro_contador.contador_scan_detectado or 0
+            
+            _logger.info(f"📧 Contadores extraídos - BN: {contador_bn}, Color: {contador_color}, Scan: {contador_scan}")
+            
+            # Buscar si ya existe registro para esta fecha/serie
+            _logger.info(f"📧 Buscando registros existentes para serie '{registro_contador.serie_detectada}' en fecha '{fecha_lectura}'")
+            
+            existing = self.search([
+                ('fecha', '=', fecha_lectura),
+                ('serie', '=', registro_contador.serie_detectada)
+            ])
+            
+            _logger.info(f"📧 Registros existentes encontrados: {len(existing)}")
+            
+            if existing:
+                for i, registro in enumerate(existing):
+                    _logger.info(f"📧 Registro existente {i+1}: ID={registro.id}, Fuente={registro.fuente_origen}, Estado={registro.estado}")
+                    _logger.info(f"📧 Contadores existentes: BN={registro.contador_bn}, Color={registro.contador_color}, Scan={registro.contador_scan}")
+                
+                # CAMBIO PRINCIPAL: No actualizar automáticamente, solo reportar
+                _logger.warning(f"⚠️ CORREO - Ya existe(n) {len(existing)} lectura(s) para {registro_contador.serie_detectada} en {fecha_lectura}")
+                _logger.warning(f"⚠️ CORREO - Fuente(s) existente(s): {[r.fuente_origen for r in existing]}")
+                _logger.warning(f"⚠️ CORREO - Se requiere consolidación manual posterior")
+                return existing[0]  # Retornar el primero encontrado
+            
+            # CASO NUEVO: No existe registro, crear nuevo
+            _logger.info(f"🆕 CORREO - Creando nuevo registro para serie: {registro_contador.serie_detectada}")
+            _logger.info(f"🆕 CORREO - Fecha: {fecha_lectura}")
+            
+            # Preparar valores para creación
+            valores = {
+                'fecha': fecha_lectura,
+                'serie': registro_contador.serie_detectada,
+                'contador_bn': contador_bn,
+                'contador_color': contador_color,
+                'contador_scan': contador_scan,
+                'contador_copy': 0,  # Correo no detecta copy/fax
+                'contador_fax': 0,
+                'fuente_origen': 'correo',
+                'contador_automatico_id': registro_contador.id,
+                'estado': 'validado'
+            }
+            
+            _logger.info(f"🆕 CORREO - Valores para creación: {valores}")
+            
+            # Crear nueva lectura
+            nueva_lectura = self.create(valores)
+            
+            _logger.info(f"✅ CORREO - Lectura creada exitosamente: ID={nueva_lectura.id}")
+            _logger.info(f"✅ CORREO - Display name: {nueva_lectura.display_name}")
+            _logger.info(f"✅ CORREO - Total contador: {nueva_lectura.contador_total}")
+            _logger.info(f"📧 ===== FIN CREACIÓN DESDE CORREO =====")
+            
+            return nueva_lectura
+            
+        except Exception as e:
+            _logger.error(f"❌ CORREO - Error crítico creando lectura desde contador automático")
+            _logger.error(f"❌ CORREO - Exception: {str(e)}")
+            _logger.error(f"❌ CORREO - Serie: {getattr(registro_contador, 'serie_detectada', 'N/A')}")
+            import traceback
+            _logger.error(f"❌ CORREO - Traceback: {traceback.format_exc()}")
+            return False
+
+    @api.model
+    def crear_desde_printtracker(self, meter_record):
+        """
+        PARTE 1 - CORREGIDO: Crea una lectura diaria desde un registro de printtracker.meter
+        CAMBIO PRINCIPAL: Solo crea, NO actualiza automáticamente
+        """
+        try:
+            _logger.info(f"🔄 ===== INICIANDO CREACIÓN DESDE PRINTTRACKER =====")
+            _logger.info(f"🔄 Device ID: {meter_record.device_id}")
+            _logger.info(f"🔄 ID meter record: {meter_record.id}")
+            _logger.info(f"🔄 Reading date: {meter_record.reading_date}")
+            
+            # Validación inicial
+            if not meter_record.device_id:
+                _logger.error("❌ PRINTTRACKER - Meter sin device_id")
+                _logger.error(f"❌ PRINTTRACKER - Meter ID: {meter_record.id}")
+                return False
+                
+            if not meter_record.device_id.serie:
+                _logger.error("❌ PRINTTRACKER - Device sin serie")
+                _logger.error(f"❌ PRINTTRACKER - Device ID: {meter_record.device_id.id}")
+                _logger.error(f"❌ PRINTTRACKER - Device name: {meter_record.device_id.name}")
+                return False
+            
+            # Obtener datos básicos
+            serie = meter_record.device_id.serie
+            fecha_lectura = meter_record.reading_date.date() if meter_record.reading_date else date.today()
+            
+            _logger.info(f"🔄 Serie extraída: {serie}")
+            _logger.info(f"🔄 Fecha de lectura calculada: {fecha_lectura}")
+            
+            # Extraer contadores
+            contador_bn = meter_record.black_pages_life or 0
+            contador_color = meter_record.color_pages_life or 0
+            contador_scan = meter_record.scan_pages or 0
+            contador_copy = meter_record.copy_pages or 0
+            contador_fax = meter_record.fax_pages or 0
+            
+            _logger.info(f"🔄 Contadores extraídos:")
+            _logger.info(f"🔄   - BN: {contador_bn}")
+            _logger.info(f"🔄   - Color: {contador_color}")
+            _logger.info(f"🔄   - Scan: {contador_scan}")
+            _logger.info(f"🔄   - Copy: {contador_copy}")
+            _logger.info(f"🔄   - Fax: {contador_fax}")
+            
+            # Buscar registros existentes
+            _logger.info(f"🔄 Buscando registros existentes para serie '{serie}' en fecha '{fecha_lectura}'")
+            
+            existing = self.search([
+                ('fecha', '=', fecha_lectura),
+                ('serie', '=', serie)
+            ])
+            
+            _logger.info(f"🔄 Registros existentes encontrados: {len(existing)}")
+            
+            if existing:
+                for i, registro in enumerate(existing):
+                    _logger.info(f"🔄 Registro existente {i+1}: ID={registro.id}, Fuente={registro.fuente_origen}, Estado={registro.estado}")
+                    _logger.info(f"🔄 Contadores existentes: BN={registro.contador_bn}, Color={registro.contador_color}, Scan={registro.contador_scan}")
+                
+                # CAMBIO PRINCIPAL: No actualizar automáticamente
+                _logger.warning(f"⚠️ PRINTTRACKER - Ya existe(n) {len(existing)} lectura(s) para {serie} en {fecha_lectura}")
+                _logger.warning(f"⚠️ PRINTTRACKER - Fuente(s) existente(s): {[r.fuente_origen for r in existing]}")
+                _logger.warning(f"⚠️ PRINTTRACKER - Se requiere consolidación manual posterior")
+                return existing[0]  # Retornar el primero encontrado
+            
+            # CASO NUEVO: No existe registro, crear nuevo
+            _logger.info(f"🆕 PRINTTRACKER - Creando nuevo registro para serie: {serie}")
+            _logger.info(f"🆕 PRINTTRACKER - Fecha: {fecha_lectura}")
+            
+            # Preparar valores para creación
+            valores = {
+                'fecha': fecha_lectura,
+                'serie': serie,
+                'contador_bn': contador_bn,
+                'contador_color': contador_color,
+                'contador_scan': contador_scan,
+                'contador_copy': contador_copy,
+                'contador_fax': contador_fax,
+                'fuente_origen': 'printtracker',
+                'printtracker_meter_id': meter_record.id,
+                'estado': 'validado'
+            }
+            
+            _logger.info(f"🆕 PRINTTRACKER - Valores para creación: {valores}")
+            
+            # Crear nueva lectura
+            nueva_lectura = self.create(valores)
+            
+            _logger.info(f"✅ PRINTTRACKER - Lectura creada exitosamente: ID={nueva_lectura.id}")
+            _logger.info(f"✅ PRINTTRACKER - Display name: {nueva_lectura.display_name}")
+            _logger.info(f"✅ PRINTTRACKER - Total contador: {nueva_lectura.contador_total}")
+            _logger.info(f"🔄 ===== FIN CREACIÓN DESDE PRINTTRACKER =====")
+            
+            return nueva_lectura
+            
+        except Exception as e:
+            _logger.error(f"❌ PRINTTRACKER - Error crítico creando lectura desde PrintTracker")
+            _logger.error(f"❌ PRINTTRACKER - Exception: {str(e)}")
+            _logger.error(f"❌ PRINTTRACKER - Device: {getattr(meter_record, 'device_id', 'N/A')}")
+            _logger.error(f"❌ PRINTTRACKER - Serie: {getattr(getattr(meter_record, 'device_id', None), 'serie', 'N/A')}")
+            import traceback
+            _logger.error(f"❌ PRINTTRACKER - Traceback: {traceback.format_exc()}")
+            return False
+
+    # ========================================
+    # MÉTODOS COMPUTE (SIN CAMBIOS)
+    # ========================================
     
     @api.depends('serie')
     def _compute_equipo_id(self):
@@ -179,465 +385,713 @@ class PrintTrackerDailyReading(models.Model):
                 reading.incremento_scan = reading.contador_scan or 0
                 reading.incremento_total = reading.contador_total or 0
 
-    @api.model
-    def crear_desde_contador_automatico(self, registro_contador):
-        """
-        Crea una lectura diaria desde un registro de contador.automatico
-        CORREGIDO: Actualiza registro de PrintTracker si ya existe
-        """
-        try:
-            _logger.info(f"📧 Creando lectura desde contador automático: {registro_contador.serie_detectada}")
-            
-            if not registro_contador.serie_detectada:
-                _logger.error("❌ Registro sin serie detectada")
-                return False
-            
-            # Usar fecha de procesamiento como fecha de la lectura
-            fecha_lectura = registro_contador.fecha_procesamiento.date() if registro_contador.fecha_procesamiento else date.today()
-            
-            # Verificar si ya existe
-            existing = self.search([
-                ('fecha', '=', fecha_lectura),
-                ('serie', '=', registro_contador.serie_detectada)
-            ], limit=1)
-            
-            if existing:
-                if existing.fuente_origen == 'printtracker':
-                    # CASO 1: ACTUALIZAR registro de PrintTracker con datos de correo
-                    _logger.info(f"📧 Actualizando registro de PrintTracker con datos de correo: {registro_contador.serie_detectada} - {fecha_lectura}")
-                    return self._actualizar_lectura_printtracker_con_correo(existing, registro_contador)
-                else:
-                    # CASO 2: Ya existe correo, no duplicar
-                    _logger.warning(f"⚠️ Ya existe lectura de correo para {registro_contador.serie_detectada} en {fecha_lectura}")
-                    return existing
-            
-            # CASO 3: No existe registro, crear nuevo
-            _logger.info(f"🆕 Creando nuevo registro desde correo: {registro_contador.serie_detectada} - {fecha_lectura}")
-            
-            valores = {
-                'fecha': fecha_lectura,
-                'serie': registro_contador.serie_detectada,
-                'contador_bn': registro_contador.contador_bn_detectado or 0,
-                'contador_color': registro_contador.contador_color_detectado or 0,
-                'contador_scan': registro_contador.contador_scan_detectado or 0,
-                'fuente_origen': 'correo',
-                'contador_automatico_id': registro_contador.id,
-                'estado': 'validado'
-            }
-            
-            nueva_lectura = self.create(valores)
-            _logger.info(f"✅ Lectura creada desde correo: {nueva_lectura.display_name}")
-            
-            return nueva_lectura
-            
-        except Exception as e:
-            _logger.error(f"❌ Error creando lectura desde contador automático: {e}")
-            return False
 
-    def _actualizar_lectura_printtracker_con_correo(self, lectura_pt, registro_contador):
-        """
-        NUEVO: Actualiza registro de PrintTracker existente con datos de correo
-        """
-        try:
-            _logger.info(f"📧 === ACTUALIZANDO PRINTTRACKER CON CORREO ===")
-            _logger.info(f"🔄 PrintTracker actual: BN={lectura_pt.contador_bn}, Color={lectura_pt.contador_color}, Scan={lectura_pt.contador_scan}")
-            _logger.info(f"📧 Correo: BN={registro_contador.contador_bn_detectado}, Color={registro_contador.contador_color_detectado}, Scan={registro_contador.contador_scan_detectado}")
-            
-            # Preparar valores a actualizar
-            valores_actualizar = {}
-            
-            # REGLA: Si PrintTracker tiene 0 en algún contador, usar valor de correo
-            if lectura_pt.contador_bn == 0 and (registro_contador.contador_bn_detectado or 0) > 0:
-                valores_actualizar['contador_bn'] = registro_contador.contador_bn_detectado
-                _logger.info(f"✅ Actualizando BN: 0 → {registro_contador.contador_bn_detectado}")
-            
-            if lectura_pt.contador_color == 0 and (registro_contador.contador_color_detectado or 0) > 0:
-                valores_actualizar['contador_color'] = registro_contador.contador_color_detectado
-                _logger.info(f"✅ Actualizando Color: 0 → {registro_contador.contador_color_detectado}")
-            
-            # REGLA ESPECIAL: Si correo tiene scan y PrintTracker no, actualizar
-            if lectura_pt.contador_scan == 0 and (registro_contador.contador_scan_detectado or 0) > 0:
-                valores_actualizar['contador_scan'] = registro_contador.contador_scan_detectado
-                _logger.info(f"✅ Actualizando Scan: 0 → {registro_contador.contador_scan_detectado}")
-            
-            # Cambiar fuente y agregar referencia correo
-            valores_actualizar.update({
-                'fuente_origen': 'consolidado',
-                'contador_automatico_id': registro_contador.id,
-                'fecha_procesamiento': fields.Datetime.now()
-            })
-            
-            if valores_actualizar:
-                lectura_pt.write(valores_actualizar)
-                _logger.info(f"✅ Lectura de PrintTracker actualizada con correo: {lectura_pt.display_name}")
-            else:
-                _logger.info(f"ℹ️ No hay valores de correo para actualizar")
-            
-            return lectura_pt
-            
-        except Exception as e:
-            _logger.error(f"❌ Error actualizando PrintTracker con correo: {e}")
-            return lectura_pt
-    @api.model
-    def crear_desde_printtracker(self, meter_record):
-        """
-        Crea una lectura diaria desde un registro de printtracker.meter
-        CORREGIDO: Actualiza registro de correo si ya existe
-        """
-        try:
-            _logger.info(f"🔄 Creando lectura desde PrintTracker: {meter_record.device_id.serie}")
-            
-            if not meter_record.device_id or not meter_record.device_id.serie:
-                _logger.error("❌ Meter sin serie de equipo")
-                return False
-            
-            # Usar fecha de lectura como fecha de la lectura
-            fecha_lectura = meter_record.reading_date.date() if meter_record.reading_date else date.today()
-            serie = meter_record.device_id.serie
-            
-            # Verificar si ya existe
-            existing = self.search([
-                ('fecha', '=', fecha_lectura),
-                ('serie', '=', serie)
-            ], limit=1)
-            
-            if existing:
-                if existing.fuente_origen == 'correo':
-                    # CASO 1: ACTUALIZAR registro de correo con datos PrintTracker
-                    _logger.info(f"🔄 Actualizando registro de correo con datos PrintTracker: {serie} - {fecha_lectura}")
-                    return self._actualizar_lectura_correo_con_printtracker(existing, meter_record)
-                else:
-                    # CASO 2: Ya existe PrintTracker, no duplicar
-                    _logger.warning(f"⚠️ Ya existe lectura de PrintTracker para {serie} en {fecha_lectura}")
-                    return existing
-            
-            # CASO 3: No existe registro, crear nuevo
-            _logger.info(f"🆕 Creando nuevo registro desde PrintTracker: {serie} - {fecha_lectura}")
-            
-            valores = {
-                'fecha': fecha_lectura,
-                'serie': serie,
-                'contador_bn': meter_record.black_pages_life or 0,
-                'contador_color': meter_record.color_pages_life or 0,
-                'contador_scan': meter_record.scan_pages or 0,
-                'contador_copy': meter_record.copy_pages or 0,
-                'contador_fax': meter_record.fax_pages or 0,
-                'fuente_origen': 'printtracker',
-                'printtracker_meter_id': meter_record.id,
-                'estado': 'validado'
-            }
-            
-            nueva_lectura = self.create(valores)
-            _logger.info(f"✅ Lectura creada desde PrintTracker: {nueva_lectura.display_name}")
-            
-            return nueva_lectura
-            
-        except Exception as e:
-            _logger.error(f"❌ Error creando lectura desde PrintTracker: {e}")
-            return False
-    def _actualizar_lectura_correo_con_printtracker(self, lectura_correo, meter_record):
-        """
-        CORREGIDO: Actualiza registro de correo existente con datos de PrintTracker
-        NUEVA LÓGICA: PrintTracker SIEMPRE gana para scan/copy/fax
-        """
-        try:
-            _logger.info(f"🔄 === ACTUALIZANDO CORREO CON PRINTTRACKER ===")
-            _logger.info(f"📧 Correo actual: BN={lectura_correo.contador_bn}, Color={lectura_correo.contador_color}, Scan={lectura_correo.contador_scan}")
-            _logger.info(f"🔄 PrintTracker: BN={meter_record.black_pages_life}, Color={meter_record.color_pages_life}, Scan={meter_record.scan_pages}")
-            
-            # Preparar valores a actualizar
-            valores_actualizar = {}
-            
-            # NUEVA REGLA 1: PrintTracker SIEMPRE gana para scan (correo no lo detecta bien)
-            if (meter_record.scan_pages or 0) > 0:
-                valores_actualizar['contador_scan'] = meter_record.scan_pages
-                _logger.info(f"✅ Actualizando Scan (PrintTracker gana): {lectura_correo.contador_scan} → {meter_record.scan_pages}")
-            elif lectura_correo.contador_scan == 0:
-                # Si PrintTracker tampoco tiene scan, mantener 0 pero registrarlo
-                _logger.info(f"ℹ️ Ambos tienen Scan=0, manteniendo 0")
-            
-            # NUEVA REGLA 2: PrintTracker SIEMPRE gana para copy/fax (correo no los tiene)
-            if (meter_record.copy_pages or 0) > 0:
-                valores_actualizar['contador_copy'] = meter_record.copy_pages
-                _logger.info(f"✅ Agregando Copy: {meter_record.copy_pages}")
-            
-            if (meter_record.fax_pages or 0) > 0:
-                valores_actualizar['contador_fax'] = meter_record.fax_pages
-                _logger.info(f"✅ Agregando Fax: {meter_record.fax_pages}")
-            
-            # REGLA 3: Para BN/Color, usar correo SI tiene valores, sino PrintTracker
-            if lectura_correo.contador_bn == 0 and (meter_record.black_pages_life or 0) > 0:
-                valores_actualizar['contador_bn'] = meter_record.black_pages_life
-                _logger.info(f"✅ Actualizando BN (correo=0): 0 → {meter_record.black_pages_life}")
-            elif lectura_correo.contador_bn > 0 and (meter_record.black_pages_life or 0) > lectura_correo.contador_bn:
-                # Si PrintTracker tiene valor mayor, usarlo
-                valores_actualizar['contador_bn'] = meter_record.black_pages_life
-                _logger.info(f"✅ Actualizando BN (PT mayor): {lectura_correo.contador_bn} → {meter_record.black_pages_life}")
-            
-            if lectura_correo.contador_color == 0 and (meter_record.color_pages_life or 0) > 0:
-                valores_actualizar['contador_color'] = meter_record.color_pages_life
-                _logger.info(f"✅ Actualizando Color (correo=0): 0 → {meter_record.color_pages_life}")
-            elif lectura_correo.contador_color > 0 and (meter_record.color_pages_life or 0) > lectura_correo.contador_color:
-                # Si PrintTracker tiene valor mayor, usarlo
-                valores_actualizar['contador_color'] = meter_record.color_pages_life
-                _logger.info(f"✅ Actualizando Color (PT mayor): {lectura_correo.contador_color} → {meter_record.color_pages_life}")
-            
-            # SIEMPRE cambiar fuente y agregar referencia PrintTracker
-            valores_actualizar.update({
-                'fuente_origen': 'consolidado',
-                'printtracker_meter_id': meter_record.id,
-                'fecha_procesamiento': fields.Datetime.now()
-            })
-            
-            # SIEMPRE aplicar actualización (aunque sea solo cambiar fuente)
-            lectura_correo.write(valores_actualizar)
-            _logger.info(f"✅ Lectura de correo actualizada con PrintTracker: {lectura_correo.display_name}")
-            _logger.info(f"📊 Valores finales: BN={lectura_correo.contador_bn}, Color={lectura_correo.contador_color}, Scan={lectura_correo.contador_scan}")
-            
-            return lectura_correo
-            
-        except Exception as e:
-            _logger.error(f"❌ Error actualizando correo con PrintTracker: {e}")
-            import traceback
-            _logger.error(f"Traceback: {traceback.format_exc()}")
-            return lectura_correo
+    # ========================================
+    # PARTE 2: MÉTODOS DE CONSOLIDACIÓN CORREGIDOS
+    # ========================================
+
     @api.model
     def consolidar_lecturas(self, fecha_objetivo=None, serie_objetivo=None):
         """
-        MÉTODO PRINCIPAL: Consolida lecturas de ambas fuentes
+        PARTE 2 - MÉTODO PRINCIPAL: Consolida lecturas de ambas fuentes
+        CORREGIDO: Lógica clara y logs detallados
         """
         try:
             if not fecha_objetivo:
                 fecha_objetivo = date.today()
             
-            _logger.info(f"🔄 === INICIANDO CONSOLIDACIÓN ===")
+            _logger.info(f"🔄 ============= INICIANDO CONSOLIDACIÓN PRINCIPAL =============")
             _logger.info(f"📅 Fecha objetivo: {fecha_objetivo}")
-            _logger.info(f"📟 Serie objetivo: {serie_objetivo or 'TODAS'}")
+            _logger.info(f"📟 Serie objetivo: {serie_objetivo or 'TODAS LAS SERIES'}")
+            _logger.info(f"🕐 Hora inicio: {datetime.now()}")
             
             # Determinar series a procesar
             if serie_objetivo:
                 series_proceso = [serie_objetivo]
+                _logger.info(f"🎯 Modo serie específica: {serie_objetivo}")
             else:
                 # Obtener todas las series con lecturas en la fecha
+                _logger.info(f"🔍 Buscando todas las series con lecturas en fecha {fecha_objetivo}")
+                
                 domain = [('fecha', '=', fecha_objetivo)]
                 lecturas_fecha = self.search(domain)
                 series_proceso = list(set(lecturas_fecha.mapped('serie')))
+                
+                _logger.info(f"📊 Total lecturas encontradas en fecha: {len(lecturas_fecha)}")
+                _logger.info(f"📊 Series únicas encontradas: {len(series_proceso)}")
+                _logger.info(f"📊 Primeras 5 series: {series_proceso[:5]}")
             
+            # Contadores de resultados
             consolidadas = 0
             conflictos = 0
+            ya_consolidadas = 0
+            aplicadas_directas = 0
+            errores = 0
+            sin_datos = 0
             
-            for serie in series_proceso:
-                resultado = self._consolidar_serie_fecha(serie, fecha_objetivo)
-                if resultado == 'consolidado':
-                    consolidadas += 1
-                elif resultado == 'conflicto':
-                    conflictos += 1
+            _logger.info(f"🚀 Iniciando procesamiento de {len(series_proceso)} series...")
             
-            _logger.info(f"🎯 === CONSOLIDACIÓN COMPLETADA ===")
+            # Procesar cada serie
+            for i, serie in enumerate(series_proceso, 1):
+                _logger.info(f"📍 === PROCESANDO SERIE {i}/{len(series_proceso)}: {serie} ===")
+                
+                try:
+                    resultado = self._consolidar_serie_fecha(serie, fecha_objetivo)
+                    
+                    # Contar resultados
+                    if resultado == 'consolidado':
+                        consolidadas += 1
+                        _logger.info(f"✅ Serie {serie}: CONSOLIDADA")
+                    elif resultado == 'conflicto':
+                        conflictos += 1
+                        _logger.warning(f"⚠️ Serie {serie}: CONFLICTO DETECTADO")
+                    elif resultado == 'ya_consolidado':
+                        ya_consolidadas += 1
+                        _logger.info(f"ℹ️ Serie {serie}: YA CONSOLIDADA")
+                    elif resultado == 'aplicado_directo':
+                        aplicadas_directas += 1
+                        _logger.info(f"✅ Serie {serie}: APLICADA DIRECTAMENTE")
+                    elif resultado == 'sin_datos':
+                        sin_datos += 1
+                        _logger.info(f"➖ Serie {serie}: SIN DATOS")
+                    else:
+                        errores += 1
+                        _logger.error(f"❌ Serie {serie}: ERROR ({resultado})")
+                        
+                except Exception as e:
+                    errores += 1
+                    _logger.error(f"❌ Error procesando serie {serie}: {str(e)}")
+                    import traceback
+                    _logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            
+            # Resumen final
+            _logger.info(f"🎯 ============= CONSOLIDACIÓN COMPLETADA =============")
+            _logger.info(f"📊 RESUMEN DE RESULTADOS:")
             _logger.info(f"✅ Consolidadas: {consolidadas}")
             _logger.info(f"⚠️ Conflictos: {conflictos}")
+            _logger.info(f"ℹ️ Ya consolidadas: {ya_consolidadas}")
+            _logger.info(f"➡️ Aplicadas directas: {aplicadas_directas}")
+            _logger.info(f"➖ Sin datos: {sin_datos}")
+            _logger.info(f"❌ Errores: {errores}")
+            _logger.info(f"📊 Total procesadas: {len(series_proceso)}")
+            _logger.info(f"🕐 Hora fin: {datetime.now()}")
             
             return {
                 'consolidadas': consolidadas,
                 'conflictos': conflictos,
-                'series_procesadas': len(series_proceso)
+                'ya_consolidadas': ya_consolidadas,
+                'aplicadas_directas': aplicadas_directas,
+                'sin_datos': sin_datos,
+                'errores': errores,
+                'series_procesadas': len(series_proceso),
+                'series_lista': series_proceso
             }
             
         except Exception as e:
-            _logger.error(f"❌ Error en consolidación: {e}")
+            _logger.error(f"❌ ERROR CRÍTICO en consolidación principal: {str(e)}")
+            import traceback
+            _logger.error(f"❌ Traceback completo: {traceback.format_exc()}")
             return False
 
     def _consolidar_serie_fecha(self, serie, fecha):
         """
-        Consolida lecturas de una serie específica en una fecha específica
+        PARTE 2 - Consolida lecturas de una serie específica en una fecha específica
+        CORREGIDO: Lógica clara y manejo de todos los casos
         """
         try:
-            _logger.info(f"🔄 Consolidando {serie} - {fecha}")
+            _logger.info(f"🔄 --- Iniciando consolidación: {serie} - {fecha} ---")
             
             # Buscar lecturas existentes
+            _logger.info(f"🔍 Buscando lecturas existentes...")
             lecturas = self.search([
                 ('fecha', '=', fecha),
                 ('serie', '=', serie)
             ])
             
+            _logger.info(f"📊 Lecturas encontradas: {len(lecturas)}")
+            
+            # Analizar lecturas encontradas
+            for i, lectura in enumerate(lecturas):
+                _logger.info(f"📋 Lectura {i+1}: ID={lectura.id}, Fuente={lectura.fuente_origen}, Estado={lectura.estado}")
+                _logger.info(f"📋 Contadores: BN={lectura.contador_bn}, Color={lectura.contador_color}, Scan={lectura.contador_scan}")
+            
+            # CASO 1: No hay lecturas
             if len(lecturas) == 0:
-                _logger.info(f"ℹ️ No hay lecturas para consolidar")
+                _logger.info(f"➖ No hay lecturas para consolidar")
                 return 'sin_datos'
             
+            # CASO 2: Solo una lectura
             if len(lecturas) == 1:
-                # Solo una fuente, marcar como aplicada
                 lectura = lecturas[0]
+                _logger.info(f"📍 Solo una lectura encontrada: Fuente={lectura.fuente_origen}, Estado={lectura.estado}")
+                
                 if lectura.estado == 'validado':
-                    self._aplicar_lectura_a_equipo(lectura)
-                _logger.info(f"ℹ️ Solo una fuente, aplicada directamente")
+                    _logger.info(f"🚀 Aplicando lectura única al equipo...")
+                    resultado_aplicacion = self._aplicar_lectura_a_equipo(lectura)
+                    if resultado_aplicacion:
+                        _logger.info(f"✅ Lectura única aplicada exitosamente")
+                    else:
+                        _logger.error(f"❌ Error aplicando lectura única")
+                else:
+                    _logger.info(f"ℹ️ Lectura única ya procesada (estado: {lectura.estado})")
+                
                 return 'aplicado_directo'
             
-            # Múltiples lecturas - consolidar
+            # CASO 3: Múltiples lecturas - analizar tipos
+            _logger.info(f"🔍 Múltiples lecturas encontradas, analizando tipos...")
+            
             lectura_correo = lecturas.filtered(lambda l: l.fuente_origen == 'correo')
             lectura_pt = lecturas.filtered(lambda l: l.fuente_origen == 'printtracker')
+            lectura_consolidada = lecturas.filtered(lambda l: l.fuente_origen == 'consolidado')
+            lectura_manual = lecturas.filtered(lambda l: l.fuente_origen == 'manual')
             
+            _logger.info(f"📊 Análisis de fuentes:")
+            _logger.info(f"📧 Correo: {len(lectura_correo)} registros")
+            _logger.info(f"🔄 PrintTracker: {len(lectura_pt)} registros")
+            _logger.info(f"🔗 Consolidado: {len(lectura_consolidada)} registros")
+            _logger.info(f"✋ Manual: {len(lectura_manual)} registros")
+            
+            # CASO 3.1: Ya existe consolidada
+            if lectura_consolidada:
+                _logger.info(f"ℹ️ Ya existe lectura consolidada, verificando si necesita aplicación...")
+                consolidada = lectura_consolidada[0]
+                
+                if consolidada.estado == 'validado':
+                    _logger.info(f"🚀 Aplicando lectura consolidada existente...")
+                    resultado_aplicacion = self._aplicar_lectura_a_equipo(consolidada)
+                    if resultado_aplicacion:
+                        _logger.info(f"✅ Lectura consolidada aplicada exitosamente")
+                    else:
+                        _logger.error(f"❌ Error aplicando lectura consolidada")
+                else:
+                    _logger.info(f"ℹ️ Lectura consolidada ya procesada (estado: {consolidada.estado})")
+                
+                return 'ya_consolidado'
+            
+            # CASO 3.2: Consolidar correo + printtracker
             if lectura_correo and lectura_pt:
-                return self._resolver_conflicto_lecturas(lectura_correo[0], lectura_pt[0])
-            else:
-                # Caso raro - múltiples lecturas de misma fuente
-                _logger.warning(f"⚠️ Múltiples lecturas de misma fuente para {serie}")
+                _logger.info(f"🔄 Consolidando correo + PrintTracker...")
+                return self._consolidar_dos_fuentes(lectura_correo[0], lectura_pt[0])
+            
+            # CASO 3.3: Solo múltiples de una fuente (caso raro)
+            if len(lectura_correo) > 1:
+                _logger.warning(f"⚠️ Múltiples lecturas de correo para misma serie/fecha")
                 return 'error'
+            
+            if len(lectura_pt) > 1:
+                _logger.warning(f"⚠️ Múltiples lecturas de PrintTracker para misma serie/fecha")
+                return 'error'
+            
+            # CASO 3.4: Solo manual (aplicar directamente)
+            if lectura_manual:
+                lectura = lectura_manual[0]
+                if lectura.estado == 'validado':
+                    _logger.info(f"🚀 Aplicando lectura manual...")
+                    self._aplicar_lectura_a_equipo(lectura)
+                return 'aplicado_directo'
+            
+            # CASO 3.5: Situación no contemplada
+            _logger.warning(f"⚠️ Situación no contemplada para {serie}")
+            _logger.warning(f"⚠️ Lecturas: {[(l.fuente_origen, l.estado) for l in lecturas]}")
+            return 'error'
                 
         except Exception as e:
-            _logger.error(f"❌ Error consolidando {serie}: {e}")
+            _logger.error(f"❌ Error consolidando {serie}: {str(e)}")
+            import traceback
+            _logger.error(f"❌ Traceback: {traceback.format_exc()}")
             return 'error'
 
-    def _resolver_conflicto_lecturas(self, lectura_correo, lectura_pt):
+    def _consolidar_dos_fuentes(self, lectura_correo, lectura_pt):
         """
-        Resuelve conflicto entre lectura de correo y PrintTracker
-        REGLA: Mayor valor gana
+        PARTE 2 - NUEVO: Consolida datos de dos fuentes en una sola lectura
+        REGLAS CLARAS Y LOGS DETALLADOS
         """
         try:
-            _logger.info(f"⚠️ === RESOLVIENDO CONFLICTO ===")
-            _logger.info(f"📧 Correo: BN={lectura_correo.contador_bn}, Color={lectura_correo.contador_color}, Scan={lectura_correo.contador_scan}")
-            _logger.info(f"🔄 PrintTracker: BN={lectura_pt.contador_bn}, Color={lectura_pt.contador_color}, Scan={lectura_pt.contador_scan}")
+            _logger.info(f"🔄 ======= CONSOLIDANDO DOS FUENTES =======")
+            _logger.info(f"📧 CORREO - ID: {lectura_correo.id}")
+            _logger.info(f"📧 CORREO - BN: {lectura_correo.contador_bn}, Color: {lectura_correo.contador_color}, Scan: {lectura_correo.contador_scan}")
+            _logger.info(f"📧 CORREO - Estado: {lectura_correo.estado}")
             
-            # Aplicar regla "mayor valor gana"
+            _logger.info(f"🔄 PRINTTRACKER - ID: {lectura_pt.id}")
+            _logger.info(f"🔄 PRINTTRACKER - BN: {lectura_pt.contador_bn}, Color: {lectura_pt.contador_color}, Scan: {lectura_pt.contador_scan}")
+            _logger.info(f"🔄 PRINTTRACKER - Copy: {lectura_pt.contador_copy}, Fax: {lectura_pt.contador_fax}")
+            _logger.info(f"🔄 PRINTTRACKER - Estado: {lectura_pt.estado}")
+            
+            # Aplicar reglas de consolidación
+            _logger.info(f"⚙️ Aplicando reglas de consolidación...")
+            
+            # REGLA 1: Mayor valor para BN/Color
+            contador_bn_final = max(lectura_correo.contador_bn or 0, lectura_pt.contador_bn or 0)
+            contador_color_final = max(lectura_correo.contador_color or 0, lectura_pt.contador_color or 0)
+            
+            _logger.info(f"⚙️ REGLA 1 (Mayor valor BN/Color):")
+            _logger.info(f"⚙️   BN: max({lectura_correo.contador_bn}, {lectura_pt.contador_bn}) = {contador_bn_final}")
+            _logger.info(f"⚙️   Color: max({lectura_correo.contador_color}, {lectura_pt.contador_color}) = {contador_color_final}")
+            
+            # REGLA 2: PrintTracker gana para scan/copy/fax (más precisos)
+            contador_scan_final = lectura_pt.contador_scan or lectura_correo.contador_scan or 0
+            contador_copy_final = lectura_pt.contador_copy or 0
+            contador_fax_final = lectura_pt.contador_fax or 0
+            
+            _logger.info(f"⚙️ REGLA 2 (PrintTracker gana para scan/copy/fax):")
+            _logger.info(f"⚙️   Scan: PT({lectura_pt.contador_scan}) o Correo({lectura_correo.contador_scan}) = {contador_scan_final}")
+            _logger.info(f"⚙️   Copy: {contador_copy_final} (solo PrintTracker)")
+            _logger.info(f"⚙️   Fax: {contador_fax_final} (solo PrintTracker)")
+            
+            # Preparar valores consolidados
             valores_consolidados = {
-                'contador_bn': max(lectura_correo.contador_bn or 0, lectura_pt.contador_bn or 0),
-                'contador_color': max(lectura_correo.contador_color or 0, lectura_pt.contador_color or 0),
-                'contador_scan': max(lectura_correo.contador_scan or 0, lectura_pt.contador_scan or 0),
-                'contador_copy': lectura_pt.contador_copy or 0,  # Solo PrintTracker tiene copy/fax
-                'contador_fax': lectura_pt.contador_fax or 0,
+                'contador_bn': contador_bn_final,
+                'contador_color': contador_color_final,
+                'contador_scan': contador_scan_final,
+                'contador_copy': contador_copy_final,
+                'contador_fax': contador_fax_final,
             }
             
-            # Detectar si hubo conflicto real
-            hay_conflicto = (
-                lectura_correo.contador_bn != lectura_pt.contador_bn or
-                lectura_correo.contador_color != lectura_pt.contador_color or
-                lectura_correo.contador_scan != lectura_pt.contador_scan
-            )
+            _logger.info(f"📊 Valores consolidados finales: {valores_consolidados}")
             
-            # Crear lectura consolidada
-            lectura_consolidada = self.create({
-                'fecha': lectura_correo.fecha,
-                'serie': lectura_correo.serie,
+            # Detectar conflictos
+            _logger.info(f"🔍 Detectando conflictos...")
+            conflictos = []
+            
+            if (lectura_correo.contador_bn != lectura_pt.contador_bn and 
+                lectura_correo.contador_bn > 0 and lectura_pt.contador_bn > 0):
+                conflicto_bn = f"BN: Correo({lectura_correo.contador_bn}) vs PT({lectura_pt.contador_bn})"
+                conflictos.append(conflicto_bn)
+                _logger.warning(f"⚠️ CONFLICTO: {conflicto_bn}")
+            
+            if (lectura_correo.contador_color != lectura_pt.contador_color and 
+                lectura_correo.contador_color > 0 and lectura_pt.contador_color > 0):
+                conflicto_color = f"Color: Correo({lectura_correo.contador_color}) vs PT({lectura_pt.contador_color})"
+                conflictos.append(conflicto_color)
+                _logger.warning(f"⚠️ CONFLICTO: {conflicto_color}")
+            
+            if (lectura_correo.contador_scan != lectura_pt.contador_scan and 
+                lectura_correo.contador_scan > 0 and lectura_pt.contador_scan > 0):
+                conflicto_scan = f"Scan: Correo({lectura_correo.contador_scan}) vs PT({lectura_pt.contador_scan})"
+                conflictos.append(conflicto_scan)
+                _logger.warning(f"⚠️ CONFLICTO: {conflicto_scan}")
+            
+            hay_conflictos = bool(conflictos)
+            _logger.info(f"🔍 Conflictos detectados: {'SÍ' if hay_conflictos else 'NO'}")
+            if hay_conflictos:
+                _logger.info(f"📋 Lista de conflictos: {conflictos}")
+            
+            # ESTRATEGIA: Actualizar lectura de correo como consolidada
+            _logger.info(f"🔄 Actualizando lectura de correo como consolidada...")
+            
+            valores_actualizar = {
                 'contador_bn': valores_consolidados['contador_bn'],
                 'contador_color': valores_consolidados['contador_color'],
                 'contador_scan': valores_consolidados['contador_scan'],
                 'contador_copy': valores_consolidados['contador_copy'],
                 'contador_fax': valores_consolidados['contador_fax'],
                 'fuente_origen': 'consolidado',
-                'contador_automatico_id': lectura_correo.contador_automatico_id.id,
                 'printtracker_meter_id': lectura_pt.printtracker_meter_id.id,
-                'conflicto_detectado': hay_conflicto,
+                'conflicto_detectado': hay_conflictos,
+                'detalle_conflicto': '; '.join(conflictos) if conflictos else None,
                 'resolucion_aplicada': 'mayor_valor',
-                'detalle_conflicto': f"Correo vs PT: BN({lectura_correo.contador_bn} vs {lectura_pt.contador_bn}), Color({lectura_correo.contador_color} vs {lectura_pt.contador_color}), Scan({lectura_correo.contador_scan} vs {lectura_pt.contador_scan})",
-                'estado': 'validado'
-            })
+                'fecha_procesamiento': fields.Datetime.now()
+            }
+            
+            _logger.info(f"📝 Valores a actualizar en correo: {valores_actualizar}")
+            
+            lectura_correo.write(valores_actualizar)
+            _logger.info(f"✅ Lectura de correo actualizada como consolidada")
+            
+            # Marcar PrintTracker como procesada
+            _logger.info(f"📝 Marcando lectura PrintTracker como procesada...")
+            lectura_pt.write({'estado': 'aplicado'})
+            _logger.info(f"✅ Lectura PrintTracker marcada como aplicada")
             
             # Aplicar al equipo
-            self._aplicar_lectura_a_equipo(lectura_consolidada)
+            _logger.info(f"🚀 Aplicando lectura consolidada al equipo...")
+            resultado_aplicacion = self._aplicar_lectura_a_equipo(lectura_correo)
             
-            # Marcar lecturas originales como procesadas
-            (lectura_correo | lectura_pt).write({'estado': 'aplicado'})
+            if resultado_aplicacion:
+                _logger.info(f"✅ Lectura consolidada aplicada exitosamente al equipo")
+            else:
+                _logger.error(f"❌ Error aplicando lectura consolidada al equipo")
             
-            _logger.info(f"✅ Conflicto resuelto y consolidado: {lectura_consolidada.display_name}")
+            _logger.info(f"🎯 === CONSOLIDACIÓN DE DOS FUENTES COMPLETADA ===")
+            _logger.info(f"📊 Resultado final:")
+            _logger.info(f"📊   - BN: {valores_consolidados['contador_bn']}")
+            _logger.info(f"📊   - Color: {valores_consolidados['contador_color']}")
+            _logger.info(f"📊   - Scan: {valores_consolidados['contador_scan']}")
+            _logger.info(f"📊   - Copy: {valores_consolidados['contador_copy']}")
+            _logger.info(f"📊   - Fax: {valores_consolidados['contador_fax']}")
+            _logger.info(f"📊   - Conflictos: {'SÍ' if hay_conflictos else 'NO'}")
             
             return 'consolidado'
             
         except Exception as e:
-            _logger.error(f"❌ Error resolviendo conflicto: {e}")
+            _logger.error(f"❌ ERROR CRÍTICO consolidando dos fuentes: {str(e)}")
+            _logger.error(f"❌ Correo ID: {getattr(lectura_correo, 'id', 'N/A')}")
+            _logger.error(f"❌ PrintTracker ID: {getattr(lectura_pt, 'id', 'N/A')}")
+            import traceback
+            _logger.error(f"❌ Traceback: {traceback.format_exc()}")
             return 'error'
+
+    @api.model
+    def consolidar_lecturas_pendientes(self, dias_atras=1):
+        """
+        PARTE 2 - NUEVO: Consolida lecturas pendientes de los últimos N días
+        Útil para ejecutar como cron job
+        """
+        try:
+            fecha_inicio = date.today() - timedelta(days=dias_atras)
+            
+            _logger.info(f"🔄 ===== CONSOLIDANDO LECTURAS PENDIENTES =====")
+            _logger.info(f"📅 Desde fecha: {fecha_inicio}")
+            _logger.info(f"📅 Hasta fecha: {date.today()}")
+            _logger.info(f"🕐 Hora inicio: {datetime.now()}")
+            
+            # Buscar fechas que necesitan consolidación
+            _logger.info(f"🔍 Buscando lecturas pendientes...")
+            
+            lecturas_pendientes = self.search([
+                ('fecha', '>=', fecha_inicio),
+                ('estado', '=', 'validado')
+            ])
+            
+            _logger.info(f"📊 Total lecturas pendientes encontradas: {len(lecturas_pendientes)}")
+            
+            # Agrupar por fecha y serie
+            _logger.info(f"📊 Agrupando por fecha y serie...")
+            grupos = {}
+            for lectura in lecturas_pendientes:
+                key = (lectura.fecha, lectura.serie)
+                if key not in grupos:
+                    grupos[key] = []
+                grupos[key].append(lectura)
+            
+            _logger.info(f"📊 Grupos encontrados: {len(grupos)}")
+            
+            # Identificar grupos que necesitan consolidación (más de 1 lectura)
+            grupos_consolidar = {k: v for k, v in grupos.items() if len(v) > 1}
+            _logger.info(f"📊 Grupos que necesitan consolidación: {len(grupos_consolidar)}")
+            
+            if not grupos_consolidar:
+                _logger.info(f"ℹ️ No hay grupos que necesiten consolidación")
+                return {
+                    'grupos_procesados': len(grupos),
+                    'grupos_consolidados': 0,
+                    'consolidadas': 0
+                }
+            
+            # Procesar grupos que necesitan consolidación
+            consolidadas = 0
+            for i, ((fecha, serie), lecturas_grupo) in enumerate(grupos_consolidar.items(), 1):
+                _logger.info(f"🔄 Procesando grupo {i}/{len(grupos_consolidar)}: {serie} - {fecha}")
+                _logger.info(f"🔄 Lecturas en grupo: {len(lecturas_grupo)}")
+                
+                resultado = self._consolidar_serie_fecha(serie, fecha)
+                if resultado == 'consolidado':
+                    consolidadas += 1
+                    _logger.info(f"✅ Grupo consolidado: {serie} - {fecha}")
+                else:
+                    _logger.warning(f"⚠️ Grupo no consolidado ({resultado}): {serie} - {fecha}")
+            
+            _logger.info(f"🎯 ===== CONSOLIDACIÓN PENDIENTE COMPLETADA =====")
+            _logger.info(f"📊 Grupos procesados: {len(grupos)}")
+            _logger.info(f"📊 Grupos que necesitaban consolidación: {len(grupos_consolidar)}")
+            _logger.info(f"✅ Consolidaciones exitosas: {consolidadas}")
+            _logger.info(f"🕐 Hora fin: {datetime.now()}")
+            
+            return {
+                'grupos_procesados': len(grupos),
+                'grupos_que_necesitaban_consolidacion': len(grupos_consolidar),
+                'consolidadas': consolidadas,
+                'fecha_inicio': fecha_inicio,
+                'fecha_fin': date.today()
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ ERROR CRÍTICO en consolidación pendiente: {str(e)}")
+            import traceback
+            _logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return False
+
+
+
+    # ========================================
+    # PARTE 3: APLICACIÓN AL EQUIPO Y MÉTODOS DE UTILIDAD
+    # ========================================
 
     def _aplicar_lectura_a_equipo(self, lectura):
         """
-        Aplica los contadores consolidados al equipo en alquiler
-        REGLA: Solo aplicar si los valores son mayores a los actuales
+        PARTE 3 - CORREGIDO: Aplica los contadores consolidados al equipo en alquiler
+        MEJORAS: Logs detallados, validaciones y manejo de errores
         """
         try:
+            _logger.info(f"🚀 ===== APLICANDO LECTURA AL EQUIPO =====")
+            _logger.info(f"📋 Lectura ID: {lectura.id}")
+            _logger.info(f"📋 Serie: {lectura.serie}")
+            _logger.info(f"📋 Fecha: {lectura.fecha}")
+            _logger.info(f"📋 Fuente: {lectura.fuente_origen}")
+            _logger.info(f"📋 Estado actual: {lectura.estado}")
+            
+            # Validación inicial - buscar equipo
             if not lectura.equipo_id:
-                _logger.error(f"❌ No se encontró equipo para serie: {lectura.serie}")
-                return False
+                _logger.warning(f"⚠️ Buscando equipo por serie: {lectura.serie}")
+                
+                # Intentar buscar equipo manualmente
+                equipo = self.env['alquiler'].search([
+                    ('serie', '=', lectura.serie)
+                ], limit=1)
+                
+                if equipo:
+                    _logger.info(f"✅ Equipo encontrado: ID={equipo.id}, Nombre={equipo.name}")
+                    # Actualizar referencia en la lectura
+                    lectura.write({'equipo_id': equipo.id})
+                else:
+                    _logger.error(f"❌ No se encontró equipo para serie: {lectura.serie}")
+                    lectura.write({
+                        'estado': 'error',
+                        'mensaje_error': f'No se encontró equipo para serie {lectura.serie}'
+                    })
+                    return False
+            else:
+                _logger.info(f"✅ Equipo ya referenciado: ID={lectura.equipo_id.id}")
             
             equipo = lectura.equipo_id
+            _logger.info(f"🎯 Aplicando al equipo: {equipo.name} (ID: {equipo.id})")
             
             # Obtener valores actuales del equipo
+            _logger.info(f"📊 Obteniendo valores actuales del equipo...")
+            
             valores_actuales = {
                 'contador_bn': getattr(equipo, 'contador_bn', 0) or 0,
                 'contador_color': getattr(equipo, 'contador_color', 0) or 0,
                 'contador_scan': getattr(equipo, 'contador_scan', 0) or 0,
+                'contador_copy': getattr(equipo, 'contador_copy', 0) or 0,
+                'contador_fax': getattr(equipo, 'contador_fax', 0) or 0,
             }
             
-            # Preparar valores a actualizar (solo si son mayores)
+            _logger.info(f"📊 Valores actuales del equipo:")
+            _logger.info(f"📊   - BN: {valores_actuales['contador_bn']}")
+            _logger.info(f"📊   - Color: {valores_actuales['contador_color']}")
+            _logger.info(f"📊   - Scan: {valores_actuales['contador_scan']}")
+            _logger.info(f"📊   - Copy: {valores_actuales['contador_copy']}")
+            _logger.info(f"📊   - Fax: {valores_actuales['contador_fax']}")
+            
+            # Valores de la lectura
+            valores_lectura = {
+                'contador_bn': lectura.contador_bn or 0,
+                'contador_color': lectura.contador_color or 0,
+                'contador_scan': lectura.contador_scan or 0,
+                'contador_copy': lectura.contador_copy or 0,
+                'contador_fax': lectura.contador_fax or 0,
+            }
+            
+            _logger.info(f"📋 Valores de la lectura:")
+            _logger.info(f"📋   - BN: {valores_lectura['contador_bn']}")
+            _logger.info(f"📋   - Color: {valores_lectura['contador_color']}")
+            _logger.info(f"📋   - Scan: {valores_lectura['contador_scan']}")
+            _logger.info(f"📋   - Copy: {valores_lectura['contador_copy']}")
+            _logger.info(f"📋   - Fax: {valores_lectura['contador_fax']}")
+            
+            # Comparar y preparar valores a actualizar
+            _logger.info(f"⚙️ Comparando valores para determinar actualizaciones...")
             valores_actualizar = {}
+            cambios_realizados = []
             
-            if lectura.contador_bn > valores_actuales['contador_bn']:
-                valores_actualizar['contador_bn'] = lectura.contador_bn
+            for contador in ['contador_bn', 'contador_color', 'contador_scan', 'contador_copy', 'contador_fax']:
+                valor_actual = valores_actuales[contador]
+                valor_lectura = valores_lectura[contador]
+                
+                # REGLA: Solo actualizar si el valor de la lectura es mayor
+                if valor_lectura > valor_actual:
+                    valores_actualizar[contador] = valor_lectura
+                    cambios_realizados.append(f"{contador}: {valor_actual} → {valor_lectura}")
+                    _logger.info(f"✅ Actualización: {contador}: {valor_actual} → {valor_lectura}")
+                elif valor_lectura < valor_actual:
+                    _logger.warning(f"⚠️ Valor menor ignorado: {contador}: lectura({valor_lectura}) < equipo({valor_actual})")
+                else:
+                    _logger.info(f"ℹ️ Sin cambio: {contador}: {valor_actual} (igual)")
             
-            if lectura.contador_color > valores_actuales['contador_color']:
-                valores_actualizar['contador_color'] = lectura.contador_color
-            
-            if lectura.contador_scan > valores_actuales['contador_scan']:
-                valores_actualizar['contador_scan'] = lectura.contador_scan
-            
-            # Siempre actualizar fecha
+            # Siempre actualizar fecha de última actualización
             valores_actualizar['fecha_ultima_actualizacion'] = fields.Datetime.now()
             
-            if valores_actualizar:
-                equipo.sudo().write(valores_actualizar)
+            # Aplicar actualizaciones si hay cambios
+            if len(valores_actualizar) > 1:  # Más que solo la fecha
+                _logger.info(f"🔄 Aplicando {len(valores_actualizar)-1} actualizaciones al equipo...")
+                _logger.info(f"🔄 Cambios: {cambios_realizados}")
+                
+                try:
+                    # Usar sudo() para asegurar permisos
+                    equipo.sudo().write(valores_actualizar)
+                    _logger.info(f"✅ Contadores actualizados en equipo exitosamente")
+                    
+                    # Actualizar estado de la lectura
+                    lectura.write({
+                        'aplicado_a_equipo': True,
+                        'fecha_aplicacion': fields.Datetime.now(),
+                        'estado': 'aplicado',
+                        'mensaje_error': None  # Limpiar errores anteriores
+                    })
+                    
+                    _logger.info(f"✅ Estado de lectura actualizado a 'aplicado'")
+                    
+                    # Log de resumen
+                    _logger.info(f"📊 RESUMEN DE APLICACIÓN:")
+                    _logger.info(f"📊   - Equipo: {equipo.name} (ID: {equipo.id})")
+                    _logger.info(f"📊   - Cambios aplicados: {len(cambios_realizados)}")
+                    _logger.info(f"📊   - Lista de cambios: {cambios_realizados}")
+                    
+                    return True
+                    
+                except Exception as e:
+                    _logger.error(f"❌ Error escribiendo en equipo: {str(e)}")
+                    lectura.write({
+                        'estado': 'error',
+                        'mensaje_error': f'Error actualizando equipo: {str(e)}'
+                    })
+                    return False
+                    
+            else:
+                _logger.info(f"ℹ️ No hay contadores mayores para aplicar en {equipo.name}")
+                _logger.info(f"ℹ️ Solo se actualiza fecha de procesamiento")
+                
+                # Marcar como aplicado aunque no haya cambios de contadores
                 lectura.write({
                     'aplicado_a_equipo': True,
                     'fecha_aplicacion': fields.Datetime.now(),
-                    'estado': 'aplicado'
+                    'estado': 'aplicado',
+                    'mensaje_error': None
                 })
                 
-                _logger.info(f"✅ Contadores aplicados al equipo {equipo.serie}: {valores_actualizar}")
-                return True
-            else:
-                _logger.info(f"ℹ️ No hay contadores mayores para aplicar en {equipo.serie}")
-                lectura.write({'estado': 'aplicado'})
+                _logger.info(f"✅ Lectura marcada como aplicada (sin cambios de contadores)")
                 return True
                 
         except Exception as e:
-            _logger.error(f"❌ Error aplicando lectura al equipo: {e}")
-            lectura.write({
-                'estado': 'error',
-                'mensaje_error': str(e)
-            })
+            _logger.error(f"❌ ERROR CRÍTICO aplicando lectura al equipo")
+            _logger.error(f"❌ Lectura ID: {getattr(lectura, 'id', 'N/A')}")
+            _logger.error(f"❌ Serie: {getattr(lectura, 'serie', 'N/A')}")
+            _logger.error(f"❌ Exception: {str(e)}")
+            import traceback
+            _logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            
+            try:
+                lectura.write({
+                    'estado': 'error',
+                    'mensaje_error': f'Error crítico aplicando al equipo: {str(e)}'
+                })
+            except:
+                _logger.error(f"❌ No se pudo actualizar estado de error en lectura")
+            
             return False
 
     @api.model
     def obtener_estadisticas_consolidacion(self, dias=7):
         """
-        Obtiene estadísticas de consolidación de los últimos N días
+        PARTE 3 - MEJORADO: Obtiene estadísticas detalladas de consolidación
         """
-        fecha_inicio = date.today() - timedelta(days=dias)
-        
-        domain = [('fecha', '>=', fecha_inicio)]
-        lecturas = self.search(domain)
-        
-        stats = {
-            'total_lecturas': len(lecturas),
-            'por_fuente': {},
-            'conflictos_detectados': len(lecturas.filtered('conflicto_detectado')),
-            'aplicadas_equipos': len(lecturas.filtered('aplicado_a_equipo')),
-            'series_unicas': len(set(lecturas.mapped('serie'))),
-            'por_estado': {}
-        }
-        
-        # Por fuente
-        for fuente in ['correo', 'printtracker', 'consolidado', 'manual']:
-            count = len(lecturas.filtered(lambda l: l.fuente_origen == fuente))
-            stats['por_fuente'][fuente] = count
-        
-        # Por estado
-        for estado in ['borrador', 'validado', 'aplicado', 'error']:
-            count = len(lecturas.filtered(lambda l: l.estado == estado))
-            stats['por_estado'][estado] = count
-        
-        return stats
+        try:
+            _logger.info(f"📊 ===== GENERANDO ESTADÍSTICAS DE CONSOLIDACIÓN =====")
+            _logger.info(f"📅 Últimos {dias} días")
+            
+            fecha_inicio = date.today() - timedelta(days=dias)
+            _logger.info(f"📅 Desde: {fecha_inicio} hasta: {date.today()}")
+            
+            domain = [('fecha', '>=', fecha_inicio)]
+            lecturas = self.search(domain)
+            
+            _logger.info(f"📊 Total lecturas encontradas: {len(lecturas)}")
+            
+            # Estadísticas básicas
+            stats = {
+                'periodo': {
+                    'fecha_inicio': fecha_inicio,
+                    'fecha_fin': date.today(),
+                    'dias': dias
+                },
+                'total_lecturas': len(lecturas),
+                'por_fuente': {},
+                'conflictos_detectados': len(lecturas.filtered('conflicto_detectado')),
+                'aplicadas_equipos': len(lecturas.filtered('aplicado_a_equipo')),
+                'series_unicas': len(set(lecturas.mapped('serie'))),
+                'por_estado': {},
+                'por_fecha': {},
+                'equipos_sin_serie': 0,
+                'errores_aplicacion': len(lecturas.filtered(lambda l: l.estado == 'error'))
+            }
+            
+            _logger.info(f"📊 Calculando estadísticas por fuente...")
+            # Por fuente
+            for fuente in ['correo', 'printtracker', 'consolidado', 'manual']:
+                count = len(lecturas.filtered(lambda l: l.fuente_origen == fuente))
+                stats['por_fuente'][fuente] = count
+                _logger.info(f"📊   {fuente}: {count}")
+            
+            _logger.info(f"📊 Calculando estadísticas por estado...")
+            # Por estado
+            for estado in ['borrador', 'validado', 'aplicado', 'error']:
+                count = len(lecturas.filtered(lambda l: l.estado == estado))
+                stats['por_estado'][estado] = count
+                _logger.info(f"📊   {estado}: {count}")
+            
+            _logger.info(f"📊 Calculando estadísticas por fecha...")
+            # Por fecha (últimos días)
+            for i in range(dias):
+                fecha = date.today() - timedelta(days=i)
+                count = len(lecturas.filtered(lambda l: l.fecha == fecha))
+                stats['por_fecha'][fecha.strftime('%Y-%m-%d')] = count
+            
+            # Equipos sin serie
+            _logger.info(f"📊 Buscando lecturas sin equipo asociado...")
+            stats['equipos_sin_serie'] = len(lecturas.filtered(lambda l: not l.equipo_id))
+            
+            # Estadísticas adicionales
+            if lecturas:
+                _logger.info(f"📊 Calculando estadísticas adicionales...")
+                
+                # Promedio de contadores
+                stats['promedios'] = {
+                    'contador_bn': sum(l.contador_bn or 0 for l in lecturas) / len(lecturas),
+                    'contador_color': sum(l.contador_color or 0 for l in lecturas) / len(lecturas),
+                    'contador_scan': sum(l.contador_scan or 0 for l in lecturas) / len(lecturas),
+                    'contador_total': sum(l.contador_total or 0 for l in lecturas) / len(lecturas)
+                }
+                
+                # Series más activas
+                series_count = {}
+                for lectura in lecturas:
+                    if lectura.serie in series_count:
+                        series_count[lectura.serie] += 1
+                    else:
+                        series_count[lectura.serie] = 1
+                
+                stats['series_mas_activas'] = sorted(
+                    series_count.items(), 
+                    key=lambda x: x[1], 
+                    reverse=True
+                )[:10]  # Top 10
+            
+            _logger.info(f"✅ Estadísticas generadas exitosamente")
+            _logger.info(f"📊 Resumen: {stats['total_lecturas']} lecturas, {stats['series_unicas']} series únicas")
+            
+            return stats
+            
+        except Exception as e:
+            _logger.error(f"❌ Error generando estadísticas: {str(e)}")
+            import traceback
+            _logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return False
 
     def action_aplicar_manual(self):
-        """Acción manual para aplicar lectura al equipo"""
+        """
+        PARTE 3 - MEJORADO: Acción manual para aplicar lectura al equipo
+        """
         self.ensure_one()
         
+        _logger.info(f"✋ ===== APLICACIÓN MANUAL SOLICITADA =====")
+        _logger.info(f"📋 Lectura ID: {self.id}")
+        _logger.info(f"📋 Serie: {self.serie}")
+        _logger.info(f"📋 Estado actual: {self.estado}")
+        _logger.info(f"📋 Ya aplicado: {self.aplicado_a_equipo}")
+        
         if self.estado == 'aplicado':
+            _logger.warning(f"⚠️ Lectura ya aplicada al equipo")
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -647,85 +1101,159 @@ class PrintTrackerDailyReading(models.Model):
                 }
             }
         
+        if self.aplicado_a_equipo:
+            _logger.warning(f"⚠️ Lectura marcada como aplicada")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': 'Esta lectura ya está marcada como aplicada',
+                    'type': 'warning'
+                }
+            }
+        
+        _logger.info(f"🚀 Iniciando aplicación manual...")
         success = self._aplicar_lectura_a_equipo(self)
+        
+        if success:
+            _logger.info(f"✅ Aplicación manual exitosa")
+            mensaje = f'✅ Lectura aplicada al equipo exitosamente\nSerie: {self.serie}\nContadores aplicados al equipo {self.equipo_id.name if self.equipo_id else "N/A"}'
+            tipo = 'success'
+        else:
+            _logger.error(f"❌ Error en aplicación manual")
+            mensaje = f'❌ Error aplicando lectura\nSerie: {self.serie}\nError: {self.mensaje_error or "Error desconocido"}'
+            tipo = 'danger'
         
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'message': '✅ Lectura aplicada al equipo exitosamente' if success else '❌ Error aplicando lectura',
-                'type': 'success' if success else 'danger'
+                'message': mensaje,
+                'type': tipo,
+                'sticky': True if not success else False
             }
         }
 
     def action_diagnostico_consolidacion(self):
         """
-        Botón para diagnosticar problemas de consolidación
+        PARTE 3 - MEJORADO: Diagnóstico completo del sistema de consolidación
         """
-        self.ensure_one()
-        
         try:
-            # Buscar datos
+            _logger.info(f"🔍 ===== INICIANDO DIAGNÓSTICO =====")
+            
+            # Buscar datos básicos
             correos = self.env['printtracker.daily.reading'].search([
                 ('fuente_origen', '=', 'correo')
             ])
             
+            printrackers = self.env['printtracker.daily.reading'].search([
+                ('fuente_origen', '=', 'printtracker')
+            ])
+            
+            consolidados = self.env['printtracker.daily.reading'].search([
+                ('fuente_origen', '=', 'consolidado')
+            ])
+            
             meters = self.env['printtracker.meter'].search([])
+            contadores_auto = self.env['contador.automatico'].search([])
             
             # Crear mensaje de diagnóstico
-            mensaje = "=== DIAGNÓSTICO CONSOLIDACIÓN ===\n"
-            mensaje += f"Total correos: {len(correos)}\n"
-            mensaje += f"Total PrintTracker: {len(meters)}\n"
+            mensaje = "=== DIAGNÓSTICO CONSOLIDACIÓN ===\n\n"
             
-            if correos:
-                mensaje += f"Primera serie correo: {correos[0].serie}\n"
-                mensaje += f"Primera fecha correo: {correos[0].fecha}\n"
+            # Estadísticas generales
+            mensaje += "📊 ESTADÍSTICAS GENERALES:\n"
+            mensaje += f"• Total lecturas correo: {len(correos)}\n"
+            mensaje += f"• Total lecturas PrintTracker: {len(printrackers)}\n"
+            mensaje += f"• Total lecturas consolidadas: {len(consolidados)}\n"
+            mensaje += f"• Total meters PT originales: {len(meters)}\n"
+            mensaje += f"• Total contadores automáticos: {len(contadores_auto)}\n\n"
             
-            if meters:
-                mensaje += f"Primera serie PT: {meters[0].device_id.serie if meters[0].device_id else 'N/A'}\n"
-                mensaje += f"Primera fecha PT: {meters[0].reading_date}\n"
+            # Series únicas
+            series_correo = set(correos.mapped('serie')) if correos else set()
+            series_pt = set(printrackers.mapped('serie')) if printrackers else set()
+            series_todas = series_correo | series_pt
             
-            # Buscar coincidencias
-            coincidencias = 0
-            ejemplos_coincidencias = []
+            mensaje += "📟 SERIES:\n"
+            mensaje += f"• Series únicas en correo: {len(series_correo)}\n"
+            mensaje += f"• Series únicas en PrintTracker: {len(series_pt)}\n"
+            mensaje += f"• Series que coinciden: {len(series_correo & series_pt)}\n"
+            mensaje += f"• Total series únicas: {len(series_todas)}\n\n"
             
-            if correos and meters:
-                for correo in correos:
-                    for meter in meters:
-                        if meter.device_id and correo.serie == meter.device_id.serie:
-                            coincidencias += 1
-                            if len(ejemplos_coincidencias) < 3:
-                                ejemplos_coincidencias.append(correo.serie)
-                            break
-            
-            mensaje += f"Series que coinciden: {coincidencias}\n"
-            mensaje += f"Ejemplos: {ejemplos_coincidencias}\n"
-            
-            # TEST: Intentar actualización manual
-            if correos and meters:
-                correo_test = correos[0]
-                meter_test = None
+            # Fechas recientes
+            if correos or printrackers:
+                fechas_correo = correos.mapped('fecha') if correos else []
+                fechas_pt = printrackers.mapped('fecha') if printrackers else []
                 
-                # Buscar meter que coincida con el correo
-                for meter in meters:
-                    if meter.device_id and meter.device_id.serie == correo_test.serie:
-                        meter_test = meter
-                        break
+                mensaje += "📅 FECHAS RECIENTES:\n"
+                if fechas_correo:
+                    mensaje += f"• Última fecha correo: {max(fechas_correo)}\n"
+                if fechas_pt:
+                    mensaje += f"• Última fecha PrintTracker: {max(fechas_pt)}\n"
+                mensaje += "\n"
+            
+            # Estados
+            estados_correo = {}
+            estados_pt = {}
+            
+            for estado in ['borrador', 'validado', 'aplicado', 'error']:
+                estados_correo[estado] = len(correos.filtered(lambda l: l.estado == estado))
+                estados_pt[estado] = len(printrackers.filtered(lambda l: l.estado == estado))
+            
+            mensaje += "📊 ESTADOS:\n"
+            mensaje += "Correo:\n"
+            for estado, count in estados_correo.items():
+                mensaje += f"  • {estado}: {count}\n"
+            mensaje += "PrintTracker:\n"
+            for estado, count in estados_pt.items():
+                mensaje += f"  • {estado}: {count}\n"
+            mensaje += "\n"
+            
+            # Conflictos
+            conflictos = (correos | printrackers | consolidados).filtered('conflicto_detectado')
+            mensaje += f"⚠️ CONFLICTOS DETECTADOS: {len(conflictos)}\n\n"
+            
+            # Problemas potenciales
+            mensaje += "🔍 PROBLEMAS POTENCIALES:\n"
+            
+            # Lecturas sin equipo
+            sin_equipo = (correos | printrackers | consolidados).filtered(lambda l: not l.equipo_id)
+            if sin_equipo:
+                mensaje += f"• {len(sin_equipo)} lecturas sin equipo asociado\n"
+            
+            # Lecturas en error
+            en_error = (correos | printrackers | consolidados).filtered(lambda l: l.estado == 'error')
+            if en_error:
+                mensaje += f"• {len(en_error)} lecturas en estado de error\n"
+            
+            # Pendientes de aplicar
+            pendientes = (correos | printrackers | consolidados).filtered(
+                lambda l: l.estado == 'validado' and not l.aplicado_a_equipo
+            )
+            if pendientes:
+                mensaje += f"• {len(pendientes)} lecturas pendientes de aplicar\n"
+            
+            if not sin_equipo and not en_error and not pendientes:
+                mensaje += "• No se detectaron problemas\n"
+            
+            mensaje += "\n"
+            
+            # Ejemplos
+            if series_todas:
+                mensaje += "🔍 EJEMPLOS:\n"
+                serie_ejemplo = list(series_todas)[0]
                 
-                if meter_test:
-                    mensaje += f"\n=== TEST ACTUALIZACIÓN ===\n"
-                    mensaje += f"Probando actualizar serie: {correo_test.serie}\n"
-                    mensaje += f"Correo Scan antes: {correo_test.contador_scan}\n"
-                    mensaje += f"PrintTracker Scan: {meter_test.scan_pages or 0}\n"
-                    
-                    try:
-                        # Intentar actualización
-                        resultado = self._actualizar_lectura_correo_con_printtracker(correo_test, meter_test)
-                        mensaje += f"Resultado actualización: {'Éxito' if resultado else 'Falló'}\n"
-                        mensaje += f"Correo Scan después: {correo_test.contador_scan}\n"
-                        mensaje += f"Fuente después: {correo_test.fuente_origen}\n"
-                    except Exception as e:
-                        mensaje += f"Error en actualización: {str(e)}\n"
+                correo_ej = correos.filtered(lambda l: l.serie == serie_ejemplo)[:1]
+                pt_ej = printrackers.filtered(lambda l: l.serie == serie_ejemplo)[:1]
+                
+                if correo_ej:
+                    mensaje += f"• Correo ejemplo ({serie_ejemplo}):\n"
+                    mensaje += f"  BN: {correo_ej.contador_bn}, Color: {correo_ej.contador_color}, Scan: {correo_ej.contador_scan}\n"
+                
+                if pt_ej:
+                    mensaje += f"• PrintTracker ejemplo ({serie_ejemplo}):\n"
+                    mensaje += f"  BN: {pt_ej.contador_bn}, Color: {pt_ej.contador_color}, Scan: {pt_ej.contador_scan}\n"
+            
+            _logger.info(f"✅ Diagnóstico completado")
             
             return {
                 'type': 'ir.actions.client',
@@ -739,6 +1267,10 @@ class PrintTrackerDailyReading(models.Model):
             }
             
         except Exception as e:
+            _logger.error(f"❌ Error en diagnóstico: {str(e)}")
+            import traceback
+            _logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -747,8 +1279,11 @@ class PrintTrackerDailyReading(models.Model):
                     'type': 'danger'
                 }
             }
+
     def action_view_equipo(self):
-        """Acción para ver el equipo relacionado"""
+        """
+        PARTE 3 - SIN CAMBIOS: Acción para ver el equipo relacionado
+        """
         self.ensure_one()
         
         if not self.equipo_id:
@@ -769,3 +1304,61 @@ class PrintTrackerDailyReading(models.Model):
             'view_mode': 'form',
             'target': 'current'
         }
+
+    @api.model
+    def accion_consolidacion_manual(self, fecha_objetivo=None):
+        """
+        PARTE 3 - NUEVO: Acción para ejecutar consolidación manual desde interfaz
+        """
+        try:
+            if not fecha_objetivo:
+                fecha_objetivo = date.today()
+            
+            _logger.info(f"✋ Consolidación manual solicitada para fecha: {fecha_objetivo}")
+            
+            resultado = self.consolidar_lecturas(fecha_objetivo=fecha_objetivo)
+            
+            if resultado:
+                mensaje = f"""🎯 CONSOLIDACIÓN COMPLETADA
+                
+📅 Fecha: {fecha_objetivo}
+✅ Consolidadas: {resultado['consolidadas']}
+⚠️ Conflictos: {resultado['conflictos']}
+➡️ Aplicadas directas: {resultado['aplicadas_directas']}
+ℹ️ Ya consolidadas: {resultado['ya_consolidadas']}
+➖ Sin datos: {resultado['sin_datos']}
+❌ Errores: {resultado['errores']}
+📊 Total series: {resultado['series_procesadas']}"""
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Consolidación Manual',
+                        'message': mensaje,
+                        'type': 'success',
+                        'sticky': True
+                    }
+                }
+            else:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': 'Error ejecutando consolidación manual',
+                        'type': 'danger'
+                    }
+                }
+                
+        except Exception as e:
+            _logger.error(f"❌ Error en consolidación manual: {str(e)}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
+
+            
