@@ -834,14 +834,8 @@
                         </group>
                     </group>
                     
-                    <group string="Referencias de Origen">
-                        <group>
-                            <field name="contador_automatico_id" readonly="True"/>
-                            <field name="printtracker_meter_id" readonly="True"/>
-                        </group>
-                    </group>
+                    <group string="Referencias de Origen">                      
                     
-                    </group>
                     
                     <group string="Errores" 
                            invisible="not mensaje_error">
