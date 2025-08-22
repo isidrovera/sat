@@ -832,15 +832,8 @@
                         <group>
                             <field name="tipo_equipo" readonly="True"/>
                         </group>
-                    </group>
-                    
-                    <group string="Referencias de Origen">                      
-                    
-                    
-                    <group string="Errores" 
-                           invisible="not mensaje_error">
-                        <field name="mensaje_error" readonly="True" widget="text"/>
-                    </group>
+                    </group>                   
+                   
                 </sheet>
             </form>
         </field>
