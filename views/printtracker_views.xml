@@ -704,7 +704,7 @@
     <!-- Acción - PrintTracker Consolidator -->
     <record id="action_printtracker_consolidator" model="ir.actions.act_window">
         <field name="name">Consolidador de Datos</field>
-        <field name="res_model">printtracker.consolidator</field>
+        <field name="res_model">printtracker.processor</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
         <field name="help" type="html">
@@ -1150,8 +1150,8 @@
     
     <!-- Vista Form - PrintTracker Consolidator -->
     <record id="view_printtracker_consolidator_form" model="ir.ui.view">
-        <field name="name">printtracker.consolidator.form</field>
-        <field name="model">printtracker.consolidator</field>
+        <field name="name">printtracker.processor.form</field>
+        <field name="model">printtracker.processor</field>
         <field name="arch" type="xml">
             <form>
                 <header>
@@ -1192,8 +1192,8 @@
         </field>
     </record>
     <record id="view_printtracker_consolidator_search" model="ir.ui.view">
-    <field name="name">printtracker.consolidator.search</field>
-    <field name="model">printtracker.consolidator</field>
+    <field name="name">printtracker.processor.search</field>
+    <field name="model">printtracker.processor</field>
     <field name="arch" type="xml">
         <search string="Buscar consolidaciones">
             <!-- Texto -->
