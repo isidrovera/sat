@@ -570,48 +570,8 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             _logger.info("Procesando ticket ID %s (estado=%s)", ticket.id, ticket.estado)
 
             unidad = ticket.product_alquiler
-            if not unidad:
-                _logger.warning("Ticket %s no tiene un equipo asignado, omitiendo carga de contómetros", ticket.id)
-            else:
-                _logger.debug(
-                    "UnidadAlquiler %s — contador_bn=%s, contador_color=%s, contador_scan=%s, fecha_ultima_actualizacion=%s",
-                    unidad.id, unidad.contador_bn, unidad.contador_color, unidad.contador_scan, unidad.fecha_ultima_actualizacion
-                )
-                _logger.debug("Ticket.agenda: %s", ticket.agenda)
-
-                # 1) Precargar contómetros en el ticket SOLO si la fecha de visita coincide con hoy
-                if unidad.fecha_ultima_actualizacion and ticket.agenda and unidad.fecha_ultima_actualizacion.date() == ticket.agenda.date():
-                    _logger.info("Fechas coinciden para ticket %s, cargando contómetros...", ticket.id)
-
-                    if unidad.contador_bn > 0:
-                        ticket.contometrok_id = str(unidad.contador_bn)
-                        _logger.debug("→ contometrok_id cargado: %s", ticket.contometrok_id)
-                    else:
-                        _logger.debug("→ contador_bn es 0 en unidad, se salta contometrok_id")
-
-                    if ticket.tipo_id == 'color':
-                        if unidad.contador_color > 0:
-                            ticket.contometroc_id = str(unidad.contador_color)
-                            _logger.debug("→ contometroc_id cargado: %s", ticket.contometroc_id)
-                        else:
-                            _logger.debug("→ contador_color es 0 en unidad, se salta contometroc_id")
-
-                    if unidad.contador_scan > 0:
-                        ticket.contometros_id = str(unidad.contador_scan)
-                        _logger.debug("→ contometros_id cargado: %s", ticket.contometros_id)
-                    else:
-                        _logger.debug("→ contador_scan es 0 en unidad, se salta contometros_id")
-
-                else:
-                    _logger.info(
-                        "No se cargan contómetros para ticket %s: fechas no coinciden o faltan datos "
-                        "(unidad.fecha_ultima_actualizacion.date=%s, ticket.agenda.date=%s)",
-                        ticket.id,
-                        unidad.fecha_ultima_actualizacion.date() if unidad.fecha_ultima_actualizacion else None,
-                        ticket.agenda.date() if ticket.agenda else None,
-                    )
-
-            # 2) Validar valores de contómetros (lanza error si no pasa)
+            
+            # 1) Validar valores de contómetros (lanza error si no pasa)
             _logger.info("Validando contómetros del ticket %s...", ticket.id)
             try:
                 ticket._check_contometro_values()
@@ -620,7 +580,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                 _logger.exception("Error en validación de contómetros para ticket %s", ticket.id)
                 raise
 
-            # 3) Crear pedido de venta si hay líneas
+            # 2) Crear pedido de venta si hay líneas
             if ticket.line_ids:
                 _logger.info("Ticket %s tiene %d línea(s), creando pedido de venta", ticket.id, len(ticket.line_ids))
                 ticket.create_sale_order()
@@ -628,7 +588,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             else:
                 _logger.debug("Ticket %s no tiene líneas, se omite create_sale_order", ticket.id)
 
-            # 4) Enviar correo de finalización
+            # 3) Enviar correo de finalización
             _logger.info("Enviando correo de finalización para ticket %s", ticket.id)
             tmpl_fin = ticket.env.ref('sat.email_template_ticket_cliente_finalizacion')
             tmpl_fin.send_mail(ticket.id, force_send=True)
@@ -639,7 +599,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                 ticket.env.ref('sat.mail_template_retorno').send_mail(ticket.id, force_send=True)
                 _logger.info("Correo de retorno enviado para ticket %s", ticket.id)
 
-            # 5) Actualizar estado de la unidad según tipo de servicio
+            # 4) Actualizar estado de la unidad según tipo de servicio
             if unidad:
                 _logger.info(
                     "Actualizando estado de UnidadAlquiler %s según tipo_servicio_id=%s",
@@ -668,7 +628,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                     })
                     _logger.info("Unidad %s reseteada por 'retiro'", unidad.id)
 
-            # 6) Marcar ticket como finalizado y resetear notificación
+            # 5) Marcar ticket como finalizado y resetear notificación
             _logger.info("Marcando ticket %s como 'finalizado'", ticket.id)
             ticket.write({
                 'estado': 'finalizado',
@@ -684,7 +644,147 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'view_id': False,
             'target': 'main',
         }
+    # Campo computed para controlar la visibilidad del botón
+mostrar_boton_contadores = fields.Boolean(
+    string='Mostrar Botón Contadores',
+    compute='_compute_mostrar_boton_contadores',
+    store=False,
+    help='Controla si se muestra el botón para cargar contadores'
+)
 
+@api.depends('estado', 'agenda', 'product_alquiler.fecha_ultima_actualizacion', 
+             'product_alquiler.contador_bn', 'product_alquiler.contador_color', 
+             'product_alquiler.contador_scan')
+def _compute_mostrar_boton_contadores(self):
+    """
+    Computed field para mostrar/ocultar el botón de cargar contadores
+    """
+    for record in self:
+        mostrar = False
+        
+        # Solo mostrar si está en proceso
+        if record.estado == 'proceso':
+            # Verificar que existe unidad y fechas
+            if (record.product_alquiler and 
+                record.agenda and 
+                record.product_alquiler.fecha_ultima_actualizacion):
+                
+                # Verificar que las fechas coinciden
+                fecha_agenda = record.agenda.date()
+                fecha_actualizacion = record.product_alquiler.fecha_ultima_actualizacion.date()
+                
+                if fecha_agenda == fecha_actualizacion:
+                    # Verificar que hay contadores disponibles
+                    unidad = record.product_alquiler
+                    tiene_contadores = (
+                        unidad.contador_bn > 0 or 
+                        unidad.contador_color > 0 or 
+                        unidad.contador_scan > 0
+                    )
+                    mostrar = tiene_contadores
+        
+        record.mostrar_boton_contadores = mostrar
+
+    def action_cargar_contadores(self):
+        """
+        Carga los contadores desde la unidad de alquiler al ticket
+        Solo disponible cuando el ticket está en proceso y las fechas coinciden
+        """
+        self.ensure_one()
+        _logger.info("=== Iniciando carga de contadores para ticket %s ===", self.name)
+        
+        # Verificar que el ticket esté en proceso
+        if self.estado != 'proceso':
+            raise UserError(_("Esta función solo está disponible para tickets en proceso."))
+        
+        # Verificar que existe una unidad de alquiler asignada
+        unidad = self.product_alquiler
+        if not unidad:
+            raise UserError(_("No hay un equipo asignado a este ticket."))
+        
+        # Verificar que existen fechas para comparar
+        if not self.agenda:
+            raise UserError(_("El ticket no tiene una fecha de agenda asignada."))
+        
+        if not unidad.fecha_ultima_actualizacion:
+            raise UserError(_("El equipo no tiene una fecha de última actualización de contadores."))
+        
+        # Verificar que las fechas coinciden (solo la fecha, no la hora)
+        fecha_agenda = self.agenda.date()
+        fecha_actualizacion = unidad.fecha_ultima_actualizacion.date()
+        
+        _logger.info("Comparando fechas: agenda=%s, actualización=%s", fecha_agenda, fecha_actualizacion)
+        
+        if fecha_agenda != fecha_actualizacion:
+            raise UserError(_(
+                "Las fechas no coinciden:\n"
+                "• Fecha de agenda del ticket: %s\n"
+                "• Fecha de última actualización del equipo: %s\n\n"
+                "Los contadores solo se pueden cargar cuando ambas fechas son iguales."
+            ) % (fecha_agenda.strftime('%d/%m/%Y'), fecha_actualizacion.strftime('%d/%m/%Y')))
+        
+        # Verificar que hay contadores válidos para cargar
+        if unidad.contador_bn <= 0 and unidad.contador_color <= 0 and unidad.contador_scan <= 0:
+            raise UserError(_("No hay contadores válidos para cargar desde el equipo."))
+        
+        # Cargar los contadores
+        valores_cargados = []
+        
+        # Cargar contador B/N
+        if unidad.contador_bn > 0:
+            self.contometrok_id = str(unidad.contador_bn)
+            valores_cargados.append("Contador B/N: %s" % unidad.contador_bn)
+            _logger.info("→ contometrok_id cargado: %s", self.contometrok_id)
+        else:
+            _logger.debug("→ contador_bn es 0 en unidad, se salta contometrok_id")
+        
+        # Cargar contador color (solo para máquinas a color)
+        if self.tipo_id == 'color':
+            if unidad.contador_color > 0:
+                self.contometroc_id = str(unidad.contador_color)
+                valores_cargados.append("Contador Color: %s" % unidad.contador_color)
+                _logger.info("→ contometroc_id cargado: %s", self.contometroc_id)
+            else:
+                _logger.debug("→ contador_color es 0 en unidad, se salta contometroc_id")
+        
+        # Cargar contador scanner
+        if unidad.contador_scan > 0:
+            self.contometros_id = str(unidad.contador_scan)
+            valores_cargados.append("Contador Scanner: %s" % unidad.contador_scan)
+            _logger.info("→ contometros_id cargado: %s", self.contometros_id)
+        else:
+            _logger.debug("→ contador_scan es 0 en unidad, se salta contometros_id")
+        
+        # Verificar que se cargó al menos un contador
+        if not valores_cargados:
+            raise UserError(_("No se pudo cargar ningún contador desde el equipo."))
+        
+        # Mensaje de confirmación
+        mensaje_exito = (
+            "✅ Contadores cargados exitosamente:\n\n"
+            "📋 %s\n\n"
+            "📅 Fecha de sincronización: %s"
+        ) % (', '.join(valores_cargados), fecha_actualizacion.strftime('%d/%m/%Y'))
+        
+        # Registrar en el log del ticket
+        self.message_post(
+            body=mensaje_exito,
+            message_type='notification'
+        )
+        
+        _logger.info("=== Contadores cargados exitosamente para ticket %s ===", self.name)
+        
+        # Mostrar mensaje al usuario
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Contadores Cargados'),
+                'message': _('Los contadores se han cargado correctamente desde el equipo.'),
+                'type': 'success',
+                'sticky': False,
+            }
+        }
             
 
     def create_ticket_wizard(self):

@@ -10,6 +10,14 @@
                     <header>
                         <field name="estado" widget="statusbar" options="{'clickable_group': 'base.group_system'}"/>
                         <button string="Cerrar" name="action_finalizar" type="object" class="btn btn-info" icon="fa-wrench" invisible="estado !='proceso'" />
+                        <button name="action_cargar_contadores"
+        type="object"
+        string="🔄 Cargar Contadores"
+        class="btn-primary"
+        icon="fa-download"
+        invisible="mostrar_boton_contadores == False"
+        confirm="¿Está seguro de que desea cargar los contadores desde el equipo? Esto sobrescribirá los valores actuales en los campos de contómetros."
+        help="Carga automáticamente los contadores desde el equipo cuando las fechas de agenda y última actualización coinciden"/>
                         <button class="oe_highlight" name="action_asignar_ticket" type="object" icon="fa-paper-plane" string="Asignar Ticket" invisible="estado != 'nuevo'" />
                         <button name="action_crear_evaluacion" string="Generar Evaluación" type="object"                          
                             icon="fa-check-circle"  groups="base.group_system"/>
@@ -26,12 +34,29 @@
                                 <field string="Repuestos" name="repuestos_count_ticket" widget="statinfo" />
                             </button>
                         </div>
+                        <div class="alert alert-info" 
+                            invisible="estado != 'proceso' or mostrar_boton_contadores == True">
+                            <strong>ℹ️ Información:</strong> Los contadores se pueden cargar automáticamente cuando:
+                            <ul>
+                                <li>El ticket esté en proceso</li>
+                                <li>La fecha de agenda coincida con la última actualización del equipo</li>
+                                <li>El equipo tenga contadores registrados</li>
+                            </ul>
+                        </div>
+
+                        <div class="alert alert-success" 
+                            invisible="mostrar_boton_contadores == False">
+                            <strong>✅ Disponible:</strong> Puede cargar los contadores automáticamente desde el equipo.
+                            <br/>
+                            <small>Las fechas de agenda y última actualización del equipo coinciden.</small>
+                        </div>
                         <div class="oe_title">
                             <label for="name" />
                             <h1>
                                 <field name="name" />
                             </h1>
                         </div>
+
                         <group>
                             <group>
                                 <field name="marca_id_r" />
@@ -44,6 +69,7 @@
                                 <field name="total_copias_id" invisible="1" />
                                 <field name="tipo_id" invisible="1" />
                                 <field name="url" invisible="1" />
+                                <field name="mostrar_boton_contadores" invisible="1"/>
 
                             </group>
                             <group>
