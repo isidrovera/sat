@@ -16,6 +16,7 @@
         class="btn-primary"
         icon="fa-download"
         invisible="mostrar_boton_contadores == False"
+        options="{'no_required_fields_validation': true}"
         confirm="¿Está seguro de que desea cargar los contadores desde el equipo? Esto sobrescribirá los valores actuales en los campos de contómetros."
         help="Carga automáticamente los contadores desde el equipo cuando las fechas de agenda y última actualización coinciden"/>
                         <button class="oe_highlight" name="action_asignar_ticket" type="object" icon="fa-paper-plane" string="Asignar Ticket" invisible="estado != 'nuevo'" />
