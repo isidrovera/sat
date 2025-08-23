@@ -652,119 +652,232 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         help='Controla si se muestra el botón para cargar contadores'
     )
 
-    @api.depends('estado', 'agenda', 'product_alquiler.fecha_ultima_actualizacion', 
-                'product_alquiler.contador_bn', 'product_alquiler.contador_color', 
-                'product_alquiler.contador_scan')
+    @api.depends('estado', 'agenda', 'product_alquiler')
     def _compute_mostrar_boton_contadores(self):
         """
         Computed field para mostrar/ocultar el botón de cargar contadores
+        ACTUALIZADO: Busca en modelos de contadores por serie
         """
         for record in self:
             mostrar = False
             
             # Solo mostrar si está en proceso
-            if record.estado == 'proceso':
-                # Verificar que existe unidad y fechas
-                if (record.product_alquiler and 
-                    record.agenda and 
-                    record.product_alquiler.fecha_ultima_actualizacion):
-                    
-                    # Verificar que las fechas coinciden
-                    fecha_agenda = record.agenda.date()
-                    fecha_actualizacion = record.product_alquiler.fecha_ultima_actualizacion.date()
-                    
-                    if fecha_agenda == fecha_actualizacion:
-                        # Verificar que hay contadores disponibles
-                        unidad = record.product_alquiler
-                        tiene_contadores = (
-                            unidad.contador_bn > 0 or 
-                            unidad.contador_color > 0 or 
-                            unidad.contador_scan > 0
-                        )
-                        mostrar = tiene_contadores
+            if record.estado == 'proceso' and record.product_alquiler:
+                # Verificar si hay contadores disponibles desde diferentes fuentes
+                tiene_contadores_disponibles = record._tiene_contadores_disponibles()
+                mostrar = tiene_contadores_disponibles
             
             record.mostrar_boton_contadores = mostrar
 
+    def _tiene_contadores_disponibles(self):
+        """
+        Verifica si hay contadores disponibles desde diferentes fuentes para cargar
+        """
+        if not self.product_alquiler or not self.product_alquiler.serie:
+            return False
+        
+        serie = self.product_alquiler.serie
+        _logger.info(f"🔍 Verificando contadores disponibles para serie: {serie}")
+        
+        # 1) Verificar en el propio equipo de alquiler
+        if self._tiene_contadores_en_equipo():
+            _logger.info("✅ Contadores encontrados en equipo de alquiler")
+            return True
+        
+        # 2) Verificar en PrintTracker Daily Reading
+        if self._tiene_contadores_en_printtracker():
+            _logger.info("✅ Contadores encontrados en PrintTracker Daily Reading")
+            return True
+        
+        # 3) Verificar en Contador Automático (correos)
+        if self._tiene_contadores_en_correos():
+            _logger.info("✅ Contadores encontrados en Contador Automático")
+            return True
+        
+        _logger.info("❌ No se encontraron contadores disponibles")
+        return False
+
+    def _tiene_contadores_en_equipo(self):
+        """
+        Verifica si el equipo tiene contadores y fecha de actualización coincidente
+        """
+        try:
+            unidad = self.product_alquiler
+            if not unidad or not self.agenda or not unidad.fecha_ultima_actualizacion:
+                return False
+            
+            fecha_agenda = self.agenda.date()
+            fecha_actualizacion = unidad.fecha_ultima_actualizacion.date()
+            
+            if fecha_agenda == fecha_actualizacion:
+                tiene_contadores = (
+                    (unidad.contador_bn or 0) > 0 or 
+                    (unidad.contador_color or 0) > 0 or 
+                    (unidad.contador_scan or 0) > 0
+                )
+                if tiene_contadores:
+                    _logger.info(f"✅ Equipo tiene contadores para fecha {fecha_agenda}")
+                    return True
+            
+            return False
+        except Exception as e:
+            _logger.error(f"❌ Error verificando contadores en equipo: {e}")
+            return False
+
+    def _tiene_contadores_en_printtracker(self):
+        """
+        Verifica si hay lecturas de PrintTracker para la serie
+        """
+        try:
+            serie = self.product_alquiler.serie
+            fecha_agenda = self.agenda.date()
+            
+            # Buscar lectura exacta de la fecha de agenda
+            lectura_exacta = self.env['printtracker.daily.reading'].search([
+                ('serie', '=', serie),
+                ('fecha', '=', fecha_agenda),
+                ('estado', 'in', ['validado', 'aplicado'])
+            ], limit=1)
+            
+            if lectura_exacta and self._lectura_tiene_contadores(lectura_exacta):
+                _logger.info(f"✅ PrintTracker: lectura exacta para {fecha_agenda}")
+                return True
+            
+            # Buscar la lectura más reciente (hasta 7 días antes)
+            fecha_limite = fecha_agenda - timedelta(days=7)
+            lectura_reciente = self.env['printtracker.daily.reading'].search([
+                ('serie', '=', serie),
+                ('fecha', '>=', fecha_limite),
+                ('fecha', '<=', fecha_agenda),
+                ('estado', 'in', ['validado', 'aplicado'])
+            ], order='fecha desc', limit=1)
+            
+            if lectura_reciente and self._lectura_tiene_contadores(lectura_reciente):
+                _logger.info(f"✅ PrintTracker: lectura reciente del {lectura_reciente.fecha}")
+                return True
+            
+            return False
+        except Exception as e:
+            _logger.error(f"❌ Error verificando PrintTracker: {e}")
+            return False
+
+    def _tiene_contadores_en_correos(self):
+        """
+        Verifica si hay contadores procesados desde correos para la serie
+        """
+        try:
+            serie = self.product_alquiler.serie
+            fecha_agenda = self.agenda.date()
+            
+            # Buscar procesamiento exacto de la fecha de agenda
+            contador_exacto = self.env['contador.automatico'].search([
+                ('serie_detectada', '=', serie),
+                ('fecha_procesamiento', '>=', fields.Datetime.combine(fecha_agenda, datetime.min.time())),
+                ('fecha_procesamiento', '<', fields.Datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
+                ('estado', '=', 'procesado')
+            ], limit=1)
+            
+            if contador_exacto and self._contador_automatico_tiene_datos(contador_exacto):
+                _logger.info(f"✅ Correos: contador exacto para {fecha_agenda}")
+                return True
+            
+            # Buscar el más reciente (hasta 7 días antes)
+            fecha_limite = fecha_agenda - timedelta(days=7)
+            contador_reciente = self.env['contador.automatico'].search([
+                ('serie_detectada', '=', serie),
+                ('fecha_procesamiento', '>=', fields.Datetime.combine(fecha_limite, datetime.min.time())),
+                ('fecha_procesamiento', '<=', fields.Datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
+                ('estado', '=', 'procesado')
+            ], order='fecha_procesamiento desc', limit=1)
+            
+            if contador_reciente and self._contador_automatico_tiene_datos(contador_reciente):
+                fecha_proc = contador_reciente.fecha_procesamiento.date()
+                _logger.info(f"✅ Correos: contador reciente del {fecha_proc}")
+                return True
+            
+            return False
+        except Exception as e:
+            _logger.error(f"❌ Error verificando contadores automáticos: {e}")
+            return False
+
+    def _lectura_tiene_contadores(self, lectura):
+        """Verifica si una lectura de PrintTracker tiene contadores válidos"""
+        return (
+            (lectura.contador_bn or 0) > 0 or 
+            (lectura.contador_color or 0) > 0 or 
+            (lectura.contador_scan or 0) > 0
+        )
+
+    def _contador_automatico_tiene_datos(self, contador):
+        """Verifica si un contador automático tiene datos válidos"""
+        return (
+            (contador.contador_bn_detectado or 0) > 0 or 
+            (contador.contador_color_detectado or 0) > 0 or 
+            (contador.contador_scan_detectado or 0) > 0
+        )
+
     def action_cargar_contadores(self):
         """
-        Carga los contadores desde la unidad de alquiler al ticket
-        Solo disponible cuando el ticket está en proceso y las fechas coinciden
+        Carga los contadores desde diferentes fuentes disponibles
+        ACTUALIZADO: Busca en múltiples modelos por serie
         """
         self.ensure_one()
-        _logger.info("=== Iniciando carga de contadores para ticket %s ===", self.name)
+        _logger.info(f"=== Iniciando carga de contadores para ticket {self.name} ===")
         
         # Verificar que el ticket esté en proceso
         if self.estado != 'proceso':
             raise UserError(_("Esta función solo está disponible para tickets en proceso."))
         
         # Verificar que existe una unidad de alquiler asignada
-        unidad = self.product_alquiler
-        if not unidad:
+        if not self.product_alquiler:
             raise UserError(_("No hay un equipo asignado a este ticket."))
         
-        # Verificar que existen fechas para comparar
-        if not self.agenda:
-            raise UserError(_("El ticket no tiene una fecha de agenda asignada."))
+        if not self.product_alquiler.serie:
+            raise UserError(_("El equipo asignado no tiene número de serie."))
         
-        if not unidad.fecha_ultima_actualizacion:
-            raise UserError(_("El equipo no tiene una fecha de última actualización de contadores."))
+        serie = self.product_alquiler.serie
+        _logger.info(f"🔍 Buscando contadores para serie: {serie}")
         
-        # Verificar que las fechas coinciden (solo la fecha, no la hora)
-        fecha_agenda = self.agenda.date()
-        fecha_actualizacion = unidad.fecha_ultima_actualizacion.date()
+        # Buscar contadores en orden de prioridad
+        contadores_encontrados, fuente_datos = self._buscar_contadores_por_prioridad(serie)
         
-        _logger.info("Comparando fechas: agenda=%s, actualización=%s", fecha_agenda, fecha_actualizacion)
-        
-        if fecha_agenda != fecha_actualizacion:
+        if not contadores_encontrados:
             raise UserError(_(
-                "Las fechas no coinciden:\n"
-                "• Fecha de agenda del ticket: %s\n"
-                "• Fecha de última actualización del equipo: %s\n\n"
-                "Los contadores solo se pueden cargar cuando ambas fechas son iguales."
-            ) % (fecha_agenda.strftime('%d/%m/%Y'), fecha_actualizacion.strftime('%d/%m/%Y')))
+                "No se encontraron contadores válidos para la serie %s.\n"
+                "Verifique que existan lecturas de PrintTracker o correos procesados para este equipo."
+            ) % serie)
         
-        # Verificar que hay contadores válidos para cargar
-        if unidad.contador_bn <= 0 and unidad.contador_color <= 0 and unidad.contador_scan <= 0:
-            raise UserError(_("No hay contadores válidos para cargar desde el equipo."))
-        
-        # Cargar los contadores
+        # Cargar los contadores encontrados
         valores_cargados = []
         
         # Cargar contador B/N
-        if unidad.contador_bn > 0:
-            self.contometrok_id = str(unidad.contador_bn)
-            valores_cargados.append("Contador B/N: %s" % unidad.contador_bn)
-            _logger.info("→ contometrok_id cargado: %s", self.contometrok_id)
-        else:
-            _logger.debug("→ contador_bn es 0 en unidad, se salta contometrok_id")
+        if contadores_encontrados.get('contador_bn', 0) > 0:
+            self.contometrok_id = str(contadores_encontrados['contador_bn'])
+            valores_cargados.append(f"Contador B/N: {contadores_encontrados['contador_bn']:,}")
+            _logger.info(f"→ contometrok_id cargado: {self.contometrok_id}")
         
         # Cargar contador color (solo para máquinas a color)
-        if self.tipo_id == 'color':
-            if unidad.contador_color > 0:
-                self.contometroc_id = str(unidad.contador_color)
-                valores_cargados.append("Contador Color: %s" % unidad.contador_color)
-                _logger.info("→ contometroc_id cargado: %s", self.contometroc_id)
-            else:
-                _logger.debug("→ contador_color es 0 en unidad, se salta contometroc_id")
+        if self.tipo_id == 'color' and contadores_encontrados.get('contador_color', 0) > 0:
+            self.contometroc_id = str(contadores_encontrados['contador_color'])
+            valores_cargados.append(f"Contador Color: {contadores_encontrados['contador_color']:,}")
+            _logger.info(f"→ contometroc_id cargado: {self.contometroc_id}")
         
         # Cargar contador scanner
-        if unidad.contador_scan > 0:
-            self.contometros_id = str(unidad.contador_scan)
-            valores_cargados.append("Contador Scanner: %s" % unidad.contador_scan)
-            _logger.info("→ contometros_id cargado: %s", self.contometros_id)
-        else:
-            _logger.debug("→ contador_scan es 0 en unidad, se salta contometros_id")
+        if contadores_encontrados.get('contador_scan', 0) > 0:
+            self.contometros_id = str(contadores_encontrados['contador_scan'])
+            valores_cargados.append(f"Contador Scanner: {contadores_encontrados['contador_scan']:,}")
+            _logger.info(f"→ contometros_id cargado: {self.contometros_id}")
         
         # Verificar que se cargó al menos un contador
         if not valores_cargados:
-            raise UserError(_("No se pudo cargar ningún contador desde el equipo."))
+            raise UserError(_("Los contadores encontrados no son válidos para cargar."))
         
         # Mensaje de confirmación
         mensaje_exito = (
-            "✅ Contadores cargados exitosamente:\n\n"
-            "📋 %s\n\n"
-            "📅 Fecha de sincronización: %s"
-        ) % (', '.join(valores_cargados), fecha_actualizacion.strftime('%d/%m/%Y'))
+            f"✅ Contadores cargados exitosamente desde {fuente_datos}:\n\n"
+            f"📋 {' • '.join(valores_cargados)}\n\n"
+            f"📅 Serie: {serie}"
+        )
         
         # Registrar en el log del ticket
         self.message_post(
@@ -772,7 +885,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             message_type='notification'
         )
         
-        _logger.info("=== Contadores cargados exitosamente para ticket %s ===", self.name)
+        _logger.info(f"=== Contadores cargados exitosamente para ticket {self.name} ===")
         
         # Mostrar mensaje al usuario
         return {
@@ -780,11 +893,182 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'tag': 'display_notification',
             'params': {
                 'title': _('Contadores Cargados'),
-                'message': _('Los contadores se han cargado correctamente desde el equipo.'),
+                'message': _('Los contadores se han cargado correctamente desde %s.') % fuente_datos,
                 'type': 'success',
                 'sticky': False,
             }
         }
+
+    def _buscar_contadores_por_prioridad(self, serie):
+        """
+        Busca contadores en orden de prioridad:
+        1. Equipo de alquiler (si fecha coincide)
+        2. PrintTracker Daily Reading (más reciente)
+        3. Contador Automático (más reciente)
+        """
+        fecha_agenda = self.agenda.date() if self.agenda else None
+        
+        # PRIORIDAD 1: Equipo de alquiler (solo si fecha coincide)
+        _logger.info("🔍 Prioridad 1: Verificando equipo de alquiler...")
+        contadores_equipo = self._obtener_contadores_equipo(fecha_agenda)
+        if contadores_equipo:
+            return contadores_equipo, "Equipo de Alquiler"
+        
+        # PRIORIDAD 2: PrintTracker Daily Reading
+        _logger.info("🔍 Prioridad 2: Verificando PrintTracker Daily Reading...")
+        contadores_pt = self._obtener_contadores_printtracker(serie, fecha_agenda)
+        if contadores_pt:
+            return contadores_pt, "PrintTracker Daily Reading"
+        
+        # PRIORIDAD 3: Contador Automático (correos)
+        _logger.info("🔍 Prioridad 3: Verificando Contador Automático...")
+        contadores_correo = self._obtener_contadores_correos(serie, fecha_agenda)
+        if contadores_correo:
+            return contadores_correo, "Procesamiento de Correos"
+        
+        _logger.warning("❌ No se encontraron contadores en ninguna fuente")
+        return None, None
+
+    def _obtener_contadores_equipo(self, fecha_agenda):
+        """
+        Obtiene contadores del equipo de alquiler si la fecha coincide
+        """
+        try:
+            unidad = self.product_alquiler
+            if not unidad or not fecha_agenda or not unidad.fecha_ultima_actualizacion:
+                return None
+            
+            if fecha_agenda == unidad.fecha_ultima_actualizacion.date():
+                contadores = {
+                    'contador_bn': unidad.contador_bn or 0,
+                    'contador_color': unidad.contador_color or 0,
+                    'contador_scan': unidad.contador_scan or 0,
+                }
+                
+                if any(v > 0 for v in contadores.values()):
+                    _logger.info(f"✅ Contadores desde equipo: {contadores}")
+                    return contadores
+            
+            return None
+        except Exception as e:
+            _logger.error(f"❌ Error obteniendo contadores del equipo: {e}")
+            return None
+
+    def _obtener_contadores_printtracker(self, serie, fecha_agenda):
+        """
+        Obtiene contadores desde PrintTracker Daily Reading
+        """
+        try:
+            # Buscar lectura exacta de la fecha de agenda
+            if fecha_agenda:
+                lectura_exacta = self.env['printtracker.daily.reading'].search([
+                    ('serie', '=', serie),
+                    ('fecha', '=', fecha_agenda),
+                    ('estado', 'in', ['validado', 'aplicado'])
+                ], limit=1)
+                
+                if lectura_exacta:
+                    contadores = self._extraer_contadores_printtracker(lectura_exacta)
+                    if contadores:
+                        _logger.info(f"✅ Contadores exactos desde PrintTracker ({fecha_agenda}): {contadores}")
+                        return contadores
+            
+            # Buscar la lectura más reciente (hasta 30 días antes)
+            fecha_limite = (fecha_agenda - timedelta(days=30)) if fecha_agenda else (datetime.now().date() - timedelta(days=30))
+            fecha_max = fecha_agenda if fecha_agenda else datetime.now().date()
+            
+            lectura_reciente = self.env['printtracker.daily.reading'].search([
+                ('serie', '=', serie),
+                ('fecha', '>=', fecha_limite),
+                ('fecha', '<=', fecha_max),
+                ('estado', 'in', ['validado', 'aplicado'])
+            ], order='fecha desc', limit=1)
+            
+            if lectura_reciente:
+                contadores = self._extraer_contadores_printtracker(lectura_reciente)
+                if contadores:
+                    _logger.info(f"✅ Contadores recientes desde PrintTracker ({lectura_reciente.fecha}): {contadores}")
+                    return contadores
+            
+            return None
+        except Exception as e:
+            _logger.error(f"❌ Error obteniendo contadores de PrintTracker: {e}")
+            return None
+
+    def _obtener_contadores_correos(self, serie, fecha_agenda):
+        """
+        Obtiene contadores desde Contador Automático (correos)
+        """
+        try:
+            # Buscar procesamiento exacto de la fecha de agenda
+            if fecha_agenda:
+                contador_exacto = self.env['contador.automatico'].search([
+                    ('serie_detectada', '=', serie),
+                    ('fecha_procesamiento', '>=', fields.Datetime.combine(fecha_agenda, datetime.min.time())),
+                    ('fecha_procesamiento', '<', fields.Datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
+                    ('estado', '=', 'procesado')
+                ], limit=1)
+                
+                if contador_exacto:
+                    contadores = self._extraer_contadores_correos(contador_exacto)
+                    if contadores:
+                        _logger.info(f"✅ Contadores exactos desde correos ({fecha_agenda}): {contadores}")
+                        return contadores
+            
+            # Buscar el más reciente (hasta 30 días antes)
+            fecha_limite = (fecha_agenda - timedelta(days=30)) if fecha_agenda else (datetime.now().date() - timedelta(days=30))
+            fecha_max = (fecha_agenda + timedelta(days=1)) if fecha_agenda else datetime.now().date() + timedelta(days=1)
+            
+            contador_reciente = self.env['contador.automatico'].search([
+                ('serie_detectada', '=', serie),
+                ('fecha_procesamiento', '>=', fields.Datetime.combine(fecha_limite, datetime.min.time())),
+                ('fecha_procesamiento', '<', fields.Datetime.combine(fecha_max, datetime.min.time())),
+                ('estado', '=', 'procesado')
+            ], order='fecha_procesamiento desc', limit=1)
+            
+            if contador_reciente:
+                contadores = self._extraer_contadores_correos(contador_reciente)
+                if contadores:
+                    fecha_proc = contador_reciente.fecha_procesamiento.date()
+                    _logger.info(f"✅ Contadores recientes desde correos ({fecha_proc}): {contadores}")
+                    return contadores
+            
+            return None
+        except Exception as e:
+            _logger.error(f"❌ Error obteniendo contadores de correos: {e}")
+            return None
+
+    def _extraer_contadores_printtracker(self, lectura):
+        """
+        Extrae contadores de una lectura de PrintTracker
+        """
+        contadores = {
+            'contador_bn': lectura.contador_bn or 0,
+            'contador_color': lectura.contador_color or 0,
+            'contador_scan': lectura.contador_scan or 0,
+        }
+        
+        # Verificar que al menos uno sea mayor que 0
+        if any(v > 0 for v in contadores.values()):
+            return contadores
+        
+        return None
+
+    def _extraer_contadores_correos(self, contador):
+        """
+        Extrae contadores de un registro de contador automático
+        """
+        contadores = {
+            'contador_bn': contador.contador_bn_detectado or 0,
+            'contador_color': contador.contador_color_detectado or 0,
+            'contador_scan': contador.contador_scan_detectado or 0,
+        }
+        
+        # Verificar que al menos uno sea mayor que 0
+        if any(v > 0 for v in contadores.values()):
+            return contadores
+        
+        return None
             
 
     def create_ticket_wizard(self):
