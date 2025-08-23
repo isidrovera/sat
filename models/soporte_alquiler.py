@@ -919,16 +919,22 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                 "Verifique que existan lecturas de PrintTracker o correos procesados para este equipo."
             ) % serie)
         
-        # Cargar los contadores encontrados
+        # CRÍTICO: Deshabilitar validación automática temporalmente
+        _logger.info("🔧 Deshabilitando validación automática temporalmente...")
+        
+        # Crear un contexto sin validaciones
+        self_no_constraints = self.with_context(skip_constraints=True)
+        
+        # Cargar los contadores encontrados SIN VALIDACIONES
         valores_cargados = []
         
         # Cargar contador B/N
         bn_valor = contadores_encontrados.get('contador_bn', 0)
         _logger.info(f"🔍 DEBUG BN - Valor: {bn_valor}, Condición: {bn_valor > 0}")
         if bn_valor > 0:
-            self.contometrok_id = str(bn_valor)
+            self_no_constraints.contometrok_id = str(bn_valor)
             valores_cargados.append(f"Contador B/N: {bn_valor:,}")
-            _logger.info(f"→ contometrok_id cargado: {self.contometrok_id}")
+            _logger.info(f"→ contometrok_id cargado: {self_no_constraints.contometrok_id}")
         else:
             _logger.warning(f"⚠️ DEBUG BN - NO SE CARGA porque valor es {bn_valor}")
         
@@ -936,9 +942,9 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         color_valor = contadores_encontrados.get('contador_color', 0)
         _logger.info(f"🔍 DEBUG COLOR - Tipo máquina: {self.tipo_id}, Valor: {color_valor}, Condición: {self.tipo_id == 'color' and color_valor > 0}")
         if self.tipo_id == 'color' and color_valor > 0:
-            self.contometroc_id = str(color_valor)
+            self_no_constraints.contometroc_id = str(color_valor)
             valores_cargados.append(f"Contador Color: {color_valor:,}")
-            _logger.info(f"→ contometroc_id cargado: {self.contometroc_id}")
+            _logger.info(f"→ contometroc_id cargado: {self_no_constraints.contometroc_id}")
         else:
             _logger.info(f"ℹ️ DEBUG COLOR - NO SE CARGA (tipo: {self.tipo_id}, valor: {color_valor})")
         
@@ -946,9 +952,9 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         scan_valor = contadores_encontrados.get('contador_scan', 0)
         _logger.info(f"🔍 DEBUG SCANNER - Valor: {scan_valor}, Tipo: {type(scan_valor)}, Condición: {scan_valor > 0}")
         if scan_valor > 0:
-            self.contometros_id = str(scan_valor)
+            self_no_constraints.contometros_id = str(scan_valor)
             valores_cargados.append(f"Contador Scanner: {scan_valor:,}")
-            _logger.info(f"→ contometros_id cargado: {self.contometros_id}")
+            _logger.info(f"→ contometros_id cargado: {self_no_constraints.contometros_id}")
         else:
             _logger.error(f"❌ DEBUG SCANNER - NO SE CARGA porque valor es {scan_valor} (tipo: {type(scan_valor)})")
         
@@ -964,6 +970,18 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             raise UserError(_("Los contadores encontrados no son válidos para cargar."))
         
         _logger.info(f"✅ Valores cargados: {valores_cargados}")
+        
+        # AHORA SÍ: Ejecutar validación manual una sola vez con todos los valores
+        _logger.info("🔍 Ejecutando validación manual final...")
+        try:
+            # Forzar recálculo de campos computed si es necesario
+            self.invalidate_cache()
+            # Validar manualmente solo UNA VEZ
+            self._check_contometro_values()
+            _logger.info("✅ Validación manual exitosa")
+        except ValidationError as e:
+            _logger.error(f"❌ Validación falló: {str(e)}")
+            raise e
         
         # Mensaje de confirmación
         mensaje_exito = (
