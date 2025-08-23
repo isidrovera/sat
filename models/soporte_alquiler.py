@@ -280,58 +280,126 @@ class ticket_alquiler(models.Model):
     @api.constrains('contometrok_id', 'contometroc_id', 'contometros_id')
     def _check_contometro_values(self):
         for record in self:
+            # Agregar logs para debug
+            _logger.info(f"🔍 VALIDANDO CONTADORES - Ticket ID: {record.id}")
+            _logger.info(f"🔍 Serie: {record.product_alquiler.serie if record.product_alquiler else 'NA'}")
+            
             previous_record = self.search(
                 [('product_alquiler', '=', record.product_alquiler.id), ('id', '<', record.id)],
                 limit=1,
                 order='id desc'
             )
+            
+            if previous_record:
+                _logger.info(f"🔍 TICKET ANTERIOR: {previous_record.id} - {previous_record.name}")
+            else:
+                _logger.info(f"🔍 NO se encontró ticket anterior")
 
-            # Convertir los valores a enteros (si no tienen valor, se asume 0)
-            current_k = int(record.contometrok_id) if record.contometrok_id else 0
-            current_color = int(record.contometroc_id) if record.contometroc_id else 0
-            current_scanner = int(record.contometros_id) if record.contometros_id else 0
+            # FUNCIÓN AUXILIAR para limpiar y convertir valores
+            def clean_and_convert(value_str):
+                """
+                Limpia y convierte string a entero manejando comas y puntos
+                """
+                if not value_str:
+                    return 0
+                
+                # Convertir a string si no lo es
+                value_str = str(value_str).strip()
+                
+                if not value_str:
+                    return 0
+                
+                try:
+                    # Remover comas (separadores de miles)
+                    cleaned = value_str.replace(',', '')
+                    
+                    # Si tiene punto, verificar si es separador decimal o de miles
+                    if '.' in cleaned:
+                        parts = cleaned.split('.')
+                        if len(parts) == 2:
+                            # Si la parte después del punto tiene 3 dígitos, es separador de miles
+                            if len(parts[1]) == 3 and parts[1].isdigit():
+                                cleaned = parts[0] + parts[1]  # Ejemplo: 123.456 -> 123456
+                            else:
+                                # Es decimal, tomar solo la parte entera
+                                cleaned = parts[0]  # Ejemplo: 123.45 -> 123
+                    
+                    # Convertir a entero
+                    result = int(float(cleaned))
+                    _logger.info(f"🔧 Conversión: '{value_str}' → {result}")
+                    return result
+                    
+                except (ValueError, TypeError) as e:
+                    _logger.error(f"❌ Error convirtiendo '{value_str}': {e}")
+                    return 0
 
-            prev_k = int(previous_record.contometrok_id) if previous_record and previous_record.contometrok_id else 0
-            prev_color = int(previous_record.contometroc_id) if previous_record and previous_record.contometroc_id else 0
-            prev_scanner = int(previous_record.contometros_id) if previous_record and previous_record.contometros_id else 0
+            # Convertir valores actuales usando la función de limpieza
+            current_k = clean_and_convert(record.contometrok_id)
+            current_color = clean_and_convert(record.contometroc_id)
+            current_scanner = clean_and_convert(record.contometros_id)
 
-            # Validar contómetro K
+            # Convertir valores anteriores
+            prev_k = clean_and_convert(previous_record.contometrok_id) if previous_record else 0
+            prev_color = clean_and_convert(previous_record.contometroc_id) if previous_record else 0
+            prev_scanner = clean_and_convert(previous_record.contometros_id) if previous_record else 0
+
+            # Debug: mostrar valores convertidos
+            _logger.info(f"📊 VALORES ACTUALES: K={current_k}, Color={current_color}, Scanner={current_scanner}")
+            if previous_record:
+                _logger.info(f"📊 VALORES ANTERIORES: K={prev_k}, Color={prev_color}, Scanner={prev_scanner}")
+
+            # VALIDAR CONTÓMETRO K
             if previous_record and current_k <= prev_k:
+                _logger.error(f"❌ VALIDACIÓN K FALLÓ: {current_k} <= {prev_k}")
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO K ES INCORRECTO\n\n"
-                    "Debe ingresar un valor MAYOR que el último valor registrado  para esta máquina."
-                    .format(prev_k))
+                    "Debe ingresar un valor MAYOR que el último valor registrado para esta máquina.\n"
+                    f"Valor actual: {current_k:,}\n"
+                    f"Valor anterior: {prev_k:,}\n"
+                    f"Ticket anterior: {previous_record.name}")
                 )
 
-            # Validar contómetro color solo si es máquina a color
+            # VALIDAR CONTÓMETRO COLOR (solo para máquinas a color)
             if record.tipo_id == 'color':
                 if previous_record and current_color <= prev_color:
+                    _logger.error(f"❌ VALIDACIÓN COLOR FALLÓ: {current_color} <= {prev_color}")
                     raise ValidationError(
                         _("❗ ERROR: EL VALOR DEL CONTÓMETRO COLOR ES INCORRECTO\n\n"
-                        "Debe ingresar un valor MAYOR que el último valor registrado para esta máquina."
-                        .format(prev_color))
+                        "Debe ingresar un valor MAYOR que el último valor registrado para esta máquina.\n"
+                        f"Valor actual: {current_color:,}\n"
+                        f"Valor anterior: {prev_color:,}\n"
+                        f"Ticket anterior: {previous_record.name}")
                     )
+                
                 if current_color == 0:
+                    _logger.error(f"❌ VALIDACIÓN COLOR: valor es 0")
                     raise ValidationError(
                         _("❗ ERROR: EL VALOR DEL CONTÓMETRO COLOR NO PUEDE SER 0\n\n"
                         "Debe ingresar el valor ACTUAL del contómetro.")
                     )
 
-            # Validar contómetro scanner - MODIFICADO para permitir valores iguales o mayores
+            # VALIDAR CONTÓMETRO SCANNER (permite valores iguales o mayores)
             if previous_record and current_scanner < prev_scanner:
+                _logger.error(f"❌ VALIDACIÓN SCANNER FALLÓ: {current_scanner} < {prev_scanner}")
                 raise ValidationError(
                     _("❗ ERROR: EL VALOR DEL CONTÓMETRO SCANNER ES INCORRECTO\n\n"
-                    "Debe ingresar un valor IGUAL O MAYOR que el último valor registrado para esta máquina."
-                    .format(prev_scanner))
+                    "Debe ingresar un valor IGUAL O MAYOR que el último valor registrado para esta máquina.\n"
+                    f"Valor actual: {current_scanner:,}\n"
+                    f"Valor anterior: {prev_scanner:,}\n"
+                    f"Ticket anterior: {previous_record.name}")
                 )
 
-            # Validar que ni K ni scanner sean 0
-            if current_k == 0 or current_scanner == 0:
+            # VALIDAR QUE K Y SCANNER NO SEAN 0 (excepto en casos especiales)
+            if current_k == 0 and current_scanner == 0:
+                _logger.error(f"❌ VALIDACIÓN: Ambos contadores son 0")
                 raise ValidationError(
-                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
-                    "Debe ingresar el valor ACTUAL del contómetro.")
+                    _("❗ ERROR: LOS CONTÓMETROS NO PUEDEN SER 0\n\n"
+                    "Debe ingresar los valores ACTUALES de los contómetros.")
                 )
 
+            # Si llegamos aquí, todo está bien
+            _logger.info(f"✅ VALIDACIÓN EXITOSA para ticket {record.id}")
+            _logger.info(f"✅ Valores finales: K={current_k:,}, Color={current_color:,}, Scanner={current_scanner:,}")
     
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
                                          ("mantenimiento_preventivo", "Mantenimiento preventivo"), (
