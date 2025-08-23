@@ -952,12 +952,12 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         _logger.info("🔧 Deshabilitando validación automática temporalmente con skip_constraints...")
         self.with_context(skip_constraints=True).write(updates)
 
-        # Log de verificación
-        self.invalidate_cache()
-        _logger.info("🎯 DEBUG FINAL - Valores asignados a campos:")
-        _logger.info(f"   contometrok_id: '{self.contometrok_id}' (tipo: {type(self.contometrok_id)})")
-        _logger.info(f"   contometroc_id: '{self.contometroc_id}' (tipo: {type(self.contometroc_id)})")
-        _logger.info(f"   contometros_id: '{self.contometros_id}' (tipo: {type(self.contometros_id)})")
+        # (Opcional) invalidar caché de este recordset si tu versión lo expone
+        try:
+            self.invalidate_recordset()
+        except Exception:
+            # No es crítico; write() ya deja el cache coherente para validaciones inmediatas
+            pass
 
         # ✅ Validación manual final (ahora sin saltos)
         _logger.info("🔍 Ejecutando validación manual final...")
@@ -990,6 +990,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                 'sticky': False,
             }
         }
+
 
     def _buscar_contadores_por_prioridad(self, serie):
         """
