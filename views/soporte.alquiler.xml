@@ -40,16 +40,18 @@
                             <strong>ℹ️ Información:</strong> Los contadores se pueden cargar automáticamente cuando:
                             <ul>
                                 <li>El ticket esté en proceso</li>
-                                <li>La fecha de agenda coincida con la última actualización del equipo</li>
+                                <li>Existan lecturas de PrintTracker para este equipo</li>
+                                <li>Existan correos procesados para este equipo</li>
                                 <li>El equipo tenga contadores registrados</li>
                             </ul>
                         </div>
 
+                        <!-- Alerta de éxito (cuando SÍ puede cargar) -->
                         <div class="alert alert-success" 
                             invisible="mostrar_boton_contadores == False">
-                            <strong>✅ Disponible:</strong> Puede cargar los contadores automáticamente desde el equipo.
+                            <strong>✅ Disponible:</strong> Se encontraron contadores para cargar automáticamente.
                             <br/>
-                            <small>Las fechas de agenda y última actualización del equipo coinciden.</small>
+                            <small>El sistema buscará en PrintTracker, correos y registros del equipo.</small>
                         </div>
                         <div class="oe_title">
                             <label for="name" />
