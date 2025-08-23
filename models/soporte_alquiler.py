@@ -909,6 +909,10 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         # Buscar contadores en orden de prioridad
         contadores_encontrados, fuente_datos = self._buscar_contadores_por_prioridad(serie)
         
+        # DEBUG - Agregar logs detallados
+        _logger.info(f"🔍 DEBUG - Contadores encontrados: {contadores_encontrados}")
+        _logger.info(f"🔍 DEBUG - Fuente: {fuente_datos}")
+        
         if not contadores_encontrados:
             raise UserError(_(
                 "No se encontraron contadores válidos para la serie %s.\n"
@@ -919,26 +923,47 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         valores_cargados = []
         
         # Cargar contador B/N
-        if contadores_encontrados.get('contador_bn', 0) > 0:
-            self.contometrok_id = str(contadores_encontrados['contador_bn'])
-            valores_cargados.append(f"Contador B/N: {contadores_encontrados['contador_bn']:,}")
+        bn_valor = contadores_encontrados.get('contador_bn', 0)
+        _logger.info(f"🔍 DEBUG BN - Valor: {bn_valor}, Condición: {bn_valor > 0}")
+        if bn_valor > 0:
+            self.contometrok_id = str(bn_valor)
+            valores_cargados.append(f"Contador B/N: {bn_valor:,}")
             _logger.info(f"→ contometrok_id cargado: {self.contometrok_id}")
+        else:
+            _logger.warning(f"⚠️ DEBUG BN - NO SE CARGA porque valor es {bn_valor}")
         
-        # Cargar contador color (solo para máquinas a color)
-        if self.tipo_id == 'color' and contadores_encontrados.get('contador_color', 0) > 0:
-            self.contometroc_id = str(contadores_encontrados['contador_color'])
-            valores_cargados.append(f"Contador Color: {contadores_encontrados['contador_color']:,}")
+        # Cargar contador color (solo para máquinas a color)  
+        color_valor = contadores_encontrados.get('contador_color', 0)
+        _logger.info(f"🔍 DEBUG COLOR - Tipo máquina: {self.tipo_id}, Valor: {color_valor}, Condición: {self.tipo_id == 'color' and color_valor > 0}")
+        if self.tipo_id == 'color' and color_valor > 0:
+            self.contometroc_id = str(color_valor)
+            valores_cargados.append(f"Contador Color: {color_valor:,}")
             _logger.info(f"→ contometroc_id cargado: {self.contometroc_id}")
+        else:
+            _logger.info(f"ℹ️ DEBUG COLOR - NO SE CARGA (tipo: {self.tipo_id}, valor: {color_valor})")
         
         # Cargar contador scanner
-        if contadores_encontrados.get('contador_scan', 0) > 0:
-            self.contometros_id = str(contadores_encontrados['contador_scan'])
-            valores_cargados.append(f"Contador Scanner: {contadores_encontrados['contador_scan']:,}")
+        scan_valor = contadores_encontrados.get('contador_scan', 0)
+        _logger.info(f"🔍 DEBUG SCANNER - Valor: {scan_valor}, Tipo: {type(scan_valor)}, Condición: {scan_valor > 0}")
+        if scan_valor > 0:
+            self.contometros_id = str(scan_valor)
+            valores_cargados.append(f"Contador Scanner: {scan_valor:,}")
             _logger.info(f"→ contometros_id cargado: {self.contometros_id}")
+        else:
+            _logger.error(f"❌ DEBUG SCANNER - NO SE CARGA porque valor es {scan_valor} (tipo: {type(scan_valor)})")
+        
+        # VERIFICAR VALORES FINALES ANTES DE VALIDACIÓN
+        _logger.info(f"🎯 DEBUG FINAL - Valores asignados a campos:")
+        _logger.info(f"   contometrok_id: '{self.contometrok_id}' (tipo: {type(self.contometrok_id)})")
+        _logger.info(f"   contometroc_id: '{self.contometroc_id}' (tipo: {type(self.contometroc_id)})")
+        _logger.info(f"   contometros_id: '{self.contometros_id}' (tipo: {type(self.contometros_id)})")
         
         # Verificar que se cargó al menos un contador
         if not valores_cargados:
+            _logger.error(f"❌ No se cargaron valores. contadores_encontrados: {contadores_encontrados}")
             raise UserError(_("Los contadores encontrados no son válidos para cargar."))
+        
+        _logger.info(f"✅ Valores cargados: {valores_cargados}")
         
         # Mensaje de confirmación
         mensaje_exito = (
@@ -966,7 +991,6 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                 'sticky': False,
             }
         }
-
     def _buscar_contadores_por_prioridad(self, serie):
         """
         Busca contadores en orden de prioridad:
