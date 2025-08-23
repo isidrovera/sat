@@ -279,6 +279,11 @@ class ticket_alquiler(models.Model):
 
     @api.constrains('contometrok_id', 'contometroc_id', 'contometros_id')
     def _check_contometro_values(self):
+        # ⏭️ Permitir saltar validaciones cuando se cargan valores en bloque
+        if self.env.context.get('skip_constraints'):
+            _logger.info("⏭️ Saltando validaciones por contexto skip_constraints")
+            return
+
         for record in self:
             # Agregar logs para debug
             _logger.info(f"🔍 VALIDANDO CONTADORES - Ticket ID: {record.id}")
@@ -303,32 +308,23 @@ class ticket_alquiler(models.Model):
                 if not value_str:
                     return 0
                 
-                # Convertir a string si no lo es
                 value_str = str(value_str).strip()
-                
                 if not value_str:
                     return 0
                 
                 try:
-                    # Remover comas (separadores de miles)
                     cleaned = value_str.replace(',', '')
-                    
-                    # Si tiene punto, verificar si es separador decimal o de miles
                     if '.' in cleaned:
                         parts = cleaned.split('.')
                         if len(parts) == 2:
-                            # Si la parte después del punto tiene 3 dígitos, es separador de miles
+                            # 123.456 -> 123456 (si la parte final son 3 dígitos)
                             if len(parts[1]) == 3 and parts[1].isdigit():
-                                cleaned = parts[0] + parts[1]  # Ejemplo: 123.456 -> 123456
+                                cleaned = parts[0] + parts[1]
                             else:
-                                # Es decimal, tomar solo la parte entera
-                                cleaned = parts[0]  # Ejemplo: 123.45 -> 123
-                    
-                    # Convertir a entero
+                                cleaned = parts[0]  # 123.45 -> 123
                     result = int(float(cleaned))
                     _logger.info(f"🔧 Conversión: '{value_str}' → {result}")
                     return result
-                    
                 except (ValueError, TypeError) as e:
                     _logger.error(f"❌ Error convirtiendo '{value_str}': {e}")
                     return 0
@@ -348,7 +344,7 @@ class ticket_alquiler(models.Model):
             if previous_record:
                 _logger.info(f"📊 VALORES ANTERIORES: K={prev_k}, Color={prev_color}, Scanner={prev_scanner}")
 
-            # VALIDAR CONTÓMETRO K
+            # VALIDAR CONTÓMETRO K (estricto mayor)
             if previous_record and current_k <= prev_k:
                 _logger.error(f"❌ VALIDACIÓN K FALLÓ: {current_k} <= {prev_k}")
                 raise ValidationError(
@@ -370,15 +366,14 @@ class ticket_alquiler(models.Model):
                         f"Valor anterior: {prev_color:,}\n"
                         f"Ticket anterior: {previous_record.name}")
                     )
-                
                 if current_color == 0:
-                    _logger.error(f"❌ VALIDACIÓN COLOR: valor es 0")
+                    _logger.error("❌ VALIDACIÓN COLOR: valor es 0")
                     raise ValidationError(
                         _("❗ ERROR: EL VALOR DEL CONTÓMETRO COLOR NO PUEDE SER 0\n\n"
                         "Debe ingresar el valor ACTUAL del contómetro.")
                     )
 
-            # VALIDAR CONTÓMETRO SCANNER (permite valores iguales o mayores)
+            # VALIDAR CONTÓMETRO SCANNER (permitir igual o mayor)
             if previous_record and current_scanner < prev_scanner:
                 _logger.error(f"❌ VALIDACIÓN SCANNER FALLÓ: {current_scanner} < {prev_scanner}")
                 raise ValidationError(
@@ -389,17 +384,17 @@ class ticket_alquiler(models.Model):
                     f"Ticket anterior: {previous_record.name}")
                 )
 
-            # VALIDAR QUE K Y SCANNER NO SEAN 0 (excepto en casos especiales)
+            # VALIDACIÓN adicional: evitar ambos en 0
             if current_k == 0 and current_scanner == 0:
-                _logger.error(f"❌ VALIDACIÓN: Ambos contadores son 0")
+                _logger.error("❌ VALIDACIÓN: Ambos contadores son 0")
                 raise ValidationError(
                     _("❗ ERROR: LOS CONTÓMETROS NO PUEDEN SER 0\n\n"
                     "Debe ingresar los valores ACTUALES de los contómetros.")
                 )
 
-            # Si llegamos aquí, todo está bien
             _logger.info(f"✅ VALIDACIÓN EXITOSA para ticket {record.id}")
             _logger.info(f"✅ Valores finales: K={current_k:,}, Color={current_color:,}, Scanner={current_scanner:,}")
+
     
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),
                                          ("mantenimiento_preventivo", "Mantenimiento preventivo"), (
@@ -886,20 +881,17 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
     def action_cargar_contadores(self):
         """
-        Carga los contadores desde diferentes fuentes disponibles
-        ACTUALIZADO: Busca en múltiples modelos por serie
+        Carga los contadores desde diferentes fuentes disponibles.
+        Escribe todos los campos en una sola operación y valida al final.
         """
         self.ensure_one()
         _logger.info(f"=== Iniciando carga de contadores para ticket {self.name} ===")
         
-        # Verificar que el ticket esté en proceso
+        # Verificaciones básicas
         if self.estado != 'proceso':
             raise UserError(_("Esta función solo está disponible para tickets en proceso."))
-        
-        # Verificar que existe una unidad de alquiler asignada
         if not self.product_alquiler:
             raise UserError(_("No hay un equipo asignado a este ticket."))
-        
         if not self.product_alquiler.serie:
             raise UserError(_("El equipo asignado no tiene número de serie."))
         
@@ -919,96 +911,86 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                 "Verifique que existan lecturas de PrintTracker o correos procesados para este equipo."
             ) % serie)
         
-        # CRÍTICO: Deshabilitar validación automática temporalmente
-        _logger.info("🔧 Deshabilitando validación automática temporalmente...")
-        
-        # Crear un contexto sin validaciones
-        self_no_constraints = self.with_context(skip_constraints=True)
-        
-        # Cargar los contadores encontrados SIN VALIDACIONES
+        # Armar payload de actualización en una sola operación
+        _logger.info("🔧 Preparando actualización masiva de campos...")
+        updates = {}
         valores_cargados = []
-        
-        # Cargar contador B/N
+
+        # B/N
         bn_valor = contadores_encontrados.get('contador_bn', 0)
         _logger.info(f"🔍 DEBUG BN - Valor: {bn_valor}, Condición: {bn_valor > 0}")
         if bn_valor > 0:
-            self_no_constraints.contometrok_id = str(bn_valor)
+            updates['contometrok_id'] = str(bn_valor)
             valores_cargados.append(f"Contador B/N: {bn_valor:,}")
-            _logger.info(f"→ contometrok_id cargado: {self_no_constraints.contometrok_id}")
         else:
             _logger.warning(f"⚠️ DEBUG BN - NO SE CARGA porque valor es {bn_valor}")
-        
-        # Cargar contador color (solo para máquinas a color)  
+
+        # Color (solo para máquinas a color)
         color_valor = contadores_encontrados.get('contador_color', 0)
         _logger.info(f"🔍 DEBUG COLOR - Tipo máquina: {self.tipo_id}, Valor: {color_valor}, Condición: {self.tipo_id == 'color' and color_valor > 0}")
         if self.tipo_id == 'color' and color_valor > 0:
-            self_no_constraints.contometroc_id = str(color_valor)
+            updates['contometroc_id'] = str(color_valor)
             valores_cargados.append(f"Contador Color: {color_valor:,}")
-            _logger.info(f"→ contometroc_id cargado: {self_no_constraints.contometroc_id}")
         else:
             _logger.info(f"ℹ️ DEBUG COLOR - NO SE CARGA (tipo: {self.tipo_id}, valor: {color_valor})")
-        
-        # Cargar contador scanner
+
+        # Scanner
         scan_valor = contadores_encontrados.get('contador_scan', 0)
         _logger.info(f"🔍 DEBUG SCANNER - Valor: {scan_valor}, Tipo: {type(scan_valor)}, Condición: {scan_valor > 0}")
         if scan_valor > 0:
-            self_no_constraints.contometros_id = str(scan_valor)
+            updates['contometros_id'] = str(scan_valor)
             valores_cargados.append(f"Contador Scanner: {scan_valor:,}")
-            _logger.info(f"→ contometros_id cargado: {self_no_constraints.contometros_id}")
         else:
             _logger.error(f"❌ DEBUG SCANNER - NO SE CARGA porque valor es {scan_valor} (tipo: {type(scan_valor)})")
-        
-        # VERIFICAR VALORES FINALES ANTES DE VALIDACIÓN
-        _logger.info(f"🎯 DEBUG FINAL - Valores asignados a campos:")
+
+        # Verificación previa
+        if not updates:
+            _logger.error(f"❌ No se cargaron valores. contadores_encontrados: {contadores_encontrados}")
+            raise UserError(_("Los contadores encontrados no son válidos para cargar."))
+
+        # 🔒 Escribir TODO de una vez, deshabilitando validaciones
+        _logger.info("🔧 Deshabilitando validación automática temporalmente con skip_constraints...")
+        self.with_context(skip_constraints=True).write(updates)
+
+        # Log de verificación
+        self.invalidate_cache()
+        _logger.info("🎯 DEBUG FINAL - Valores asignados a campos:")
         _logger.info(f"   contometrok_id: '{self.contometrok_id}' (tipo: {type(self.contometrok_id)})")
         _logger.info(f"   contometroc_id: '{self.contometroc_id}' (tipo: {type(self.contometroc_id)})")
         _logger.info(f"   contometros_id: '{self.contometros_id}' (tipo: {type(self.contometros_id)})")
-        
-        # Verificar que se cargó al menos un contador
-        if not valores_cargados:
-            _logger.error(f"❌ No se cargaron valores. contadores_encontrados: {contadores_encontrados}")
-            raise UserError(_("Los contadores encontrados no son válidos para cargar."))
-        
-        _logger.info(f"✅ Valores cargados: {valores_cargados}")
-        
-        # AHORA SÍ: Ejecutar validación manual una sola vez con todos los valores
+
+        # ✅ Validación manual final (ahora sin saltos)
         _logger.info("🔍 Ejecutando validación manual final...")
         try:
-            # Forzar recálculo de campos computed si es necesario
-            self.invalidate_cache()
-            # Validar manualmente solo UNA VEZ
             self._check_contometro_values()
             _logger.info("✅ Validación manual exitosa")
         except ValidationError as e:
             _logger.error(f"❌ Validación falló: {str(e)}")
-            raise e
-        
-        # Mensaje de confirmación
+            raise
+
+        # Mensajes
         mensaje_exito = (
             f"✅ Contadores cargados exitosamente desde {fuente_datos}:\n\n"
             f"📋 {' • '.join(valores_cargados)}\n\n"
             f"📅 Serie: {serie}"
         )
-        
-        # Registrar en el log del ticket
-        self.message_post(
-            body=mensaje_exito,
-            message_type='notification'
-        )
-        
+
+        # Registrar en el chatter
+        self.message_post(body=mensaje_exito, message_type='notification')
         _logger.info(f"=== Contadores cargados exitosamente para ticket {self.name} ===")
         
-        # Mostrar mensaje al usuario
+        # Notificación UI
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
                 'title': _('Contadores Cargados'),
-                'message': _('Los contadores se han cargado correctamente desde %s.') % fuente_datos,
+                'message': _('Los contadores se han cargado correctamente desde %s.') % (fuente_datos or 'fuente desconocida'),
                 'type': 'success',
                 'sticky': False,
             }
         }
+
     def _buscar_contadores_por_prioridad(self, serie):
         """
         Busca contadores en orden de prioridad:
