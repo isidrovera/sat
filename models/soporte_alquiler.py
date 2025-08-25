@@ -633,13 +633,88 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             _logger.info("Procesando ticket ID %s (estado=%s)", ticket.id, ticket.estado)
 
             # VALIDACIONES DE CAMPOS REQUERIDOS SEGÚN LA LÓGICA DE LA VISTA
-            validation_errors = self._validate_ticket_completion(ticket)
+            errors = []
             
-            # Si hay errores, mostrar notificaciones y no continuar
-            if validation_errors:
-                action_result = self._show_validation_errors(validation_errors, ticket)
-                if action_result:
-                    return action_result
+            # Campos requeridos cuando estado == 'nuevo'
+            if ticket.estado == 'nuevo':
+                if not ticket.agenda:
+                    errors.append("• Agenda es requerida cuando el ticket está en estado 'nuevo'")
+                if not ticket.responsable:
+                    errors.append("• Responsable es requerido cuando el ticket está en estado 'nuevo'")
+                if not ticket.description:
+                    errors.append("• Descripción del problema es requerida cuando el ticket está en estado 'nuevo'")
+            
+            # Campos requeridos cuando estado == 'proceso' (para finalizar debe estar en proceso)
+            if ticket.estado == 'proceso':
+                # Contómetros requeridos en proceso
+                if not ticket.contometrok_id:
+                    errors.append("• Contador K es requerido cuando el ticket está en proceso")
+                
+                if not ticket.contometros_id:
+                    errors.append("• Contador S es requerido cuando el ticket está en proceso")
+                
+                # Contador color requerido solo para equipos color en proceso
+                if ticket.tipo_id == 'color' and not ticket.contometroc_id:
+                    errors.append("• Contador Color es requerido para equipos a color cuando el ticket está en proceso")
+                
+                # Informe técnico requerido en proceso
+                if not ticket.informe_id:
+                    errors.append("• Informe Técnico es requerido cuando el ticket está en proceso")
+                
+                # Campos del Check List requeridos en proceso
+                checklist_fields = [
+                    ('calidad_id', 'Calidad'),
+                    ('copia_id', 'Copia'),
+                    ('impresion_id', 'Impresión'),
+                    ('impresion_usb_id', 'Impresión USB'),
+                    ('scaner_smb_id', 'Scanner SMB'),
+                    ('scaner_usb_id', 'Scanner USB'),
+                    ('scaner_ftp_id', 'Scanner FTP'),
+                    ('scaner_mail_id', 'Scanner Mail'),
+                    ('toner_black_id', 'Toner Black'),
+                    ('bypass_id', 'Bypass'),
+                    ('tray1_id', 'Tray 1'),
+                    ('tray2_id', 'Tray 2'),
+                    ('tray3_id', 'Tray 3'),
+                    ('tray4_id', 'Tray 4'),
+                    ('adf_id', 'ADF'),
+                    ('finalizador_id', 'Finalizador'),
+                    ('tacho_id', 'Tacho'),
+                    ('fusora_id', 'Fusora'),
+                    ('transfer_id', 'Transfer'),
+                    ('optico_id', 'Óptico'),
+                    ('black_id', 'Black'),
+                ]
+                
+                # Validar campos generales del checklist cuando estado == 'proceso'
+                for field_name, field_label in checklist_fields:
+                    if not getattr(ticket, field_name, None):
+                        errors.append(f"• {field_label} es requerido en el Check List cuando el ticket está en proceso")
+                
+                # Campos específicos para equipos color cuando estado == 'proceso' y tipo_id == 'color'
+                if ticket.tipo_id == 'color':
+                    color_fields = [
+                        ('toner_magenta_id', 'Toner Magenta'),
+                        ('toner_cyan_id', 'Toner Cyan'),
+                        ('toner_yellow_id', 'Toner Yellow'),
+                        ('magenta_id', 'Magenta'),
+                        ('cyan_id', 'Cyan'),
+                        ('yellow_id', 'Yellow'),
+                    ]
+                    
+                    for field_name, field_label in color_fields:
+                        if not getattr(ticket, field_name, None):
+                            errors.append(f"• {field_label} es requerido para equipos a color cuando el ticket está en proceso")
+            
+            # Validar que el ticket esté en el estado correcto para finalizar
+            if ticket.estado != 'proceso':
+                errors.append(f"• El ticket debe estar en estado 'proceso' para poder finalizarlo. Estado actual: '{ticket.estado}'")
+            
+            # Si hay errores, mostrar mensaje detallado y no continuar
+            if errors:
+                error_message = "No se puede finalizar el ticket. Se encontraron los siguientes problemas:\n\n" + "\n".join(errors)
+                error_message += "\n\nPor favor, complete todos los campos requeridos antes de intentar finalizar el ticket."
+                raise UserError(error_message)
 
             unidad = ticket.product_alquiler
             
@@ -716,239 +791,6 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'view_id': False,
             'target': 'main',
         }
-
-    def _validate_ticket_completion(self, ticket):
-        """Valida que el ticket tenga todos los campos requeridos para finalizar"""
-        errors = {
-            'critical': [],  # Errores críticos (estado incorrecto)
-            'general': [],   # Campos básicos faltantes
-            'counters': [],  # Contadores faltantes
-            'checklist': [], # Campos del checklist faltantes
-            'color': []      # Campos específicos de color
-        }
-        
-        # Validar estado del ticket
-        if ticket.estado != 'proceso':
-            errors['critical'].append({
-                'field': 'estado',
-                'message': f'El ticket debe estar en estado "En Proceso" para finalizarlo',
-                'current_value': ticket.estado,
-                'required_value': 'proceso'
-            })
-            return errors  # Si el estado no es correcto, no validar más
-        
-        # Campos básicos requeridos en proceso
-        basic_fields = [
-            ('agenda', 'Agenda de trabajo'),
-            ('responsable', 'Técnico responsable'),
-            ('description', 'Descripción del problema'),
-            ('informe_id', 'Informe técnico')
-        ]
-        
-        for field_name, field_label in basic_fields:
-            if not getattr(ticket, field_name, None):
-                errors['general'].append({
-                    'field': field_name,
-                    'message': field_label,
-                    'icon': 'fa-user' if 'responsable' in field_name else 'fa-file-text'
-                })
-        
-        # Contadores requeridos
-        counter_fields = [
-            ('contometrok_id', 'Contador K (Negro)', 'fa-tachometer'),
-            ('contometros_id', 'Contador S (Scanner)', 'fa-scanner')
-        ]
-        
-        for field_name, field_label, icon in counter_fields:
-            if not getattr(ticket, field_name, None):
-                errors['counters'].append({
-                    'field': field_name,
-                    'message': field_label,
-                    'icon': icon
-                })
-        
-        # Contador color solo para equipos color
-        if ticket.tipo_id == 'color' and not ticket.contometroc_id:
-            errors['counters'].append({
-                'field': 'contometroc_id',
-                'message': 'Contador Color',
-                'icon': 'fa-tachometer'
-            })
-        
-        # Campos del Check List con iconos descriptivos
-        checklist_data = [
-            # Funciones básicas
-            ('calidad_id', 'Calidad de impresión', 'fa-check-circle'),
-            ('copia_id', 'Función de copia', 'fa-copy'),
-            ('impresion_id', 'Impresión general', 'fa-print'),
-            ('impresion_usb_id', 'Impresión desde USB', 'fa-usb'),
-            
-            # Scanner
-            ('scaner_smb_id', 'Scanner a carpeta de red (SMB)', 'fa-network-wired'),
-            ('scaner_usb_id', 'Scanner a USB', 'fa-usb'),
-            ('scaner_ftp_id', 'Scanner por FTP', 'fa-server'),
-            ('scaner_mail_id', 'Scanner por email', 'fa-envelope'),
-            
-            # Toners
-            ('toner_black_id', 'Toner negro', 'fa-tint'),
-            
-            # Bandejas
-            ('bypass_id', 'Bandeja bypass', 'fa-layer-group'),
-            ('tray1_id', 'Bandeja 1', 'fa-layer-group'),
-            ('tray2_id', 'Bandeja 2', 'fa-layer-group'),
-            ('tray3_id', 'Bandeja 3', 'fa-layer-group'),
-            ('tray4_id', 'Bandeja 4', 'fa-layer-group'),
-            
-            # Componentes
-            ('adf_id', 'Alimentador automático (ADF)', 'fa-arrows-alt-v'),
-            ('finalizador_id', 'Finalizador', 'fa-clipboard-check'),
-            ('tacho_id', 'Tacho de residuos', 'fa-trash'),
-            ('fusora_id', 'Unidad fusora', 'fa-thermometer-half'),
-            ('transfer_id', 'Cinturón de transferencia', 'fa-exchange-alt'),
-            ('optico_id', 'Unidad óptica', 'fa-eye'),
-            ('black_id', 'Cilindro negro', 'fa-circle'),
-        ]
-        
-        for field_name, field_label, icon in checklist_data:
-            if not getattr(ticket, field_name, None):
-                errors['checklist'].append({
-                    'field': field_name,
-                    'message': field_label,
-                    'icon': icon
-                })
-        
-        # Campos específicos para equipos color
-        if ticket.tipo_id == 'color':
-            color_fields = [
-                ('toner_magenta_id', 'Toner magenta', 'fa-tint'),
-                ('toner_cyan_id', 'Toner cyan', 'fa-tint'),
-                ('toner_yellow_id', 'Toner amarillo', 'fa-tint'),
-                ('magenta_id', 'Cilindro magenta', 'fa-circle'),
-                ('cyan_id', 'Cilindro cyan', 'fa-circle'),
-                ('yellow_id', 'Cilindro amarillo', 'fa-circle'),
-            ]
-            
-            for field_name, field_label, icon in color_fields:
-                if not getattr(ticket, field_name, None):
-                    errors['color'].append({
-                        'field': field_name,
-                        'message': field_label,
-                        'icon': icon
-                    })
-        
-        return errors
-
-    def _show_validation_errors(self, errors, ticket):
-        """Muestra errores de validación usando notificaciones de Odoo"""
-        
-        # Si hay errores críticos, usar warning
-        if errors['critical']:
-            error = errors['critical'][0]
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Estado del Ticket Incorrecto',
-                    'message': f'El ticket debe estar en estado "En Proceso" para finalizarlo. Estado actual: {error["current_value"]}',
-                    'type': 'warning',
-                    'sticky': False,
-                    'fadeout': 10000  # 10 segundos
-                }
-            }
-        
-        # Construir mensaje consolidado
-        messages = []
-        
-        # Información General
-        if errors['general']:
-            fields_list = [error['message'] for error in errors['general']]
-            messages.append(f"📝 Información General:\n• " + "\n• ".join(fields_list))
-        
-        # Contadores
-        if errors['counters']:
-            fields_list = [error['message'] for error in errors['counters']]
-            messages.append(f"📊 Contadores:\n• " + "\n• ".join(fields_list))
-        
-        # Checklist
-        if errors['checklist']:
-            fields_list = [error['message'] for error in errors['checklist']]
-            messages.append(f"✅ Checklist:\n• " + "\n• ".join(fields_list))
-        
-        # Componentes Color
-        if errors['color']:
-            fields_list = [error['message'] for error in errors['color']]
-            messages.append(f"🎨 Componentes Color:\n• " + "\n• ".join(fields_list))
-        
-        # Mensaje final
-        final_message = "\n\n".join(messages)
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': f'Completar campos del Ticket #{ticket.id}',
-                'message': final_message,
-                'type': 'warning',
-                'sticky': False,
-                'fadeout': 10000  # 10 segundos
-            }
-        }
-
-    def _get_simple_icon(self, field_name):
-        """Retorna un ícono simple para cada tipo de campo"""
-        icon_map = {
-            # Campos generales
-            'agenda': '📅',
-            'responsable': '👨‍🔧',
-            'description': '📝',
-            'informe_id': '📋',
-            
-            # Contadores
-            'contometrok_id': '⚫ K',
-            'contometros_id': '📄 S',
-            'contometroc_id': '🌈 C',
-            
-            # Toners
-            'toner_black_id': '⚫',
-            'toner_magenta_id': '🟣',
-            'toner_cyan_id': '🔵',
-            'toner_yellow_id': '🟡',
-            
-            # Funciones básicas
-            'calidad_id': '✨',
-            'copia_id': '📄',
-            'impresion_id': '🖨️',
-            'impresion_usb_id': '💾',
-            
-            # Scanner
-            'scaner_smb_id': '🌐',
-            'scaner_usb_id': '💾',
-            'scaner_ftp_id': '📡',
-            'scaner_mail_id': '📧',
-            
-            # Bandejas
-            'bypass_id': '📋',
-            'tray1_id': '1️⃣',
-            'tray2_id': '2️⃣',
-            'tray3_id': '3️⃣',
-            'tray4_id': '4️⃣',
-            
-            # Componentes
-            'adf_id': '📑',
-            'finalizador_id': '✅',
-            'tacho_id': '🗑️',
-            'fusora_id': '🔥',
-            'transfer_id': '🔄',
-            'optico_id': '👁️',
-            
-            # Cilindros
-            'black_id': '⚫',
-            'magenta_id': '🟣',
-            'cyan_id': '🔵',
-            'yellow_id': '🟡',
-        }
-        
-        return icon_map.get(field_name, '⚙️')
     # Campo computed para controlar la visibilidad del botón
     mostrar_boton_contadores = fields.Boolean(
         string='Mostrar Botón Contadores',
