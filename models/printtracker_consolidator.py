@@ -35,50 +35,83 @@ class PrintTrackerProcessor(models.TransientModel):
     @api.model
     def ejecutar_procesamiento_automatico(self):
         """
-        SIMPLIFICADO: Método ejecutado por el cron 
-        Procesa datos PrintTracker de las últimas 24 horas
+        MEJORADO: Procesamiento automático completo con lógica clara
         """
         try:
-            _logger.info("🔄 ===== INICIANDO PROCESAMIENTO AUTOMÁTICO =====")
-            _logger.info(f"🕐 Hora de ejecución: {datetime.now()}")
+            _logger.info("🔄 ===== PROCESAMIENTO AUTOMÁTICO DIARIO =====")
+            hora_actual = datetime.now()
+            _logger.info(f"🕐 Ejecutándose a las: {hora_actual}")
             
-            # Configurar fechas de procesamiento (últimas 24 horas)
-            fecha_fin = date.today()
-            fecha_inicio = fecha_fin - timedelta(days=1)
+            # PASO 1: SINCRONIZAR CON API PRINTTRACKER
+            _logger.info("🔄 === PASO 1: SINCRONIZACIÓN API ===")
+            config = self.env['printtracker.config'].search([('sync_enabled', '=', True)], limit=1)
             
-            _logger.info(f"📅 Período automático: {fecha_inicio} a {fecha_fin}")
+            if not config:
+                _logger.error("❌ No hay configuración activa de PrintTracker")
+                return False
             
-            # Crear registro de procesamiento temporal
-            procesador = self.create({
-                'fecha_inicio': fecha_inicio,
-                'fecha_fin': fecha_fin,
-                'forzar_reproceso': False
-            })
+            # Sincronizar dispositivos y medidores
+            _logger.info("📱 Sincronizando dispositivos...")
+            result_devices = config.sync_all_devices()
             
-            _logger.info(f"🆕 Procesador creado: ID={procesador.id}")
+            _logger.info("📊 Sincronizando medidores...")  
+            result_meters = config.sync_current_meters()
             
-            # Ejecutar procesamiento
-            _logger.info(f"🚀 Iniciando ejecución de procesamiento...")
-            resultado = procesador.ejecutar_procesamiento()
+            # PASO 2: PROCESAR METERS A LECTURAS DIARIAS
+            _logger.info("🔄 === PASO 2: GENERANDO LECTURAS DIARIAS ===")
             
-            if resultado:
-                _logger.info(f"✅ ===== PROCESAMIENTO AUTOMÁTICO EXITOSO =====")
-                _logger.info(f"📊 PrintTracker: {procesador.registros_printtracker} registros")
-                _logger.info(f"📊 Procesadas: {procesador.lecturas_procesadas} lecturas")
-                _logger.info(f"📊 Equipos actualizados: {procesador.equipos_actualizados}")
-                _logger.info(f"📊 Errores: {procesador.errores_encontrados}")
+            # Buscar meters de las últimas 48 horas que no tienen lectura diaria
+            cutoff_date = datetime.now() - timedelta(hours=48)
+            meters_sin_procesar = self.env['printtracker.meter'].search([
+                ('reading_date', '>=', cutoff_date),
+                ('id', 'not in', self.env['printtracker.daily.reading'].search([
+                    ('printtracker_meter_id', '!=', False)
+                ]).mapped('printtracker_meter_id.id'))
+            ])
+            
+            _logger.info(f"📊 Meters sin procesar: {len(meters_sin_procesar)}")
+            
+            lecturas_creadas = 0
+            for meter in meters_sin_procesar:
+                if meter._crear_o_actualizar_lectura_diaria():
+                    lecturas_creadas += 1
+            
+            _logger.info(f"📋 Lecturas diarias creadas/actualizadas: {lecturas_creadas}")
+            
+            # PASO 3: APLICAR LECTURAS PENDIENTES A EQUIPOS  
+            _logger.info("🔄 === PASO 3: APLICANDO A EQUIPOS ===")
+            
+            # Buscar lecturas validadas no aplicadas
+            lecturas_pendientes = self.env['printtracker.daily.reading'].search([
+                ('estado', '=', 'validado'),
+                ('aplicado_a_equipo', '=', False),
+                ('fecha', '>=', date.today() - timedelta(days=2))  # Últimos 2 días
+            ])
+            
+            _logger.info(f"💾 Lecturas pendientes: {len(lecturas_pendientes)}")
+            
+            equipos_actualizados = 0
+            for lectura in lecturas_pendientes:
+                if lectura._aplicar_lectura_a_equipo(lectura):
+                    equipos_actualizados += 1
+            
+            _logger.info(f"💾 Equipos actualizados: {equipos_actualizados}")
+            
+            # PASO 4: LIMPIEZA AUTOMÁTICA (OPCIONAL)
+            if hora_actual.hour == 2:  # Solo a las 2 AM
+                _logger.info("🗑️ === PASO 4: LIMPIEZA AUTOMÁTICA ===")
                 
-                # Log de resumen en una línea
-                _logger.info(f"📈 RESUMEN: PT={procesador.registros_printtracker}, "
-                           f"PROC={procesador.lecturas_procesadas}, "
-                           f"EQ={procesador.equipos_actualizados}, "
-                           f"ERR={procesador.errores_encontrados}")
-            else:
-                _logger.error(f"❌ ===== ERROR EN PROCESAMIENTO AUTOMÁTICO =====")
-                _logger.error(f"📊 Errores: {procesador.errores_encontrados}")
-                _logger.error(f"📋 Log: {procesador.log_procesamiento}")
+                # Limpiar meters antiguos (mantener 90 días)
+                cleanup_result = self.env['printtracker.meter'].cleanup_old_readings(90)
+                _logger.info(f"🗑️ Limpieza: {cleanup_result['deleted_count']} meters eliminados")
             
-            return resultado
+            # RESUMEN FINAL
+            _logger.info("✅ ===== PROCESAMIENTO AUTOMÁTICO COMPLETADO =====")
+            _logger.info(f"📊 Lecturas creadas: {lecturas_creadas}")
+            _logger.info(f"💾 Equipos actualizados: {equipos_actualizados}")
+            _logger.info(f"🕐 Duración: {(datetime.now() - hora_actual).total_seconds():.1f}s")
+            
+            return True
             
         except Exception as e:
             _logger.error(f"❌ ERROR CRÍTICO en procesamiento automático: {str(e)}")

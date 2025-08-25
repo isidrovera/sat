@@ -158,26 +158,239 @@ class PrintTrackerMeter(models.Model):
         meter._crear_o_actualizar_lectura_diaria()
         
         return meter
+    @api.model
+    def generar_lecturas_diarias_desde_meters(self, dias_atras=1):
+        """
+        NUEVO: Genera lecturas diarias desde meters existentes
+        Útil para reprocesar datos o catch-up
+        """
+        try:
+            fecha_inicio = date.today() - timedelta(days=dias_atras)
+            
+            _logger.info(f"🔄 === GENERANDO LECTURAS DIARIAS ===")
+            _logger.info(f"📅 Desde: {fecha_inicio}")
+            
+            # Buscar todos los meters del período
+            meters = self.env['printtracker.meter'].search([
+                ('reading_date', '>=', datetime.combine(fecha_inicio, datetime.min.time()))
+            ], order='device_id, reading_date')
+            
+            _logger.info(f"📊 Meters encontrados: {len(meters)}")
+            
+            if not meters:
+                _logger.info("ℹ️ No hay meters para procesar")
+                return {'creadas': 0, 'actualizadas': 0, 'errores': 0}
+            
+            # Agrupar por dispositivo y fecha
+            from collections import defaultdict
+            meters_by_device_date = defaultdict(list)
+            
+            for meter in meters:
+                if meter.device_id and meter.reading_date:
+                    fecha_key = meter.reading_date.date()
+                    device_key = meter.device_id.id
+                    meters_by_device_date[(device_key, fecha_key)].append(meter)
+            
+            _logger.info(f"📊 Combinaciones dispositivo-fecha: {len(meters_by_device_date)}")
+            
+            creadas = 0
+            actualizadas = 0
+            errores = 0
+            
+            for (device_id, fecha), device_meters in meters_by_device_date.items():
+                try:
+                    # Tomar el meter más reciente del día para ese dispositivo
+                    latest_meter = max(device_meters, key=lambda m: m.reading_date)
+                    
+                    _logger.info(f"🔄 Procesando: Dispositivo {device_id}, Fecha {fecha}")
+                    _logger.info(f"🔄 Meter seleccionado: {latest_meter.id} ({latest_meter.reading_date})")
+                    
+                    # Verificar si ya existe lectura diaria
+                    existing = self.env['printtracker.daily.reading'].search([
+                        ('serie', '=', latest_meter.device_id.serie),
+                        ('fecha', '=', fecha)
+                    ], limit=1)
+                    
+                    if existing:
+                        if existing.fuente_origen == 'manual':
+                            _logger.info(f"⏭️ Saltando: existe lectura manual para {latest_meter.device_id.serie} - {fecha}")
+                            continue
+                        
+                        # Actualizar si es PrintTracker y este meter es más reciente
+                        if (not existing.printtracker_meter_id or 
+                            latest_meter.reading_date > existing.printtracker_meter_id.reading_date):
+                            
+                            existing.write({
+                                'contador_bn': latest_meter.black_pages_life or 0,
+                                'contador_color': latest_meter.color_pages_life or 0,
+                                'contador_scan': latest_meter.scan_pages or 0,
+                                'contador_copy': latest_meter.copy_pages or 0,
+                                'contador_fax': latest_meter.fax_pages or 0,
+                                'printtracker_meter_id': latest_meter.id,
+                                'fecha_procesamiento': fields.Datetime.now()
+                            })
+                            
+                            actualizadas += 1
+                            _logger.info(f"📝 Actualizada: {latest_meter.device_id.serie} - {fecha}")
+                    else:
+                        # Crear nueva lectura
+                        nueva_lectura = self.env['printtracker.daily.reading'].create({
+                            'fecha': fecha,
+                            'serie': latest_meter.device_id.serie,
+                            'contador_bn': latest_meter.black_pages_life or 0,
+                            'contador_color': latest_meter.color_pages_life or 0,
+                            'contador_scan': latest_meter.scan_pages or 0,
+                            'contador_copy': latest_meter.copy_pages or 0,
+                            'contador_fax': latest_meter.fax_pages or 0,
+                            'fuente_origen': 'printtracker',
+                            'printtracker_meter_id': latest_meter.id,
+                            'estado': 'validado'
+                        })
+                        
+                        creadas += 1
+                        _logger.info(f"🆕 Creada: {latest_meter.device_id.serie} - {fecha}")
+                    
+                except Exception as e:
+                    errores += 1
+                    _logger.error(f"❌ Error procesando dispositivo {device_id}: {e}")
+            
+            _logger.info(f"✅ Generación completada: {creadas} creadas, {actualizadas} actualizadas, {errores} errores")
+            
+            return {
+                'creadas': creadas,
+                'actualizadas': actualizadas,
+                'errores': errores,
+                'total_procesadas': creadas + actualizadas
+            }
+            
+        except Exception as e:
+            _logger.error(f"❌ Error generando lecturas diarias: {e}")
+            import traceback
+            _logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return {'creadas': 0, 'actualizadas': 0, 'errores': 1}
 
+    def action_generar_lecturas_diarias(self):
+        """
+        NUEVO: Acción manual para generar lecturas diarias desde meters
+        """
+        try:
+            _logger.info("✋ Generación manual de lecturas diarias solicitada")
+            
+            resultado = self.generar_lecturas_diarias_desde_meters(dias_atras=2)
+            
+            mensaje = f"""✅ GENERACIÓN DE LECTURAS COMPLETADA
+
+    📊 RESULTADOS:
+    • Lecturas creadas: {resultado['creadas']}
+    • Lecturas actualizadas: {resultado['actualizadas']}
+    • Errores: {resultado['errores']}
+    • Total procesadas: {resultado['total_procesadas']}
+
+    📅 Período: Últimos 2 días
+
+    Las lecturas están listas para aplicar a equipos."""
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Generación de Lecturas',
+                    'message': mensaje,
+                    'type': 'success' if resultado['errores'] == 0 else 'warning',
+                    'sticky': True
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'❌ Error: {str(e)}',
+                    'type': 'danger'
+                }
+            }
 
     def _crear_o_actualizar_lectura_diaria(self):
         """
-        NUEVO: Crea o actualiza lectura diaria cuando se crea meter PrintTracker
+        CORREGIDO: Lógica mejorada para crear lecturas diarias
         """
         try:
             self.ensure_one()
-            _logger.info(f"🔄 Trigger: Creando/actualizando lectura diaria para {self.device_id.serie}")
+            _logger.info(f"🔄 === PROCESANDO METER A LECTURA DIARIA ===")
+            _logger.info(f"🔄 Serie: {self.device_id.serie}")
+            _logger.info(f"🔄 Fecha meter: {self.reading_date}")
             
-            # Llamar al método que ya maneja la lógica de actualización
-            resultado = self.env['printtracker.daily.reading'].crear_desde_printtracker(self)
+            if not self.device_id or not self.device_id.serie:
+                _logger.error("❌ Meter sin dispositivo o serie")
+                return False
             
-            if resultado:
-                _logger.info(f"✅ Lectura diaria procesada automáticamente: {self.device_id.serie}")
-            else:
-                _logger.warning(f"⚠️ No se pudo procesar lectura diaria para: {self.device_id.serie}")
+            # EXTRAER SOLO LA FECHA (sin hora)
+            fecha_lectura = self.reading_date.date() if self.reading_date else date.today()
+            serie = self.device_id.serie
+            
+            _logger.info(f"🔄 Fecha objetivo: {fecha_lectura}")
+            
+            # BUSCAR LECTURA EXISTENTE DEL DÍA
+            existing_reading = self.env['printtracker.daily.reading'].search([
+                ('fecha', '=', fecha_lectura),
+                ('serie', '=', serie)
+            ], limit=1)
+            
+            # VALORES DEL METER ACTUAL
+            valores_meter = {
+                'contador_bn': self.black_pages_life or 0,
+                'contador_color': self.color_pages_life or 0,
+                'contador_scan': self.scan_pages or 0,
+                'contador_copy': self.copy_pages or 0,
+                'contador_fax': self.fax_pages or 0,
+            }
+            
+            if existing_reading:
+                _logger.info(f"📋 Lectura existente encontrada: {existing_reading.fuente_origen}")
                 
+                # REGLA 1: NO SOBRESCRIBIR LECTURAS MANUALES
+                if existing_reading.fuente_origen == 'manual':
+                    _logger.info(f"🚫 Lectura manual existente - NO se actualiza")
+                    return existing_reading
+                
+                # REGLA 2: ACTUALIZAR SOLO SI ES MÁS RECIENTE
+                elif existing_reading.fuente_origen == 'printtracker':
+                    # Comparar si este meter es más reciente que el ya registrado
+                    if (existing_reading.printtracker_meter_id and 
+                        existing_reading.printtracker_meter_id.reading_date >= self.reading_date):
+                        _logger.info(f"⏭️ Meter más antiguo - no se actualiza")
+                        return existing_reading
+                    
+                    # Este meter es más reciente - actualizar
+                    _logger.info(f"📝 Actualizando con meter más reciente...")
+                    existing_reading.write({
+                        **valores_meter,
+                        'printtracker_meter_id': self.id,
+                        'fecha_procesamiento': fields.Datetime.now()
+                    })
+                    _logger.info(f"✅ Lectura actualizada")
+                    return existing_reading
+            
+            # CREAR NUEVA LECTURA
+            _logger.info(f"🆕 Creando nueva lectura diaria...")
+            nueva_lectura = self.env['printtracker.daily.reading'].create({
+                'fecha': fecha_lectura,
+                'serie': serie,
+                **valores_meter,
+                'fuente_origen': 'printtracker',
+                'printtracker_meter_id': self.id,
+                'estado': 'validado'  # Listo para aplicar
+            })
+            
+            _logger.info(f"✅ Nueva lectura creada: ID={nueva_lectura.id}")
+            return nueva_lectura
+            
         except Exception as e:
             _logger.error(f"❌ Error en trigger de lectura diaria: {e}")
+            import traceback
+            _logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return False
 
     def write(self, vals):
         """Override write para marcar como lectura actual"""
