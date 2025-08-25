@@ -635,10 +635,11 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             # VALIDACIONES DE CAMPOS REQUERIDOS SEGÚN LA LÓGICA DE LA VISTA
             validation_errors = self._validate_ticket_completion(ticket)
             
-            # Si hay errores, mostrar mensaje mejorado y detallado
+            # Si hay errores, mostrar notificaciones y no continuar
             if validation_errors:
-                self._show_validation_errors(validation_errors, ticket)
-                return
+                action_result = self._show_validation_errors(validation_errors, ticket)
+                if action_result:
+                    return action_result
 
             unidad = ticket.product_alquiler
             
@@ -838,80 +839,83 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         return errors
 
     def _show_validation_errors(self, errors, ticket):
-        """Muestra errores de validación con formato moderno y descriptivo"""
+        """Muestra errores de validación usando notificaciones de Odoo"""
         
-        # Si hay errores críticos
+        # Si hay errores críticos, usar warning
         if errors['critical']:
             error = errors['critical'][0]
-            message = f"""
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    🚨 ERROR CRÍTICO - ESTADO DEL TICKET INCORRECTO
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    ❌ Estado actual: {error['current_value'].upper()}
-    ✅ Estado requerido: EN PROCESO
-
-    Para finalizar un ticket, primero debe estar en estado "En Proceso".
-
-    💡 SOLUCIÓN: Cambie el estado del ticket a "En Proceso" y complete todos
-    los campos requeridos antes de intentar finalizarlo.
-            """
-            raise UserError(message)
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Estado del Ticket Incorrecto',
+                    'message': f'El ticket debe estar en estado "En Proceso" para finalizarlo. Estado actual: {error["current_value"]}',
+                    'type': 'warning',
+                    'sticky': True
+                }
+            }
         
-        # Construir mensaje de texto estructurado para otros errores
-        message_parts = []
+        # Construir mensaje consolidado para otros errores
+        notifications = []
         
-        # Header
-        message_parts.append(f"""
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    📋 COMPLETAR INFORMACIÓN DEL TICKET
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    🎫 TICKET: #{ticket.id}{f' - {ticket.name}' if ticket.name else ''}
-    📊 ESTADO: EN PROCESO ✅
-
-    Se requiere completar la siguiente información para finalizar el servicio:
-    """)
-        
+        # Calcular totales por categoría
         section_configs = [
-            ('general', '📝 INFORMACIÓN GENERAL', '🔴'),
-            ('counters', '📊 LECTURAS DE CONTADORES', '🟠'),
-            ('checklist', '✅ LISTA DE VERIFICACIÓN', '🟡'),
-            ('color', '🎨 COMPONENTES COLOR', '🟣')
+            ('general', 'Información General', 'warning'),
+            ('counters', 'Lecturas de Contadores', 'info'),
+            ('checklist', 'Lista de Verificación', 'info'),
+            ('color', 'Componentes Color', 'info')
         ]
         
-        total_errors = 0
-        for error_type, section_title, emoji in section_configs:
+        total_errors = sum(len(errors[key]) for key in ['general', 'counters', 'checklist', 'color'])
+        
+        # Notificación principal
+        main_message = f"Se requieren {total_errors} campos para finalizar el ticket #{ticket.id}"
+        notifications.append({
+            'title': 'Completar Información del Ticket',
+            'message': main_message,
+            'type': 'warning',
+            'sticky': True
+        })
+        
+        # Notificaciones por categoría
+        for error_type, section_title, notif_type in section_configs:
             if errors[error_type]:
                 count = len(errors[error_type])
-                total_errors += count
-                message_parts.append(f"\n\n{section_title} ({count} pendiente{'s' if count > 1 else ''})")
-                message_parts.append("─" * 70)
+                # Tomar solo los primeros 3 campos para no saturar
+                fields_list = []
+                for i, error in enumerate(errors[error_type][:3]):
+                    icon = self._get_simple_icon(error['field'])
+                    fields_list.append(f"{icon} {error['message']}")
                 
-                for i, error in enumerate(errors[error_type], 1):
-                    icon = self._get_text_icon(error['field'])
-                    message_parts.append(f"  {emoji} {i:2d}. {icon} {error['message']}")
+                more_text = f" y {count-3} más" if count > 3 else ""
+                message = "\n".join(fields_list) + more_text
+                
+                notifications.append({
+                    'title': f'{section_title} ({count} pendiente{"s" if count > 1 else ""})',
+                    'message': message,
+                    'type': notif_type,
+                    'sticky': False
+                })
         
-        # Footer con instrucciones
-        message_parts.append(f"""
-
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    💡 INSTRUCCIONES PARA COMPLETAR
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    ➤ Complete los {total_errors} campo{'s' if total_errors > 1 else ''} marcado{'s' if total_errors > 1 else ''} arriba
-    ➤ Los campos están organizados en pestañas dentro del formulario
-    ➤ Una vez completados, intente finalizar el ticket nuevamente
-
-    🔧 SUGERENCIA: Revise cada sección del ticket de forma ordenada para
-    asegurar que toda la información técnica esté registrada correctamente.
-        """)
+        # Ejecutar todas las notificaciones
+        for notif in notifications:
+            self.env['bus.bus']._sendone(
+                self.env.user.partner_id,
+                'simple_notification',
+                notif
+            )
         
-        final_message = "".join(message_parts)
-        raise UserError(final_message)
+        # Retornar acción que refresque la vista actual
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'ticket.alquiler',
+            'res_id': ticket.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
 
-    def _get_text_icon(self, field_name):
-        """Retorna un ícono de texto para cada tipo de campo"""
+    def _get_simple_icon(self, field_name):
+        """Retorna un ícono simple para cada tipo de campo"""
         icon_map = {
             # Campos generales
             'agenda': '📅',
@@ -920,17 +924,17 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'informe_id': '📋',
             
             # Contadores
-            'contometrok_id': '⚫',
-            'contometros_id': '📄',
-            'contometroc_id': '🌈',
+            'contometrok_id': '⚫ K',
+            'contometros_id': '📄 S',
+            'contometroc_id': '🌈 C',
             
             # Toners
-            'toner_black_id': '🖤',
-            'toner_magenta_id': '💜',
-            'toner_cyan_id': '💙',
-            'toner_yellow_id': '💛',
+            'toner_black_id': '⚫',
+            'toner_magenta_id': '🟣',
+            'toner_cyan_id': '🔵',
+            'toner_yellow_id': '🟡',
             
-            # Funciones
+            # Funciones básicas
             'calidad_id': '✨',
             'copia_id': '📄',
             'impresion_id': '🖨️',
@@ -939,15 +943,15 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             # Scanner
             'scaner_smb_id': '🌐',
             'scaner_usb_id': '💾',
-            'scaner_ftp_id': '🌐',
+            'scaner_ftp_id': '📡',
             'scaner_mail_id': '📧',
             
             # Bandejas
             'bypass_id': '📋',
-            'tray1_id': '📄',
-            'tray2_id': '📄',
-            'tray3_id': '📄',
-            'tray4_id': '📄',
+            'tray1_id': '1️⃣',
+            'tray2_id': '2️⃣',
+            'tray3_id': '3️⃣',
+            'tray4_id': '4️⃣',
             
             # Componentes
             'adf_id': '📑',
