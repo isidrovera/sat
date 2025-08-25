@@ -5,7 +5,7 @@ access_reparaciones_tecnicos,sat.reparaciones_tecnicos_access,model_reparaciones
 access_linea_pedidos_user,ticket.alquiler.line_user_access,model_ticket_alquiler_line,base.group_user,1,1,0,0
 access_linea_pedidos_system,ticket.alquiler.line_system_access,model_ticket_alquiler_line,base.group_system,1,1,1,1
 access_sat_dashboard_system,sat.dashboard_system_access,model_sat_dashboard,base.group_system,1,1,1,1
-access_reparacion_autenticacion_wizard,reparacion.autenticacion_wizard_access,model_reparacion_autenticacion_wizard,base.group_user,1,1,0,0
+access_reparacion_autenticacion_wizard,reparacion.autenticacion_wizard_access,model_reparacion_autenticacion_wizard,base.group_user,1,1,1,0
 
 access_linea_pedidos_tecnico,ticket.alquiler.line_tecnico_access,model_ticket_alquiler_line,sat.sat_tecnica_group_user,1,1,0,0
 access_tipo_maquina_user,tipo.maquina_user_access,model_tipo_maquina,base.group_user,1,1,0,0
