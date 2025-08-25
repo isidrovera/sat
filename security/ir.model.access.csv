@@ -1,5 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_sat_sat_user,sat.sat_user_access,model_sat_sat,base.group_user,1,1,1,1
+access_sat_sat_user,sat.sat_user_access,model_sat_sat,base.group_user,1,1,1,0
 access_reparaciones_reparaciones_user,reparaciones.reparaciones_user_access,model_reparaciones_reparaciones,base.group_user,1,1,0,0
 access_reparaciones_tecnicos,sat.reparaciones_tecnicos_access,model_reparaciones_reparaciones,sat.sat_tecnica_group_user,1,1,0,0
 access_linea_pedidos_user,ticket.alquiler.line_user_access,model_ticket_alquiler_line,base.group_user,1,1,0,0
