@@ -633,88 +633,12 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             _logger.info("Procesando ticket ID %s (estado=%s)", ticket.id, ticket.estado)
 
             # VALIDACIONES DE CAMPOS REQUERIDOS SEGÚN LA LÓGICA DE LA VISTA
-            errors = []
+            validation_errors = self._validate_ticket_completion(ticket)
             
-            # Campos requeridos cuando estado == 'nuevo'
-            if ticket.estado == 'nuevo':
-                if not ticket.agenda:
-                    errors.append("• Agenda es requerida cuando el ticket está en estado 'nuevo'")
-                if not ticket.responsable:
-                    errors.append("• Responsable es requerido cuando el ticket está en estado 'nuevo'")
-                if not ticket.description:
-                    errors.append("• Descripción del problema es requerida cuando el ticket está en estado 'nuevo'")
-            
-            # Campos requeridos cuando estado == 'proceso' (para finalizar debe estar en proceso)
-            if ticket.estado == 'proceso':
-                # Contómetros requeridos en proceso
-                if not ticket.contometrok_id:
-                    errors.append("• Contador K es requerido cuando el ticket está en proceso")
-                
-                if not ticket.contometros_id:
-                    errors.append("• Contador S es requerido cuando el ticket está en proceso")
-                
-                # Contador color requerido solo para equipos color en proceso
-                if ticket.tipo_id == 'color' and not ticket.contometroc_id:
-                    errors.append("• Contador Color es requerido para equipos a color cuando el ticket está en proceso")
-                
-                # Informe técnico requerido en proceso
-                if not ticket.informe_id:
-                    errors.append("• Informe Técnico es requerido cuando el ticket está en proceso")
-                
-                # Campos del Check List requeridos en proceso
-                checklist_fields = [
-                    ('calidad_id', 'Calidad'),
-                    ('copia_id', 'Copia'),
-                    ('impresion_id', 'Impresión'),
-                    ('impresion_usb_id', 'Impresión USB'),
-                    ('scaner_smb_id', 'Scanner SMB'),
-                    ('scaner_usb_id', 'Scanner USB'),
-                    ('scaner_ftp_id', 'Scanner FTP'),
-                    ('scaner_mail_id', 'Scanner Mail'),
-                    ('toner_black_id', 'Toner Black'),
-                    ('bypass_id', 'Bypass'),
-                    ('tray1_id', 'Tray 1'),
-                    ('tray2_id', 'Tray 2'),
-                    ('tray3_id', 'Tray 3'),
-                    ('tray4_id', 'Tray 4'),
-                    ('adf_id', 'ADF'),
-                    ('finalizador_id', 'Finalizador'),
-                    ('tacho_id', 'Tacho'),
-                    ('fusora_id', 'Fusora'),
-                    ('transfer_id', 'Transfer'),
-                    ('optico_id', 'Óptico'),
-                    ('black_id', 'Black'),
-                ]
-                
-                # Validar campos generales del checklist cuando estado == 'proceso'
-                for field_name, field_label in checklist_fields:
-                    if not getattr(ticket, field_name, None):
-                        errors.append(f"• {field_label} es requerido en el Check List cuando el ticket está en proceso")
-                
-                # Campos específicos para equipos color cuando estado == 'proceso' y tipo_id == 'color'
-                if ticket.tipo_id == 'color':
-                    color_fields = [
-                        ('toner_magenta_id', 'Toner Magenta'),
-                        ('toner_cyan_id', 'Toner Cyan'),
-                        ('toner_yellow_id', 'Toner Yellow'),
-                        ('magenta_id', 'Magenta'),
-                        ('cyan_id', 'Cyan'),
-                        ('yellow_id', 'Yellow'),
-                    ]
-                    
-                    for field_name, field_label in color_fields:
-                        if not getattr(ticket, field_name, None):
-                            errors.append(f"• {field_label} es requerido para equipos a color cuando el ticket está en proceso")
-            
-            # Validar que el ticket esté en el estado correcto para finalizar
-            if ticket.estado != 'proceso':
-                errors.append(f"• El ticket debe estar en estado 'proceso' para poder finalizarlo. Estado actual: '{ticket.estado}'")
-            
-            # Si hay errores, mostrar mensaje detallado y no continuar
-            if errors:
-                error_message = "No se puede finalizar el ticket. Se encontraron los siguientes problemas:\n\n" + "\n".join(errors)
-                error_message += "\n\nPor favor, complete todos los campos requeridos antes de intentar finalizar el ticket."
-                raise UserError(error_message)
+            # Si hay errores, mostrar mensaje mejorado y detallado
+            if validation_errors:
+                self._show_validation_errors(validation_errors, ticket)
+                return
 
             unidad = ticket.product_alquiler
             
@@ -791,6 +715,238 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'view_id': False,
             'target': 'main',
         }
+
+    def _validate_ticket_completion(self, ticket):
+        """Valida que el ticket tenga todos los campos requeridos para finalizar"""
+        errors = {
+            'critical': [],  # Errores críticos (estado incorrecto)
+            'general': [],   # Campos básicos faltantes
+            'counters': [],  # Contadores faltantes
+            'checklist': [], # Campos del checklist faltantes
+            'color': []      # Campos específicos de color
+        }
+        
+        # Validar estado del ticket
+        if ticket.estado != 'proceso':
+            errors['critical'].append({
+                'field': 'estado',
+                'message': f'El ticket debe estar en estado "En Proceso" para finalizarlo',
+                'current_value': ticket.estado,
+                'required_value': 'proceso'
+            })
+            return errors  # Si el estado no es correcto, no validar más
+        
+        # Campos básicos requeridos en proceso
+        basic_fields = [
+            ('agenda', 'Agenda de trabajo'),
+            ('responsable', 'Técnico responsable'),
+            ('description', 'Descripción del problema'),
+            ('informe_id', 'Informe técnico')
+        ]
+        
+        for field_name, field_label in basic_fields:
+            if not getattr(ticket, field_name, None):
+                errors['general'].append({
+                    'field': field_name,
+                    'message': field_label,
+                    'icon': 'fa-user' if 'responsable' in field_name else 'fa-file-text'
+                })
+        
+        # Contadores requeridos
+        counter_fields = [
+            ('contometrok_id', 'Contador K (Negro)', 'fa-tachometer'),
+            ('contometros_id', 'Contador S (Scanner)', 'fa-scanner')
+        ]
+        
+        for field_name, field_label, icon in counter_fields:
+            if not getattr(ticket, field_name, None):
+                errors['counters'].append({
+                    'field': field_name,
+                    'message': field_label,
+                    'icon': icon
+                })
+        
+        # Contador color solo para equipos color
+        if ticket.tipo_id == 'color' and not ticket.contometroc_id:
+            errors['counters'].append({
+                'field': 'contometroc_id',
+                'message': 'Contador Color',
+                'icon': 'fa-tachometer'
+            })
+        
+        # Campos del Check List con iconos descriptivos
+        checklist_data = [
+            # Funciones básicas
+            ('calidad_id', 'Calidad de impresión', 'fa-check-circle'),
+            ('copia_id', 'Función de copia', 'fa-copy'),
+            ('impresion_id', 'Impresión general', 'fa-print'),
+            ('impresion_usb_id', 'Impresión desde USB', 'fa-usb'),
+            
+            # Scanner
+            ('scaner_smb_id', 'Scanner a carpeta de red (SMB)', 'fa-network-wired'),
+            ('scaner_usb_id', 'Scanner a USB', 'fa-usb'),
+            ('scaner_ftp_id', 'Scanner por FTP', 'fa-server'),
+            ('scaner_mail_id', 'Scanner por email', 'fa-envelope'),
+            
+            # Toners
+            ('toner_black_id', 'Toner negro', 'fa-tint'),
+            
+            # Bandejas
+            ('bypass_id', 'Bandeja bypass', 'fa-layer-group'),
+            ('tray1_id', 'Bandeja 1', 'fa-layer-group'),
+            ('tray2_id', 'Bandeja 2', 'fa-layer-group'),
+            ('tray3_id', 'Bandeja 3', 'fa-layer-group'),
+            ('tray4_id', 'Bandeja 4', 'fa-layer-group'),
+            
+            # Componentes
+            ('adf_id', 'Alimentador automático (ADF)', 'fa-arrows-alt-v'),
+            ('finalizador_id', 'Finalizador', 'fa-clipboard-check'),
+            ('tacho_id', 'Tacho de residuos', 'fa-trash'),
+            ('fusora_id', 'Unidad fusora', 'fa-thermometer-half'),
+            ('transfer_id', 'Cinturón de transferencia', 'fa-exchange-alt'),
+            ('optico_id', 'Unidad óptica', 'fa-eye'),
+            ('black_id', 'Cilindro negro', 'fa-circle'),
+        ]
+        
+        for field_name, field_label, icon in checklist_data:
+            if not getattr(ticket, field_name, None):
+                errors['checklist'].append({
+                    'field': field_name,
+                    'message': field_label,
+                    'icon': icon
+                })
+        
+        # Campos específicos para equipos color
+        if ticket.tipo_id == 'color':
+            color_fields = [
+                ('toner_magenta_id', 'Toner magenta', 'fa-tint'),
+                ('toner_cyan_id', 'Toner cyan', 'fa-tint'),
+                ('toner_yellow_id', 'Toner amarillo', 'fa-tint'),
+                ('magenta_id', 'Cilindro magenta', 'fa-circle'),
+                ('cyan_id', 'Cilindro cyan', 'fa-circle'),
+                ('yellow_id', 'Cilindro amarillo', 'fa-circle'),
+            ]
+            
+            for field_name, field_label, icon in color_fields:
+                if not getattr(ticket, field_name, None):
+                    errors['color'].append({
+                        'field': field_name,
+                        'message': field_label,
+                        'icon': icon
+                    })
+        
+        return errors
+
+    def _show_validation_errors(self, errors, ticket):
+        """Muestra errores de validación con formato moderno y descriptivo"""
+        
+        # Si hay errores críticos
+        if errors['critical']:
+            error = errors['critical'][0]
+            message = f"""
+            <div style="padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                <div style="background: #fee; border-left: 4px solid #dc3545; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                    <h3 style="color: #dc3545; margin: 0 0 10px 0;">
+                        <i class="fa fa-exclamation-triangle"></i> Estado del Ticket Incorrecto
+                    </h3>
+                    <p style="margin: 0; color: #721c24;">
+                        <strong>Estado actual:</strong> {error['current_value']}<br>
+                        <strong>Estado requerido:</strong> {error['required_value']}<br><br>
+                        Para finalizar un ticket, primero debe estar en estado "En Proceso".
+                    </p>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <p style="color: #6c757d; font-size: 14px;">
+                        💡 <strong>Tip:</strong> Cambie el estado del ticket a "En Proceso" y complete todos los campos requeridos antes de intentar finalizarlo.
+                    </p>
+                </div>
+            </div>
+            """
+            raise UserError(message)
+        
+        # Construir mensaje HTML moderno para otros errores
+        html_parts = []
+        html_parts.append("""
+        <div style="padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+                <h2 style="margin: 0; font-weight: 300;">
+                    <i class="fa fa-clipboard-check" style="margin-right: 10px;"></i>
+                    Completar Información del Ticket
+                </h2>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">
+                    Se requiere información adicional para finalizar el servicio
+                </p>
+            </div>
+            <div style="background: white; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 8px 8px;">
+        """)
+        
+        # Información del ticket
+        html_parts.append(f"""
+            <div style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e9ecef;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: #495057;">Ticket #{ticket.id}</strong>
+                        {f'- {ticket.name}' if ticket.name else ''}
+                    </div>
+                    <div style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
+                        EN PROCESO
+                    </div>
+                </div>
+            </div>
+        """)
+        
+        section_configs = [
+            ('general', 'Información General', '#dc3545', 'fa-info-circle'),
+            ('counters', 'Lecturas de Contadores', '#fd7e14', 'fa-tachometer-alt'),
+            ('checklist', 'Lista de Verificación', '#ffc107', 'fa-tasks'),
+            ('color', 'Componentes Color', '#e83e8c', 'fa-palette')
+        ]
+        
+        for error_type, section_title, color, icon in section_configs:
+            if errors[error_type]:
+                html_parts.append(f"""
+                <div style="padding: 20px; border-bottom: 1px solid #e9ecef;">
+                    <h4 style="color: {color}; margin: 0 0 15px 0; font-weight: 500;">
+                        <i class="fa {icon}" style="margin-right: 8px;"></i>
+                        {section_title} ({len(errors[error_type])} pendiente{'s' if len(errors[error_type]) > 1 else ''})
+                    </h4>
+                    <div style="display: grid; gap: 8px;">
+                """)
+                
+                for error in errors[error_type]:
+                    html_parts.append(f"""
+                        <div style="display: flex; align-items: center; padding: 8px 12px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid {color};">
+                            <i class="fa {error.get('icon', 'fa-exclamation-circle')}" style="color: {color}; margin-right: 10px; width: 16px;"></i>
+                            <span style="flex: 1; color: #495057;">{error['message']}</span>
+                            <small style="color: #6c757d; background: white; padding: 2px 6px; border-radius: 10px; font-size: 11px;">
+                                REQUERIDO
+                            </small>
+                        </div>
+                    """)
+                
+                html_parts.append("</div></div>")
+        
+        # Instrucciones finales
+        total_errors = sum(len(errors[key]) for key in ['general', 'counters', 'checklist', 'color'])
+        html_parts.append(f"""
+                <div style="background: #e3f2fd; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
+                    <div style="color: #1976d2; margin-bottom: 10px;">
+                        <i class="fa fa-lightbulb" style="font-size: 24px;"></i>
+                    </div>
+                    <p style="margin: 0; color: #1565c0; font-weight: 500;">
+                        Complete los <strong>{total_errors} campo{'s' if total_errors > 1 else ''}</strong> marcado{'s' if total_errors > 1 else ''} como requerido{'s' if total_errors > 1 else ''} 
+                        y luego intente finalizar el ticket nuevamente.
+                    </p>
+                    <p style="margin: 10px 0 0 0; color: #424242; font-size: 14px;">
+                        💡 Los campos se encuentran organizados en pestañas dentro del formulario del ticket.
+                    </p>
+                </div>
+            </div>
+        </div>
+        """)
+        
+        final_message = "".join(html_parts)
+        raise UserError(final_message)
     # Campo computed para controlar la visibilidad del botón
     mostrar_boton_contadores = fields.Boolean(
         string='Mostrar Botón Contadores',
@@ -966,6 +1122,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
     def action_cargar_contadores(self):
         """
         Carga los contadores desde diferentes fuentes disponibles.
+        Solo carga contadores que estén máximo 3 días anteriores a la fecha de agenda.
         Escribe todos los campos en una sola operación y valida al final.
         """
         self.ensure_one()
@@ -978,54 +1135,66 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             raise UserError(_("No hay un equipo asignado a este ticket."))
         if not self.product_alquiler.serie:
             raise UserError(_("El equipo asignado no tiene número de serie."))
+        if not self.agenda:
+            raise UserError(_("El ticket debe tener una fecha de agenda asignada."))
         
         serie = self.product_alquiler.serie
-        _logger.info(f"🔍 Buscando contadores para serie: {serie}")
+        fecha_agenda = self.agenda.date()
+        fecha_limite_minima = fecha_agenda - timedelta(days=3)
         
-        # Buscar contadores en orden de prioridad
-        contadores_encontrados, fuente_datos = self._buscar_contadores_por_prioridad(serie)
+        _logger.info(f"🔍 Buscando contadores para serie: {serie}")
+        _logger.info(f"📅 Fecha agenda: {fecha_agenda}")
+        _logger.info(f"📅 Fecha límite mínima (3 días antes): {fecha_limite_minima}")
+        
+        # Buscar contadores con validación de fecha
+        contadores_encontrados, fuente_datos, fecha_contador = self._buscar_contadores_con_limite_fecha(serie, fecha_agenda, fecha_limite_minima)
         
         # DEBUG - Agregar logs detallados
         _logger.info(f"🔍 DEBUG - Contadores encontrados: {contadores_encontrados}")
         _logger.info(f"🔍 DEBUG - Fuente: {fuente_datos}")
+        _logger.info(f"🔍 DEBUG - Fecha contador: {fecha_contador}")
         
         if not contadores_encontrados:
             raise UserError(_(
-                "No se encontraron contadores válidos para la serie %s.\n"
-                "Verifique que existan lecturas de PrintTracker o correos procesados para este equipo."
-            ) % serie)
+                "No se encontraron contadores válidos para la serie %s dentro del rango de fechas permitido.\n\n"
+                "📅 Fecha de agenda: %s\n"
+                "📅 Fecha límite (3 días antes): %s\n\n"
+                "Verifique que existan lecturas de PrintTracker o correos procesados para este equipo "
+                "entre estas fechas."
+            ) % (serie, fecha_agenda.strftime('%d/%m/%Y'), fecha_limite_minima.strftime('%d/%m/%Y')))
         
         # Armar payload de actualización en una sola operación
         _logger.info("🔧 Preparando actualización masiva de campos...")
         updates = {}
         valores_cargados = []
+        fecha_contador_str = fecha_contador.strftime('%d/%m/%Y') if fecha_contador else 'fecha desconocida'
 
         # B/N
         bn_valor = contadores_encontrados.get('contador_bn', 0)
-        _logger.info(f"🔍 DEBUG BN - Valor: {bn_valor}, Condición: {bn_valor > 0}")
+        _logger.info(f"🔍 DEBUG BN - Valor: {bn_valor}, Fecha: {fecha_contador_str}")
         if bn_valor > 0:
             updates['contometrok_id'] = str(bn_valor)
-            valores_cargados.append(f"Contador B/N: {bn_valor:,}")
+            valores_cargados.append(f"Contador B/N: {bn_valor:,} (del {fecha_contador_str})")
         else:
             _logger.warning(f"⚠️ DEBUG BN - NO SE CARGA porque valor es {bn_valor}")
 
         # Color (solo para máquinas a color)
         color_valor = contadores_encontrados.get('contador_color', 0)
-        _logger.info(f"🔍 DEBUG COLOR - Tipo máquina: {self.tipo_id}, Valor: {color_valor}, Condición: {self.tipo_id == 'color' and color_valor > 0}")
+        _logger.info(f"🔍 DEBUG COLOR - Tipo máquina: {self.tipo_id}, Valor: {color_valor}, Fecha: {fecha_contador_str}")
         if self.tipo_id == 'color' and color_valor > 0:
             updates['contometroc_id'] = str(color_valor)
-            valores_cargados.append(f"Contador Color: {color_valor:,}")
+            valores_cargados.append(f"Contador Color: {color_valor:,} (del {fecha_contador_str})")
         else:
             _logger.info(f"ℹ️ DEBUG COLOR - NO SE CARGA (tipo: {self.tipo_id}, valor: {color_valor})")
 
         # Scanner
         scan_valor = contadores_encontrados.get('contador_scan', 0)
-        _logger.info(f"🔍 DEBUG SCANNER - Valor: {scan_valor}, Tipo: {type(scan_valor)}, Condición: {scan_valor > 0}")
+        _logger.info(f"🔍 DEBUG SCANNER - Valor: {scan_valor}, Fecha: {fecha_contador_str}")
         if scan_valor > 0:
             updates['contometros_id'] = str(scan_valor)
-            valores_cargados.append(f"Contador Scanner: {scan_valor:,}")
+            valores_cargados.append(f"Contador Scanner: {scan_valor:,} (del {fecha_contador_str})")
         else:
-            _logger.error(f"❌ DEBUG SCANNER - NO SE CARGA porque valor es {scan_valor} (tipo: {type(scan_valor)})")
+            _logger.error(f"❌ DEBUG SCANNER - NO SE CARGA porque valor es {scan_valor}")
 
         # Verificación previa
         if not updates:
@@ -1052,29 +1221,150 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             _logger.error(f"❌ Validación falló: {str(e)}")
             raise
 
-        # Mensajes
+        # Mensajes detallados
+        dias_diferencia = (fecha_agenda - fecha_contador).days if fecha_contador else 0
+        mensaje_diferencia = ""
+        if dias_diferencia > 0:
+            mensaje_diferencia = f" ({dias_diferencia} días antes de la agenda)"
+        
         mensaje_exito = (
             f"✅ Contadores cargados exitosamente desde {fuente_datos}:\n\n"
-            f"📋 {' • '.join(valores_cargados)}\n\n"
-            f"📅 Serie: {serie}"
+            f"📋 Contadores cargados:\n"
+            f"{'• ' + chr(10) + '• '.join(valores_cargados)}\n\n"
+            f"📅 Fecha de los contadores: {fecha_contador_str}{mensaje_diferencia}\n"
+            f"📅 Fecha de agenda: {fecha_agenda.strftime('%d/%m/%Y')}\n"
+            f"🔧 Serie: {serie}"
         )
 
         # Registrar en el chatter
         self.message_post(body=mensaje_exito, message_type='notification')
         _logger.info(f"=== Contadores cargados exitosamente para ticket {self.name} ===")
         
-        # Notificación UI
+        # Refrescar la página y mostrar notificación
         return {
             'type': 'ir.actions.client',
-            'tag': 'display_notification',
+            'tag': 'reload',  # Esto refresca la página completa
             'params': {
-                'title': _('Contadores Cargados'),
-                'message': _('Los contadores se han cargado correctamente desde %s.') % (fuente_datos or 'fuente desconocida'),
-                'type': 'success',
-                'sticky': False,
+                'message': {
+                    'title': _('Contadores Cargados'),
+                    'message': _('Los contadores se han cargado correctamente desde %s del %s.') % (
+                        fuente_datos or 'fuente desconocida', 
+                        fecha_contador_str
+                    ),
+                    'type': 'success',
+                    'sticky': True,  # Mantener visible más tiempo
+                }
             }
         }
 
+    def _buscar_contadores_con_limite_fecha(self, serie, fecha_agenda, fecha_limite_minima):
+        """
+        Busca contadores en orden de prioridad con validación de fecha límite:
+        Solo acepta contadores entre fecha_limite_minima y fecha_agenda
+        """
+        # PRIORIDAD 1: Equipo de alquiler (solo si fecha está en rango)
+        _logger.info("🔍 Prioridad 1: Verificando equipo de alquiler...")
+        contadores_equipo, fecha_equipo = self._obtener_contadores_equipo_con_fecha(fecha_agenda, fecha_limite_minima)
+        if contadores_equipo:
+            return contadores_equipo, "Equipo de Alquiler", fecha_equipo
+        
+        # PRIORIDAD 2: PrintTracker Daily Reading
+        _logger.info("🔍 Prioridad 2: Verificando PrintTracker Daily Reading...")
+        contadores_pt, fecha_pt = self._obtener_contadores_printtracker_con_limite(serie, fecha_agenda, fecha_limite_minima)
+        if contadores_pt:
+            return contadores_pt, "PrintTracker Daily Reading", fecha_pt
+        
+        # PRIORIDAD 3: Contador Automático (correos)
+        _logger.info("🔍 Prioridad 3: Verificando Contador Automático...")
+        contadores_correo, fecha_correo = self._obtener_contadores_correos_con_limite(serie, fecha_agenda, fecha_limite_minima)
+        if contadores_correo:
+            return contadores_correo, "Procesamiento de Correos", fecha_correo
+        
+        _logger.warning("❌ No se encontraron contadores en el rango de fechas permitido")
+        return None, None, None
+
+    def _obtener_contadores_equipo_con_fecha(self, fecha_agenda, fecha_limite_minima):
+        """
+        Obtiene contadores del equipo de alquiler si la fecha está en rango permitido
+        """
+        try:
+            unidad = self.product_alquiler
+            if not unidad or not unidad.fecha_ultima_actualizacion:
+                return None, None
+            
+            fecha_equipo = unidad.fecha_ultima_actualizacion.date()
+            
+            # Verificar que esté en el rango permitido
+            if fecha_limite_minima <= fecha_equipo <= fecha_agenda:
+                contadores = {
+                    'contador_bn': unidad.contador_bn or 0,
+                    'contador_color': unidad.contador_color or 0,
+                    'contador_scan': unidad.contador_scan or 0,
+                }
+                
+                if any(v > 0 for v in contadores.values()):
+                    _logger.info(f"✅ Contadores desde equipo del {fecha_equipo}: {contadores}")
+                    return contadores, fecha_equipo
+            else:
+                _logger.info(f"❌ Fecha equipo ({fecha_equipo}) fuera del rango permitido")
+            
+            return None, None
+        except Exception as e:
+            _logger.error(f"❌ Error obteniendo contadores del equipo: {e}")
+            return None, None
+
+    def _obtener_contadores_printtracker_con_limite(self, serie, fecha_agenda, fecha_limite_minima):
+        """
+        Obtiene contadores desde PrintTracker Daily Reading con límite de fecha
+        """
+        try:
+            # Buscar la lectura más reciente dentro del rango permitido
+            lectura_reciente = self.env['printtracker.daily.reading'].search([
+                ('serie', '=', serie),
+                ('fecha', '>=', fecha_limite_minima),
+                ('fecha', '<=', fecha_agenda),
+                ('estado', 'in', ['validado', 'aplicado'])
+            ], order='fecha desc', limit=1)
+            
+            if lectura_reciente:
+                contadores = self._extraer_contadores_printtracker(lectura_reciente)
+                if contadores:
+                    _logger.info(f"✅ Contadores desde PrintTracker del {lectura_reciente.fecha}: {contadores}")
+                    return contadores, lectura_reciente.fecha
+            else:
+                _logger.info(f"❌ No hay lecturas PrintTracker entre {fecha_limite_minima} y {fecha_agenda}")
+            
+            return None, None
+        except Exception as e:
+            _logger.error(f"❌ Error obteniendo contadores de PrintTracker: {e}")
+            return None, None
+
+    def _obtener_contadores_correos_con_limite(self, serie, fecha_agenda, fecha_limite_minima):
+        """
+        Obtiene contadores desde Contador Automático (correos) con límite de fecha
+        """
+        try:
+            # Buscar el más reciente dentro del rango permitido
+            contador_reciente = self.env['contador.automatico'].search([
+                ('serie_detectada', '=', serie),
+                ('fecha_procesamiento', '>=', fields.Datetime.combine(fecha_limite_minima, datetime.min.time())),
+                ('fecha_procesamiento', '<=', fields.Datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
+                ('estado', '=', 'procesado')
+            ], order='fecha_procesamiento desc', limit=1)
+            
+            if contador_reciente:
+                contadores = self._extraer_contadores_correos(contador_reciente)
+                if contadores:
+                    fecha_proc = contador_reciente.fecha_procesamiento.date()
+                    _logger.info(f"✅ Contadores desde correos del {fecha_proc}: {contadores}")
+                    return contadores, fecha_proc
+            else:
+                _logger.info(f"❌ No hay contadores de correos entre {fecha_limite_minima} y {fecha_agenda}")
+            
+            return None, None
+        except Exception as e:
+            _logger.error(f"❌ Error obteniendo contadores de correos: {e}")
+            return None, None
 
     def _buscar_contadores_por_prioridad(self, serie):
         """
