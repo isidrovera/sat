@@ -851,67 +851,47 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                     'title': 'Estado del Ticket Incorrecto',
                     'message': f'El ticket debe estar en estado "En Proceso" para finalizarlo. Estado actual: {error["current_value"]}',
                     'type': 'warning',
-                    'sticky': True
+                    'sticky': False,
+                    'fadeout': 10000  # 10 segundos
                 }
             }
         
-        # Construir mensaje consolidado para otros errores
-        notifications = []
+        # Construir mensaje consolidado
+        messages = []
         
-        # Calcular totales por categoría
-        section_configs = [
-            ('general', 'Información General', 'warning'),
-            ('counters', 'Lecturas de Contadores', 'info'),
-            ('checklist', 'Lista de Verificación', 'info'),
-            ('color', 'Componentes Color', 'info')
-        ]
+        # Información General
+        if errors['general']:
+            fields_list = [error['message'] for error in errors['general']]
+            messages.append(f"📝 Información General:\n• " + "\n• ".join(fields_list))
         
-        total_errors = sum(len(errors[key]) for key in ['general', 'counters', 'checklist', 'color'])
+        # Contadores
+        if errors['counters']:
+            fields_list = [error['message'] for error in errors['counters']]
+            messages.append(f"📊 Contadores:\n• " + "\n• ".join(fields_list))
         
-        # Notificación principal
-        main_message = f"Se requieren {total_errors} campos para finalizar el ticket #{ticket.id}"
-        notifications.append({
-            'title': 'Completar Información del Ticket',
-            'message': main_message,
-            'type': 'warning',
-            'sticky': True
-        })
+        # Checklist
+        if errors['checklist']:
+            fields_list = [error['message'] for error in errors['checklist']]
+            messages.append(f"✅ Checklist:\n• " + "\n• ".join(fields_list))
         
-        # Notificaciones por categoría
-        for error_type, section_title, notif_type in section_configs:
-            if errors[error_type]:
-                count = len(errors[error_type])
-                # Tomar solo los primeros 3 campos para no saturar
-                fields_list = []
-                for i, error in enumerate(errors[error_type][:3]):
-                    icon = self._get_simple_icon(error['field'])
-                    fields_list.append(f"{icon} {error['message']}")
-                
-                more_text = f" y {count-3} más" if count > 3 else ""
-                message = "\n".join(fields_list) + more_text
-                
-                notifications.append({
-                    'title': f'{section_title} ({count} pendiente{"s" if count > 1 else ""})',
-                    'message': message,
-                    'type': notif_type,
-                    'sticky': False
-                })
+        # Componentes Color
+        if errors['color']:
+            fields_list = [error['message'] for error in errors['color']]
+            messages.append(f"🎨 Componentes Color:\n• " + "\n• ".join(fields_list))
         
-        # Ejecutar todas las notificaciones
-        for notif in notifications:
-            self.env['bus.bus']._sendone(
-                self.env.user.partner_id,
-                'simple_notification',
-                notif
-            )
+        # Mensaje final
+        final_message = "\n\n".join(messages)
         
-        # Retornar acción que refresque la vista actual
         return {
-            'type': 'ir.actions.act_window',
-            'res_model': 'ticket.alquiler',
-            'res_id': ticket.id,
-            'view_mode': 'form',
-            'target': 'current',
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': f'Completar campos del Ticket #{ticket.id}',
+                'message': final_message,
+                'type': 'warning',
+                'sticky': False,
+                'fadeout': 10000  # 10 segundos
+            }
         }
 
     def _get_simple_icon(self, field_name):
