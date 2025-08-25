@@ -632,6 +632,90 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         for ticket in tickets:
             _logger.info("Procesando ticket ID %s (estado=%s)", ticket.id, ticket.estado)
 
+            # VALIDACIONES DE CAMPOS REQUERIDOS SEGÚN LA LÓGICA DE LA VISTA
+            errors = []
+            
+            # Campos requeridos cuando estado == 'nuevo'
+            if ticket.estado == 'nuevo':
+                if not ticket.agenda:
+                    errors.append("• Agenda es requerida cuando el ticket está en estado 'nuevo'")
+                if not ticket.responsable:
+                    errors.append("• Responsable es requerido cuando el ticket está en estado 'nuevo'")
+                if not ticket.description:
+                    errors.append("• Descripción del problema es requerida cuando el ticket está en estado 'nuevo'")
+            
+            # Campos requeridos cuando estado == 'proceso' (para finalizar debe estar en proceso)
+            if ticket.estado == 'proceso':
+                # Contómetros requeridos en proceso
+                if not ticket.contometrok_id:
+                    errors.append("• Contador K es requerido cuando el ticket está en proceso")
+                
+                if not ticket.contometros_id:
+                    errors.append("• Contador S es requerido cuando el ticket está en proceso")
+                
+                # Contador color requerido solo para equipos color en proceso
+                if ticket.tipo_id == 'color' and not ticket.contometroc_id:
+                    errors.append("• Contador Color es requerido para equipos a color cuando el ticket está en proceso")
+                
+                # Informe técnico requerido en proceso
+                if not ticket.informe_id:
+                    errors.append("• Informe Técnico es requerido cuando el ticket está en proceso")
+                
+                # Campos del Check List requeridos en proceso
+                checklist_fields = [
+                    ('calidad_id', 'Calidad'),
+                    ('copia_id', 'Copia'),
+                    ('impresion_id', 'Impresión'),
+                    ('impresion_usb_id', 'Impresión USB'),
+                    ('scaner_smb_id', 'Scanner SMB'),
+                    ('scaner_usb_id', 'Scanner USB'),
+                    ('scaner_ftp_id', 'Scanner FTP'),
+                    ('scaner_mail_id', 'Scanner Mail'),
+                    ('toner_black_id', 'Toner Black'),
+                    ('bypass_id', 'Bypass'),
+                    ('tray1_id', 'Tray 1'),
+                    ('tray2_id', 'Tray 2'),
+                    ('tray3_id', 'Tray 3'),
+                    ('tray4_id', 'Tray 4'),
+                    ('adf_id', 'ADF'),
+                    ('finalizador_id', 'Finalizador'),
+                    ('tacho_id', 'Tacho'),
+                    ('fusora_id', 'Fusora'),
+                    ('transfer_id', 'Transfer'),
+                    ('optico_id', 'Óptico'),
+                    ('black_id', 'Black'),
+                ]
+                
+                # Validar campos generales del checklist cuando estado == 'proceso'
+                for field_name, field_label in checklist_fields:
+                    if not getattr(ticket, field_name, None):
+                        errors.append(f"• {field_label} es requerido en el Check List cuando el ticket está en proceso")
+                
+                # Campos específicos para equipos color cuando estado == 'proceso' y tipo_id == 'color'
+                if ticket.tipo_id == 'color':
+                    color_fields = [
+                        ('toner_magenta_id', 'Toner Magenta'),
+                        ('toner_cyan_id', 'Toner Cyan'),
+                        ('toner_yellow_id', 'Toner Yellow'),
+                        ('magenta_id', 'Magenta'),
+                        ('cyan_id', 'Cyan'),
+                        ('yellow_id', 'Yellow'),
+                    ]
+                    
+                    for field_name, field_label in color_fields:
+                        if not getattr(ticket, field_name, None):
+                            errors.append(f"• {field_label} es requerido para equipos a color cuando el ticket está en proceso")
+            
+            # Validar que el ticket esté en el estado correcto para finalizar
+            if ticket.estado != 'proceso':
+                errors.append(f"• El ticket debe estar en estado 'proceso' para poder finalizarlo. Estado actual: '{ticket.estado}'")
+            
+            # Si hay errores, mostrar mensaje detallado y no continuar
+            if errors:
+                error_message = "No se puede finalizar el ticket. Se encontraron los siguientes problemas:\n\n" + "\n".join(errors)
+                error_message += "\n\nPor favor, complete todos los campos requeridos antes de intentar finalizar el ticket."
+                raise UserError(error_message)
+
             unidad = ticket.product_alquiler
             
             # 1) Validar valores de contómetros (lanza error si no pasa)

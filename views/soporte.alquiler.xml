@@ -66,9 +66,9 @@
                                 <field name="product_alquiler" readonly="1" />
                                 <field name="serie_id_r" />
                                 <!--<field name="modelo_id_r" />-->
-                                <field name="contometrok_id" required="estado =='proceso'" />
-                                <field name="contometroc_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'" />
-                                <field name="contometros_id" required="estado =='proceso'" />
+                                <field name="contometrok_id" />
+                                <field name="contometroc_id" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'" />
+                                <field name="contometros_id"  />
                                 <field name="total_copias_id" invisible="1" />
                                 <field name="tipo_id" invisible="1" />
                                 <field name="url" invisible="1" />
@@ -102,7 +102,7 @@
                             </page>
                             <page string="Informe Técnico">
                                 <group>
-                                    <field name="informe_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
+                                    <field name="informe_id"  readonly="estado == 'finalizado'"/>
                                 </group>
                             </page>
                             <page string="Accesorios">
@@ -131,35 +131,35 @@
                             <page string="Check List">
                                 <group>
                                     <group>
-                                        <field name="calidad_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="copia_id" required="estado == 'proceso'" readonly="estado == 'finalizado'" />
-                                        <field name="impresion_id" required="estado == 'proceso'" readonly="estado == 'finalizado'" />
-                                        <field name="impresion_usb_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="scaner_smb_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="scaner_usb_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="scaner_ftp_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="scaner_mail_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="toner_black_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="toner_magenta_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="toner_cyan_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="toner_yellow_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="bypass_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="tray1_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
+                                        <field name="calidad_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="copia_id"  readonly="estado == 'finalizado'" />
+                                        <field name="impresion_id" readonly="estado == 'finalizado'" />
+                                        <field name="impresion_usb_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="scaner_smb_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="scaner_usb_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="scaner_ftp_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="scaner_mail_id" readonly="estado == 'finalizado'"/>
+                                        <field name="toner_black_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="toner_magenta_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="toner_cyan_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="toner_yellow_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="bypass_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="tray1_id"  readonly="estado == 'finalizado'"/>
                                     </group>
                                     <group>
-                                        <field name="tray2_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="tray3_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="tray4_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="adf_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="finalizador_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="tacho_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="fusora_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="transfer_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="optico_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="black_id" required="estado == 'proceso'" readonly="estado == 'finalizado'"/>
-                                        <field name="magenta_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="cyan_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="yellow_id" required="estado == 'proceso' and tipo_id =='color'" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="tray2_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="tray3_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="tray4_id" readonly="estado == 'finalizado'"/>
+                                        <field name="adf_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="finalizador_id" readonly="estado == 'finalizado'"/>
+                                        <field name="tacho_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="fusora_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="transfer_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="optico_id" readonly="estado == 'finalizado'"/>
+                                        <field name="black_id"  readonly="estado == 'finalizado'"/>
+                                        <field name="magenta_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="cyan_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                        <field name="yellow_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
                                     </group>
                                 </group>
                             </page>
