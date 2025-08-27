@@ -1069,3 +1069,65 @@ class ReparacionFoto(models.Model):
         except Exception as e:
             _logger.exception("[UPLOAD_PCLOUD] Error general: %s", str(e))
             return False
+
+
+
+    # === NUEVO: helpers para upload links de pCloud ===
+    def _get_or_create_uploadlink(self, folder_id, pcloud_config):
+        """
+        Devuelve el 'code' de un upload link (File Request) para esa carpeta.
+        Si ya existe uno utilizable, lo reutiliza. Si no, crea uno.
+        """
+        try:
+            # 1) Buscar si ya hay upload links
+            list_ul = f"{pcloud_config.hostname}/listuploadlinks"
+            params = {'access_token': pcloud_config.access_token}
+            r = requests.get(list_ul, params=params, timeout=15)
+            data = r.json() if r.status_code == 200 else {}
+
+            if data.get('result') == 0:
+                for link in data.get('links', []):
+                    # Cada link tiene 'folderid' o 'path' (dependiendo de versión). Reusamos si coincide.
+                    if str(link.get('folderid')) == str(folder_id):
+                        # link['code'] es el identificador del upload link
+                        return link.get('code')
+
+            # 2) Crear nuevo upload link
+            create_ul = f"{pcloud_config.hostname}/createuploadlink"
+            create_params = {
+                'access_token': pcloud_config.access_token,
+                'folderid': folder_id,
+                # Opcionales (descomenta si quieres):
+                # 'maxspace': 0,         # 0 = sin límite
+                # 'expires': 0,          # 0 = sin vencimiento
+                # 'name': 'reparacion'   # etiqueta opcional
+            }
+            cr = requests.get(create_ul, params=create_params, timeout=15)
+            cres = cr.json() if cr.status_code == 200 else {}
+            if cres.get('result') == 0 and cres.get('code'):
+                return cres.get('code')
+
+            _logger.error("[UPLOADLINK] No se pudo crear upload link: %s", cres)
+            return False
+        except Exception as e:
+            _logger.exception("[UPLOADLINK] Error: %s", str(e))
+            return False
+
+
+    def _get_upload_post_url(self, code, pcloud_config):
+        """
+        Convierte el 'code' de un upload link en una URL de POST (host+path) para subir vía fetch(FormData)
+        """
+        try:
+            get_ul = f"{pcloud_config.hostname}/getuploadlink"
+            params = {'code': code}
+            r = requests.get(get_ul, params=params, timeout=15)
+            data = r.json() if r.status_code == 200 else {}
+            # Respuesta típica: { result:0, hosts:[...], path:"/x/y/z" }
+            if data.get('result') == 0 and data.get('hosts') and data.get('path'):
+                return f"https://{data['hosts'][0]}{data['path']}"
+            _logger.error("[UPLOADLINK] getuploadlink error: %s", data)
+            return False
+        except Exception as e:
+            _logger.exception("[UPLOADLINK] Error get_upload_post_url: %s", str(e))
+            return False

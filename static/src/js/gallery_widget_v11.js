@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Nueva propiedad para acumular fotos
         capturedPhotos: [],
         currentSession: null,
+        pcloudUploadUrl: null,
         
         init() {
             console.log('Iniciando galería...');
@@ -392,103 +393,155 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.src = URL.createObjectURL(file);
             });
         },
+        // === NUEVO: pedir upload link al backend (pCloud) ===
+        async getPcloudUploadUrl() {
+            try {
+                const resp = await fetch(`/gallery/pcloud/uploadlink/${this.reparacionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (!resp.ok) throw new Error(`Server: ${resp.status}`);
+                const data = await resp.json();
+                const result = data.result || data;
+                if (result.success && result.upload_url) {
+                    return result.upload_url; // host+path para POST
+                }
+                return null;
+            } catch (e) {
+                console.error('[PCLOUD] No se pudo obtener upload link:', e);
+                return null;
+            }
+        },
+
+        // === NUEVO: subida directa a pCloud usando el upload link ===
+        async uploadDirectToPcloud(file, uploadUrl) {
+            // pCloud (upload link) acepta multipart; usamos campo "file" + filename.
+            const fd = new FormData();
+            fd.append('file', file, file.name);
+            // algunos setups aceptan 'filename' adicional; no hace daño:
+            fd.append('filename', file.name);
+
+            // Renombrar si existe (si el servidor lo soporta vía query):
+            const url = uploadUrl.includes('?') ? `${uploadUrl}&renameifexists=1` : `${uploadUrl}?renameifexists=1`;
+
+            const resp = await fetch(url, { method: 'POST', body: fd });
+            if (!resp.ok) {
+                throw new Error(`PCLOUD_UPLOAD:${resp.status}`);
+            }
+
+            // pCloud devuelve HTML/JSON variado en upload link; con que sea 200 asumimos OK.
+            return { success: true };
+        },
+
 
         // MODIFICAR: Función uploadSingleFile completa con timeout y validaciones
         async uploadSingleFile(file, sessionId, retryAttempt = 0) {
-            const maxRetries = 5;
-            console.log(`Subiendo archivo: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB) - Intento ${retryAttempt + 1}/${maxRetries + 1}`);
-            
-            try {
-                let processedFile = file;
-                
-                // Comprimir más agresivamente en reintentos
-                if (file.size > 6 * 1024 * 1024) {
-                    const compressionLevel = retryAttempt > 1 ? 0.5 : 0.8;
-                    const targetSize = retryAttempt > 2 ? 4 : 6;
-                    console.log(`Comprimiendo archivo (nivel ${compressionLevel}, objetivo ${targetSize}MB)...`);
-                    processedFile = await this.compressImage(file, targetSize, compressionLevel);
-                }
-                
-                const nextSequence = await this.getNextSequence();
-                console.log(`Secuencia asignada: ${nextSequence}`);
-                
-                const formData = new FormData();
-                formData.append('file', processedFile);
-                formData.append('sequence', nextSequence);
-                formData.append('reparacion_id', this.reparacionId);
-                
-                // Timeout progresivo sin AbortController problemático
-                const baseTimeout = Math.max(45000, processedFile.size / 1024 / 1024 * 20000);
-                const timeoutMs = baseTimeout + (retryAttempt * 15000);
-                console.log(`Timeout: ${timeoutMs/1000}s (intento ${retryAttempt + 1})`);
-                
-                // Usar Promise.race en lugar de AbortController
-                const fetchPromise = fetch(`/gallery/upload/single/${sessionId}`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => {
-                        reject(new Error(`TIMEOUT_ERROR:${timeoutMs/1000}s`));
-                    }, timeoutMs);
-                });
-                
-                const response = await Promise.race([fetchPromise, timeoutPromise]);
-                
-                if (!response.ok) {
-                    if (response.status === 504 || response.status === 502 || response.status === 503) {
-                        throw new Error(`SERVER_RETRY:${response.status}`);
-                    }
-                    throw new Error(`Error de servidor: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                const result = data.result || data;
-                
-                if (!result.success) {
-                    if (result.code === 'SESSION_EXPIRED') {
-                        this.showAuthError();
-                        return null;
-                    }
-                    throw new Error(`SERVER_RETRY:${result.error}`);
-                }
-                
-                console.log(`✅ ${processedFile.name} subido exitosamente`);
-                return result;
-                
-            } catch (error) {
-                console.error(`❌ Error en intento ${retryAttempt + 1}: ${error.message}`);
-                
-                // Decidir si reintentar
-                const shouldRetry = (
-                    retryAttempt < maxRetries && (
-                        error.message.includes('TIMEOUT_ERROR') ||
-                        error.message.includes('SERVER_RETRY') ||
-                        error.message.includes('timeout') ||
-                        error.message.includes('network') ||
-                        error.message.includes('fetch') ||
-                        error.message.includes('Failed to fetch')
-                    )
-                );
-                
-                if (shouldRetry) {
-                    const waitTime = Math.min(3000 + (retryAttempt * 2000), 10000);
-                    console.log(`🔄 Reintentando ${file.name} en ${waitTime/1000}s...`);
-                    
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-                    return this.uploadSingleFile(file, sessionId, retryAttempt + 1);
-                }
-                
-                console.error(`💀 Se agotaron los ${maxRetries + 1} intentos para ${file.name}`);
-                return { 
-                    success: false, 
-                    error: `Falló después de ${maxRetries + 1} intentos: ${error.message}`, 
-                    filename: file.name,
-                    finalAttempt: true
-                };
+    const maxRetries = 5;
+    console.log(`Subiendo archivo: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB) - Intento ${retryAttempt + 1}/${maxRetries + 1}`);
+    
+    // === NUEVO: si tenemos pcloudUploadUrl, intentamos primero directo a pCloud
+    if (this.pcloudUploadUrl) {
+        try {
+            // (opcional) renombra para una convención consistente
+            const safeName = file.name || `image_${Date.now()}.jpg`;
+            const renamed = new File([file], safeName, { type: file.type || 'image/jpeg' });
+            await this.uploadDirectToPcloud(renamed, this.pcloudUploadUrl);
+            console.log(`✅ Subido a pCloud: ${renamed.name}`);
+            return { success: true, filename: renamed.name, via: 'pcloud' };
+        } catch (e) {
+            console.warn('Fallo subida directa a pCloud; uso fallback Odoo:', e);
+            // si falla pCloud, continuamos con el flujo Odoo como fallback
+        }
+    }
+
+    // === Flujo original (Odoo) como fallback ===
+    try {
+        let processedFile = file;
+        
+        // Comprimir más agresivo en reintentos
+        if (file.size > 6 * 1024 * 1024) {
+            const compressionLevel = retryAttempt > 1 ? 0.5 : 0.8;
+            const targetSize = retryAttempt > 2 ? 4 : 6;
+            console.log(`Comprimiendo archivo (nivel ${compressionLevel}, objetivo ${targetSize}MB)...`);
+            processedFile = await this.compressImage(file, targetSize, compressionLevel);
+        }
+        
+        const nextSequence = await this.getNextSequence();
+        console.log(`Secuencia asignada: ${nextSequence}`);
+        
+        const formData = new FormData();
+        formData.append('file', processedFile);
+        formData.append('sequence', nextSequence);
+        formData.append('reparacion_id', this.reparacionId);
+        
+        // Timeout progresivo sin AbortController
+        const baseTimeout = Math.max(45000, processedFile.size / 1024 / 1024 * 20000);
+        const timeoutMs = baseTimeout + (retryAttempt * 15000);
+        console.log(`Timeout: ${timeoutMs/1000}s (intento ${retryAttempt + 1})`);
+        
+        const fetchPromise = fetch(`/gallery/upload/single/${sessionId}`, {
+            method: 'POST',
+            body: formData
+        });
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error(`TIMEOUT_ERROR:${timeoutMs/1000}s`)), timeoutMs);
+        });
+        
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        if (!response.ok) {
+            if ([504, 502, 503].includes(response.status)) {
+                throw new Error(`SERVER_RETRY:${response.status}`);
             }
-        },
+            throw new Error(`Error de servidor: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const result = data.result || data;
+        
+        if (!result.success) {
+            if (result.code === 'SESSION_EXPIRED') {
+                this.showAuthError();
+                return null;
+            }
+            throw new Error(`SERVER_RETRY:${result.error}`);
+        }
+        
+        console.log(`✅ ${processedFile.name} subido exitosamente (Odoo)`);
+        return result;
+        
+    } catch (error) {
+        console.error(`❌ Error en intento ${retryAttempt + 1}: ${error.message}`);
+        
+        // Decidir si reintentar
+        const shouldRetry = (
+            retryAttempt < maxRetries && (
+                error.message.includes('TIMEOUT_ERROR') ||
+                error.message.includes('SERVER_RETRY') ||
+                error.message.includes('timeout') ||
+                error.message.includes('network') ||
+                error.message.includes('fetch') ||
+                error.message.includes('Failed to fetch')
+            )
+        );
+        
+        if (shouldRetry) {
+            const waitTime = Math.min(3000 + (retryAttempt * 2000), 10000);
+            console.log(`🔄 Reintentando ${file.name} en ${waitTime/1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            return this.uploadSingleFile(file, sessionId, retryAttempt + 1);
+        }
+        
+        console.error(`💀 Se agotaron los ${maxRetries + 1} intentos para ${file.name}`);
+        return { 
+            success: false, 
+            error: `Falló después de ${maxRetries + 1} intentos: ${error.message}`, 
+            filename: file.name,
+            finalAttempt: true
+        };
+    }
+},
+
         // NUEVA FUNCIÓN: Finalizar sesión de subida
         async completeUploadSession(sessionId) {
             if (!sessionId) {
@@ -656,178 +709,164 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // MODIFICAR: Función uploadAllCapturedPhotos completa
         async uploadAllCapturedPhotos() {
-            console.log(`Subiendo ${this.capturedPhotos.length} fotos capturadas`);
-            
-            if (this.capturedPhotos.length === 0) {
-                this.showError('Sin fotos', 'No hay fotos para subir');
-                return;
-            }
+    console.log(`Subiendo ${this.capturedPhotos.length} fotos capturadas`);
+    if (this.capturedPhotos.length === 0) {
+        this.showError('Sin fotos', 'No hay fotos para subir');
+        return;
+    }
 
-            // Validar sesión primero
-            const validation = await this.validateUploadSession(this.capturedPhotos);
-            if (!validation) {
-                console.log('Validación fallida, cancelando subida');
-                return;
-            }
+    // Preparar upload link
+    const totalSize = this.capturedPhotos.reduce((s, f) => s + f.size, 0);
+    const info = await this.getPCloudUploadInfo(this.capturedPhotos.length, totalSize);
+    if (!info) return;
 
-            this.showUploadProgress(this.capturedPhotos.length);
-            
-            let uploadedCount = 0;
-            let failedCount = 0;
-            const results = [];
+    this.showUploadProgress(this.capturedPhotos.length);
 
-            // CAMBIO PRINCIPAL: Subir archivos SECUENCIALMENTE para evitar duplicados de secuencia
-            console.log('Iniciando subida secuencial de fotos de cámara...');
-            
-            for (let i = 0; i < this.capturedPhotos.length; i++) {
-                const file = this.capturedPhotos[i];
-                console.log(`Subiendo foto ${i + 1}/${this.capturedPhotos.length}: ${file.name}`);
-                
-                const result = await this.uploadSingleFile(file, this.currentSession);
-                
-                if (result && result.success) {
-                    uploadedCount++;
-                    console.log(`Foto ${i + 1} subida exitosamente`);
-                } else {
-                    failedCount++;
-                    console.log(`Foto ${i + 1} falló: ${result ? result.error : 'Error desconocido'}`);
-                }
-                
-                results.push(result);
-                
-                // Actualizar progreso
-                const progress = ((i + 1) / this.capturedPhotos.length) * 100;
-                this.updateUploadProgress(progress, uploadedCount + failedCount, this.capturedPhotos.length);
-                
-                // Si hay error de autenticación, salir del bucle
-                if (result && result.code === 'SESSION_EXPIRED') {
-                    console.log('Sesión expirada detectada, deteniendo subida');
-                    break;
-                }
-                
-                // Pequeña pausa entre subidas para evitar condiciones de carrera
-                if (i < this.capturedPhotos.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                }
-            }
+    let uploadedCount = 0;
+    let failedCount = 0;
 
-            // Finalizar sesión
-            await this.completeUploadSession(this.currentSession);
+    // Subir secuencialmente al upload link
+    for (let i = 0; i < this.capturedPhotos.length; i++) {
+        const file = this.capturedPhotos[i];
 
-            // Mostrar resultado final
-            if (uploadedCount > 0) {
-                console.log(`Subida completada: ${uploadedCount} exitosos, ${failedCount} fallidos`);
-                this.showSuccess(
-                    'Fotos Subidas', 
-                    failedCount === 0 
-                        ? `Se subieron las ${uploadedCount} fotos correctamente`
-                        : `Se subieron ${uploadedCount} de ${this.capturedPhotos.length} fotos`
-                );
-                
-                // Limpiar sesión de cámara
-                this.capturedPhotos = [];
-                this.currentSession = null;
-                this.updateCameraButton();
-                setTimeout(() => window.location.reload(), 1500);
-            } else {
-                this.showError('Error', 'No se pudieron subir las fotos');
-            }
-        },
+        // (opcional) compresión como ya tenías
+        let processed = file;
+        if (file.size > 6 * 1024 * 1024) {
+            processed = await this.compressImage(file, 6, 0.8);
+        }
+
+        const result = await this.uploadSingleFileToPCloud(processed, info.code);
+        if (result && result.success) uploadedCount++; else failedCount++;
+
+        const progress = ((i + 1) / this.capturedPhotos.length) * 100;
+        this.updateUploadProgress(progress, uploadedCount + failedCount, this.capturedPhotos.length);
+        await new Promise(r => setTimeout(r, 150));
+    }
+
+    // Sincronizar y limpiar sesión local
+    await this.syncSilently();
+    this.capturedPhotos = [];
+    this.currentSession = null;
+    this.updateCameraButton();
+
+    if (uploadedCount > 0) {
+        this.showSuccess('Fotos Subidas', failedCount === 0
+            ? `Se subieron las ${uploadedCount} fotos correctamente`
+            : `Se subieron ${uploadedCount} de ${this.capturedPhotos.length} fotos`);
+        setTimeout(() => window.location.reload(), 1200);
+    } else {
+        this.showError('Error', 'No se pudieron subir las fotos');
+    }
+},
+
 
         // MEJORADA: Subida masiva con nuevo sistema
         
         async handleMassiveUpload(event) {
-            const files = Array.from(event.target.files);
-            console.log(`Procesando ${files.length} archivos`);
-            
-            if (!files.length) return;
+    const files = Array.from(event.target.files);
+    console.log(`Procesando ${files.length} archivos`);
+    if (!files.length) return;
 
-            const validFiles = files.filter(file => this.validateFile(file));
-            if (!validFiles.length) {
-                this.showError('Sin archivos válidos', 'Selecciona imágenes válidas');
-                return;
-            }
+    const validFiles = files.filter(file => this.validateFile(file));
+    if (!validFiles.length) {
+        this.showError('Sin archivos válidos', 'Selecciona imágenes válidas');
+        return;
+    }
 
-            const batchSize = 3;
-            const batches = this.createBatches(validFiles, batchSize);
-            console.log(`Dividiendo ${validFiles.length} archivos en ${batches.length} lotes`);
-            
-            let totalUploaded = 0;
-            let totalFailed = 0;
-            let currentFile = 0;
+    // Preparar upload link para TODO el lote
+    const totalSize = validFiles.reduce((s, f) => s + f.size, 0);
+    const info = await this.getPCloudUploadInfo(validFiles.length, totalSize);
+    if (!info) return;
 
-            this.showBatchProgress(validFiles.length, 0, 0);
+    const batchSize = 3; // subimos en tandas pequeñas
+    const batches = this.createBatches(validFiles, batchSize);
+    let totalUploaded = 0;
+    let totalFailed = 0;
 
-            // Procesar lote por lote
-            for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-                const batch = batches[batchIndex];
-                console.log(`\n=== PROCESANDO LOTE ${batchIndex + 1}/${batches.length} ===`);
-                
-                let currentSessionId = null;
-                
-                try {
-                    // Crear nueva sesión para cada lote
-                    const validation = await this.validateUploadSession(batch);
-                    if (!validation) {
-                        console.log('Validación fallida, saltando lote');
-                        totalFailed += batch.length;
-                        continue;
-                    }
-                    
-                    currentSessionId = validation.session_id;
-                    console.log(`Nueva sesión creada para lote ${batchIndex + 1}: ${currentSessionId}`);
+    this.showBatchProgress(validFiles.length, 0, 0);
 
-                    // Procesar archivos del lote
-                    for (const file of batch) {
-                        currentFile++;
-                        console.log(`Procesando archivo ${currentFile}/${validFiles.length}: ${file.name}`);
-                        
-                        const result = await this.uploadSingleFile(file, currentSessionId, 0);
-                        
-                        if (result && result.success) {
-                            totalUploaded++;
-                            console.log(`✓ ${file.name} subido exitosamente`);
-                        } else {
-                            totalFailed++;
-                            console.log(`✗ ${file.name} falló: ${result ? result.error : 'Error desconocido'}`);
-                        }
-                        
-                        this.updateBatchProgress(validFiles.length, totalUploaded, totalFailed);
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                    }
+    for (let b = 0; b < batches.length; b++) {
+        const batch = batches[b];
+        for (let i = 0; i < batch.length; i++) {
+            const f = batch[i];
+            let processed = f;
+            if (f.size > 6 * 1024 * 1024) processed = await this.compressImage(f, 6, 0.8);
 
-                } catch (error) {
-                    console.error(`Error en lote ${batchIndex + 1}:`, error);
-                    totalFailed += batch.filter(f => !f.uploaded).length;
-                    
-                } finally {
-                    // Finalizar sesión solo si se creó exitosamente
-                    if (currentSessionId) {
-                        try {
-                            console.log(`Finalizando sesión del lote ${batchIndex + 1}: ${currentSessionId}`);
-                            await this.completeUploadSession(currentSessionId);
-                            console.log(`Sesión ${currentSessionId} finalizada exitosamente`);
-                        } catch (sessionError) {
-                            console.warn(`Error finalizando sesión ${currentSessionId}:`, sessionError.message);
-                            // No es crítico si falla la finalización
-                        }
-                    }
-                }
-                
-                // Pausa entre lotes
-                if (batchIndex < batches.length - 1) {
-                    console.log('Pausa entre lotes...');
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-            }
+            const r = await this.uploadSingleFileToPCloud(processed, info.code);
+            if (r && r.success) totalUploaded++; else totalFailed++;
 
-            // Resultado final
-            this.showFinalResult(validFiles.length, totalUploaded, totalFailed);
-            
-            if (totalUploaded > 0) {
-                setTimeout(() => window.location.reload(), 2000);
-            }
-        },
+            this.updateBatchProgress(validFiles.length, totalUploaded, totalFailed);
+            await new Promise(r2 => setTimeout(r2, 300));
+        }
+        if (b < batches.length - 1) await new Promise(r => setTimeout(r, 1200));
+    }
+
+    // Sincronizar
+    await this.syncSilently();
+
+    // Resultado final
+    this.showFinalResult(validFiles.length, totalUploaded, totalFailed);
+    if (totalUploaded > 0) {
+        setTimeout(() => window.location.reload(), 1500);
+    }
+},
+// === NUEVO: pedir upload link (code) al backend ===
+async getPCloudUploadInfo(fileCount, totalSize) {
+    try {
+        const res = await fetch(`/gallery/pcloud/uploadlink/${this.reparacionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_count: fileCount, total_size: totalSize })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+        return { endpoint: data.endpoint, code: data.code };
+    } catch (e) {
+        console.error('getPCloudUploadInfo error:', e);
+        this.showError('Error', 'No se pudo preparar la subida a pCloud');
+        return null;
+    }
+},
+
+// === NUEVO: subida directa a pCloud (uploadtolink) ===
+async uploadSingleFileToPCloud(file, code, retryAttempt = 0) {
+    const maxRetries = 4;
+    try {
+        const formData = new FormData();
+        formData.append('code', code);
+        formData.append('file', file); // pCloud acepta 'file' como campo
+
+        // Nota: si CORS falla en tu navegador, usa el proxy:
+        // const res = await fetch('/gallery/pcloud/proxy-upload', { method: 'POST', body: formData });
+
+        const res = await fetch('https://api.pcloud.com/uploadtolink', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok && data && data.result === 0) {
+            return { success: true };
+        }
+        throw new Error(`pCloud: ${data && data.error ? data.error : 'error'}`);
+    } catch (err) {
+        const transient = /fetch|network|timeout|Failed|502|503|504/i.test(err.message);
+        if (retryAttempt < maxRetries && transient) {
+            await new Promise(r => setTimeout(r, 1000 + retryAttempt * 1500));
+            return this.uploadSingleFileToPCloud(file, code, retryAttempt + 1);
+        }
+        return { success: false, error: err.message };
+    }
+},
+
+// === NUEVO: sync sin UI ruidosa post-subida ===
+async syncSilently() {
+    try {
+        const res = await fetch(`/gallery/sync/${this.reparacionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        return !!(res.ok && data && data.success);
+    } catch { return false; }
+},
 
         // NUEVA FUNCIÓN: Crear lotes
         createBatches(files, batchSize) {

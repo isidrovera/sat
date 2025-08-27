@@ -499,44 +499,69 @@ class GalleryController(http.Controller):
         except Exception as e:
             return json.dumps({'success': False, 'error': str(e), 'code': 'INTERNAL_ERROR'})
 
-    @http.route('/gallery/sync/<int:reparacion_id>', type='json', auth='public')
-    def sync_photos(self, reparacion_id):
-        """Sincroniza los enlaces de las fotos con pCloud"""
-        _logger.info("[SYNC] Iniciando sincronización para reparación ID: %s", reparacion_id)
+    # === MEJORA: sync también crea registros nuevos si detecta archivos nuevos en la carpeta pCloud ===
+    @http.route('/gallery/sync/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
+    def sync_from_pcloud(self, reparacion_id, **kw):
+        """
+        Si NO lo tenías ya: sincroniza archivos nuevos del folder de pCloud → crea reparaciones.foto
+        (Idempotente por file_id). Devuelve un resumen.
+        """
         try:
-            fotos = request.env['reparaciones.foto'].sudo().search([
-                ('reparacion_id', '=', reparacion_id)
-            ])
-            
-            pcloud_config = request.env['pcloud.configuracion'].sudo().search([], limit=1)
-            
-            updated_fotos = []
-            for foto in fotos:
-                try:
-                    thumb_url = foto._get_thumb_url(foto.file_id, pcloud_config)
-                    file_url = f"/gallery/download/{foto.id}"
-                    
-                    if thumb_url:
-                        foto.write({'url_foto': file_url})
-                        updated_fotos.append({
-                            'id': foto.id,
-                            'nombre_foto': foto.nombre_foto,
-                            'thumb_url': f'/gallery/preview/{foto.id}',
-                            'download_url': file_url
-                        })
-                except Exception as e:
-                    _logger.error("[SYNC] Error procesando foto %s: %s", foto.id, str(e))
+            env = request.env
+            reparacion = env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                return {'success': False, 'error': 'Reparación no encontrada'}
 
-            _logger.info("[SYNC] Actualización completada: %s fotos", len(updated_fotos))
-            return {
-                'success': True,
-                'fotos': updated_fotos,
-                'message': f'Se actualizaron {len(updated_fotos)} fotos'
+            pcloud_config = env['pcloud.configuracion'].sudo().search([], limit=1)
+            if not pcloud_config or not pcloud_config.access_token:
+                return {'success': False, 'error': 'Falta configuración de pCloud'}
+
+            # Asegurar folder
+            folder_id = reparacion._ensure_pcloud_folder()
+
+            # Listar contenidos de la carpeta
+            list_url = f"{pcloud_config.hostname}/listfolder"
+            params = {
+                'access_token': pcloud_config.access_token,
+                'folderid': folder_id
             }
+            r = requests.get(list_url, params=params, timeout=15)
+            data = r.json()
+            if r.status_code != 200 or data.get('result') != 0:
+                return {'success': False, 'error': f"listfolder error: {data}"}
 
+            contents = data.get('metadata', {}).get('contents', [])
+            Foto = env['reparaciones.foto'].sudo()
+
+            created = 0
+            skipped = 0
+            for it in contents:
+                if it.get('isfolder'):
+                    continue
+                file_id = str(it.get('fileid'))
+                # ¿ya existe?
+                if Foto.search_count([('reparacion_id', '=', reparacion.id), ('file_id', '=', file_id)]):
+                    skipped += 1
+                    continue
+
+                # Obtener URL de descarga (opcional; el modelo ya tiene _get_file_url si lo necesitas)
+                # Crear registro sin foto_binario (para NO re-subir):
+                vals = {
+                    'reparacion_id': reparacion.id,
+                    'nombre_foto': it.get('name') or f'foto_{file_id}.jpg',
+                    'file_id': file_id,
+                    'state': 'done',
+                    'size': it.get('size') or 0,
+                    'mimetype': it.get('contenttype') or 'application/octet-stream',
+                }
+                Foto.create(vals)
+                created += 1
+
+            return {'success': True, 'message': f'Sync OK: {created} creadas, {skipped} ya existían.'}
         except Exception as e:
-            _logger.exception("[SYNC] Error en sincronización: %s", str(e))
-            return {'success': False, 'error': str(e)}
+            _logger.exception('Error en sync_from_pcloud: %s', e)
+            return {'success': False, 'error': 'Error interno'}
+
 
     @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
     def download_photo(self, foto_id):
@@ -696,3 +721,67 @@ class GalleryController(http.Controller):
                 'uid': False,
                 'is_authenticated': False
             })
+
+
+
+    # === NUEVO: obtener upload link de pCloud para subir directo desde el navegador ===
+    @http.route('/gallery/pcloud/uploadlink/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
+    def get_pcloud_upload_link(self, reparacion_id):
+        """
+        Devuelve una URL de 'upload link' de pCloud (File Request) para subir directo desde el navegador.
+        Luego se ejecuta /gallery/sync/<id> para indexar en Odoo.
+        """
+        try:
+            reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                return {'success': False, 'error': 'Reparación no encontrada', 'code': 'REPARACION_NOT_FOUND'}
+
+            pcloud_config = request.env['pcloud.configuracion'].sudo().search([], limit=1)
+            if not pcloud_config or not pcloud_config.access_token:
+                return {'success': False, 'error': 'Configuración pCloud inválida', 'code': 'PCLOUD_CONFIG'}
+
+            # Obtener/crear folder por modelo+serie
+            foto_model = request.env['reparaciones.foto'].sudo()
+            folder_id = foto_model._obtener_folder_id(reparacion, pcloud_config)
+
+            # Usamos helpers del modelo para crear/recuperar upload link y su POST url
+            code = foto_model._get_or_create_uploadlink(folder_id, pcloud_config)
+            if not code:
+                return {'success': False, 'error': 'No se pudo crear upload link', 'code': 'PCLOUD_CREATE_UL'}
+
+            upload_post_url = foto_model._get_upload_post_url(code, pcloud_config)
+            if not upload_post_url:
+                return {'success': False, 'error': 'No se pudo obtener URL de subida', 'code': 'PCLOUD_GET_UL'}
+
+            # Devolvemos URL directa para POST (multipart)
+            return {
+                'success': True,
+                'upload_url': upload_post_url,  # p.ej. https://e123.pcloud.com/uZxY... (host+path)
+                'code': code,
+                'folder_id': folder_id
+            }
+        except Exception as e:
+            _logger.exception("[UPLOAD_LINK] Error: %s", str(e))
+            return {'success': False, 'error': 'Error interno', 'code': 'INTERNAL_ERROR'}
+    @http.route('/gallery/pcloud/proxy-upload', type='http', auth='user', methods=['POST'], csrf=False)
+    def proxy_upload(self, **kw):
+        """
+        OPCIONAL: Fallback por si CORS bloquea la subida directa desde el navegador.
+        Recibe 'code' y 'file' y los reenvía a https://api.pcloud.com/uploadtolink
+        """
+        try:
+            code = request.httprequest.form.get('code')
+            f = request.httprequest.files.get('file')
+            if not code or not f:
+                return request.make_json_response({'success': False, 'error': 'Faltan parámetros'}, status=400)
+
+            # Reenvío al endpoint público de pCloud (sin token)
+            files = {'file': (f.filename, f.stream, f.mimetype)}
+            data = {'code': code}
+            r = requests.post('https://api.pcloud.com/uploadtolink', data=data, files=files, timeout=120)
+            jr = r.json() if r.content else {}
+            ok = (r.status_code == 200 and jr.get('result') == 0)
+            return request.make_json_response({'success': ok, 'raw': jr}, status=200 if ok else 500)
+        except Exception as e:
+            _logger.exception('Error en proxy_upload: %s', e)
+            return request.make_json_response({'success': False, 'error': 'Proxy error'}, status=500)

@@ -75,7 +75,73 @@ class Reparaciones(models.Model):
         except Exception as create_error:
             _logger.error("Error durante la creación de la reparación: %s", str(create_error))
             raise
-    
+    # --- NUEVOS CAMPOS EN Reparaciones ---
+    pcloud_folder_id = fields.Char(string='pCloud Folder ID', copy=False)
+    pcloud_upload_code = fields.Char(string='pCloud Upload Code', copy=False)
+    pcloud_upload_expires = fields.Datetime(string='pCloud Upload Expira', copy=False)
+    pcloud_upload_maxfiles = fields.Integer(string='pCloud Max Files', copy=False)
+    pcloud_upload_maxspace = fields.Integer(string='pCloud Max Bytes', copy=False)
+
+    def _ensure_pcloud_folder(self):
+        """Asegura y devuelve el folder_id en pCloud para esta reparación."""
+        self.ensure_one()
+        # Reutiliza tu lógica existente para crear/obtener carpeta:
+        folder_id = self.pcloud_folder_id
+        if not folder_id:
+            folder_id = str(self.create_folder_in_pcloud())  # ya tienes create_folder_in_pcloud()
+            self.pcloud_folder_id = folder_id
+        return int(folder_id)
+
+    def _ensure_upload_link(self, file_count=1, total_size=10_000_000, hours_valid=3):
+        """Crea o reutiliza un upload link de pCloud (code) para subir desde el browser sin exponer token."""
+        self.ensure_one()
+        pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
+        if not pcloud_config or not pcloud_config.access_token:
+            raise ValidationError("Falta configuración de pCloud o access_token.")
+
+        # Reutilizar si sigue vigente y cubre el lote actual:
+        if (self.pcloud_upload_code and self.pcloud_upload_expires and
+            fields.Datetime.now() < self.pcloud_upload_expires and
+            (not self.pcloud_upload_maxfiles or self.pcloud_upload_maxfiles >= file_count) and
+            (not self.pcloud_upload_maxspace or self.pcloud_upload_maxspace >= total_size)):
+            return {
+                'code': self.pcloud_upload_code,
+                'expires': self.pcloud_upload_expires,
+            }
+
+        folder_id = self._ensure_pcloud_folder()
+
+        # Crear upload link en pCloud
+        import requests
+        from datetime import timedelta
+        expires_dt = fields.Datetime.now() + timedelta(hours=hours_valid)
+
+        url = f"{pcloud_config.hostname}/createuploadlink"
+        params = {
+            'access_token': pcloud_config.access_token,
+            'folderid': folder_id,
+            'comment': f"Upload desde Odoo – Reparación {self.name or self.id}",
+            'expire': fields.Datetime.to_string(expires_dt),
+            'maxspace': int(total_size),         # bytes
+            'maxfiles': int(file_count)
+        }
+        resp = requests.get(url, params=params, timeout=15)
+        data = resp.json()
+        if resp.status_code != 200 or data.get('result') != 0:
+            raise ValidationError(f"No se pudo crear upload link en pCloud: {data}")
+
+        # Guardar para reusar
+        self.write({
+            'pcloud_upload_code': data.get('code'),
+            'pcloud_upload_expires': expires_dt,
+            'pcloud_upload_maxfiles': file_count,
+            'pcloud_upload_maxspace': total_size,
+        })
+        return {
+            'code': data.get('code'),
+            'expires': expires_dt,
+        }
+
     def create_folder_in_pcloud(self):
         """Crea una subcarpeta dentro de 'fotos_reparaciones' en pCloud."""
         pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
