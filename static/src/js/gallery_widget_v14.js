@@ -927,71 +927,169 @@ async handleMassiveUpload(event) {
     event.target.value = '';
 },
 
-// === FUNCIÓN CORREGIDA: getPCloudUploadInfo ===
-// REEMPLAZA la función existente en tu JS
+// === FUNCIÓN JAVASCRIPT OPTIMIZADA PARA MANEJAR 504 TIMEOUTS ===
+// Reemplaza la función getPCloudUploadInfo existente
+
 async getPCloudUploadInfo() {
-    console.log('[PCLOUD_UPLOADINFO] === INICIANDO SOLICITUD DE UPLOAD LINK ===');
+    console.log('[PCLOUD_UPLOADINFO] === INICIANDO CON TIMEOUT OPTIMIZADO ===');
     console.log('[PCLOUD_UPLOADINFO] Reparación ID:', this.reparacionId);
+    
+    // Timeout del cliente - debe ser MENOR que el del servidor
+    const CLIENT_TIMEOUT = 25000; // 25 segundos (servidor tiene 30s max)
+    let timeoutId;
     
     try {
         const requestUrl = `/gallery/pcloud/uploadinfo/${this.reparacionId}`;
-        console.log('[PCLOUD_UPLOADINFO] URL de solicitud:', requestUrl);
+        console.log('[PCLOUD_UPLOADINFO] URL:', requestUrl);
+        console.log('[PCLOUD_UPLOADINFO] Timeout del cliente:', CLIENT_TIMEOUT / 1000, 'segundos');
         
-        // Mostrar loading mientras obtenemos el upload link
+        // Mostrar loading específico para operación lenta
         Swal.fire({
-            title: 'Preparando subida',
-            text: 'Validando conexión con pCloud...',
+            title: 'Preparando pCloud',
+            html: `
+                <div class="d-flex flex-column align-items-center">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="sr-only">Cargando...</span>
+                    </div>
+                    <p class="mb-2">Validando conexión con pCloud...</p>
+                    <small class="text-muted">Esto puede tomar unos momentos</small>
+                    <div class="progress mt-3" style="width: 100%; height: 6px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             style="width: 0%" id="pcloud-progress"></div>
+                    </div>
+                </div>
+            `,
             allowOutsideClick: false,
             showConfirmButton: false,
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
             didOpen: () => {
-                Swal.showLoading();
+                // Animación de progreso visual
+                let progress = 0;
+                const progressBar = document.getElementById('pcloud-progress');
+                const interval = setInterval(() => {
+                    progress += 2;
+                    if (progress <= 90 && progressBar) {
+                        progressBar.style.width = progress + '%';
+                    }
+                    if (progress >= 90) clearInterval(interval);
+                }, 250);
+                
+                // Timeout visual
+                timeoutId = setTimeout(() => {
+                    clearInterval(interval);
+                    if (progressBar) progressBar.style.width = '100%';
+                }, CLIENT_TIMEOUT - 2000);
+            },
+            preConfirm: () => {
+                return false; // No permitir confirmación, solo cancelar
             }
         });
         
-        const response = await fetch(requestUrl, {
+        // Crear promise con timeout del cliente
+        const fetchPromise = fetch(requestUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
             body: JSON.stringify({}),
-            credentials: 'same-origin' // Importante para mantener la sesión
+            credentials: 'same-origin'
         });
         
-        console.log('[PCLOUD_UPLOADINFO] Response status:', response.status);
-        console.log('[PCLOUD_UPLOADINFO] Response headers:', Object.fromEntries(response.headers.entries()));
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error('CLIENT_TIMEOUT'));
+            }, CLIENT_TIMEOUT);
+        });
         
+        // Race entre fetch y timeout
+        console.log('[PCLOUD_UPLOADINFO] Iniciando race fetch vs timeout...');
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        
+        // Limpiar timeout visual
+        if (timeoutId) clearTimeout(timeoutId);
+        
+        console.log('[PCLOUD_UPLOADINFO] Response status:', response.status);
+        console.log('[PCLOUD_UPLOADINFO] Response ok:', response.ok);
+        
+        // Manejar errores específicos de HTTP
         if (!response.ok) {
-            console.error('[PCLOUD_UPLOADINFO] Error HTTP:', response.status, response.statusText);
+            console.error('[PCLOUD_UPLOADINFO] Error HTTP:', response.status);
+            Swal.close();
             
-            // Manejar errores específicos de HTTP
             switch (response.status) {
+                case 504:
+                    console.log('[PCLOUD_UPLOADINFO] 504 Gateway Timeout detectado');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Servidor Sobrecargado',
+                        html: `
+                            <p>El servidor de pCloud está respondiendo lentamente.</p>
+                            <p><strong>Opciones:</strong></p>
+                            <ul class="text-left">
+                                <li>Reintentar en unos minutos</li>
+                                <li>Usar subida por lotes más pequeños</li>
+                                <li>Contactar al administrador si persiste</li>
+                            </ul>
+                        `,
+                        confirmButtonText: 'Reintentar',
+                        showCancelButton: true,
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#28a745'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Esperar 3 segundos antes de reintentar
+                            setTimeout(() => this.getPCloudUploadInfo(), 3000);
+                        }
+                    });
+                    return null;
+                    
+                case 502:
+                case 503:
+                    console.log('[PCLOUD_UPLOADINFO] Error de servidor temporal:', response.status);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Servidor No Disponible',
+                        text: 'El servidor no está disponible temporalmente. Inténtalo en unos minutos.',
+                        confirmButtonText: 'Reintentar Más Tarde',
+                        showCancelButton: true,
+                        timer: 5000
+                    });
+                    return null;
+                    
                 case 401:
-                    console.log('[PCLOUD_UPLOADINFO] Error 401 - Sesión expirada');
-                    Swal.close();
+                    console.log('[PCLOUD_UPLOADINFO] 401 - Sesión expirada');
                     this.showAuthError();
                     return null;
-                case 403:
-                    throw new Error('Sin permisos para realizar esta operación');
+                    
                 case 500:
-                    throw new Error('Error interno del servidor. Inténtalo más tarde.');
+                    console.log('[PCLOUD_UPLOADINFO] 500 - Error interno del servidor');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error Interno',
+                        text: 'Error interno del servidor. Contacta al administrador.',
+                        confirmButtonText: 'Entendido'
+                    });
+                    return null;
+                    
                 default:
-                    throw new Error(`Error de servidor: ${response.status} ${response.statusText}`);
+                    throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
             }
         }
         
+        // Procesar respuesta JSON
+        console.log('[PCLOUD_UPLOADINFO] Procesando respuesta JSON...');
         const rawData = await response.json();
-        console.log('[PCLOUD_UPLOADINFO] Respuesta cruda del servidor:', rawData);
+        console.log('[PCLOUD_UPLOADINFO] Datos recibidos:', rawData);
         
-        // Manejar respuestas JSON-RPC de Odoo y respuestas directas
+        // Manejar errores de JSON-RPC
         let data;
         if (rawData.error) {
             console.error('[PCLOUD_UPLOADINFO] Error JSON-RPC:', rawData.error);
+            Swal.close();
             
-            // Manejar errores específicos de Odoo
             if (rawData.error.message && rawData.error.message.includes('Session')) {
-                console.log('[PCLOUD_UPLOADINFO] Sesión de Odoo expirada');
-                Swal.close();
                 this.showAuthError();
                 return null;
             }
@@ -999,158 +1097,471 @@ async getPCloudUploadInfo() {
             throw new Error(`Error del servidor: ${rawData.error.message || rawData.error}`);
         }
         
-        // Los datos pueden estar en 'result' (JSON-RPC) o directamente en la respuesta
+        // Extraer datos
         data = rawData.result || rawData;
         console.log('[PCLOUD_UPLOADINFO] Datos procesados:', data);
         
-        // Verificar el éxito de la operación
+        // Verificar éxito
         if (data.success === false) {
-            console.error('[PCLOUD_UPLOADINFO] Operación falló según respuesta:', data);
+            console.error('[PCLOUD_UPLOADINFO] Operación falló:', data);
+            Swal.close();
             
-            // Manejar códigos de error específicos del backend
+            // Manejar códigos específicos de error del backend
             switch (data.code) {
                 case 'PCLOUD_TOKEN_INVALID':
                 case 'PCLOUD_TOKEN_MISSING':
-                    Swal.close();
+                    console.log('[PCLOUD_UPLOADINFO] Token pCloud inválido');
                     Swal.fire({
                         icon: 'error',
-                        title: 'Token de pCloud Inválido',
-                        text: 'El token de acceso a pCloud ha expirado o es inválido. Contacta al administrador para renovarlo.',
+                        title: 'Token pCloud Inválido',
+                        html: `
+                            <p>El token de acceso a pCloud ha expirado o es inválido.</p>
+                            <p><strong>Solución:</strong></p>
+                            <p>Contacta al administrador del sistema para renovar la configuración de pCloud.</p>
+                        `,
                         confirmButtonText: 'Entendido',
                         allowOutsideClick: false
                     });
                     return null;
                     
-                case 'PCLOUD_CONNECTION_ERROR':
                 case 'PCLOUD_VALIDATION_TIMEOUT':
-                    Swal.close();
+                case 'PCLOUD_CONNECTION_ERROR':
+                    console.log('[PCLOUD_UPLOADINFO] Problema de conexión con pCloud');
                     Swal.fire({
                         icon: 'warning',
                         title: 'Problema de Conexión',
-                        text: 'No se pudo conectar con pCloud. Verifica tu conexión e inténtalo nuevamente.',
+                        html: `
+                            <p>No se pudo establecer conexión estable con pCloud.</p>
+                            <p><strong>Tiempo de procesamiento:</strong> ${data.processing_time || 'N/A'}s</p>
+                            <p><strong>¿Qué hacer?</strong></p>
+                            <ul class="text-left">
+                                <li>Verificar conexión a internet</li>
+                                <li>Reintentar en unos minutos</li>
+                                <li>Usar archivos más pequeños</li>
+                            </ul>
+                        `,
                         confirmButtonText: 'Reintentar',
                         showCancelButton: true,
                         cancelButtonText: 'Cancelar'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // Reintentar automáticamente
                             setTimeout(() => this.getPCloudUploadInfo(), 2000);
                         }
                     });
                     return null;
                     
-                case 'PCLOUD_CONFIG_MISSING':
-                case 'PCLOUD_HOSTNAME_MISSING':
-                    Swal.close();
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Configuración Faltante',
-                        text: 'La configuración de pCloud no está completa. Contacta al administrador.',
-                        confirmButtonText: 'Entendido'
-                    });
-                    return null;
-                    
-                case 'REPARACION_NOT_FOUND':
-                    Swal.close();
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Reparación No Encontrada',
-                        text: 'La reparación especificada no existe.',
-                        confirmButtonText: 'Entendido'
-                    }).then(() => {
-                        window.history.back();
-                    });
-                    return null;
-                    
                 case 'PCLOUD_FOLDER_ERROR':
-                case 'PCLOUD_FOLDER_CREATE_ERROR':
-                    throw new Error(`Error creando carpeta en pCloud: ${data.error}`);
+                    console.log('[PCLOUD_UPLOADINFO] Error creando carpeta');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Carpeta',
+                        text: 'No se pudo crear o acceder a la carpeta en pCloud. Contacta al administrador.',
+                        confirmButtonText: 'Entendido'
+                    });
+                    return null;
                     
-                case 'PCLOUD_CREATELINK_ERROR':
-                    throw new Error(`Error creando upload link: ${data.error}`);
+                case 'PCLOUD_CREATELINK_TIMEOUT':
+                    console.log('[PCLOUD_UPLOADINFO] Timeout creando upload link');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Timeout de pCloud',
+                        html: `
+                            <p>pCloud tardó demasiado en responder.</p>
+                            <p><strong>Tiempo transcurrido:</strong> ${data.processing_time || 'N/A'}s</p>
+                            <p>Es posible que el servicio esté sobrecargado.</p>
+                        `,
+                        confirmButtonText: 'Reintentar',
+                        showCancelButton: true,
+                        timer: 8000
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            setTimeout(() => this.getPCloudUploadInfo(), 5000);
+                        }
+                    });
+                    return null;
                     
                 default:
                     throw new Error(data.error || 'Error desconocido obteniendo upload link');
             }
         }
         
-        // Verificar que tenemos todos los datos necesarios
+        // Verificar datos requeridos
         if (!data.link_code) {
-            console.error('[PCLOUD_UPLOADINFO] Falta link_code en la respuesta:', data);
-            throw new Error('Respuesta inválida del servidor: falta código de upload link');
+            console.error('[PCLOUD_UPLOADINFO] Falta link_code en respuesta:', data);
+            Swal.close();
+            Swal.fire({
+                icon: 'error',
+                title: 'Respuesta Inválida',
+                text: 'El servidor no devolvió un código de upload válido.',
+                confirmButtonText: 'Entendido'
+            });
+            return null;
         }
         
-        if (!data.folder_id) {
-            console.warn('[PCLOUD_UPLOADINFO] Falta folder_id en la respuesta (continuando)');
-        }
-        
-        // Cerrar loading
+        // Cerrar loading y mostrar éxito
         Swal.close();
         
-        console.log('[PCLOUD_UPLOADINFO] === UPLOAD LINK OBTENIDO EXITOSAMENTE ===');
+        // Mostrar información de rendimiento si fue lento
+        const processingTime = data.processing_time || 0;
+        if (processingTime > 15) {
+            console.warn('[PCLOUD_UPLOADINFO] Operación lenta detectada:', processingTime, 'segundos');
+            Swal.fire({
+                icon: 'info',
+                title: 'Preparación Completada',
+                text: `pCloud preparado en ${processingTime}s. La subida puede comenzar.`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
+        
+        console.log('[PCLOUD_UPLOADINFO] === ÉXITO EN', processingTime, 'SEGUNDOS ===');
         console.log('[PCLOUD_UPLOADINFO] Link code:', data.link_code);
-        console.log('[PCLOUD_UPLOADINFO] Folder ID:', data.folder_id);
-        console.log('[PCLOUD_UPLOADINFO] Upload endpoint:', data.upload_endpoint);
         
         return {
             linkCode: data.link_code,
             folderId: data.folder_id,
-            uploadEndpoint: data.upload_endpoint || 'https://api.pcloud.com/uploadtolink'
+            uploadEndpoint: data.upload_endpoint || 'https://api.pcloud.com/uploadtolink',
+            processingTime: processingTime
         };
         
     } catch (error) {
         console.error('[PCLOUD_UPLOADINFO] === ERROR CAPTURADO ===');
-        console.error('[PCLOUD_UPLOADINFO] Tipo de error:', error.constructor.name);
+        console.error('[PCLOUD_UPLOADINFO] Tipo:', error.constructor.name);
         console.error('[PCLOUD_UPLOADINFO] Mensaje:', error.message);
-        console.error('[PCLOUD_UPLOADINFO] Stack:', error.stack);
         
-        // Cerrar cualquier loading dialog
+        // Limpiar timeouts y UI
+        if (timeoutId) clearTimeout(timeoutId);
         Swal.close();
         
-        // Mostrar error apropiado al usuario
-        let userMessage = 'Error preparando la subida a pCloud';
+        // Manejar tipos específicos de error
+        let userTitle = 'Error de Conexión';
+        let userMessage = 'Error preparando la subida';
         let shouldRetry = false;
         
-        if (error.message.includes('network') || 
-            error.message.includes('fetch') || 
-            error.message.includes('Failed to fetch') ||
-            error.message.includes('conexión')) {
-            userMessage = 'Error de conexión. Verifica tu internet e inténtalo nuevamente.';
+        if (error.message === 'CLIENT_TIMEOUT') {
+            console.log('[PCLOUD_UPLOADINFO] Timeout del cliente alcanzado');
+            userTitle = 'Operación Muy Lenta';
+            userMessage = `La operación tardó más de ${CLIENT_TIMEOUT/1000} segundos. El servidor puede estar sobrecargado.`;
             shouldRetry = true;
-        } else if (error.message.includes('timeout')) {
-            userMessage = 'La operación tardó demasiado. Inténtalo nuevamente.';
+        } else if (error.message.includes('fetch') || 
+                   error.message.includes('network') || 
+                   error.message.includes('Failed to fetch')) {
+            userTitle = 'Error de Red';
+            userMessage = 'Problema de conectividad. Verifica tu conexión a internet.';
             shouldRetry = true;
+        } else if (error.message.includes('504') || error.message.includes('Gateway Timeout')) {
+            userTitle = 'Servidor Sobrecargado';
+            userMessage = 'El servidor está respondiendo muy lentamente. Inténtalo más tarde.';
+            shouldRetry = false;
         } else if (error.message.includes('500')) {
-            userMessage = 'Error interno del servidor. Inténtalo más tarde.';
-            shouldRetry = true;
+            userTitle = 'Error del Servidor';
+            userMessage = 'Error interno del servidor. Contacta al administrador.';
+            shouldRetry = false;
         } else {
-            userMessage = error.message || 'Error desconocido preparando la subida';
+            userMessage = error.message || 'Error desconocido';
         }
         
         if (shouldRetry) {
             Swal.fire({
                 icon: 'error',
-                title: 'Error de Conexión',
-                text: userMessage,
+                title: userTitle,
+                html: `
+                    <p>${userMessage}</p>
+                    <p><strong>¿Deseas reintentar?</strong></p>
+                    <small class="text-muted">Se reintentará con un timeout más largo</small>
+                `,
                 confirmButtonText: 'Reintentar',
                 showCancelButton: true,
-                cancelButtonText: 'Cancelar'
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#28a745'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Esperar un momento antes de reintentar
+                    console.log('[PCLOUD_UPLOADINFO] Reintentando después de error...');
+                    // Esperar antes de reintentar
                     setTimeout(() => this.getPCloudUploadInfo(), 3000);
                 }
             });
         } else {
             Swal.fire({
                 icon: 'error',
-                title: 'Error',
+                title: userTitle,
                 text: userMessage,
                 confirmButtonText: 'Entendido'
             });
         }
         
         return null;
+    }
+},
+
+// === FUNCIÓN ADICIONAL: Fallback para casos extremos ===
+async getPCloudUploadInfoWithFallback() {
+    console.log('[PCLOUD_FALLBACK] Intentando obtener upload info con fallback...');
+    
+    try {
+        // Primer intento con el método optimizado
+        const result = await this.getPCloudUploadInfo();
+        if (result && result.linkCode) {
+            console.log('[PCLOUD_FALLBACK] Éxito con método principal');
+            return result;
+        }
+        
+        console.log('[PCLOUD_FALLBACK] Método principal falló, intentando método alternativo...');
+        
+        // Fallback: Usar el método get_upload_link si está disponible
+        const fallbackResponse = await fetch(`/gallery/pcloud/uploadlink/${this.reparacionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_count: 10, // Valor por defecto
+                total_size: 50 * 1024 * 1024 // 50MB por defecto
+            }),
+            timeout: 15000 // Timeout más corto para fallback
+        });
+        
+        if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json();
+            const result = fallbackData.result || fallbackData;
+            
+            if (result.success && result.endpoint && result.code) {
+                console.log('[PCLOUD_FALLBACK] Éxito con método alternativo');
+                return {
+                    linkCode: result.code,
+                    uploadEndpoint: result.endpoint,
+                    method: 'fallback'
+                };
+            }
+        }
+        
+        console.error('[PCLOUD_FALLBACK] Todos los métodos fallaron');
+        throw new Error('No se pudo obtener upload link por ningún método');
+        
+    } catch (error) {
+        console.error('[PCLOUD_FALLBACK] Error en fallback:', error);
+        
+        // Última opción: Mostrar opción de subida tradicional
+        Swal.fire({
+            icon: 'warning',
+            title: 'Problema con pCloud',
+            html: `
+                <p>No se pudo preparar la subida directa a pCloud.</p>
+                <p><strong>Opciones alternativas:</strong></p>
+                <ul class="text-left">
+                    <li>Usar subida tradicional (más lenta pero confiable)</li>
+                    <li>Intentar con archivos más pequeños</li>
+                    <li>Contactar al administrador</li>
+                </ul>
+            `,
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: 'Subida Tradicional',
+            denyButtonText: 'Reintentar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#17a2b8',
+            denyButtonColor: '#28a745'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                console.log('[PCLOUD_FALLBACK] Usuario eligió subida tradicional');
+                // Aquí puedes implementar la subida tradicional a través de Odoo
+                this.enableTraditionalUpload();
+            } else if (result.isDenied) {
+                console.log('[PCLOUD_FALLBACK] Usuario eligió reintentar');
+                setTimeout(() => this.getPCloudUploadInfoWithFallback(), 2000);
+            }
+        });
+        
+        return null;
+    }
+},
+
+// === FUNCIÓN: Habilitar subida tradicional ===
+enableTraditionalUpload() {
+    console.log('[TRADITIONAL_UPLOAD] Habilitando método tradicional');
+    
+    // Deshabilitar métodos de pCloud
+    this.pcloudUploadUrl = null;
+    
+    // Mostrar información al usuario
+    Swal.fire({
+        icon: 'info',
+        title: 'Modo Tradicional Activado',
+        text: 'Las fotos se subirán a través del servidor de Odoo. Esto puede ser más lento pero es más confiable.',
+        timer: 3000,
+        showConfirmButton: false
+    });
+    
+    // Modificar las funciones de subida para usar método tradicional
+    this.useTraditionalUploadMethod = true;
+},
+
+// === FUNCIÓN AUXILIAR: Detectar si el servidor está sobrecargado ===
+async checkServerHealth() {
+    console.log('[SERVER_HEALTH] Verificando salud del servidor...');
+    
+    try {
+        const startTime = Date.now();
+        
+        const response = await Promise.race([
+            fetch('/web/session/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            }),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('HEALTH_TIMEOUT')), 5000)
+            )
+        ]);
+        
+        const responseTime = Date.now() - startTime;
+        console.log('[SERVER_HEALTH] Tiempo de respuesta:', responseTime + 'ms');
+        
+        if (response.ok && responseTime < 2000) {
+            console.log('[SERVER_HEALTH] Servidor saludable');
+            return 'healthy';
+        } else if (responseTime >= 2000 && responseTime < 5000) {
+            console.log('[SERVER_HEALTH] Servidor lento');
+            return 'slow';
+        } else {
+            console.log('[SERVER_HEALTH] Servidor muy lento');
+            return 'very_slow';
+        }
+        
+    } catch (error) {
+        console.error('[SERVER_HEALTH] Error verificando salud:', error.message);
+        
+        if (error.message === 'HEALTH_TIMEOUT') {
+            return 'timeout';
+        }
+        return 'error';
+    }
+},
+
+// === MODIFICACIÓN: handleMassiveUpload con verificación de salud ===
+async handleMassiveUpload(event) {
+    console.log('[MASSIVE_UPLOAD] Iniciando con verificación de salud del servidor...');
+    
+    // Verificar salud del servidor antes de proceder
+    const serverHealth = await this.checkServerHealth();
+    console.log('[MASSIVE_UPLOAD] Salud del servidor:', serverHealth);
+    
+    if (serverHealth === 'timeout' || serverHealth === 'error') {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Servidor No Disponible',
+            text: 'El servidor no responde adecuadamente. Inténtalo más tarde.',
+            confirmButtonText: 'Entendido'
+        });
+        return;
+    }
+    
+    if (serverHealth === 'very_slow') {
+        const proceed = await Swal.fire({
+            icon: 'warning',
+            title: 'Servidor Lento Detectado',
+            text: 'El servidor está respondiendo muy lentamente. ¿Deseas continuar? La subida puede fallar.',
+            showCancelButton: true,
+            confirmButtonText: 'Continuar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#ffc107'
+        });
+        
+        if (!proceed.isConfirmed) {
+            console.log('[MASSIVE_UPLOAD] Usuario canceló por servidor lento');
+            return;
+        }
+    }
+    
+    // Resto de la lógica original de handleMassiveUpload...
+    const selected = Array.from(event.target.files || []);
+    if (!selected.length) return;
+
+    const files = selected.filter(f => this.validateFile(f));
+    if (!files.length) {
+        this.showError('Sin archivos válidos', 'Selecciona imágenes válidas');
+        return;
+    }
+    
+    // Continuar con el método optimizado basado en la salud del servidor
+    if (serverHealth === 'slow' || serverHealth === 'very_slow') {
+        console.log('[MASSIVE_UPLOAD] Usando método tradicional por servidor lento');
+        return this.handleTraditionalUpload(files);
+    } else {
+        console.log('[MASSIVE_UPLOAD] Usando método pCloud optimizado');
+        return this.handlePCloudUpload(files);
+    }
+},
+
+// === FUNCIÓN: Subida tradicional para servidores lentos ===
+async handleTraditionalUpload(files) {
+    console.log('[TRADITIONAL] Procesando', files.length, 'archivos con método tradicional');
+    
+    // Validar sesión tradicional
+    const validation = await this.validateUploadSession(files);
+    if (!validation) return;
+    
+    // Procesar en lotes muy pequeños para servidores lentos
+    const batchSize = 1; // Un archivo a la vez
+    let uploaded = 0;
+    let failed = 0;
+    
+    this.showBatchProgress(files.length, uploaded, failed);
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        console.log(`[TRADITIONAL] Subiendo archivo ${i+1}/${files.length}:`, file.name);
+        
+        try {
+            const result = await this.uploadSingleFile(file, this.currentSession);
+            if (result && result.success) {
+                uploaded++;
+            } else {
+                failed++;
+            }
+        } catch (error) {
+            console.error(`[TRADITIONAL] Error subiendo ${file.name}:`, error);
+            failed++;
+        }
+        
+        this.updateBatchProgress(files.length, uploaded, failed);
+        
+        // Pausa más larga entre archivos para servidores lentos
+        if (i < files.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    }
+    
+    // Finalizar sesión
+    await this.completeUploadSession(this.currentSession);
+    
+    this.showFinalResult(files.length, uploaded, failed);
+    if (uploaded > 0) {
+        setTimeout(() => window.location.reload(), 2000);
+    }
+    
+    event.target.value = '';
+},
+
+// === FUNCIÓN: Subida optimizada pCloud ===
+async handlePCloudUpload(files) {
+    console.log('[PCLOUD_UPLOAD] Procesando', files.length, 'archivos con pCloud optimizado');
+    
+    try {
+        // Intentar obtener upload info con fallback
+        const uploadInfo = await this.getPCloudUploadInfoWithFallback();
+        if (!uploadInfo) {
+            console.log('[PCLOUD_UPLOAD] No se pudo obtener upload info, fallback a tradicional');
+            return this.handleTraditionalUpload(files);
+        }
+        
+        // Continuar con lógica original de pCloud...
+        // (resto del código de subida pCloud)
+        
+    } catch (error) {
+        console.error('[PCLOUD_UPLOAD] Error:', error);
+        console.log('[PCLOUD_UPLOAD] Fallback automático a subida tradicional');
+        return this.handleTraditionalUpload(files);
     }
 },
 

@@ -485,17 +485,17 @@ class GalleryController(http.Controller):
     @http.route('/gallery/pcloud/uploadinfo/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
     def pcloud_uploadinfo(self, reparacion_id):
         """
-        Crea/obtiene un upload link de pCloud con validación previa de token.
-        Incluye logs detallados y manejo robusto de errores.
+        Versión optimizada para evitar 504 timeout.
+        Timeouts agresivos y validación rápida.
         """
-        _logger.info("[PCLOUD_UPLOADINFO] === INICIANDO CREACIÓN DE UPLOAD LINK ===")
+        start_time = time.time()
+        _logger.info("[PCLOUD_UPLOADINFO] === INICIO OPTIMIZADO (timeout: 30s max) ===")
         _logger.info("[PCLOUD_UPLOADINFO] Reparación ID: %s", reparacion_id)
         
         try:
             env = request.env
-            Foto = env['reparaciones.foto'].sudo()
             
-            # 1. Verificar que la reparación existe
+            # 1. Verificaciones rápidas (sin DB queries costosas)
             reparacion = env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
             if not reparacion.exists():
                 _logger.error("[PCLOUD_UPLOADINFO] Reparación no encontrada: %s", reparacion_id)
@@ -505,221 +505,279 @@ class GalleryController(http.Controller):
                     'code': 'REPARACION_NOT_FOUND'
                 }
             
-            _logger.info("[PCLOUD_UPLOADINFO] Reparación encontrada: %s - %s", 
-                        reparacion.id, reparacion.name or 'Sin nombre')
+            elapsed = time.time() - start_time
+            _logger.info("[PCLOUD_UPLOADINFO] Reparación verificada en %.2fs", elapsed)
             
-            # 2. Obtener configuración de pCloud
+            # 2. Configuración de pCloud (query simple)
             pconf = env['pcloud.configuracion'].sudo().search([], limit=1)
-            if not pconf:
-                _logger.error("[PCLOUD_UPLOADINFO] No se encontró configuración de pCloud")
+            if not pconf or not pconf.access_token or not pconf.hostname:
+                _logger.error("[PCLOUD_UPLOADINFO] Configuración pCloud incompleta")
                 return {
                     'success': False, 
-                    'error': 'Configuración de pCloud no encontrada',
+                    'error': 'Configuración de pCloud incompleta',
                     'code': 'PCLOUD_CONFIG_MISSING'
                 }
             
-            if not pconf.access_token:
-                _logger.error("[PCLOUD_UPLOADINFO] Token de acceso no configurado")
-                return {
-                    'success': False, 
-                    'error': 'Token de acceso de pCloud no configurado',
-                    'code': 'PCLOUD_TOKEN_MISSING'
-                }
+            elapsed = time.time() - start_time
+            _logger.info("[PCLOUD_UPLOADINFO] Config obtenida en %.2fs", elapsed)
             
-            if not pconf.hostname:
-                _logger.error("[PCLOUD_UPLOADINFO] Hostname no configurado")
-                return {
-                    'success': False, 
-                    'error': 'Hostname de pCloud no configurado',
-                    'code': 'PCLOUD_HOSTNAME_MISSING'
-                }
-            
-            _logger.info("[PCLOUD_UPLOADINFO] Configuración pCloud obtenida - Hostname: %s", pconf.hostname)
-            
-            # 3. VALIDACIÓN CRÍTICA: Verificar token antes de usarlo
-            _logger.info("[PCLOUD_UPLOADINFO] Validando token de acceso...")
+            # 3. VALIDACIÓN CRÍTICA: Token con timeout muy corto
+            _logger.info("[PCLOUD_UPLOADINFO] Validando token (timeout: 5s)...")
             try:
                 validate_url = f"{pconf.hostname}/userinfo"
                 validate_params = {'access_token': pconf.access_token}
                 
-                _logger.info("[PCLOUD_UPLOADINFO] Enviando solicitud de validación a: %s", validate_url)
-                validate_response = requests.get(validate_url, params=validate_params, timeout=10)
-                validate_data = validate_response.json() if validate_response.content else {}
+                # Timeout muy corto para validación
+                validate_response = requests.get(
+                    validate_url, 
+                    params=validate_params, 
+                    timeout=5  # Solo 5 segundos
+                )
                 
-                _logger.info("[PCLOUD_UPLOADINFO] Respuesta de validación - Status: %s, Data: %s", 
-                            validate_response.status_code, validate_data)
+                elapsed = time.time() - start_time
+                _logger.info("[PCLOUD_UPLOADINFO] Token validado en %.2fs", elapsed)
                 
                 if validate_response.status_code != 200:
-                    _logger.error("[PCLOUD_UPLOADINFO] Error HTTP en validación de token: %s", 
-                                validate_response.status_code)
+                    _logger.error("[PCLOUD_UPLOADINFO] Error HTTP validación: %s", validate_response.status_code)
                     return {
                         'success': False, 
-                        'error': 'Error de conexión con pCloud durante validación',
-                        'code': 'PCLOUD_VALIDATION_HTTP_ERROR',
-                        'details': f'HTTP {validate_response.status_code}'
+                        'error': 'Error de conexión con pCloud',
+                        'code': 'PCLOUD_CONNECTION_ERROR'
                     }
                 
+                validate_data = validate_response.json() if validate_response.content else {}
                 if validate_data.get('result') != 0:
-                    error_msg = validate_data.get('error', 'Token inválido o expirado')
-                    _logger.error("[PCLOUD_UPLOADINFO] Token inválido - Error: %s, Data: %s", 
-                                error_msg, validate_data)
+                    error_msg = validate_data.get('error', 'Token inválido')
+                    _logger.error("[PCLOUD_UPLOADINFO] Token inválido: %s", error_msg)
                     return {
                         'success': False, 
                         'error': f'Token de pCloud inválido: {error_msg}',
-                        'code': 'PCLOUD_TOKEN_INVALID',
-                        'pcloud_error': validate_data
+                        'code': 'PCLOUD_TOKEN_INVALID'
                     }
-                
-                user_email = validate_data.get('email', 'No disponible')
-                _logger.info("[PCLOUD_UPLOADINFO] Token válido - Usuario: %s", user_email)
-                
+                    
             except requests.exceptions.Timeout:
-                _logger.error("[PCLOUD_UPLOADINFO] Timeout validando token de pCloud")
+                _logger.error("[PCLOUD_UPLOADINFO] Timeout validando token (>5s)")
                 return {
                     'success': False, 
-                    'error': 'Timeout validando conexión con pCloud',
+                    'error': 'Timeout validando pCloud. El servidor está lento.',
                     'code': 'PCLOUD_VALIDATION_TIMEOUT'
                 }
-            except requests.exceptions.ConnectionError as conn_error:
-                _logger.error("[PCLOUD_UPLOADINFO] Error de conexión validando token: %s", str(conn_error))
+            except Exception as e:
+                _logger.error("[PCLOUD_UPLOADINFO] Error validando token: %s", str(e))
                 return {
                     'success': False, 
                     'error': 'Error de conexión con pCloud',
-                    'code': 'PCLOUD_CONNECTION_ERROR',
-                    'details': str(conn_error)
-                }
-            except Exception as e:
-                _logger.exception("[PCLOUD_UPLOADINFO] Error inesperado validando token: %s", str(e))
-                return {
-                    'success': False, 
-                    'error': 'Error interno validando token de pCloud',
-                    'code': 'PCLOUD_VALIDATION_ERROR',
-                    'details': str(e)
+                    'code': 'PCLOUD_CONNECTION_ERROR'
                 }
             
-            # 4. Obtener o crear folder_id
-            _logger.info("[PCLOUD_UPLOADINFO] Obteniendo folder_id para la reparación...")
+            # 4. Obtener folder_id CON TIMEOUT OPTIMIZADO
+            _logger.info("[PCLOUD_UPLOADINFO] Obteniendo folder_id (timeout optimizado)...")
             try:
-                folder_id = Foto._obtener_folder_id(reparacion, pconf)
+                folder_id = self._get_folder_id_fast(reparacion, pconf)
                 if not folder_id:
-                    _logger.error("[PCLOUD_UPLOADINFO] No se pudo obtener folder_id")
+                    _logger.error("[PCLOUD_UPLOADINFO] Error obteniendo folder_id")
                     return {
                         'success': False, 
-                        'error': 'No se pudo crear/obtener la carpeta en pCloud',
+                        'error': 'Error creando carpeta en pCloud',
                         'code': 'PCLOUD_FOLDER_ERROR'
                     }
                 
-                _logger.info("[PCLOUD_UPLOADINFO] Folder ID obtenido exitosamente: %s", folder_id)
+                elapsed = time.time() - start_time
+                _logger.info("[PCLOUD_UPLOADINFO] Folder ID obtenido en %.2fs: %s", elapsed, folder_id)
                 
-            except Exception as folder_error:
-                _logger.exception("[PCLOUD_UPLOADINFO] Error obteniendo folder_id: %s", str(folder_error))
+            except Exception as e:
+                elapsed = time.time() - start_time
+                _logger.error("[PCLOUD_UPLOADINFO] Error folder_id en %.2fs: %s", elapsed, str(e))
                 return {
                     'success': False, 
-                    'error': f'Error creando carpeta: {str(folder_error)}',
-                    'code': 'PCLOUD_FOLDER_CREATE_ERROR'
+                    'error': f'Error creando carpeta: {str(e)}',
+                    'code': 'PCLOUD_FOLDER_ERROR'
                 }
             
-            # 5. Crear upload link
-            _logger.info("[PCLOUD_UPLOADINFO] Creando upload link...")
+            # 5. Crear upload link CON TIMEOUT CORTO
+            _logger.info("[PCLOUD_UPLOADINFO] Creando upload link (timeout: 8s)...")
             try:
                 url = f"{pconf.hostname}/createuploadlink"
                 params = {
                     'access_token': pconf.access_token,
                     'folderid': folder_id,
-                    'comment': f"Upload desde Odoo - Reparación {reparacion.name or reparacion.id}",
-                    # Parámetros opcionales que puedes descomentar según necesidades:
-                    # 'maxfiles': 50,        # Máximo número de archivos
-                    # 'maxspace': 104857600, # 100MB en bytes
-                    # 'expires': int(time.time()) + 3600  # Expira en 1 hora
+                    'comment': f"Odoo Upload - Reparación {reparacion_id}"
                 }
                 
-                _logger.info("[PCLOUD_UPLOADINFO] Enviando solicitud createuploadlink a: %s", url)
-                _logger.info("[PCLOUD_UPLOADINFO] Parámetros: folderid=%s, comment=%s", 
-                            folder_id, params.get('comment'))
-                
-                response = requests.get(url, params=params, timeout=15)
+                # Timeout corto para upload link
+                response = requests.get(url, params=params, timeout=8)
                 data = response.json() if response.content else {}
                 
-                _logger.info("[PCLOUD_UPLOADINFO] Respuesta createuploadlink - Status: %s, Data: %s", 
-                            response.status_code, data)
+                elapsed = time.time() - start_time
+                _logger.info("[PCLOUD_UPLOADINFO] Upload link response en %.2fs", elapsed)
                 
                 if response.status_code != 200:
-                    _logger.error("[PCLOUD_UPLOADINFO] Error HTTP creando upload link: %s", 
-                                response.status_code)
+                    _logger.error("[PCLOUD_UPLOADINFO] HTTP Error: %s", response.status_code)
                     return {
                         'success': False,
-                        'error': f'Error HTTP creando upload link: {response.status_code}',
-                        'code': 'PCLOUD_CREATELINK_HTTP_ERROR'
+                        'error': f'Error HTTP: {response.status_code}',
+                        'code': 'PCLOUD_HTTP_ERROR'
                     }
                 
                 if data.get('result') != 0:
-                    pcloud_error = data.get('error', 'Error desconocido creando upload link')
-                    _logger.error("[PCLOUD_UPLOADINFO] Error creando upload link - pCloud Error: %s, Data: %s", 
-                                pcloud_error, data)
+                    error_msg = data.get('error', 'Error desconocido')
+                    _logger.error("[PCLOUD_UPLOADINFO] pCloud error: %s", error_msg)
                     return {
                         'success': False,
-                        'error': f'Error de pCloud creando upload link: {pcloud_error}',
-                        'code': 'PCLOUD_CREATELINK_ERROR',
-                        'pcloud_error': data
+                        'error': f'Error de pCloud: {error_msg}',
+                        'code': 'PCLOUD_API_ERROR'
                     }
                 
                 upload_code = data.get('code')
                 if not upload_code:
-                    _logger.error("[PCLOUD_UPLOADINFO] No se obtuvo código de upload link en respuesta: %s", data)
+                    _logger.error("[PCLOUD_UPLOADINFO] No se recibió código: %s", data)
                     return {
                         'success': False,
-                        'error': 'Respuesta inválida de pCloud (falta código)',
-                        'code': 'PCLOUD_INVALID_RESPONSE',
-                        'pcloud_raw': data
+                        'error': 'Respuesta inválida de pCloud',
+                        'code': 'PCLOUD_INVALID_RESPONSE'
                     }
                 
-                _logger.info("[PCLOUD_UPLOADINFO] Upload link creado exitosamente - Code: %s", upload_code)
-                
-                # 6. Respuesta exitosa
-                success_response = {
-                    'success': True,
-                    'link_code': upload_code,
-                    'folder_id': folder_id,
-                    'reparacion_id': reparacion_id,
-                    'upload_endpoint': 'https://api.pcloud.com/uploadtolink'  # Endpoint público para usar el code
-                }
-                
-                _logger.info("[PCLOUD_UPLOADINFO] === UPLOAD LINK CREADO EXITOSAMENTE ===")
-                _logger.info("[PCLOUD_UPLOADINFO] Resultado: %s", success_response)
-                
-                return success_response
-                
             except requests.exceptions.Timeout:
-                _logger.error("[PCLOUD_UPLOADINFO] Timeout creando upload link")
+                elapsed = time.time() - start_time
+                _logger.error("[PCLOUD_UPLOADINFO] Timeout creando upload link en %.2fs", elapsed)
                 return {
                     'success': False, 
-                    'error': 'Timeout creando upload link en pCloud',
+                    'error': 'Timeout creando upload link (>8s)',
                     'code': 'PCLOUD_CREATELINK_TIMEOUT'
                 }
-            except requests.exceptions.ConnectionError as conn_error:
-                _logger.error("[PCLOUD_UPLOADINFO] Error de conexión creando upload link: %s", str(conn_error))
-                return {
-                    'success': False, 
-                    'error': 'Error de conexión creando upload link',
-                    'code': 'PCLOUD_CREATELINK_CONNECTION_ERROR'
-                }
             except Exception as e:
-                _logger.exception("[PCLOUD_UPLOADINFO] Error inesperado creando upload link: %s", str(e))
+                elapsed = time.time() - start_time
+                _logger.error("[PCLOUD_UPLOADINFO] Error upload link en %.2fs: %s", elapsed, str(e))
                 return {
                     'success': False, 
-                    'error': f'Error interno creando upload link: {str(e)}',
-                    'code': 'PCLOUD_CREATELINK_INTERNAL_ERROR'
+                    'error': f'Error creando upload link: {str(e)}',
+                    'code': 'PCLOUD_CREATELINK_ERROR'
                 }
-                
+            
+            # 6. Respuesta exitosa
+            total_elapsed = time.time() - start_time
+            _logger.info("[PCLOUD_UPLOADINFO] === COMPLETADO EN %.2fs ===", total_elapsed)
+            
+            return {
+                'success': True,
+                'link_code': upload_code,
+                'folder_id': folder_id,
+                'reparacion_id': reparacion_id,
+                'upload_endpoint': 'https://api.pcloud.com/uploadtolink',
+                'processing_time': round(total_elapsed, 2)
+            }
+            
         except Exception as e:
-            _logger.exception("[PCLOUD_UPLOADINFO] ERROR CRÍTICO en pcloud_uploadinfo: %s", str(e))
+            total_elapsed = time.time() - start_time
+            _logger.exception("[PCLOUD_UPLOADINFO] ERROR CRÍTICO en %.2fs: %s", total_elapsed, str(e))
             request.env.cr.rollback()
+            
             return {
                 'success': False, 
                 'error': 'Error interno del servidor',
                 'code': 'INTERNAL_SERVER_ERROR',
-                'details': str(e)
+                'processing_time': round(total_elapsed, 2)
             }
+
+    def _get_folder_id_fast(self, reparacion, pcloud_config):
+        """
+        Versión optimizada de obtener folder_id con timeouts cortos.
+        Evita operaciones que puedan tardar más de 20 segundos total.
+        """
+        _logger.info("[FOLDER_FAST] Iniciando obtención rápida de folder_id")
+        
+        try:
+            # Nombre de carpeta simplificado
+            machine_name = reparacion.maquina_id.name.name if reparacion.maquina_id and reparacion.maquina_id.name else 'Sin_Maquina'
+            serie = reparacion.serie_id or 'Sin_Serie'
+            folder_name = f"{machine_name}_{serie}"
+            
+            _logger.info("[FOLDER_FAST] Carpeta objetivo: %s", folder_name)
+            
+            # 1. Verificar carpeta raíz fotos_reparaciones con timeout corto
+            root_folder_id = self._get_or_create_folder_fast('fotos_reparaciones', 0, pcloud_config, timeout=5)
+            if not root_folder_id:
+                raise Exception("No se pudo obtener carpeta raíz")
+            
+            _logger.info("[FOLDER_FAST] Carpeta raíz ID: %s", root_folder_id)
+            
+            # 2. Verificar carpeta específica con timeout corto
+            target_folder_id = self._get_or_create_folder_fast(folder_name, root_folder_id, pcloud_config, timeout=8)
+            if not target_folder_id:
+                raise Exception(f"No se pudo obtener carpeta {folder_name}")
+            
+            _logger.info("[FOLDER_FAST] Carpeta objetivo ID: %s", target_folder_id)
+            return target_folder_id
+            
+        except Exception as e:
+            _logger.error("[FOLDER_FAST] Error: %s", str(e))
+            return None
+
+    def _get_or_create_folder_fast(self, folder_name, parent_id, pcloud_config, timeout=6):
+        """
+        Obtiene o crea carpeta con timeout específico y manejo de errores optimizado.
+        """
+        _logger.info("[FOLDER_FAST] Procesando carpeta '%s' en padre %s (timeout: %ss)", 
+                    folder_name, parent_id, timeout)
+        
+        try:
+            # 1. Intentar listar carpetas existentes
+            list_url = f"{pcloud_config.hostname}/listfolder"
+            params = {
+                'access_token': pcloud_config.access_token,
+                'folderid': parent_id,
+                'nofiles': 1  # Solo carpetas, más rápido
+            }
+            
+            response = requests.get(list_url, params=params, timeout=timeout)
+            if response.status_code != 200:
+                _logger.warning("[FOLDER_FAST] HTTP %s listando carpeta", response.status_code)
+                raise Exception(f"HTTP {response.status_code} listando carpetas")
+            
+            result = response.json()
+            if result.get('result') != 0:
+                _logger.warning("[FOLDER_FAST] pCloud error listando: %s", result.get('error'))
+                raise Exception(f"pCloud error: {result.get('error')}")
+            
+            # 2. Buscar carpeta existente
+            contents = result.get('metadata', {}).get('contents', [])
+            for item in contents:
+                if item.get('isfolder') and item.get('name') == folder_name:
+                    folder_id = item.get('folderid')
+                    _logger.info("[FOLDER_FAST] Carpeta existente encontrada: %s", folder_id)
+                    return folder_id
+            
+            # 3. Crear nueva carpeta si no existe
+            _logger.info("[FOLDER_FAST] Creando nueva carpeta: %s", folder_name)
+            create_url = f"{pcloud_config.hostname}/createfolder"
+            create_params = {
+                'access_token': pcloud_config.access_token,
+                'name': folder_name,
+                'folderid': parent_id
+            }
+            
+            create_response = requests.get(create_url, params=create_params, timeout=timeout)
+            if create_response.status_code != 200:
+                raise Exception(f"HTTP {create_response.status_code} creando carpeta")
+            
+            create_result = create_response.json()
+            if create_result.get('result') != 0:
+                error_msg = create_result.get('error', 'Error desconocido')
+                raise Exception(f"pCloud error creando carpeta: {error_msg}")
+            
+            new_folder_id = create_result.get('metadata', {}).get('folderid')
+            if not new_folder_id:
+                raise Exception("No se recibió ID de carpeta creada")
+            
+            _logger.info("[FOLDER_FAST] Nueva carpeta creada: %s", new_folder_id)
+            return new_folder_id
+            
+        except requests.exceptions.Timeout:
+            _logger.error("[FOLDER_FAST] Timeout (>%ss) procesando carpeta '%s'", timeout, folder_name)
+            return None
+        except Exception as e:
+            _logger.error("[FOLDER_FAST] Error procesando carpeta '%s': %s", folder_name, str(e))
+            return None
 
     @http.route('/gallery/pcloud/register', type='json', auth='user', methods=['POST'])
     def pcloud_register_file(self, **payload):
