@@ -334,8 +334,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
         // NUEVA FUNCIÓN: Comprimir imagen antes de subir
-        async compressImage(file, maxSizeMB = 8, quality = 0.8) {
-            console.log(`Comprimiendo ${file.name}: ${(file.size/1024/1024).toFixed(2)}MB`);
+        async compressImage(file, maxSizeMB = 6, quality = 0.8) {
+            console.log(`Comprimiendo ${file.name}: ${(file.size/1024/1024).toFixed(2)}MB -> objetivo: ${maxSizeMB}MB`);
             
             return new Promise((resolve) => {
                 const canvas = document.createElement('canvas');
@@ -343,9 +343,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const img = new Image();
                 
                 img.onload = () => {
-                    // Calcular nuevas dimensiones manteniendo proporción
                     let { width, height } = img;
-                    const maxDimension = 1920; // Máximo HD
+                    
+                    // Reducir dimensiones más agresivamente para archivos problemáticos
+                    const maxDimension = maxSizeMB < 5 ? 1400 : 1600; // Dimensiones menores para compresión agresiva
                     
                     if (width > height) {
                         if (width > maxDimension) {
@@ -361,27 +362,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     canvas.width = width;
                     canvas.height = height;
-                    
-                    // Dibujar imagen redimensionada
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // Convertir a blob con compresión
                     canvas.toBlob((blob) => {
                         const compressedSize = blob.size / 1024 / 1024;
-                        console.log(`Imagen comprimida: ${compressedSize.toFixed(2)}MB (reducción: ${((file.size - blob.size) / file.size * 100).toFixed(1)}%)`);
+                        console.log(`Compresión resultado: ${compressedSize.toFixed(2)}MB (${((file.size - blob.size) / file.size * 100).toFixed(1)}% reducción)`);
                         
-                        // Si aún es muy grande, reducir más la calidad
+                        // Si sigue siendo muy grande, comprimir hasta el límite
                         if (compressedSize > maxSizeMB && quality > 0.3) {
-                            img.src = canvas.toDataURL('image/jpeg', quality - 0.2);
+                            console.log(`Aún muy grande, comprimiendo más...`);
+                            canvas.toBlob((finalBlob) => {
+                                const finalFile = new File([finalBlob], file.name, {
+                                    type: 'image/jpeg',
+                                    lastModified: file.lastModified
+                                });
+                                resolve(finalFile);
+                            }, 'image/jpeg', Math.max(0.3, quality - 0.2));
                             return;
                         }
                         
-                        // Crear nuevo archivo con el mismo nombre pero comprimido
                         const compressedFile = new File([blob], file.name, {
                             type: 'image/jpeg',
                             lastModified: file.lastModified
                         });
-                        
                         resolve(compressedFile);
                     }, 'image/jpeg', quality);
                 };
@@ -391,54 +394,56 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         // MODIFICAR: Función uploadSingleFile completa con timeout y validaciones
-        async uploadSingleFile(file, sessionId) {
-            console.log(`Subiendo archivo individual: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)`);
+        async uploadSingleFile(file, sessionId, retryAttempt = 0) {
+            const maxRetries = 5; // Número máximo de reintentos
+            console.log(`Subiendo archivo: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB) - Intento ${retryAttempt + 1}/${maxRetries + 1}`);
             
             try {
                 let processedFile = file;
                 
-                // Comprimir si es mayor a 8MB
-                if (file.size > 8 * 1024 * 1024) {
-                    console.log(`Archivo grande detectado, comprimiendo...`);
-                    processedFile = await this.compressImage(file, 8, 0.8);
-                }
-                
-                // Verificar tamaño después de compresión
-                const maxSize = 10 * 1024 * 1024; // 10MB después de compresión
-                if (processedFile.size > maxSize) {
-                    throw new Error(`Archivo demasiado grande incluso después de compresión: ${processedFile.name}`);
+                // Comprimir más agresivamente en reintentos
+                if (file.size > 6 * 1024 * 1024) {
+                    const compressionLevel = retryAttempt > 1 ? 0.5 : 0.8; // Comprimir más si ya falló antes
+                    const targetSize = retryAttempt > 2 ? 4 : 6; // Archivo más pequeño en reintentos
+                    console.log(`Comprimiendo archivo (nivel ${compressionLevel}, objetivo ${targetSize}MB)...`);
+                    processedFile = await this.compressImage(file, targetSize, compressionLevel);
                 }
                 
                 const nextSequence = await this.getNextSequence();
-                console.log(`Secuencia asignada para ${processedFile.name}: ${nextSequence}`);
+                console.log(`Secuencia asignada: ${nextSequence}`);
                 
                 const formData = new FormData();
                 formData.append('file', processedFile);
                 formData.append('sequence', nextSequence);
                 formData.append('reparacion_id', this.reparacionId);
                 
-                // Timeout más generoso para archivos grandes
+                // Timeout progresivo: más tiempo en cada reintento
+                const baseTimeout = Math.max(45000, processedFile.size / 1024 / 1024 * 20000); // 20s por MB
+                const timeoutMs = baseTimeout + (retryAttempt * 15000); // +15s por cada reintento
+                console.log(`Timeout: ${timeoutMs/1000}s (intento ${retryAttempt + 1})`);
+                
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => {
                     controller.abort();
-                    console.error(`Timeout para ${processedFile.name}: más de 60 segundos`);
-                }, 60000); // 60 segundos
+                    console.error(`Timeout después de ${timeoutMs/1000}s`);
+                }, timeoutMs);
                 
                 const response = await fetch(`/gallery/upload/single/${sessionId}`, {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal
                 });
-
+                
                 clearTimeout(timeoutId);
-
+                
                 if (!response.ok) {
-                    if (response.status === 504) {
-                        throw new Error(`Timeout del servidor. Intenta nuevamente o usa una imagen más pequeña.`);
+                    // En lugar de fallar, reintentar según el tipo de error
+                    if (response.status === 504 || response.status === 502 || response.status === 503) {
+                        throw new Error(`SERVER_RETRY:${response.status}`);
                     }
                     throw new Error(`Error de servidor: ${response.status}`);
                 }
-
+                
                 const data = await response.json();
                 const result = data.result || data;
                 
@@ -447,22 +452,44 @@ document.addEventListener('DOMContentLoaded', function() {
                         this.showAuthError();
                         return null;
                     }
-                    throw new Error(result.error || 'Error en subida');
+                    throw new Error(`SERVER_RETRY:${result.error}`);
                 }
-
-                console.log(`Archivo ${processedFile.name} subido exitosamente`);
+                
+                console.log(`✅ ${processedFile.name} subido exitosamente`);
                 return result;
-
+                
             } catch (error) {
-                if (error.name === 'AbortError') {
-                    return { 
-                        success: false, 
-                        error: `Timeout: La subida tardó demasiado. Intenta con una conexión más rápida.`, 
-                        filename: file.name 
-                    };
+                console.error(`❌ Error en intento ${retryAttempt + 1}: ${error.message}`);
+                
+                // Decidir si reintentar
+                const shouldRetry = (
+                    retryAttempt < maxRetries && (
+                        error.name === 'AbortError' ||
+                        error.message.includes('SERVER_RETRY') ||
+                        error.message.includes('timeout') ||
+                        error.message.includes('network') ||
+                        error.message.includes('fetch')
+                    )
+                );
+                
+                if (shouldRetry) {
+                    const waitTime = Math.min(5000 + (retryAttempt * 2000), 15000); // Espera progresiva
+                    console.log(`🔄 Reintentando ${file.name} en ${waitTime/1000}s...`);
+                    
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    
+                    // Llamada recursiva con incremento de intento
+                    return this.uploadSingleFile(file, sessionId, retryAttempt + 1);
                 }
-                console.error(`Error subiendo ${file.name}:`, error);
-                return { success: false, error: error.message, filename: file.name };
+                
+                // Si agotamos todos los reintentos
+                console.error(`💀 Se agotaron los ${maxRetries + 1} intentos para ${file.name}`);
+                return { 
+                    success: false, 
+                    error: `Falló después de ${maxRetries + 1} intentos: ${error.message}`, 
+                    filename: file.name,
+                    finalAttempt: true
+                };
             }
         },
         // NUEVA FUNCIÓN: Finalizar sesión de subida
@@ -701,95 +728,193 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // MEJORADA: Subida masiva con nuevo sistema
         
+        // REEMPLAZAR handleMassiveUpload completa
         async handleMassiveUpload(event) {
-            console.log('Iniciando proceso de subida masiva de archivos de galería');
             const files = Array.from(event.target.files);
-            console.log(`Total de archivos seleccionados de galería: ${files.length}`);
+            console.log(`Procesando ${files.length} archivos`);
             
-            if (!files.length) {
-                console.log('No se seleccionaron archivos para subir');
-                return;
-            }
+            if (!files.length) return;
 
             const validFiles = files.filter(file => this.validateFile(file));
-            console.log(`Archivos válidos para subir: ${validFiles.length} de ${files.length}`);
-            
             if (!validFiles.length) {
-                this.showError('No hay archivos válidos', 'Por favor seleccione imágenes válidas');
+                this.showError('Sin archivos válidos', 'Selecciona imágenes válidas');
                 return;
             }
 
-            // Validar sesión primero
-            const validation = await this.validateUploadSession(validFiles);
-            if (!validation) {
-                console.log('Validación fallida, cancelando subida');
-                return;
-            }
-
-            this.showUploadProgress(validFiles.length);
-
-            let uploadedCount = 0;
-            let failedCount = 0;
-            const results = [];
-
-            // CAMBIO PRINCIPAL: Subir archivos SECUENCIALMENTE para evitar duplicados de secuencia
-            console.log('Iniciando subida secuencial de archivos...');
+            // NUEVO: Procesar por lotes pequeños
+            const batchSize = 3; // Solo 3 archivos a la vez
+            const batches = this.createBatches(validFiles, batchSize);
             
-            for (let i = 0; i < validFiles.length; i++) {
-                const file = validFiles[i];
-                console.log(`Procesando archivo ${i + 1}/${validFiles.length}: ${file.name}`);
+            console.log(`Dividiendo ${validFiles.length} archivos en ${batches.length} lotes de máximo ${batchSize}`);
+            
+            let totalUploaded = 0;
+            let totalFailed = 0;
+            let currentFile = 0;
+
+            this.showBatchProgress(validFiles.length, 0, 0);
+
+            // Procesar lote por lote
+            for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+                const batch = batches[batchIndex];
+                console.log(`\n=== PROCESANDO LOTE ${batchIndex + 1}/${batches.length} ===`);
                 
-                const result = await this.uploadSingleFile(file, this.currentSession);
-                
-                if (result && result.success) {
-                    uploadedCount++;
-                    console.log(`Archivo ${file.name} subido exitosamente`);
-                } else {
-                    failedCount++;
-                    console.log(`Archivo ${file.name} falló: ${result ? result.error : 'Error desconocido'}`);
+                // Validar sesión para cada lote
+                const validation = await this.validateUploadSession(batch);
+                if (!validation) {
+                    console.log('Validación fallida, saltando lote');
+                    totalFailed += batch.length;
+                    continue;
                 }
-                
-                results.push(result);
-                
-                // Actualizar progreso
-                const progress = ((i + 1) / validFiles.length) * 100;
-                this.updateUploadProgress(progress, uploadedCount + failedCount, validFiles.length);
-                
-                // Verificar si hay errores de autenticación
-                if (result && result.code === 'SESSION_EXPIRED') {
-                    console.log('Sesión expirada detectada, deteniendo subida');
-                    break;
+
+                // Procesar archivos del lote secuencialmente
+                for (const file of batch) {
+                    currentFile++;
+                    console.log(`Procesando archivo ${currentFile}/${validFiles.length}: ${file.name}`);
+                    
+                    const result = await this.uploadWithRetry(file, this.currentSession, 3); // 3 intentos
+                    
+                    if (result && result.success) {
+                        totalUploaded++;
+                        console.log(`✓ ${file.name} subido exitosamente`);
+                    } else {
+                        totalFailed++;
+                        console.log(`✗ ${file.name} falló: ${result ? result.error : 'Error desconocido'}`);
+                    }
+                    
+                    // Actualizar progreso
+                    this.updateBatchProgress(validFiles.length, totalUploaded, totalFailed);
+                    
+                    // Pausa entre archivos para evitar saturar el servidor
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
+
+                // Finalizar sesión del lote
+                await this.completeUploadSession(this.currentSession);
                 
-                // Pequeña pausa entre subidas para evitar condiciones de carrera
-                if (i < validFiles.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                // Pausa entre lotes más larga
+                if (batchIndex < batches.length - 1) {
+                    console.log('Pausa entre lotes...');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
 
-            // Finalizar sesión
-            await this.completeUploadSession(this.currentSession);
+            // Resultado final
+            this.showFinalResult(validFiles.length, totalUploaded, totalFailed);
+            
+            if (totalUploaded > 0) {
+                setTimeout(() => window.location.reload(), 2000);
+            }
+        },
 
-            // Mostrar resultado final
-            if (uploadedCount > 0) {
-                console.log(`Subida masiva completada: ${uploadedCount} exitosos, ${failedCount} fallidos`);
-                this.showSuccess(
-                    'Subida Completada', 
-                    failedCount === 0 
-                        ? `Se subieron los ${uploadedCount} archivos correctamente`
-                        : `Se subieron ${uploadedCount} de ${validFiles.length} archivos`
-                );
-                setTimeout(() => window.location.reload(), 1500);
+        // NUEVA FUNCIÓN: Crear lotes
+        createBatches(files, batchSize) {
+            const batches = [];
+            for (let i = 0; i < files.length; i += batchSize) {
+                batches.push(files.slice(i, i + batchSize));
+            }
+            return batches;
+        },
+
+        // NUEVA FUNCIÓN: Subida con reintentos
+        async uploadWithRetry(file, sessionId, maxRetries = 3) {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                console.log(`Intento ${attempt}/${maxRetries} para ${file.name}`);
+                
+                try {
+                    const result = await this.uploadSingleFile(file, sessionId);
+                    if (result && result.success) {
+                        return result;
+                    }
+                    
+                    // Si falla pero no es error crítico, reintentar
+                    if (attempt < maxRetries && result && !result.error.includes('SESSION_EXPIRED')) {
+                        console.log(`Reintentando ${file.name} en 2 segundos...`);
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        continue;
+                    }
+                    
+                    return result;
+                    
+                } catch (error) {
+                    console.error(`Error en intento ${attempt} para ${file.name}:`, error);
+                    
+                    if (attempt < maxRetries) {
+                        console.log(`Reintentando ${file.name} después del error...`);
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                    } else {
+                        return { success: false, error: error.message, filename: file.name };
+                    }
+                }
+            }
+        },
+
+        // NUEVA FUNCIÓN: Progreso por lotes
+        showBatchProgress(total, uploaded, failed) {
+            Swal.fire({
+                title: 'Subiendo por lotes',
+                html: `
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-success" style="width: ${(uploaded/total*100)}%"></div>
+                        <div class="progress-bar bg-danger" style="width: ${(failed/total*100)}%"></div>
+                    </div>
+                    <div>Procesadas: ${uploaded + failed}/${total}</div>
+                    <div class="text-success">Exitosas: ${uploaded}</div>
+                    <div class="text-danger">Fallidas: ${failed}</div>
+                    <div class="mt-2"><small>Procesando en lotes pequeños para mayor confiabilidad...</small></div>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+        },
+
+        // NUEVA FUNCIÓN: Actualizar progreso
+        updateBatchProgress(total, uploaded, failed) {
+            const uploadedPercent = (uploaded / total) * 100;
+            const failedPercent = (failed / total) * 100;
+            
+            const progressHtml = `
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success" style="width: ${uploadedPercent}%"></div>
+                    <div class="progress-bar bg-danger" style="width: ${failedPercent}%"></div>
+                </div>
+                <div>Procesadas: ${uploaded + failed}/${total}</div>
+                <div class="text-success">Exitosas: ${uploaded}</div>
+                <div class="text-danger">Fallidas: ${failed}</div>
+                <div class="mt-2"><small>Procesando en lotes pequeños para mayor confiabilidad...</small></div>
+            `;
+            
+            Swal.update({ html: progressHtml });
+        },
+
+        // NUEVA FUNCIÓN: Resultado final
+        showFinalResult(total, uploaded, failed) {
+            const successRate = ((uploaded / total) * 100).toFixed(1);
+            
+            if (uploaded === total) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Subida Completada',
+                    text: `Se subieron las ${uploaded} fotos correctamente`,
+                    timer: 2000
+                });
+            } else if (uploaded > 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Subida Parcial',
+                    html: `
+                        <p>Se subieron <strong>${uploaded} de ${total}</strong> fotos</p>
+                        <p>Tasa de éxito: <strong>${successRate}%</strong></p>
+                        <p><small>Las fotos fallidas pueden deberse a problemas de conectividad</small></p>
+                    `,
+                    confirmButtonText: 'OK'
+                });
             } else {
-                this.showError('Error', 'No se pudieron subir los archivos');
-            }
-
-            // Limpiar session
-            this.currentSession = null;
-            
-            // Limpiar input para permitir seleccionar los mismos archivos nuevamente
-            if (event.target) {
-                event.target.value = '';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error en Subida',
+                    text: 'No se pudieron subir las fotos. Verifica tu conexión e inténtalo de nuevo.',
+                    confirmButtonText: 'OK'
+                });
             }
         },
 
