@@ -927,42 +927,232 @@ async handleMassiveUpload(event) {
     event.target.value = '';
 },
 
-// === NUEVO: pedir upload link (code) al backend ===
-// PREPARA el upload directo a pCloud pidiendo al backend un upload link 'code'
+// === FUNCIÓN CORREGIDA: getPCloudUploadInfo ===
+// REEMPLAZA la función existente en tu JS
 async getPCloudUploadInfo() {
+    console.log('[PCLOUD_UPLOADINFO] === INICIANDO SOLICITUD DE UPLOAD LINK ===');
+    console.log('[PCLOUD_UPLOADINFO] Reparación ID:', this.reparacionId);
+    
     try {
-        const resp = await fetch(`/gallery/pcloud/uploadinfo/${this.reparacionId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
+        const requestUrl = `/gallery/pcloud/uploadinfo/${this.reparacionId}`;
+        console.log('[PCLOUD_UPLOADINFO] URL de solicitud:', requestUrl);
+        
+        // Mostrar loading mientras obtenemos el upload link
+        Swal.fire({
+            title: 'Preparando subida',
+            text: 'Validando conexión con pCloud...',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
         });
-
-        if (!resp.ok) {
-            throw new Error(`HTTP ${resp.status}`);
+        
+        const response = await fetch(requestUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({}),
+            credentials: 'same-origin' // Importante para mantener la sesión
+        });
+        
+        console.log('[PCLOUD_UPLOADINFO] Response status:', response.status);
+        console.log('[PCLOUD_UPLOADINFO] Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+            console.error('[PCLOUD_UPLOADINFO] Error HTTP:', response.status, response.statusText);
+            
+            // Manejar errores específicos de HTTP
+            switch (response.status) {
+                case 401:
+                    console.log('[PCLOUD_UPLOADINFO] Error 401 - Sesión expirada');
+                    Swal.close();
+                    this.showAuthError();
+                    return null;
+                case 403:
+                    throw new Error('Sin permisos para realizar esta operación');
+                case 500:
+                    throw new Error('Error interno del servidor. Inténtalo más tarde.');
+                default:
+                    throw new Error(`Error de servidor: ${response.status} ${response.statusText}`);
+            }
         }
-        const raw = await resp.json();
-        // Soporta JSON-RPC y JSON plano
-        const data = raw.result || raw;
-
-        if (!data.success) {
-            // Muestra detalle real, no [object Object]
-            throw new Error(`pCloud createuploadlink: ${data.error || JSON.stringify(data.pcloud_raw || data)}`);
+        
+        const rawData = await response.json();
+        console.log('[PCLOUD_UPLOADINFO] Respuesta cruda del servidor:', rawData);
+        
+        // Manejar respuestas JSON-RPC de Odoo y respuestas directas
+        let data;
+        if (rawData.error) {
+            console.error('[PCLOUD_UPLOADINFO] Error JSON-RPC:', rawData.error);
+            
+            // Manejar errores específicos de Odoo
+            if (rawData.error.message && rawData.error.message.includes('Session')) {
+                console.log('[PCLOUD_UPLOADINFO] Sesión de Odoo expirada');
+                Swal.close();
+                this.showAuthError();
+                return null;
+            }
+            
+            throw new Error(`Error del servidor: ${rawData.error.message || rawData.error}`);
         }
+        
+        // Los datos pueden estar en 'result' (JSON-RPC) o directamente en la respuesta
+        data = rawData.result || rawData;
+        console.log('[PCLOUD_UPLOADINFO] Datos procesados:', data);
+        
+        // Verificar el éxito de la operación
+        if (data.success === false) {
+            console.error('[PCLOUD_UPLOADINFO] Operación falló según respuesta:', data);
+            
+            // Manejar códigos de error específicos del backend
+            switch (data.code) {
+                case 'PCLOUD_TOKEN_INVALID':
+                case 'PCLOUD_TOKEN_MISSING':
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Token de pCloud Inválido',
+                        text: 'El token de acceso a pCloud ha expirado o es inválido. Contacta al administrador para renovarlo.',
+                        confirmButtonText: 'Entendido',
+                        allowOutsideClick: false
+                    });
+                    return null;
+                    
+                case 'PCLOUD_CONNECTION_ERROR':
+                case 'PCLOUD_VALIDATION_TIMEOUT':
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Problema de Conexión',
+                        text: 'No se pudo conectar con pCloud. Verifica tu conexión e inténtalo nuevamente.',
+                        confirmButtonText: 'Reintentar',
+                        showCancelButton: true,
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Reintentar automáticamente
+                            setTimeout(() => this.getPCloudUploadInfo(), 2000);
+                        }
+                    });
+                    return null;
+                    
+                case 'PCLOUD_CONFIG_MISSING':
+                case 'PCLOUD_HOSTNAME_MISSING':
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Configuración Faltante',
+                        text: 'La configuración de pCloud no está completa. Contacta al administrador.',
+                        confirmButtonText: 'Entendido'
+                    });
+                    return null;
+                    
+                case 'REPARACION_NOT_FOUND':
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Reparación No Encontrada',
+                        text: 'La reparación especificada no existe.',
+                        confirmButtonText: 'Entendido'
+                    }).then(() => {
+                        window.history.back();
+                    });
+                    return null;
+                    
+                case 'PCLOUD_FOLDER_ERROR':
+                case 'PCLOUD_FOLDER_CREATE_ERROR':
+                    throw new Error(`Error creando carpeta en pCloud: ${data.error}`);
+                    
+                case 'PCLOUD_CREATELINK_ERROR':
+                    throw new Error(`Error creando upload link: ${data.error}`);
+                    
+                default:
+                    throw new Error(data.error || 'Error desconocido obteniendo upload link');
+            }
+        }
+        
+        // Verificar que tenemos todos los datos necesarios
         if (!data.link_code) {
-            throw new Error('No se recibió link_code de pCloud');
+            console.error('[PCLOUD_UPLOADINFO] Falta link_code en la respuesta:', data);
+            throw new Error('Respuesta inválida del servidor: falta código de upload link');
         }
-
+        
+        if (!data.folder_id) {
+            console.warn('[PCLOUD_UPLOADINFO] Falta folder_id en la respuesta (continuando)');
+        }
+        
+        // Cerrar loading
+        Swal.close();
+        
+        console.log('[PCLOUD_UPLOADINFO] === UPLOAD LINK OBTENIDO EXITOSAMENTE ===');
+        console.log('[PCLOUD_UPLOADINFO] Link code:', data.link_code);
+        console.log('[PCLOUD_UPLOADINFO] Folder ID:', data.folder_id);
+        console.log('[PCLOUD_UPLOADINFO] Upload endpoint:', data.upload_endpoint);
+        
         return {
             linkCode: data.link_code,
-            folderId: data.folder_id
+            folderId: data.folder_id,
+            uploadEndpoint: data.upload_endpoint || 'https://api.pcloud.com/uploadtolink'
         };
-    } catch (err) {
-        console.error('getPCloudUploadInfo error:', err);
-        this.showError('Error', 'No se pudo preparar la subida a pCloud');
-        throw err;
+        
+    } catch (error) {
+        console.error('[PCLOUD_UPLOADINFO] === ERROR CAPTURADO ===');
+        console.error('[PCLOUD_UPLOADINFO] Tipo de error:', error.constructor.name);
+        console.error('[PCLOUD_UPLOADINFO] Mensaje:', error.message);
+        console.error('[PCLOUD_UPLOADINFO] Stack:', error.stack);
+        
+        // Cerrar cualquier loading dialog
+        Swal.close();
+        
+        // Mostrar error apropiado al usuario
+        let userMessage = 'Error preparando la subida a pCloud';
+        let shouldRetry = false;
+        
+        if (error.message.includes('network') || 
+            error.message.includes('fetch') || 
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('conexión')) {
+            userMessage = 'Error de conexión. Verifica tu internet e inténtalo nuevamente.';
+            shouldRetry = true;
+        } else if (error.message.includes('timeout')) {
+            userMessage = 'La operación tardó demasiado. Inténtalo nuevamente.';
+            shouldRetry = true;
+        } else if (error.message.includes('500')) {
+            userMessage = 'Error interno del servidor. Inténtalo más tarde.';
+            shouldRetry = true;
+        } else {
+            userMessage = error.message || 'Error desconocido preparando la subida';
+        }
+        
+        if (shouldRetry) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de Conexión',
+                text: userMessage,
+                confirmButtonText: 'Reintentar',
+                showCancelButton: true,
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Esperar un momento antes de reintentar
+                    setTimeout(() => this.getPCloudUploadInfo(), 3000);
+                }
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: userMessage,
+                confirmButtonText: 'Entendido'
+            });
+        }
+        
+        return null;
     }
 },
-
 
 
 // === NUEVO: subida directa a pCloud (uploadtolink) ===

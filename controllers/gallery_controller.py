@@ -484,52 +484,242 @@ class GalleryController(http.Controller):
             return json.dumps({'success': False, 'error': f'Error interno: {str(e)}', 'code': 'INTERNAL_ERROR'})
     @http.route('/gallery/pcloud/uploadinfo/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
     def pcloud_uploadinfo(self, reparacion_id):
-        """Crea/obtiene un upload link de pCloud (no expone el token)."""
-        env = request.env
-        Foto = env['reparaciones.foto'].sudo()
-        Reparacion = env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
-
-        if not Reparacion.exists():
-            return {'success': False, 'error': 'Reparación no encontrada'}
-
-        pconf = env['pcloud.configuracion'].sudo().search([], limit=1)
-        if not pconf or not pconf.access_token:
-            return {'success': False, 'error': 'Config pCloud no disponible'}
-
+        """
+        Crea/obtiene un upload link de pCloud con validación previa de token.
+        Incluye logs detallados y manejo robusto de errores.
+        """
+        _logger.info("[PCLOUD_UPLOADINFO] === INICIANDO CREACIÓN DE UPLOAD LINK ===")
+        _logger.info("[PCLOUD_UPLOADINFO] Reparación ID: %s", reparacion_id)
+        
         try:
-            # Asegurar carpeta destino
-            folder_id = Foto._obtener_folder_id(Reparacion, pconf)
-
-            # Crear upload link para esa carpeta
-            # Doc pCloud: /createuploadlink -> retorna 'result', 'code', 'linkid', etc.
-            url = f"{pconf.hostname}/createuploadlink"
-            params = {
-                'access_token': pconf.access_token,
-                'folderid': folder_id,
-                # Opcionales:
-                # 'maxuses': 1,              # Úsalo si quieres que sea de un solo uso
-                # 'expires': int(time.time()) + 3600  # 1 hora
-            }
-            res = requests.get(url, params=params, timeout=10)
-            data = res.json()
-            if res.status_code != 200 or data.get('result') != 0:
-                request.env.cr.rollback()
+            env = request.env
+            Foto = env['reparaciones.foto'].sudo()
+            
+            # 1. Verificar que la reparación existe
+            reparacion = env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                _logger.error("[PCLOUD_UPLOADINFO] Reparación no encontrada: %s", reparacion_id)
                 return {
-                    'success': False,
-                    'error': f"pCloud createuploadlink: {data.get('error','error')}",
-                    'pcloud_raw': data
+                    'success': False, 
+                    'error': 'Reparación no encontrada',
+                    'code': 'REPARACION_NOT_FOUND'
                 }
-
-            # pCloud devuelve un 'code' (lo usamos con /uploadtolink)
-            return {
-                'success': True,
-                'link_code': data.get('code'),
-                'folder_id': folder_id
-            }
-
+            
+            _logger.info("[PCLOUD_UPLOADINFO] Reparación encontrada: %s - %s", 
+                        reparacion.id, reparacion.name or 'Sin nombre')
+            
+            # 2. Obtener configuración de pCloud
+            pconf = env['pcloud.configuracion'].sudo().search([], limit=1)
+            if not pconf:
+                _logger.error("[PCLOUD_UPLOADINFO] No se encontró configuración de pCloud")
+                return {
+                    'success': False, 
+                    'error': 'Configuración de pCloud no encontrada',
+                    'code': 'PCLOUD_CONFIG_MISSING'
+                }
+            
+            if not pconf.access_token:
+                _logger.error("[PCLOUD_UPLOADINFO] Token de acceso no configurado")
+                return {
+                    'success': False, 
+                    'error': 'Token de acceso de pCloud no configurado',
+                    'code': 'PCLOUD_TOKEN_MISSING'
+                }
+            
+            if not pconf.hostname:
+                _logger.error("[PCLOUD_UPLOADINFO] Hostname no configurado")
+                return {
+                    'success': False, 
+                    'error': 'Hostname de pCloud no configurado',
+                    'code': 'PCLOUD_HOSTNAME_MISSING'
+                }
+            
+            _logger.info("[PCLOUD_UPLOADINFO] Configuración pCloud obtenida - Hostname: %s", pconf.hostname)
+            
+            # 3. VALIDACIÓN CRÍTICA: Verificar token antes de usarlo
+            _logger.info("[PCLOUD_UPLOADINFO] Validando token de acceso...")
+            try:
+                validate_url = f"{pconf.hostname}/userinfo"
+                validate_params = {'access_token': pconf.access_token}
+                
+                _logger.info("[PCLOUD_UPLOADINFO] Enviando solicitud de validación a: %s", validate_url)
+                validate_response = requests.get(validate_url, params=validate_params, timeout=10)
+                validate_data = validate_response.json() if validate_response.content else {}
+                
+                _logger.info("[PCLOUD_UPLOADINFO] Respuesta de validación - Status: %s, Data: %s", 
+                            validate_response.status_code, validate_data)
+                
+                if validate_response.status_code != 200:
+                    _logger.error("[PCLOUD_UPLOADINFO] Error HTTP en validación de token: %s", 
+                                validate_response.status_code)
+                    return {
+                        'success': False, 
+                        'error': 'Error de conexión con pCloud durante validación',
+                        'code': 'PCLOUD_VALIDATION_HTTP_ERROR',
+                        'details': f'HTTP {validate_response.status_code}'
+                    }
+                
+                if validate_data.get('result') != 0:
+                    error_msg = validate_data.get('error', 'Token inválido o expirado')
+                    _logger.error("[PCLOUD_UPLOADINFO] Token inválido - Error: %s, Data: %s", 
+                                error_msg, validate_data)
+                    return {
+                        'success': False, 
+                        'error': f'Token de pCloud inválido: {error_msg}',
+                        'code': 'PCLOUD_TOKEN_INVALID',
+                        'pcloud_error': validate_data
+                    }
+                
+                user_email = validate_data.get('email', 'No disponible')
+                _logger.info("[PCLOUD_UPLOADINFO] Token válido - Usuario: %s", user_email)
+                
+            except requests.exceptions.Timeout:
+                _logger.error("[PCLOUD_UPLOADINFO] Timeout validando token de pCloud")
+                return {
+                    'success': False, 
+                    'error': 'Timeout validando conexión con pCloud',
+                    'code': 'PCLOUD_VALIDATION_TIMEOUT'
+                }
+            except requests.exceptions.ConnectionError as conn_error:
+                _logger.error("[PCLOUD_UPLOADINFO] Error de conexión validando token: %s", str(conn_error))
+                return {
+                    'success': False, 
+                    'error': 'Error de conexión con pCloud',
+                    'code': 'PCLOUD_CONNECTION_ERROR',
+                    'details': str(conn_error)
+                }
+            except Exception as e:
+                _logger.exception("[PCLOUD_UPLOADINFO] Error inesperado validando token: %s", str(e))
+                return {
+                    'success': False, 
+                    'error': 'Error interno validando token de pCloud',
+                    'code': 'PCLOUD_VALIDATION_ERROR',
+                    'details': str(e)
+                }
+            
+            # 4. Obtener o crear folder_id
+            _logger.info("[PCLOUD_UPLOADINFO] Obteniendo folder_id para la reparación...")
+            try:
+                folder_id = Foto._obtener_folder_id(reparacion, pconf)
+                if not folder_id:
+                    _logger.error("[PCLOUD_UPLOADINFO] No se pudo obtener folder_id")
+                    return {
+                        'success': False, 
+                        'error': 'No se pudo crear/obtener la carpeta en pCloud',
+                        'code': 'PCLOUD_FOLDER_ERROR'
+                    }
+                
+                _logger.info("[PCLOUD_UPLOADINFO] Folder ID obtenido exitosamente: %s", folder_id)
+                
+            except Exception as folder_error:
+                _logger.exception("[PCLOUD_UPLOADINFO] Error obteniendo folder_id: %s", str(folder_error))
+                return {
+                    'success': False, 
+                    'error': f'Error creando carpeta: {str(folder_error)}',
+                    'code': 'PCLOUD_FOLDER_CREATE_ERROR'
+                }
+            
+            # 5. Crear upload link
+            _logger.info("[PCLOUD_UPLOADINFO] Creando upload link...")
+            try:
+                url = f"{pconf.hostname}/createuploadlink"
+                params = {
+                    'access_token': pconf.access_token,
+                    'folderid': folder_id,
+                    'comment': f"Upload desde Odoo - Reparación {reparacion.name or reparacion.id}",
+                    # Parámetros opcionales que puedes descomentar según necesidades:
+                    # 'maxfiles': 50,        # Máximo número de archivos
+                    # 'maxspace': 104857600, # 100MB en bytes
+                    # 'expires': int(time.time()) + 3600  # Expira en 1 hora
+                }
+                
+                _logger.info("[PCLOUD_UPLOADINFO] Enviando solicitud createuploadlink a: %s", url)
+                _logger.info("[PCLOUD_UPLOADINFO] Parámetros: folderid=%s, comment=%s", 
+                            folder_id, params.get('comment'))
+                
+                response = requests.get(url, params=params, timeout=15)
+                data = response.json() if response.content else {}
+                
+                _logger.info("[PCLOUD_UPLOADINFO] Respuesta createuploadlink - Status: %s, Data: %s", 
+                            response.status_code, data)
+                
+                if response.status_code != 200:
+                    _logger.error("[PCLOUD_UPLOADINFO] Error HTTP creando upload link: %s", 
+                                response.status_code)
+                    return {
+                        'success': False,
+                        'error': f'Error HTTP creando upload link: {response.status_code}',
+                        'code': 'PCLOUD_CREATELINK_HTTP_ERROR'
+                    }
+                
+                if data.get('result') != 0:
+                    pcloud_error = data.get('error', 'Error desconocido creando upload link')
+                    _logger.error("[PCLOUD_UPLOADINFO] Error creando upload link - pCloud Error: %s, Data: %s", 
+                                pcloud_error, data)
+                    return {
+                        'success': False,
+                        'error': f'Error de pCloud creando upload link: {pcloud_error}',
+                        'code': 'PCLOUD_CREATELINK_ERROR',
+                        'pcloud_error': data
+                    }
+                
+                upload_code = data.get('code')
+                if not upload_code:
+                    _logger.error("[PCLOUD_UPLOADINFO] No se obtuvo código de upload link en respuesta: %s", data)
+                    return {
+                        'success': False,
+                        'error': 'Respuesta inválida de pCloud (falta código)',
+                        'code': 'PCLOUD_INVALID_RESPONSE',
+                        'pcloud_raw': data
+                    }
+                
+                _logger.info("[PCLOUD_UPLOADINFO] Upload link creado exitosamente - Code: %s", upload_code)
+                
+                # 6. Respuesta exitosa
+                success_response = {
+                    'success': True,
+                    'link_code': upload_code,
+                    'folder_id': folder_id,
+                    'reparacion_id': reparacion_id,
+                    'upload_endpoint': 'https://api.pcloud.com/uploadtolink'  # Endpoint público para usar el code
+                }
+                
+                _logger.info("[PCLOUD_UPLOADINFO] === UPLOAD LINK CREADO EXITOSAMENTE ===")
+                _logger.info("[PCLOUD_UPLOADINFO] Resultado: %s", success_response)
+                
+                return success_response
+                
+            except requests.exceptions.Timeout:
+                _logger.error("[PCLOUD_UPLOADINFO] Timeout creando upload link")
+                return {
+                    'success': False, 
+                    'error': 'Timeout creando upload link en pCloud',
+                    'code': 'PCLOUD_CREATELINK_TIMEOUT'
+                }
+            except requests.exceptions.ConnectionError as conn_error:
+                _logger.error("[PCLOUD_UPLOADINFO] Error de conexión creando upload link: %s", str(conn_error))
+                return {
+                    'success': False, 
+                    'error': 'Error de conexión creando upload link',
+                    'code': 'PCLOUD_CREATELINK_CONNECTION_ERROR'
+                }
+            except Exception as e:
+                _logger.exception("[PCLOUD_UPLOADINFO] Error inesperado creando upload link: %s", str(e))
+                return {
+                    'success': False, 
+                    'error': f'Error interno creando upload link: {str(e)}',
+                    'code': 'PCLOUD_CREATELINK_INTERNAL_ERROR'
+                }
+                
         except Exception as e:
+            _logger.exception("[PCLOUD_UPLOADINFO] ERROR CRÍTICO en pcloud_uploadinfo: %s", str(e))
             request.env.cr.rollback()
-            return {'success': False, 'error': str(e)}
+            return {
+                'success': False, 
+                'error': 'Error interno del servidor',
+                'code': 'INTERNAL_SERVER_ERROR',
+                'details': str(e)
+            }
 
     @http.route('/gallery/pcloud/register', type='json', auth='user', methods=['POST'])
     def pcloud_register_file(self, **payload):
