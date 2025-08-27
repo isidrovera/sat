@@ -2,6 +2,7 @@ from odoo import models, fields, api
 from odoo.exceptions import ValidationError
 import logging
 import requests
+import time
 import base64
 import json
 import io
@@ -266,51 +267,246 @@ class ReparacionFoto(models.Model):
 
     @api.model
     def get_photos_preview(self, reparacion_id):
-        """Obtiene todas las fotos con sus previsualizaciones y valida si los enlaces son válidos."""
-        _logger.info("[GET_PHOTOS_PREVIEW] Iniciando para reparación ID: %s", reparacion_id)
-        photos = []
+        """
+        Obtiene las fotos de una reparación con previsualizaciones optimizadas.
+        Implementa timeouts agresivos y manejo robusto de errores por foto individual.
+        """
+        _logger.info("[GET_PHOTOS_PREVIEW] === INICIANDO CARGA OPTIMIZADA ===")
+        _logger.info("[GET_PHOTOS_PREVIEW] Reparación ID: %s", reparacion_id)
+        
         try:
-            # Obtener fotos de la reparación
-            fotos = self.search([('reparacion_id', '=', reparacion_id)], order='sequence, id')
-            _logger.info("[GET_PHOTOS_PREVIEW] Encontradas %s fotos", len(fotos))
+            # Buscar todas las fotos de la reparación
+            fotos = self.search([('reparacion_id', '=', reparacion_id)], order='sequence asc, create_date asc')
+            total_fotos = len(fotos)
+            _logger.info("[GET_PHOTOS_PREVIEW] Total de fotos encontradas: %s", total_fotos)
             
-            # Obtener configuración de pCloud
-            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+            if not fotos:
+                _logger.info("[GET_PHOTOS_PREVIEW] No se encontraron fotos para la reparación")
+                return []
+            
+            # Obtener configuración de pCloud una sola vez
+            _logger.info("[GET_PHOTOS_PREVIEW] Obteniendo configuración de pCloud...")
+            pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
             if not pcloud_config or not pcloud_config.access_token:
-                _logger.error("[GET_PHOTOS_PREVIEW] No se encontró configuración de pCloud")
-                return photos
-
-            for foto in fotos:
+                _logger.error("[GET_PHOTOS_PREVIEW] ❌ Configuración de pCloud no encontrada o sin token")
+                return self._get_fallback_photos_data(fotos)
+            
+            _logger.info("[GET_PHOTOS_PREVIEW] ✅ Configuración pCloud obtenida correctamente")
+            
+            result = []
+            successful_loads = 0
+            failed_loads = 0
+            timeout_errors = 0
+            pcloud_errors = 0
+            
+            # Procesar cada foto individualmente con manejo robusto de errores
+            for index, foto in enumerate(fotos, 1):
+                foto_start_time = time.time()
+                _logger.info("[GET_PHOTOS_PREVIEW] 📸 Procesando foto %s/%s - ID: %s", index, total_fotos, foto.id)
+                
+                # Datos básicos de la foto (siempre disponibles)
+                foto_data = {
+                    'id': foto.id,
+                    'nombre_foto': foto.nombre_foto or f'foto_{foto.id}',
+                    'sequence': foto.sequence or 0,
+                    'file_id': foto.file_id,
+                    'fecha_creacion': foto.create_date.strftime('%Y-%m-%d %H:%M:%S') if foto.create_date else None,
+                }
+                
                 try:
-                    _logger.info("[GET_PHOTOS_PREVIEW] Procesando foto ID: %s", foto.id)
                     if foto.file_id:
-                        # Generar enlaces actualizados
-                        thumb_url = foto._get_thumb_url(foto.file_id, pcloud_config)
-                        download_url = foto._get_file_url(foto.file_id, pcloud_config)
+                        _logger.info("[GET_PHOTOS_PREVIEW] 🔗 Generando URLs para foto ID: %s, file_id: %s", 
+                                foto.id, foto.file_id)
                         
-                        if thumb_url and download_url:
-                            photos.append({
-                                'id': foto.id,
-                                'nombre_foto': foto.nombre_foto,
-                                'thumb_url': thumb_url,
-                                'download_url': download_url,
-                                'file_id': foto.file_id
-                            })
-                            _logger.info("[GET_PHOTOS_PREVIEW] Foto %s agregada al resultado", foto.id)
+                        # Intentar obtener thumbnail con timeout muy agresivo
+                        thumb_url = self._get_thumb_url_with_timeout(foto.file_id, pcloud_config, timeout=2)
+                        processing_time = time.time() - foto_start_time
+                        
+                        if thumb_url:
+                            foto_data['thumb_url'] = thumb_url
+                            _logger.info("[GET_PHOTOS_PREVIEW] ✅ Thumbnail obtenido para foto %s en %.2fs", 
+                                    foto.id, processing_time)
+                            successful_loads += 1
                         else:
-                            _logger.warning("[GET_PHOTOS_PREVIEW] No se generaron enlaces para la foto ID: %s", foto.id)
+                            _logger.warning("[GET_PHOTOS_PREVIEW] ⚠️ Thumbnail falló para foto %s, usando fallback local", foto.id)
+                            foto_data['thumb_url'] = f'/gallery/preview/{foto.id}'
+                            pcloud_errors += 1
+                            failed_loads += 1
+                        
+                        # URL de descarga (siempre usar nuestro endpoint local para mayor confiabilidad)
+                        foto_data['download_url'] = f'/gallery/download/{foto.id}'
+                        _logger.info("[GET_PHOTOS_PREVIEW] 📥 URL de descarga local asignada: /gallery/download/%s", foto.id)
+                        
                     else:
-                        _logger.warning("[GET_PHOTOS_PREVIEW] Foto %s no tiene file_id", foto.id)
+                        _logger.warning("[GET_PHOTOS_PREVIEW] ⚠️ Foto ID: %s sin file_id, usando fallbacks completos", foto.id)
+                        foto_data['thumb_url'] = f'/gallery/preview/{foto.id}'
+                        foto_data['download_url'] = f'/gallery/download/{foto.id}'
+                        failed_loads += 1
+                    
                 except Exception as e:
-                    _logger.exception("[GET_PHOTOS_PREVIEW] Error procesando foto %s: %s", foto.id, str(e))
-                    continue
-
-            _logger.info("[GET_PHOTOS_PREVIEW] Retornando %s fotos procesadas", len(photos))
-            return photos
-
+                    processing_time = time.time() - foto_start_time
+                    error_msg = str(e)
+                    
+                    # Clasificar tipos de error
+                    if 'timeout' in error_msg.lower() or 'time' in error_msg.lower():
+                        timeout_errors += 1
+                        _logger.error("[GET_PHOTOS_PREVIEW] ⏱️ TIMEOUT en foto %s después de %.2fs: %s", 
+                                    foto.id, processing_time, error_msg)
+                    else:
+                        pcloud_errors += 1
+                        _logger.error("[GET_PHOTOS_PREVIEW] ❌ ERROR en foto %s después de %.2fs: %s", 
+                                    foto.id, processing_time, error_msg)
+                    
+                    # Usar fallbacks en caso de cualquier error
+                    foto_data['thumb_url'] = f'/gallery/preview/{foto.id}'
+                    foto_data['download_url'] = f'/gallery/download/{foto.id}'
+                    failed_loads += 1
+                
+                result.append(foto_data)
+                
+                # Log de progreso cada 3 fotos o en la última
+                if index % 3 == 0 or index == total_fotos:
+                    _logger.info("[GET_PHOTOS_PREVIEW] 📊 Progreso: %s/%s fotos procesadas (%s exitosos, %s fallidos)", 
+                            index, total_fotos, successful_loads, failed_loads)
+            
+            # Estadísticas finales
+            total_time = time.time()
+            _logger.info("[GET_PHOTOS_PREVIEW] === CARGA COMPLETADA ===")
+            _logger.info("[GET_PHOTOS_PREVIEW] 📈 Estadísticas finales:")
+            _logger.info("[GET_PHOTOS_PREVIEW]   • Total procesadas: %s fotos", total_fotos)
+            _logger.info("[GET_PHOTOS_PREVIEW]   • Exitosas (pCloud): %s", successful_loads)
+            _logger.info("[GET_PHOTOS_PREVIEW]   • Fallidas (fallback): %s", failed_loads)
+            _logger.info("[GET_PHOTOS_PREVIEW]   • Errores de timeout: %s", timeout_errors)
+            _logger.info("[GET_PHOTOS_PREVIEW]   • Errores de pCloud: %s", pcloud_errors)
+            _logger.info("[GET_PHOTOS_PREVIEW]   • Tasa de éxito: %.1f%%", 
+                    (successful_loads / total_fotos * 100) if total_fotos > 0 else 0)
+            
+            # Verificar si tenemos un problema serio
+            if failed_loads > total_fotos * 0.5:  # Más del 50% fallido
+                _logger.warning("[GET_PHOTOS_PREVIEW] 🚨 ALERTA: Más del 50%% de fotos fallaron, posible problema de conectividad con pCloud")
+            
+            return result
+            
         except Exception as e:
-            _logger.exception("[GET_PHOTOS_PREVIEW] Error general: %s", str(e))
-            return photos
+            _logger.exception("[GET_PHOTOS_PREVIEW] ❌ ERROR CRÍTICO: %s", str(e))
+            
+            # En caso de error crítico, devolver datos mínimos usando fallback
+            try:
+                _logger.info("[GET_PHOTOS_PREVIEW] 🔄 Intentando recuperación con datos fallback...")
+                fotos = self.search([('reparacion_id', '=', reparacion_id)], order='sequence asc, create_date asc')
+                fallback_result = self._get_fallback_photos_data(fotos)
+                _logger.info("[GET_PHOTOS_PREVIEW] ✅ Recuperación exitosa con %s fotos en modo fallback", len(fallback_result))
+                return fallback_result
+            except Exception as fallback_error:
+                _logger.exception("[GET_PHOTOS_PREVIEW] ❌ ERROR EN RECUPERACIÓN: %s", str(fallback_error))
+                return []
+
+    def _get_thumb_url_with_timeout(self, file_id, pcloud_config, timeout=2):
+        """Obtiene thumbnail URL con timeout específico y manejo robusto de errores"""
+        start_time = time.time()
+        _logger.info("[THUMB_TIMEOUT] 🔄 Solicitando thumbnail para file_id: %s (timeout: %ss)", 
+                    file_id, timeout)
+        
+        try:
+            if not pcloud_config or not pcloud_config.access_token:
+                _logger.error("[THUMB_TIMEOUT] ❌ No hay token de acceso disponible")
+                return None
+            
+            url = f"https://api.pcloud.com/getthumblink"
+            params = {
+                'access_token': pcloud_config.access_token,
+                'fileid': file_id,
+                'size': '320x240',
+                'crop': 0,
+                'type': 'auto'
+            }
+            
+            _logger.debug("[THUMB_TIMEOUT] 📡 Enviando request a pCloud: %s", url)
+            
+            # Request con timeout muy corto y configuración optimizada
+            import requests
+            
+            # Configurar session para mejor performance
+            session = requests.Session()
+            session.headers.update({
+                'User-Agent': 'Odoo-Gallery/1.0',
+                'Accept': 'application/json',
+                'Connection': 'keep-alive'
+            })
+            
+            response = session.get(url, params=params, timeout=timeout, stream=False)
+            request_time = time.time() - start_time
+            
+            _logger.debug("[THUMB_TIMEOUT] 📡 Response status: %s en %.2fs", response.status_code, request_time)
+            
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    _logger.debug("[THUMB_TIMEOUT] 📄 Respuesta JSON: %s", data)
+                    
+                    if data.get('result') == 0 and 'hosts' in data and 'path' in data:
+                        thumb_url = f"https://{data['hosts'][0]}{data['path']}"
+                        _logger.info("[THUMB_TIMEOUT] ✅ URL generada exitosamente en %.2fs: %s", 
+                                request_time, thumb_url[:100] + "..." if len(thumb_url) > 100 else thumb_url)
+                        return thumb_url
+                    else:
+                        error_msg = data.get('error', 'Respuesta inválida de pCloud')
+                        _logger.error("[THUMB_TIMEOUT] ❌ Error en respuesta pCloud: %s", error_msg)
+                        return None
+                        
+                except ValueError as json_error:
+                    _logger.error("[THUMB_TIMEOUT] ❌ Error parsing JSON: %s", str(json_error))
+                    _logger.error("[THUMB_TIMEOUT] Response text: %s", response.text[:200])
+                    return None
+            else:
+                _logger.error("[THUMB_TIMEOUT] ❌ HTTP Error %s en %.2fs", response.status_code, request_time)
+                return None
+                
+        except requests.exceptions.Timeout:
+            timeout_time = time.time() - start_time
+            _logger.error("[THUMB_TIMEOUT] ⏱️ TIMEOUT después de %.2fs para file_id: %s", timeout_time, file_id)
+            return None
+            
+        except requests.exceptions.ConnectionError as conn_error:
+            error_time = time.time() - start_time
+            _logger.error("[THUMB_TIMEOUT] 🌐 ERROR DE CONEXIÓN en %.2fs: %s", error_time, str(conn_error))
+            return None
+            
+        except requests.exceptions.RequestException as req_error:
+            error_time = time.time() - start_time
+            _logger.error("[THUMB_TIMEOUT] 📡 ERROR DE REQUEST en %.2fs: %s", error_time, str(req_error))
+            return None
+            
+        except Exception as e:
+            error_time = time.time() - start_time
+            _logger.exception("[THUMB_TIMEOUT] ❌ ERROR INESPERADO en %.2fs: %s", error_time, str(e))
+            return None
+
+    def _get_fallback_photos_data(self, fotos):
+        """Genera datos de fotos usando solo endpoints locales como fallback"""
+        _logger.info("[FALLBACK_DATA] 🔄 Generando datos fallback para %s fotos", len(fotos))
+        
+        try:
+            result = []
+            for foto in fotos:
+                foto_data = {
+                    'id': foto.id,
+                    'nombre_foto': foto.nombre_foto or f'foto_{foto.id}',
+                    'sequence': foto.sequence or 0,
+                    'file_id': foto.file_id,
+                    'thumb_url': f'/gallery/preview/{foto.id}',
+                    'download_url': f'/gallery/download/{foto.id}',
+                    'fecha_creacion': foto.create_date.strftime('%Y-%m-%d %H:%M:%S') if foto.create_date else None,
+                }
+                result.append(foto_data)
+                _logger.debug("[FALLBACK_DATA] ✅ Datos fallback para foto ID: %s", foto.id)
+            
+            _logger.info("[FALLBACK_DATA] ✅ Datos fallback generados para %s fotos", len(result))
+            return result
+            
+        except Exception as e:
+            _logger.exception("[FALLBACK_DATA] ❌ Error generando datos fallback: %s", str(e))
+            return []
 
     def download_photo(self):
         """Descargar foto individual"""
