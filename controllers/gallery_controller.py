@@ -485,8 +485,8 @@ class GalleryController(http.Controller):
     @http.route('/gallery/pcloud/uploadinfo/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
     def pcloud_uploadinfo(self, reparacion_id):
         """
-        Versión optimizada para evitar 504 timeout.
-        Timeouts agresivos y validación rápida.
+        Método completo para crear upload link de pCloud con múltiples enfoques
+        para resolver el problema "Log in required" en createuploadlink.
         """
         start_time = time.time()
         _logger.info("[PCLOUD_UPLOADINFO] === INICIO OPTIMIZADO (timeout: 30s max) ===")
@@ -495,7 +495,7 @@ class GalleryController(http.Controller):
         try:
             env = request.env
             
-            # 1. Verificaciones rápidas (sin DB queries costosas)
+            # 1. Verificaciones rápidas
             reparacion = env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
             if not reparacion.exists():
                 _logger.error("[PCLOUD_UPLOADINFO] Reparación no encontrada: %s", reparacion_id)
@@ -508,7 +508,7 @@ class GalleryController(http.Controller):
             elapsed = time.time() - start_time
             _logger.info("[PCLOUD_UPLOADINFO] Reparación verificada en %.2fs", elapsed)
             
-            # 2. Configuración de pCloud (query simple)
+            # 2. Configuración de pCloud
             pconf = env['pcloud.configuracion'].sudo().search([], limit=1)
             if not pconf or not pconf.access_token or not pconf.hostname:
                 _logger.error("[PCLOUD_UPLOADINFO] Configuración pCloud incompleta")
@@ -521,19 +521,13 @@ class GalleryController(http.Controller):
             elapsed = time.time() - start_time
             _logger.info("[PCLOUD_UPLOADINFO] Config obtenida en %.2fs", elapsed)
             
-            # 3. VALIDACIÓN CRÍTICA: Token con timeout muy corto
+            # 3. Validación de token
             _logger.info("[PCLOUD_UPLOADINFO] Validando token (timeout: 5s)...")
             try:
                 validate_url = f"{pconf.hostname}/userinfo"
                 validate_params = {'access_token': pconf.access_token}
                 
-                # Timeout muy corto para validación
-                validate_response = requests.get(
-                    validate_url, 
-                    params=validate_params, 
-                    timeout=5  # Solo 5 segundos
-                )
-                
+                validate_response = requests.get(validate_url, params=validate_params, timeout=5)
                 elapsed = time.time() - start_time
                 _logger.info("[PCLOUD_UPLOADINFO] Token validado en %.2fs", elapsed)
                 
@@ -556,10 +550,10 @@ class GalleryController(http.Controller):
                     }
                     
             except requests.exceptions.Timeout:
-                _logger.error("[PCLOUD_UPLOADINFO] Timeout validando token (>5s)")
+                _logger.error("[PCLOUD_UPLOADINFO] Timeout validando token")
                 return {
                     'success': False, 
-                    'error': 'Timeout validando pCloud. El servidor está lento.',
+                    'error': 'Timeout validando pCloud',
                     'code': 'PCLOUD_VALIDATION_TIMEOUT'
                 }
             except Exception as e:
@@ -570,8 +564,8 @@ class GalleryController(http.Controller):
                     'code': 'PCLOUD_CONNECTION_ERROR'
                 }
             
-            # 4. Obtener folder_id CON TIMEOUT OPTIMIZADO
-            _logger.info("[PCLOUD_UPLOADINFO] Obteniendo folder_id (timeout optimizado)...")
+            # 4. Obtener folder_id
+            _logger.info("[PCLOUD_UPLOADINFO] Obteniendo folder_id...")
             try:
                 folder_id = self._get_folder_id_fast(reparacion, pconf)
                 if not folder_id:
@@ -594,47 +588,118 @@ class GalleryController(http.Controller):
                     'code': 'PCLOUD_FOLDER_ERROR'
                 }
             
-            # 5. Crear upload link CON TIMEOUT CORTO
-            _logger.info("[PCLOUD_UPLOADINFO] Creando upload link (timeout: 8s)...")
+            # 5. CREAR UPLOAD LINK CON MÚLTIPLES ENFOQUES
+            _logger.info("[PCLOUD_UPLOADINFO] Creando upload link con múltiples enfoques...")
+            upload_code = None
+            method_used = None
+            
             try:
+                # ENFOQUE 1: Método estándar con GET
+                _logger.info("[PCLOUD_UPLOADINFO] Enfoque 1: createuploadlink estándar (GET)")
                 url = f"{pconf.hostname}/createuploadlink"
                 params = {
                     'access_token': pconf.access_token,
                     'folderid': folder_id,
-                    'comment': f"Odoo Upload - Reparación {reparacion_id}"
+                    'comment': f"Odoo Upload - Reparación {reparacion_id}",
+                    'maxfiles': 20,
+                    'maxspace': 100 * 1024 * 1024  # 100MB
                 }
                 
-                # Timeout corto para upload link
                 response = requests.get(url, params=params, timeout=8)
                 data = response.json() if response.content else {}
                 
-                elapsed = time.time() - start_time
-                _logger.info("[PCLOUD_UPLOADINFO] Upload link response en %.2fs", elapsed)
+                _logger.info("[PCLOUD_UPLOADINFO] Enfoque 1 response: status=%s, result=%s", 
+                            response.status_code, data.get('result'))
                 
-                if response.status_code != 200:
-                    _logger.error("[PCLOUD_UPLOADINFO] HTTP Error: %s", response.status_code)
-                    return {
-                        'success': False,
-                        'error': f'Error HTTP: {response.status_code}',
-                        'code': 'PCLOUD_HTTP_ERROR'
+                if response.status_code == 200 and data.get('result') == 0 and data.get('code'):
+                    upload_code = data.get('code')
+                    method_used = "GET_standard"
+                    _logger.info("[PCLOUD_UPLOADINFO] Enfoque 1 EXITOSO - código: %s", upload_code)
+                    
+                elif data.get('error') and 'log in required' in data.get('error', '').lower():
+                    _logger.warning("[PCLOUD_UPLOADINFO] Enfoque 1 falló: %s", data.get('error'))
+                    
+                    # ENFOQUE 2: Parámetros mínimos
+                    _logger.info("[PCLOUD_UPLOADINFO] Enfoque 2: parámetros mínimos")
+                    minimal_params = {
+                        'access_token': pconf.access_token,
+                        'folderid': folder_id
                     }
+                    
+                    response2 = requests.get(url, params=minimal_params, timeout=8)
+                    data2 = response2.json() if response2.content else {}
+                    
+                    _logger.info("[PCLOUD_UPLOADINFO] Enfoque 2 response: status=%s, result=%s", 
+                                response2.status_code, data2.get('result'))
+                    
+                    if response2.status_code == 200 and data2.get('result') == 0 and data2.get('code'):
+                        upload_code = data2.get('code')
+                        method_used = "GET_minimal"
+                        _logger.info("[PCLOUD_UPLOADINFO] Enfoque 2 EXITOSO - código: %s", upload_code)
+                    
+                    else:
+                        # ENFOQUE 3: Endpoint público con POST
+                        _logger.info("[PCLOUD_UPLOADINFO] Enfoque 3: endpoint público con POST")
+                        public_url = "https://api.pcloud.com/createuploadlink"
+                        
+                        response3 = requests.post(public_url, data=minimal_params, timeout=8)
+                        data3 = response3.json() if response3.content else {}
+                        
+                        _logger.info("[PCLOUD_UPLOADINFO] Enfoque 3 response: status=%s, result=%s", 
+                                    response3.status_code, data3.get('result'))
+                        
+                        if response3.status_code == 200 and data3.get('result') == 0 and data3.get('code'):
+                            upload_code = data3.get('code')
+                            method_used = "POST_public"
+                            _logger.info("[PCLOUD_UPLOADINFO] Enfoque 3 EXITOSO - código: %s", upload_code)
+                        
+                        else:
+                            # ENFOQUE 4: Reintentar con token refrescado
+                            _logger.info("[PCLOUD_UPLOADINFO] Enfoque 4: revalidar token y reintentar")
+                            
+                            # Volver a validar token por si cambió algo
+                            revalidate_response = requests.get(validate_url, params=validate_params, timeout=3)
+                            revalidate_data = revalidate_response.json() if revalidate_response.content else {}
+                            
+                            if revalidate_response.status_code == 200 and revalidate_data.get('result') == 0:
+                                _logger.info("[PCLOUD_UPLOADINFO] Token sigue válido, reintentando createuploadlink")
+                                
+                                # Reintentar con pausa pequeña
+                                import time
+                                time.sleep(1)
+                                
+                                response4 = requests.get(url, params=minimal_params, timeout=8)
+                                data4 = response4.json() if response4.content else {}
+                                
+                                if response4.status_code == 200 and data4.get('result') == 0 and data4.get('code'):
+                                    upload_code = data4.get('code')
+                                    method_used = "GET_retry"
+                                    _logger.info("[PCLOUD_UPLOADINFO] Enfoque 4 EXITOSO - código: %s", upload_code)
+                                else:
+                                    _logger.error("[PCLOUD_UPLOADINFO] Enfoque 4 falló: %s", data4.get('error'))
+                            else:
+                                _logger.error("[PCLOUD_UPLOADINFO] Token ya no es válido en revalidación")
                 
-                if data.get('result') != 0:
-                    error_msg = data.get('error', 'Error desconocido')
-                    _logger.error("[PCLOUD_UPLOADINFO] pCloud error: %s", error_msg)
-                    return {
-                        'success': False,
-                        'error': f'Error de pCloud: {error_msg}',
-                        'code': 'PCLOUD_API_ERROR'
-                    }
-                
-                upload_code = data.get('code')
+                # Si ningún enfoque funcionó
                 if not upload_code:
-                    _logger.error("[PCLOUD_UPLOADINFO] No se recibió código: %s", data)
+                    _logger.error("[PCLOUD_UPLOADINFO] TODOS LOS ENFOQUES FALLARON")
+                    _logger.error("[PCLOUD_UPLOADINFO] Último error: %s", data.get('error', 'Error desconocido'))
+                    
+                    # Información diagnóstica para el usuario
+                    user_info = validate_data.get('email', 'N/A')
+                    is_premium = validate_data.get('premium', False)
+                    
                     return {
                         'success': False,
-                        'error': 'Respuesta inválida de pCloud',
-                        'code': 'PCLOUD_INVALID_RESPONSE'
+                        'error': 'No se pudo crear upload link con ningún método. Token válido para userinfo pero rechazado para createuploadlink.',
+                        'code': 'PCLOUD_CREATELINK_ALL_METHODS_FAILED',
+                        'debug_info': {
+                            'user_email': user_info,
+                            'is_premium': is_premium,
+                            'last_error': data.get('error', 'N/A'),
+                            'methods_tried': ['GET_standard', 'GET_minimal', 'POST_public', 'GET_retry'],
+                            'suggestion': 'Verificar permisos del token de pCloud o contactar administrador'
+                        }
                     }
                 
             except requests.exceptions.Timeout:
@@ -642,12 +707,12 @@ class GalleryController(http.Controller):
                 _logger.error("[PCLOUD_UPLOADINFO] Timeout creando upload link en %.2fs", elapsed)
                 return {
                     'success': False, 
-                    'error': 'Timeout creando upload link (>8s)',
+                    'error': 'Timeout creando upload link',
                     'code': 'PCLOUD_CREATELINK_TIMEOUT'
                 }
             except Exception as e:
                 elapsed = time.time() - start_time
-                _logger.error("[PCLOUD_UPLOADINFO] Error upload link en %.2fs: %s", elapsed, str(e))
+                _logger.error("[PCLOUD_UPLOADINFO] Error creando upload link en %.2fs: %s", elapsed, str(e))
                 return {
                     'success': False, 
                     'error': f'Error creando upload link: {str(e)}',
@@ -656,7 +721,8 @@ class GalleryController(http.Controller):
             
             # 6. Respuesta exitosa
             total_elapsed = time.time() - start_time
-            _logger.info("[PCLOUD_UPLOADINFO] === COMPLETADO EN %.2fs ===", total_elapsed)
+            _logger.info("[PCLOUD_UPLOADINFO] === COMPLETADO EN %.2fs CON MÉTODO: %s ===", 
+                        total_elapsed, method_used)
             
             return {
                 'success': True,
@@ -664,7 +730,8 @@ class GalleryController(http.Controller):
                 'folder_id': folder_id,
                 'reparacion_id': reparacion_id,
                 'upload_endpoint': 'https://api.pcloud.com/uploadtolink',
-                'processing_time': round(total_elapsed, 2)
+                'processing_time': round(total_elapsed, 2),
+                'method_used': method_used
             }
             
         except Exception as e:
@@ -680,10 +747,7 @@ class GalleryController(http.Controller):
             }
 
     def _get_folder_id_fast(self, reparacion, pcloud_config):
-        """
-        Versión optimizada de obtener folder_id con timeouts cortos.
-        Evita operaciones que puedan tardar más de 20 segundos total.
-        """
+        """Versión optimizada para obtener folder_id con timeouts cortos"""
         _logger.info("[FOLDER_FAST] Iniciando obtención rápida de folder_id")
         
         try:
@@ -694,14 +758,14 @@ class GalleryController(http.Controller):
             
             _logger.info("[FOLDER_FAST] Carpeta objetivo: %s", folder_name)
             
-            # 1. Verificar carpeta raíz fotos_reparaciones con timeout corto
+            # Verificar carpeta raíz
             root_folder_id = self._get_or_create_folder_fast('fotos_reparaciones', 0, pcloud_config, timeout=5)
             if not root_folder_id:
                 raise Exception("No se pudo obtener carpeta raíz")
             
             _logger.info("[FOLDER_FAST] Carpeta raíz ID: %s", root_folder_id)
             
-            # 2. Verificar carpeta específica con timeout corto
+            # Verificar carpeta específica
             target_folder_id = self._get_or_create_folder_fast(folder_name, root_folder_id, pcloud_config, timeout=8)
             if not target_folder_id:
                 raise Exception(f"No se pudo obtener carpeta {folder_name}")
@@ -714,19 +778,17 @@ class GalleryController(http.Controller):
             return None
 
     def _get_or_create_folder_fast(self, folder_name, parent_id, pcloud_config, timeout=6):
-        """
-        Obtiene o crea carpeta con timeout específico y manejo de errores optimizado.
-        """
+        """Obtiene o crea carpeta con timeout específico"""
         _logger.info("[FOLDER_FAST] Procesando carpeta '%s' en padre %s (timeout: %ss)", 
                     folder_name, parent_id, timeout)
         
         try:
-            # 1. Intentar listar carpetas existentes
+            # Listar carpetas existentes
             list_url = f"{pcloud_config.hostname}/listfolder"
             params = {
                 'access_token': pcloud_config.access_token,
                 'folderid': parent_id,
-                'nofiles': 1  # Solo carpetas, más rápido
+                'nofiles': 1  # Solo carpetas
             }
             
             response = requests.get(list_url, params=params, timeout=timeout)
@@ -739,7 +801,7 @@ class GalleryController(http.Controller):
                 _logger.warning("[FOLDER_FAST] pCloud error listando: %s", result.get('error'))
                 raise Exception(f"pCloud error: {result.get('error')}")
             
-            # 2. Buscar carpeta existente
+            # Buscar carpeta existente
             contents = result.get('metadata', {}).get('contents', [])
             for item in contents:
                 if item.get('isfolder') and item.get('name') == folder_name:
@@ -747,7 +809,7 @@ class GalleryController(http.Controller):
                     _logger.info("[FOLDER_FAST] Carpeta existente encontrada: %s", folder_id)
                     return folder_id
             
-            # 3. Crear nueva carpeta si no existe
+            # Crear nueva carpeta
             _logger.info("[FOLDER_FAST] Creando nueva carpeta: %s", folder_name)
             create_url = f"{pcloud_config.hostname}/createfolder"
             create_params = {
@@ -773,7 +835,7 @@ class GalleryController(http.Controller):
             return new_folder_id
             
         except requests.exceptions.Timeout:
-            _logger.error("[FOLDER_FAST] Timeout (>%ss) procesando carpeta '%s'", timeout, folder_name)
+            _logger.error("[FOLDER_FAST] Timeout procesando carpeta '%s'", folder_name)
             return None
         except Exception as e:
             _logger.error("[FOLDER_FAST] Error procesando carpeta '%s': %s", folder_name, str(e))
