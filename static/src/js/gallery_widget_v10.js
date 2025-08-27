@@ -491,6 +491,11 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         // NUEVA FUNCIÓN: Finalizar sesión de subida
         async completeUploadSession(sessionId) {
+            if (!sessionId) {
+                console.warn('No hay sessionId para finalizar');
+                return null;
+            }
+            
             console.log(`Finalizando sesión: ${sessionId}`);
             
             try {
@@ -502,16 +507,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 if (!response.ok) {
+                    // Si es 400, probablemente la sesión ya se finalizó o no existe
+                    if (response.status === 400) {
+                        console.warn(`Sesión ${sessionId} ya finalizada o no existe`);
+                        return { success: true, message: 'Sesión ya finalizada' };
+                    }
                     throw new Error(`Error de servidor: ${response.status}`);
                 }
 
                 const data = await response.json();
-                console.log('Sesión finalizada:', data);
+                console.log(`Sesión ${sessionId} finalizada correctamente`);
                 return data;
 
             } catch (error) {
-                console.error('Error finalizando sesión:', error);
-                return null;
+                console.error(`Error finalizando sesión ${sessionId}:`, error);
+                // No relanzar el error para evitar interrumpir el flujo principal
+                return { success: false, error: error.message };
             }
         },
 
@@ -725,7 +736,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // MEJORADA: Subida masiva con nuevo sistema
         
-        // REEMPLAZAR handleMassiveUpload completa
         async handleMassiveUpload(event) {
             const files = Array.from(event.target.files);
             console.log(`Procesando ${files.length} archivos`);
@@ -738,11 +748,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // NUEVO: Procesar por lotes pequeños
-            const batchSize = 3; // Solo 3 archivos a la vez
+            const batchSize = 3;
             const batches = this.createBatches(validFiles, batchSize);
-            
-            console.log(`Dividiendo ${validFiles.length} archivos en ${batches.length} lotes de máximo ${batchSize}`);
+            console.log(`Dividiendo ${validFiles.length} archivos en ${batches.length} lotes`);
             
             let totalUploaded = 0;
             let totalFailed = 0;
@@ -755,40 +763,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 const batch = batches[batchIndex];
                 console.log(`\n=== PROCESANDO LOTE ${batchIndex + 1}/${batches.length} ===`);
                 
-                // Validar sesión para cada lote
-                const validation = await this.validateUploadSession(batch);
-                if (!validation) {
-                    console.log('Validación fallida, saltando lote');
-                    totalFailed += batch.length;
-                    continue;
-                }
-
-                // Procesar archivos del lote secuencialmente
-                for (const file of batch) {
-                    currentFile++;
-                    console.log(`Procesando archivo ${currentFile}/${validFiles.length}: ${file.name}`);
-                    
-                    const result = await this.uploadWithRetry(file, this.currentSession, 3); // 3 intentos
-                    
-                    if (result && result.success) {
-                        totalUploaded++;
-                        console.log(`✓ ${file.name} subido exitosamente`);
-                    } else {
-                        totalFailed++;
-                        console.log(`✗ ${file.name} falló: ${result ? result.error : 'Error desconocido'}`);
+                let currentSessionId = null;
+                
+                try {
+                    // Crear nueva sesión para cada lote
+                    const validation = await this.validateUploadSession(batch);
+                    if (!validation) {
+                        console.log('Validación fallida, saltando lote');
+                        totalFailed += batch.length;
+                        continue;
                     }
                     
-                    // Actualizar progreso
-                    this.updateBatchProgress(validFiles.length, totalUploaded, totalFailed);
-                    
-                    // Pausa entre archivos para evitar saturar el servidor
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
+                    currentSessionId = validation.session_id;
+                    console.log(`Nueva sesión creada para lote ${batchIndex + 1}: ${currentSessionId}`);
 
-                // Finalizar sesión del lote
-                await this.completeUploadSession(this.currentSession);
+                    // Procesar archivos del lote
+                    for (const file of batch) {
+                        currentFile++;
+                        console.log(`Procesando archivo ${currentFile}/${validFiles.length}: ${file.name}`);
+                        
+                        const result = await this.uploadSingleFile(file, currentSessionId, 0);
+                        
+                        if (result && result.success) {
+                            totalUploaded++;
+                            console.log(`✓ ${file.name} subido exitosamente`);
+                        } else {
+                            totalFailed++;
+                            console.log(`✗ ${file.name} falló: ${result ? result.error : 'Error desconocido'}`);
+                        }
+                        
+                        this.updateBatchProgress(validFiles.length, totalUploaded, totalFailed);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+
+                } catch (error) {
+                    console.error(`Error en lote ${batchIndex + 1}:`, error);
+                    totalFailed += batch.filter(f => !f.uploaded).length;
+                    
+                } finally {
+                    // Finalizar sesión solo si se creó exitosamente
+                    if (currentSessionId) {
+                        try {
+                            console.log(`Finalizando sesión del lote ${batchIndex + 1}: ${currentSessionId}`);
+                            await this.completeUploadSession(currentSessionId);
+                            console.log(`Sesión ${currentSessionId} finalizada exitosamente`);
+                        } catch (sessionError) {
+                            console.warn(`Error finalizando sesión ${currentSessionId}:`, sessionError.message);
+                            // No es crítico si falla la finalización
+                        }
+                    }
+                }
                 
-                // Pausa entre lotes más larga
+                // Pausa entre lotes
                 if (batchIndex < batches.length - 1) {
                     console.log('Pausa entre lotes...');
                     await new Promise(resolve => setTimeout(resolve, 2000));
