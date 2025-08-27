@@ -664,3 +664,32 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception("[CLEANUP_SEQUENCES] Error: %s", str(e))
             return {'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'}
+
+
+    @http.route('/web/session/check', type='json', auth='public', methods=['GET', 'POST'])
+    def check_session_status(self):
+        """Verifica el estado de la sesión actual"""
+        try:
+            # Verificar si hay un usuario autenticado
+            if request.env.user and not request.env.user._is_public():
+                return {
+                    'success': True,
+                    'uid': request.env.user.id,
+                    'username': request.env.user.name,
+                    'is_authenticated': True
+                }
+            else:
+                return {
+                    'success': True,
+                    'uid': False,
+                    'username': None,
+                    'is_authenticated': False
+                }
+        except Exception as e:
+            _logger.warning("[SESSION_CHECK] Error verificando sesión: %s", str(e))
+            return {
+                'success': False,
+                'error': 'Error verificando sesión',
+                'uid': False,
+                'is_authenticated': False
+            }

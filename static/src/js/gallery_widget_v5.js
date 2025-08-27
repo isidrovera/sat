@@ -1099,18 +1099,24 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Iniciando verificación periódica de autenticación');
             
             setInterval(() => {
-                // Verificar cada 5 minutos si el usuario sigue autenticado
-                fetch('/web/session/get_session_info')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (!data || !data.uid || data.uid === false) {
-                            console.log('Sesión expirada detectada');
-                            this.showAuthError();
-                        }
-                    })
-                    .catch(error => {
-                        console.warn('Error verificando autenticación:', error);
-                    });
+                // Usar nuestro endpoint personalizado
+                fetch('/web/session/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success || !data.is_authenticated || data.uid === false) {
+                        console.log('Sesión expirada detectada');
+                        this.showAuthError();
+                    }
+                })
+                .catch(error => {
+                    console.warn('Error verificando autenticación:', error);
+                });
             }, 5 * 60 * 1000); // 5 minutos
         },
 
