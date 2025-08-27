@@ -715,220 +715,12 @@ async uploadAllCapturedPhotos() {
         return;
     }
 
-    // 1) Preparar upload link de pCloud (no expone token)
-    const { linkCode } = await this.getPCloudUploadInfo();
-
-    // 2) UI de progreso
-    this.showUploadProgress(files.length);
-
-    let uploaded = 0;
-    let failed = 0;
-
-    // 3) Subir SECUENCIAL para respetar las secuencias y simplificar
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-
-        // Obtener la siguiente secuencia desde el backend (como ya tenías)
-        const sequence = await this.getNextSequence();
-
-        try {
-            // 3.1) POST directo a pCloud /uploadtolink
-            const fd = new FormData();
-            fd.append('code', linkCode);
-            fd.append('file', file, file.name);
-
-            const resp = await fetch('https://api.pcloud.com/uploadtolink', {
-                method: 'POST',
-                body: fd,
-            });
-
-            if (!resp.ok) {
-                throw new Error(`pCloud HTTP ${resp.status}`);
-            }
-
-            const pdata = await resp.json();
-            if (pdata.result !== 0) {
-                // Muestra detalle real
-                throw new Error(`pCloud uploadtolink: ${pdata.error || JSON.stringify(pdata)}`);
-            }
-
-            // pCloud retorna metadata; según doc, puede venir como 'metadata' o 'fileids'
-            let meta = null;
-            if (Array.isArray(pdata.metadata) && pdata.metadata.length) {
-                meta = pdata.metadata[0];
-            } else if (pdata.fileids && pdata.fileids.length) {
-                meta = { fileid: pdata.fileids[0], size: file.size, contenttype: file.type };
-            }
-
-            if (!meta || !meta.fileid) {
-                throw new Error(`pCloud no devolvió fileid: ${JSON.stringify(pdata)}`);
-            }
-
-            // 3.2) Registrar en Odoo el archivo ya subido
-            const regResp = await fetch('/gallery/pcloud/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    reparacion_id: this.reparacionId,
-                    sequence: sequence,
-                    filename: file.name,
-                    pcloud: {
-                        fileid: meta.fileid,
-                        size: meta.size || file.size,
-                        contenttype: meta.contenttype || file.type
-                    }
-                })
-            });
-            const regRaw = await regResp.json();
-            const reg = regRaw.result || regRaw;
-            if (!reg.success) {
-                throw new Error(`Registro Odoo: ${reg.error || JSON.stringify(reg)}`);
-            }
-
-            uploaded += 1;
-        } catch (err) {
-            console.error(`Error subiendo ${file.name}:`, err);
-            failed += 1;
-        }
-
-        const progress = ((i + 1) / files.length) * 100;
-        this.updateUploadProgress(progress, uploaded + failed, files.length);
-
-        // Pequeña pausa para evitar picos
-        if (i < files.length - 1) {
-            await new Promise(r => setTimeout(r, 200));
-        }
-    }
-
-    // 4) Resultado
-    if (uploaded === files.length) {
-        this.showSuccess('Subida completada', `Se subieron las ${uploaded} fotos`);
-    } else if (uploaded > 0) {
-        this.showError('Subida parcial', `Se subieron ${uploaded} de ${files.length} fotos`);
-    } else {
-        this.showError('Error', 'No se pudo subir ninguna foto');
-    }
-
-    // Limpia sesión de cámara y refresca
-    this.capturedPhotos = [];
-    this.updateCameraButton();
-    setTimeout(() => window.location.reload(), 1500);
+    console.log(`[CAMERA_UPLOAD] Subiendo ${files.length} fotos capturadas con método directo`);
+    
+    // Usar método directo en lugar de createuploadlink
+    return this.handleDirectPCloudUpload(files);
 },
 
-
-        // MEJORADA: Subida masiva con nuevo sistema
-        
-        // SUSTITUIR COMPLETA
-// Sube selección masiva (desde galería) DIRECTO a pCloud por lotes
-async handleMassiveUpload(event) {
-    const selected = Array.from(event.target.files || []);
-    if (!selected.length) return;
-
-    const files = selected.filter(f => this.validateFile(f));
-    if (!files.length) {
-        this.showError('Sin archivos válidos', 'Selecciona imágenes válidas');
-        return;
-    }
-
-    // 1) Preparar upload link (una sola vez para todo el proceso)
-    const { linkCode } = await this.getPCloudUploadInfo();
-
-    // 2) Lotes pequeños para estabilidad
-    const batchSize = 3;
-    const batches = [];
-    for (let i = 0; i < files.length; i += batchSize) {
-        batches.push(files.slice(i, i + batchSize));
-    }
-
-    let uploaded = 0;
-    let failed = 0;
-    this.showBatchProgress(files.length, uploaded, failed);
-
-    // 3) Procesar lote a lote (secuencial)
-    for (let b = 0; b < batches.length; b++) {
-        const batch = batches[b];
-
-        // Dentro de cada lote, también SECUENCIAL para respetar secuencias
-        for (let i = 0; i < batch.length; i++) {
-            const file = batch[i];
-            try {
-                const sequence = await this.getNextSequence();
-
-                const fd = new FormData();
-                fd.append('code', linkCode);
-                fd.append('file', file, file.name);
-
-                const resp = await fetch('https://api.pcloud.com/uploadtolink', {
-                    method: 'POST',
-                    body: fd,
-                });
-                if (!resp.ok) {
-                    throw new Error(`pCloud HTTP ${resp.status}`);
-                }
-
-                const pdata = await resp.json();
-                if (pdata.result !== 0) {
-                    throw new Error(`pCloud uploadtolink: ${pdata.error || JSON.stringify(pdata)}`);
-                }
-
-                let meta = null;
-                if (Array.isArray(pdata.metadata) && pdata.metadata.length) {
-                    meta = pdata.metadata[0];
-                } else if (pdata.fileids && pdata.fileids.length) {
-                    meta = { fileid: pdata.fileids[0], size: file.size, contenttype: file.type };
-                }
-                if (!meta || !meta.fileid) {
-                    throw new Error(`pCloud no devolvió fileid: ${JSON.stringify(pdata)}`);
-                }
-
-                const regResp = await fetch('/gallery/pcloud/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        reparacion_id: this.reparacionId,
-                        sequence: sequence,
-                        filename: file.name,
-                        pcloud: {
-                            fileid: meta.fileid,
-                            size: meta.size || file.size,
-                            contenttype: meta.contenttype || file.type
-                        }
-                    })
-                });
-                const regRaw = await regResp.json();
-                const reg = regRaw.result || regRaw;
-                if (!reg.success) {
-                    throw new Error(`Registro Odoo: ${reg.error || JSON.stringify(reg)}`);
-                }
-
-                uploaded += 1;
-            } catch (err) {
-                console.error(`Error subiendo ${file.name}:`, err);
-                failed += 1;
-            }
-
-            this.updateBatchProgress(files.length, uploaded, failed);
-            await new Promise(r => setTimeout(r, 300));
-        }
-
-        // Pausa entre lotes
-        if (b < batches.length - 1) {
-            await new Promise(r => setTimeout(r, 1200));
-        }
-    }
-
-    // 4) Resultado final
-    this.showFinalResult(files.length, uploaded, failed);
-    if (uploaded > 0) {
-        setTimeout(() => window.location.reload(), 1500);
-    }
-
-    // limpiar input
-    event.target.value = '';
-},
-
-// === FUNCIÓN JAVASCRIPT OPTIMIZADA PARA MANEJAR 504 TIMEOUTS ===
-// Reemplaza la función getPCloudUploadInfo existente
 
 async getPCloudUploadInfo() {
     console.log('[PCLOUD_UPLOADINFO] === INICIANDO CON TIMEOUT OPTIMIZADO ===');
@@ -1438,42 +1230,9 @@ async checkServerHealth() {
     }
 },
 
-// === MODIFICACIÓN: handleMassiveUpload con verificación de salud ===
 async handleMassiveUpload(event) {
-    console.log('[MASSIVE_UPLOAD] Iniciando con verificación de salud del servidor...');
+    console.log('[MASSIVE_UPLOAD] Iniciando con método directo (sin createuploadlink)');
     
-    // Verificar salud del servidor antes de proceder
-    const serverHealth = await this.checkServerHealth();
-    console.log('[MASSIVE_UPLOAD] Salud del servidor:', serverHealth);
-    
-    if (serverHealth === 'timeout' || serverHealth === 'error') {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Servidor No Disponible',
-            text: 'El servidor no responde adecuadamente. Inténtalo más tarde.',
-            confirmButtonText: 'Entendido'
-        });
-        return;
-    }
-    
-    if (serverHealth === 'very_slow') {
-        const proceed = await Swal.fire({
-            icon: 'warning',
-            title: 'Servidor Lento Detectado',
-            text: 'El servidor está respondiendo muy lentamente. ¿Deseas continuar? La subida puede fallar.',
-            showCancelButton: true,
-            confirmButtonText: 'Continuar',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#ffc107'
-        });
-        
-        if (!proceed.isConfirmed) {
-            console.log('[MASSIVE_UPLOAD] Usuario canceló por servidor lento');
-            return;
-        }
-    }
-    
-    // Resto de la lógica original de handleMassiveUpload...
     const selected = Array.from(event.target.files || []);
     if (!selected.length) return;
 
@@ -1482,16 +1241,135 @@ async handleMassiveUpload(event) {
         this.showError('Sin archivos válidos', 'Selecciona imágenes válidas');
         return;
     }
+
+    // Usar método directo en lugar de createuploadlink
+    console.log('[MASSIVE_UPLOAD] Usando método de subida directa');
+    return this.handleDirectPCloudUpload(files);
     
-    // Continuar con el método optimizado basado en la salud del servidor
-    if (serverHealth === 'slow' || serverHealth === 'very_slow') {
-        console.log('[MASSIVE_UPLOAD] Usando método tradicional por servidor lento');
+    event.target.value = '';
+},
+async handleDirectPCloudUpload(files) {
+    console.log('[DIRECT_PCLOUD] Iniciando subida directa para', files.length, 'archivos');
+    
+    try {
+        // Obtener información para subida directa
+        const uploadInfo = await this.getDirectUploadInfo();
+        if (!uploadInfo) {
+            console.log('[DIRECT_PCLOUD] No se pudo obtener info de subida, usando método tradicional');
+            return this.handleTraditionalUpload(files);
+        }
+        
+        console.log('[DIRECT_PCLOUD] Info de subida directa obtenida:', uploadInfo);
+        
+        // Subir archivos uno por uno usando método directo
+        let uploaded = 0;
+        let failed = 0;
+        
+        this.showBatchProgress(files.length, uploaded, failed);
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const sequence = await this.getNextSequence();
+            
+            console.log(`[DIRECT_PCLOUD] Subiendo archivo ${i+1}/${files.length}: ${file.name} (secuencia: ${sequence})`);
+            
+            try {
+                const result = await this.uploadFileDirectToPCloud(file, sequence, uploadInfo);
+                if (result && result.success) {
+                    uploaded++;
+                    console.log(`[DIRECT_PCLOUD] Archivo ${file.name} subido exitosamente`);
+                } else {
+                    failed++;
+                    console.error(`[DIRECT_PCLOUD] Error subiendo ${file.name}:`, result?.error);
+                }
+            } catch (error) {
+                failed++;
+                console.error(`[DIRECT_PCLOUD] Error subiendo ${file.name}:`, error);
+            }
+            
+            this.updateBatchProgress(files.length, uploaded, failed);
+            
+            // Pausa entre archivos para evitar saturar el servidor
+            if (i < files.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+        
+        // Mostrar resultado final
+        this.showFinalResult(files.length, uploaded, failed);
+        if (uploaded > 0) {
+            setTimeout(() => window.location.reload(), 1500);
+        }
+        
+    } catch (error) {
+        console.error('[DIRECT_PCLOUD] Error general:', error);
+        console.log('[DIRECT_PCLOUD] Fallback a método tradicional');
         return this.handleTraditionalUpload(files);
-    } else {
-        console.log('[MASSIVE_UPLOAD] Usando método pCloud optimizado');
-        return this.handlePCloudUpload(files);
     }
 },
+async getDirectUploadInfo() {
+    console.log('[DIRECT_UPLOAD_INFO] Obteniendo información para subida directa');
+    
+    try {
+        const response = await fetch(`/gallery/pcloud/direct-upload/${this.reparacionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        });
+        
+        if (!response.ok) {
+            console.error('[DIRECT_UPLOAD_INFO] Error HTTP:', response.status);
+            return null;
+        }
+        
+        const rawData = await response.json();
+        const data = rawData.result || rawData;
+        
+        if (!data.success) {
+            console.error('[DIRECT_UPLOAD_INFO] Error en respuesta:', data.error);
+            return null;
+        }
+        
+        console.log('[DIRECT_UPLOAD_INFO] Info obtenida exitosamente en', data.processing_time, 'segundos');
+        return data;
+        
+    } catch (error) {
+        console.error('[DIRECT_UPLOAD_INFO] Error:', error);
+        return null;
+    }
+},
+
+// NUEVA FUNCIÓN: Subir archivo individual usando método directo
+async uploadFileDirectToPCloud(file, sequence, uploadInfo) {
+    console.log(`[DIRECT_UPLOAD_FILE] Subiendo ${file.name} con secuencia ${sequence}`);
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('sequence', sequence.toString());
+        
+        const response = await fetch(`/gallery/pcloud/upload-direct/${this.reparacionId}`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log(`[DIRECT_UPLOAD_FILE] Respuesta para ${file.name}:`, data);
+        
+        return data;
+        
+    } catch (error) {
+        console.error(`[DIRECT_UPLOAD_FILE] Error subiendo ${file.name}:`, error);
+        return { success: false, error: error.message };
+    }
+},
+
 
 // === FUNCIÓN: Subida tradicional para servidores lentos ===
 async handleTraditionalUpload(files) {

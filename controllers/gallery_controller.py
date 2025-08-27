@@ -1223,3 +1223,160 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception('Error en proxy_upload: %s', e)
             return request.make_json_response({'success': False, 'error': 'Proxy error'}, status=500)
+    # NUEVA RUTA ALTERNATIVA QUE NO USA createuploadlink
+    # Agrega este método al controlador
+
+    @http.route('/gallery/pcloud/direct-upload/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
+    def pcloud_direct_upload_info(self, reparacion_id):
+        """
+        Método alternativo que no usa createuploadlink.
+        En su lugar, prepara la subida directa usando el token existente.
+        """
+        start_time = time.time()
+        _logger.info("[PCLOUD_DIRECT] === MÉTODO SIN CREATEUPLOADLINK ===")
+        _logger.info("[PCLOUD_DIRECT] Reparación ID: %s", reparacion_id)
+        
+        try:
+            env = request.env
+            
+            # Verificaciones básicas
+            reparacion = env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                return {'success': False, 'error': 'Reparación no encontrada'}
+            
+            pconf = env['pcloud.configuracion'].sudo().search([], limit=1)
+            if not pconf or not pconf.access_token:
+                return {'success': False, 'error': 'Configuración pCloud faltante'}
+            
+            # Validar token (ya sabemos que esto funciona)
+            validate_url = f"{pconf.hostname}/userinfo"
+            validate_response = requests.get(validate_url, params={'access_token': pconf.access_token}, timeout=5)
+            if validate_response.status_code != 200:
+                return {'success': False, 'error': 'Token inválido'}
+            
+            # Obtener folder_id
+            folder_id = self._get_folder_id_fast(reparacion, pconf)
+            if not folder_id:
+                return {'success': False, 'error': 'Error obteniendo carpeta'}
+            
+            elapsed = time.time() - start_time
+            _logger.info("[PCLOUD_DIRECT] Preparación completada en %.2fs", elapsed)
+            
+            # En lugar de createuploadlink, devolvemos información para subida directa
+            return {
+                'success': True,
+                'method': 'direct_upload',
+                'folder_id': folder_id,
+                'upload_endpoint': f"{pconf.hostname}/uploadfile",
+                'access_token': pconf.access_token,  # Solo para uso interno
+                'processing_time': round(elapsed, 2),
+                'note': 'Subida directa sin createuploadlink'
+            }
+            
+        except Exception as e:
+            elapsed = time.time() - start_time
+            _logger.exception("[PCLOUD_DIRECT] Error: %s", str(e))
+            return {
+                'success': False,
+                'error': f'Error interno: {str(e)}',
+                'processing_time': round(elapsed, 2)
+            }
+
+    # TAMBIÉN AGREGA ESTE MÉTODO PARA MANEJAR LA SUBIDA DIRECTA
+    @http.route('/gallery/pcloud/upload-direct/<int:reparacion_id>', type='http', auth='user', methods=['POST'], csrf=False)
+    def pcloud_upload_direct(self, reparacion_id, **kwargs):
+        """
+        Subida directa a pCloud sin usar createuploadlink.
+        Utiliza directamente uploadfile con el token.
+        """
+        _logger.info("[PCLOUD_UPLOAD_DIRECT] Iniciando subida directa para reparación %s", reparacion_id)
+        
+        try:
+            # Verificaciones básicas
+            reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                return self._json_response({'success': False, 'error': 'Reparación no encontrada'})
+            
+            pconf = request.env['pcloud.configuracion'].sudo().search([], limit=1)
+            if not pconf or not pconf.access_token:
+                return self._json_response({'success': False, 'error': 'Configuración pCloud faltante'})
+            
+            # Obtener archivo
+            files = request.httprequest.files.getlist('file')
+            if not files:
+                return self._json_response({'success': False, 'error': 'No se encontró archivo'})
+            
+            file = files[0]
+            sequence = request.httprequest.form.get('sequence', '1')
+            
+            # Obtener folder_id
+            folder_id = self._get_folder_id_fast(reparacion, pconf)
+            if not folder_id:
+                return self._json_response({'success': False, 'error': 'Error obteniendo carpeta'})
+            
+            # Subir directamente usando uploadfile
+            _logger.info("[PCLOUD_UPLOAD_DIRECT] Subiendo archivo %s a carpeta %s", file.filename, folder_id)
+            
+            upload_url = f"{pconf.hostname}/uploadfile"
+            upload_files = {'file': (file.filename, file.stream, file.mimetype)}
+            upload_data = {
+                'access_token': pconf.access_token,
+                'folderid': folder_id,
+                'renameifexists': 1,
+                'nopartial': 1
+            }
+            
+            response = requests.post(upload_url, files=upload_files, data=upload_data, timeout=30)
+            result = response.json() if response.content else {}
+            
+            _logger.info("[PCLOUD_UPLOAD_DIRECT] Respuesta de pCloud: status=%s, result=%s", 
+                        response.status_code, result.get('result'))
+            
+            if response.status_code == 200 and result.get('result') == 0:
+                # Subida exitosa - crear registro en Odoo
+                metadata = result.get('metadata', [{}])[0]
+                file_id = metadata.get('fileid')
+                
+                if file_id:
+                    # Crear registro de foto
+                    foto_data = {
+                        'reparacion_id': reparacion_id,
+                        'nombre_foto': file.filename,
+                        'sequence': int(sequence) if sequence.isdigit() else 1,
+                        'file_id': str(file_id),
+                        'state': 'done',
+                        'size': metadata.get('size', file.content_length or 0),
+                        'mimetype': metadata.get('contenttype', file.mimetype)
+                    }
+                    
+                    foto = request.env['reparaciones.foto'].sudo().create(foto_data)
+                    
+                    _logger.info("[PCLOUD_UPLOAD_DIRECT] Foto creada exitosamente: ID=%s, file_id=%s", 
+                                foto.id, file_id)
+                    
+                    return self._json_response({
+                        'success': True,
+                        'foto_id': foto.id,
+                        'file_id': file_id,
+                        'filename': file.filename,
+                        'sequence': foto.sequence,
+                        'method': 'direct_upload'
+                    })
+                else:
+                    return self._json_response({'success': False, 'error': 'No se recibió file_id de pCloud'})
+            
+            else:
+                error_msg = result.get('error', 'Error desconocido')
+                _logger.error("[PCLOUD_UPLOAD_DIRECT] Error de pCloud: %s", error_msg)
+                return self._json_response({'success': False, 'error': f'Error de pCloud: {error_msg}'})
+                
+        except Exception as e:
+            _logger.exception("[PCLOUD_UPLOAD_DIRECT] Error: %s", str(e))
+            return self._json_response({'success': False, 'error': f'Error interno: {str(e)}'})
+
+    def _json_response(self, data):
+        """Retorna una respuesta JSON válida"""
+        return Response(
+            json.dumps(data),
+            headers=[('Content-Type', 'application/json')]
+        )
