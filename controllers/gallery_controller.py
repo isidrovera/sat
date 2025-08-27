@@ -482,6 +482,117 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception("[UPLOAD] Error general: %s", str(e))
             return json.dumps({'success': False, 'error': f'Error interno: {str(e)}', 'code': 'INTERNAL_ERROR'})
+    @http.route('/gallery/pcloud/uploadinfo/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
+    def pcloud_uploadinfo(self, reparacion_id):
+        """Crea/obtiene un upload link de pCloud (no expone el token)."""
+        env = request.env
+        Foto = env['reparaciones.foto'].sudo()
+        Reparacion = env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+
+        if not Reparacion.exists():
+            return {'success': False, 'error': 'Reparación no encontrada'}
+
+        pconf = env['pcloud.configuracion'].sudo().search([], limit=1)
+        if not pconf or not pconf.access_token:
+            return {'success': False, 'error': 'Config pCloud no disponible'}
+
+        try:
+            # Asegurar carpeta destino
+            folder_id = Foto._obtener_folder_id(Reparacion, pconf)
+
+            # Crear upload link para esa carpeta
+            # Doc pCloud: /createuploadlink -> retorna 'result', 'code', 'linkid', etc.
+            url = f"{pconf.hostname}/createuploadlink"
+            params = {
+                'access_token': pconf.access_token,
+                'folderid': folder_id,
+                # Opcionales:
+                # 'maxuses': 1,              # Úsalo si quieres que sea de un solo uso
+                # 'expires': int(time.time()) + 3600  # 1 hora
+            }
+            res = requests.get(url, params=params, timeout=10)
+            data = res.json()
+            if res.status_code != 200 or data.get('result') != 0:
+                request.env.cr.rollback()
+                return {
+                    'success': False,
+                    'error': f"pCloud createuploadlink: {data.get('error','error')}",
+                    'pcloud_raw': data
+                }
+
+            # pCloud devuelve un 'code' (lo usamos con /uploadtolink)
+            return {
+                'success': True,
+                'link_code': data.get('code'),
+                'folder_id': folder_id
+            }
+
+        except Exception as e:
+            request.env.cr.rollback()
+            return {'success': False, 'error': str(e)}
+
+    @http.route('/gallery/pcloud/register', type='json', auth='user', methods=['POST'])
+    def pcloud_register_file(self, **payload):
+        """
+        Crea el registro reparaciones.foto con el file ya subido a pCloud
+        payload esperado:
+        {
+          "reparacion_id": 123,
+          "sequence": 7,
+          "filename": "image.jpg",
+          "pcloud": {
+             "fileid": 7783...,
+             "size": 123456,
+             "contenttype": "image/jpeg"
+          }
+        }
+        """
+        try:
+            reparacion_id = int(payload.get('reparacion_id'))
+            sequence = int(payload.get('sequence') or 0)
+            filename = payload.get('filename') or 'foto.jpg'
+            pcloud_meta = payload.get('pcloud') or {}
+            fileid = pcloud_meta.get('fileid')
+
+            if not (reparacion_id and fileid):
+                return {'success': False, 'error': 'Datos incompletos'}
+
+            env = request.env
+            Foto = env['reparaciones.foto'].sudo()
+            pconf = env['pcloud.configuracion'].sudo().search([], limit=1)
+            if not pconf:
+                return {'success': False, 'error': 'Config pCloud no disponible'}
+
+            # Crear registro sin foto_binario (no dispara subida)
+            rec = Foto.create({
+                'reparacion_id': reparacion_id,
+                'nombre_foto': filename,
+                'sequence': sequence,
+                'file_id': str(fileid),
+                'mimetype': pcloud_meta.get('contenttype', 'application/octet-stream'),
+                'size': int(pcloud_meta.get('size') or 0),
+                'state': 'done',
+            })
+
+            # Actualiza URLs (descarga y thumb) como plus
+            file_url = rec._get_file_url(rec.file_id, pconf)
+            thumb_url = rec._get_thumb_url(rec.file_id, pconf)
+            rec.write({
+                'url_foto': file_url,
+                'public_link': rec._create_public_link(rec.file_id, pconf) or False,
+            })
+
+            return {
+                'success': True,
+                'id': rec.id,
+                'file_id': rec.file_id,
+                'download_url': file_url,
+                'thumb_url': thumb_url,
+            }
+
+        except Exception as e:
+            request.env.cr.rollback()
+            return {'success': False, 'error': str(e)}
 
     @http.route('/gallery/delete/<int:foto_id>', type='http', auth='user', methods=['POST'], csrf=False)
     def delete_photo(self, foto_id):

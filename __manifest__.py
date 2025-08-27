@@ -174,7 +174,7 @@
             # JS Files existentes
             'sat/static/src/js/dashboard.js',
             'sat/static/src/js/estilo_dashboard.js',
-            'sat/static/src/js/gallery_widget_v12.js',
+            'sat/static/src/js/gallery_widget_v13.js',
             'sat/static/src/js/list_dashboard.js',
             'sat/static/src/js/parts_request_message.js',
             'sat/static/src/js/image-viewer_v1.js',
