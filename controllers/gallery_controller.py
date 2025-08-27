@@ -664,8 +664,7 @@ class GalleryController(http.Controller):
                             if revalidate_response.status_code == 200 and revalidate_data.get('result') == 0:
                                 _logger.info("[PCLOUD_UPLOADINFO] Token sigue válido, reintentando createuploadlink")
                                 
-                                # Reintentar con pausa pequeña
-                                import time
+                                
                                 time.sleep(1)
                                 
                                 response4 = requests.get(url, params=minimal_params, timeout=8)
