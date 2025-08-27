@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // MODIFICAR: Función uploadSingleFile completa con timeout y validaciones
         async uploadSingleFile(file, sessionId, retryAttempt = 0) {
-            const maxRetries = 5; // Número máximo de reintentos
+            const maxRetries = 5;
             console.log(`Subiendo archivo: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB) - Intento ${retryAttempt + 1}/${maxRetries + 1}`);
             
             try {
@@ -403,8 +403,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Comprimir más agresivamente en reintentos
                 if (file.size > 6 * 1024 * 1024) {
-                    const compressionLevel = retryAttempt > 1 ? 0.5 : 0.8; // Comprimir más si ya falló antes
-                    const targetSize = retryAttempt > 2 ? 4 : 6; // Archivo más pequeño en reintentos
+                    const compressionLevel = retryAttempt > 1 ? 0.5 : 0.8;
+                    const targetSize = retryAttempt > 2 ? 4 : 6;
                     console.log(`Comprimiendo archivo (nivel ${compressionLevel}, objetivo ${targetSize}MB)...`);
                     processedFile = await this.compressImage(file, targetSize, compressionLevel);
                 }
@@ -417,27 +417,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('sequence', nextSequence);
                 formData.append('reparacion_id', this.reparacionId);
                 
-                // Timeout progresivo: más tiempo en cada reintento
-                const baseTimeout = Math.max(45000, processedFile.size / 1024 / 1024 * 20000); // 20s por MB
-                const timeoutMs = baseTimeout + (retryAttempt * 15000); // +15s por cada reintento
+                // Timeout progresivo sin AbortController problemático
+                const baseTimeout = Math.max(45000, processedFile.size / 1024 / 1024 * 20000);
+                const timeoutMs = baseTimeout + (retryAttempt * 15000);
                 console.log(`Timeout: ${timeoutMs/1000}s (intento ${retryAttempt + 1})`);
                 
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => {
-                    controller.abort();
-                    console.error(`Timeout después de ${timeoutMs/1000}s`);
-                }, timeoutMs);
-                
-                const response = await fetch(`/gallery/upload/single/${sessionId}`, {
+                // Usar Promise.race en lugar de AbortController
+                const fetchPromise = fetch(`/gallery/upload/single/${sessionId}`, {
                     method: 'POST',
-                    body: formData,
-                    signal: controller.signal
+                    body: formData
                 });
                 
-                clearTimeout(timeoutId);
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => {
+                        reject(new Error(`TIMEOUT_ERROR:${timeoutMs/1000}s`));
+                    }, timeoutMs);
+                });
+                
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
                 
                 if (!response.ok) {
-                    // En lugar de fallar, reintentar según el tipo de error
                     if (response.status === 504 || response.status === 502 || response.status === 503) {
                         throw new Error(`SERVER_RETRY:${response.status}`);
                     }
@@ -464,25 +463,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Decidir si reintentar
                 const shouldRetry = (
                     retryAttempt < maxRetries && (
-                        error.name === 'AbortError' ||
+                        error.message.includes('TIMEOUT_ERROR') ||
                         error.message.includes('SERVER_RETRY') ||
                         error.message.includes('timeout') ||
                         error.message.includes('network') ||
-                        error.message.includes('fetch')
+                        error.message.includes('fetch') ||
+                        error.message.includes('Failed to fetch')
                     )
                 );
                 
                 if (shouldRetry) {
-                    const waitTime = Math.min(5000 + (retryAttempt * 2000), 15000); // Espera progresiva
+                    const waitTime = Math.min(3000 + (retryAttempt * 2000), 10000);
                     console.log(`🔄 Reintentando ${file.name} en ${waitTime/1000}s...`);
                     
                     await new Promise(resolve => setTimeout(resolve, waitTime));
-                    
-                    // Llamada recursiva con incremento de intento
                     return this.uploadSingleFile(file, sessionId, retryAttempt + 1);
                 }
                 
-                // Si agotamos todos los reintentos
                 console.error(`💀 Se agotaron los ${maxRetries + 1} intentos para ${file.name}`);
                 return { 
                     success: false, 
@@ -816,36 +813,10 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         // NUEVA FUNCIÓN: Subida con reintentos
-        async uploadWithRetry(file, sessionId, maxRetries = 3) {
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                console.log(`Intento ${attempt}/${maxRetries} para ${file.name}`);
-                
-                try {
-                    const result = await this.uploadSingleFile(file, sessionId);
-                    if (result && result.success) {
-                        return result;
-                    }
-                    
-                    // Si falla pero no es error crítico, reintentar
-                    if (attempt < maxRetries && result && !result.error.includes('SESSION_EXPIRED')) {
-                        console.log(`Reintentando ${file.name} en 2 segundos...`);
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        continue;
-                    }
-                    
-                    return result;
-                    
-                } catch (error) {
-                    console.error(`Error en intento ${attempt} para ${file.name}:`, error);
-                    
-                    if (attempt < maxRetries) {
-                        console.log(`Reintentando ${file.name} después del error...`);
-                        await new Promise(resolve => setTimeout(resolve, 3000));
-                    } else {
-                        return { success: false, error: error.message, filename: file.name };
-                    }
-                }
-            }
+        async uploadWithRetry(file, sessionId, maxRetries = 1) {
+            // Simplificado - los reintentos están dentro de uploadSingleFile
+            console.log(`Procesando ${file.name}`);
+            return await this.uploadSingleFile(file, sessionId, 0);
         },
 
         // NUEVA FUNCIÓN: Progreso por lotes
