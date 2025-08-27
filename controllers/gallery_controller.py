@@ -666,30 +666,33 @@ class GalleryController(http.Controller):
             return {'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'}
 
 
-    @http.route('/web/session/check', type='json', auth='public', methods=['GET', 'POST'])
+    @http.route('/web/session/check', type='http', auth='public', methods=['POST'], csrf=False)
     def check_session_status(self):
         """Verifica el estado de la sesión actual"""
         try:
             # Verificar si hay un usuario autenticado
             if request.env.user and not request.env.user._is_public():
-                return {
+                result = {
                     'success': True,
                     'uid': request.env.user.id,
                     'username': request.env.user.name,
                     'is_authenticated': True
                 }
             else:
-                return {
+                result = {
                     'success': True,
                     'uid': False,
                     'username': None,
                     'is_authenticated': False
                 }
+            
+            return json.dumps(result)
+            
         except Exception as e:
             _logger.warning("[SESSION_CHECK] Error verificando sesión: %s", str(e))
-            return {
+            return json.dumps({
                 'success': False,
                 'error': 'Error verificando sesión',
                 'uid': False,
                 'is_authenticated': False
-            }
+            })

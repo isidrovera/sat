@@ -333,34 +333,113 @@ document.addEventListener('DOMContentLoaded', function() {
                 return null;
             }
         },
+        // NUEVA FUNCIÓN: Comprimir imagen antes de subir
+        async compressImage(file, maxSizeMB = 8, quality = 0.8) {
+            console.log(`Comprimiendo ${file.name}: ${(file.size/1024/1024).toFixed(2)}MB`);
+            
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                    // Calcular nuevas dimensiones manteniendo proporción
+                    let { width, height } = img;
+                    const maxDimension = 1920; // Máximo HD
+                    
+                    if (width > height) {
+                        if (width > maxDimension) {
+                            height = (height * maxDimension) / width;
+                            width = maxDimension;
+                        }
+                    } else {
+                        if (height > maxDimension) {
+                            width = (width * maxDimension) / height;
+                            height = maxDimension;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Dibujar imagen redimensionada
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convertir a blob con compresión
+                    canvas.toBlob((blob) => {
+                        const compressedSize = blob.size / 1024 / 1024;
+                        console.log(`Imagen comprimida: ${compressedSize.toFixed(2)}MB (reducción: ${((file.size - blob.size) / file.size * 100).toFixed(1)}%)`);
+                        
+                        // Si aún es muy grande, reducir más la calidad
+                        if (compressedSize > maxSizeMB && quality > 0.3) {
+                            img.src = canvas.toDataURL('image/jpeg', quality - 0.2);
+                            return;
+                        }
+                        
+                        // Crear nuevo archivo con el mismo nombre pero comprimido
+                        const compressedFile = new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: file.lastModified
+                        });
+                        
+                        resolve(compressedFile);
+                    }, 'image/jpeg', quality);
+                };
+                
+                img.src = URL.createObjectURL(file);
+            });
+        },
 
-        // MODIFICAR: Función uploadSingleFile completa
+        // MODIFICAR: Función uploadSingleFile completa con timeout y validaciones
         async uploadSingleFile(file, sessionId) {
-            console.log(`Subiendo archivo individual: ${file.name}`);
+            console.log(`Subiendo archivo individual: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)`);
             
             try {
-                // NUEVO: Obtener la siguiente secuencia disponible antes de subir
+                let processedFile = file;
+                
+                // Comprimir si es mayor a 8MB
+                if (file.size > 8 * 1024 * 1024) {
+                    console.log(`Archivo grande detectado, comprimiendo...`);
+                    processedFile = await this.compressImage(file, 8, 0.8);
+                }
+                
+                // Verificar tamaño después de compresión
+                const maxSize = 10 * 1024 * 1024; // 10MB después de compresión
+                if (processedFile.size > maxSize) {
+                    throw new Error(`Archivo demasiado grande incluso después de compresión: ${processedFile.name}`);
+                }
+                
                 const nextSequence = await this.getNextSequence();
-                console.log(`Secuencia asignada para ${file.name}: ${nextSequence}`);
+                console.log(`Secuencia asignada para ${processedFile.name}: ${nextSequence}`);
                 
                 const formData = new FormData();
-                formData.append('file', file);
+                formData.append('file', processedFile);
                 formData.append('sequence', nextSequence);
                 formData.append('reparacion_id', this.reparacionId);
                 
+                // Timeout más generoso para archivos grandes
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    controller.abort();
+                    console.error(`Timeout para ${processedFile.name}: más de 60 segundos`);
+                }, 60000); // 60 segundos
+                
                 const response = await fetch(`/gallery/upload/single/${sessionId}`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    signal: controller.signal
                 });
 
+                clearTimeout(timeoutId);
+
                 if (!response.ok) {
+                    if (response.status === 504) {
+                        throw new Error(`Timeout del servidor. Intenta nuevamente o usa una imagen más pequeña.`);
+                    }
                     throw new Error(`Error de servidor: ${response.status}`);
                 }
 
                 const data = await response.json();
-                console.log('Respuesta de subida individual:', data);
-
-                // Manejar formato JSON-RPC de Odoo
                 const result = data.result || data;
                 
                 if (!result.success) {
@@ -371,10 +450,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error(result.error || 'Error en subida');
                 }
 
-                console.log(`Archivo ${file.name} subido exitosamente con secuencia ${nextSequence}`);
+                console.log(`Archivo ${processedFile.name} subido exitosamente`);
                 return result;
 
             } catch (error) {
+                if (error.name === 'AbortError') {
+                    return { 
+                        success: false, 
+                        error: `Timeout: La subida tardó demasiado. Intenta con una conexión más rápida.`, 
+                        filename: file.name 
+                    };
+                }
                 console.error(`Error subiendo ${file.name}:`, error);
                 return { success: false, error: error.message, filename: file.name };
             }
@@ -715,9 +801,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false;
             }
 
-            const maxSize = 10 * 1024 * 1024; // 10MB
+            // Límite más generoso - la compresión se encargará del tamaño
+            const maxSize = 25 * 1024 * 1024; // 25MB original
             if (file.size > maxSize) {
-                console.warn(`Archivo rechazado (excede tamaño máximo): ${file.name} (${file.size} bytes, máximo: ${maxSize} bytes)`);
+                console.warn(`Archivo rechazado (demasiado grande): ${file.name}`);
+                this.showError('Archivo muy grande', `${file.name} excede el límite de 25MB`);
+                return false;
+            }
+
+            if (file.size === 0) {
+                console.warn(`Archivo rechazado (vacío): ${file.name}`);
                 return false;
             }
 
