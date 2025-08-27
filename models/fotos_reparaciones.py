@@ -909,9 +909,7 @@ class ReparacionFoto(models.Model):
 
 
     def get_photos_zip(self, foto_ids=None):
-        """Crear un archivo ZIP en memoria con las fotos seleccionadas desde pCloud"""
-        
-        # Log inicial de verificación de IDs recibidos
+        """Crear un ZIP en memoria con nombres únicos, descargando desde pCloud."""
         if not foto_ids:
             _logger.warning("[ZIP] No se proporcionaron foto_ids o el valor es None.")
             return False
@@ -919,30 +917,36 @@ class ReparacionFoto(models.Model):
         _logger.info(f"[ZIP] foto_ids recibidos: {foto_ids} (Tipo: {type(foto_ids)})")
 
         try:
-            # Obtener los registros de fotos
             fotos = self.browse(foto_ids)
             if not fotos:
-                _logger.warning("[ZIP] No se encontraron fotos con los IDs proporcionados.")
+                _logger.warning("[ZIP] No se encontraron fotos para descargar")
                 return False
 
-            _logger.info(f"[ZIP] Número de fotos a procesar: {len(fotos)}")
-
-            # Obtener configuración de pCloud
             pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-            if not pcloud_config:
-                _logger.error("[ZIP] No se encontró configuración de pCloud.")
+            if not pcloud_config or not pcloud_config.access_token:
+                _logger.error("[ZIP] Config pCloud faltante")
                 raise ValidationError("No se encontró configuración de pCloud")
 
-            _logger.info("[ZIP] Configuración de pCloud obtenida con éxito")
-
-            # Crear ZIP en memoria
             zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                for foto in fotos:
-                    try:
-                        _logger.info(f"[ZIP] Procesando foto ID: {foto.id}")
+            existing_names = set()
 
-                        # Obtener contenido de la foto desde pCloud
+            def _unique_name(name):
+                # normaliza y garantiza unicidad dentro del ZIP
+                base, ext = os.path.splitext(name)
+                i = 1
+                candidate = name
+                while candidate in existing_names:
+                    i += 1
+                    candidate = f"{base} ({i}){ext}"
+                existing_names.add(candidate)
+                return candidate
+
+            import os
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zip_file:
+                for foto in fotos:
+                    if not foto.file_id:
+                        continue
+                    try:
                         url = f"{pcloud_config.hostname}/getfilelink"
                         params = {
                             'access_token': pcloud_config.access_token,
@@ -950,41 +954,37 @@ class ReparacionFoto(models.Model):
                             'forcedownload': 1
                         }
                         _logger.info(f"[ZIP] Solicitando link de descarga para foto ID: {foto.id} con params: {params}")
-                        
-                        response = requests.get(url, params=params)
+                        response = requests.get(url, params=params, timeout=15)
                         result = response.json()
                         _logger.info(f"[ZIP] Respuesta recibida de pCloud para foto ID: {foto.id}: {result}")
 
                         if response.status_code == 200 and result.get('result') == 0:
                             download_url = f"https://{result['hosts'][0]}{result['path']}"
-                            file_response = requests.get(download_url)
-                            
+                            file_response = requests.get(download_url, timeout=30)
                             if file_response.status_code == 200:
-                                filename = foto.nombre_foto or f'foto_{foto.id}.png'
-                                zip_file.writestr(filename, file_response.content)
-                                _logger.info(f"[ZIP] Foto ID: {foto.id} agregada al ZIP")
+                                name = foto.nombre_foto or f'foto_{foto.id}.jpg'
+                                safe = _unique_name(name)
+                                zip_file.writestr(safe, file_response.content)
+                                _logger.info(f"[ZIP] Foto ID: {foto.id} agregada como '{safe}'")
                             else:
-                                _logger.error(f"[ZIP] Error al descargar la foto ID: {foto.id}")
+                                _logger.error(f"[ZIP] Error al descargar foto {foto.id}: HTTP {file_response.status_code}")
                         else:
-                            _logger.error(f"[ZIP] No se pudo obtener el link de descarga para la foto ID: {foto.id}")
+                            _logger.error(f"[ZIP] No se pudo obtener link para foto {foto.id}")
                     except Exception as e:
-                        _logger.error(f"[ZIP] Error al procesar la foto ID: {foto.id}: {str(e)}")
-                        continue
+                        _logger.error(f"[ZIP] Error procesando foto {foto.id}: {e}")
 
-            # Devolver el ZIP como contenido base64
             zip_buffer.seek(0)
             content = base64.b64encode(zip_buffer.getvalue()).decode('utf-8')
-            
             _logger.info("[ZIP] ZIP creado exitosamente")
             return {
                 'content': content,
                 'filename': 'fotos_reparacion.zip',
                 'mimetype': 'application/zip'
             }
-
         except Exception as e:
-            _logger.exception(f"[ZIP] Error al crear ZIP: {str(e)}")
+            _logger.exception(f"[ZIP] Error al crear ZIP: {e}")
             return False
+
     def _upload_to_pcloud(self, archivo_binario, filename, folder_id, pcloud_config):
         """Sube un archivo a pCloud"""
         _logger.info("[UPLOAD_PCLOUD] Iniciando subida de archivo %s a folder_id %s", filename, folder_id)

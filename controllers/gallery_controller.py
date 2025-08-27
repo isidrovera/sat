@@ -726,43 +726,61 @@ class GalleryController(http.Controller):
 
     # === NUEVO: obtener upload link de pCloud para subir directo desde el navegador ===
     @http.route('/gallery/pcloud/uploadlink/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
-    def get_pcloud_upload_link(self, reparacion_id):
-        """
-        Devuelve una URL de 'upload link' de pCloud (File Request) para subir directo desde el navegador.
-        Luego se ejecuta /gallery/sync/<id> para indexar en Odoo.
-        """
+    def get_upload_link(self, reparacion_id, **kw):
+        """Devuelve {success, endpoint, code, error} siempre."""
         try:
-            reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
-            if not reparacion.exists():
-                return {'success': False, 'error': 'Reparación no encontrada', 'code': 'REPARACION_NOT_FOUND'}
+            payload = request.jsonrequest or {}
+            file_count = int(payload.get('file_count') or 1)
+            total_size = int(payload.get('total_size') or 10_000_000)
 
-            pcloud_config = request.env['pcloud.configuracion'].sudo().search([], limit=1)
-            if not pcloud_config or not pcloud_config.access_token:
-                return {'success': False, 'error': 'Configuración pCloud inválida', 'code': 'PCLOUD_CONFIG'}
+            rep = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not rep.exists():
+                return {'success': False, 'error': 'Reparación no encontrada'}
 
-            # Obtener/crear folder por modelo+serie
-            foto_model = request.env['reparaciones.foto'].sudo()
-            folder_id = foto_model._obtener_folder_id(reparacion, pcloud_config)
+            # Asegura carpeta en pCloud (usa tu método existente)
+            folder_id = rep.create_folder_in_pcloud()
 
-            # Usamos helpers del modelo para crear/recuperar upload link y su POST url
-            code = foto_model._get_or_create_uploadlink(folder_id, pcloud_config)
-            if not code:
-                return {'success': False, 'error': 'No se pudo crear upload link', 'code': 'PCLOUD_CREATE_UL'}
+            pc = request.env['pcloud.configuracion'].sudo().search([], limit=1)
+            if not pc or not pc.access_token or not pc.hostname:
+                return {'success': False, 'error': 'Falta configuración de pCloud'}
 
-            upload_post_url = foto_model._get_upload_post_url(code, pcloud_config)
-            if not upload_post_url:
-                return {'success': False, 'error': 'No se pudo obtener URL de subida', 'code': 'PCLOUD_GET_UL'}
+            # 1) Validar token antes (userinfo)
+            try:
+                u = requests.get(f"{pc.hostname}/userinfo", params={'access_token': pc.access_token}, timeout=10)
+                uj = u.json()
+                if u.status_code != 200 or uj.get('result') != 0:
+                    return {'success': False, 'code': 'PCLOUD_AUTH', 'error': f"Token inválido: {uj.get('error','sin detalle')}"}
+            except Exception as e:
+                _logger.exception("userinfo error")
+                return {'success': False, 'code': 'PCLOUD_AUTH', 'error': 'No se pudo validar token con pCloud'}
 
-            # Devolvemos URL directa para POST (multipart)
-            return {
-                'success': True,
-                'upload_url': upload_post_url,  # p.ej. https://e123.pcloud.com/uZxY... (host+path)
-                'code': code,
-                'folder_id': folder_id
-            }
+            # 2) Crear upload link
+            try:
+                url = f"{pc.hostname}/createuploadlink"
+                params = {
+                    'access_token': pc.access_token,
+                    'folderid': folder_id,
+                    'maxfiles': file_count,
+                    'maxspace': total_size,  # bytes
+                    'comment': f"Upload Odoo Reparación {rep.name or rep.id}",
+                }
+                r = requests.get(url, params=params, timeout=15)
+                data = r.json()
+                if r.status_code == 200 and data.get('result') == 0 and data.get('code'):
+                    return {
+                        'success': True,
+                        'endpoint': 'https://api.pcloud.com/uploadtolink',
+                        'code': data['code'],
+                    }
+                # Error de pCloud normalizado
+                return {'success': False, 'error': f"pCloud error: {data.get('error','sin detalle')}", 'pcloud': data}
+            except Exception as e:
+                _logger.exception('createuploadlink error')
+                return {'success': False, 'error': 'Error creando upload link en pCloud'}
+
         except Exception as e:
-            _logger.exception("[UPLOAD_LINK] Error: %s", str(e))
-            return {'success': False, 'error': 'Error interno', 'code': 'INTERNAL_ERROR'}
+            _logger.exception('get_upload_link error')
+            return {'success': False, 'error': 'Error interno'}
     @http.route('/gallery/pcloud/proxy-upload', type='http', auth='user', methods=['POST'], csrf=False)
     def proxy_upload(self, **kw):
         """
