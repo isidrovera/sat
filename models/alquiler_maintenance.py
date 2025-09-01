@@ -115,29 +115,41 @@ class UnidadAlquiler(models.Model):
         default=False,
         help="Si está activado, usará la fecha recurrente como base para calcular la próxima fecha. Si no, usará la fecha inicial."
     )
+    fecha_ultimo_mantenimiento = fields.Date(
+        string='Último mantenimiento realizado',
+        tracking=True,
+        readonly=True,
+        help="Fecha del último mantenimiento completado"
+    )
     @api.onchange('fecha_inicio', 'patron_recurrencia')
     def _onchange_fecha_inicio(self):
         """
-        Cuando el usuario selecciona una fecha y el patrón 'día específico de la semana',
-        este método detecta automáticamente qué día de la semana es y qué posición
-        ocupa en el mes (primera, segunda, última, etc.)
+        MEJORADO: Detección automática con mejor logging y verificación.
         """
         if self.fecha_inicio and self.patron_recurrencia == 'semana_dia':
-            # Detectar día de la semana (0-6 donde 0 es lunes)
-            dia_semana = self.fecha_inicio.weekday()
-            self.dia_semana = str(dia_semana)
+            # Detectar día de la semana
+            dia_semana_python = self.fecha_inicio.weekday()  # 0=Lunes, 6=Domingo
+            self.dia_semana = str(dia_semana_python)
+            
+            # Nombres para logging
+            nombres_dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+            dia_nombre = nombres_dias[dia_semana_python]
+            
+            _logger.info(f"DETECCIÓN: {self.fecha_inicio} es un {dia_nombre} (código: {dia_semana_python})")
 
-            # Obtener todas las ocurrencias de este día de la semana en el mes
+            # Obtener todas las ocurrencias de este día en el mes
             ocurrencias = []
             year, month = self.fecha_inicio.year, self.fecha_inicio.month
             ultimo_dia = calendar.monthrange(year, month)[1]
 
             for dia in range(1, ultimo_dia + 1):
                 fecha = datetime(year, month, dia).date()
-                if fecha.weekday() == dia_semana:
+                if fecha.weekday() == dia_semana_python:
                     ocurrencias.append(dia)
 
-            # Encontrar la posición de la fecha actual en las ocurrencias
+            _logger.info(f"Todas las ocurrencias de {dia_nombre} en {month}/{year}: {ocurrencias}")
+
+            # Encontrar posición de la fecha seleccionada
             posicion = None
             for i, dia in enumerate(ocurrencias):
                 if dia == self.fecha_inicio.day:
@@ -146,35 +158,87 @@ class UnidadAlquiler(models.Model):
 
             if posicion is not None:
                 total_ocurrencias = len(ocurrencias)
-
-                # Determinar si es mejor expresar desde el inicio o desde el final
+                posicion_desde_inicio = posicion + 1
                 posicion_desde_final = -1 * (total_ocurrencias - posicion)
 
-                # Si es una de las últimas 3 posiciones, usar expresión desde el final
+                _logger.info(f"ANÁLISIS:")
+                _logger.info(f"  Día seleccionado: {self.fecha_inicio.day}")
+                _logger.info(f"  Posición desde inicio: {posicion_desde_inicio} de {total_ocurrencias}")
+                _logger.info(f"  Posición desde final: {posicion_desde_final}")
+
+                # Decidir si usar posición desde inicio o final
                 if posicion_desde_final >= -3:  # Última, penúltima o antepenúltima
-                    self.semana_mes = str(posicion_desde_final)  # -1, -2 o -3
+                    self.semana_mes = str(posicion_desde_final)
+                    descripcion = f"{['Última','Penúltima','Antepenúltima'][abs(posicion_desde_final)-1]} {dia_nombre}"
                 else:
-                    # Es mejor expresarlo desde el inicio
-                    # +1 porque la posición empieza en 0
-                    self.semana_mes = str(posicion + 1)
+                    # Expresar desde el inicio
+                    self.semana_mes = str(posicion_desde_inicio)
+                    descripcion = f"{['Primera','Segunda','Tercera','Cuarta'][posicion_desde_inicio-1]} {dia_nombre}"
 
-                # Loguear para depuración
-                _logger.info(
-                    f"DETECCIÓN DE PATRÓN: Fecha={self.fecha_inicio}, "
-                    f"Día semana={dia_semana} ({['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][dia_semana]}), "
-                    f"Ocurrencias en mes={ocurrencias}, "
-                    f"Posición={posicion+1} de {total_ocurrencias}, "
-                    f"Posición asignada={self.semana_mes}"
-                )
+                _logger.info(f"CONFIGURACIÓN DETECTADA: {descripcion}")
+                _logger.info(f"  semana_mes = '{self.semana_mes}'")
+                _logger.info(f"  dia_semana = '{self.dia_semana}'")
 
+
+    # NUEVO MÉTODO: Para debugging y verificación
+    def debug_cronograma_perpetuo(self):
+        """
+        Simula los próximos 12 meses de mantenimiento para verificar el patrón.
+        """
+        self.ensure_one()
+        
+        if not self.fecha_inicio:
+            return {'warning': {'title': 'Error', 'message': 'Debe definir una fecha de inicio'}}
+        
+        # Simular 12 próximos mantenimientos
+        fecha_simulada = self.fecha_inicio
+        resultados = []
+        
+        for i in range(12):
+            # Simular el cálculo
+            old_fecha_inicio = record.fecha_inicio
+            record.fecha_inicio = fecha_simulada
+            record._compute_fecha_recurrente()
+            
+            resultado = {
+                'mes': i + 1,
+                'fecha_inicio': fecha_simulada,
+                'fecha_recurrente': record.fecha_recurrente,
+                'mes_nombre': fecha_simulada.strftime('%B %Y'),
+                'dia_semana': fecha_simulada.strftime('%A')
+            }
+            resultados.append(resultado)
+            
+            # Preparar para siguiente iteración
+            fecha_simulada = record.fecha_recurrente
+        
+        # Restaurar fecha original
+        record.fecha_inicio = old_fecha_inicio
+        record._compute_fecha_recurrente()
+        
+        # Mostrar resultados
+        mensaje = "SIMULACIÓN DE 12 MESES:\\n\\n"
+        for r in resultados:
+            mensaje += f"{r['mes']:2d}. {r['fecha_recurrente'].strftime('%d/%m/%Y')} ({r['fecha_recurrente'].strftime('%A')})\\n"
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Simulación de Cronograma',
+                'message': mensaje,
+                'sticky': True,
+                'type': 'info',
+            }
+        }
 
 
     
-    @api.depends('fecha_inicio', 'intervalo_meses', 'patron_recurrencia', 'semana_mes', 'dia_semana', 'usar_fecha_recurrente_como_base')
+    @api.depends('fecha_inicio', 'intervalo_meses', 'patron_recurrencia', 'semana_mes', 'dia_semana')
     def _compute_fecha_recurrente(self):
         """
-        Calcula la próxima fecha de mantenimiento para cronogramas perpetuos.
-        VERSIÓN FINAL CORREGIDA: Siempre encuentra fechas FUTURAS respetando el patrón original.
+        Calcula la próxima fecha de mantenimiento basada en fecha_inicio actualizable.
+        NUEVO ENFOQUE: fecha_inicio se actualiza automáticamente y siempre es la base del cálculo.
         """
         for record in self:
             if not record.fecha_inicio:
@@ -185,9 +249,9 @@ class UnidadAlquiler(models.Model):
             fecha_anterior = record.fecha_recurrente
             today = fields.Date.today()
 
-            _logger.info(f"🔍 CALCULANDO para {record.name}: fecha_inicio={record.fecha_inicio}, "
-                        f"fecha_recurrente_actual={record.fecha_recurrente}, "
-                        f"hoy={today}, patrón={record.patron_recurrencia}")
+            _logger.info(f"CALCULANDO desde fecha_inicio: {record.fecha_inicio}, "
+                        f"patron: {record.patron_recurrencia}, intervalo: {record.intervalo_meses} meses, "
+                        f"hoy: {today}")
 
             # Validar intervalo
             intervalo_str = record.intervalo_meses or '1'
@@ -199,148 +263,84 @@ class UnidadAlquiler(models.Model):
                 meses = 1
 
             if record.patron_recurrencia == 'fecha_exacta' or not record.patron_recurrencia:
-                # ========== PATRÓN: DÍA ESPECÍFICO DEL MES ==========
+                # PATRÓN: DÍA ESPECÍFICO DEL MES
                 day_of_month = record.fecha_inicio.day
+                siguiente_fecha = record.fecha_inicio + relativedelta(months=meses)
                 
-                # ✅ LÓGICA CORREGIDA: Buscar desde HOY hacia adelante
-                candidate_date = today
-                found = False
+                # Ajustar si el día no existe en el mes destino
+                last_day = calendar.monthrange(siguiente_fecha.year, siguiente_fecha.month)[1]
+                if day_of_month > last_day:
+                    final_day = last_day
+                else:
+                    final_day = day_of_month
                 
-                # Buscar hasta 24 meses en el futuro
-                for month_offset in range(1, 25):
-                    test_date = today + relativedelta(months=month_offset)
-                    
-                    # Solo considerar meses que coincidan con el intervalo
-                    if month_offset % meses == 0:
-                        # Ajustar el día si no existe en el mes destino
-                        last_day = calendar.monthrange(test_date.year, test_date.month)[1]
-                        if day_of_month > last_day:
-                            final_day = last_day
-                        else:
-                            final_day = day_of_month
-                        
-                        fecha_calculada = test_date.replace(day=final_day)
-                        
-                        if fecha_calculada > today:
-                            record.fecha_recurrente = fecha_calculada
-                            found = True
-                            _logger.info(f"✅ FECHA EXACTA ENCONTRADA: {fecha_calculada}")
-                            break
+                record.fecha_recurrente = siguiente_fecha.replace(day=final_day)
                 
-                if not found:
-                    # Fallback simple
-                    record.fecha_recurrente = today + relativedelta(months=meses, day=day_of_month)
+                _logger.info(f"FECHA_EXACTA: {record.fecha_inicio} + {meses} meses = {record.fecha_recurrente}")
 
             elif record.patron_recurrencia == 'semana_dia' and record.semana_mes and record.dia_semana:
-                # ========== PATRÓN: DÍA ESPECÍFICO DE LA SEMANA ==========
+                # PATRÓN: DÍA ESPECÍFICO DE LA SEMANA
                 try:
-                    weekday = int(record.dia_semana)  # 0=Lunes, 6=Domingo
-                    position = int(record.semana_mes)  # 1,2,3,4 o -1,-2,-3
+                    weekday = int(record.dia_semana)
+                    position = int(record.semana_mes)
                     
+                    # Nombres para logging
                     dias_nombres = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
                     pos_nombres = {'1':'Primer','2':'Segundo','3':'Tercer','4':'Cuarto','-1':'Último','-2':'Penúltimo','-3':'Antepenúltimo'}
                     patron_desc = f"{pos_nombres.get(record.semana_mes, record.semana_mes)} {dias_nombres[weekday]}"
                     
-                    _logger.info(f"🎯 BUSCANDO PATRÓN: {patron_desc} cada {meses} mes(es) desde HOY ({today})")
+                    # Calcular el mes objetivo
+                    target_date = record.fecha_inicio + relativedelta(months=meses)
+                    target_year = target_date.year
+                    target_month = target_date.month
                     
-                    def encontrar_fecha_en_mes(year, month):
-                        """Encuentra la fecha del patrón en un mes específico"""
-                        ocurrencias = []
-                        last_day = calendar.monthrange(year, month)[1]
-                        
-                        # Encontrar todas las ocurrencias del día de la semana
-                        for dia in range(1, last_day + 1):
-                            fecha = datetime(year, month, dia).date()
-                            if fecha.weekday() == weekday:
-                                ocurrencias.append(fecha)
-                        
-                        if not ocurrencias:
-                            return None
-                        
+                    _logger.info(f"SEMANA_DIA: Buscando {patron_desc} en {target_month}/{target_year}")
+                    
+                    # Encontrar todas las ocurrencias del día en el mes objetivo
+                    ocurrencias = []
+                    last_day = calendar.monthrange(target_year, target_month)[1]
+                    
+                    for dia in range(1, last_day + 1):
+                        fecha = datetime(target_year, target_month, dia).date()
+                        if fecha.weekday() == weekday:
+                            ocurrencias.append(fecha)
+                    
+                    _logger.info(f"Ocurrencias encontradas: {[f.strftime('%d/%m') for f in ocurrencias]}")
+                    
+                    if ocurrencias:
                         # Seleccionar según posición
                         if position < 0:  # Desde el final (-1=último, -2=penúltimo, etc.)
                             if abs(position) <= len(ocurrencias):
-                                return ocurrencias[position]  # position ya es negativo
+                                record.fecha_recurrente = ocurrencias[position]
                             else:
-                                return ocurrencias[0]  # Primera si no hay suficientes
+                                record.fecha_recurrente = ocurrencias[0]
                         else:  # Desde el inicio (1=primer, 2=segundo, etc.)
-                            index = position - 1  # Convertir a índice 0-based
+                            index = position - 1
                             if index < len(ocurrencias):
-                                return ocurrencias[index]
+                                record.fecha_recurrente = ocurrencias[index]
                             else:
-                                return ocurrencias[-1]  # Última si no hay suficientes
-                    
-                    # ✅ NUEVA LÓGICA: Buscar desde HOY hacia adelante en intervalos correctos
-                    found = False
-                    
-                    # Buscar hasta 24 meses en el futuro
-                    for month_offset in range(1, 25):
-                        # Solo buscar en meses que coincidan con el intervalo
-                        if month_offset % meses == 0:
-                            target_date = today + relativedelta(months=month_offset)
-                            fecha_candidata = encontrar_fecha_en_mes(target_date.year, target_date.month)
-                            
-                            if fecha_candidata and fecha_candidata > today:
-                                record.fecha_recurrente = fecha_candidata
-                                found = True
-                                _logger.info(f"✅ PATRÓN ENCONTRADO: {patron_desc} en {fecha_candidata.strftime('%d/%m/%Y')} "
-                                            f"(mes +{month_offset} desde hoy)")
-                                break
-                            else:
-                                _logger.info(f"⏭️ Mes +{month_offset}: {target_date.strftime('%m/%Y')} → "
-                                            f"{'Sin ocurrencias' if not fecha_candidata else f'Fecha {fecha_candidata} ya pasó'}")
-                    
-                    if not found:
-                        # Fallback: buscar sin restricción de intervalo
-                        _logger.warning("🔍 FALLBACK: Buscando sin restricción de intervalo...")
-                        for month_offset in range(1, 12):
-                            target_date = today + relativedelta(months=month_offset)
-                            fecha_candidata = encontrar_fecha_en_mes(target_date.year, target_date.month)
-                            
-                            if fecha_candidata and fecha_candidata > today:
-                                record.fecha_recurrente = fecha_candidata
-                                found = True
-                                _logger.info(f"✅ FALLBACK ENCONTRADO: {patron_desc} en {fecha_candidata.strftime('%d/%m/%Y')}")
-                                break
-                    
-                    if not found:
-                        _logger.error(f"❌ NO SE PUDO ENCONTRAR {patron_desc}, usando fallback simple")
-                        record.fecha_recurrente = today + relativedelta(months=meses)
-
+                                record.fecha_recurrente = ocurrencias[-1]
+                        
+                        _logger.info(f"RESULTADO: {patron_desc} = {record.fecha_recurrente.strftime('%d/%m/%Y')}")
+                    else:
+                        # Fallback si no hay ocurrencias (muy raro)
+                        record.fecha_recurrente = target_date
+                        _logger.warning(f"Sin ocurrencias de {patron_desc} en {target_month}/{target_year}, usando fallback")
+                        
                 except Exception as e:
-                    _logger.error(f"❌ Error en cálculo de patrón semana_dia: {str(e)}")
-                    record.fecha_recurrente = today + relativedelta(months=meses)
+                    _logger.error(f"Error en cálculo semana_dia: {str(e)}")
+                    record.fecha_recurrente = record.fecha_inicio + relativedelta(months=meses)
             else:
-                # Fallback para casos no contemplados
-                record.fecha_recurrente = today + relativedelta(months=meses)
+                # Fallback simple
+                record.fecha_recurrente = record.fecha_inicio + relativedelta(months=meses)
 
-            # Log final detallado
-            if record.dia_semana and record.semana_mes:
-                dia_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-                posicion_nombres = {
-                    '1': 'Primer', '2': 'Segundo', '3': 'Tercer', '4': 'Cuarto',
-                    '-1': 'Último', '-2': 'Penúltimo', '-3': 'Antepenúltimo'
-                }
-                dia_semana_nombre = dia_nombres[int(record.dia_semana)]
-                posicion_nombre = posicion_nombres.get(record.semana_mes, record.semana_mes)
-                patron_desc = f"{posicion_nombre} {dia_semana_nombre}"
-            else:
-                patron_desc = f"Día {record.fecha_inicio.day} del mes"
+            # Log final completo
+            _logger.info(f"RESULTADO FINAL: {record.name} -> "
+                        f"fecha_inicio: {record.fecha_inicio} -> "
+                        f"fecha_recurrente: {record.fecha_recurrente} -> "
+                        f"dias_diferencia: {(record.fecha_recurrente - today).days}")
 
-            # Verificar que la fecha esté en el futuro
-            if record.fecha_recurrente <= today:
-                _logger.error(f"❌ ERROR: Fecha calculada {record.fecha_recurrente} NO está en el futuro (hoy={today})")
-                # Forzar una fecha futura
-                record.fecha_recurrente = today + relativedelta(months=meses)
-            
-            _logger.info(
-                f"🎯 RESULTADO FINAL: {record.name} → {patron_desc} cada {meses} mes(es) "
-                f"→ PRÓXIMA FECHA: {record.fecha_recurrente.strftime('%d/%m/%Y')} "
-                f"(hoy es {today.strftime('%d/%m/%Y')} - "
-                f"{'✅ FUTURO' if record.fecha_recurrente > today else '❌ PASADO'})"
-            )
-
-            # Solo hacer message_post si el registro está guardado y hay cambio
+            # Solo hacer message_post si el registro está guardado
             if (fecha_anterior and 
                 record.fecha_recurrente != fecha_anterior and 
                 record.id and 
@@ -350,48 +350,98 @@ class UnidadAlquiler(models.Model):
                 
                 if record.estado_programacion in ['confirmado', 'reprogramado']:
                     record.estado_programacion = 'pendiente'
-                    try:
-                        record.message_post(
-                            body=f"Nueva fecha de mantenimiento: {record.fecha_recurrente.strftime('%d/%m/%Y')}",
-                            message_type='notification'
-                        )
-                    except Exception as e:
-                        _logger.warning(f"No se pudo enviar mensaje: {str(e)}")
-
 
 
 
     def iniciar_calculo_recurrente(self):
         """
-        Activa el cálculo recurrente para calcular fechas futuras
-        a partir de la fecha recurrente actual en vez de la fecha de inicio.
+        SIMPLIFICADO: Ya no necesario con el nuevo enfoque.
+        Solo resetea el estado.
         """
         self.ensure_one()
-        self.usar_fecha_recurrente_como_base = True
+        
+        self.write({
+            'estado_programacion': 'pendiente',
+            'fecha_confirmacion': False
+        })
+        
         self.message_post(
-            body="🔄 Se ha iniciado el cálculo recurrente. Las próximas fechas se calcularán a partir de la fecha recurrente actual.",
+            body="Cronograma de mantenimiento reiniciado",
             message_type='notification'
         )
+        
         return True
+
+    def corregir_patron_manualmente(self, nuevo_dia_semana=None, nueva_posicion=None):
+        """
+        Permite corregir manualmente la configuración de patrón.
+        Útil cuando la detección automática falla.
+        """
+        self.ensure_one()
+        
+        if nuevo_dia_semana is not None:
+            self.dia_semana = str(nuevo_dia_semana)
+        
+        if nueva_posicion is not None:
+            self.semana_mes = str(nueva_posicion)
+        
+        # Recalcular con la nueva configuración
+        self._compute_fecha_recurrente()
+        
+        # Determinar descripción del patrón
+        if self.patron_recurrencia == 'semana_dia':
+            dias_nombres = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+            pos_nombres = {'1':'Primer','2':'Segundo','3':'Tercer','4':'Cuarto','-1':'Último','-2':'Penúltimo','-3':'Antepenúltimo'}
+            patron_desc = f"{pos_nombres.get(self.semana_mes)} {dias_nombres[int(self.dia_semana)]}"
+        else:
+            patron_desc = f"Día {self.fecha_inicio.day} del mes"
+        
+        mensaje = f"Patrón corregido a: {patron_desc}. Próximo mantenimiento: {self.fecha_recurrente.strftime('%d/%m/%Y')}"
+        
+        self.message_post(
+            body=mensaje,
+            message_type='notification'
+        )
+        
+        _logger.info(f"PATRÓN CORREGIDO MANUALMENTE: {self.name} -> {patron_desc}")
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Patrón Corregido',
+                'message': mensaje,
+                'sticky': True,
+                'type': 'success',
+            }
+        }
+
 
     def reiniciar_configuracion(self):
         """
-        Reinicia la configuración para volver a calcular la fecha recurrente
-        a partir de la fecha de inicio original.
+        MODIFICADO: Reinicia solo el estado, mantiene fecha_inicio actual.
         """
         self.ensure_one()
-        self.usar_fecha_recurrente_como_base = False
-        self._compute_fecha_recurrente()  # Forzar recálculo
+        
+        self.write({
+            'estado_programacion': 'pendiente',
+            'fecha_confirmacion': False
+        })
+        
+        # Forzar recálculo desde fecha_inicio actual
+        self._compute_fecha_recurrente()
+        
         self.message_post(
-            body="🔄 Configuración reiniciada. La fecha recurrente se calculará a partir de la fecha de inicio.",
+            body=f"Configuración reiniciada. Próximo mantenimiento: {self.fecha_recurrente.strftime('%d/%m/%Y')}",
             message_type='notification'
         )
+        
         return True
     @api.model
     def update_fecha_recurrente(self):
         """
-        Actualiza fechas de mantenimiento vencidas.
-        VERSIÓN FINAL CORREGIDA: Calcula fechas futuras correctamente.
+        Actualiza fechas vencidas moviendo fecha_inicio hacia adelante.
+        NUEVO ENFOQUE: Actualiza fecha_inicio para simplificar cálculos futuros.
         """
         today = fields.Date.today()
         
@@ -401,33 +451,50 @@ class UnidadAlquiler(models.Model):
             ('control_mantenimiento', '=', True)
         ])
         
-        _logger.info(f"🔍 CRON: Encontrados {len(records)} registros con fechas vencidas (hoy={today})")
+        _logger.info(f"CRON: Encontrados {len(records)} registros con fechas vencidas (hoy: {today})")
 
         for record in records:
             fecha_vencida = record.fecha_recurrente
+            fecha_inicio_anterior = record.fecha_inicio
             
-            _logger.info(f"📅 PROCESANDO: {record.name} - Fecha vencida: {fecha_vencida} - Patrón: {record.patron_recurrencia}")
+            # Determinar descripción del patrón para logs
+            if record.patron_recurrencia == 'semana_dia' and record.semana_mes and record.dia_semana:
+                dias_nombres = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+                pos_nombres = {'1':'Primer','2':'Segundo','3':'Tercer','4':'Cuarto','-1':'Último','-2':'Penúltimo','-3':'Antepenúltimo'}
+                patron_desc = f"{pos_nombres.get(record.semana_mes, record.semana_mes)} {dias_nombres[int(record.dia_semana)]}"
+            else:
+                patron_desc = f"Día {record.fecha_inicio.day} del mes"
             
-            # ✅ ACTIVAR el uso de fecha_recurrente como base
+            _logger.info(f"PROCESANDO: {record.name} - Patrón: {patron_desc}")
+            _logger.info(f"  fecha_inicio anterior: {fecha_inicio_anterior}")
+            _logger.info(f"  fecha_recurrente vencida: {fecha_vencida}")
+            
+            # ACTUALIZAR fecha_inicio a la fecha vencida
             record.write({
-                'usar_fecha_recurrente_como_base': True,
+                'fecha_inicio': fecha_vencida,
+                'fecha_ultimo_mantenimiento': fecha_vencida,  # Registrar el último mantenimiento
                 'estado_programacion': 'pendiente',
                 'fecha_confirmacion': False
             })
 
-            # Forzar recálculo (la nueva lógica calculará desde HOY hacia adelante)
+            # Forzar recálculo desde la nueva fecha_inicio
             record._compute_fecha_recurrente()
 
-            # Verificar que el resultado sea correcto
-            if record.fecha_recurrente <= today:
-                _logger.error(f"❌ ERROR: {record.name} - Fecha calculada {record.fecha_recurrente} aún está en el pasado")
-                # Forzar una fecha futura simple
-                record.fecha_recurrente = today + relativedelta(months=int(record.intervalo_meses or '1'))
-
-            _logger.info(f"✅ ACTUALIZADO: {record.name} → {fecha_vencida} → {record.fecha_recurrente} "
-                        f"({'✅ FUTURO' if record.fecha_recurrente > today else '❌ PASADO'})")
+            _logger.info(f"ACTUALIZADO: {record.name}")
+            _logger.info(f"  nueva fecha_inicio: {record.fecha_inicio}")
+            _logger.info(f"  nueva fecha_recurrente: {record.fecha_recurrente}")
+            _logger.info(f"  patrón mantenido: {patron_desc}")
             
-            # Enviar notificación solo si el registro existe
+            # Verificar que el patrón se respete
+            if record.patron_recurrencia == 'semana_dia':
+                dia_calculado = record.fecha_recurrente.weekday()
+                dia_esperado = int(record.dia_semana)
+                if dia_calculado == dia_esperado:
+                    _logger.info(f"  PATRÓN VERIFICADO: {patron_desc} respetado correctamente")
+                else:
+                    _logger.error(f"  ERROR PATRÓN: Esperado {dias_nombres[dia_esperado]}, calculado {dias_nombres[dia_calculado]}")
+            
+            # Enviar notificación
             if record.id and hasattr(record, '_origin') and record._origin and record._origin.id:
                 try:
                     record.message_post(
@@ -437,8 +504,50 @@ class UnidadAlquiler(models.Model):
                 except Exception as e:
                     _logger.warning(f"No se pudo enviar notificación: {str(e)}")
 
-        _logger.info(f"🎯 CRON COMPLETADO: {len(records)} registros actualizados")
+        _logger.info(f"CRON COMPLETADO: {len(records)} registros actualizados")
         return True
+    def confirmar_mantenimiento_completado(self):
+        """
+        Confirma que el mantenimiento fue completado y avanza fecha_inicio.
+        Método para usar cuando el técnico completa el mantenimiento.
+        """
+        self.ensure_one()
+        
+        if not self.fecha_recurrente:
+            raise UserError("No hay fecha de mantenimiento programada")
+        
+        fecha_completada = self.fecha_recurrente
+        
+        # Actualizar fecha_inicio para el próximo cálculo
+        self.write({
+            'fecha_inicio': fecha_completada,
+            'fecha_ultimo_mantenimiento': fecha_completada,
+            'estado_programacion': 'pendiente',
+            'fecha_confirmacion': fields.Datetime.now()
+        })
+        
+        # Recalcular automáticamente la próxima fecha
+        self._compute_fecha_recurrente()
+        
+        # Log del cambio
+        self.message_post(
+            body=f"Mantenimiento completado el {fecha_completada.strftime('%d/%m/%Y')}. Próximo: {self.fecha_recurrente.strftime('%d/%m/%Y')}",
+            message_type='notification'
+        )
+        
+        _logger.info(f"MANTENIMIENTO COMPLETADO: {self.name} - Nueva secuencia iniciada desde {self.fecha_inicio}")
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Mantenimiento Completado',
+                'message': f'Próximo mantenimiento programado para {self.fecha_recurrente.strftime("%d/%m/%Y")}',
+                'sticky': False,
+                'type': 'success',
+            }
+        }
+
 
 
     def debug_patron_cliente(self, cliente_id=None):
@@ -568,23 +677,18 @@ class UnidadAlquiler(models.Model):
 
     def aplicar_configuracion_a_todos(self):
         """
-        Aplica la configuración de mantenimiento del registro actual a todos
-        los otros equipos del mismo cliente.
-        VERSIÓN CORREGIDA: Evita recálculos múltiples no deseados.
+        MODIFICADO: Aplica configuración sin el campo usar_fecha_recurrente_como_base.
         """
         self.ensure_one()
 
-        # Verificar que haya un cliente asignado
+        # Verificaciones
         if not self.cliente_id:
-            raise UserError(
-                _("Debe seleccionar un cliente antes de aplicar la configuración a todos los equipos."))
+            raise UserError("Debe seleccionar un cliente antes de aplicar la configuración")
 
-        # Verificar que la configuración de mantenimiento esté completa
         if not self.fecha_inicio or not self.intervalo_meses:
-            raise UserError(
-                _("Complete la configuración de mantenimiento antes de aplicarla a otros equipos."))
+            raise UserError("Complete la configuración de mantenimiento antes de aplicarla")
 
-        # Buscar todos los otros equipos del mismo cliente que tienen mantenimiento activado
+        # Buscar otros equipos del mismo cliente
         otros_equipos = self.search([
             ('id', '!=', self.id),
             ('cliente_id', '=', self.cliente_id.id),
@@ -592,66 +696,60 @@ class UnidadAlquiler(models.Model):
         ])
 
         if not otros_equipos:
-            raise UserError(
-                _("No se encontraron otros equipos con mantenimiento activado para este cliente."))
+            raise UserError("No se encontraron otros equipos con mantenimiento activado para este cliente")
 
-        # ✅ CAMBIO PRINCIPAL: Resetear TODOS los equipos primero (sin recálculos)
-        _logger.info(f"🔄 APLICANDO configuración a {len(otros_equipos)} equipos del cliente {self.cliente_id.name}")
+        _logger.info(f"APLICANDO configuración a {len(otros_equipos)} equipos del cliente {self.cliente_id.name}")
         
-        # Valores a copiar (SIN usar_fecha_recurrente_como_base para evitar problemas)
+        # Valores a copiar (sin usar_fecha_recurrente_como_base)
         valores_base = {
             'fecha_inicio': self.fecha_inicio,
             'intervalo_meses': self.intervalo_meses,
             'patron_recurrencia': self.patron_recurrencia,
-            'usar_fecha_recurrente_como_base': False,  # ← RESETEAR a False
             'estado_programacion': 'pendiente',
             'fecha_confirmacion': False
         }
 
-        # Si el patrón es "día específico de la semana", también copiar estos campos
+        # Si el patrón es "día específico de la semana", copiar estos campos
         if self.patron_recurrencia == 'semana_dia':
             valores_base.update({
                 'semana_mes': self.semana_mes,
                 'dia_semana': self.dia_semana
             })
 
-        # ✅ IMPORTANTE: Usar with_context para evitar triggers no deseados
         try:
-            # Aplicar la configuración base a todos los equipos (esto forzará recálculo desde fecha_inicio)
-            otros_equipos.with_context(skip_compute=True).write(valores_base)
+            # Aplicar configuración
+            otros_equipos.write(valores_base)
             
-            # Forzar recálculo manual UNA SOLA VEZ para cada equipo
+            # Forzar recálculo para cada equipo
             for equipo in otros_equipos:
                 equipo._compute_fecha_recurrente()
-                _logger.info(f"✅ Equipo {equipo.id}: Nueva fecha_recurrente = {equipo.fecha_recurrente}")
+                _logger.info(f"Equipo {equipo.id}: fecha_recurrente = {equipo.fecha_recurrente}")
+
+            # Mensaje de confirmación
+            message = f"Configuración aplicada a {len(otros_equipos)} equipo(s) del cliente {self.cliente_id.name}"
+            
+            self.message_post(
+                body=message,
+                message_type='notification'
+            )
+
+            _logger.info(f"CONFIGURACIÓN APLICADA EXITOSAMENTE a {len(otros_equipos)} equipos")
+
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Configuración aplicada',
+                    'message': message,
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
 
         except Exception as e:
-            _logger.error(f"❌ Error aplicando configuración: {str(e)}")
-            raise UserError(_(f"Error al aplicar configuración: {str(e)}"))
+            _logger.error(f"Error aplicando configuración: {str(e)}")
+            raise UserError(f"Error al aplicar configuración: {str(e)}")
 
-        # Mostrar mensaje de confirmación
-        message = _(
-            f"Configuración de mantenimiento aplicada a {len(otros_equipos)} equipo(s) del cliente {self.cliente_id.name}.")
-
-        # Registrar la acción en el historial
-        self.message_post(
-            body=f"✅ {message}",
-            message_type='notification'
-        )
-
-        _logger.info(f"🎯 CONFIGURACIÓN APLICADA EXITOSAMENTE a {len(otros_equipos)} equipos")
-
-        # Mostrar mensaje al usuario
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Configuración aplicada'),
-                'message': message,
-                'sticky': False,
-                'type': 'success',
-            }
-        }
 
 
     def _create_maintenance_tickets(self):
