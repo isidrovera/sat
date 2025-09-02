@@ -463,32 +463,5 @@
     <!-- CRON JOBS -->
     <!-- ============================================ -->
     
-    <!-- Cron para generar reporte semanal -->
-    <record id="cron_generar_reporte_semanal" model="ir.cron">
-        <field name="name">Generar Reporte Semanal Estado Máquinas</field>
-        <field name="model_id" ref="model_reporte_estado_maquina"/>
-        <field name="state">code</field>
-        <field name="code">model.generar_reporte_semanal()</field>
-        <field name="interval_number">1</field>
-        <field name="interval_type">weeks</field>
-        <field name="numbercall">-1</field>
-        <field name="active">True</field>
-       
-        <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).replace(hour=6, minute=0, second=0, microsecond=0)"/>
-    </record>
-
-    <!-- Cron para limpiar reportes antiguos -->
-    <record id="cron_limpiar_reportes_antiguos" model="ir.cron">
-        <field name="name">Limpiar Reportes Antiguos Estado Máquinas</field>
-        <field name="model_id" ref="model_reporte_estado_maquina"/>
-        <field name="state">code</field>
-        <field name="code">model.limpiar_reportes_antiguos()</field>
-        <field name="interval_number">1</field>
-        <field name="interval_type">months</field>
-        <field name="numbercall">-1</field>
-        <field name="active">True</field>
-        
-        <field name="nextcall" eval="(DateTime.now() + timedelta(days=30)).replace(hour=2, minute=0, second=0, microsecond=0)"/>
-    </record>
-
+    
 </odoo>
