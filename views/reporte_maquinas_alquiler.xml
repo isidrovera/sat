@@ -409,7 +409,7 @@
     <menuitem id="menu_reporte_estado_maquinas_main"
               name="Reportes Estado Máquinas"
               parent="sat_menu_root"
-              sequence="80"/>
+              sequence="140"/>
 
     <!-- Submenú: Ver reportes -->
     <menuitem id="menu_reporte_estado_maquinas_ver"
