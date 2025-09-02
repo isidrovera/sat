@@ -1318,6 +1318,10 @@
     <!-- =============================================== -->
     <!-- MENÚS ACTUALIZADOS -->
     <!-- =============================================== -->
+     <menuitem id="menu_printtracker_root"
+              name="PrintTracker Pro"
+              parent="sat_menu_root"
+              sequence="100"/>
     
     <!-- Separador para nuevos módulos -->
     <menuitem id="menu_printtracker_consolidation"
@@ -1364,11 +1368,7 @@
     <!-- =============================================== -->
     
     <!-- Menú PrintTracker Pro -->
-    <menuitem id="menu_printtracker_root"
-              name="PrintTracker Pro"
-              parent="sat_menu_root"
-              sequence="100"/>
-    
+   
     <!-- Configuración -->
     <menuitem id="menu_printtracker_config"
               name="Configuración API"
