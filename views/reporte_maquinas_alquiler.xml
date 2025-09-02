@@ -1,0 +1,509 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ============================================ -->
+    <!-- VISTA TREE: Reporte Estado Máquina -->
+    <!-- ============================================ -->
+    <record id="view_reporte_estado_maquina_list" model="ir.ui.view">
+        <field name="name">reporte.estado.maquina.list</field>
+        <field name="model">reporte.estado.maquina</field>
+        <field name="arch" type="xml">
+            <list string="Reportes de Estado de Máquinas" default_order="fecha_generacion desc, estado_maquina, serie">
+                <field name="fecha_generacion"/>
+                <field name="semana_reporte"/>
+                <field name="serie"/>
+                <field name="modelo"/>
+                <field name="marca"/>
+                <field name="tipo_maquina"/>
+                <field name="estado_maquina" 
+                       decoration-danger="estado_maquina == 'con_problemas'"
+                       decoration-warning="estado_maquina == 'partes'"
+                       decoration-info="estado_maquina == 'sin_revisar'"
+                       decoration-success="estado_maquina in ('revisada', 'lista')"/>
+                <field name="contador_total"/>
+                <field name="ubicacion_fisica"/>
+                <field name="ultimo_ticket_fecha"/>
+                <field name="tecnico_responsable"/>
+                <field name="cliente_anterior_id"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ============================================ -->
+    <!-- VISTA FORM: Reporte Estado Máquina -->
+    <!-- ============================================ -->
+    <record id="view_reporte_estado_maquina_form" model="ir.ui.view">
+        <field name="name">reporte.estado.maquina.form</field>
+        <field name="model">reporte.estado.maquina</field>
+        <field name="arch" type="xml">
+            <form string="Reporte Estado Máquina" create="false" edit="false" delete="false">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_ver_maquina" type="object" class="oe_stat_button" icon="fa-cog">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Máquina</span>
+                            </div>
+                        </button>
+                        <button name="action_ver_ultimo_ticket" type="object" class="oe_stat_button" icon="fa-ticket" 
+                                invisible="not ultimo_ticket_id">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver</span>
+                                <span class="o_stat_text">Último Ticket</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <h1>
+                            <field name="display_name"/>
+                        </h1>
+                        <div class="o_row">
+                            <field name="estado_maquina" widget="badge" 
+                                   decoration-danger="estado_maquina == 'con_problemas'"
+                                   decoration-warning="estado_maquina == 'partes'"
+                                   decoration-info="estado_maquina == 'sin_revisar'"
+                                   decoration-success="estado_maquina in ('revisada', 'lista')"/>
+                        </div>
+                    </div>
+
+                    <group>
+                        <group name="informacion_basica" string="Información Básica">
+                            <field name="fecha_generacion"/>
+                            <field name="semana_reporte"/>
+                            <field name="maquina_id"/>
+                            <field name="serie"/>
+                            <field name="modelo"/>
+                            <field name="marca"/>
+                            <field name="tipo_maquina"/>
+                            <field name="ubicacion_fisica"/>
+                        </group>
+                        <group name="contadores" string="Contadores">
+                            <field name="contador_bn"/>
+                            <field name="contador_color" invisible="tipo_maquina == 'monocromatica'"/>
+                            <field name="contador_total" class="oe_subtotal_footer_separator"/>
+                            <field name="contador_scanner"/>
+                        </group>
+                    </group>
+
+                    <group name="ultimo_ticket" string="Último Ticket de Servicio">
+                        <group>
+                            <field name="ultimo_ticket_id"/>
+                            <field name="ultimo_ticket_fecha"/>
+                            <field name="ultimo_ticket_tipo"/>
+                            <field name="tecnico_responsable"/>
+                        </group>
+                        <group name="cliente_anterior" string="Cliente Anterior">
+                            <field name="cliente_anterior_id"/>
+                            <field name="direccion_anterior"/>
+                            <field name="fecha_ultimo_retiro"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Accesorios" name="accesorios">
+                            <group>
+                                <group name="accesorios_principales" string="Accesorios Principales">
+                                    <field name="transformador"/>
+                                    <field name="estabilizador"/>
+                                    <field name="adf_simple"/>
+                                    <field name="adf_dual"/>
+                                    <field name="numero_caseteras"/>
+                                </group>
+                                <group name="accesorios_finalizadores" string="Finalizadores y Muebles">
+                                    <field name="finalizador_interno"/>
+                                    <field name="finalizador_externo"/>
+                                    <field name="mueble"/>
+                                    <field name="panel_smart"/>
+                                    <field name="panel_normal"/>
+                                </group>
+                            </group>
+                            <group>
+                                <group name="conectividad" string="Conectividad">
+                                    <field name="wifi"/>
+                                    <field name="bluetooth"/>
+                                    <field name="cable_usb"/>
+                                    <field name="cable_red"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Check List Técnico" name="checklist">
+                            <group>
+                                <group name="funciones" string="Funciones">
+                                    <field name="copia_estado"/>
+                                    <field name="impresion_estado"/>
+                                    <field name="impresion_usb_estado"/>
+                                    <field name="scanner_smb_estado"/>
+                                    <field name="scanner_usb_estado"/>
+                                    <field name="scanner_ftp_estado"/>
+                                    <field name="scanner_mail_estado"/>
+                                </group>
+                                <group name="componentes" string="Componentes">
+                                    <field name="adf_estado"/>
+                                    <field name="tray1_estado"/>
+                                    <field name="tray2_estado"/>
+                                    <field name="tray3_estado"/>
+                                    <field name="tray4_estado"/>
+                                    <field name="bypass_estado"/>
+                                    <field name="finalizador_estado"/>
+                                </group>
+                            </group>
+                            
+                            <group name="partes_criticas" string="Partes Críticas">
+                                <group>
+                                    <field name="tacho_estado"/>
+                                    <field name="fusora_estado"/>
+                                    <field name="transfer_estado"/>
+                                    <field name="optico_estado"/>
+                                </group>
+                                <group>
+                                    <field name="unidad_imagen_black_estado"/>
+                                    <field name="unidad_imagen_magenta_estado" invisible="tipo_maquina == 'monocromatica'"/>
+                                    <field name="unidad_imagen_cyan_estado" invisible="tipo_maquina == 'monocromatica'"/>
+                                    <field name="unidad_imagen_yellow_estado" invisible="tipo_maquina == 'monocromatica'"/>
+                                </group>
+                            </group>
+
+                            <group name="toners" string="Nivel de Toners">
+                                <group>
+                                    <field name="toner_black_nivel"/>
+                                    <field name="toner_magenta_nivel" invisible="tipo_maquina == 'monocromatica'"/>
+                                </group>
+                                <group>
+                                    <field name="toner_cyan_nivel" invisible="tipo_maquina == 'monocromatica'"/>
+                                    <field name="toner_yellow_nivel" invisible="tipo_maquina == 'monocromatica'"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Informe Técnico" name="informe_tecnico">
+                            <field name="informe_tecnico" widget="html"/>
+                        </page>
+
+                        <page string="Partes Retiradas" name="partes_retiradas" 
+                              invisible="estado_maquina not in ('con_problemas', 'partes')">
+                            <field name="partes_retiradas_ids">
+                                <list>
+                                    <field name="fecha_solicitud"/>
+                                    <field name="nombre_parte"/>
+                                    <field name="descripcion"/>
+                                    <field name="estado_parte"/>
+                                    <field name="condicion"/>
+                                    <field name="maquina_destino"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Historial de Alquileres" name="historial_alquileres">
+                            <field name="historial_alquileres_ids">
+                                <list>
+                                    <field name="cliente_id"/>
+                                    <field name="direccion"/>
+                                    <field name="fecha_instalacion"/>
+                                    <field name="fecha_retiro"/>
+                                    <field name="dias_alquiler"/>
+                                    <field name="copias_total_periodo"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================ -->
+    <!-- VISTA SEARCH: Reporte Estado Máquina -->
+    <!-- ============================================ -->
+    <record id="view_reporte_estado_maquina_search" model="ir.ui.view">
+        <field name="name">reporte.estado.maquina.search</field>
+        <field name="model">reporte.estado.maquina</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Reportes Estado Máquinas">
+                <field name="serie" string="Serie" filter_domain="[('serie', 'ilike', self)]"/>
+                <field name="modelo" string="Modelo" filter_domain="[('modelo', 'ilike', self)]"/>
+                <field name="marca" string="Marca" filter_domain="[('marca', 'ilike', self)]"/>
+                <field name="tecnico_responsable" string="Técnico" filter_domain="[('tecnico_responsable', 'ilike', self)]"/>
+                <field name="cliente_anterior_id" string="Cliente Anterior"/>
+                
+                <separator/>
+                
+                <filter string="Sin Revisar" name="filter_sin_revisar" 
+                        domain="[('estado_maquina', '=', 'sin_revisar')]"/>
+                <filter string="Revisadas" name="filter_revisadas" 
+                        domain="[('estado_maquina', '=', 'revisada')]"/>
+                <filter string="Listas" name="filter_listas" 
+                        domain="[('estado_maquina', '=', 'lista')]"/>
+                <filter string="Con Problemas" name="filter_con_problemas" 
+                        domain="[('estado_maquina', '=', 'con_problemas')]"/>
+                <filter string="De Partes" name="filter_partes" 
+                        domain="[('estado_maquina', '=', 'partes')]"/>
+                
+                <separator/>
+                
+                <filter string="Equipos Color" name="filter_color" 
+                        domain="[('tipo_maquina', '=', 'color')]"/>
+                <filter string="Equipos Monocromáticos" name="filter_mono" 
+                        domain="[('tipo_maquina', '=', 'monocromatica')]"/>
+                
+                <separator/>
+                
+                <filter string="Esta Semana" name="filter_esta_semana" 
+                        domain="[('fecha_generacion', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter string="Este Mes" name="filter_este_mes" 
+                        domain="[('fecha_generacion', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+                
+                <separator/>
+                
+                <filter string="Alta Utilizacion (&gt;100k)" name="filter_alta_utilizacion" 
+                        domain="[('contador_total', '&gt;', 100000)]"/>
+                <filter string="Media Utilizacion (50k-100k)" name="filter_media_utilizacion" 
+                        domain="[('contador_total', '&gt;=', 50000), ('contador_total', '&lt;=', 100000)]"/>
+                <filter string="Baja Utilizacion (&lt;50k)" name="filter_baja_utilizacion" 
+                        domain="[('contador_total', '&lt;', 50000)]"/>
+
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Estado de Máquina" name="group_by_estado" 
+                            context="{'group_by': 'estado_maquina'}"/>
+                    <filter string="Marca" name="group_by_marca" 
+                            context="{'group_by': 'marca'}"/>
+                    <filter string="Tipo de Máquina" name="group_by_tipo" 
+                            context="{'group_by': 'tipo_maquina'}"/>
+                    <filter string="Ubicación" name="group_by_ubicacion" 
+                            context="{'group_by': 'ubicacion_fisica'}"/>
+                    <filter string="Semana de Reporte" name="group_by_semana" 
+                            context="{'group_by': 'semana_reporte'}"/>
+                    <filter string="Técnico Responsable" name="group_by_tecnico" 
+                            context="{'group_by': 'tecnico_responsable'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ============================================ -->
+    <!-- WIZARD: Generar Reporte -->
+    <!-- ============================================ -->
+    <record id="view_reporte_estado_maquina_wizard_form" model="ir.ui.view">
+        <field name="name">reporte.estado.maquina.wizard.form</field>
+        <field name="model">reporte.estado.maquina.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generar Reporte de Estado de Máquinas">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Generar Reporte de Estado de Máquinas</h1>
+                    </div>
+                    
+                    <group>
+                        <group name="filtros_fecha" string="Período del Reporte">
+                            <field name="fecha_desde"/>
+                            <field name="fecha_hasta"/>
+                        </group>
+                        <group name="filtros_estado" string="Filtros de Estado">
+                            <field name="estados_maquina"/>
+                            <field name="estados_personalizados" 
+                                   invisible="estados_maquina != 'personalizado'"
+                                   widget="many2many_tags"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group name="filtros_adicionales" string="Filtros Adicionales">
+                            <field name="marcas_incluir" widget="many2many_tags"/>
+                        </group>
+                        <group name="opciones_reporte" string="Opciones del Reporte">
+                            <field name="incluir_historial"/>
+                            <field name="incluir_partes"/>
+                            <field name="formato_salida"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button string="Generar Reporte" name="action_generar_reporte" 
+                            type="object" class="btn-primary"/>
+                    <button string="Generar Ahora (Manual)" name="action_generar_reporte_ahora" 
+                            type="object" class="btn-secondary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================ -->
+    <!-- ACCIONES -->
+    <!-- ============================================ -->
+    
+    <!-- Acción principal para ver reportes -->
+    <record id="action_reporte_estado_maquinas" model="ir.actions.act_window">
+        <field name="name">Reportes Estado de Máquinas</field>
+        <field name="res_model">reporte.estado.maquina</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_reporte_estado_maquina_list"/>
+        <field name="search_view_id" ref="view_reporte_estado_maquina_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡Aún no hay reportes de estado de máquinas!
+            </p>
+            <p>
+                Los reportes se generan automáticamente cada semana.<br/>
+                También puedes generar un reporte manualmente usando el wizard.
+            </p>
+        </field>
+        <field name="context">{
+            'search_default_group_by_estado': 1,
+            'search_default_filter_esta_semana': 1
+        }</field>
+    </record>
+
+    <!-- Acción para wizard generador -->
+    <record id="action_reporte_estado_maquinas_wizard" model="ir.actions.act_window">
+        <field name="name">Generar Reporte Estado Máquinas</field>
+        <field name="res_model">reporte.estado.maquina.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_reporte_estado_maquina_wizard_form"/>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Acción para reportes de esta semana -->
+    <record id="action_reporte_estado_maquinas_semana_actual" model="ir.actions.act_window">
+        <field name="name">Reportes Semana Actual</field>
+        <field name="res_model">reporte.estado.maquina</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_reporte_estado_maquina_list"/>
+        <field name="domain">[('fecha_generacion', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]</field>
+        <field name="context">{
+            'search_default_group_by_estado': 1
+        }</field>
+    </record>
+
+    <!-- Acción para máquinas sin revisar -->
+    <record id="action_reporte_estado_maquinas_sin_revisar" model="ir.actions.act_window">
+        <field name="name">Máquinas Sin Revisar</field>
+        <field name="res_model">reporte.estado.maquina</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_reporte_estado_maquina_list"/>
+        <field name="domain">[
+            ('estado_maquina', '=', 'sin_revisar'),
+            ('fecha_generacion', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))
+        ]</field>
+    </record>
+
+    <!-- Acción para máquinas con problemas -->
+    <record id="action_reporte_estado_maquinas_con_problemas" model="ir.actions.act_window">
+        <field name="name">Máquinas Con Problemas</field>
+        <field name="res_model">reporte.estado.maquina</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_reporte_estado_maquina_list"/>
+        <field name="domain">[
+            ('estado_maquina', '=', 'con_problemas'),
+            ('fecha_generacion', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))
+        ]</field>
+    </record>
+
+    <!-- Acción para máquinas de partes -->
+    <record id="action_reporte_estado_maquinas_partes" model="ir.actions.act_window">
+        <field name="name">Máquinas de Partes</field>
+        <field name="res_model">reporte.estado.maquina</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_reporte_estado_maquina_list"/>
+        <field name="domain">[
+            ('estado_maquina', '=', 'partes'),
+            ('fecha_generacion', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))
+        ]</field>
+    </record>
+
+    <!-- ============================================ -->
+    <!-- MENÚS -->
+    <!-- ============================================ -->
+    
+    <!-- Menú principal de reportes -->
+    <menuitem id="menu_reporte_estado_maquinas_main"
+              name="Reportes Estado Máquinas"
+              parent="sat_menu_root"
+              sequence="80"/>
+
+    <!-- Submenú: Ver reportes -->
+    <menuitem id="menu_reporte_estado_maquinas_ver"
+              name="Ver Reportes"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas"
+              sequence="10"/>
+
+    <!-- Submenú: Generar reporte -->
+    <menuitem id="menu_reporte_estado_maquinas_generar"
+              name="Generar Reporte"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas_wizard"
+              sequence="20"/>
+
+    <!-- Submenú: Semana actual -->
+    <menuitem id="menu_reporte_estado_maquinas_semana"
+              name="Semana Actual"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas_semana_actual"
+              sequence="30"/>
+
+    <!-- Submenu separador -->
+    <menuitem id="menu_reporte_estado_maquinas_separator"
+              name="────────────────"
+              parent="menu_reporte_estado_maquinas_main"
+              sequence="40"/>
+
+    <!-- Submenú: Sin revisar -->
+    <menuitem id="menu_reporte_estado_maquinas_sin_revisar"
+              name="Sin Revisar"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas_sin_revisar"
+              sequence="50"/>
+
+    <!-- Submenú: Con problemas -->
+    <menuitem id="menu_reporte_estado_maquinas_problemas"
+              name="Con Problemas"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas_con_problemas"
+              sequence="60"/>
+
+    <!-- Submenú: De partes -->
+    <menuitem id="menu_reporte_estado_maquinas_partes"
+              name="De Partes"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas_partes"
+              sequence="70"/>
+
+    <!-- ============================================ -->
+    <!-- CRON JOBS -->
+    <!-- ============================================ -->
+    
+    <!-- Cron para generar reporte semanal -->
+    <record id="cron_generar_reporte_semanal" model="ir.cron">
+        <field name="name">Generar Reporte Semanal Estado Máquinas</field>
+        <field name="model_id" ref="model_reporte_estado_maquina"/>
+        <field name="state">code</field>
+        <field name="code">model.generar_reporte_semanal()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">weeks</field>
+        <field name="numbercall">-1</field>
+        <field name="active">True</field>
+        <field name="doall">False</field>
+        <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).replace(hour=6, minute=0, second=0, microsecond=0)"/>
+    </record>
+
+    <!-- Cron para limpiar reportes antiguos -->
+    <record id="cron_limpiar_reportes_antiguos" model="ir.cron">
+        <field name="name">Limpiar Reportes Antiguos Estado Máquinas</field>
+        <field name="model_id" ref="model_reporte_estado_maquina"/>
+        <field name="state">code</field>
+        <field name="code">model.limpiar_reportes_antiguos()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">months</field>
+        <field name="numbercall">-1</field>
+        <field name="active">True</field>
+        <field name="doall">False</field>
+        <field name="nextcall" eval="(DateTime.now() + timedelta(days=30)).replace(hour=2, minute=0, second=0, microsecond=0)"/>
+    </record>
+
+</odoo>

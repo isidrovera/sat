@@ -121,6 +121,7 @@
         'views/view_contador_automatico.xml',
         'views/view_patron_contador.xml',        
         'views/printtracker_views.xml',
+        'views/reporte_maquinas_alquiler.xml',
     ],
     
     'assets': {

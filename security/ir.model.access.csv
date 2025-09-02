@@ -148,3 +148,15 @@ access_printtracker_consolidator_user,printtracker.processor user,model_printtra
 access_printtracker_consolidator_admin,printtracker.processor admin,model_printtracker_processor,base.group_system,1,1,1,1
 access_printtracker_alert_manager_user,printtracker.alert.manager user,model_printtracker_alert_manager,base.group_user,1,0,0,0
 access_printtracker_alert_manager_admin,printtracker.alert.manager admin,model_printtracker_alert_manager,base.group_system,1,1,1,1
+access_reporte_estado_maquina_user,reporte.estado.maquina user,model_reporte_estado_maquina,base.group_user,1,0,0,0
+
+access_reporte_estado_maquina_admin,reporte.estado.maquina admin,model_reporte_estado_maquina,base.group_system,1,1,1,1
+access_reporte_estado_maquina_parte_user,reporte.estado.maquina.parte user,model_reporte_estado_maquina_parte,base.group_user,1,0,0,0
+
+access_reporte_estado_maquina_parte_admin,reporte.estado.maquina.parte admin,model_reporte_estado_maquina_parte,base.group_system,1,1,1,1
+access_reporte_estado_maquina_alquiler_user,reporte.estado.maquina.alquiler user,model_reporte_estado_maquina_alquiler,base.group_user,1,0,0,0
+
+access_reporte_estado_maquina_alquiler_admin,reporte.estado.maquina.alquiler admin,model_reporte_estado_maquina_alquiler,base.group_system,1,1,1,1
+access_reporte_estado_maquina_wizard_user,reporte.estado.maquina.wizard user,model_reporte_estado_maquina_wizard,base.group_user,1,1,1,1
+
+access_reporte_estado_maquina_wizard_admin,reporte.estado.maquina.wizard admin,model_reporte_estado_maquina_wizard,base.group_system,1,1,1,1

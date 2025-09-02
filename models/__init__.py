@@ -50,3 +50,4 @@ from . import printtracker_alert
 from . import printtracker_alert_manager
 from . import printtracker_consolidator
 from . import printtracker_daily_reading
+from . import reporte_maquinas_alquiler
