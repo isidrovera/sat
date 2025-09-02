@@ -473,7 +473,7 @@
         <field name="interval_type">weeks</field>
         <field name="numbercall">-1</field>
         <field name="active">True</field>
-        <field name="doall">False</field>
+       
         <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).replace(hour=6, minute=0, second=0, microsecond=0)"/>
     </record>
 
@@ -487,7 +487,7 @@
         <field name="interval_type">months</field>
         <field name="numbercall">-1</field>
         <field name="active">True</field>
-        <field name="doall">False</field>
+        
         <field name="nextcall" eval="(DateTime.now() + timedelta(days=30)).replace(hour=2, minute=0, second=0, microsecond=0)"/>
     </record>
 
