@@ -39,13 +39,7 @@
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         
-                        <button name="action_ver_ultimo_ticket" type="object" class="oe_stat_button" icon="fa-ticket" 
-                                invisible="not ultimo_ticket_id">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text">Ver</span>
-                                <span class="o_stat_text">Último Ticket</span>
-                            </div>
-                        </button>
+                        
                     </div>
 
                     <div class="oe_title">
