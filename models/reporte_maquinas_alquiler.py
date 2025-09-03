@@ -1099,40 +1099,50 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         Crea hoja con detalles completos - Diseño profesional y minimalista
         """
         import xlwt
+        import re
+
         worksheet = workbook.add_sheet('Detalles Completos')
-        
+
         # PALETA DE COLORES PROFESIONAL MINIMALISTA
-        # Definir colores personalizados
         xlwt.add_palette_colour("dark_header", 0x21)
         workbook.set_colour_RGB(0x21, 47, 79, 79)  # Verde oscuro profesional
-        
-        xlwt.add_palette_colour("light_header", 0x22) 
+
+        xlwt.add_palette_colour("light_header", 0x22)
         workbook.set_colour_RGB(0x22, 240, 248, 255)  # Azul muy claro
-        
+
         # ESTADOS DE MÁQUINA CON COLORES ESPECÍFICOS
         xlwt.add_palette_colour("lista_color", 0x23)
-        workbook.set_colour_RGB(0x23, 212, 237, 218)  # Verde claro para "Lista"
-        
+        workbook.set_colour_RGB(0x23, 212, 237, 218)
+
         xlwt.add_palette_colour("revisada_color", 0x24)
-        workbook.set_colour_RGB(0x24, 217, 237, 247)  # Azul claro para "Revisada"
-        
+        workbook.set_colour_RGB(0x24, 217, 237, 247)
+
         xlwt.add_palette_colour("sin_revisar_color", 0x25)
-        workbook.set_colour_RGB(0x25, 248, 249, 250)  # Gris muy claro para "Sin Revisar"
-        
+        workbook.set_colour_RGB(0x25, 248, 249, 250)
+
         xlwt.add_palette_colour("con_problemas_color", 0x26)
-        workbook.set_colour_RGB(0x26, 255, 243, 205)  # Amarillo claro para "Con Problemas"
-        
+        workbook.set_colour_RGB(0x26, 255, 243, 205)
+
         xlwt.add_palette_colour("partes_color", 0x27)
-        workbook.set_colour_RGB(0x27, 248, 215, 218)  # Rojo claro para "De Partes"
-        
+        workbook.set_colour_RGB(0x27, 248, 215, 218)
+
         xlwt.add_palette_colour("alquilada_color", 0x28)
-        workbook.set_colour_RGB(0x28, 230, 247, 255)  # Azul muy claro para "Alquilada"
-        
-        # ESTILOS PROFESIONALES
-        header_main = xlwt.easyxf('pattern: pattern solid, fore_colour dark_header; font: bold 1, colour white, height 240; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
-        header_sub = xlwt.easyxf('pattern: pattern solid, fore_colour light_header; font: bold 1, height 200; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
-        
-        # ESTILOS POR ESTADO DE MÁQUINA
+        workbook.set_colour_RGB(0x28, 230, 247, 255)
+
+        # ESTILOS
+        header_main = xlwt.easyxf(
+            'pattern: pattern solid, fore_colour dark_header;'
+            'font: bold 1, colour white, height 240;'
+            'align: horiz center;'
+            'borders: left thin, right thin, top thin, bottom thin'
+        )
+        header_sub = xlwt.easyxf(
+            'pattern: pattern solid, fore_colour light_header;'
+            'font: bold 1, height 200;'
+            'align: horiz center;'
+            'borders: left thin, right thin, top thin, bottom thin'
+        )
+
         def get_row_style(estado_maquina):
             estado_styles = {
                 'lista': xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin'),
@@ -1143,10 +1153,8 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
                 'alquilada': xlwt.easyxf('pattern: pattern solid, fore_colour alquilada_color; borders: left thin, right thin, top thin, bottom thin'),
             }
             return estado_styles.get(estado_maquina, xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin'))
-        
-        # Estilos especiales para números y fechas
+
         def get_number_style(estado_maquina):
-            base_style = get_row_style(estado_maquina)
             if estado_maquina == 'lista':
                 return xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0')
             elif estado_maquina == 'revisada':
@@ -1159,7 +1167,7 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
                 return xlwt.easyxf('pattern: pattern solid, fore_colour partes_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0')
             else:
                 return xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0')
-        
+
         def get_date_style(estado_maquina):
             if estado_maquina == 'lista':
                 return xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY')
@@ -1173,128 +1181,103 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
                 return xlwt.easyxf('pattern: pattern solid, fore_colour partes_color; borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY')
             else:
                 return xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY')
-        
-        # ENCABEZADOS SIMPLIFICADOS Y PROFESIONALES
+
+        # ENCABEZADOS (agregamos "Informe Técnico" al final)
         headers = [
-            # INFORMACIÓN ESENCIAL
             'Fecha', 'Serie', 'Modelo', 'Marca', 'Estado', 'Ubicación',
-            
-            # CONTÓMETROS
             'Contador B/N', 'Contador Color', 'Total', 'Scanner',
-            
-            # ÚLTIMO SERVICIO
             'Último Ticket', 'Fecha Servicio', 'Técnico',
-            
-            # CLIENTE ANTERIOR
             'Cliente Anterior', 'Fecha Retiro',
-            
-            # ACCESORIOS PRINCIPALES
             'Transformador', 'ADF', 'Finalizador', 'Panel', 'Wi-Fi',
-            
-            # FUNCIONES CRÍTICAS
             'Copia', 'Impresión', 'Scanner',
-            
-            # COMPONENTES CRÍTICOS
             'Tray 1', 'Fusora', 'Transfer', 'Óptico',
-            
-            # TONERS
-            'Toner Black', 'Toner Color'
+            'Toner Black', 'Toner Color',
+            'Informe Técnico'
         ]
-        
-        # Escribir encabezados principales
+
         for col, header in enumerate(headers):
             worksheet.write(0, col, header, header_main)
-        
-        # Escribir datos con colores por estado
+
+        # FILAS
         row = 1
         for reporte in reportes:
             estado = reporte.estado_maquina
             row_style = get_row_style(estado)
             number_style = get_number_style(estado)
             date_style = get_date_style(estado)
-            
+
             col = 0
-            
-            # INFORMACIÓN ESENCIAL
+
+            # INFO ESENCIAL
             worksheet.write(row, col, reporte.fecha_generacion or '', date_style); col += 1
             worksheet.write(row, col, reporte.serie or '', row_style); col += 1
             worksheet.write(row, col, reporte.modelo or '', row_style); col += 1
             worksheet.write(row, col, reporte.marca or '', row_style); col += 1
-            
-            # Estado con estilo destacado
+
             estado_display = dict(reporte._fields['estado_maquina'].selection).get(estado, '')
             worksheet.write(row, col, estado_display, row_style); col += 1
-            
+
             ubicacion_display = dict(reporte._fields['ubicacion_fisica'].selection).get(reporte.ubicacion_fisica, '') if reporte.ubicacion_fisica else ''
             worksheet.write(row, col, ubicacion_display, row_style); col += 1
-            
+
             # CONTÓMETROS
             worksheet.write(row, col, reporte.contador_bn or 0, number_style); col += 1
             worksheet.write(row, col, reporte.contador_color or 0, number_style); col += 1
             worksheet.write(row, col, reporte.contador_total or 0, number_style); col += 1
             worksheet.write(row, col, reporte.contador_scanner or 0, number_style); col += 1
-            
+
             # ÚLTIMO SERVICIO
             worksheet.write(row, col, reporte.ultimo_ticket_id.name if reporte.ultimo_ticket_id else '', row_style); col += 1
             worksheet.write(row, col, reporte.ultimo_ticket_fecha or '', date_style); col += 1
             worksheet.write(row, col, reporte.tecnico_responsable or '', row_style); col += 1
-            
+
             # CLIENTE ANTERIOR
             worksheet.write(row, col, reporte.cliente_anterior_id.name if reporte.cliente_anterior_id else '', row_style); col += 1
             worksheet.write(row, col, reporte.fecha_ultimo_retiro or '', date_style); col += 1
-            
-            # ACCESORIOS PRINCIPALES (simplificado)
+
+            # ACCESORIOS (simplificado)
             worksheet.write(row, col, dict(reporte._fields['transformador'].selection).get(reporte.transformador, '') if reporte.transformador else '', row_style); col += 1
-            
-            # ADF (combinar simple y dual)
+
             adf_value = ''
             if reporte.adf_simple == 'si' or reporte.adf_dual == 'si':
                 adf_value = 'Sí'
             elif reporte.adf_simple == 'no' and reporte.adf_dual == 'no':
                 adf_value = 'No'
             worksheet.write(row, col, adf_value, row_style); col += 1
-            
-            # Finalizador (combinar interno y externo)
+
             fin_value = ''
             if reporte.finalizador_interno == 'si' or reporte.finalizador_externo == 'si':
                 fin_value = 'Sí'
             elif reporte.finalizador_interno == 'no' and reporte.finalizador_externo == 'no':
                 fin_value = 'No'
             worksheet.write(row, col, fin_value, row_style); col += 1
-            
-            # Panel (combinar smart y normal)
-            panel_value = ''
-            if reporte.panel_smart == 'si':
-                panel_value = 'Smart'
-            elif reporte.panel_normal == 'si':
-                panel_value = 'Normal'
+
+            panel_value = 'Smart' if reporte.panel_smart == 'si' else ('Normal' if reporte.panel_normal == 'si' else '')
             worksheet.write(row, col, panel_value, row_style); col += 1
-            
+
             worksheet.write(row, col, dict(reporte._fields['wifi'].selection).get(reporte.wifi, '') if reporte.wifi else '', row_style); col += 1
-            
+
             # FUNCIONES CRÍTICAS
             worksheet.write(row, col, dict(reporte._fields['copia_estado'].selection).get(reporte.copia_estado, '') if reporte.copia_estado else '', row_style); col += 1
             worksheet.write(row, col, dict(reporte._fields['impresion_estado'].selection).get(reporte.impresion_estado, '') if reporte.impresion_estado else '', row_style); col += 1
-            
-            # Scanner (combinar SMB, USB, FTP)
+
             scanner_value = ''
             if any(getattr(reporte, f, '') == 'si' for f in ['scanner_smb_estado', 'scanner_usb_estado', 'scanner_ftp_estado']):
                 scanner_value = 'Funciona'
             elif any(getattr(reporte, f, '') == 'no' for f in ['scanner_smb_estado', 'scanner_usb_estado', 'scanner_ftp_estado']):
                 scanner_value = 'Con problemas'
             worksheet.write(row, col, scanner_value, row_style); col += 1
-            
+
             # COMPONENTES CRÍTICOS
             worksheet.write(row, col, dict(reporte._fields['tray1_estado'].selection).get(reporte.tray1_estado, '') if reporte.tray1_estado else '', row_style); col += 1
             worksheet.write(row, col, dict(reporte._fields['fusora_estado'].selection).get(reporte.fusora_estado, '') if reporte.fusora_estado else '', row_style); col += 1
             worksheet.write(row, col, dict(reporte._fields['transfer_estado'].selection).get(reporte.transfer_estado, '') if reporte.transfer_estado else '', row_style); col += 1
             worksheet.write(row, col, dict(reporte._fields['optico_estado'].selection).get(reporte.optico_estado, '') if reporte.optico_estado else '', row_style); col += 1
-            
+
             # TONERS
             worksheet.write(row, col, dict(reporte._fields['toner_black_nivel'].selection).get(reporte.toner_black_nivel, '') if reporte.toner_black_nivel else '', row_style); col += 1
-            
-            # Toner Color (combinar magenta, cyan, yellow)
-            toner_color_value = ''
+
+            toner_color_value = 'N/A'
             if reporte.tipo_maquina == 'color':
                 if any(getattr(reporte, f, '') == 'lleno' for f in ['toner_magenta_nivel', 'toner_cyan_nivel', 'toner_yellow_nivel']):
                     toner_color_value = 'Lleno'
@@ -1302,58 +1285,38 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
                     toner_color_value = 'Vacío'
                 elif any(getattr(reporte, f, '') == 'medio' for f in ['toner_magenta_nivel', 'toner_cyan_nivel', 'toner_yellow_nivel']):
                     toner_color_value = 'Medio'
-            else:
-                toner_color_value = 'N/A'
             worksheet.write(row, col, toner_color_value, row_style); col += 1
-            
+
+            # INFORME TÉCNICO (limpiar HTML y limitar)
+            informe_html = reporte.informe_tecnico or ''
+            informe_limpio = re.sub('<.*?>', '', informe_html or '')
+            informe_limpio = informe_limpio.replace('&nbsp;', ' ').strip()
+            if len(informe_limpio) > 500:
+                informe_limpio = informe_limpio[:497] + '...'
+            worksheet.write(row, col, informe_limpio, row_style); col += 1
+
             row += 1
-        
-        # AJUSTAR ANCHOS DE COLUMNA PROFESIONALMENTE
+
+        # ANCHOS DE COLUMNA (agregamos ancho grande para “Informe Técnico”)
         column_widths = [
-            3000, 3500, 4000, 3000, 3500, 3000,  # Info básica
-            3200, 3200, 3200, 3200,              # Contómetros
-            3500, 3500, 4000,                    # Servicio
-            4500, 3200,                          # Cliente anterior
-            3000, 2500, 3000, 2500, 2500,       # Accesorios
-            3000, 3000, 3000,                    # Funciones
-            2800, 3000, 3000, 3000,             # Componentes
-            3000, 3000                           # Toners
+            3000, 3500, 4000, 3000, 3500, 3000,  # Info básica (6)
+            3200, 3200, 3200, 3200,              # Contómetros (4) -> total 10
+            3500, 3500, 4000,                    # Servicio (3) -> 13
+            4500, 3200,                          # Cliente anterior (2) -> 15
+            3000, 2500, 3000, 2500, 2500,        # Accesorios (5) -> 20
+            3000, 3000, 3000,                    # Funciones (3) -> 23
+            2800, 3000, 3000, 3000,              # Componentes (4) -> 27
+            3000, 3000,                          # Toners (2) -> 29
+            9000                                 # Informe Técnico (1) -> 30
         ]
-        
         for col, width in enumerate(column_widths):
             worksheet.col(col).width = width
-        
+
         # CONGELAR PANELES PARA NAVEGACIÓN
         worksheet.set_panes_frozen(True)
         worksheet.set_horz_split_pos(1)  # Congelar encabezado
-        worksheet.set_vert_split_pos(2)  # Congelar serie y modeloicos
-                
-                informe_limpio = re.sub('<.*?>', '', informe)
-                informe_limpio = informe_limpio.replace('&nbsp;', ' ').strip()
-                # Limitar a 500 caracteres para Excel
-                if len(informe_limpio) > 500:
-                    informe_limpio = informe_limpio[:497] + '...'
-            else:
-                informe_limpio = ''
-            worksheet.write(row, col, informe_limpio, base_style); col += 1
-            
-            row += 1
-        
-        # Ajustar ancho de columnas automáticamente
-        for col in range(len(headers)):
-            if col < 8:  # Información básica - más ancho
-                worksheet.col(col).width = 4000
-            elif col < 12:  # Contómetros - ancho medio
-                worksheet.col(col).width = 3000
-            elif headers[col] == 'Informe Técnico':  # Informe técnico - muy ancho
-                worksheet.col(col).width = 8000
-            else:  # Check lists y demás - ancho estándar
-                worksheet.col(col).width = 2800
-        
-        # Congelar paneles para mejor navegación
-        worksheet.set_panes_frozen(True)
-        worksheet.set_horz_split_pos(2)  # Congelar las 2 primeras filas
-        worksheet.set_vert_split_pos(3)  # Congelar las 3 primeras columnas
+        worksheet.set_vert_split_pos(2)  # Congelar primeras columnas
+
 
     def action_generar_reporte_ahora(self):
         """
