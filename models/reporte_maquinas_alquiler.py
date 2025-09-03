@@ -861,8 +861,7 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         if self.estados_maquina != 'todos':
             if self.estados_maquina == 'personalizado':
                 if self.estados_personalizados:
-                    estados = [e.estado_alquiler_id for e in self.estados_personalizados]
-                    domain.append(('estado_maquina', 'in', estados))
+                    domain.append(('estado_maquina', '=', self.estados_personalizados))
             else:
                 domain.append(('estado_maquina', '=', self.estados_maquina))
         else:

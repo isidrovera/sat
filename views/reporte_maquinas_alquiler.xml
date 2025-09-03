@@ -291,8 +291,7 @@
                         <group name="filtros_estado" string="Filtros de Estado">
                             <field name="estados_maquina"/>
                             <field name="estados_personalizados" 
-                                   invisible="estados_maquina != 'personalizado'"
-                                   widget="many2many_tags"/>
+                                   invisible="estados_maquina != 'personalizado'"/>
                         </group>
                     </group>
 
