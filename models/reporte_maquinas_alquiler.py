@@ -998,14 +998,15 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
 
         # === Crear adjunto ===
         attachment = self.env['ir.attachment'].create({
-            'name': safe_filename,                         # nombre humano
+            'name': safe_filename,                 # tu nombre ya armado
             'type': 'binary',
             'datas': excel_data,
-            'mimetype': 'application/vnd.ms-excel',
+            # Forzar descarga en vez de previsualizar:
+            'mimetype': 'application/octet-stream',
             'res_model': self._name,
             'res_id': self.id,
-            # 'public': True,  # si quieres acceso sin token (menos seguro)
         })
+
 
         # === Asegurar access_token (para evitar 404 por ACLs) ===
         token = getattr(attachment, 'access_token', False)
