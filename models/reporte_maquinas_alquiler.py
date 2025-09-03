@@ -968,11 +968,11 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         import xlwt
         worksheet = workbook.add_sheet('Resumen')
         
-        # Estilos
+        # Estilos corregidos
         title_style = xlwt.easyxf('font: bold 1, height 320; align: horiz center')
-        header_style = xlwt.easyxf('font: bold 1; align: horiz center; borders: all thin')
-        data_style = xlwt.easyxf('borders: all thin; align: horiz center')
-        number_style = xlwt.easyxf('borders: all thin; align: horiz right', num_format_str='#,##0')
+        header_style = xlwt.easyxf('font: bold 1; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
+        data_style = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: horiz center')
+        number_style = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0')
         
         # Título
         worksheet.write_merge(0, 0, 0, 4, 'REPORTE DE ESTADO DE MÁQUINAS', title_style)
@@ -1033,11 +1033,11 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         import xlwt
         worksheet = workbook.add_sheet('Detalles Completos')
         
-        # Estilos
-        header_style = xlwt.easyxf('font: bold 1; align: horiz center; borders: all thin')
-        data_style = xlwt.easyxf('borders: all thin')
-        date_style = xlwt.easyxf('borders: all thin', num_format_str='DD/MM/YYYY')
-        number_style = xlwt.easyxf('borders: all thin; align: horiz right', num_format_str='#,##0')
+        # Estilos corregidos
+        header_style = xlwt.easyxf('font: bold 1; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
+        data_style = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin')
+        date_style = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY')
+        number_style = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0')
         
         # Encabezados principales
         headers = [
