@@ -1257,15 +1257,14 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
 
         # ENCABEZADOS (agregamos "Informe Técnico" al final)
         headers = [
-            'Fecha', 'Serie', 'Modelo', 'Marca', 'Estado', 'Ubicación',
-            'Contador B/N', 'Contador Color', 'Total', 'Scanner',
-            'Último Ticket', 'Fecha Servicio', 'Técnico',
+            'Fecha', 'Marca','Modelo','Serie', 'Estado',
+             'Total', 'Informe Técnico',            
             'Cliente Anterior', 'Fecha Retiro',
             'Transformador', 'ADF', 'Finalizador', 'Panel', 'Wi-Fi',
             'Copia', 'Impresión', 'Scanner',
             'Tray 1', 'Fusora', 'Transfer', 'Óptico',
-            'Toner Black', 'Toner Color',
-            'Informe Técnico'
+            'Toner Black', 'Toner Color'
+            
         ]
 
         for col, header in enumerate(headers):
@@ -1283,9 +1282,10 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
 
             # INFO ESENCIAL
             worksheet.write(row, col, reporte.fecha_generacion or '', date_style); col += 1
-            worksheet.write(row, col, reporte.serie or '', row_style); col += 1
-            worksheet.write(row, col, reporte.modelo or '', row_style); col += 1
             worksheet.write(row, col, reporte.marca or '', row_style); col += 1
+            worksheet.write(row, col, reporte.modelo or '', row_style); col += 1
+            worksheet.write(row, col, reporte.serie or '', row_style); col += 1           
+            
 
             estado_display = dict(reporte._fields['estado_maquina'].selection).get(estado, '')
             worksheet.write(row, col, estado_display, row_style); col += 1
@@ -1294,21 +1294,30 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
             worksheet.write(row, col, ubicacion_display, row_style); col += 1
 
             # CONTÓMETROS
-            worksheet.write(row, col, reporte.contador_bn or 0, number_style); col += 1
-            worksheet.write(row, col, reporte.contador_color or 0, number_style); col += 1
+            #worksheet.write(row, col, reporte.contador_bn or 0, number_style); col += 1
+            #worksheet.write(row, col, reporte.contador_color or 0, number_style); col += 1
             worksheet.write(row, col, reporte.contador_total or 0, number_style); col += 1
-            worksheet.write(row, col, reporte.contador_scanner or 0, number_style); col += 1
+            #worksheet.write(row, col, reporte.contador_scanner or 0, number_style); col += 1
 
             # ÚLTIMO SERVICIO
-            worksheet.write(row, col, reporte.ultimo_ticket_id.name if reporte.ultimo_ticket_id else '', row_style); col += 1
-            worksheet.write(row, col, reporte.ultimo_ticket_fecha or '', date_style); col += 1
-            worksheet.write(row, col, reporte.tecnico_responsable or '', row_style); col += 1
+           # worksheet.write(row, col, reporte.ultimo_ticket_id.name if reporte.ultimo_ticket_id else '', row_style); col += 1
+            #worksheet.write(row, col, reporte.ultimo_ticket_fecha or '', date_style); col += 1
+           # worksheet.write(row, col, reporte.tecnico_responsable or '', row_style); col += 1
 
             # CLIENTE ANTERIOR
-            worksheet.write(row, col, reporte.cliente_anterior_id.name if reporte.cliente_anterior_id else '', row_style); col += 1
-            worksheet.write(row, col, reporte.fecha_ultimo_retiro or '', date_style); col += 1
+            #worksheet.write(row, col, reporte.cliente_anterior_id.name if reporte.cliente_anterior_id else '', row_style); col += 1
+            #worksheet.write(row, col, reporte.fecha_ultimo_retiro or '', date_style); col += 1
 
             # ACCESORIOS (simplificado)
+            # INFORME TÉCNICO (limpiar HTML y limitar)
+            informe_html = reporte.informe_tecnico or ''
+            informe_limpio = re.sub('<.*?>', '', informe_html or '')
+            informe_limpio = informe_limpio.replace('&nbsp;', ' ').strip()
+            if len(informe_limpio) > 500:
+                informe_limpio = informe_limpio[:497] + '...'
+            worksheet.write(row, col, informe_limpio, row_style); col += 1
+
+            row += 1
             worksheet.write(row, col, dict(reporte._fields['transformador'].selection).get(reporte.transformador, '') if reporte.transformador else '', row_style); col += 1
 
             adf_value = ''
@@ -1360,15 +1369,7 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
                     toner_color_value = 'Medio'
             worksheet.write(row, col, toner_color_value, row_style); col += 1
 
-            # INFORME TÉCNICO (limpiar HTML y limitar)
-            informe_html = reporte.informe_tecnico or ''
-            informe_limpio = re.sub('<.*?>', '', informe_html or '')
-            informe_limpio = informe_limpio.replace('&nbsp;', ' ').strip()
-            if len(informe_limpio) > 500:
-                informe_limpio = informe_limpio[:497] + '...'
-            worksheet.write(row, col, informe_limpio, row_style); col += 1
-
-            row += 1
+            
 
         # ANCHOS DE COLUMNA (agregamos ancho grande para “Informe Técnico”)
         column_widths = [
