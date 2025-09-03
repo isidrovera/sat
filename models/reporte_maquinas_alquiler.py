@@ -1026,66 +1026,484 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         for col in range(5):
             worksheet.col(col).width = 4000
 
+    from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+from datetime import timedelta
+import logging
+
+_logger = logging.getLogger(__name__)
+
+
+class ReporteEstadoMaquinaWizard(models.TransientModel):
+    _name = 'reporte.estado.maquina.wizard'
+    _description = 'Wizard para Generar Reporte de Estado de Máquinas'
+
+    fecha_desde = fields.Date(
+        string='Fecha Desde',
+        default=lambda self: fields.Date.context_today(self) - timedelta(days=30)
+    )
+    
+    fecha_hasta = fields.Date(
+        string='Fecha Hasta',
+        default=fields.Date.context_today
+    )
+    
+    estados_maquina = fields.Selection([
+        ('todos', 'Todos los Estados Relevantes'),
+        ('sin_revisar', 'Solo Sin Revisar'),
+        ('revisada', 'Solo Revisadas'),
+        ('lista', 'Solo Listas'),
+        ('con_problemas', 'Solo Con Problemas'),
+        ('partes', 'Solo De Partes'),
+        ('personalizado', 'Selección Personalizada')
+    ], string='Estados a Incluir', default='todos', required=True)
+    
+    estados_personalizados = fields.Selection([
+        ('sin_revisar', 'Sin Revisar'),
+        ('revisada', 'Revisada'),
+        ('lista', 'Lista'),
+        ('con_problemas', 'Con Problemas'),
+        ('partes', 'De Partes'),
+        ('alquilada', 'Alquilada'),
+        ('externo', 'Externo'),
+        ('vendida', 'Vendida')
+    ], string='Estado Personalizado',
+       help='Seleccionar estado específico cuando se elige "Selección Personalizada"')
+    
+    incluir_historial = fields.Boolean(
+        string='Incluir Historial de Alquileres',
+        default=True
+    )
+    
+    incluir_partes = fields.Boolean(
+        string='Incluir Información de Partes',
+        default=True
+    )
+    
+    formato_salida = fields.Selection([
+        ('pantalla', 'Ver en Pantalla'),
+        ('pdf', 'Generar PDF'),
+        ('excel', 'Exportar a Excel')
+    ], string='Formato de Salida', default='pantalla', required=True)
+
+    def action_generar_reporte(self):
+        """
+        Acción para generar el reporte según los filtros seleccionados
+        """
+        # Construir dominio de búsqueda
+        domain = [
+            ('fecha_generacion', '>=', self.fecha_desde),
+            ('fecha_generacion', '<=', self.fecha_hasta)
+        ]
+        
+        # Filtrar por estados
+        if self.estados_maquina != 'todos':
+            if self.estados_maquina == 'personalizado':
+                if self.estados_personalizados:
+                    domain.append(('estado_maquina', '=', self.estados_personalizados))
+                else:
+                    raise UserError(_('Debe seleccionar un estado cuando elige "Selección Personalizada".'))
+            else:
+                domain.append(('estado_maquina', '=', self.estados_maquina))
+        else:
+            # Estados relevantes por defecto
+            domain.append(('estado_maquina', 'in', ['sin_revisar', 'revisada', 'lista', 'con_problemas', 'partes']))
+        
+        # Buscar reportes
+        reportes = self.env['reporte.estado.maquina'].search(domain, order='estado_maquina, serie')
+        
+        if not reportes:
+            raise UserError(_('No se encontraron datos para los filtros seleccionados.'))
+        
+        # Procesar según formato de salida
+        if self.formato_salida == 'pantalla':
+            return self._mostrar_en_pantalla(reportes)
+        elif self.formato_salida == 'pdf':
+            return self._generar_pdf(reportes)
+        elif self.formato_salida == 'excel':
+            return self._exportar_excel(reportes)
+
+    def _mostrar_en_pantalla(self, reportes):
+        """
+        Muestra los reportes en una vista de árbol
+        """
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Reporte de Estado de Máquinas',
+            'res_model': 'reporte.estado.maquina',
+            'view_mode': 'tree,form',
+            'view_type': 'form',
+            'domain': [('id', 'in', reportes.ids)],
+            'context': {
+                'group_by': ['estado_maquina'],
+            },
+            'target': 'current',
+        }
+
+    def _generar_pdf(self, reportes):
+        """
+        Genera un PDF con el reporte
+        """
+        try:
+            report_ref = self.env.ref('sat.action_reporte_estado_maquinas_pdf')
+            return report_ref.report_action(reportes)
+        except ValueError:
+            raise UserError(_('El reporte PDF no está configurado. Por favor, configure el reporte PDF en el módulo.'))
+
+    def _exportar_excel(self, reportes):
+        """
+        Exporta los datos a Excel directamente desde el wizard
+        """
+        import xlwt
+        import base64
+        from io import BytesIO
+        
+        # Crear workbook
+        workbook = xlwt.Workbook(encoding='utf-8')
+        
+        # Crear hojas
+        self._crear_hoja_resumen(workbook, reportes)
+        self._crear_hoja_detalle(workbook, reportes)
+        
+        # Generar archivo
+        output = BytesIO()
+        workbook.save(output)
+        output.seek(0)
+        
+        # Codificar en base64
+        excel_data = base64.b64encode(output.read())
+        
+        # Generar nombre de archivo
+        fecha_actual = fields.Date.context_today(self).strftime('%Y%m%d')
+        filename = f'Reporte_Estado_Maquinas_{fecha_actual}.xls'
+        
+        # Crear attachment para descarga
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'type': 'binary',
+            'datas': excel_data,
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'application/vnd.ms-excel'
+        })
+        
+        # Retornar acción de descarga
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'self',
+        }
+
+    def _crear_hoja_resumen(self, workbook, reportes):
+        """
+        Crea hoja de resumen con estadísticas
+        """
+        import xlwt
+        worksheet = workbook.add_sheet('Resumen')
+        
+        # Estilos corregidos
+        title_style = xlwt.easyxf('font: bold 1, height 320; align: horiz center')
+        header_style = xlwt.easyxf('font: bold 1; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
+        data_style = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: horiz center')
+        number_style = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0')
+        
+        # Título
+        worksheet.write_merge(0, 0, 0, 4, 'REPORTE DE ESTADO DE MÁQUINAS', title_style)
+        worksheet.write_merge(1, 1, 0, 4, f'Fecha de Generación: {fields.Date.context_today(self)}', header_style)
+        
+        # Resumen por estado
+        row = 3
+        worksheet.write(row, 0, 'RESUMEN POR ESTADO', header_style)
+        row += 1
+        
+        headers_resumen = ['Estado', 'Cantidad', 'Contador B/N Total', 'Contador Color Total', 'Contador Scanner Total']
+        for col, header in enumerate(headers_resumen):
+            worksheet.write(row, col, header, header_style)
+        row += 1
+        
+        # Agrupar por estado
+        estados_data = {}
+        for reporte in reportes:
+            estado = reporte.estado_maquina
+            if estado not in estados_data:
+                estados_data[estado] = {
+                    'cantidad': 0,
+                    'contador_bn': 0,
+                    'contador_color': 0,
+                    'contador_scanner': 0
+                }
+            estados_data[estado]['cantidad'] += 1
+            estados_data[estado]['contador_bn'] += reporte.contador_bn or 0
+            estados_data[estado]['contador_color'] += reporte.contador_color or 0
+            estados_data[estado]['contador_scanner'] += reporte.contador_scanner or 0
+        
+        # Escribir datos del resumen
+        for estado, data in estados_data.items():
+            estado_label = dict(reportes._fields['estado_maquina'].selection).get(estado, estado)
+            worksheet.write(row, 0, estado_label, data_style)
+            worksheet.write(row, 1, data['cantidad'], number_style)
+            worksheet.write(row, 2, data['contador_bn'], number_style)
+            worksheet.write(row, 3, data['contador_color'], number_style)
+            worksheet.write(row, 4, data['contador_scanner'], number_style)
+            row += 1
+        
+        # Totales
+        row += 1
+        worksheet.write(row, 0, 'TOTAL GENERAL', header_style)
+        worksheet.write(row, 1, len(reportes), number_style)
+        worksheet.write(row, 2, sum(r.contador_bn or 0 for r in reportes), number_style)
+        worksheet.write(row, 3, sum(r.contador_color or 0 for r in reportes), number_style)
+        worksheet.write(row, 4, sum(r.contador_scanner or 0 for r in reportes), number_style)
+        
+        # Ajustar ancho de columnas
+        for col in range(5):
+            worksheet.col(col).width = 4000
+
     def _crear_hoja_detalle(self, workbook, reportes):
         """
-        Crea hoja con detalles completos de cada máquina
+        Crea hoja con detalles completos de cada máquina con todos los campos
         """
         import xlwt
         worksheet = workbook.add_sheet('Detalles Completos')
         
-        # Estilos corregidos
-        header_style = xlwt.easyxf('font: bold 1; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
-        data_style = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin')
-        date_style = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY')
-        number_style = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0')
+        # Estilos modernos con colores
+        # Colores modernos
+        light_blue = xlwt.easyxf('pattern: pattern solid, fore_colour light_blue; font: bold 1, colour white; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
+        header_style = xlwt.easyxf('pattern: pattern solid, fore_colour dark_blue; font: bold 1, colour white; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
+        subheader_style = xlwt.easyxf('pattern: pattern solid, fore_colour blue_grey; font: bold 1, colour white; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
         
-        # Encabezados principales
+        # Estilos de datos con colores alternados
+        data_style_1 = xlwt.easyxf('pattern: pattern solid, fore_colour white; borders: left thin, right thin, top thin, bottom thin')
+        data_style_2 = xlwt.easyxf('pattern: pattern solid, fore_colour pale_blue; borders: left thin, right thin, top thin, bottom thin')
+        
+        # Estilos especiales
+        date_style = xlwt.easyxf('pattern: pattern solid, fore_colour white; borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY')
+        number_style = xlwt.easyxf('pattern: pattern solid, fore_colour white; borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0')
+        
+        # Estados con colores condicionales
+        estado_ok_style = xlwt.easyxf('pattern: pattern solid, fore_colour light_green; borders: left thin, right thin, top thin, bottom thin; align: horiz center')
+        estado_problema_style = xlwt.easyxf('pattern: pattern solid, fore_colour light_orange; borders: left thin, right thin, top thin, bottom thin; align: horiz center')
+        estado_critico_style = xlwt.easyxf('pattern: pattern solid, fore_colour rose; borders: left thin, right thin, top thin, bottom thin; align: horiz center')
+        
+        # Encabezados COMPLETOS con TODAS las columnas del modelo
         headers = [
-            'Fecha Generación', 'Serie', 'Modelo', 'Marca', 'Tipo Máquina', 'Estado Máquina',
-            'Ubicación Física', 'Contador B/N', 'Contador Color', 'Contador Total', 'Contador Scanner',
+            # INFORMACIÓN BÁSICA
+            'Fecha Generación', 'Semana Reporte', 'Serie', 'Modelo', 'Marca', 
+            'Tipo Máquina', 'Estado Máquina', 'Ubicación Física',
+            
+            # CONTÓMETROS
+            'Contador B/N', 'Contador Color', 'Contador Total', 'Contador Scanner',
+            
+            # ÚLTIMO TICKET
             'Último Ticket', 'Fecha Último Ticket', 'Tipo Servicio', 'Técnico Responsable',
-            'Cliente Anterior', 'Dirección Anterior'
+            
+            # CLIENTE ANTERIOR
+            'Cliente Anterior', 'Dirección Anterior', 'Fecha Último Retiro',
+            
+            # ACCESORIOS COMPLETOS
+            'Transformador', 'Estabilizador', 'ADF Simple', 'ADF Dual', 
+            'Finalizador Interno', 'Finalizador Externo', 'Mueble', 
+            'Panel Smart', 'Panel Normal', 'Wi-Fi', 'Bluetooth',
+            'Cable USB', 'Cable Red', 'Número Caseteras',
+            
+            # CHECK LIST - FUNCIONES
+            'Función Copia', 'Función Impresión', 'Impresión USB', 
+            'Scanner SMB', 'Scanner USB', 'Scanner FTP', 'Scanner Mail',
+            
+            # CHECK LIST - COMPONENTES
+            'Estado ADF', 'Estado Tray 1', 'Estado Tray 2', 'Estado Tray 3', 
+            'Estado Tray 4', 'Estado Bypass', 'Estado Finalizador',
+            
+            # CHECK LIST - PARTES CRÍTICAS
+            'Estado Tacho', 'Estado Fusora', 'Estado Transfer', 'Estado Óptico',
+            'Unidad Imagen Black', 'Unidad Imagen Magenta', 
+            'Unidad Imagen Cyan', 'Unidad Imagen Yellow',
+            
+            # NIVELES DE TONER
+            'Toner Black', 'Toner Magenta', 'Toner Cyan', 'Toner Yellow',
+            
+            # INFORME TÉCNICO
+            'Informe Técnico'
         ]
         
-        # Escribir encabezados
-        for col, header in enumerate(headers):
-            worksheet.write(0, col, header, header_style)
+        # Crear encabezados con secciones coloreadas
+        current_col = 0
+        sections = [
+            ('INFORMACIÓN BÁSICA', 8, header_style),
+            ('CONTÓMETROS', 4, subheader_style),
+            ('ÚLTIMO TICKET', 4, header_style),
+            ('CLIENTE ANTERIOR', 3, subheader_style),
+            ('ACCESORIOS', 13, header_style),
+            ('CHECK LIST - FUNCIONES', 7, subheader_style),
+            ('CHECK LIST - COMPONENTES', 7, header_style),
+            ('CHECK LIST - PARTES CRÍTICAS', 8, subheader_style),
+            ('NIVELES DE TONER', 4, header_style),
+            ('INFORME TÉCNICO', 1, light_blue)
+        ]
         
-        # Escribir datos
-        row = 1
-        for reporte in reportes:
+        # Escribir secciones en fila 0
+        for section_name, col_count, style in sections:
+            if col_count > 1:
+                worksheet.write_merge(0, 0, current_col, current_col + col_count - 1, section_name, style)
+            else:
+                worksheet.write(0, current_col, section_name, style)
+            current_col += col_count
+        
+        # Escribir encabezados de columna en fila 1
+        for col, header in enumerate(headers):
+            worksheet.write(1, col, header, light_blue)
+        
+        # Función para obtener estilo según el estado
+        def get_estado_style(value):
+            if not value:
+                return data_style_1
+            if value in ['si', 'lleno', 'bueno']:
+                return estado_ok_style
+            elif value in ['medio', 'regular', 'desgaste']:
+                return estado_problema_style
+            elif value in ['no', 'vacio', 'malo', 'cambio']:
+                return estado_critico_style
+            else:
+                return data_style_1
+        
+        # Escribir datos de cada reporte
+        row = 2
+        for i, reporte in enumerate(reportes):
+            # Alternar colores de fila
+            base_style = data_style_1 if i % 2 == 0 else data_style_2
             col = 0
             
-            # Datos básicos
+            # INFORMACIÓN BÁSICA
             worksheet.write(row, col, reporte.fecha_generacion or '', date_style); col += 1
-            worksheet.write(row, col, reporte.serie or '', data_style); col += 1
-            worksheet.write(row, col, reporte.modelo or '', data_style); col += 1
-            worksheet.write(row, col, reporte.marca or '', data_style); col += 1
-            worksheet.write(row, col, reporte.tipo_maquina or '', data_style); col += 1
-            worksheet.write(row, col, dict(reporte._fields['estado_maquina'].selection).get(reporte.estado_maquina, ''), data_style); col += 1
-            worksheet.write(row, col, dict(reporte._fields['ubicacion_fisica'].selection).get(reporte.ubicacion_fisica, '') if reporte.ubicacion_fisica else '', data_style); col += 1
+            worksheet.write(row, col, reporte.semana_reporte or '', base_style); col += 1
+            worksheet.write(row, col, reporte.serie or '', base_style); col += 1
+            worksheet.write(row, col, reporte.modelo or '', base_style); col += 1
+            worksheet.write(row, col, reporte.marca or '', base_style); col += 1
+            worksheet.write(row, col, reporte.tipo_maquina or '', base_style); col += 1
+            worksheet.write(row, col, dict(reporte._fields['estado_maquina'].selection).get(reporte.estado_maquina, ''), base_style); col += 1
+            worksheet.write(row, col, dict(reporte._fields['ubicacion_fisica'].selection).get(reporte.ubicacion_fisica, '') if reporte.ubicacion_fisica else '', base_style); col += 1
             
-            # Contómetros
+            # CONTÓMETROS
             worksheet.write(row, col, reporte.contador_bn or 0, number_style); col += 1
             worksheet.write(row, col, reporte.contador_color or 0, number_style); col += 1
             worksheet.write(row, col, reporte.contador_total or 0, number_style); col += 1
             worksheet.write(row, col, reporte.contador_scanner or 0, number_style); col += 1
             
-            # Último ticket
-            worksheet.write(row, col, reporte.ultimo_ticket_id.name if reporte.ultimo_ticket_id else '', data_style); col += 1
+            # ÚLTIMO TICKET
+            worksheet.write(row, col, reporte.ultimo_ticket_id.name if reporte.ultimo_ticket_id else '', base_style); col += 1
             worksheet.write(row, col, reporte.ultimo_ticket_fecha or '', date_style); col += 1
-            worksheet.write(row, col, reporte.ultimo_ticket_tipo or '', data_style); col += 1
-            worksheet.write(row, col, reporte.tecnico_responsable or '', data_style); col += 1
+            worksheet.write(row, col, reporte.ultimo_ticket_tipo or '', base_style); col += 1
+            worksheet.write(row, col, reporte.tecnico_responsable or '', base_style); col += 1
             
-            # Cliente anterior
-            worksheet.write(row, col, reporte.cliente_anterior_id.name if reporte.cliente_anterior_id else '', data_style); col += 1
-            worksheet.write(row, col, reporte.direccion_anterior or '', data_style); col += 1
+            # CLIENTE ANTERIOR
+            worksheet.write(row, col, reporte.cliente_anterior_id.name if reporte.cliente_anterior_id else '', base_style); col += 1
+            worksheet.write(row, col, reporte.direccion_anterior or '', base_style); col += 1
+            worksheet.write(row, col, reporte.fecha_ultimo_retiro or '', date_style); col += 1
+            
+            # ACCESORIOS - con estilos condicionales
+            accesorios_fields = [
+                'transformador', 'estabilizador', 'adf_simple', 'adf_dual',
+                'finalizador_interno', 'finalizador_externo', 'mueble',
+                'panel_smart', 'panel_normal', 'wifi', 'bluetooth',
+                'cable_usb', 'cable_red'
+            ]
+            
+            for field in accesorios_fields:
+                value = getattr(reporte, field, '')
+                display_value = ''
+                if value and hasattr(reporte._fields.get(field, {}), 'selection'):
+                    selection_dict = dict(reporte._fields[field].selection)
+                    display_value = selection_dict.get(value, value)
+                worksheet.write(row, col, display_value, get_estado_style(value)); col += 1
+            
+            # Número de caseteras
+            worksheet.write(row, col, reporte.numero_caseteras or '', base_style); col += 1
+            
+            # CHECK LIST - FUNCIONES
+            funciones_fields = [
+                'copia_estado', 'impresion_estado', 'impresion_usb_estado',
+                'scanner_smb_estado', 'scanner_usb_estado', 'scanner_ftp_estado', 'scanner_mail_estado'
+            ]
+            
+            for field in funciones_fields:
+                value = getattr(reporte, field, '')
+                display_value = ''
+                if value and hasattr(reporte._fields.get(field, {}), 'selection'):
+                    selection_dict = dict(reporte._fields[field].selection)
+                    display_value = selection_dict.get(value, value)
+                worksheet.write(row, col, display_value, get_estado_style(value)); col += 1
+            
+            # CHECK LIST - COMPONENTES
+            componentes_fields = [
+                'adf_estado', 'tray1_estado', 'tray2_estado', 'tray3_estado',
+                'tray4_estado', 'bypass_estado', 'finalizador_estado'
+            ]
+            
+            for field in componentes_fields:
+                value = getattr(reporte, field, '')
+                display_value = ''
+                if value and hasattr(reporte._fields.get(field, {}), 'selection'):
+                    selection_dict = dict(reporte._fields[field].selection)
+                    display_value = selection_dict.get(value, value)
+                worksheet.write(row, col, display_value, get_estado_style(value)); col += 1
+            
+            # CHECK LIST - PARTES CRÍTICAS
+            partes_fields = [
+                'tacho_estado', 'fusora_estado', 'transfer_estado', 'optico_estado',
+                'unidad_imagen_black_estado', 'unidad_imagen_magenta_estado',
+                'unidad_imagen_cyan_estado', 'unidad_imagen_yellow_estado'
+            ]
+            
+            for field in partes_fields:
+                value = getattr(reporte, field, '')
+                display_value = ''
+                if value and hasattr(reporte._fields.get(field, {}), 'selection'):
+                    selection_dict = dict(reporte._fields[field].selection)
+                    display_value = selection_dict.get(value, value)
+                worksheet.write(row, col, display_value, get_estado_style(value)); col += 1
+            
+            # NIVELES DE TONER
+            toner_fields = ['toner_black_nivel', 'toner_magenta_nivel', 'toner_cyan_nivel', 'toner_yellow_nivel']
+            
+            for field in toner_fields:
+                value = getattr(reporte, field, '')
+                display_value = ''
+                if value and hasattr(reporte._fields.get(field, {}), 'selection'):
+                    selection_dict = dict(reporte._fields[field].selection)
+                    display_value = selection_dict.get(value, value)
+                worksheet.write(row, col, display_value, get_estado_style(value)); col += 1
+            
+            # INFORME TÉCNICO (eliminar HTML tags básicos)
+            informe = reporte.informe_tecnico or ''
+            if informe:
+                # Limpiar tags HTML básicos
+                import re
+                informe_limpio = re.sub('<.*?>', '', informe)
+                informe_limpio = informe_limpio.replace('&nbsp;', ' ').strip()
+                # Limitar a 500 caracteres para Excel
+                if len(informe_limpio) > 500:
+                    informe_limpio = informe_limpio[:497] + '...'
+            else:
+                informe_limpio = ''
+            worksheet.write(row, col, informe_limpio, base_style); col += 1
             
             row += 1
         
-        # Ajustar ancho de columnas
+        # Ajustar ancho de columnas automáticamente
         for col in range(len(headers)):
-            worksheet.col(col).width = 3500
+            if col < 8:  # Información básica - más ancho
+                worksheet.col(col).width = 4000
+            elif col < 12:  # Contómetros - ancho medio
+                worksheet.col(col).width = 3000
+            elif headers[col] == 'Informe Técnico':  # Informe técnico - muy ancho
+                worksheet.col(col).width = 8000
+            else:  # Check lists y demás - ancho estándar
+                worksheet.col(col).width = 2800
+        
+        # Congelar paneles para mejor navegación
+        worksheet.set_panes_frozen(True)
+        worksheet.set_horz_split_pos(2)  # Congelar las 2 primeras filas
+        worksheet.set_vert_split_pos(3)  # Congelar las 3 primeras columnas
 
     def action_generar_reporte_ahora(self):
         """
