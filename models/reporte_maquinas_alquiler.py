@@ -1290,8 +1290,8 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
             estado_display = dict(reporte._fields['estado_maquina'].selection).get(estado, '')
             worksheet.write(row, col, estado_display, row_style); col += 1
 
-            ubicacion_display = dict(reporte._fields['ubicacion_fisica'].selection).get(reporte.ubicacion_fisica, '') if reporte.ubicacion_fisica else ''
-            worksheet.write(row, col, ubicacion_display, row_style); col += 1
+            #ubicacion_display = dict(reporte._fields['ubicacion_fisica'].selection).get(reporte.ubicacion_fisica, '') if reporte.ubicacion_fisica else ''
+           # worksheet.write(row, col, ubicacion_display, row_style); col += 1
 
             # CONTÓMETROS
             #worksheet.write(row, col, reporte.contador_bn or 0, number_style); col += 1
