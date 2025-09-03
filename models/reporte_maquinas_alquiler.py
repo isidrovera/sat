@@ -949,7 +949,26 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         import base64
         import re
         from io import BytesIO
+        from unicodedata import normalize
+        from urllib.parse import quote
 
+        # --- helpers ---
+        def _mes_es(dt):
+            return [
+                'enero','febrero','marzo','abril','mayo','junio',
+                'julio','agosto','septiembre','octubre','noviembre','diciembre'
+            ][dt.month - 1]
+
+        def _slug_filename(text):
+            # quitar tildes y dejar ASCII puro
+            text = normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+            # reemplazar cualquier cosa rara por "_"
+            text = re.sub(r'[^A-Za-z0-9._-]+', '_', text)
+            # compactar guiones bajos
+            text = re.sub(r'_{2,}', '_', text).strip('_')
+            return text
+
+        # --- generar workbook ---
         workbook = xlwt.Workbook(encoding='utf-8')
         self._setup_palette(workbook)
         self._crear_hoja_resumen(workbook, reportes)
@@ -960,42 +979,45 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         output.seek(0)
         excel_data = base64.b64encode(output.read()).decode('utf-8')
 
-        # ==== Datos de fecha para el nombre ====
-        def _mes_es(dt):
-            return [
-                'enero','febrero','marzo','abril','mayo','junio',
-                'julio','agosto','septiembre','octubre','noviembre','diciembre'
-            ][dt.month - 1]
-
+        # --- datos fecha ---
         fecha_desde = self.fecha_desde or fields.Date.context_today(self)
         fecha_hasta = self.fecha_hasta or fields.Date.context_today(self)
         mes_texto = _mes_es(fecha_hasta).capitalize()
         anio = fecha_hasta.year
 
-        # ==== Secuencia ====
+        # --- secuencia ---
         seq_raw = self.env['ir.sequence'].next_by_code('sat.reporte_estado_excel') or '0001'
-        # Sanea cualquier caracter no permitido en filenames (por ej. "/")
-        seq_safe = re.sub(r'[^A-Za-z0-9._-]+', '-', seq_raw)
+        # también la saneamos (prefijos con "/")
+        seq_safe = _slug_filename(seq_raw)
 
-        # Nombre final (corto y legible)
-        filename = (
+        # --- nombre final (ASCII, sin espacios, con .xls) ---
+        human_name = (
             f"{seq_safe}_Reporte_Estado_Maquinas_"
             f"{mes_texto}-{anio}_{fecha_desde.strftime('%Y%m%d')}_a_{fecha_hasta.strftime('%Y%m%d')}.xls"
         )
-        safe_filename = filename.replace(' ', '_')
+        safe_filename = _slug_filename(human_name)  # e.g. REM-56274_Reporte_Estado_Maquinas_Septiembre-2025_20250805_a_20250903.xls
+        # para querystring
+        quoted_filename = quote(safe_filename)
 
+        # --- crear adjunto ---
         attachment = self.env['ir.attachment'].create({
-            'name': safe_filename,
+            'name': safe_filename,                  # nombre legible y estable
             'type': 'binary',
-            'datas': excel_data,
+            'datas': excel_data,                    # base64 en string
             'mimetype': 'application/vnd.ms-excel',
             'res_model': self._name,
             'res_id': self.id,
         })
 
+        # --- forzar nombre en la descarga ---
+        url = f"/web/content/{attachment.id}?download=1&filename={quoted_filename}"
+
+        # (opcional) log para verificar qué nombre se está enviando
+        _logger.info("Descarga Excel -> id=%s name=%s url=%s", attachment.id, safe_filename, url)
+
         return {
             'type': 'ir.actions.act_url',
-            'url': f"/web/content/{attachment.id}?download=1&filename={safe_filename}",
+            'url': url,
             'target': 'self',
         }
 
