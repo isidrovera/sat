@@ -333,53 +333,7 @@
     </field>
 </record>
 
-<!-- Vista para el exportador Excel -->
-<record id="view_excel_exporter_form" model="ir.ui.view">
-    <field name="name">reporte.estado.maquina.excel.exporter.form</field>
-    <field name="model">reporte.estado.maquina.excel.exporter</field>
-    <field name="arch" type="xml">
-        <form string="Exportar a Excel">
-            <sheet>
-                <div class="oe_title" invisible="state == 'init'">
-                    <h1>
-                        <i class="fa fa-file-excel-o" style="color: #1f7244; margin-right: 10px;"/>
-                        Archivo Excel Generado
-                    </h1>
-                </div>
-                
-                <div class="oe_title" invisible="state == 'done'">
-                    <h1>
-                        <i class="fa fa-spinner fa-spin" style="margin-right: 10px;"/>
-                        Generando Archivo Excel...
-                    </h1>
-                    <p class="oe_grey">Por favor espere mientras se procesa el reporte</p>
-                </div>
-                
-                <group invisible="state == 'init'">
-                    <group>
-                        <field name="filename" readonly="1"/>
-                        <field name="state" invisible="1"/>
-                    </group>
-                </group>
-                
-                <div class="alert alert-success" role="alert" invisible="state != 'done'" style="margin: 20px 0;">
-                    <h4><i class="fa fa-check-circle"/> ¡Archivo Excel Generado Exitosamente!</h4>
-                    <p style="margin-bottom: 10px;">El archivo contiene dos hojas de trabajo:</p>
-                    <ul style="margin-bottom: 0;">
-                        <li><strong>📊 Resumen:</strong> Estadísticas ejecutivas por estado de máquina</li>
-                        <li><strong>📋 Detalles Completos:</strong> Información detallada de cada equipo</li>
-                    </ul>
-                </div>
-            </sheet>
-            
-            <footer>
-                <button string="📥 Descargar Excel" name="action_download_excel" 
-                        type="object" class="btn-primary" invisible="state != 'done'"/>
-                <button string="✅ Cerrar" class="btn-secondary" special="cancel"/>
-            </footer>
-        </form>
-    </field>
-</record>
+
     <!-- ============================================ -->
     <!-- ACCIONES -->
     <!-- ============================================ -->
