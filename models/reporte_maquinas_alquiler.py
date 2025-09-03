@@ -1,7 +1,12 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 from datetime import datetime, timedelta
+import xlwt
+import base64
+from io import BytesIO
 import logging
+
+
 
 _logger = logging.getLogger(__name__)
 
@@ -914,15 +919,173 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
 
     def _exportar_excel(self, reportes):
         """
-        Exporta los datos a Excel usando el exportador dedicado
+        Exporta los datos a Excel directamente desde el wizard
         """
-        # Crear el exportador
-        exporter = self.env['reporte.estado.maquina.excel.exporter'].create({
-            'name': f'Reporte_Estado_Maquinas_{fields.Date.context_today(self)}.xls'
+        import xlwt
+        import base64
+        from io import BytesIO
+        
+        # Crear workbook
+        workbook = xlwt.Workbook(encoding='utf-8')
+        
+        # Crear hojas
+        self._crear_hoja_resumen(workbook, reportes)
+        self._crear_hoja_detalle(workbook, reportes)
+        
+        # Generar archivo
+        output = BytesIO()
+        workbook.save(output)
+        output.seek(0)
+        
+        # Codificar en base64
+        excel_data = base64.b64encode(output.read())
+        
+        # Generar nombre de archivo
+        fecha_actual = fields.Date.context_today(self).strftime('%Y%m%d')
+        filename = f'Reporte_Estado_Maquinas_{fecha_actual}.xls'
+        
+        # Crear attachment para descarga
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'type': 'binary',
+            'datas': excel_data,
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'application/vnd.ms-excel'
         })
         
-        # Generar el Excel
-        return exporter.generar_excel(reportes.ids)
+        # Retornar acción de descarga
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'self',
+        }
+
+    def _crear_hoja_resumen(self, workbook, reportes):
+        """
+        Crea hoja de resumen con estadísticas
+        """
+        import xlwt
+        worksheet = workbook.add_sheet('Resumen')
+        
+        # Estilos
+        title_style = xlwt.easyxf('font: bold 1, height 320; align: horiz center')
+        header_style = xlwt.easyxf('font: bold 1; align: horiz center; borders: all thin')
+        data_style = xlwt.easyxf('borders: all thin; align: horiz center')
+        number_style = xlwt.easyxf('borders: all thin; align: horiz right', num_format_str='#,##0')
+        
+        # Título
+        worksheet.write_merge(0, 0, 0, 4, 'REPORTE DE ESTADO DE MÁQUINAS', title_style)
+        worksheet.write_merge(1, 1, 0, 4, f'Fecha de Generación: {fields.Date.context_today(self)}', header_style)
+        
+        # Resumen por estado
+        row = 3
+        worksheet.write(row, 0, 'RESUMEN POR ESTADO', header_style)
+        row += 1
+        
+        headers_resumen = ['Estado', 'Cantidad', 'Contador B/N Total', 'Contador Color Total', 'Contador Scanner Total']
+        for col, header in enumerate(headers_resumen):
+            worksheet.write(row, col, header, header_style)
+        row += 1
+        
+        # Agrupar por estado
+        estados_data = {}
+        for reporte in reportes:
+            estado = reporte.estado_maquina
+            if estado not in estados_data:
+                estados_data[estado] = {
+                    'cantidad': 0,
+                    'contador_bn': 0,
+                    'contador_color': 0,
+                    'contador_scanner': 0
+                }
+            estados_data[estado]['cantidad'] += 1
+            estados_data[estado]['contador_bn'] += reporte.contador_bn or 0
+            estados_data[estado]['contador_color'] += reporte.contador_color or 0
+            estados_data[estado]['contador_scanner'] += reporte.contador_scanner or 0
+        
+        # Escribir datos del resumen
+        for estado, data in estados_data.items():
+            estado_label = dict(reportes._fields['estado_maquina'].selection).get(estado, estado)
+            worksheet.write(row, 0, estado_label, data_style)
+            worksheet.write(row, 1, data['cantidad'], number_style)
+            worksheet.write(row, 2, data['contador_bn'], number_style)
+            worksheet.write(row, 3, data['contador_color'], number_style)
+            worksheet.write(row, 4, data['contador_scanner'], number_style)
+            row += 1
+        
+        # Totales
+        row += 1
+        worksheet.write(row, 0, 'TOTAL GENERAL', header_style)
+        worksheet.write(row, 1, len(reportes), number_style)
+        worksheet.write(row, 2, sum(r.contador_bn or 0 for r in reportes), number_style)
+        worksheet.write(row, 3, sum(r.contador_color or 0 for r in reportes), number_style)
+        worksheet.write(row, 4, sum(r.contador_scanner or 0 for r in reportes), number_style)
+        
+        # Ajustar ancho de columnas
+        for col in range(5):
+            worksheet.col(col).width = 4000
+
+    def _crear_hoja_detalle(self, workbook, reportes):
+        """
+        Crea hoja con detalles completos de cada máquina
+        """
+        import xlwt
+        worksheet = workbook.add_sheet('Detalles Completos')
+        
+        # Estilos
+        header_style = xlwt.easyxf('font: bold 1; align: horiz center; borders: all thin')
+        data_style = xlwt.easyxf('borders: all thin')
+        date_style = xlwt.easyxf('borders: all thin', num_format_str='DD/MM/YYYY')
+        number_style = xlwt.easyxf('borders: all thin; align: horiz right', num_format_str='#,##0')
+        
+        # Encabezados principales
+        headers = [
+            'Fecha Generación', 'Serie', 'Modelo', 'Marca', 'Tipo Máquina', 'Estado Máquina',
+            'Ubicación Física', 'Contador B/N', 'Contador Color', 'Contador Total', 'Contador Scanner',
+            'Último Ticket', 'Fecha Último Ticket', 'Tipo Servicio', 'Técnico Responsable',
+            'Cliente Anterior', 'Dirección Anterior'
+        ]
+        
+        # Escribir encabezados
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_style)
+        
+        # Escribir datos
+        row = 1
+        for reporte in reportes:
+            col = 0
+            
+            # Datos básicos
+            worksheet.write(row, col, reporte.fecha_generacion or '', date_style); col += 1
+            worksheet.write(row, col, reporte.serie or '', data_style); col += 1
+            worksheet.write(row, col, reporte.modelo or '', data_style); col += 1
+            worksheet.write(row, col, reporte.marca or '', data_style); col += 1
+            worksheet.write(row, col, reporte.tipo_maquina or '', data_style); col += 1
+            worksheet.write(row, col, dict(reporte._fields['estado_maquina'].selection).get(reporte.estado_maquina, ''), data_style); col += 1
+            worksheet.write(row, col, dict(reporte._fields['ubicacion_fisica'].selection).get(reporte.ubicacion_fisica, '') if reporte.ubicacion_fisica else '', data_style); col += 1
+            
+            # Contómetros
+            worksheet.write(row, col, reporte.contador_bn or 0, number_style); col += 1
+            worksheet.write(row, col, reporte.contador_color or 0, number_style); col += 1
+            worksheet.write(row, col, reporte.contador_total or 0, number_style); col += 1
+            worksheet.write(row, col, reporte.contador_scanner or 0, number_style); col += 1
+            
+            # Último ticket
+            worksheet.write(row, col, reporte.ultimo_ticket_id.name if reporte.ultimo_ticket_id else '', data_style); col += 1
+            worksheet.write(row, col, reporte.ultimo_ticket_fecha or '', date_style); col += 1
+            worksheet.write(row, col, reporte.ultimo_ticket_tipo or '', data_style); col += 1
+            worksheet.write(row, col, reporte.tecnico_responsable or '', data_style); col += 1
+            
+            # Cliente anterior
+            worksheet.write(row, col, reporte.cliente_anterior_id.name if reporte.cliente_anterior_id else '', data_style); col += 1
+            worksheet.write(row, col, reporte.direccion_anterior or '', data_style); col += 1
+            
+            row += 1
+        
+        # Ajustar ancho de columnas
+        for col in range(len(headers)):
+            worksheet.col(col).width = 3500
 
     def action_generar_reporte_ahora(self):
         """
