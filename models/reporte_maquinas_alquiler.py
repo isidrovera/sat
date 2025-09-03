@@ -11,6 +11,7 @@ class ReporteEstadoMaquina(models.Model):
     _description = 'Reporte de Estado de Máquinas'
     _order = 'fecha_generacion desc, estado_maquina, serie'
     _rec_name = 'display_name'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
 
     # Campos de identificación del reporte
     fecha_generacion = fields.Date(
