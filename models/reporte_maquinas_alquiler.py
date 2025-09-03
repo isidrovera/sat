@@ -899,7 +899,7 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
             'type': 'ir.actions.act_window',
             'name': 'Reporte de Estado de Máquinas',
             'res_model': 'reporte.estado.maquina',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'view_type': 'form',
             'domain': [('id', 'in', reportes.ids)],
             'context': {
@@ -945,48 +945,65 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         workbook.set_colour_RGB(0x28, 230, 247, 255)
 
     def _exportar_excel(self, reportes):
-        """
-        Exporta los datos a Excel directamente desde el wizard
-        """
         import xlwt
         import base64
         from io import BytesIO
-        
+
         # Crear workbook
         workbook = xlwt.Workbook(encoding='utf-8')
         self._setup_palette(workbook)
+
         # Crear hojas
         self._crear_hoja_resumen(workbook, reportes)
         self._crear_hoja_detalle(workbook, reportes)
-        
+
         # Generar archivo
         output = BytesIO()
         workbook.save(output)
         output.seek(0)
-        
-        # Codificar en base64
-        excel_data = base64.b64encode(output.read())
-        
-        # Generar nombre de archivo
-        fecha_actual = fields.Date.context_today(self).strftime('%Y%m%d')
-        filename = f'Reporte_Estado_Maquinas_{fecha_actual}.xls'
-        
-        # Crear attachment para descarga
+
+        # Codificar en base64 como **string**
+        excel_data = base64.b64encode(output.read()).decode('utf-8')
+
+        # ===== Nombre de archivo: Mes-Año + rango =====
+        def _mes_es(dt):
+            return [
+                'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+            ][dt.month - 1]
+
+        fecha_desde = self.fecha_desde or fields.Date.context_today(self)
+        fecha_hasta = self.fecha_hasta or fields.Date.context_today(self)
+
+        mes_texto = _mes_es(fecha_hasta).capitalize()
+        anio = fecha_hasta.year
+
+        # Ej: Reporte_Estado_Maquinas_Septiembre-2025_20250805_a_20250903.xls
+        filename = (
+            f"Reporte_Estado_Maquinas_{mes_texto}-{anio}_"
+            f"{fecha_desde.strftime('%Y%m%d')}_a_{fecha_hasta.strftime('%Y%m%d')}.xls"
+        )
+        # Evitar espacios raros en URL
+        safe_filename = filename.replace(' ', '_')
+
+        # Crear attachment
         attachment = self.env['ir.attachment'].create({
-            'name': filename,
+            'name': safe_filename,                 # <- nombre visible del adjunto
+            'datas_fname': safe_filename,          # <- nombre de archivo sugerido
             'type': 'binary',
-            'datas': excel_data,
+            'datas': excel_data,                   # <- base64 como string
             'res_model': self._name,
             'res_id': self.id,
-            'mimetype': 'application/vnd.ms-excel'
+            'mimetype': 'application/vnd.ms-excel',
         })
-        
-        # Retornar acción de descarga
+
+        # Forzar nombre en descarga
         return {
             'type': 'ir.actions.act_url',
-            'url': f'/web/content/{attachment.id}?download=true',
+            'url': f"/web/content/{attachment.id}?download=1&filename={safe_filename}",
             'target': 'self',
         }
+
 
     def _crear_hoja_resumen(self, workbook, reportes):
         """
@@ -1028,10 +1045,10 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         worksheet.write(row, 0, 'ESTADO', header_resumen)
         worksheet.write(row, 1, 'CANTIDAD', header_resumen)
         worksheet.write(row, 2, 'PORCENTAJE', header_resumen)
-        worksheet.write(row, 3, 'CONTADOR B/N', header_resumen)
-        worksheet.write(row, 4, 'CONTADOR COLOR', header_resumen)
-        worksheet.write(row, 5, 'CONTADOR SCANNER', header_resumen)
-        worksheet.write(row, 6, 'OBSERVACIONES', header_resumen)
+        #worksheet.write(row, 3, 'CONTADOR B/N', header_resumen)
+        #worksheet.write(row, 4, 'CONTADOR COLOR', header_resumen)
+        #worksheet.write(row, 5, 'CONTADOR SCANNER', header_resumen)
+        worksheet.write(row, 3, 'OBSERVACIONES', header_resumen)
         row += 1
         
         # Agrupar datos por estado
@@ -1042,15 +1059,15 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
             estado = reporte.estado_maquina
             if estado not in estados_data:
                 estados_data[estado] = {
-                    'cantidad': 0,
-                    'contador_bn': 0,
-                    'contador_color': 0,
-                    'contador_scanner': 0
+                    'cantidad': 0
+                    #'contador_bn': 0,
+                    #'contador_color': 0,
+                    #'contador_scanner': 0
                 }
             estados_data[estado]['cantidad'] += 1
-            estados_data[estado]['contador_bn'] += reporte.contador_bn or 0
-            estados_data[estado]['contador_color'] += reporte.contador_color or 0
-            estados_data[estado]['contador_scanner'] += reporte.contador_scanner or 0
+            #estados_data[estado]['contador_bn'] += reporte.contador_bn or 0
+            #estados_data[estado]['contador_color'] += reporte.contador_color or 0
+            #estados_data[estado]['contador_scanner'] += reporte.contador_scanner or 0
         
         # Mapeo de estilos por estado
         estado_styles = {
@@ -1081,10 +1098,10 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
             worksheet.write(row, 0, estado_label, style)
             worksheet.write(row, 1, data['cantidad'], style)
             worksheet.write(row, 2, f"{porcentaje}%", style)
-            worksheet.write(row, 3, data['contador_bn'], number_summary)
-            worksheet.write(row, 4, data['contador_color'], number_summary)
-            worksheet.write(row, 5, data['contador_scanner'], number_summary)
-            worksheet.write(row, 6, observaciones.get(estado, ''), style)
+           # worksheet.write(row, 3, data['contador_bn'], number_summary)
+           # worksheet.write(row, 4, data['contador_color'], number_summary)
+            #worksheet.write(row, 5, data['contador_scanner'], number_summary)
+            worksheet.write(row, 3, observaciones.get(estado, ''), style)
             row += 1
         
         # Total general
@@ -1092,10 +1109,10 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         worksheet.write(row, 0, 'TOTAL GENERAL', header_resumen)
         worksheet.write(row, 1, total_maquinas, header_resumen)
         worksheet.write(row, 2, '100%', header_resumen)
-        worksheet.write(row, 3, sum(r.contador_bn or 0 for r in reportes), number_summary)
-        worksheet.write(row, 4, sum(r.contador_color or 0 for r in reportes), number_summary)
-        worksheet.write(row, 5, sum(r.contador_scanner or 0 for r in reportes), number_summary)
-        worksheet.write(row, 6, f'{total_maquinas} equipos en inventario', header_resumen)
+        #worksheet.write(row, 3, sum(r.contador_bn or 0 for r in reportes), number_summary)
+        #worksheet.write(row, 4, sum(r.contador_color or 0 for r in reportes), number_summary)
+        #worksheet.write(row, 5, sum(r.contador_scanner or 0 for r in reportes), number_summary)
+        worksheet.write(row, 3, f'{total_maquinas} equipos en inventario', header_resumen)
         
         # Indicadores clave (KPIs)
         row += 3
@@ -1109,9 +1126,9 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         kpis = [
             ('Equipos Operativos', equipos_operativos, f"{round((equipos_operativos/total_maquinas)*100, 1)}%"),
             ('Equipos con Problemas', equipos_problema, f"{round((equipos_problema/total_maquinas)*100, 1)}%"),
-            ('Equipos Sin Revisar', estados_data.get('sin_revisar', {}).get('cantidad', 0), f"{round((estados_data.get('sin_revisar', {}).get('cantidad', 0)/total_maquinas)*100, 1)}%"),
-            ('Total Copias B/N', sum(r.contador_bn or 0 for r in reportes), 'Acumulado'),
-            ('Total Copias Color', sum(r.contador_color or 0 for r in reportes), 'Acumulado')
+            ('Equipos Sin Revisar', estados_data.get('sin_revisar', {}).get('cantidad', 0), f"{round((estados_data.get('sin_revisar', {}).get('cantidad', 0)/total_maquinas)*100, 1)}%")
+            #('Total Copias B/N', sum(r.contador_bn or 0 for r in reportes), 'Acumulado'),
+            #('Total Copias Color', sum(r.contador_color or 0 for r in reportes), 'Acumulado')
         ]
         
         for kpi_name, kpi_value, kpi_percent in kpis:
