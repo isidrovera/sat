@@ -297,7 +297,7 @@
 
                     <group>
                         <group name="filtros_adicionales" string="Filtros Adicionales">
-                            <field name="marcas_incluir" widget="many2many_tags"/>
+                           
                         </group>
                         <group name="opciones_reporte" string="Opciones del Reporte">
                             <field name="incluir_historial"/>
