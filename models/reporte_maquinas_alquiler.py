@@ -819,11 +819,18 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         ('personalizado', 'Selección Personalizada')
     ], string='Estados a Incluir', default='todos', required=True)
     
-    estados_personalizados = fields.Many2many(
-        'alquiler',
-        string='Estados Personalizados',
-        help='Seleccionar estados específicos cuando se elige "Selección Personalizada"'
-    )
+    # CORRECCIÓN: Cambiar Many2many por Selection multiple
+    estados_personalizados = fields.Selection([
+        ('sin_revisar', 'Sin Revisar'),
+        ('revisada', 'Revisada'),
+        ('lista', 'Lista'),
+        ('con_problemas', 'Con Problemas'),
+        ('partes', 'De Partes'),
+        ('alquilada', 'Alquilada'),
+        ('externo', 'Externo'),
+        ('vendida', 'Vendida')
+    ], string='Estado Personalizado',
+       help='Seleccionar estado específico cuando se elige "Selección Personalizada"')
     
     marcas_incluir = fields.Many2many(
         'modelo.marca',
@@ -860,8 +867,11 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         # Filtrar por estados
         if self.estados_maquina != 'todos':
             if self.estados_maquina == 'personalizado':
+                # CORRECCIÓN: Usar el valor único de Selection
                 if self.estados_personalizados:
                     domain.append(('estado_maquina', '=', self.estados_personalizados))
+                else:
+                    raise UserError(_('Debe seleccionar un estado cuando elige "Selección Personalizada".'))
             else:
                 domain.append(('estado_maquina', '=', self.estados_maquina))
         else:
@@ -908,24 +918,63 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         """
         Genera un PDF con el reporte
         """
-        # Aquí se implementaría la generación del PDF
-        # Por ahora retornamos el reporte estándar de Odoo
-        return self.env.ref('sat.action_reporte_estado_maquinas_pdf').report_action(reportes)
+        # Verificar si existe la referencia del reporte
+        try:
+            report_ref = self.env.ref('sat.action_reporte_estado_maquinas_pdf')
+            return report_ref.report_action(reportes)
+        except ValueError:
+            # Si no existe el reporte PDF, mostrar mensaje informativo
+            raise UserError(_('El reporte PDF no está configurado. Por favor, configure el reporte PDF en el módulo.'))
 
     def _exportar_excel(self, reportes):
         """
         Exporta los datos a Excel
         """
-        # Implementar exportación a Excel usando xlwt o similar
-        raise UserError(_('La exportación a Excel estará disponible en una próxima versión.'))
+        # Por ahora, redirigir a la vista de lista para exportación manual
+        action = self._mostrar_en_pantalla(reportes)
+        action['context'].update({
+            'export_excel': True,
+        })
+        
+        # Mensaje informativo
+        message = {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Exportación a Excel'),
+                'message': _('Para exportar a Excel, use el botón "Exportar" en la vista de lista.'),
+                'type': 'info',
+                'sticky': False,
+            }
+        }
+        
+        return action
 
     def action_generar_reporte_ahora(self):
         """
         Genera el reporte semanal inmediatamente (para testing)
         """
-        self.env['reporte.estado.maquina'].generar_reporte_semanal()
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'reload',
-        }
+        try:
+            self.env['reporte.estado.maquina'].generar_reporte_semanal()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Reporte Generado'),
+                    'message': _('El reporte semanal se ha generado exitosamente.'),
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+        except Exception as e:
+            _logger.error(f"Error al generar reporte semanal: {str(e)}")
+            raise UserError(_('Error al generar el reporte: %s') % str(e))
+
+    @api.onchange('estados_maquina')
+    def _onchange_estados_maquina(self):
+        """
+        Limpiar el estado personalizado cuando se cambia la selección principal
+        """
+        if self.estados_maquina != 'personalizado':
+            self.estados_personalizados = False
