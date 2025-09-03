@@ -274,49 +274,112 @@
     <!-- WIZARD: Generar Reporte -->
     <!-- ============================================ -->
     <record id="view_reporte_estado_maquina_wizard_form" model="ir.ui.view">
-        <field name="name">reporte.estado.maquina.wizard.form</field>
-        <field name="model">reporte.estado.maquina.wizard</field>
-        <field name="arch" type="xml">
-            <form string="Generar Reporte de Estado de Máquinas">
-                <sheet>
-                    <div class="oe_title">
-                        <h1>Generar Reporte de Estado de Máquinas</h1>
-                    </div>
-                    
-                    <group>
-                        <group name="filtros_fecha" string="Período del Reporte">
-                            <field name="fecha_desde"/>
-                            <field name="fecha_hasta"/>
-                        </group>
-                        <group name="filtros_estado" string="Filtros de Estado">
-                            <field name="estados_maquina"/>
-                            <field name="estados_personalizados" 
-                                   invisible="estados_maquina != 'personalizado'"/>
-                        </group>
+    <field name="name">reporte.estado.maquina.wizard.form</field>
+    <field name="model">reporte.estado.maquina.wizard</field>
+    <field name="arch" type="xml">
+        <form string="Generar Reporte de Estado de Máquinas">
+            <sheet>
+                <div class="oe_title">
+                    <h1>
+                        <i class="fa fa-file-text-o" style="margin-right: 10px;"/>
+                        Generar Reporte de Estado de Máquinas
+                    </h1>
+                    <p class="oe_grey">Genere reportes detallados del inventario y estado actual de las máquinas</p>
+                </div>
+                
+                <group>
+                    <group name="filtros_fecha" string="📅 Período del Reporte">
+                        <field name="fecha_desde" widget="date"/>
+                        <field name="fecha_hasta" widget="date"/>
                     </group>
-
-                    <group>
-                        <group name="filtros_adicionales" string="Filtros Adicionales">
-                           
-                        </group>
-                        <group name="opciones_reporte" string="Opciones del Reporte">
-                            <field name="incluir_historial"/>
-                            <field name="incluir_partes"/>
-                            <field name="formato_salida"/>
-                        </group>
+                    <group name="filtros_estado" string="🔧 Filtros de Estado">
+                        <field name="estados_maquina"/>
+                        <field name="estados_personalizados" 
+                               invisible="estados_maquina != 'personalizado'"
+                               placeholder="Seleccione un estado específico"/>
                     </group>
-                </sheet>
-                <footer>
-                    <button string="Generar Reporte" name="action_generar_reporte" 
-                            type="object" class="btn-primary"/>
-                    <button string="Generar Ahora (Manual)" name="action_generar_reporte_ahora" 
-                            type="object" class="btn-secondary"/>
-                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
-                </footer>
-            </form>
-        </field>
-    </record>
+                </group>
 
+                <group>
+                    <group name="opciones_contenido" string="📋 Contenido del Reporte">
+                        <field name="incluir_historial"/>
+                        <field name="incluir_partes"/>
+                    </group>
+                    <group name="opciones_formato" string="📄 Formato de Salida">
+                        <field name="formato_salida" widget="radio"/>
+                    </group>
+                </group>
+
+                <!-- Información adicional sobre formatos -->
+                <div class="alert alert-info" role="alert" style="margin: 20px 0;">
+                    <h4><i class="fa fa-info-circle"/> Información sobre Formatos:</h4>
+                    <ul style="margin-bottom: 0;">
+                        <li><strong>📺 Ver en Pantalla:</strong> Vista interactiva con filtros y agrupaciones</li>
+                        <li><strong>📊 Excel:</strong> Archivo completo con resumen ejecutivo y detalles de todos los equipos (Recomendado para análisis)</li>
+                        <li><strong>📄 PDF:</strong> Documento para impresión y presentaciones</li>
+                    </ul>
+                </div>
+            </sheet>
+            
+            <footer>
+                <button string="🚀 Generar Reporte" name="action_generar_reporte" 
+                        type="object" class="btn-primary"/>
+                <button string="⚡ Generar Datos Ahora" name="action_generar_reporte_ahora" 
+                        type="object" class="btn-secondary"
+                        help="Ejecuta el proceso de generación de reportes semanales"/>
+                <button string="❌ Cancelar" class="btn-secondary" special="cancel"/>
+            </footer>
+        </form>
+    </field>
+</record>
+
+<!-- Vista para el exportador Excel -->
+<record id="view_excel_exporter_form" model="ir.ui.view">
+    <field name="name">reporte.estado.maquina.excel.exporter.form</field>
+    <field name="model">reporte.estado.maquina.excel.exporter</field>
+    <field name="arch" type="xml">
+        <form string="Exportar a Excel">
+            <sheet>
+                <div class="oe_title" invisible="state == 'init'">
+                    <h1>
+                        <i class="fa fa-file-excel-o" style="color: #1f7244; margin-right: 10px;"/>
+                        Archivo Excel Generado
+                    </h1>
+                </div>
+                
+                <div class="oe_title" invisible="state == 'done'">
+                    <h1>
+                        <i class="fa fa-spinner fa-spin" style="margin-right: 10px;"/>
+                        Generando Archivo Excel...
+                    </h1>
+                    <p class="oe_grey">Por favor espere mientras se procesa el reporte</p>
+                </div>
+                
+                <group invisible="state == 'init'">
+                    <group>
+                        <field name="filename" readonly="1"/>
+                        <field name="state" invisible="1"/>
+                    </group>
+                </group>
+                
+                <div class="alert alert-success" role="alert" invisible="state != 'done'" style="margin: 20px 0;">
+                    <h4><i class="fa fa-check-circle"/> ¡Archivo Excel Generado Exitosamente!</h4>
+                    <p style="margin-bottom: 10px;">El archivo contiene dos hojas de trabajo:</p>
+                    <ul style="margin-bottom: 0;">
+                        <li><strong>📊 Resumen:</strong> Estadísticas ejecutivas por estado de máquina</li>
+                        <li><strong>📋 Detalles Completos:</strong> Información detallada de cada equipo</li>
+                    </ul>
+                </div>
+            </sheet>
+            
+            <footer>
+                <button string="📥 Descargar Excel" name="action_download_excel" 
+                        type="object" class="btn-primary" invisible="state != 'done'"/>
+                <button string="✅ Cerrar" class="btn-secondary" special="cancel"/>
+            </footer>
+        </form>
+    </field>
+</record>
     <!-- ============================================ -->
     <!-- ACCIONES -->
     <!-- ============================================ -->

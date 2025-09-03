@@ -914,14 +914,15 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
 
     def _exportar_excel(self, reportes):
         """
-        Exporta los datos a Excel
+        Exporta los datos a Excel usando el exportador dedicado
         """
-        action = self._mostrar_en_pantalla(reportes)
-        action['context'].update({
-            'export_excel': True,
+        # Crear el exportador
+        exporter = self.env['reporte.estado.maquina.excel.exporter'].create({
+            'name': f'Reporte_Estado_Maquinas_{fields.Date.context_today(self)}.xls'
         })
         
-        return action
+        # Generar el Excel
+        return exporter.generar_excel(reportes.ids)
 
     def action_generar_reporte_ahora(self):
         """
