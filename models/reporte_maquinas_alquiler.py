@@ -2,6 +2,7 @@ from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 from datetime import datetime, timedelta
 import xlwt
+import re
 import base64
 from io import BytesIO
 import logging
@@ -1326,7 +1327,7 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         worksheet.set_panes_frozen(True)
         worksheet.set_horz_split_pos(1)  # Congelar encabezado
         worksheet.set_vert_split_pos(2)  # Congelar serie y modeloicos
-                import re
+                
                 informe_limpio = re.sub('<.*?>', '', informe)
                 informe_limpio = informe_limpio.replace('&nbsp;', ' ').strip()
                 # Limitar a 500 caracteres para Excel
