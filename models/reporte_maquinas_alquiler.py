@@ -917,6 +917,32 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
             return report_ref.report_action(reportes)
         except ValueError:
             raise UserError(_('El reporte PDF no está configurado. Por favor, configure el reporte PDF en el módulo.'))
+    def _setup_palette(self, workbook):
+        import xlwt
+        # define todos tus colores personalizados una sola vez
+        xlwt.add_palette_colour("dark_header", 0x21)
+        workbook.set_colour_RGB(0x21, 47, 79, 79)
+
+        xlwt.add_palette_colour("light_header", 0x22)
+        workbook.set_colour_RGB(0x22, 240, 248, 255)
+
+        xlwt.add_palette_colour("lista_color", 0x23)
+        workbook.set_colour_RGB(0x23, 212, 237, 218)
+
+        xlwt.add_palette_colour("revisada_color", 0x24)
+        workbook.set_colour_RGB(0x24, 217, 237, 247)
+
+        xlwt.add_palette_colour("sin_revisar_color", 0x25)
+        workbook.set_colour_RGB(0x25, 248, 249, 250)
+
+        xlwt.add_palette_colour("con_problemas_color", 0x26)
+        workbook.set_colour_RGB(0x26, 255, 243, 205)
+
+        xlwt.add_palette_colour("partes_color", 0x27)
+        workbook.set_colour_RGB(0x27, 248, 215, 218)
+
+        xlwt.add_palette_colour("alquilada_color", 0x28)
+        workbook.set_colour_RGB(0x28, 230, 247, 255)
 
     def _exportar_excel(self, reportes):
         """
@@ -928,7 +954,7 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         
         # Crear workbook
         workbook = xlwt.Workbook(encoding='utf-8')
-        
+        self._setup_palette(workbook)
         # Crear hojas
         self._crear_hoja_resumen(workbook, reportes)
         self._crear_hoja_detalle(workbook, reportes)
@@ -972,7 +998,12 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         # Usar los mismos colores personalizados definidos anteriormente
         
         # Estilos para el resumen
-        title_style = xlwt.easyxf('font: bold 1, height 400, colour dark_header; align: horiz center')
+        title_style = xlwt.easyxf(
+            'pattern: pattern solid, fore_colour dark_header;'
+            'font: bold 1, height 400, colour white;'
+            'align: horiz center'
+        )
+
         subtitle_style = xlwt.easyxf('font: bold 1, height 280; align: horiz center')
         header_resumen = xlwt.easyxf('pattern: pattern solid, fore_colour dark_header; font: bold 1, colour white; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
         
