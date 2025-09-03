@@ -991,7 +991,7 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         # === Nombre final (ASCII y seguro) ===
         human_name = (
             f"{seq_safe}_Reporte_Estado_Maquinas_"
-            f"{mes_texto}-{anio}_{fecha_desde.strftime('%Y%m%d')}_a_{fecha_hasta.strftime('%Y%m%d')}.xlsx"
+            f"{mes_texto}-{anio}_{fecha_desde.strftime('%Y%m%d')}_a_{fecha_hasta.strftime('%Y%m%d')}.xls"
         )
         safe_filename = _slug_filename(human_name)
         quoted_filename = quote(safe_filename)   # para ponerlo en la RUTA
