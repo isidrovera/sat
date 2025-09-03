@@ -819,7 +819,6 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         ('personalizado', 'Selección Personalizada')
     ], string='Estados a Incluir', default='todos', required=True)
     
-    # CORRECCIÓN: Cambiar Many2many por Selection multiple
     estados_personalizados = fields.Selection([
         ('sin_revisar', 'Sin Revisar'),
         ('revisada', 'Revisada'),
@@ -831,12 +830,6 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         ('vendida', 'Vendida')
     ], string='Estado Personalizado',
        help='Seleccionar estado específico cuando se elige "Selección Personalizada"')
-    
-    marcas_incluir = fields.Many2many(
-        'modelo.marca',
-        string='Marcas a Incluir',
-        help='Dejar vacío para incluir todas las marcas'
-    )
     
     incluir_historial = fields.Boolean(
         string='Incluir Historial de Alquileres',
@@ -867,7 +860,6 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         # Filtrar por estados
         if self.estados_maquina != 'todos':
             if self.estados_maquina == 'personalizado':
-                # CORRECCIÓN: Usar el valor único de Selection
                 if self.estados_personalizados:
                     domain.append(('estado_maquina', '=', self.estados_personalizados))
                 else:
@@ -877,11 +869,6 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         else:
             # Estados relevantes por defecto
             domain.append(('estado_maquina', 'in', ['sin_revisar', 'revisada', 'lista', 'con_problemas', 'partes']))
-        
-        # Filtrar por marcas
-        if self.marcas_incluir:
-            marcas_nombres = [m.name for m in self.marcas_incluir]
-            domain.append(('marca', 'in', marcas_nombres))
         
         # Buscar reportes
         reportes = self.env['reporte.estado.maquina'].search(domain, order='estado_maquina, serie')
@@ -918,35 +905,20 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         """
         Genera un PDF con el reporte
         """
-        # Verificar si existe la referencia del reporte
         try:
             report_ref = self.env.ref('sat.action_reporte_estado_maquinas_pdf')
             return report_ref.report_action(reportes)
         except ValueError:
-            # Si no existe el reporte PDF, mostrar mensaje informativo
             raise UserError(_('El reporte PDF no está configurado. Por favor, configure el reporte PDF en el módulo.'))
 
     def _exportar_excel(self, reportes):
         """
         Exporta los datos a Excel
         """
-        # Por ahora, redirigir a la vista de lista para exportación manual
         action = self._mostrar_en_pantalla(reportes)
         action['context'].update({
             'export_excel': True,
         })
-        
-        # Mensaje informativo
-        message = {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Exportación a Excel'),
-                'message': _('Para exportar a Excel, use el botón "Exportar" en la vista de lista.'),
-                'type': 'info',
-                'sticky': False,
-            }
-        }
         
         return action
 
