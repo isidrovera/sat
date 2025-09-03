@@ -948,11 +948,11 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         import xlwt
         import base64
         import re
+        import uuid
         from io import BytesIO
         from unicodedata import normalize
         from urllib.parse import quote
 
-        # --- helpers ---
         def _mes_es(dt):
             return [
                 'enero','febrero','marzo','abril','mayo','junio',
@@ -960,15 +960,14 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
             ][dt.month - 1]
 
         def _slug_filename(text):
-            # quitar tildes y dejar ASCII puro
+            # quita tildes -> ASCII
             text = normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
-            # reemplazar cualquier cosa rara por "_"
+            # reemplaza todo lo raro por "_"
             text = re.sub(r'[^A-Za-z0-9._-]+', '_', text)
-            # compactar guiones bajos
             text = re.sub(r'_{2,}', '_', text).strip('_')
             return text
 
-        # --- generar workbook ---
+        # === Workbook ===
         workbook = xlwt.Workbook(encoding='utf-8')
         self._setup_palette(workbook)
         self._crear_hoja_resumen(workbook, reportes)
@@ -979,40 +978,48 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         output.seek(0)
         excel_data = base64.b64encode(output.read()).decode('utf-8')
 
-        # --- datos fecha ---
+        # === Rango y mes/año ===
         fecha_desde = self.fecha_desde or fields.Date.context_today(self)
         fecha_hasta = self.fecha_hasta or fields.Date.context_today(self)
         mes_texto = _mes_es(fecha_hasta).capitalize()
         anio = fecha_hasta.year
 
-        # --- secuencia ---
+        # === Secuencia (opcional) ===
         seq_raw = self.env['ir.sequence'].next_by_code('sat.reporte_estado_excel') or '0001'
-        # también la saneamos (prefijos con "/")
         seq_safe = _slug_filename(seq_raw)
 
-        # --- nombre final (ASCII, sin espacios, con .xls) ---
+        # === Nombre final (ASCII y seguro) ===
         human_name = (
             f"{seq_safe}_Reporte_Estado_Maquinas_"
-            f"{mes_texto}-{anio}_{fecha_desde.strftime('%Y%m%d')}_a_{fecha_hasta.strftime('%Y%m%d')}.xls"
+            f"{mes_texto}-{anio}_{fecha_desde.strftime('%Y%m%d')}_a_{fecha_hasta.strftime('%Y%m%d')}.xlsx"
         )
-        safe_filename = _slug_filename(human_name)  # e.g. REM-56274_Reporte_Estado_Maquinas_Septiembre-2025_20250805_a_20250903.xls
-        # para querystring
-        quoted_filename = quote(safe_filename)
+        safe_filename = _slug_filename(human_name)
+        quoted_filename = quote(safe_filename)   # para ponerlo en la RUTA
 
-        # --- crear adjunto ---
+        # === Crear adjunto ===
         attachment = self.env['ir.attachment'].create({
-            'name': safe_filename,                  # nombre legible y estable
+            'name': safe_filename,                         # nombre humano
             'type': 'binary',
-            'datas': excel_data,                    # base64 en string
+            'datas': excel_data,
             'mimetype': 'application/vnd.ms-excel',
             'res_model': self._name,
             'res_id': self.id,
+            # 'public': True,  # si quieres acceso sin token (menos seguro)
         })
 
-        # --- forzar nombre en la descarga ---
-        url = f"/web/content/{attachment.id}?download=1&filename={quoted_filename}"
+        # === Asegurar access_token (para evitar 404 por ACLs) ===
+        token = getattr(attachment, 'access_token', False)
+        if not token:
+            if hasattr(attachment, 'generate_access_token'):
+                attachment.generate_access_token()
+                token = attachment.access_token
+        if not token:
+            token = uuid.uuid4().hex
+            attachment.write({'access_token': token})
 
-        # (opcional) log para verificar qué nombre se está enviando
+        # === URL con nombre en la RUTA (no en query) ===
+        url = f"/web/content/{attachment.id}/{quoted_filename}?download=1&access_token={token}"
+
         _logger.info("Descarga Excel -> id=%s name=%s url=%s", attachment.id, safe_filename, url)
 
         return {
@@ -1020,7 +1027,6 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
             'url': url,
             'target': 'self',
         }
-
 
 
     def _crear_hoja_resumen(self, workbook, reportes):
