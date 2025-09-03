@@ -947,62 +947,58 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
     def _exportar_excel(self, reportes):
         import xlwt
         import base64
+        import re
         from io import BytesIO
 
-        # Crear workbook
         workbook = xlwt.Workbook(encoding='utf-8')
         self._setup_palette(workbook)
-
-        # Crear hojas
         self._crear_hoja_resumen(workbook, reportes)
         self._crear_hoja_detalle(workbook, reportes)
 
-        # Generar archivo
         output = BytesIO()
         workbook.save(output)
         output.seek(0)
-
-        # Codificar en base64 como **string**
         excel_data = base64.b64encode(output.read()).decode('utf-8')
 
-        # ===== Nombre de archivo: Mes-Año + rango =====
+        # ==== Datos de fecha para el nombre ====
         def _mes_es(dt):
             return [
-                'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-                'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+                'enero','febrero','marzo','abril','mayo','junio',
+                'julio','agosto','septiembre','octubre','noviembre','diciembre'
             ][dt.month - 1]
 
         fecha_desde = self.fecha_desde or fields.Date.context_today(self)
         fecha_hasta = self.fecha_hasta or fields.Date.context_today(self)
-
         mes_texto = _mes_es(fecha_hasta).capitalize()
         anio = fecha_hasta.year
 
-        # Ej: Reporte_Estado_Maquinas_Septiembre-2025_20250805_a_20250903.xls
+        # ==== Secuencia ====
+        seq_raw = self.env['ir.sequence'].next_by_code('sat.reporte_estado_excel') or '0001'
+        # Sanea cualquier caracter no permitido en filenames (por ej. "/")
+        seq_safe = re.sub(r'[^A-Za-z0-9._-]+', '-', seq_raw)
+
+        # Nombre final (corto y legible)
         filename = (
-            f"Reporte_Estado_Maquinas_{mes_texto}-{anio}_"
-            f"{fecha_desde.strftime('%Y%m%d')}_a_{fecha_hasta.strftime('%Y%m%d')}.xls"
+            f"{seq_safe}_Reporte_Estado_Maquinas_"
+            f"{mes_texto}-{anio}_{fecha_desde.strftime('%Y%m%d')}_a_{fecha_hasta.strftime('%Y%m%d')}.xls"
         )
-        # Evitar espacios raros en URL
         safe_filename = filename.replace(' ', '_')
 
-        # Crear attachment
         attachment = self.env['ir.attachment'].create({
-            'name': safe_filename,                 # <- nombre visible del adjunto
-            'datas_fname': safe_filename,          # <- nombre de archivo sugerido
+            'name': safe_filename,
             'type': 'binary',
-            'datas': excel_data,                   # <- base64 como string
+            'datas': excel_data,
+            'mimetype': 'application/vnd.ms-excel',
             'res_model': self._name,
             'res_id': self.id,
-            'mimetype': 'application/vnd.ms-excel',
         })
 
-        # Forzar nombre en descarga
         return {
             'type': 'ir.actions.act_url',
             'url': f"/web/content/{attachment.id}?download=1&filename={safe_filename}",
             'target': 'self',
         }
+
 
 
     def _crear_hoja_resumen(self, workbook, reportes):

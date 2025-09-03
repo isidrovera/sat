@@ -24,6 +24,19 @@
             <field name="number_next">1</field>
             <field name="number_increment">1</field>
         </record>
+        <record id="seq_reporte_estado_excel" model="ir.sequence">
+            <field name="name">Reporte Estado Máquinas</field>
+            <field name="code">sat.reporte_estado_excel</field>
+            <!-- Prefijo con año/mes; Ojo: este valor no irá al filename si tiene "/" -->
+            <field name="prefix">REM/%(year)s/%(month)s/</field>
+            <field name="padding">4</field>
+            <field name="implementation">no_gap</field>
+            <!-- opcional: <field name="company_id" ref="base.main_company"/> -->
+            <!-- si quieres reinicios por periodo:
+            <field name="use_date_range">True</field>
+            <field name="prefix">REM/%(range_year)s/%(range_month)s/</field>
+            -->
+         </record>
 
     </data>
 </odoo>
