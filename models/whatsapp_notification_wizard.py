@@ -14,7 +14,7 @@ class WhatsappNotificationWizard(models.TransientModel):
     _description = 'Wizard para Notificar Grupos WhatsApp'
 
     # Campos principales
-    ticket_id = fields.Many2one('ticket.alquiler', string='Ticket', required=True, readonly=True)
+    ticket_id = fields.Many2one('ticket.alquiler', string='Ticket', required=False, readonly=True)
     
     # Información del ticket (solo lectura)
     cliente_name = fields.Char(string='Cliente', related='ticket_id.partner_id.name', readonly=True)
