@@ -387,7 +387,8 @@
                     <field name="direccion" readonly="1"/>
                     <field name="modelo_equipo" readonly="1"/>
                     <field name="serie_equipo" readonly="1"/>
-                    <field name="problema_descripcion" readonly="1"/>                    
+                    <field name="problema_descripcion" readonly="1"/>
+               
                     <field name="tecnico_name" readonly="1"/>
                 </group>
                 
@@ -513,9 +514,9 @@
     <field name="model">whatsapp.notification.wizard.line</field>
     <field name="arch" type="xml">
         <list string="Tickets a Procesar" 
-              editable="1"
-              create="0"
-              delete="0"
+              editable="bottom"
+              create="false"
+              delete="false"
               decoration-danger="estado_actual != 'nuevo'"
               decoration-warning="not tipo_servicio_id"
               decoration-info="tipo_servicio_id in ['mantenimiento_correctivo', 'cambio_repuestos']">
