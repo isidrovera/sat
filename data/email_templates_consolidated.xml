@@ -1,236 +1,678 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-  <data>
+    <data>
 
-    <!-- ================= CLIENTE ================= -->
-    <record id="email_template_ticket_cliente_consolidado" model="mail.template">
-      <field name="name">Tickets Consolidados - Cliente</field>
-      <field name="model_id" ref="sat.model_ticket_alquiler"/>
-      <field name="email_from">soporte@andescopiers.com.pe</field>
-      <field name="email_to">{{object.product_alquiler.correo_}}</field>
-      <field name="email_cc">jamilet.roggero@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com, alquiler@andescopiers.com.pe, ventas3@andescopiers.com</field>
-      <field name="subject">Visita Técnica </field>
-      <field name="auto_delete" eval="True"/>
-      <field name="body_html"><![CDATA[
+        <!-- PLANTILLA CONSOLIDADA PARA CLIENTE -->
+        <record id="email_template_ticket_cliente_consolidado" model="mail.template">
+            <field name="name">Tickets Consolidados - Cliente</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.product_alquiler.correo_}}</field>
+            <field name="email_cc">jamilet.roggero@andescopiers.com.pe,
+                comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com,
+                alquiler@andescopiers.com.pe, ventas3@andescopiers.com</field>
+            <field name="subject">Visita Técnica - {{ctx.get('cantidad_tickets', 1)}} Servicio(s) Programado(s)</field>
+            <field name="model_id" ref="model_ticket_alquiler" />
+            <field name="auto_delete" eval="True" />
+            <field name="body_html"><![CDATA[
 <!DOCTYPE html>
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
-<body>
-  <div>
-    <div>
-      <div>Visita Técnica Programada</div>
-      <div>
-        <t t-if="ctx.get('cantidad_tickets', 1) &gt; 1">
-          <t t-out="ctx.get('cantidad_tickets')"/> Servicios para <t t-out="object.partner_id.name"/>
-        </t>
-        <t t-else="">Servicio para <t t-out="object.partner_id.name"/></t>
-      </div>
-    </div>
-
-    <div>
-      Estimado/a <strong><t t-out="object.partner_id.name"/></strong>,
-      <div>
-        Hemos programado
-        <t t-if="ctx.get('cantidad_tickets', 1) &gt; 1"><strong><t t-out="ctx.get('cantidad_tickets')"/> servicios técnicos</strong></t>
-        <t t-else=""><strong>una visita técnica</strong></t>.
-      </div>
-
-      <div>
-        <div>Información General</div>
-        <div>Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
-        <div>Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
-        <div>Técnico: <strong>
-          <t t-if="ctx.get('tecnico_principal')"><t t-out="ctx.get('tecnico_principal').name"/></t>
-          <t t-else=""><t t-out="object.responsable.name"/></t>
-        </strong></div>
-        <div>DNI: <strong>
-          <t t-if="ctx.get('tecnico_principal')"><t t-out="ctx.get('tecnico_principal').vat"/></t>
-          <t t-else=""><t t-out="object.responsable.vat"/></t>
-        </strong></div>
-      </div>
-
-      <div>
-        <div>
-          <t t-if="ctx.get('cantidad_tickets', 1) &gt; 1">Equipos a Atender</t>
-          <t t-else="">Equipo a Atender</t>
-        </div>
-
-        <t t-if="ctx.get('tickets_grupo')">
-          <t t-foreach="ctx.get('tickets_grupo')" t-as="ticket" t-foreach-index="i">
-            <div>
-              <div>
-                <t t-if="ctx.get('cantidad_tickets', 1) &gt; 1">Equipo #<t t-out="i + 1"/> - </t>
-                Ticket <t t-out="ticket.name"/>
-              </div>
-              <div>Marca: <strong><t t-out="ticket.marca_id_r"/></strong></div>
-              <div>Modelo: <strong><t t-out="ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'"/></strong></div>
-              <div>Serie: <strong><t t-out="ticket.serie_id_r"/></strong></div>
-              <div>Servicio: <strong><t t-out="ticket.tipo_servicio_id"/></strong></div>
-              <div>Problema: <t t-out="ticket.description"/></div>
-            </div>
-          </t>
-        </t>
-        <t t-else="">
-          <div>
-            <div>Marca: <strong><t t-out="object.marca_id_r"/></strong></div>
-            <div>Modelo: <strong><t t-out="object.product_alquiler.name.name"/></strong></div>
-            <div>Serie: <strong><t t-out="object.serie_id_r"/></strong></div>
-            <div>Problema: <t t-out="object.description"/></div>
-          </div>
-        </t>
-      </div>
-    </div>
-  </div>
-</body></html>
-      ]]></field>
-    </record>
-
-    <!-- ================ TÉCNICO ================= -->
-    <record id="email_template_ticket_tecnico_consolidado" model="mail.template">
-      <field name="name">Tickets Consolidados - Técnico</field>
-      <field name="model_id" ref="sat.model_ticket_alquiler"/>
-      <field name="email_from">soporte@andescopiers.com.pe</field>
-      <field name="subject">Asignación </field>
-      <field name="auto_delete" eval="False"/>
-      <field name="email_to">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #333333;">
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
         
-      </field>
-      <field name="body_html"><![CDATA[
-<!DOCTYPE html>
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
-<body>
-  <div>
-    <div>
-      <div>
-        <t t-if="ctx.get('cantidad_tickets', 1) &gt; 1">Asignación Masiva de Tickets</t>
-        <t t-else="">Nuevo Ticket Asignado</t>
-      </div>
-      <div><t t-out="ctx.get('cantidad_tickets', 1)"/> Ticket(s) Asignado(s)</div>
-    </div>
-
-    <div>
-      Estimado(a)
-      <strong>
-        <t t-if="ctx.get('tecnico_principal')"><t t-out="ctx.get('tecnico_principal').name"/></t>
-        <t t-else=""><t t-out="object.responsable.name"/></t>
-      </strong>,
-      <div>
-        <t t-if="ctx.get('cantidad_tickets', 1) &gt; 1">
-          Se le han asignado <strong><t t-out="ctx.get('cantidad_tickets')"/> tickets</strong>.
-        </t>
-        <t t-else="">Se le ha asignado un nuevo ticket.</t>
-      </div>
-
-      <div>
-        <div>Información General</div>
-        <div>Cliente: <strong><t t-out="object.partner_id.name"/></strong></div>
-        <div>Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
-        <div>Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
-        <div>Contacto: <strong><t t-out="object.contacto_id_r"/></strong></div>
-        <div>Celular: <strong><t t-out="object.product_alquiler.celular if object.product_alquiler else 'NA'"/></strong></div>
-      </div>
-
-      <div>
-        <div>
-          <t t-if="ctx.get('cantidad_tickets', 1) &gt; 1">Equipos a Atender</t>
-          <t t-else="">Equipo a Atender</t>
-        </div>
-
-        <t t-if="ctx.get('tickets_grupo')">
-          <t t-foreach="ctx.get('tickets_grupo')" t-as="ticket" t-foreach-index="i">
-            <div>
-              <div><t t-out="i + 1"/>. Ticket <t t-out="ticket.name"/> - <t t-out="ticket.tipo_servicio_id"/></div>
-              <div>Marca: <strong><t t-out="ticket.marca_id_r"/></strong></div>
-              <div>Modelo: <strong><t t-out="ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'"/></strong></div>
-              <div>Serie: <strong><t t-out="ticket.serie_id_r"/></strong></div>
-              <div>Problema: <t t-out="ticket.description"/></div>
+        <!-- Encabezado -->
+        <div style="background-color: #2C5282; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">Visita Técnica Programada</div>
+            <div style="color: #ffffff; margin-top: 10px;">
+                <t t-if="ctx.get('cantidad_tickets', 1) > 1">
+                    <t t-out="ctx.get('cantidad_tickets')"/> Servicios para <t t-out="object.partner_id.name"/>
+                </t>
+                <t t-else="">
+                    Servicio para <t t-out="object.partner_id.name"/>
+                </t>
             </div>
-          </t>
-        </t>
-        <t t-else="">
-          <div>
-            <div>Marca: <strong><t t-out="object.marca_id_r"/></strong></div>
-            <div>Modelo: <strong><t t-out="object.product_alquiler.name.name"/></strong></div>
-            <div>Serie: <strong><t t-out="object.serie_id_r"/></strong></div>
-            <div>Problema: <t t-out="object.description"/></div>
-          </div>
-        </t>
-      </div>
-    </div>
-  </div>
-</body></html>
-      ]]></field>
-    </record>
-
-    
-    <record id="mail_template_asistencia_directa_consolidado" model="mail.template">
-      <field name="name">Asistencia Directa Consolidada</field>
-      <field name="model_id" ref="sat.model_ticket_alquiler"/>
-      <field name="email_from">soporte@andescopiers.com.pe</field>
-      <field name="email_to">t.escalante@corapsac.com.pe</field>
-      <field name="email_cc">jamilet.roggero@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
-      <field name="subject">Reporte de Asistencia Directa </field>
-      <field name="auto_delete" eval="True"/>
-      <field name="body_html"><![CDATA[
-<!DOCTYPE html>
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
-<body>
-  <div>
-    <div>
-      <div>Reporte de Asistencia Directa</div>
-      <div><t t-out="ctx.get('cantidad_tickets', 1)"/> Servicio(s) Programado(s)</div>
-    </div>
-
-    <div>
-      Estimada Señora Teresa,
-      <div>
-        Le informo que el trabajador designado realizará
-        <t t-if="ctx.get('cantidad_tickets', 1) &gt; 1"><strong><t t-out="ctx.get('cantidad_tickets')"/> visitas técnicas directas</strong></t>
-        <t t-else=""><strong>una visita técnica directa</strong></t>.
-      </div>
-
-      <div>
-        <div>Información General</div>
-        <div>Cliente: <strong><t t-out="object.partner_id.name"/></strong></div>
-        <div>Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
-        <div>Trabajador: <strong>
-          <t t-if="ctx.get('tecnico_principal')"><t t-out="ctx.get('tecnico_principal').name"/></t>
-          <t t-else=""><t t-out="object.responsable.name"/></t>
-        </strong></div>
-        <div>Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
-      </div>
-
-      <div>
-        <div>
-          <t t-if="ctx.get('cantidad_tickets', 1) &gt; 1">Servicios con Asistencia Directa</t>
-          <t t-else="">Servicio con Asistencia Directa</t>
         </div>
-
-        <t t-if="ctx.get('tickets_asistencia_directa')">
-          <t t-foreach="ctx.get('tickets_asistencia_directa')" t-as="ticket" t-foreach-index="i">
-            <div>
-              <div><t t-out="i + 1"/>. Ticket <t t-out="ticket.name"/></div>
-              <div>Equipo: <t t-out="ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'"/></div>
-              <div>Serie: <t t-out="ticket.serie_id_r"/></div>
-              <div>Servicio: <t t-out="ticket.tipo_servicio_id"/></div>
+        
+        <!-- Contenido Principal -->
+        <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+            <!-- Saludo -->
+            <div style="margin-bottom: 20px;">
+                Estimado/a <strong><t t-out="object.partner_id.name"/></strong>,
             </div>
-          </t>
-        </t>
-        <t t-else="">
-          <div>
-            <div>Ticket <t t-out="object.name"/></div>
-            <div>Equipo: <t t-out="object.product_alquiler.name.name if object.product_alquiler and object.product_alquiler.name else 'NA'"/></div>
-            <div>Serie: <t t-out="object.serie_id_r"/></div>
-            <div>Servicio: <t t-out="object.tipo_servicio_id"/></div>
-          </div>
-        </t>
-      </div>
+            
+            <div style="margin-bottom: 20px;">
+                Reciba un cordial saludo. Le informamos que hemos programado 
+                <t t-if="ctx.get('cantidad_tickets', 1) > 1">
+                    <strong><t t-out="ctx.get('cantidad_tickets')"/> servicios técnicos</strong>
+                </t>
+                <t t-else="">
+                    <strong>una visita técnica</strong>
+                </t>
+                para atender sus requerimientos.
+            </div>
+            
+            <!-- Información General de la Visita -->
+            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">Información General</div>
+                <div style="margin: 10px 0;">Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
+                <div style="margin: 10px 0;">Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
+                <div style="margin: 10px 0;">Técnico: <strong>
+                    <t t-if="ctx.get('tecnico_principal')">
+                        <t t-out="ctx.get('tecnico_principal').name"/>
+                    </t>
+                    <t t-else="">
+                        <t t-out="object.responsable.name"/>
+                    </t>
+                </strong></div>
+                <div style="margin: 10px 0;">DNI: <strong>
+                    <t t-if="ctx.get('tecnico_principal')">
+                        <t t-out="ctx.get('tecnico_principal').vat"/>
+                    </t>
+                    <t t-else="">
+                        <t t-out="object.responsable.vat"/>
+                    </t>
+                </strong></div>
+            </div>
 
-      <div>Quedo a su disposición para cualquier consulta adicional.</div>
+            <!-- Equipos a Atender -->
+            <div style="background-color: #f0fff4; padding: 20px; margin: 15px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">
+                    <t t-if="ctx.get('cantidad_tickets', 1) > 1">Equipos a Atender</t>
+                    <t t-else="">Equipo a Atender</t>
+                </div>
+                
+                <t t-if="ctx.get('tickets_grupo')">
+                    <t t-foreach="ctx.get('tickets_grupo')" t-as="ticket">
+                        <div style="background-color: #edf2f7; padding: 15px; margin: 10px 0; border-left: 4px solid #4299e1;">
+                            <div style="font-weight: bold; margin-bottom: 8px;">
+                                <t t-if="ctx.get('cantidad_tickets', 1) > 1">
+                                    Equipo #<t t-out="ticket_index + 1"/> - 
+                                </t>
+                                Ticket <t t-out="ticket.name"/>
+                            </div>
+                            <div style="margin: 5px 0;">Marca: <strong><t t-out="ticket.marca_id_r"/></strong></div>
+                            <div style="margin: 5px 0;">Modelo: <strong><t t-out="ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'"/></strong></div>
+                            <div style="margin: 5px 0;">Serie: <strong><t t-out="ticket.serie_id_r"/></strong></div>
+                            <div style="margin: 5px 0;">Servicio: <strong><t t-out="ticket.tipo_servicio_id"/></strong></div>
+                            <div style="margin: 5px 0;">Problema: <t t-out="ticket.description"/></div>
+                        </div>
+                    </t>
+                </t>
+                <t t-else="">
+                    <div style="background-color: #edf2f7; padding: 15px; margin: 10px 0;">
+                        <div style="margin: 5px 0;">Marca: <strong><t t-out="object.marca_id_r"/></strong></div>
+                        <div style="margin: 5px 0;">Modelo: <strong><t t-out="object.product_alquiler.name.name"/></strong></div>
+                        <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie_id_r"/></strong></div>
+                        <div style="margin: 5px 0;">Problema: <t t-out="object.description"/></div>
+                    </div>
+                </t>
+            </div>
+
+            <!-- Requerimientos -->
+            <div style="margin: 20px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">Requerimos su apoyo en:</div>
+                <div style="margin-left: 20px;">
+                    1. Dar autorización para el ingreso de nuestro personal.<br>
+                    2. Disponibilidad de espacio y tiempo para nuestro trabajo.<br>
+                    <t t-if="ctx.get('cantidad_tickets', 1) > 1">
+                        3. Los <t t-out="ctx.get('cantidad_tickets')"/> equipos serán atendidos en la misma visita.
+                    </t>
+                </div>
+            </div>
+
+            <!-- Pie -->
+            <div style="text-align: center; margin-top: 30px; color: #666666;">
+                Gracias por su atención
+            </div>
+        </div>
     </div>
-  </div>
-</body></html>
-      ]]></field>
-    </record>
+</body>
+</html>
+            ]]></field>
+        </record>
 
-  </data>
+        <!-- PLANTILLA CONSOLIDADA PARA TÉCNICO -->
+        <record id="email_template_ticket_tecnico_consolidado" model="mail.template">
+            <field name="name">Tickets Consolidados - Técnico</field>
+            <field name="subject">Asignación - {{ctx.get('cantidad_tickets', 1)}} Ticket(s)</field>
+            <field name="model_id" ref="model_ticket_alquiler" />
+            <field name="auto_delete" eval="False" />
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">
+                <t t-if="ctx.get('tecnico_principal')">
+                    {{ctx.get('tecnico_principal').email}}
+                </t>
+                <t t-else="">
+                    {{object.responsable.email}}
+                </t>
+            </field>
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color: #3182ce; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">
+                <t t-if="ctx.get('cantidad_tickets', 1) > 1">Asignación Masiva de Tickets</t>
+                <t t-else="">Nuevo Ticket Asignado</t>
+            </div>
+            <div style="color: #ffffff; margin-top: 10px;">
+                <t t-out="ctx.get('cantidad_tickets', 1)"/> Ticket(s) Asignado(s)
+            </div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+            <!-- Saludo -->
+            <div style="margin-bottom: 20px;">
+                Estimado(a) <strong>
+                    <t t-if="ctx.get('tecnico_principal')">
+                        <t t-out="ctx.get('tecnico_principal').name"/>
+                    </t>
+                    <t t-else="">
+                        <t t-out="object.responsable.name"/>
+                    </t>
+                </strong>,
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <t t-if="ctx.get('cantidad_tickets', 1) > 1">
+                    Se le han asignado <strong><t t-out="ctx.get('cantidad_tickets')"/> tickets</strong> 
+                    de servicio técnico para atender en una sola visita.
+                </t>
+                <t t-else="">
+                    Se le ha asignado un nuevo ticket de servicio técnico.
+                </t>
+            </div>
+
+            <!-- Información General -->
+            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0; border-left: 4px solid #3182ce;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">Información General</div>
+                <div style="margin: 10px 0;">Cliente: <strong><t t-out="object.partner_id.name"/></strong></div>
+                <div style="margin: 10px 0;">Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
+                <div style="margin: 10px 0;">Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
+                <div style="margin: 10px 0;">Contacto: <strong><t t-out="object.contacto_id_r"/></strong></div>
+                <div style="margin: 10px 0;">Celular: <strong><t t-out="object.product_alquiler.celular if object.product_alquiler else 'NA'"/></strong></div>
+            </div>
+
+            <!-- Equipos Detallados -->
+            <div style="background-color: #ebf8ff; padding: 20px; margin: 15px 0; border-left: 4px solid #4299e1;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">
+                    <t t-if="ctx.get('cantidad_tickets', 1) > 1">Equipos a Atender</t>
+                    <t t-else="">Equipo a Atender</t>
+                </div>
+                
+                <t t-if="ctx.get('tickets_grupo')">
+                    <t t-foreach="ctx.get('tickets_grupo')" t-as="ticket">
+                        <div style="background-color: #ffffff; padding: 15px; margin: 10px 0; border: 1px solid #e2e8f0;">
+                            <div style="font-weight: bold; margin-bottom: 8px; color: #3182ce;">
+                                <t t-out="ticket_index + 1"/>. Ticket <t t-out="ticket.name"/> - <t t-out="ticket.tipo_servicio_id"/>
+                            </div>
+                            <div style="margin: 5px 0;">Marca: <strong><t t-out="ticket.marca_id_r"/></strong></div>
+                            <div style="margin: 5px 0;">Modelo: <strong><t t-out="ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'"/></strong></div>
+                            <div style="margin: 5px 0;">Serie: <strong><t t-out="ticket.serie_id_r"/></strong></div>
+                            <div style="margin: 5px 0;">Problema: <t t-out="ticket.description"/></div>
+                        </div>
+                    </t>
+                </t>
+                <t t-else="">
+                    <div style="background-color: #ffffff; padding: 15px; border: 1px solid #e2e8f0;">
+                        <div style="margin: 5px 0;">Marca: <strong><t t-out="object.marca_id_r"/></strong></div>
+                        <div style="margin: 5px 0;">Modelo: <strong><t t-out="object.product_alquiler.name.name"/></strong></div>
+                        <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie_id_r"/></strong></div>
+                        <div style="margin: 5px 0;">Problema: <t t-out="object.description"/></div>
+                    </div>
+                </t>
+            </div>
+
+            <!-- Firma -->
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #718096;">
+                <div style="margin: 0;">
+                    Saludos cordiales,<br>
+                    <strong>El equipo de Soporte Técnico</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+
+        <!-- PLANTILLA CONSOLIDADA PARA ASISTENCIA DIRECTA -->
+        <record id="mail_template_asistencia_directa_consolidado" model="mail.template">
+            <field name="name">Asistencia Directa Consolidada</field>
+            <field name="subject">Reporte de Asistencia Directa - Servicios</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">t.escalante@corapsac.com.pe</field>
+            <field name="email_cc">jamilet.roggero@andescopiers.com.pe, campuero@corapsac.com.pe,
+                lincoln@corapsac.com</field>
+            <field name="model_id" ref="model_ticket_alquiler" />
+            <field name="auto_delete" eval="True" />
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color: #38a169; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">Reporte de Asistencia Directa</div>
+            <div style="color: #ffffff; margin-top: 10px;">
+                <t t-out="ctx.get('cantidad_tickets', 1)"/> Servicio(s) Programado(s)
+            </div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+            <!-- Saludo -->
+            <div style="margin-bottom: 20px;">
+                Estimada Señora Teresa,
+            </div>
+            
+            <!-- Mensaje de Éxito -->
+            <div style="background-color: #f7fafc; padding: 15px; margin: 15px 0; border: 1px solid #e2e8f0;">
+                <div style="margin: 0;">
+                    Le informo que el trabajador designado realizará 
+                    <t t-if="ctx.get('cantidad_tickets', 1) > 1">
+                        <strong><t t-out="ctx.get('cantidad_tickets')"/> visitas técnicas directas</strong>
+                    </t>
+                    <t t-else="">
+                        <strong>una visita técnica directa</strong>
+                    </t>
+                    al cliente de manera puntual y eficiente, sin requerir descuentos por tardanza.
+                </div>
+            </div>
+
+            <!-- Información General -->
+            <div style="background-color: #f0fff4; padding: 20px; margin: 15px 0; border-left: 4px solid #38a169;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">Información General</div>
+                <div style="margin: 10px 0;">Cliente: <strong><t t-out="object.partner_id.name"/></strong></div>
+                <div style="margin: 10px 0;">Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
+                <div style="margin: 10px 0;">Trabajador: <strong>
+                    <t t-if="ctx.get('tecnico_principal')">
+                        <t t-out="ctx.get('tecnico_principal').name"/>
+                    </t>
+                    <t t-else="">
+                        <t t-out="object.responsable.name"/>
+                    </t>
+                </strong></div>
+                <div style="margin: 10px 0;">Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
+            </div>
+
+            <!-- Detalles de los Servicios -->
+            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">
+                    <t t-if="ctx.get('cantidad_tickets', 1) > 1">Servicios con Asistencia Directa</t>
+                    <t t-else="">Servicio con Asistencia Directa</t>
+                </div>
+                
+                <t t-if="ctx.get('tickets_asistencia_directa')">
+                    <t t-foreach="ctx.get('tickets_asistencia_directa')" t-as="ticket">
+                        <div style="background-color: #edf2f7; padding: 10px; margin: 8px 0; border-left: 3px solid #38a169;">
+                            <div style="font-weight: bold;">
+                                <t t-out="ticket_index + 1"/>. Ticket <t t-out="ticket.name"/>
+                            </div>
+                            <div style="margin: 3px 0;">Equipo: <t t-out="ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'"/></div>
+                            <div style="margin: 3px 0;">Serie: <t t-out="ticket.serie_id_r"/></div>
+                            <div style="margin: 3px 0;">Servicio: <t t-out="ticket.tipo_servicio_id"/></div>
+                        </div>
+                    </t>
+                </t>
+                <t t-else="">
+                    <div style="background-color: #edf2f7; padding: 10px; border-left: 3px solid #38a169;">
+                        <div style="font-weight: bold;">Ticket <t t-out="object.name"/></div>
+                        <div style="margin: 3px 0;">Equipo: <t t-out="object.product_alquiler.name.name if object.product_alquiler and object.product_alquiler.name else 'NA'"/></div>
+                        <div style="margin: 3px 0;">Serie: <t t-out="object.serie_id_r"/></div>
+                        <div style="margin: 3px 0;">Servicio: <t t-out="object.tipo_servicio_id"/></div>
+                    </div>
+                </t>
+            </div>
+
+            <!-- Mensaje Final -->
+            <div style="margin: 20px 0;">
+                Quedo a su disposición para cualquier consulta o información adicional que requiera.
+            </div>
+
+            <!-- Firma -->
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #718096;">
+                <div style="margin: 0;">
+                    Cordialmente,<br>
+                    <strong>Equipo de Soporte Técnico</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+
+    </data>
+</odoo>index + 1"/> - 
+                                </t>
+                                Ticket <t t-out="ticket.name"/>
+                            </div>
+                            <div style="margin: 5px 0;">Marca: <strong><t t-out="ticket.marca_id_r"/></strong></div>
+                            <div style="margin: 5px 0;">Modelo: <strong><t t-out="ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'"/></strong></div>
+                            <div style="margin: 5px 0;">Serie: <strong><t t-out="ticket.serie_id_r"/></strong></div>
+                            <div style="margin: 5px 0;">Servicio: <strong><t t-out="ticket.tipo_servicio_id"/></strong></div>
+                            <div style="margin: 5px 0;">Problema: <t t-out="ticket.description"/></div>
+                        </div>
+                    </t>
+                </t>
+                <t t-else="">
+                    <div style="background-color: #edf2f7; padding: 15px; margin: 10px 0;">
+                        <div style="margin: 5px 0;">Marca: <strong><t t-out="object.marca_id_r"/></strong></div>
+                        <div style="margin: 5px 0;">Modelo: <strong><t t-out="object.product_alquiler.name.name"/></strong></div>
+                        <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie_id_r"/></strong></div>
+                        <div style="margin: 5px 0;">Problema: <t t-out="object.description"/></div>
+                    </div>
+                </t>
+            </div>
+
+            <!-- Nota Importante -->
+            <div style="margin: 20px 0; padding-left: 15px; border-left: 4px solid #4299e1;">
+                <div style="margin: 10px 0;">
+                    Por favor, notifíquenos sobre su stock de toner para garantizarles el total abastecimiento. 
+                    Además, le solicitamos reportar cualquier inconveniente adicional al técnico durante su visita.
+                </div>
+            </div>
+
+            <!-- Requerimientos -->
+            <div style="margin: 20px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Requerimos su apoyo en:</div>
+                <div style="margin-left: 20px;">
+                    1. Dar autorización para el ingreso de nuestro personal.<br>
+                    2. Disponibilidad de espacio y tiempo para nuestro trabajo.<br>
+                    <t t-if="ctx.get('cantidad_tickets', 1) > 1">
+                        3. Los <t t-out="ctx.get('cantidad_tickets')"/> equipos serán atendidos en la misma visita.
+                    </t>
+                </div>
+            </div>
+
+            <!-- Pie -->
+            <div style="text-align: center; margin-top: 30px; color: #666666;">
+                Gracias por su atención
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+
+        <!-- PLANTILLA CONSOLIDADA PARA TÉCNICO -->
+        <record id="email_template_ticket_tecnico_consolidado" model="mail.template">
+            <field name="name">Tickets Consolidados - Técnico</field>
+            <field name="subject">🔧 Asignación - {{ctx.get('cantidad_tickets', 1)}} Ticket(s)</field>
+            <field name="model_id" ref="sat.model_ticket_alquiler" />
+            <field name="auto_delete" eval="False" />
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">
+                <t t-if="ctx.get('tecnico_principal')">
+                    {{ctx.get('tecnico_principal').email}}
+                </t>
+                <t t-else="">
+                    {{object.responsable.email}}
+                </t>
+            </field>
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color: #3182ce; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🎫 
+                <t t-if="ctx.get('cantidad_tickets', 1) > 1">Asignación Masiva de Tickets</t>
+                <t t-else="">Nuevo Ticket Asignado</t>
+            </div>
+            <div style="color: #ffffff; margin-top: 10px;">
+                <t t-out="ctx.get('cantidad_tickets', 1)"/> Ticket(s) Asignado(s)
+            </div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+            <!-- Saludo -->
+            <div style="margin-bottom: 20px;">
+                Estimado(a) <strong>
+                    <t t-if="ctx.get('tecnico_principal')">
+                        <t t-out="ctx.get('tecnico_principal').name"/>
+                    </t>
+                    <t t-else="">
+                        <t t-out="object.responsable.name"/>
+                    </t>
+                </strong>,
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <t t-if="ctx.get('cantidad_tickets', 1) > 1">
+                    Se le han asignado <strong><t t-out="ctx.get('cantidad_tickets')"/> tickets</strong> 
+                    de servicio técnico para atender en una sola visita.
+                </t>
+                <t t-else="">
+                    Se le ha asignado un nuevo ticket de servicio técnico.
+                </t>
+            </div>
+
+            <!-- Información General -->
+            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0; border-left: 4px solid #3182ce;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Información General</div>
+                <div style="margin: 10px 0;">👥 Cliente: <strong><t t-out="object.partner_id.name"/></strong></div>
+                <div style="margin: 10px 0;">📅 Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
+                <div style="margin: 10px 0;">📍 Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
+                <div style="margin: 10px 0;">📞 Contacto: <strong><t t-out="object.contacto_id_r"/></strong></div>
+                <div style="margin: 10px 0;">📱 Celular: <strong><t t-out="object.product_alquiler.celular if object.product_alquiler else 'NA'"/></strong></div>
+                
+                <t t-if="ctx.get('tickets_grupo') and any(t.asistencia_id == 'si' for t in ctx.get('tickets_grupo'))">
+                    <div style="margin: 15px 0; padding: 10px; background-color: #fed7d7; border-left: 4px solid #f56565;">
+                        ⚠️ <strong>ASISTENCIA DIRECTA PROGRAMADA</strong>
+                    </div>
+                </t>
+            </div>
+
+            <!-- Resumen por Tipo de Servicio (solo para múltiples) -->
+            <t t-if="ctx.get('cantidad_tickets', 1) > 1 and ctx.get('tickets_por_tipo_servicio')">
+                <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0; border-left: 4px solid #3182ce;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📊 Resumen por Tipo de Servicio</div>
+                    <t t-foreach="ctx.get('tickets_por_tipo_servicio').items()" t-as="tipo_info">
+                        <div style="margin: 8px 0; background-color: #edf2f7; padding: 8px 15px; display: inline-block;">
+                            <strong><t t-out="tipo_info[0]"/>:</strong> <t t-out="len(tipo_info[1])"/> equipo(s)
+                        </div>
+                    </t>
+                </div>
+            </t>
+
+            <!-- Equipos Detallados -->
+            <div style="background-color: #ebf8ff; padding: 20px; margin: 15px 0; border-left: 4px solid #4299e1;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ 
+                    <t t-if="ctx.get('cantidad_tickets', 1) > 1">Equipos a Atender</t>
+                    <t t-else="">Equipo a Atender</t>
+                </div>
+                
+                <t t-if="ctx.get('tickets_grupo')">
+                    <t t-foreach="ctx.get('tickets_grupo')" t-as="ticket">
+                        <div style="background-color: #ffffff; padding: 15px; margin: 10px 0; border: 1px solid #e2e8f0;">
+                            <div style="font-weight: bold; margin-bottom: 8px; color: #3182ce;">
+                                <t t-out="ticket_index + 1"/>. Ticket <t t-out="ticket.name"/> - <t t-out="ticket.tipo_servicio_id"/>
+                            </div>
+                            <div style="margin: 5px 0;">Marca: <strong><t t-out="ticket.marca_id_r"/></strong></div>
+                            <div style="margin: 5px 0;">Modelo: <strong><t t-out="ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'"/></strong></div>
+                            <div style="margin: 5px 0;">Serie: <strong><t t-out="ticket.serie_id_r"/></strong></div>
+                            <div style="margin: 5px 0;">Problema: <t t-out="ticket.description"/></div>
+                            <div style="margin: 8px 0;">
+                                <a href="#" style="color: #3182ce; text-decoration: none;">🔗 Ver ticket completo</a>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+                <t t-else="">
+                    <div style="background-color: #ffffff; padding: 15px; border: 1px solid #e2e8f0;">
+                        <div style="margin: 5px 0;">Marca: <strong><t t-out="object.marca_id_r"/></strong></div>
+                        <div style="margin: 5px 0;">Modelo: <strong><t t-out="object.product_alquiler.name.name"/></strong></div>
+                        <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie_id_r"/></strong></div>
+                        <div style="margin: 5px 0;">Problema: <t t-out="object.description"/></div>
+                    </div>
+                </t>
+            </div>
+
+            <!-- Instrucciones -->
+            <div style="margin: 20px 0; padding: 15px; background-color: #f7fafc; border-left: 4px solid #38a169;">
+                <div style="font-weight: bold; margin-bottom: 10px;">📋 Instrucciones Importantes:</div>
+                <t t-if="ctx.get('cantidad_tickets', 1) > 1">
+                    <div style="margin: 5px 0;">• Revisar todos los <t t-out="ctx.get('cantidad_tickets')"/> equipos listados en la misma visita</div>
+                    <div style="margin: 5px 0;">• Completar el informe técnico para cada ticket</div>
+                    <div style="margin: 5px 0;">• Registrar contómetros de todos los equipos</div>
+                    <div style="margin: 5px 0;">• Finalizar todos los tickets al completar la visita</div>
+                </t>
+                <t t-else="">
+                    <div style="margin: 5px 0;">• Completar el informe técnico</div>
+                    <div style="margin: 5px 0;">• Registrar contómetros del equipo</div>
+                    <div style="margin: 5px 0;">• Finalizar el ticket al completar la visita</div>
+                </t>
+            </div>
+
+            <!-- Firma -->
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #718096;">
+                <div style="margin: 0;">
+                    Saludos cordiales,<br>
+                    <strong>El equipo de Soporte Técnico</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+
+        <!-- PLANTILLA CONSOLIDADA PARA ASISTENCIA DIRECTA -->
+        <record id="mail_template_asistencia_directa_consolidado" model="mail.template">
+            <field name="name">Asistencia Directa Consolidada</field>
+            <field name="subject">✅ Reporte de Asistencia Directa - {{ctx.get('cantidad_tickets', 1)}} Servicio(s)</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">t.escalante@corapsac.com.pe</field>
+            <field name="email_cc">jamilet.roggero@andescopiers.com.pe, campuero@corapsac.com.pe,
+                lincoln@corapsac.com</field>
+            <field name="model_id" ref="sat.model_ticket_alquiler" />
+            <field name="auto_delete" eval="True" />
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color: #38a169; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">✅ Reporte de Asistencia Directa</div>
+            <div style="color: #ffffff; margin-top: 10px;">
+                <t t-out="ctx.get('cantidad_tickets', 1)"/> Servicio(s) Programado(s)
+            </div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
+            <!-- Saludo -->
+            <div style="margin-bottom: 20px;">
+                Estimada Señora Teresa,
+            </div>
+            
+            <!-- Mensaje de Éxito -->
+            <div style="background-color: #f7fafc; padding: 15px; margin: 15px 0; border: 1px solid #e2e8f0;">
+                <div style="margin: 0;">
+                    Le informo que el trabajador designado realizará 
+                    <t t-if="ctx.get('cantidad_tickets', 1) > 1">
+                        <strong><t t-out="ctx.get('cantidad_tickets')"/> visitas técnicas directas</strong>
+                    </t>
+                    <t t-else="">
+                        <strong>una visita técnica directa</strong>
+                    </t>
+                    al cliente de manera puntual y eficiente, sin requerir descuentos por tardanza.
+                </div>
+            </div>
+
+            <!-- Información General -->
+            <div style="background-color: #f0fff4; padding: 20px; margin: 15px 0; border-left: 4px solid #38a169;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Información General</div>
+                <div style="margin: 10px 0;">👥 Cliente: <strong><t t-out="object.partner_id.name"/></strong></div>
+                <div style="margin: 10px 0;">📅 Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
+                <div style="margin: 10px 0;">👨‍🔧 Trabajador: <strong>
+                    <t t-if="ctx.get('tecnico_principal')">
+                        <t t-out="ctx.get('tecnico_principal').name"/>
+                    </t>
+                    <t t-else="">
+                        <t t-out="object.responsable.name"/>
+                    </t>
+                </strong></div>
+                <div style="margin: 10px 0;">📍 Dirección: <strong><t t-out="object.direccion_id_r"/></strong></div>
+            </div>
+
+            <!-- Detalles de los Servicios -->
+            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🔧 
+                    <t t-if="ctx.get('cantidad_tickets', 1) > 1">Servicios con Asistencia Directa</t>
+                    <t t-else="">Servicio con Asistencia Directa</t>
+                </div>
+                
+                <t t-if="ctx.get('tickets_asistencia_directa')">
+                    <t t-foreach="ctx.get('tickets_asistencia_directa')" t-as="ticket">
+                        <div style="background-color: #edf2f7; padding: 10px; margin: 8px 0; border-left: 3px solid #38a169;">
+                            <div style="font-weight: bold;">
+                                <t t-out="ticket_index + 1"/>. Ticket <t t-out="ticket.name"/>
+                            </div>
+                            <div style="margin: 3px 0;">Equipo: <t t-out="ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'"/></div>
+                            <div style="margin: 3px 0;">Serie: <t t-out="ticket.serie_id_r"/></div>
+                            <div style="margin: 3px 0;">Servicio: <t t-out="ticket.tipo_servicio_id"/></div>
+                        </div>
+                    </t>
+                </t>
+                <t t-else="">
+                    <div style="background-color: #edf2f7; padding: 10px; border-left: 3px solid #38a169;">
+                        <div style="font-weight: bold;">Ticket <t t-out="object.name"/></div>
+                        <div style="margin: 3px 0;">Equipo: <t t-out="object.product_alquiler.name.name if object.product_alquiler and object.product_alquiler.name else 'NA'"/></div>
+                        <div style="margin: 3px 0;">Serie: <t t-out="object.serie_id_r"/></div>
+                        <div style="margin: 3px 0;">Servicio: <t t-out="object.tipo_servicio_id"/></div>
+                    </div>
+                </t>
+            </div>
+
+            <!-- Mensaje Final -->
+            <div style="margin: 20px 0;">
+                Quedo a su disposición para cualquier consulta o información adicional que requiera.
+            </div>
+
+            <!-- Firma -->
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #718096;">
+                <div style="margin: 0;">
+                    Cordialmente,<br>
+                    <strong>Equipo de Soporte Técnico</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+
+    </data>
 </odoo>
