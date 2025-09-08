@@ -9,7 +9,7 @@
       <field name="email_from">soporte@andescopiers.com.pe</field>
       <field name="email_to">{{object.product_alquiler.correo_}}</field>
       <field name="email_cc">jamilet.roggero@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com, alquiler@andescopiers.com.pe, ventas3@andescopiers.com</field>
-      <field name="subject">Visita Técnica - {{ctx.get('cantidad_tickets', 1)}} Servicio(s) Programado(s)</field>
+      <field name="subject">Visita Técnica </field>
       <field name="auto_delete" eval="True"/>
       <field name="body_html"><![CDATA[
 <!DOCTYPE html>
@@ -89,11 +89,10 @@
       <field name="name">Tickets Consolidados - Técnico</field>
       <field name="model_id" ref="sat.model_ticket_alquiler"/>
       <field name="email_from">soporte@andescopiers.com.pe</field>
-      <field name="subject">Asignación - {{ctx.get('cantidad_tickets', 1)}} Ticket(s)</field>
+      <field name="subject">Asignación </field>
       <field name="auto_delete" eval="False"/>
       <field name="email_to">
-        <t t-if="ctx.get('tecnico_principal')">{{ctx.get('tecnico_principal').email}}</t>
-        <t t-else="">{{object.responsable.email}}</t>
+        
       </field>
       <field name="body_html"><![CDATA[
 <!DOCTYPE html>
@@ -162,14 +161,14 @@
       ]]></field>
     </record>
 
-    <!-- ============ ASISTENCIA DIRECTA ============ -->
+    
     <record id="mail_template_asistencia_directa_consolidado" model="mail.template">
       <field name="name">Asistencia Directa Consolidada</field>
       <field name="model_id" ref="sat.model_ticket_alquiler"/>
       <field name="email_from">soporte@andescopiers.com.pe</field>
       <field name="email_to">t.escalante@corapsac.com.pe</field>
       <field name="email_cc">jamilet.roggero@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
-      <field name="subject">Reporte de Asistencia Directa - {{ctx.get('cantidad_tickets', 1)}} Servicio(s)</field>
+      <field name="subject">Reporte de Asistencia Directa </field>
       <field name="auto_delete" eval="True"/>
       <field name="body_html"><![CDATA[
 <!DOCTYPE html>
