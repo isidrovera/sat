@@ -446,42 +446,44 @@
                 
                 <!-- Lista de tickets para configurar individualmente -->
                 <notebook>
-                    <page string="Configuración por Ticket" name="tickets_config">
-                        <group>
-                            <field name="resumen_servicios" readonly="1" nolabel="1"/>
-                        </group>
-                        
-                        <field name="ticket_line_ids" 
-                               context="{'default_wizard_id': id}"
-                               nolabel="1">
-                            <list editable="1" 
-                                  create="0" 
-                                  delete="0"
-                                  decoration-danger="estado_actual != 'nuevo'"
-                                  decoration-warning="not tipo_servicio_id">
-                                
-                                <field name="ticket_name" readonly="1" string="Ticket"/>
-                                <field name="cliente_name" readonly="1" string="Cliente"/>
-                                <field name="modelo_equipo" readonly="1" string="Modelo" optional="show"/>
-                                <field name="serie_equipo" readonly="1" string="Serie" optional="show"/>
-                                <field name="tipo_servicio_id" required="1" string="Tipo de Servicio"/>
-                                <field name="observaciones" string="Observaciones Específicas"/>
-                                
-                                <!-- Campos hidden para controles -->
-                                <field name="estado_actual" column_invisible="1"/>
-                                <field name="wizard_id" column_invisible="1"/>
-                                <field name="ticket_id" column_invisible="1"/>
-                            </list>
-                        </field>
-                        
-                        <div class="text-muted mt-2">
-                            <small>
-                                💡 <strong>Tip:</strong> Configure el tipo de servicio para cada ticket según sus necesidades específicas.
-                                Las observaciones son opcionales pero recomendadas para casos especiales.
-                            </small>
-                        </div>
-                    </page>
-                </notebook>
+    <page string="Configuración por Ticket" name="tickets_config">
+        <group>
+            <field name="resumen_servicios" readonly="1" nolabel="1"/>
+        </group>
+
+        <field name="ticket_line_ids"
+               context="{'default_wizard_id': id}"
+               nolabel="1">
+            <!-- Si tu versión es Odoo 15/16 usa <tree>; en 17+ <list> también es válido -->
+            <list editable="bottom"
+                  create="0"
+                  delete="0"
+                  decoration-danger="estado_actual != 'nuevo'"
+                  decoration-warning="not tipo_servicio_id">
+
+                <field name="ticket_name" readonly="1" string="Ticket"/>
+                <field name="cliente_name" readonly="1" string="Cliente"/>
+                <field name="modelo_equipo" readonly="1" string="Modelo" optional="show"/>
+                <field name="serie_equipo" readonly="1" string="Serie" optional="show"/>
+                <field name="tipo_servicio_id" required="1" string="Tipo de Servicio"/>
+                <field name="observaciones" string="Observaciones Específicas"/>
+
+                <!-- Campos ocultos para control -->
+                <field name="estado_actual" invisible="1"/>
+                <field name="wizard_id" invisible="1"/>
+                <field name="ticket_id" invisible="1"/>
+            </list>
+        </field>
+
+        <div class="text-muted mt-2">
+            <small>
+                💡 <strong>Tip:</strong> Configure el tipo de servicio para cada ticket según sus necesidades específicas.
+                Las observaciones son opcionales pero recomendadas para casos especiales.
+            </small>
+        </div>
+    </page>
+</notebook>
+
             </group>
             
             <!-- Botones de acción -->
