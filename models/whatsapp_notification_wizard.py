@@ -23,7 +23,7 @@ class WhatsappNotificationWizard(models.TransientModel):
     serie_equipo = fields.Char(string='Serie', related='ticket_id.serie_id_r', readonly=True)
     tipo_equipo = fields.Selection(related='ticket_id.tipo_id', string='Tipo de Equipo', readonly=True)
     problema_descripcion = fields.Text(string='Problema', related='ticket_id.description', readonly=True)
-    fecha_visita = fields.Char(string='Fecha de Visita', related='ticket_id.agenda_local', readonly=True)
+    fecha_visita_ticket = fields.Char(string='Fecha de Visita', related='ticket_id.agenda_local', readonly=True)
     tecnico_name = fields.Char(string='Técnico', related='ticket_id.responsable.name', readonly=True)
     
     # Configuración de notificación
@@ -322,43 +322,51 @@ class WhatsappNotificationWizard(models.TransientModel):
             else:
                 wizard.resumen_servicios = ''
 
-    # OVERRIDE del método create
+    # MODIFICA: create() con logs
     @api.model
     def create(self, vals):
-        """Override create para manejar asignación masiva"""
+        _logger.info("🧩 [wizard.create] vals=%s", vals)
         wizard = super().create(vals)
-        
+        _logger.info("🧩 [wizard.create] creado id=%s es_asignacion_masiva=%s tickets=%s",
+                    wizard.id, wizard.es_asignacion_masiva, len(wizard.tickets_masivos_ids))
+
         if wizard.es_asignacion_masiva and wizard.tickets_masivos_ids:
-            # Crear líneas automáticamente para cada ticket
+            _logger.info("🧩 [wizard.create] generando líneas...")
             wizard._crear_lineas_tickets()
-            
-            # Establecer valores por defecto del primer ticket si están disponibles
-            primer_ticket = wizard.tickets_masivos_ids[0]
-            if not wizard.tecnico_asignado and primer_ticket.responsable:
-                wizard.tecnico_asignado = primer_ticket.responsable
-            if not wizard.fecha_visita and primer_ticket.agenda:
-                wizard.fecha_visita = primer_ticket.agenda
-            if primer_ticket.asistencia_id:
-                wizard.asistencia_directa = primer_ticket.asistencia_id
-        
+            # defaults de apoyo
+            primer = wizard.tickets_masivos_ids[0]
+            if not wizard.tecnico_asignado and getattr(primer, 'responsable', False):
+                wizard.tecnico_asignado = primer.responsable
+            if not wizard.fecha_visita and getattr(primer, 'agenda', False):
+                wizard.fecha_visita = primer.agenda
+            if getattr(primer, 'asistencia_id', False):
+                wizard.asistencia_directa = primer.asistencia_id
+
+        _logger.info("🧩 [wizard.create] listo: lines=%s", len(wizard.ticket_line_ids))
         return wizard
 
-    # MÉTODOS PRINCIPALES
+
+    # MODIFICA: _crear_lineas_tickets() con logs finos
     def _crear_lineas_tickets(self):
-        """Crea líneas editables para cada ticket seleccionado"""
         self.ensure_one()
-        
-        # Limpiar líneas existentes
+        _logger.info("🧱 [_crear_lineas_tickets] wizard=%s tickets=%s", self.id, self.tickets_masivos_ids.ids)
+        # Limpiar
+        removed = len(self.ticket_line_ids)
         self.ticket_line_ids.unlink()
-        
-        # Crear nueva línea para cada ticket
-        for ticket in self.tickets_masivos_ids:
+        if removed:
+            _logger.info("🧱 [_crear_lineas_tickets] líneas previas eliminadas: %s", removed)
+
+        count = 0
+        for t in self.tickets_masivos_ids:
             self.env['whatsapp.notification.wizard.line'].create({
                 'wizard_id': self.id,
-                'ticket_id': ticket.id,
-                'tipo_servicio_id': ticket.tipo_servicio_id or 'revision',
+                'ticket_id': t.id,
+                'tipo_servicio_id': getattr(t, 'tipo_servicio_id', False) or 'revision',
                 'observaciones': '',
             })
+            count += 1
+        _logger.info("✅ [_crear_lineas_tickets] creadas=%s", count)
+
 
     def action_confirmar_asignacion_masiva(self):
         """Confirma la asignación masiva con valores del wizard"""

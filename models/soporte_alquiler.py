@@ -1699,40 +1699,44 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'type': 'ir.actions.act_window_close'
         }
 
+    # MODIFICA: action_asignar_masivo
     def action_asignar_masivo(self):
-        """
-        Método para asignación masiva desde la vista lista
-        Siempre muestra wizard para múltiples tickets
-        """
-        _logger.info(f"🎯 Iniciando asignación masiva para {len(self)} tickets")
-        
-        # Verificar que todos los tickets estén en estado 'nuevo'
+        _logger.info("🎯 [asignar_masivo] records=%s ids=%s", len(self), self.ids)
+
+        # Validación
         tickets_no_nuevos = self.filtered(lambda t: t.estado != 'nuevo')
         if tickets_no_nuevos:
             raise UserError(
-                f"No se pueden asignar tickets que no están en estado 'nuevo'.\n"
-                f"Tickets con estado diferente: {', '.join(tickets_no_nuevos.mapped('name'))}"
+                "No se pueden asignar tickets que no están en estado 'nuevo'.\n"
+                f"Diferentes: {', '.join(tickets_no_nuevos.mapped('name'))}"
             )
-        
-        # Crear wizard masivo
-        wizard = self.env['whatsapp.notification.wizard'].create({
+
+        Wizard = self.env['whatsapp.notification.wizard']
+        view = self.env.ref('sat.view_whatsapp_notification_wizard_form_massive')
+
+        wizard = Wizard.create({
             'es_asignacion_masiva': True,
             'tickets_masivos_ids': [(6, 0, self.ids)],
             'notificar_grupos': False,
         })
-        
+        _logger.info("✅ [asignar_masivo] wizard=%s es_asignacion_masiva=%s tickets=%s",
+                    wizard.id, wizard.es_asignacion_masiva, len(wizard.tickets_masivos_ids))
+
         return {
             'type': 'ir.actions.act_window',
             'name': f'Asignación Masiva - {len(self)} Tickets',
             'res_model': 'whatsapp.notification.wizard',
             'res_id': wizard.id,
             'view_mode': 'form',
+            'view_id': view.id,
+            'views': [(view.id, 'form')],
             'target': 'new',
             'context': {
                 'default_es_asignacion_masiva': True,
-                'default_tickets_masivos_ids': [(6, 0, self.ids)]
-            }
+                'default_tickets_masivos_ids': [(6, 0, self.ids)],
+            },
         }
+
 
     def action_asignar_ticket(self):
         """

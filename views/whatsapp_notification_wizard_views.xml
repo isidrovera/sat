@@ -38,7 +38,7 @@
                         <group string="Información del Ticket">
                             <field name="cliente_name"/>
                             <field name="direccion"/>
-                            <field name="fecha_visita"/>
+                            <field name="fecha_visita_ticket"/>
                             <field name="tecnico_name"/>
                         </group>
                         
