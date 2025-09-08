@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- ===================== VISTA DEL WIZARD (FORM) ===================== -->
+    <record id="view_whatsapp_notification_wizard_form_massive" model="ir.ui.view">
+      <field name="name">whatsapp.notification.wizard.form.massive</field>
+      <field name="model">whatsapp.notification.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Asignación de Tickets">
+
+          <!-- Alert para asignación masiva -->
+          <div class="alert alert-info" invisible="not es_asignacion_masiva">
+            <strong>Asignación Masiva:</strong> Se procesarán <field name="total_tickets"/> tickets seleccionados.
+          </div>
+
+          <!-- SECCIÓN INDIVIDUAL -->
+          <group invisible="es_asignacion_masiva" string="Asignación Individual">
+            <group string="Información del Ticket">
+              <field name="ticket_id" invisible="1"/>
+              <field name="cliente_name" readonly="1"/>
+              <field name="direccion" readonly="1"/>
+              <field name="modelo_equipo" readonly="1"/>
+              <field name="serie_equipo" readonly="1"/>
+              <field name="problema_descripcion" readonly="1"/>
+              <field name="tecnico_name" readonly="1"/>
+            </group>
+
+            <group string="Configuración">
+              <field name="notificar_grupos"/>
+              <field name="grupo_seleccionado" invisible="not notificar_grupos" required="notificar_grupos"/>
+              <field name="cliente_solicita_toner"/>
+              <field name="enviar_toner"/>
+              <field name="observaciones_toner" invisible="not enviar_toner"/>
+              <field name="mensaje_adicional"/>
+            </group>
+          </group>
+
+          <!-- SECCIÓN MASIVA -->
+          <group invisible="not es_asignacion_masiva" string="Asignación Masiva">
+            <!-- Campos ocultos de control -->
+            <field name="es_asignacion_masiva" invisible="1"/>
+            <field name="tickets_masivos_ids" invisible="1"/>
+
+            <!-- Información general -->
+            <group col="4" string="Resumen General">
+              <field name="total_tickets" readonly="1"/>
+              <field name="clientes_involucrados" readonly="1" colspan="3"/>
+            </group>
+
+            <!-- Valores comunes obligatorios -->
+            <group col="2" string="Valores Comunes (se aplicarán a todos los tickets)">
+              <field name="tecnico_asignado"
+                     required="es_asignacion_masiva"
+                     placeholder="Seleccione el técnico..."
+                     options="{'no_create': True, 'no_create_edit': True}"/>
+              <field name="fecha_visita"
+                     required="es_asignacion_masiva"
+                     placeholder="Seleccione fecha y hora..."/>
+              <field name="asistencia_directa"/>
+            </group>
+
+            <!-- Configuración de notificaciones -->
+            <group string="Notificaciones (Opcional)">
+              <field name="notificar_grupos"/>
+              <field name="grupo_seleccionado" invisible="not notificar_grupos" required="notificar_grupos"/>
+              <field name="cliente_solicita_toner"/>
+              <field name="enviar_toner"/>
+              <field name="observaciones_toner" invisible="not enviar_toner"/>
+              <field name="mensaje_adicional" placeholder="Observaciones adicionales..."/>
+            </group>
+
+            <!-- Notebook con lista por ticket -->
+            <notebook>
+              <page string="Configuración por Ticket" name="tickets_config">
+                <group>
+                  <field name="resumen_servicios" readonly="1" nolabel="1"/>
+                </group>
+
+                <!-- Forzamos vistas externas y modo list/form -->
+                <field name="ticket_line_ids"
+                       nolabel="1"
+                       mode="list,form"
+                       context="{
+                         'tree_view_ref': 'sat.view_whatsapp_notification_wizard_line_list',
+                         'form_view_ref': 'sat.view_whatsapp_notification_wizard_line_form'
+                       }"/>
+
+                <div class="text-muted mt-2">
+                  <small>
+                    💡 <strong>Tip:</strong> Configure el tipo de servicio para cada ticket según sus necesidades específicas.
+                    Las observaciones son opcionales pero recomendadas para casos especiales.
+                  </small>
+                </div>
+              </page>
+            </notebook>
+          </group>
+
+          <!-- Botones de acción -->
+          <footer>
+            <!-- Individual -->
+            <div invisible="es_asignacion_masiva">
+              <button name="action_confirmar_asignacion"
+                      type="object"
+                      string="Confirmar Asignación Individual"
+                      class="btn-primary"/>
+              <button string="Cancelar" class="btn-secondary" special="cancel"/>
+            </div>
+
+            <!-- Masiva -->
+            <div invisible="not es_asignacion_masiva">
+              <button name="action_confirmar_asignacion_masiva"
+                      type="object"
+                      string="Confirmar Asignación Masiva"
+                      class="btn-primary"/>
+              <button string="Cancelar" class="btn-secondary" special="cancel"/>
+            </div>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <!-- ============= VISTA LISTA (EXTERNA) PARA LÍNEAS DEL WIZARD ============= -->
+    <record id="view_whatsapp_notification_wizard_line_list" model="ir.ui.view">
+      <field name="name">whatsapp.notification.wizard.line.list</field>
+      <field name="model">whatsapp.notification.wizard.line</field>
+      <field name="arch" type="xml">
+        <list string="Tickets a Procesar"
+              editable="bottom"
+              create="false"
+              delete="false"
+              decoration-danger="estado_actual != 'nuevo'"
+              decoration-warning="not tipo_servicio_id"
+              decoration-info="tipo_servicio_id in ['mantenimiento_correctivo', 'cambio_repuestos']">
+
+          <field name="ticket_name" readonly="1" string="Ticket"/>
+          <field name="cliente_name" readonly="1" string="Cliente"/>
+          <field name="modelo_equipo" readonly="1" string="Modelo" optional="show"/>
+          <field name="serie_equipo" readonly="1" string="Serie" optional="show"/>
+          <field name="direccion" readonly="1" string="Dirección" optional="hide"/>
+          <field name="tipo_servicio_id" required="1" string="Tipo de Servicio"/>
+          <field name="observaciones" string="Observaciones"/>
+
+          <!-- ocultos -->
+          <field name="estado_actual" invisible="1"/>
+          <field name="color" invisible="1"/>
+          <field name="wizard_id" invisible="1"/>
+          <field name="ticket_id" invisible="1"/>
+
+          <!-- acciones de línea -->
+          <button name="action_ver_ticket_completo"
+                  type="object"
+                  string="Ver"
+                  icon="fa-external-link"
+                  title="Ver ticket completo"/>
+          <button name="action_copiar_observaciones_a_todas"
+                  type="object"
+                  string="Copiar Obs."
+                  icon="fa-copy"
+                  title="Copiar observaciones a todas las líneas"
+                  invisible="not observaciones"/>
+          <button name="action_aplicar_tipo_servicio_a_todas"
+                  type="object"
+                  string="Aplicar Tipo"
+                  icon="fa-share"
+                  title="Aplicar tipo de servicio a todas las líneas"
+                  invisible="not tipo_servicio_id"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- ============= VISTA FORM (EXTERNA) PARA LÍNEAS DEL WIZARD ============= -->
+    <record id="view_whatsapp_notification_wizard_line_form" model="ir.ui.view">
+      <field name="name">whatsapp.notification.wizard.line.form</field>
+      <field name="model">whatsapp.notification.wizard.line</field>
+      <field name="arch" type="xml">
+        <form string="Detalle del Ticket">
+          <group col="2">
+            <group string="Información del Ticket">
+              <field name="ticket_name" readonly="1"/>
+              <field name="cliente_name" readonly="1"/>
+              <field name="direccion" readonly="1"/>
+              <field name="estado_actual" readonly="1"/>
+              <field name="tipo_equipo" readonly="1"/>
+            </group>
+            <group string="Detalles del Equipo">
+              <field name="marca_equipo" readonly="1"/>
+              <field name="modelo_equipo" readonly="1"/>
+              <field name="serie_equipo" readonly="1"/>
+            </group>
+          </group>
+
+          <group string="Problema Reportado">
+            <field name="problema_actual" readonly="1" nolabel="1"/>
+          </group>
+
+          <group col="2" string="Configuración del Servicio">
+            <field name="tipo_servicio_id" required="1"/>
+            <field name="observaciones"/>
+          </group>
+
+          <div class="oe_button_box">
+            <button name="action_ver_ticket_completo"
+                    type="object"
+                    string="Abrir Ticket Completo"
+                    class="btn-primary"/>
+          </div>
+        </form>
+      </field>
+    </record>
+
+    <!-- ===================== ACCIONES SERVIDOR ===================== -->
+
+    <!-- Asignar Tickets -->
+    <record id="action_asignar_tickets_masivo" model="ir.actions.server">
+      <field name="name">Asignar Tickets</field>
+      <field name="model_id" ref="sat.model_ticket_alquiler"/>
+      <field name="binding_model_id" ref="sat.model_ticket_alquiler"/>
+      <field name="binding_view_types">list</field>
+      <field name="sequence">10</field>
+      <field name="state">code</field>
+      <field name="code"><![CDATA[
+# Validar que hay registros seleccionados
+if not records:
+    raise UserError("Debe seleccionar al menos un ticket")
+
+# Filtrar solo tickets en estado 'nuevo'
+tickets_nuevos = records.filtered(lambda t: t.estado == 'nuevo')
+tickets_no_nuevos = records - tickets_nuevos
+
+# Mostrar advertencia si hay tickets que no se pueden asignar
+if tickets_no_nuevos:
+    tickets_problema = tickets_no_nuevos.mapped('name')
+    if not tickets_nuevos:
+        raise UserError(f"Los tickets seleccionados no están en estado 'nuevo': {', '.join(tickets_problema)}")
+    else:
+        env.user.notify_warning(
+            message=f"Se omitirán {len(tickets_no_nuevos)} tickets que no están en estado 'nuevo': {', '.join(tickets_problema[:3])}{'...' if len(tickets_problema) > 3 else ''}",
+            title="Algunos tickets omitidos"
+        )
+
+# Proceder con los tickets válidos
+if len(tickets_nuevos) == 1:
+    action = tickets_nuevos.action_asignar_ticket()
+else:
+    # Asignación masiva: delega a método del modelo que crea el wizard y devuelve res_id
+    action = tickets_nuevos.action_asignar_masivo()
+      ]]></field>
+    </record>
+
+    <!-- Finalizar Tickets -->
+    <record id="action_finalizar_tickets_masivo" model="ir.actions.server">
+      <field name="name">Finalizar Tickets</field>
+      <field name="model_id" ref="sat.model_ticket_alquiler"/>
+      <field name="binding_model_id" ref="sat.model_ticket_alquiler"/>
+      <field name="binding_view_types">list</field>
+      <field name="sequence">20</field>
+      <field name="state">code</field>
+      <field name="code"><![CDATA[
+# Validar que hay registros seleccionados
+if not records:
+    raise UserError("Debe seleccionar al menos un ticket")
+
+# Filtrar solo tickets en estado 'proceso'
+tickets_proceso = records.filtered(lambda t: t.estado == 'proceso')
+tickets_no_proceso = records - tickets_proceso
+
+# Validar estado
+if not tickets_proceso:
+    raise UserError("Debe seleccionar tickets en estado 'proceso' para finalizar")
+
+if tickets_no_proceso:
+    tickets_problema = tickets_no_proceso.mapped('name')
+    env.user.notify_warning(
+        message=f"Se omitirán {len(tickets_no_proceso)} tickets que no están en estado 'proceso': {', '.join(tickets_problema[:3])}{'...' if len(tickets_problema) > 3 else ''}",
+        title="Algunos tickets omitidos"
+    )
+
+# Finalizar todos los tickets en proceso
+try:
+    tickets_proceso.action_finalizar()
+    env.user.notify_success(
+        message=f"Se finalizaron correctamente {len(tickets_proceso)} tickets",
+        title="Finalización Completada"
+    )
+except Exception as e:
+    raise UserError(f"Error al finalizar tickets: {str(e)}")
+      ]]></field>
+    </record>
+
+    <!-- Marcar como En Proceso -->
+    <record id="action_proceso_tickets_masivo" model="ir.actions.server">
+      <field name="name">Marcar como En Proceso</field>
+      <field name="model_id" ref="sat.model_ticket_alquiler"/>
+      <field name="binding_model_id" ref="sat.model_ticket_alquiler"/>
+      <field name="binding_view_types">list</field>
+      <field name="sequence">15</field>
+      <field name="state">code</field>
+      <field name="code"><![CDATA[
+# Validar que hay registros seleccionados
+if not records:
+    raise UserError("Debe seleccionar al menos un ticket")
+
+# Filtrar solo tickets en estado 'nuevo'
+tickets_nuevos = records.filtered(lambda t: t.estado == 'nuevo')
+tickets_no_nuevos = records - tickets_nuevos
+
+# Validar estado
+if not tickets_nuevos:
+    raise UserError("Debe seleccionar tickets en estado 'nuevo' para marcar como proceso")
+
+if tickets_no_nuevos:
+    tickets_problema = tickets_no_nuevos.mapped('name')
+    env.user.notify_warning(
+        message=f"Se omitirán {len(tickets_no_nuevos)} tickets que no están en estado 'nuevo': {', '.join(tickets_problema[:3])}{'...' if len(tickets_problema) > 3 else ''}",
+        title="Algunos tickets omitidos"
+    )
+
+# Cambiar estado a proceso
+try:
+    tickets_nuevos.write({'estado': 'proceso'})
+    env.user.notify_success(
+        message=f"Se marcaron {len(tickets_nuevos)} tickets como 'En Proceso'",
+        title="Estado Actualizado"
+    )
+except Exception as e:
+    raise UserError(f"Error al cambiar estado: {str(e)}")
+      ]]></field>
+    </record>
+
+    <!-- Cambiar Técnico -->
+    <record id="action_cambiar_tecnico_masivo" model="ir.actions.server">
+      <field name="name">Cambiar Técnico</field>
+      <field name="model_id" ref="sat.model_ticket_alquiler"/>
+      <field name="binding_model_id" ref="sat.model_ticket_alquiler"/>
+      <field name="binding_view_types">list</field>
+      <field name="sequence">25</field>
+      <field name="state">code</field>
+      <field name="code"><![CDATA[
+# Crear un wizard simple para seleccionar nuevo técnico
+wizard = env['ticket.cambio.tecnico.wizard'].create({
+    'ticket_ids': [(6, 0, records.ids)]
+})
+
+action = {
+    'type': 'ir.actions.act_window',
+    'name': f'Cambiar Técnico - {len(records)} Tickets',
+    'res_model': 'ticket.cambio.tecnico.wizard',
+    'res_id': wizard.id,
+    'view_mode': 'form',
+    'target': 'new',
+}
+      ]]></field>
+    </record>
+
+    <!-- Reprogramar Fecha -->
+    <record id="action_reprogramar_fecha_masivo" model="ir.actions.server">
+      <field name="name">Reprogramar Fecha</field>
+      <field name="model_id" ref="sat.model_ticket_alquiler"/>
+      <field name="binding_model_id" ref="sat.model_ticket_alquiler"/>
+      <field name="binding_view_types">list</field>
+      <field name="sequence">30</field>
+      <field name="state">code</field>
+      <field name="code"><![CDATA[
+# Filtrar tickets que se pueden reprogramar
+tickets_validos = records.filtered(lambda t: t.estado in ['nuevo', 'proceso'])
+
+if not tickets_validos:
+    raise UserError("Debe seleccionar tickets en estado 'nuevo' o 'proceso' para reprogramar")
+
+# Crear wizard para seleccionar nueva fecha
+wizard = env['ticket.reprogramar.wizard'].create({
+    'ticket_ids': [(6, 0, tickets_validos.ids)]
+})
+
+action = {
+    'type': 'ir.actions.act_window',
+    'name': f'Reprogramar Fecha - {len(tickets_validos)} Tickets',
+    'res_model': 'ticket.reprogramar.wizard',
+    'res_id': wizard.id,
+    'view_mode': 'form',
+    'target': 'new',
+}
+      ]]></field>
+    </record>
+
+  </data>
+</odoo>

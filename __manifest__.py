@@ -122,6 +122,7 @@
         'views/view_patron_contador.xml',        
         'views/printtracker_views.xml',
         'views/reporte_maquinas_alquiler.xml',
+        'views/tickets_masivos.xml',
     ],
     
     'assets': {
