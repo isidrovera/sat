@@ -486,7 +486,7 @@ Recibirá confirmación de la fecha de entrega.
             <p><strong>Número de Reporte:</strong> {creation_result['secuencia']}</p>
             <p><strong>Cliente:</strong> {datos_formulario.get('cliente')}</p>
             <p><strong>Equipo:</strong> {summary.get('equipment_name', 'Sin nombre')}</p>
-            <p><strong>Serie:</strong> {summary.get('equipment_serie', 'Sin serie')}</p>
+            <p><strong>Serie:</strong> {datos_formulario.get('serie', 'Sin serie')}</p>
             <p><strong>Tóners solicitados:</strong> {', '.join(summary.get('requested_toners', []))}</p>
             <p><strong>Entrega automática:</strong> {'✅ Sí' if creation_result['requires_automatic_delivery'] else '❌ No'}</p>
             <p><em>Esta solicitud fue validada y aprobada automáticamente por el sistema inteligente.</em></p>

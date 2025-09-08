@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <h6><strong>¿Considera que hay un error?</strong></h6>
                                 <p>Puede contactarnos directamente:</p>
                                 <a href="tel:+51924894829" class="btn btn-primary me-2">
-                                    <i class="fa fa-phone"></i> +51 975 399 303
+                                    <i class="fa fa-phone"></i> +51924894829
                                 </a>
                                 <a href="mailto:soporte@andescopiers.com.pe" class="btn btn-outline-primary">
                                     <i class="fa fa-envelope"></i> soporte@andescopiers.com.pe
@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <h6><strong>¡Gracias por confiar en Andes Copier!</strong></h6>
                                 <p>Ha recibido una confirmación por WhatsApp.</p>
                                 <a href="tel:+51924894829" class="btn btn-success me-2">
-                                    <i class="fa fa-phone"></i> +51 975 399 303
+                                    <i class="fa fa-phone"></i> +51924894829
                                 </a>
                                 <a href="mailto:soporte@andescopiers.com.pe" class="btn btn-outline-success">
                                     <i class="fa fa-envelope"></i> soporte@andescopiers.com.pe
