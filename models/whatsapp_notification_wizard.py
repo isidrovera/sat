@@ -424,13 +424,14 @@ class WhatsappNotificationWizard(models.TransientModel):
             # 3. Procesar asignación masiva
             self.tickets_masivos_ids._procesar_asignacion_masiva(wizard_data)
             
+            
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': 'Asignación Masiva Completada',
                     'message': f'Se asignaron correctamente {len(self.tickets_masivos_ids)} tickets.',
-                    'type': 'success',
+                    'type': 'ir.actions.act_window_close',
                     'sticky': True,
                 }
             }
