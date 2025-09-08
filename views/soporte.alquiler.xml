@@ -387,8 +387,7 @@
                     <field name="direccion" readonly="1"/>
                     <field name="modelo_equipo" readonly="1"/>
                     <field name="serie_equipo" readonly="1"/>
-                    <field name="problema_descripcion" readonly="1"/>
-                    <field name="fecha_visita_info" readonly="1"/>
+                    <field name="problema_descripcion" readonly="1"/>                    
                     <field name="tecnico_name" readonly="1"/>
                 </group>
                 
