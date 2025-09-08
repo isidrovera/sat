@@ -16,7 +16,7 @@ access_marca_user,marca.user_access,model_marca_marca,base.group_user,1,1,0,0
 access_repuestos_alquiler_user,repuestos.alquiler_user_access,model_repuestos_alquiler,base.group_user,1,1,0,0
 access_fallas_user,fallas.user_access,model_fallas,base.group_user,1,1,1,0
 access_informes_user,informes.user_access,model_informes,base.group_user,1,1,0,0
-access_alquiler_user,alquiler.user_access,model_alquiler,base.group_user,1,1,0,0
+access_alquiler_user,alquiler.user_access,model_alquiler,base.group_user,1,1,1,0
 access_ticket_alquiler_user,ticket.alquiler_user_access,model_ticket_alquiler,base.group_user,1,1,1,0
 access_ticket_alquiler_tecnico,ticket.alquiler_tecnico_access,model_ticket_alquiler,sat.sat_tecnica_group_user,1,1,0,0
 

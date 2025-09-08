@@ -1699,21 +1699,59 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'type': 'ir.actions.act_window_close'
         }
 
-    def action_asignar_ticket(self):
+    def action_asignar_masivo(self):
         """
-        Método que SIEMPRE muestra el wizard antes de proceder con la asignación
+        Método para asignación masiva desde la vista lista
+        Siempre muestra wizard para múltiples tickets
         """
-        self.ensure_one()
+        _logger.info(f"🎯 Iniciando asignación masiva para {len(self)} tickets")
         
-        _logger.info(f"🎯 Iniciando proceso de asignación para ticket {self.name}")
+        # Verificar que todos los tickets estén en estado 'nuevo'
+        tickets_no_nuevos = self.filtered(lambda t: t.estado != 'nuevo')
+        if tickets_no_nuevos:
+            raise UserError(
+                f"No se pueden asignar tickets que no están en estado 'nuevo'.\n"
+                f"Tickets con estado diferente: {', '.join(tickets_no_nuevos.mapped('name'))}"
+            )
         
-        # SIEMPRE mostrar el wizard, sin importar si hay grupos configurados o no
+        # Crear wizard masivo
         wizard = self.env['whatsapp.notification.wizard'].create({
-            'ticket_id': self.id,
-            'notificar_grupos': False,  # Por defecto NO notificar, que el usuario decida
+            'es_asignacion_masiva': True,
+            'tickets_masivos_ids': [(6, 0, self.ids)],
+            'notificar_grupos': False,
         })
         
-        _logger.info(f"🪄 Wizard creado con ID: {wizard.id}")
+        return {
+            'type': 'ir.actions.act_window',
+            'name': f'Asignación Masiva - {len(self)} Tickets',
+            'res_model': 'whatsapp.notification.wizard',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_es_asignacion_masiva': True,
+                'default_tickets_masivos_ids': [(6, 0, self.ids)]
+            }
+        }
+
+    def action_asignar_ticket(self):
+        """
+        Método modificado para manejar tanto asignación individual como masiva
+        """
+        if len(self) > 1:
+            # Si son múltiples tickets, usar asignación masiva
+            return self.action_asignar_masivo()
+        
+        # Para un solo ticket, usar el proceso original con wizard
+        self.ensure_one()
+        
+        _logger.info(f"🎯 Iniciando proceso de asignación individual para ticket {self.name}")
+        
+        wizard = self.env['whatsapp.notification.wizard'].create({
+            'ticket_id': self.id,
+            'es_asignacion_masiva': False,
+            'notificar_grupos': False,
+        })
         
         return {
             'type': 'ir.actions.act_window',
@@ -1724,9 +1762,397 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             'target': 'new',
             'context': {
                 'default_ticket_id': self.id,
+                'default_es_asignacion_masiva': False,
                 'default_notificar_grupos': False
             }
         }
+
+    def _procesar_asignacion_masiva(self, wizard_data):
+        """
+        Procesa la asignación masiva agrupando por cliente y técnico
+        """
+        _logger.info(f"📋 Procesando asignación masiva de {len(self)} tickets")
+        
+        # Aplicar valores comunes del wizard a todos los tickets
+        valores_comunes = {
+            'responsable': wizard_data.get('tecnico_asignado').id if wizard_data.get('tecnico_asignado') else False,
+            'agenda': wizard_data.get('fecha_visita'),
+            'asistencia_id': wizard_data.get('asistencia_directa', 'no'),
+        }
+        
+        # Aplicar valores individuales de tipo de servicio
+        for ticket_data in wizard_data.get('ticket_lines', []):
+            ticket = self.browse(ticket_data['ticket_id'])
+            valores_ticket = valores_comunes.copy()
+            valores_ticket['tipo_servicio_id'] = ticket_data['tipo_servicio_id']
+            ticket.write(valores_ticket)
+        
+        # Agrupar tickets por cliente y técnico para envío consolidado
+        grupos = {}
+        for ticket in self:
+            key = (ticket.partner_id.id if ticket.partner_id else 0, 
+                ticket.responsable.id if ticket.responsable else 0)
+            
+            if key not in grupos:
+                grupos[key] = {
+                    'cliente': ticket.partner_id,
+                    'tecnico': ticket.responsable,
+                    'tickets': self.env['ticket.alquiler']
+                }
+            grupos[key]['tickets'] |= ticket
+        
+        _logger.info(f"📊 Se crearon {len(grupos)} grupos para notificación")
+        
+        # Procesar cada grupo
+        for grupo_data in grupos.values():
+            try:
+                self._procesar_grupo_tickets_consolidado(grupo_data, wizard_data)
+            except Exception as e:
+                _logger.error(f"Error procesando grupo: {e}")
+                raise
+        
+        # Cambiar estado de todos los tickets a 'proceso'
+        self.write({'estado': 'proceso'})
+        
+        return True
+
+    def _procesar_grupo_tickets_consolidado(self, grupo_data, wizard_data):
+        """
+        Procesa un grupo de tickets del mismo cliente/técnico con mensajes consolidados
+        """
+        tickets = grupo_data['tickets']
+        cliente = grupo_data['cliente']
+        tecnico = grupo_data['tecnico']
+        
+        _logger.info(f"🔄 Procesando grupo consolidado: Cliente={cliente.name if cliente else 'NA'}, "
+                    f"Técnico={tecnico.name if tecnico else 'NA'}, "
+                    f"Tickets={len(tickets)}")
+        
+        try:
+            # 1. Crear eventos de calendario para todos los tickets
+            for ticket in tickets:
+                try:
+                    ticket.crear_evento_calendario()
+                except Exception as e:
+                    _logger.warning(f"Error creando evento para ticket {ticket.name}: {e}")
+            
+            # 2. Enviar notificación a grupos si está habilitada
+            if wizard_data.get('notificar_grupos') and wizard_data.get('grupo_seleccionado'):
+                self._enviar_notificacion_grupo_consolidada(tickets, wizard_data)
+            
+            # 3. Generar y enviar mensajes WhatsApp consolidados
+            self._enviar_whatsapp_consolidado(tickets, cliente, tecnico)
+            
+            # 4. Enviar correos consolidados
+            self._enviar_correos_consolidados(tickets, cliente, tecnico)
+            
+            # 5. Verificar asistencia directa y notificar gerente si es necesario
+            tickets_directos = tickets.filtered(lambda t: t.asistencia_id == 'si')
+            if tickets_directos:
+                self._notificar_gerente_asistencia_directa_consolidada(tickets_directos)
+            
+            _logger.info(f"✅ Grupo procesado exitosamente: {len(tickets)} tickets")
+            
+        except Exception as e:
+            _logger.error(f"❌ Error procesando grupo consolidado: {e}")
+            raise
+
+    def _enviar_whatsapp_consolidado(self, tickets, cliente, tecnico):
+        """
+        Envía un solo mensaje WhatsApp consolidado por grupo
+        """
+        try:
+            # Mensaje consolidado para el técnico
+            if tecnico and tickets[0].responsable_mobile_clean and tickets[0].responsable_mobile_clean != 'NA':
+                msg_tecnico = self._generar_mensaje_tecnico_consolidado(tickets, tecnico)
+                tickets[0].send_whatsapp_message(tickets[0].responsable_mobile_clean, msg_tecnico)
+                _logger.info(f"✅ WhatsApp consolidado enviado al técnico {tecnico.name}")
+            
+            # Mensaje consolidado para el cliente
+            if cliente and tickets[0].cliente_phones_clean and tickets[0].cliente_phones_clean != 'NA':
+                msg_cliente = self._generar_mensaje_cliente_consolidado(tickets, cliente, tecnico)
+                phone_numbers = tickets[0].cliente_phones_clean.split(',')
+                for phone_number in phone_numbers:
+                    tickets[0].send_whatsapp_message(phone_number, msg_cliente)
+                _logger.info(f"✅ WhatsApp consolidado enviado al cliente {cliente.name}")
+                
+        except Exception as e:
+            _logger.error(f"❌ Error enviando WhatsApp consolidado: {e}")
+
+    def _generar_mensaje_tecnico_consolidado(self, tickets, tecnico):
+        """
+        Genera un mensaje consolidado para el técnico con todos sus tickets
+        """
+        cantidad = len(tickets)
+        tecnico_name = tecnico.name if tecnico else 'NA'
+        
+        # Agrupar por tipo de servicio
+        servicios_agrupados = {}
+        for ticket in tickets:
+            tipo_servicio = dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, 'NA')
+            if tipo_servicio not in servicios_agrupados:
+                servicios_agrupados[tipo_servicio] = []
+            servicios_agrupados[tipo_servicio].append(ticket)
+        
+        mensaje = f"Hola *{tecnico_name}*,\n\n"
+        
+        if cantidad == 1:
+            mensaje += "Se le ha asignado un Ticket de servicio:"
+        else:
+            mensaje += f"Se le han asignado *{cantidad} Tickets* de servicio:"
+        
+        mensaje += "\n\n"
+        
+        # Resumen por tipo de servicio
+        if len(servicios_agrupados) > 1:
+            mensaje += "*RESUMEN POR TIPO DE SERVICIO:*\n"
+            for tipo, tickets_tipo in servicios_agrupados.items():
+                mensaje += f"• {tipo}: {len(tickets_tipo)} ticket(s)\n"
+            mensaje += "\n"
+        
+        # Detalles de cada ticket agrupado por cliente
+        clientes_agrupados = {}
+        for ticket in tickets:
+            cliente_name = ticket.partner_id.name if ticket.partner_id else 'Sin cliente'
+            if cliente_name not in clientes_agrupados:
+                clientes_agrupados[cliente_name] = []
+            clientes_agrupados[cliente_name].append(ticket)
+        
+        for cliente_name, tickets_cliente in clientes_agrupados.items():
+            mensaje += f"*CLIENTE: {cliente_name}*\n"
+            
+            # Información común del cliente (usar primer ticket)
+            primer_ticket = tickets_cliente[0]
+            mensaje += f"📍 Dirección: {primer_ticket.direccion_id_r or 'NA'}\n"
+            mensaje += f"📞 Contacto: {primer_ticket.contacto_id_r or 'NA'}\n"
+            mensaje += f"📱 Celular: {primer_ticket.product_alquiler.celular if primer_ticket.product_alquiler else 'NA'}\n"
+            mensaje += f"📅 Fecha de visita: {primer_ticket.agenda_local or 'NA'}\n"
+            
+            # ¿Hay asistencia directa?
+            tickets_directos = [t for t in tickets_cliente if t.asistencia_id == 'si']
+            if tickets_directos:
+                mensaje += "⚠️ *ASISTENCIA DIRECTA*\n"
+            
+            mensaje += "\n*EQUIPOS A ATENDER:*\n"
+            
+            for i, ticket in enumerate(tickets_cliente, 1):
+                tipo_servicio = dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, 'NA')
+                mensaje += f"  {i}. *{ticket.name}* - {tipo_servicio}\n"
+                mensaje += f"     Modelo: {ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'}\n"
+                mensaje += f"     Serie: {ticket.serie_id_r or 'NA'}\n"
+                mensaje += f"     Problema: {ticket.description or 'NA'}\n"
+                mensaje += f"     URL: {ticket.url}\n\n"
+            
+            mensaje += "---\n\n"
+        
+        if cantidad > 1:
+            mensaje += f"*TOTAL DE TICKETS: {cantidad}*\n"
+            mensaje += "Revise cada ticket en Odoo para detalles completos.\n\n"
+        
+        mensaje += "Lea atentamente todos los detalles del servicio."
+        
+        return mensaje
+
+    def _generar_mensaje_cliente_consolidado(self, tickets, cliente, tecnico):
+        """
+        Genera un mensaje consolidado para el cliente con todos sus tickets
+        """
+        cantidad = len(tickets)
+        cliente_name = cliente.name if cliente else 'NA'
+        tecnico_name = tecnico.name if tecnico else 'NA'
+        tecnico_dni = tecnico.vat if tecnico else 'NA'
+        
+        # Usar fecha del primer ticket (deberían ser del mismo día)
+        fecha_visita = tickets[0].agenda_local if tickets else 'NA'
+        direccion = tickets[0].direccion_id_r if tickets else 'NA'
+        
+        mensaje = f"Estimado/a *{cliente_name}*,\n\n"
+        
+        if cantidad == 1:
+            mensaje += "Le informamos que hemos programado una visita técnica para atender su requerimiento:"
+        else:
+            mensaje += f"Le informamos que hemos programado una visita técnica para atender *{cantidad} requerimientos*:"
+        
+        mensaje += "\n\n"
+        mensaje += f"*INFORMACIÓN DE LA VISITA*\n"
+        mensaje += f"📅 Fecha de Visita: {fecha_visita}\n"
+        mensaje += f"📍 Dirección: {direccion}\n"
+        mensaje += f"👨‍🔧 Técnico Asignado: {tecnico_name}\n"
+        mensaje += f"🆔 DNI: {tecnico_dni}\n\n"
+        
+        # Agrupar por tipo de servicio
+        servicios_agrupados = {}
+        for ticket in tickets:
+            tipo_servicio = dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, 'NA')
+            if tipo_servicio not in servicios_agrupados:
+                servicios_agrupados[tipo_servicio] = []
+            servicios_agrupados[tipo_servicio].append(ticket)
+        
+        # Mostrar resumen de servicios
+        mensaje += f"*SERVICIOS PROGRAMADOS ({cantidad}):*\n"
+        for tipo_servicio, tickets_tipo in servicios_agrupados.items():
+            mensaje += f"• {tipo_servicio}: {len(tickets_tipo)} equipo(s)\n"
+        mensaje += "\n"
+        
+        # Detalles de cada equipo
+        mensaje += f"*EQUIPOS A ATENDER:*\n"
+        for i, ticket in enumerate(tickets, 1):
+            tipo_servicio = dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, 'NA')
+            mensaje += f"*EQUIPO #{i} - TICKET {ticket.name}*\n"
+            mensaje += f"🔧 Servicio: {tipo_servicio}\n"
+            mensaje += f"🏭 Marca: {ticket.marca_id_r or 'NA'}\n"
+            mensaje += f"📱 Modelo: {ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'}\n"
+            mensaje += f"🔢 Serie: {ticket.serie_id_r or 'NA'}\n"
+            mensaje += f"⚠️ Problema: {ticket.description or 'NA'}\n\n"
+        
+        mensaje += f"*IMPORTANTE:*\n"
+        mensaje += f"1. Dar autorización para el ingreso de nuestro personal a sus oficinas.\n"
+        mensaje += f"2. Disponibilidad de espacio y tiempo para el desarrollo del trabajo.\n"
+        
+        if cantidad > 1:
+            mensaje += f"3. Los {cantidad} equipos serán atendidos en la misma visita.\n"
+        
+        mensaje += f"\nGracias por su atención."
+        
+        return mensaje
+
+    def _enviar_correos_consolidados(self, tickets, cliente, tecnico):
+        """
+        Envía correos consolidados (uno al cliente, uno al técnico)
+        Usa los templates existentes con contexto consolidado por ahora
+        """
+        try:
+            # Preparar contexto con información consolidada
+            contexto_consolidado = {
+                'tickets_grupo': tickets,
+                'cantidad_tickets': len(tickets),
+                'cliente_principal': cliente,
+                'tecnico_principal': tecnico,
+                'es_asignacion_masiva': True,
+                'tickets_por_tipo_servicio': self._agrupar_tickets_por_tipo_servicio(tickets),
+            }
+            
+            # Enviar correo al cliente usando el primer ticket como base
+            primer_ticket = tickets[0]
+            template_cliente = self.env.ref('sat.email_template_ticket_cliente')
+            template_cliente.with_context(**contexto_consolidado).send_mail(primer_ticket.id, force_send=True)
+            _logger.info(f"✅ Correo enviado al cliente {cliente.name if cliente else 'NA'}")
+            
+            # Enviar correo al técnico
+            template_tecnico = self.env.ref('sat.email_template_ticket_tecnico')
+            template_tecnico.with_context(**contexto_consolidado).send_mail(primer_ticket.id, force_send=True)
+            _logger.info(f"✅ Correo enviado al técnico {tecnico.name if tecnico else 'NA'}")
+            
+            # Enviar correos de asistencia directa si aplica
+            tickets_directos = tickets.filtered(lambda t: t.asistencia_id == 'si')
+            if tickets_directos:
+                template_directo = self.env.ref('sat.mail_template_asistencia_directa')
+                # Por ahora enviar uno por cada ticket directo (después crearemos template consolidado)
+                for ticket in tickets_directos:
+                    template_directo.send_mail(ticket.id, force_send=True)
+                _logger.info(f"✅ Correos de asistencia directa enviados para {len(tickets_directos)} tickets")
+            
+        except Exception as e:
+            _logger.error(f"❌ Error enviando correos consolidados: {e}")
+
+    def _agrupar_tickets_por_tipo_servicio(self, tickets):
+        """
+        Agrupa tickets por tipo de servicio para usar en templates
+        """
+        agrupados = {}
+        for ticket in tickets:
+            tipo = ticket.tipo_servicio_id
+            if tipo not in agrupados:
+                agrupados[tipo] = []
+            agrupados[tipo].append(ticket)
+        return agrupados
+
+    def _notificar_gerente_asistencia_directa_consolidada(self, tickets_directos):
+        """
+        Notifica al gerente sobre tickets con asistencia directa (mensaje consolidado)
+        """
+        try:
+            if not tickets_directos:
+                return
+            
+            cantidad = len(tickets_directos)
+            tecnico = tickets_directos[0].responsable
+            cliente = tickets_directos[0].partner_id
+            
+            mensaje = f"⚠️ *VISITAS TÉCNICAS DIRECTAS* ⚠️\n\n"
+            mensaje += f"👨‍🔧 Técnico: {tecnico.name if tecnico else 'NA'}\n"
+            mensaje += f"👥 Cliente: {cliente.name if cliente else 'NA'}\n"
+            mensaje += f"📊 Cantidad de visitas: {cantidad}\n\n"
+            
+            mensaje += f"*TICKETS CON ASISTENCIA DIRECTA:*\n"
+            for ticket in tickets_directos:
+                mensaje += f"• {ticket.name} - {ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'}\n"
+                mensaje += f"  📅 {ticket.agenda_local or 'NA'}\n"
+                if ticket.direccion_id_r:
+                    mensaje += f"  📍 {ticket.direccion_id_r}\n"
+            
+            mensaje += f"\n⚠️ Se ha programado asistencia directa para todos estos equipos."
+            
+            # Enviar al gerente
+            tickets_directos[0].send_whatsapp_message('51922541085', mensaje)
+            _logger.info(f"✅ Notificación consolidada de asistencia directa enviada al gerente para {cantidad} tickets")
+            
+        except Exception as e:
+            _logger.error(f"❌ Error notificando al gerente de forma consolidada: {e}")
+
+    def _enviar_notificacion_grupo_consolidada(self, tickets, wizard_data):
+        """
+        Envía una notificación consolidada al grupo de WhatsApp
+        """
+        try:
+            cantidad = len(tickets)
+            cliente = tickets[0].partner_id
+            tecnico = tickets[0].responsable
+            fecha_visita = tickets[0].agenda_local
+            
+            # Generar mensaje consolidado para el grupo
+            mensaje = f"🔧 *VISITAS TÉCNICAS PROGRAMADAS* 🔧\n\n"
+            mensaje += f"👥 Cliente: {cliente.name if cliente else 'NA'}\n"
+            mensaje += f"👨‍🔧 Técnico: {tecnico.name if tecnico else 'NA'}\n"
+            mensaje += f"📅 Fecha: {fecha_visita or 'NA'}\n"
+            mensaje += f"📊 Cantidad de equipos: {cantidad}\n\n"
+            
+            # Agrupar por tipo de servicio
+            servicios_agrupados = self._agrupar_tickets_por_tipo_servicio(tickets)
+            mensaje += f"*SERVICIOS PROGRAMADOS:*\n"
+            for tipo_servicio, tickets_tipo in servicios_agrupados.items():
+                tipo_label = dict(tickets[0]._fields['tipo_servicio_id'].selection).get(tipo_servicio, tipo_servicio)
+                mensaje += f"• {tipo_label}: {len(tickets_tipo)} equipo(s)\n"
+            
+            mensaje += f"\n*EQUIPOS:*\n"
+            for i, ticket in enumerate(tickets, 1):
+                mensaje += f"{i}. {ticket.name} - {ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'}\n"
+                mensaje += f"   Serie: {ticket.serie_id_r or 'NA'}\n"
+            
+            # Información de tóner si existe
+            if wizard_data.get('cliente_solicita_toner') or wizard_data.get('enviar_toner'):
+                mensaje += f"\n*GESTIÓN DE TÓNER:*\n"
+                if wizard_data.get('cliente_solicita_toner'):
+                    mensaje += f"✅ Cliente solicita tóner\n"
+                if wizard_data.get('enviar_toner'):
+                    mensaje += f"📦 Se enviará tóner con el técnico\n"
+                    if wizard_data.get('observaciones_toner'):
+                        mensaje += f"• Especificaciones: {wizard_data.get('observaciones_toner')}\n"
+            
+            # Mensaje adicional
+            if wizard_data.get('mensaje_adicional'):
+                mensaje += f"\n*OBSERVACIONES:*\n{wizard_data.get('mensaje_adicional')}\n"
+            
+            mensaje += f"\n⚠️ *Evalúen si es necesario enviar suministros adicionales.*"
+            
+            # Enviar al grupo
+            grupo_id = wizard_data.get('grupo_seleccionado')
+            if grupo_id:
+                tickets[0].send_whatsapp_message(grupo_id, mensaje)
+                _logger.info(f"✅ Notificación consolidada enviada al grupo {grupo_id} para {cantidad} tickets")
+            
+        except Exception as e:
+            _logger.error(f"❌ Error enviando notificación consolidada al grupo: {e}")
 
     def action_proceso(self):
         self.estado='proceso'

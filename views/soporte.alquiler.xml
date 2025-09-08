@@ -367,6 +367,126 @@
             <field name="view_mode">list,form,kanban,search,graph,calendar,pivot</field>
             <field name="view_id" ref="sat.model_name_view_kanban" />
         </record>
+        <!-- ACCIÓN DE SERVIDOR PARA ASIGNACIÓN MASIVA -->
+<!-- Agregar este registro XML a tus vistas -->
+
+<record id="action_asignar_tickets_masivo" model="ir.actions.server">
+    <field name="name">Asignar Tickets</field>
+    <field name="model_id" ref="sat.model_ticket_alquiler"/>
+    <field name="binding_model_id" ref="sat.model_ticket_alquiler"/>
+    <field name="binding_view_types">list</field>
+    <field name="sequence">10</field>
+    <field name="state">code</field>
+    <field name="code">
+# Validar que hay registros seleccionados
+if not records:
+    raise UserError("Debe seleccionar al menos un ticket")
+
+# Filtrar solo tickets en estado 'nuevo'
+tickets_nuevos = records.filtered(lambda t: t.estado == 'nuevo')
+tickets_no_nuevos = records - tickets_nuevos
+
+# Mostrar advertencia si hay tickets que no se pueden asignar
+if tickets_no_nuevos:
+    tickets_problema = tickets_no_nuevos.mapped('name')
+    if not tickets_nuevos:
+        raise UserError(f"Los tickets seleccionados no están en estado 'nuevo': {', '.join(tickets_problema)}")
+    else:
+        # Hay algunos tickets válidos, continuar con advertencia
+        env.user.notify_warning(
+            message=f"Se omitirán {len(tickets_no_nuevos)} tickets que no están en estado 'nuevo': {', '.join(tickets_problema[:3])}{'...' if len(tickets_problema) > 3 else ''}",
+            title="Algunos tickets omitidos"
+        )
+
+# Proceder con los tickets válidos
+if len(tickets_nuevos) == 1:
+    # Asignación individual
+    action = tickets_nuevos.action_asignar_ticket()
+else:
+    # Asignación masiva
+    action = tickets_nuevos.action_asignar_masivo()
+    </field>
+</record>
+
+<!-- ACCIÓN ADICIONAL PARA FINALIZAR MASIVAMENTE (opcional) -->
+<record id="action_finalizar_tickets_masivo" model="ir.actions.server">
+    <field name="name">Finalizar Tickets</field>
+    <field name="model_id" ref="sat.model_ticket_alquiler"/>
+    <field name="binding_model_id" ref="sat.model_ticket_alquiler"/>
+    <field name="binding_view_types">list</field>
+    <field name="sequence">20</field>
+    <field name="state">code</field>
+    <field name="code">
+# Validar que hay registros seleccionados
+if not records:
+    raise UserError("Debe seleccionar al menos un ticket")
+
+# Filtrar solo tickets en estado 'proceso'
+tickets_proceso = records.filtered(lambda t: t.estado == 'proceso')
+tickets_no_proceso = records - tickets_proceso
+
+# Validar estado
+if not tickets_proceso:
+    raise UserError("Debe seleccionar tickets en estado 'proceso' para finalizar")
+
+if tickets_no_proceso:
+    tickets_problema = tickets_no_proceso.mapped('name')
+    env.user.notify_warning(
+        message=f"Se omitirán {len(tickets_no_proceso)} tickets que no están en estado 'proceso': {', '.join(tickets_problema[:3])}{'...' if len(tickets_problema) > 3 else ''}",
+        title="Algunos tickets omitidos"
+    )
+
+# Finalizar todos los tickets en proceso
+try:
+    tickets_proceso.action_finalizar()
+    env.user.notify_success(
+        message=f"Se finalizaron correctamente {len(tickets_proceso)} tickets",
+        title="Finalización Completada"
+    )
+except Exception as e:
+    raise UserError(f"Error al finalizar tickets: {str(e)}")
+    </field>
+</record>
+
+<!-- ACCIÓN PARA CAMBIAR ESTADO A PROCESO MASIVAMENTE -->
+<record id="action_proceso_tickets_masivo" model="ir.actions.server">
+    <field name="name">Marcar como En Proceso</field>
+    <field name="model_id" ref="sat.model_ticket_alquiler"/>
+    <field name="binding_model_id" ref="sat.model_ticket_alquiler"/>
+    <field name="binding_view_types">list</field>
+    <field name="sequence">15</field>
+    <field name="state">code</field>
+    <field name="code">
+# Validar que hay registros seleccionados
+if not records:
+    raise UserError("Debe seleccionar al menos un ticket")
+
+# Filtrar solo tickets en estado 'nuevo'
+tickets_nuevos = records.filtered(lambda t: t.estado == 'nuevo')
+tickets_no_nuevos = records - tickets_nuevos
+
+# Validar estado
+if not tickets_nuevos:
+    raise UserError("Debe seleccionar tickets en estado 'nuevo' para marcar como proceso")
+
+if tickets_no_nuevos:
+    tickets_problema = tickets_no_nuevos.mapped('name')
+    env.user.notify_warning(
+        message=f"Se omitirán {len(tickets_no_nuevos)} tickets que no están en estado 'nuevo': {', '.join(tickets_problema[:3])}{'...' if len(tickets_problema) > 3 else ''}",
+        title="Algunos tickets omitidos"
+    )
+
+# Cambiar estado a proceso
+try:
+    tickets_nuevos.write({'estado': 'proceso'})
+    env.user.notify_success(
+        message=f"Se marcaron {len(tickets_nuevos)} tickets como 'En Proceso'",
+        title="Estado Actualizado"
+    )
+except Exception as e:
+    raise UserError(f"Error al cambiar estado: {str(e)}")
+    </field>
+</record>
         <menuitem name="Tickets" id="sat.tickets" parent="sat_menu_root" action="sat.action_soporte_window" sequence="50" />
 
     </data>
