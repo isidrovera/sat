@@ -2022,11 +2022,9 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
     def _enviar_correos_consolidados(self, tickets, cliente, tecnico):
         """
-        Envía correos consolidados (uno al cliente, uno al técnico)
-        Usa los templates existentes con contexto consolidado por ahora
+        Envía correos consolidados usando las nuevas plantillas
         """
         try:
-            # Preparar contexto con información consolidada
             contexto_consolidado = {
                 'tickets_grupo': tickets,
                 'cantidad_tickets': len(tickets),
@@ -2036,28 +2034,26 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                 'tickets_por_tipo_servicio': self._agrupar_tickets_por_tipo_servicio(tickets),
             }
             
-            # Enviar correo al cliente usando el primer ticket como base
             primer_ticket = tickets[0]
-            template_cliente = self.env.ref('sat.email_template_ticket_cliente')
+            
+            # Correo consolidado al cliente
+            template_cliente = self.env.ref('sat.email_template_ticket_cliente_consolidado')
             template_cliente.with_context(**contexto_consolidado).send_mail(primer_ticket.id, force_send=True)
-            _logger.info(f"✅ Correo enviado al cliente {cliente.name if cliente else 'NA'}")
             
-            # Enviar correo al técnico
-            template_tecnico = self.env.ref('sat.email_template_ticket_tecnico')
+            # Correo consolidado al técnico
+            template_tecnico = self.env.ref('sat.email_template_ticket_tecnico_consolidado')
             template_tecnico.with_context(**contexto_consolidado).send_mail(primer_ticket.id, force_send=True)
-            _logger.info(f"✅ Correo enviado al técnico {tecnico.name if tecnico else 'NA'}")
             
-            # Enviar correos de asistencia directa si aplica
+            # Correo consolidado de asistencia directa si aplica
             tickets_directos = tickets.filtered(lambda t: t.asistencia_id == 'si')
             if tickets_directos:
-                template_directo = self.env.ref('sat.mail_template_asistencia_directa')
-                # Por ahora enviar uno por cada ticket directo (después crearemos template consolidado)
-                for ticket in tickets_directos:
-                    template_directo.send_mail(ticket.id, force_send=True)
-                _logger.info(f"✅ Correos de asistencia directa enviados para {len(tickets_directos)} tickets")
+                contexto_directo = contexto_consolidado.copy()
+                contexto_directo['tickets_asistencia_directa'] = tickets_directos
+                template_directo = self.env.ref('sat.mail_template_asistencia_directa_consolidado')
+                template_directo.with_context(**contexto_directo).send_mail(primer_ticket.id, force_send=True)
             
         except Exception as e:
-            _logger.error(f"❌ Error enviando correos consolidados: {e}")
+            _logger.error(f"Error enviando correos consolidados: {e}")
 
     def _agrupar_tickets_por_tipo_servicio(self, tickets):
         """
