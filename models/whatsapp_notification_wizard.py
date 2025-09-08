@@ -249,7 +249,7 @@ class WhatsappNotificationWizard(models.TransientModel):
     tecnico_asignado = fields.Many2one(
         'res.users', 
         string='Técnico Responsable',
-        domain=[('groups_id', 'in', [])],  # Ajustar dominio según tus grupos de técnicos
+        #domain=[('groups_id', 'in', [])],  # Ajustar dominio según tus grupos de técnicos
         help="Técnico que se asignará a todos los tickets seleccionados"
     )
     fecha_visita = fields.Datetime(
