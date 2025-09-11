@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-
-
+    <!-- Acción del reporte PDF -->
     <record id="action_reporte_estado_maquinas_pdf" model="ir.actions.report">
         <field name="name">Reporte de Estado de Máquinas</field>
         <field name="model">reporte.estado.maquina</field>
@@ -16,90 +15,118 @@
         <field name="binding_type">report</field>
     </record>
 
+    <!-- Plantilla QWeb -->
     <template id="reporte_estado_maquinas_pdf" name="Reporte Estado de Máquinas">
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
 
-                <!-- Estilo de tarjeta por estado global -->
+                <!-- Estilo de tarjeta según estado global -->
                 <t t-set="card_style">
-                    <t t-if="kpis['estado_global'] == 'excelente'">border-color:#86efac;background:#dcfce7</t>
-                    <t t-elif="kpis['estado_global'] == 'bueno'">border-color:#fde047;background:#fef9c3</t>
-                    <t t-elif="kpis['estado_global'] == 'regular'">border-color:#fdba74;background:#ffedd5</t>
-                    <t t-else="">border-color:#fca5a5;background:#fee2e2</t>
+                    <t t-if="kpis['estado_global'] == 'excelente'">border-color:#16a34a;background:#dcfce7</t>
+                    <t t-elif="kpis['estado_global'] == 'bueno'">border-color:#f59e0b;background:#fef9c3</t>
+                    <t t-elif="kpis['estado_global'] == 'regular'">border-color:#f97316;background:#ffedd5</t>
+                    <t t-else="">border-color:#dc2626;background:#fee2e2</t>
                 </t>
 
                 <div class="page">
                     <style>
-                        /* ====== NO USAR reglas globales de thead/tfoot ====== */
-                        /* Nada de @page ni de thead/tfoot globales */
-
+                        /* ===== Paleta y Tokens ===== */
                         :root{
-                            --dark:#111827; --muted:#6b7280; --border:#e5e7eb;
-                            --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --info:#3b82f6;
-                            --card:#f8fafc;
+                            --ink:#0f172a;        /* texto principal */
+                            --muted:#64748b;      /* texto secundario */
+                            --line:#e2e8f0;       /* borde suave */
+                            --panel:#f8fafc;      /* panel/card */
+                            --zebra:#fbfdff;      /* filas alternas */
+
+                            --ok:#16a34a;         /* verde */
+                            --good:#3b82f6;       /* azul */
+                            --warn:#f59e0b;       /* ámbar */
+                            --attn:#f97316;       /* naranja */
+                            --bad:#dc2626;        /* rojo */
+
+                            --thead:#0b1220;      /* cabecera tabla */
+                            --theadText:#ffffff;  /* texto cabecera */
                         }
-                        body { font-size: 12px; line-height: 1.25; color: var(--dark); }
-                        .wrap { padding: 6px 4px; }
-                        .tiny{font-size:10px;color:var(--muted);}
-                        .muted{color:var(--muted);}
-                        .sec-title{margin:12px 0 6px 0; font-weight:700; font-size:14px;}
 
-                        .kpis{display:flex; gap:10px; margin-top:10px;}
-                        .kpi{flex:1; border:1px solid var(--border); border-radius:8px; padding:8px 10px;}
-                        .kpi .t{font-size:11px;color:var(--muted); margin-bottom:2px;}
-                        .kpi .v{font-size:18px;font-weight:700;}
+                        /* ===== Tipografía / Layout ===== */
+                        body { font-size:12px; line-height:1.28; color:var(--ink); }
+                        h1,h2,h3 { margin:0; }
+                        .wrap { padding:8px 6px; }
+                        .tiny { font-size:10px; color:var(--muted); }
+                        .muted { color:var(--muted); }
+                        .sec-title { margin:12px 0 6px 0; font-weight:700; font-size:14px; }
 
-                        .card{background:var(--card); border:1px solid var(--border);
-                              border-radius:8px; padding:8px 10px; margin:10px 0;}
-                        .badge{display:inline-block;padding:3px 8px;border-radius:14px;
-                               font-size:11px;font-weight:700;color:#fff; vertical-align:middle;}
-                        .b-ok{background:var(--ok);} .b-warn{background:var(--warn);}
-                        .b-bad{background:var(--bad);} .b-info{background:var(--info);}
-
-                        /* ====== Tablas: reglas ESPECÍFICAS ====== */
-                        table.main{
-                            width:100%;
-                            border-collapse:collapse;
-                            table-layout:fixed;
-                            margin-top:8px;
+                        /* ===== Cards KPI ===== */
+                        .kpis { display:flex; gap:10px; margin-top:10px; }
+                        .kpi {
+                            flex:1; border:1px solid var(--line); border-radius:10px;
+                            padding:10px; background:var(--panel);
                         }
-                        table.main th, table.main td{
-                            border:1px solid var(--border);
-                            padding:5px 6px;
-                            vertical-align:top;
-                            word-wrap:break-word;
-                            overflow-wrap:break-word;
-                            hyphens:auto;
-                        }
-                        table.main thead th{
-                            background:#1f2937; color:#fff; font-weight:700;
-                        }
-                        /* Repetir cabecera SOLO en tus tablas, no global */
-                        table.main thead { display: table-header-group; }
+                        .kpi .head { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:11px; }
+                        .kpi .val { font-size:20px; font-weight:800; margin-top:2px; }
+                        .kpi .sub { font-size:10px; color:var(--muted); }
 
-                        .num{text-align:right; white-space:nowrap;}
-                        .nowrap{white-space:nowrap;}
-                        .w-date{width: 14%;}
-                        .w-marca{width: 10%;}
-                        .w-modelo{width: 14%;}
-                        .w-serie{width: 15%;}
-                        .w-estado{width: 12%;}
-                        .w-total{width: 12%;}
-                        .w-info{width: 23%;}
-                        tbody tr:nth-child(odd) td { background: #fbfdff; }
+                        .badge {
+                            display:inline-block; padding:3px 10px; border-radius:999px;
+                            font-size:11px; font-weight:700; color:#fff; vertical-align:middle;
+                        }
+                        .b-lista{background:var(--ok);}
+                        .b-revisada{background:var(--good);}
+                        .b-sin_revisar{background:var(--warn);}
+                        .b-con_problemas{background:var(--attn);}
+                        .b-partes{background:var(--bad);}
+                        .b-alquilada{background:#0ea5e9;}
+                        .b-externo{background:#8b5cf6;}
+                        .b-vendida{background:#6b7280;}
 
-                        /* Evitar cortes feos en bloques clave */
+                        .chip {
+                            display:inline-flex; align-items:center; gap:6px;
+                            background:#fff; border:1px solid var(--line); border-radius:999px;
+                            padding:3px 8px; font-size:10px;
+                        }
+
+                        /* ===== Alert Card (estado global) ===== */
+                        .alert {
+                            border:1.5px solid var(--line); border-radius:10px;
+                            padding:10px; background:var(--panel);
+                        }
+
+                        /* ===== Tablas robustas PDF ===== */
+                        table.main {
+                            width:100%; border-collapse:collapse; table-layout:fixed; margin-top:8px;
+                        }
+                        table.main thead { display: table-header-group; } /* solo nuestras tablas */
+                        table.main th, table.main td {
+                            border:1px solid var(--line); padding:6px 7px; vertical-align:top;
+                            word-wrap:break-word; overflow-wrap:break-word; hyphens:auto;
+                        }
+                        table.main thead th {
+                            background:var(--thead); color:var(--theadText); font-weight:700;
+                        }
+                        tbody tr:nth-child(odd) td { background:var(--zebra); }
+                        .num { text-align:right; white-space:nowrap; }
+                        .nowrap { white-space:nowrap; }
+
+                        /* Anchos columna */
+                        .w-date{width:14%;}
+                        .w-marca{width:10%;}
+                        .w-modelo{width:14%;}
+                        .w-serie{width:15%;}
+                        .w-estado{width:12%;}
+                        .w-total{width:12%;}
+                        .w-info{width:23%;}
+
+                        /* Evitar cortes feos */
                         .no-break, tr { page-break-inside: avoid; break-inside: avoid; }
+                        .page-break-before { page-break-before: always; break-before: page; }
 
-                        /* Encabezado propio de la sección (evita clase .header) */
-                        .report-header {
-                            padding:6px 0 10px 0; border-bottom:1px solid var(--border);
-                        }
+                        /* Encabezado de contenido (evita colisión con clases de Odoo) */
+                        .report-header { padding:6px 0 10px 0; border-bottom:1px solid var(--line); }
                     </style>
 
-                    <!-- Encabezado de contenido del reporte -->
+                    <!-- Encabezado -->
                     <div class="report-header wrap no-break">
-                        <h2 style="font-weight:700;">📊 Reporte Ejecutivo – Estado de Máquinas</h2>
+                        <h2 style="font-weight:800;">📊 Reporte Ejecutivo – Estado de Máquinas</h2>
                         <div class="tiny">
                             Impreso: <t t-esc="date_print"/> — Compañía: <t t-esc="company.display_name"/>
                         </div>
@@ -108,35 +135,47 @@
                     <!-- KPIs -->
                     <div class="kpis wrap no-break">
                         <div class="kpi">
-                            <div class="t">Total equipos</div>
-                            <div class="v" t-esc="kpis['total']"/>
+                            <div class="head">🗂️ <span>Total equipos</span></div>
+                            <div class="val" t-esc="kpis['total']"/>
                         </div>
                         <div class="kpi">
-                            <div class="t">Operativos (lista + alquilada)</div>
-                            <div class="v">
+                            <div class="head">⚙️ <span>Operativos (lista + alquilada)</span></div>
+                            <div class="val">
                                 <t t-esc="kpis['operativos']"/>
-                                <span class="tiny">(<t t-esc="kpis['pct_operativos_str']"/>)</span>
                             </div>
+                            <div class="sub">Operativos: <t t-esc="kpis['pct_operativos_str']"/></div>
                         </div>
                         <div class="kpi">
-                            <div class="t">Con problemas (problemas + partes)</div>
-                            <div class="v" t-esc="kpis['problemas']"/>
+                            <div class="head">🛠️ <span>Con problemas (problemas + partes)</span></div>
+                            <div class="val" t-esc="kpis['problemas']"/>
                         </div>
                         <div class="kpi">
-                            <div class="t">Sin revisar</div>
-                            <div class="v" t-esc="kpis['sin_revisar']"/>
+                            <div class="head">🔎 <span>Sin revisar</span></div>
+                            <div class="val" t-esc="kpis['sin_revisar']"/>
                         </div>
                     </div>
 
                     <!-- Estado global -->
                     <div class="wrap">
-                        <div class="card no-break" t-att-style="card_style">
-                            <strong t-esc="kpis['badge_text']"/>
+                        <div class="alert no-break" t-att-style="card_style">
+                            <strong style="font-weight:800;"><t t-esc="kpis['badge_text']"/></strong>
                             <span class="tiny"> — Operativos: <t t-esc="kpis['pct_operativos_str']"/></span>
                         </div>
                     </div>
 
-                    <!-- Distribución por estados -->
+                    <!-- Leyenda de estados -->
+                    <div class="wrap no-break" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                        <span class="chip"><span class="badge b-lista">Lista</span> Inventario listo</span>
+                        <span class="chip"><span class="badge b-revisada">Revisada</span> Check técnico OK</span>
+                        <span class="chip"><span class="badge b-sin_revisar">Sin Revisar</span> Pendiente evaluación</span>
+                        <span class="chip"><span class="badge b-con_problemas">Con Problemas</span> Requiere atención</span>
+                        <span class="chip"><span class="badge b-partes">De Partes</span> Uso como repuestos</span>
+                        <span class="chip"><span class="badge b-alquilada">Alquilada</span> En servicio</span>
+                        <span class="chip"><span class="badge b-externo">Externo</span> Tercero</span>
+                        <span class="chip"><span class="badge b-vendida">Vendida</span> Histórico</span>
+                    </div>
+
+                    <!-- Distribución por estados (tabla de totales) -->
                     <div class="wrap">
                         <div class="sec-title">Distribución por estados</div>
                         <table class="main">
@@ -161,53 +200,90 @@
                         </table>
                     </div>
 
-                    <!-- Detalle de equipos -->
+                    <!-- Detalle de equipos: una TABLA por ESTADO -->
                     <div class="wrap">
-                        <div class="sec-title">Detalle de equipos</div>
-                        <table class="main">
-                            <colgroup>
-                                <col class="w-date"/>
-                                <col class="w-marca"/>
-                                <col class="w-modelo"/>
-                                <col class="w-serie"/>
-                                <col class="w-estado"/>
-                                <col class="w-total"/>
-                                <col class="w-info"/>
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    <th class="w-date nowrap">Fecha</th>
-                                    <th class="w-marca">Marca</th>
-                                    <th class="w-modelo">Modelo</th>
-                                    <th class="w-serie">Serie</th>
-                                    <th class="w-estado">Estado</th>
-                                    <th class="w-total num">Total contómetro</th>
-                                    <th class="w-info">Informe técnico</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-foreach="docs" t-as="r" t-key="r.id">
-                                    <tr>
-                                        <td class="nowrap"><t t-esc="(r.fecha_generacion or '')"/></td>
-                                        <td><t t-esc="(r.marca or '')"/></td>
-                                        <td><t t-esc="(r.modelo or '')"/></td>
-                                        <td class="nowrap"><t t-esc="(r.serie or '')"/></td>
-                                        <td>
-                                            <span class="badge"
-                                                  t-att-class="'badge ' + (estado_badges.get(r.estado_maquina,'b-info'))">
-                                                <t t-esc="estado_labels.get(r.id) or r.estado_maquina"/>
-                                            </span>
-                                        </td>
-                                        <td class="num"><t t-esc="(r.contador_total or 0)"/></td>
-                                        <td><t t-esc="informes_limpios.get(r.id) or ''"/></td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </table>
+                        <div class="sec-title">Detalle de equipos por estado</div>
+
+                        <!-- Orden y etiquetas a mostrar -->
+                        <t t-set="estados_order"
+                           t-value="[
+                               ('lista','Lista'),
+                               ('revisada','Revisada'),
+                               ('sin_revisar','Sin Revisar'),
+                               ('con_problemas','Con Problemas'),
+                               ('partes','De Partes'),
+                               ('alquilada','Alquilada'),
+                               ('externo','Externo'),
+                               ('vendida','Vendida')
+                           ]"/>
+
+                        <!-- Control para saltos de página -->
+                        <t t-set="primero" t-value="True"/>
+
+                        <t t-foreach="estados_order" t-as="st">
+                            <t t-set="code" t-value="st[0]"/>
+                            <t t-set="label" t-value="st[1]"/>
+                            <t t-set="rows" t-value="docs.filtered(lambda r: r.estado_maquina == code)"/>
+
+                            <t t-if="rows">
+                                <!-- Salto de página desde el segundo bloque -->
+                                <div t-attf-class="#{'' if primero else 'page-break-before'}"></div>
+                                <t t-set="primero" t-value="False"/>
+
+                                <div class="sec-title no-break" style="display:flex; align-items:center; gap:10px;">
+                                    <span><t t-esc="label"/></span>
+                                    <span class="badge"
+                                          t-att-class="'badge b-' + (code.replace('_','-'))">
+                                        <t t-esc="label"/> — <t t-esc="len(rows)"/> equipo(s)
+                                    </span>
+                                </div>
+
+                                <table class="main">
+                                    <colgroup>
+                                        <col class="w-date"/>
+                                        <col class="w-marca"/>
+                                        <col class="w-modelo"/>
+                                        <col class="w-serie"/>
+                                        <col class="w-estado"/>
+                                        <col class="w-total"/>
+                                        <col class="w-info"/>
+                                    </colgroup>
+                                    <thead>
+                                        <tr>
+                                            <th class="w-date nowrap">Fecha</th>
+                                            <th class="w-marca">Marca</th>
+                                            <th class="w-modelo">Modelo</th>
+                                            <th class="w-serie">Serie</th>
+                                            <th class="w-estado">Estado</th>
+                                            <th class="w-total num">Total contómetro</th>
+                                            <th class="w-info">Informe técnico</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="rows" t-as="r" t-key="r.id">
+                                            <tr>
+                                                <td class="nowrap"><t t-esc="r.fecha_generacion or ''"/></td>
+                                                <td><t t-esc="r.marca or ''"/></td>
+                                                <td><t t-esc="r.modelo or ''"/></td>
+                                                <td class="nowrap"><t t-esc="r.serie or ''"/></td>
+                                                <td>
+                                                    <span class="badge"
+                                                          t-att-class="'badge ' + (estado_badges.get(r.estado_maquina,'b-sin_revisar'))">
+                                                        <t t-esc="estado_labels.get(r.id) or r.estado_maquina"/>
+                                                    </span>
+                                                </td>
+                                                <td class="num"><t t-esc="r.contador_total or 0"/></td>
+                                                <td><t t-esc="informes_limpios.get(r.id) or ''"/></td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </t>
+                        </t>
                     </div>
 
                     <div class="tiny wrap" style="margin-top:8px;">
-                        Generado automáticamente por SAT · Odoo 18
+                        Generado por Isidro
                     </div>
                 </div>
 
