@@ -123,39 +123,7 @@
                         <h2 style="font-weight:800;">📊 Estado de Máquinas Alquiler</h2>
                         
                     </div>
-                    <!-- KPIs -->
-                    <div class="kpis wrap no-break">
-                        <div class="kpi">
-                            <div class="head">🗂️
-                                <span>Total equipos</span>
-                            </div>
-                            <div class="val" t-esc="kpis['total']"/>
-                        </div>
-                        <div class="kpi">
-                            <div class="head">⚙️
-                                <span>Operativos (lista + alquilada)</span>
-                            </div>
-                            <div class="val">
-                                <t t-esc="kpis['operativos']"/>
-                            </div>
-                            <div class="sub">Operativos:
-                                <t t-esc="kpis['pct_operativos_str']"/>
-                            </div>
-                        </div>
-                        <div class="kpi">
-                            <div class="head">🛠️
-                                <span>Con problemas (problemas + partes)</span>
-                            </div>
-                            <div class="val" t-esc="kpis['problemas']"/>
-                        </div>
-                        <div class="kpi">
-                            <div class="head">🔎
-                                <span>Sin revisar</span>
-                            </div>
-                            <div class="val" t-esc="kpis['sin_revisar']"/>
-                        </div>
-                    </div>
-                   
+                    
                     <!-- Distribución por estados (tabla de totales) -->
                     <div class="wrap">
                         <div class="sec-title">Distribución por estados</div>
@@ -165,7 +133,7 @@
                                     <th>Estado</th>
                                     <th class="num">Cantidad</th>
                                     <th class="num">%</th>
-                                    <th class="num">Contómetro total</th>
+                                    
                                 </tr>
                             </thead>
                             <tbody>
@@ -180,9 +148,7 @@
                                         <td class="num">
                                             <t t-esc="s['pct_str']"/>
                                         </td>
-                                        <td class="num">
-                                            <t t-esc="s['contador_sum']"/>
-                                        </td>
+                                        
                                     </tr>
                                 </t>
                             </tbody>
@@ -228,8 +194,7 @@
                                         <col class="w-date"/>
                                         <col class="w-marca"/>
                                         <col class="w-modelo"/>
-                                        <col class="w-serie"/>
-                                        <col class="w-estado_maquina"/>
+                                        <col class="w-serie"/>                                        
                                         <col class="w-total"/>
                                         <col class="w-info"/>
                                     </colgroup>
@@ -238,9 +203,8 @@
                                             <th class="w-date nowrap">Fecha</th>
                                             <th class="w-marca">Marca</th>
                                             <th class="w-modelo">Modelo</th>
-                                            <th class="w-serie">Serie</th>
-                                            <th class="w-estado_maquina">Estado</th>
-                                            <th class="w-total num">Total contómetro</th>
+                                            <th class="w-serie">Serie</th>                                            
+                                            <th class="w-total num">Contómetro</th>
                                             <th class="w-info">Informe técnico</th>
                                         </tr>
                                     </thead>
@@ -258,13 +222,7 @@
                                                 </td>
                                                 <td class="nowrap">
                                                     <t t-esc="r.serie or ''"/>
-                                                </td>
-                                                <td>
-                                                    <span class="badge"
-                                                          t-att-class="'badge ' + (estado_badges.get(r.estado_maquina,'b-sin_revisar'))">
-                                                        <t t-esc="estado_labels.get(r.id) or r.estado_maquina"/>
-                                                    </span>
-                                                </td>
+                                                </td>                                               
                                                 <td class="num">
                                                     <t t-esc="r.contador_total or 0"/>
                                                 </td>
