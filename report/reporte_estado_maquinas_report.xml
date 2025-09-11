@@ -1,294 +1,239 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Formato de papel A4 apaisado mejorado -->
+    <!-- Formato de papel A4 apaisado con márgenes contenidos -->
     <record id="paperformat_landscape_a4" model="report.paperformat">
-        <field name="name">A4 Landscape SAT Premium</field>
+        <field name="name">A4 Landscape SAT</field>
         <field name="default" eval="False"/>
         <field name="format">A4</field>
         <field name="orientation">Landscape</field>
-        <field name="margin_top">8</field>
-        <field name="margin_bottom">8</field>
-        <field name="margin_left">6</field>
-        <field name="margin_right">6</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
         <field name="header_line" eval="False"/>
+        <!-- Opcional en algunos entornos: controla espaciado de header -->
         <field name="header_spacing">0</field>
-        <field name="dpi">90</field>
+        <!-- <field name="dpi">96</field> -->
     </record>
 
     <!-- Acción del reporte PDF -->
     <record id="action_reporte_estado_maquinas_pdf" model="ir.actions.report">
-        <field name="name">📊 Reporte Estado de Máquinas</field>
+        <field name="name">Reporte de Estado de Máquinas</field>
         <field name="model">reporte.estado.maquina</field>
         <field name="report_type">qweb-pdf</field>
-        <field name="report_name">sat.reporte_estado_maquinas_premium_pdf</field>
-        <field name="report_file">sat.reporte_estado_maquinas_premium_pdf</field>
+        <field name="report_name">sat.reporte_estado_maquinas_pdf</field>
+        <field name="report_file">sat.reporte_estado_maquinas_pdf</field>
         <field name="paperformat_id" ref="sat.paperformat_landscape_a4"/>
         <field name="print_report_name">
-            'Reporte_Estado_Maquinas_%s_%s' % (
-                (object.semana_reporte or 'S').replace('/', '_'),
-                (object.fecha_generacion.strftime('%Y%m%d') if object.fecha_generacion else 'Sin_Fecha')
-            )
+            'Reporte_Estado_Maquinas_%s' % (object.semana_reporte or object.fecha_generacion or '')
         </field>
         <field name="binding_type">report</field>
-        <field name="attachment_use" eval="False"/>
     </record>
 
-    <!-- Plantilla QWeb del PDF Premium -->
-    <template id="reporte_estado_maquinas_premium_pdf" name="Reporte Premium Estado de Máquinas">
+    <!-- Plantilla QWeb del PDF -->
+    <template id="reporte_estado_maquinas_pdf" name="Reporte Estado de Máquinas">
         <t t-call="web.html_container">
-            <!-- Recorremos los docs por compatibilidad, pero renderizamos todo en una sola página -->
-            <t t-foreach="docs" t-as="doc">
-                <t t-call="web.external_layout">
-                    <!-- Asegurar variables que pueden faltar en report_values -->
-                    <t t-set="company" t-value="env.company"/>
-                    <t t-set="fecha_actual" t-value="(data.get('date_print') if data else False) or (datetime.datetime.now().strftime('%d/%m/%Y %H:%M'))"/>
-                    <t t-set="total_equipos" t-value="len(docs)"/>
-                    <!-- Backups por si el AbstractModel usa otras claves -->
-                    <t t-set="estado_badges_data" t-value="estado_badges or {}"/>
-                    <t t-set="estado_labels_data" t-value="estado_labels or {}"/>
-                    <t t-set="informes_limpios_data" t-value="informes_limpios or {}"/>
+            <t t-call="web.external_layout">
 
+                <!-- Precalcular estilo de tarjeta según estado global -->
+                <t t-set="card_style">
+                    <t t-if="kpis['estado_global'] == 'excelente'">border-color:#86efac;background:#dcfce7</t>
+                    <t t-elif="kpis['estado_global'] == 'bueno'">border-color:#fde047;background:#fef9c3</t>
+                    <t t-elif="kpis['estado_global'] == 'regular'">border-color:#fdba74;background:#ffedd5</t>
+                    <t t-else="">border-color:#fca5a5;background:#fee2e2</t>
+                </t>
+
+                <div class="page">
                     <style>
-                        /* Nota: las fuentes externas pueden no cargarse en wkhtmltopdf/Chromium sin internet */
-                        :root {
-                            --primary: #2563eb;
-                            --secondary: #64748b;
-                            --success: #059669;
-                            --warning: #d97706;
-                            --danger: #dc2626;
-                            --info: #0891b2;
+                        /* ====== Reglas de impresión y paginado ====== */
+                        @page { size: A4 landscape; }
+                        /* Evitar que se corten cabeceras/filas entre páginas */
+                        thead { display: table-header-group; }
+                        tfoot { display: table-footer-group; }
+                        tr, .no-break { page-break-inside: avoid; break-inside: avoid; }
+                        .section { page-break-inside: avoid; break-inside: avoid; }
+                        /* Margen interno general para que nada se “pegue” a los bordes */
+                        .wrap { padding: 6px 4px; }
 
-                            --gray-50: #f8fafc;
-                            --gray-100: #f1f5f9;
-                            --gray-200: #e2e8f0;
-                            --gray-300: #cbd5e1;
-                            --gray-400: #94a3b8;
-                            --gray-500: #64748b;
-                            --gray-600: #475569;
-                            --gray-700: #334155;
-                            --gray-800: #1e293b;
-                            --gray-900: #0f172a;
-
-                            --radius: 8px;
-                            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-                            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+                        /* ====== Tokens y escala tipográfica ====== */
+                        :root{
+                            --dark:#111827; --muted:#6b7280; --border:#e5e7eb;
+                            --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --info:#3b82f6;
+                            --card:#f8fafc;
                         }
-                        body {
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-                            font-size: 12px; line-height: 1.5; color: var(--gray-700);
+                        body { font-size: 12px; line-height: 1.25; color: var(--dark); }
+                        h1,h2,h3 { margin: 0; }
+
+                        /* ====== Componentes ====== */
+                        .tiny{font-size:10px;color:var(--muted);}
+                        .muted{color:var(--muted);}
+                        .sec-title{margin:12px 0 6px 0; font-weight:700; font-size:14px;}
+
+                        .kpis{display:flex; gap:10px; margin-top:10px;}
+                        .kpi{flex:1; border:1px solid var(--border); border-radius:8px; padding:8px 10px; }
+                        .kpi .t{font-size:11px;color:var(--muted); margin-bottom:2px;}
+                        .kpi .v{font-size:18px;font-weight:700;}
+
+                        .card{background:var(--card); border:1px solid var(--border);
+                              border-radius:8px; padding:8px 10px; margin:10px 0;}
+                        .badge{display:inline-block;padding:3px 8px;border-radius:14px;
+                               font-size:11px;font-weight:700;color:#fff; vertical-align:middle;}
+                        .b-ok{background:var(--ok);} .b-warn{background:var(--warn);}
+                        .b-bad{background:var(--bad);} .b-info{background:var(--info);}
+
+                        /* ====== Tablas robustas para PDF ====== */
+                        table.main{
+                            width:100%;
+                            border-collapse:collapse;
+                            table-layout:fixed;   /* Controla desbordes y asegura ajuste */
+                            margin-top:8px;
                         }
-                        .page { background: #fff; }
-                        .report-header {
-                            background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
-                            color: #fff; padding: 20px; border-radius: var(--radius) var(--radius) 0 0;
-                            box-shadow: var(--shadow-lg);
+                        table.main th, table.main td{
+                            border:1px solid var(--border);
+                            padding:5px 6px;
+                            vertical-align:top;
+                            word-wrap:break-word;
+                            overflow-wrap:break-word;
+                            hyphens:auto;
                         }
-                        .report-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
-                        .report-subtitle { font-size: 12px; display: flex; justify-content: space-between; }
-                        .kpis-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0; }
-                        .kpi-card { background: #fff; border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); border-left: 4px solid var(--primary); }
-                        .kpi-label { font-size: 10px; color: var(--gray-500); font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
-                        .kpi-value { font-size: 24px; font-weight: 700; color: var(--gray-800); }
-                        .kpi-subtitle { font-size: 10px; color: var(--gray-500); margin-top: 2px; }
-                        .progress-bar { height: 6px; background: var(--gray-200); border-radius: 3px; overflow: hidden; margin-top: 6px; }
-                        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--info)); }
+                        table.main thead th{
+                            background:#1f2937; color:#fff; font-weight:700;
+                        }
+                        .num{text-align:right; white-space:nowrap;}
+                        .nowrap{white-space:nowrap;}
+                        .w-date{width: 14%;}
+                        .w-marca{width: 10%;}
+                        .w-modelo{width: 14%;}
+                        .w-serie{width: 15%;}
+                        .w-estado{width: 12%;}
+                        .w-total{width: 12%;}
+                        .w-info{width: 23%;}
 
-                        .section { margin: 16px 0; background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-                        .section-header { background: var(--gray-50); padding: 12px 14px; border-bottom: 1px solid var(--gray-200); }
-                        .section-title { font-size: 14px; font-weight: 700; color: var(--gray-800); display: flex; gap: 6px; align-items: center; }
-                        .table-container { overflow-x: auto; }
-                        table.modern-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-                        .modern-table thead th { background: var(--gray-800); color: #fff; padding: 10px; text-transform: uppercase; font-size: 10px; }
-                        .modern-table tbody tr { border-bottom: 1px solid var(--gray-200); }
-                        .modern-table tbody tr:nth-child(even) { background: var(--gray-50); }
-                        .modern-table td, .modern-table th { padding: 8px; }
+                        /* Ligeras filas “zebra” sin sobrecargar tinta */
+                        tbody tr:nth-child(odd) td { background: #fbfdff; }
 
-                        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; color: #fff; }
-                        .badge-success { background: var(--success); }
-                        .badge-warning { background: var(--warning); }
-                        .badge-danger { background: var(--danger); }
-                        .badge-info { background: var(--info); }
-
-                        .status-card { margin: 16px 0; border-radius: var(--radius); padding: 16px; text-align: center; }
-                        .status-excellent { background: #dcfce7; border: 2px solid #86efac; color: #065f46; }
-                        .status-good { background: #fef3c7; border: 2px solid #fde047; color: #92400e; }
-                        .status-regular { background: #ffedd5; border: 2px solid #fdba74; color: #9a3412; }
-                        .status-poor { background: #fee2e2; border: 2px solid #fca5a5; color: #991b1b; }
-
-                        .report-footer { text-align: center; padding: 14px; color: var(--gray-500); font-size: 10px; border-top: 1px solid var(--gray-200); background: var(--gray-50); }
-                        .icon-chart::before { content: "📊"; margin-right: 6px; }
-                        .icon-status::before { content: "📈"; margin-right: 6px; }
-                        .icon-detail::before { content: "📋"; margin-right: 6px; }
-                        .icon-time::before { content: "⏰"; margin-right: 6px; }
-                        .icon-company::before { content: "🏢"; margin-right: 6px; }
+                        /* Encabezado superior con división sutil */
+                        .header {
+                            padding:6px 0 10px 0; border-bottom:1px solid var(--border);
+                        }
                     </style>
 
-                    <div class="page">
-                        <!-- Encabezado -->
-                        <div class="report-header">
-                            <div class="report-title">
-                                <span class="icon-chart"></span> Reporte Ejecutivo - Estado de Máquinas
-                            </div>
-                            <div class="report-subtitle">
-                                <div><span class="icon-company"></span><t t-esc="(company and company.display_name) or 'SAT Company'"/></div>
-                                <div><span class="icon-time"></span><t t-esc="fecha_actual"/></div>
-                            </div>
-                        </div>
-
-                        <!-- KPIs -->
-                        <div class="kpis-container">
-                            <div class="kpi-card">
-                                <div class="kpi-label">Total Equipos</div>
-                                <div class="kpi-value"><t t-esc="kpis.get('total', total_equipos)"/></div>
-                                <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-label">Equipos Operativos</div>
-                                <div class="kpi-value"><t t-esc="kpis.get('operativos', 0)"/></div>
-                                <div class="kpi-subtitle"><t t-esc="kpis.get('pct_operativos_str', '0%')"/></div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" t-att-style="'width: ' + str(int(round(kpis.get('operativos',0)*100.0/max(1,kpis.get('total',total_equipos))))) + '%;'"></div>
-                                </div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-label">Con Problemas</div>
-                                <div class="kpi-value"><t t-esc="kpis.get('problemas', 0)"/></div>
-                                <div class="kpi-subtitle">Requieren atención</div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-label">Sin Revisar</div>
-                                <div class="kpi-value"><t t-esc="kpis.get('sin_revisar', 0)"/></div>
-                                <div class="kpi-subtitle">Pendientes de inspección</div>
-                            </div>
-                        </div>
-
-                        <!-- Estado Global -->
-                        <t t-set="status_class">
-                            <t t-if="kpis.get('estado_global') == 'excelente'">status-excellent</t>
-                            <t t-elif="kpis.get('estado_global') == 'bueno'">status-good</t>
-                            <t t-elif="kpis.get('estado_global') == 'regular'">status-regular</t>
-                            <t t-else="">status-poor</t>
-                        </t>
-                        <div t-att-class="'status-card ' + status_class">
-                            <div style="font-size:16px; font-weight:700;">
-                                <t t-esc="kpis.get('badge_text', 'Estado no definido')"/>
-                            </div>
-                            <div style="font-size:12px; opacity:.8;">
-                                Operativos: <t t-esc="kpis.get('pct_operativos_str', '0%')"/> del total
-                            </div>
-                        </div>
-
-                        <!-- Distribución por Estados -->
-                        <div class="section">
-                            <div class="section-header">
-                                <div class="section-title"><span class="icon-status"></span>Distribución por Estados</div>
-                            </div>
-                            <div class="table-container">
-                                <table class="modern-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Estado</th>
-                                            <th style="text-align:right;">Cantidad</th>
-                                            <th style="text-align:right;">Porcentaje</th>
-                                            <th style="text-align:right;">Contómetro Total</th>
-                                            <th style="text-align:center;">Tendencia</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-foreach="by_state or []" t-as="s">
-                                            <tr>
-                                                <td><strong t-esc="s.get('label', 'N/A')"/></td>
-                                                <td style="text-align:right;"><t t-esc="s.get('qty', 0)"/></td>
-                                                <td style="text-align:right;"><t t-esc="s.get('pct_str', '0%')"/></td>
-                                                <td style="text-align:right;"><t t-esc="'{:,}'.format(s.get('contador_sum', 0))"/></td>
-                                                <td style="text-align:center;">
-                                                    <div class="progress-bar" style="width: 60px; margin: 0 auto;">
-                                                        <div class="progress-fill" t-att-style="'width: ' + str(min(s.get('qty', 0) * 10, 100)) + '%;'"></div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </t>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Detalle de Equipos -->
-                        <div class="section">
-                            <div class="section-header">
-                                <div class="section-title"><span class="icon-detail"></span>Detalle de Equipos (<t t-esc="len(docs)"/> registros)</div>
-                            </div>
-                            <div class="table-container">
-                                <table class="modern-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Fecha</th>
-                                            <th>Marca</th>
-                                            <th>Modelo</th>
-                                            <th>N° Serie</th>
-                                            <th style="text-align:center;">Estado</th>
-                                            <th style="text-align:right;">Contómetro</th>
-                                            <th>Informe Técnico</th>
-                                            <th style="text-align:center;">Prioridad</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-foreach="docs" t-as="r">
-                                            <tr>
-                                                <td><t t-esc="r.fecha_generacion or 'Sin fecha'"/></td>
-                                                <td><strong t-esc="r.marca or 'N/A'"/></td>
-                                                <td t-esc="r.modelo or 'N/A'"/>
-                                                <td>
-                                                    <code style="background: var(--gray-100); padding: 2px 6px; border-radius: 4px; font-size: 10px;">
-                                                        <t t-esc="r.serie or 'N/A'"/>
-                                                    </code>
-                                                </td>
-                                                <td style="text-align:center;">
-                                                    <t t-set="bcls">
-                                                        <t t-if="estado_badges_data.get(r.estado_maquina) == 'b-ok'">badge-success</t>
-                                                        <t t-elif="estado_badges_data.get(r.estado_maquina) == 'b-warn'">badge-warning</t>
-                                                        <t t-elif="estado_badges_data.get(r.estado_maquina) == 'b-bad'">badge-danger</t>
-                                                        <t t-else="">badge-info</t>
-                                                    </t>
-                                                    <span t-att-class="'badge ' + bcls">
-                                                        <t t-esc="estado_labels_data.get(r.id) or r.estado_maquina or 'N/A'"/>
-                                                    </span>
-                                                </td>
-                                                <td style="text-align:right;"><strong t-esc="r.contador_total or 0"/></td>
-                                                <td>
-                                                    <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                                                         t-att-title="informes_limpios_data.get(r.id) or ''">
-                                                        <t t-esc="informes_limpios_data.get(r.id) or 'Sin informe'"/>
-                                                    </div>
-                                                </td>
-                                                <td style="text-align:center;">
-                                                    <t t-if="r.estado_maquina in ['con_problemas', 'partes']">
-                                                        <span style="color: var(--danger); font-weight: bold;">🚨 Alta</span>
-                                                    </t>
-                                                    <t t-elif="r.estado_maquina == 'sin_revisar'">
-                                                        <span style="color: var(--warning); font-weight: bold;">⚠️ Media</span>
-                                                    </t>
-                                                    <t t-else=""><span style="color: var(--success);">✅ Baja</span></t>
-                                                </td>
-                                            </tr>
-                                        </t>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Footer -->
-                        <div class="report-footer">
-                            <div style="margin-bottom: 6px;"><strong>SAT - Sistema de Administración Técnica</strong></div>
-                            <div>
-                                Generado automáticamente • Odoo 18 • <t t-esc="fecha_actual"/> •
-                                Página <span class="page">1</span> de <span class="topage">1</span>
-                            </div>
+                    <!-- Encabezado -->
+                    <div class="header wrap no-break">
+                        <h2 style="font-weight:700;">📊 Reporte Ejecutivo – Estado de Máquinas</h2>
+                        <div class="tiny">
+                            Impreso: <t t-esc="date_print"/> — Compañía: <t t-esc="company.display_name"/>
                         </div>
                     </div>
 
-                </t>
+                    <!-- KPIs (no se parten) -->
+                    <div class="kpis wrap no-break">
+                        <div class="kpi">
+                            <div class="t">Total equipos</div>
+                            <div class="v" t-esc="kpis['total']"/>
+                        </div>
+                        <div class="kpi">
+                            <div class="t">Operativos (lista + alquilada)</div>
+                            <div class="v">
+                                <t t-esc="kpis['operativos']"/>
+                                <span class="tiny">(<t t-esc="kpis['pct_operativos_str']"/>)</span>
+                            </div>
+                        </div>
+                        <div class="kpi">
+                            <div class="t">Con problemas (problemas + partes)</div>
+                            <div class="v" t-esc="kpis['problemas']"/>
+                        </div>
+                        <div class="kpi">
+                            <div class="t">Sin revisar</div>
+                            <div class="v" t-esc="kpis['sin_revisar']"/>
+                        </div>
+                    </div>
+
+                    <!-- Estado global -->
+                    <div class="wrap">
+                        <div class="card no-break" t-att-style="card_style">
+                            <strong t-esc="kpis['badge_text']"/>
+                            <span class="tiny"> — Operativos: <t t-esc="kpis['pct_operativos_str']"/></span>
+                        </div>
+                    </div>
+
+                    <!-- Distribución por estados -->
+                    <div class="wrap section">
+                        <div class="sec-title">Distribución por estados</div>
+                        <table class="main">
+                            <thead>
+                                <tr>
+                                    <th>Estado</th>
+                                    <th class="num">Cantidad</th>
+                                    <th class="num">%</th>
+                                    <th class="num">Contómetro total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="by_state" t-as="s">
+                                    <tr>
+                                        <td><t t-esc="s['label']"/></td>
+                                        <td class="num"><t t-esc="s['qty']"/></td>
+                                        <td class="num"><t t-esc="s['pct_str']"/></td>
+                                        <td class="num"><t t-esc="s['contador_sum']"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Detalle de equipos (cabecera repetida por página) -->
+                    <div class="wrap section">
+                        <div class="sec-title">Detalle de equipos</div>
+                        <table class="main">
+                            <!-- Definimos anchos con colgroup para evitar desbordes -->
+                            <colgroup>
+                                <col class="w-date"/>
+                                <col class="w-marca"/>
+                                <col class="w-modelo"/>
+                                <col class="w-serie"/>
+                                <col class="w-estado"/>
+                                <col class="w-total"/>
+                                <col class="w-info"/>
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th class="w-date nowrap">Fecha</th>
+                                    <th class="w-marca">Marca</th>
+                                    <th class="w-modelo">Modelo</th>
+                                    <th class="w-serie">Serie</th>
+                                    <th class="w-estado">Estado</th>
+                                    <th class="w-total num">Total contómetro</th>
+                                    <th class="w-info">Informe técnico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="docs" t-as="r">
+                                    <tr>
+                                        <td class="nowrap"><t t-esc="(r.fecha_generacion or '')"/></td>
+                                        <td><t t-esc="(r.marca or '')"/></td>
+                                        <td><t t-esc="(r.modelo or '')"/></td>
+                                        <td class="nowrap"><t t-esc="(r.serie or '')"/></td>
+                                        <td>
+                                            <span class="badge"
+                                                  t-att-class="'badge ' + (estado_badges.get(r.estado_maquina,'b-info'))">
+                                                <t t-esc="estado_labels.get(r.id) or r.estado_maquina"/>
+                                            </span>
+                                        </td>
+                                        <td class="num"><t t-esc="(r.contador_total or 0)"/></td>
+                                        <td><t t-esc="informes_limpios.get(r.id) or ''"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="tiny wrap" style="margin-top:8px;">
+                        Generado automáticamente por SAT · Odoo 18
+                    </div>
+                </div>
+
             </t>
         </t>
     </template>
