@@ -189,8 +189,10 @@
                                                 <!-- Botón que abre el registro -->
                                                 <td>
                                                     <a class="btn"
-                                                       t-attf-href="${base_url}/web#id=${r.id}&amp;model=reporte.estado.maquina&amp;view_type=form"
-                                                       target="_blank">Ver información</a>
+   t-attf-href="#{base_url}/web#id=#{r.id}&amp;model=reporte.estado.maquina&amp;view_type=form"
+   target="_blank">Ver información
+   </a>
+
                                                 </td>
                                             </tr>
                                         </t>
