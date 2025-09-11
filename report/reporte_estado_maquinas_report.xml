@@ -2,7 +2,18 @@
 <odoo>
 
     <!-- Acción del reporte PDF -->
-    <record id="action_reporte_estado_maquinas_pdf" model="ir.actions.report"> <field name="name">Reporte de Estado de Máquinas</field> <field name="model">reporte.estado.maquina</field> <field name="report_type">qweb-pdf</field> <field name="report_name">sat.reporte_estado_maquinas_pdf</field> <field name="report_file">sat.reporte_estado_maquinas_pdf</field> <field name="paperformat_id" ref="sat.paperformat_landscape_a4"/> <field name="print_report_name"> 'Reporte_Estado_Maquinas_%s' % (object.semana_reporte or object.fecha_generacion or '') </field> <field name="binding_type">report</field> </record>
+    <record id="action_reporte_estado_maquinas_pdf" model="ir.actions.report">
+        <field name="name">Reporte de Estado de Máquinas</field>
+        <field name="model">reporte.estado.maquina</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sat.reporte_estado_maquinas_pdf</field>
+        <field name="report_file">sat.reporte_estado_maquinas_pdf</field>
+        <field name="paperformat_id" ref="sat.paperformat_landscape_a4"/>
+        <field name="print_report_name">
+            'Reporte_Estado_Maquinas_%s' % (object.semana_reporte or object.fecha_generacion or '')
+        </field>
+        <field name="binding_type">report</field>
+    </record>
 
     <!-- Plantilla QWeb -->
     <template id="reporte_estado_maquinas_pdf" name="Reporte Estado de Máquinas">
