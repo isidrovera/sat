@@ -120,12 +120,8 @@
                     </style>
                     <!-- Encabezado -->
                     <div class="report-header wrap no-break">
-                        <h2 style="font-weight:800;">📊 Reporte Ejecutivo – Estado de Máquinas</h2>
-                        <div class="tiny">
-                            Impreso:
-                            <t t-esc="date_print"/> — Compañía:
-                            <t t-esc="company.display_name"/>
-                        </div>
+                        <h2 style="font-weight:800;">📊 Estado de Máquinas Alquiler</h2>
+                        
                     </div>
                     <!-- KPIs -->
                     <div class="kpis wrap no-break">
@@ -159,44 +155,7 @@
                             <div class="val" t-esc="kpis['sin_revisar']"/>
                         </div>
                     </div>
-                    <!-- Estado global -->
-                    <div class="wrap">
-                        <div class="alert no-break" t-att-style="card_style">
-                            <strong style="font-weight:800;">
-                                <t t-esc="kpis['badge_text']"/>
-                            </strong>
-                            <span class="tiny"> — Operativos:
-                                <t t-esc="kpis['pct_operativos_str']"/>
-                            </span>
-                        </div>
-                    </div>
-                    <!-- Leyenda de estados -->
-                    <div class="wrap no-break" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
-                        <span class="chip">
-                            <span class="badge b-lista">Lista</span> Inventario listo
-                        </span>
-                        <span class="chip">
-                            <span class="badge b-revisada">Revisada</span> Check técnico OK
-                        </span>
-                        <span class="chip">
-                            <span class="badge b-sin_revisar">Sin Revisar</span> Pendiente evaluación
-                        </span>
-                        <span class="chip">
-                            <span class="badge b-con_problemas">Con Problemas</span> Requiere atención
-                        </span>
-                        <span class="chip">
-                            <span class="badge b-partes">De Partes</span> Uso como repuestos
-                        </span>
-                        <span class="chip">
-                            <span class="badge b-alquilada">Alquilada</span> En servicio
-                        </span>
-                        <span class="chip">
-                            <span class="badge b-externo">Externo</span> Tercero
-                        </span>
-                        <span class="chip">
-                            <span class="badge b-vendida">Vendida</span> Histórico
-                        </span>
-                    </div>
+                   
                     <!-- Distribución por estados (tabla de totales) -->
                     <div class="wrap">
                         <div class="sec-title">Distribución por estados</div>
