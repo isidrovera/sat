@@ -1032,140 +1032,255 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
 
     def _crear_hoja_resumen(self, workbook, reportes):
         """
-        Crea hoja de resumen ejecutivo con diseño profesional
+        Crea dashboard ejecutivo moderno con métricas visuales y KPIs
         """
         import xlwt
-        worksheet = workbook.add_sheet('Resumen Ejecutivo')
+        from datetime import datetime
         
-        # Usar los mismos colores personalizados definidos anteriormente
+        worksheet = workbook.add_sheet('Dashboard Ejecutivo')
         
-        # Estilos para el resumen
+        # ESTILOS MODERNOS
+        # Header principal - gradiente simulado
         title_style = xlwt.easyxf(
             'pattern: pattern solid, fore_colour dark_header;'
-            'font: bold 1, height 400, colour white;'
-            'align: horiz center'
+            'font: bold 1, height 500, colour white, name Arial;'
+            'align: horiz center, vert center'
         )
-
-        subtitle_style = xlwt.easyxf('font: bold 1, height 280; align: horiz center')
-        header_resumen = xlwt.easyxf('pattern: pattern solid, fore_colour dark_header; font: bold 1, colour white; align: horiz center; borders: left thin, right thin, top thin, bottom thin')
         
-        # Estilos específicos por estado para el resumen
-        lista_summary = xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin; align: horiz center')
-        revisada_summary = xlwt.easyxf('pattern: pattern solid, fore_colour revisada_color; borders: left thin, right thin, top thin, bottom thin; align: horiz center')
-        sin_revisar_summary = xlwt.easyxf('pattern: pattern solid, fore_colour sin_revisar_color; borders: left thin, right thin, top thin, bottom thin; align: horiz center')
-        con_problemas_summary = xlwt.easyxf('pattern: pattern solid, fore_colour con_problemas_color; borders: left thin, right thin, top thin, bottom thin; align: horiz center')
-        partes_summary = xlwt.easyxf('pattern: pattern solid, fore_colour partes_color; borders: left thin, right thin, top thin, bottom thin; align: horiz center')
-        alquilada_summary = xlwt.easyxf('pattern: pattern solid, fore_colour alquilada_color; borders: left thin, right thin, top thin, bottom thin; align: horiz center')
+        # Subtítulos con tipografía moderna
+        subtitle_style = xlwt.easyxf(
+            'font: bold 1, height 320, colour dark_header, name Arial;'
+            'align: horiz center, vert center'
+        )
         
-        number_summary = xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0')
+        # Cards de métricas (estilo tarjetas)
+        card_header = xlwt.easyxf(
+            'pattern: pattern solid, fore_colour light_header;'
+            'font: bold 1, height 280, name Arial;'
+            'align: horiz center, vert center;'
+            'borders: left medium, right medium, top medium, bottom thin'
+        )
         
-        # Título principal
-        worksheet.write_merge(0, 0, 0, 6, 'REPORTE EJECUTIVO - ESTADO DE INVENTARIO', title_style)
-        worksheet.write_merge(1, 1, 0, 6, f'Fecha de Generación: {fields.Date.context_today(self)}', subtitle_style)
+        card_value = xlwt.easyxf(
+            'pattern: pattern solid, fore_colour light_header;'
+            'font: bold 1, height 400, colour dark_header, name Arial;'
+            'align: horiz center, vert center;'
+            'borders: left medium, right medium, top thin, bottom medium',
+            num_format_str='#,##0'
+        )
         
-        # Espacio
-        row = 3
+        # Indicadores de estado (semáforo visual)
+        status_excellent = xlwt.easyxf(
+            'pattern: pattern solid, fore_colour lista_color;'
+            'font: bold 1, height 240, name Arial;'
+            'align: horiz center, vert center;'
+            'borders: left thin, right thin, top thin, bottom thin'
+        )
         
-        # Encabezados del resumen
-        worksheet.write(row, 0, 'ESTADO', header_resumen)
-        worksheet.write(row, 1, 'CANTIDAD', header_resumen)
-        worksheet.write(row, 2, 'PORCENTAJE', header_resumen)
-        #worksheet.write(row, 3, 'CONTADOR B/N', header_resumen)
-        #worksheet.write(row, 4, 'CONTADOR COLOR', header_resumen)
-        #worksheet.write(row, 5, 'CONTADOR SCANNER', header_resumen)
-        worksheet.write(row, 3, 'OBSERVACIONES', header_resumen)
-        row += 1
+        status_good = xlwt.easyxf(
+            'pattern: pattern solid, fore_colour revisada_color;'
+            'font: bold 1, height 240, name Arial;'
+            'align: horiz center, vert center;'
+            'borders: left thin, right thin, top thin, bottom thin'
+        )
         
-        # Agrupar datos por estado
-        estados_data = {}
+        status_warning = xlwt.easyxf(
+            'pattern: pattern solid, fore_colour con_problemas_color;'
+            'font: bold 1, height 240, name Arial;'
+            'align: horiz center, vert center;'
+            'borders: left thin, right thin, top thin, bottom thin'
+        )
+        
+        status_critical = xlwt.easyxf(
+            'pattern: pattern solid, fore_colour partes_color;'
+            'font: bold 1, height 240, name Arial;'
+            'align: horiz center, vert center;'
+            'borders: left thin, right thin, top thin, bottom thin'
+        )
+        
+        # HEADER DEL DASHBOARD
+        fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
+        worksheet.write_merge(0, 1, 0, 8, '📊 DASHBOARD EJECUTIVO - INVENTARIO DE EQUIPOS', title_style)
+        worksheet.write_merge(2, 2, 0, 8, f'Actualizado: {fecha_actual}', subtitle_style)
+        
+        # Establecer altura de filas para el header
+        worksheet.row(0).height = 800
+        worksheet.row(1).height = 400
+        worksheet.row(2).height = 400
+        
+        # PROCESAR DATOS
         total_maquinas = len(reportes)
+        estados_data = {}
         
         for reporte in reportes:
             estado = reporte.estado_maquina
             if estado not in estados_data:
-                estados_data[estado] = {
-                    'cantidad': 0
-                    #'contador_bn': 0,
-                    #'contador_color': 0,
-                    #'contador_scanner': 0
-                }
+                estados_data[estado] = {'cantidad': 0, 'contador_total': 0}
             estados_data[estado]['cantidad'] += 1
-            #estados_data[estado]['contador_bn'] += reporte.contador_bn or 0
-            #estados_data[estado]['contador_color'] += reporte.contador_color or 0
-            #estados_data[estado]['contador_scanner'] += reporte.contador_scanner or 0
+            estados_data[estado]['contador_total'] += reporte.contador_total or 0
         
-        # Mapeo de estilos por estado
-        estado_styles = {
-            'lista': lista_summary,
-            'revisada': revisada_summary, 
-            'sin_revisar': sin_revisar_summary,
-            'con_problemas': con_problemas_summary,
-            'partes': partes_summary,
-            'alquilada': alquilada_summary
-        }
-        
-        # Observaciones por estado
-        observaciones = {
-            'lista': 'Listas para alquilar',
-            'revisada': 'Revisadas, necesitan preparación',
-            'sin_revisar': 'Requieren revisión técnica',
-            'con_problemas': 'ATENCIÓN: Requieren reparación',
-            'partes': 'CRÍTICO: Para repuestos',
-            'alquilada': 'En servicio con clientes'
-        }
-        
-        # Escribir datos del resumen
-        for estado, data in estados_data.items():
-            estado_label = dict(reportes._fields['estado_maquina'].selection).get(estado, estado)
-            porcentaje = round((data['cantidad'] / total_maquinas) * 100, 1)
-            style = estado_styles.get(estado, sin_revisar_summary)
-            
-            worksheet.write(row, 0, estado_label, style)
-            worksheet.write(row, 1, data['cantidad'], style)
-            worksheet.write(row, 2, f"{porcentaje}%", style)
-           # worksheet.write(row, 3, data['contador_bn'], number_summary)
-           # worksheet.write(row, 4, data['contador_color'], number_summary)
-            #worksheet.write(row, 5, data['contador_scanner'], number_summary)
-            worksheet.write(row, 3, observaciones.get(estado, ''), style)
-            row += 1
-        
-        # Total general
-        row += 1
-        worksheet.write(row, 0, 'TOTAL GENERAL', header_resumen)
-        worksheet.write(row, 1, total_maquinas, header_resumen)
-        worksheet.write(row, 2, '100%', header_resumen)
-        #worksheet.write(row, 3, sum(r.contador_bn or 0 for r in reportes), number_summary)
-        #worksheet.write(row, 4, sum(r.contador_color or 0 for r in reportes), number_summary)
-        #worksheet.write(row, 5, sum(r.contador_scanner or 0 for r in reportes), number_summary)
-        worksheet.write(row, 3, f'{total_maquinas} equipos en inventario', header_resumen)
-        
-        # Indicadores clave (KPIs)
-        row += 3
-        worksheet.write_merge(row, row, 0, 6, 'INDICADORES CLAVE', title_style)
+        # SECCIÓN DE KPIs PRINCIPALES (Cards estilo dashboard)
+        row = 4
+        worksheet.write_merge(row, row, 0, 8, '🎯 MÉTRICAS CLAVE', subtitle_style)
         row += 2
         
-        # Calcular KPIs
-        equipos_operativos = estados_data.get('lista', {}).get('cantidad', 0) + estados_data.get('alquilada', {}).get('cantidad', 0)
-        equipos_problema = estados_data.get('con_problemas', {}).get('cantidad', 0) + estados_data.get('partes', {}).get('cantidad', 0)
+        # Crear cards de KPIs
+        equipos_operativos = (estados_data.get('lista', {}).get('cantidad', 0) + 
+                            estados_data.get('alquilada', {}).get('cantidad', 0))
+        equipos_problema = (estados_data.get('con_problemas', {}).get('cantidad', 0) + 
+                        estados_data.get('partes', {}).get('cantidad', 0))
+        sin_revisar = estados_data.get('sin_revisar', {}).get('cantidad', 0)
         
-        kpis = [
-            ('Equipos Operativos', equipos_operativos, f"{round((equipos_operativos/total_maquinas)*100, 1)}%"),
-            ('Equipos con Problemas', equipos_problema, f"{round((equipos_problema/total_maquinas)*100, 1)}%"),
-            ('Equipos Sin Revisar', estados_data.get('sin_revisar', {}).get('cantidad', 0), f"{round((estados_data.get('sin_revisar', {}).get('cantidad', 0)/total_maquinas)*100, 1)}%")
-            #('Total Copias B/N', sum(r.contador_bn or 0 for r in reportes), 'Acumulado'),
-            #('Total Copias Color', sum(r.contador_color or 0 for r in reportes), 'Acumulado')
-        ]
+        # Card 1: Total Equipos
+        worksheet.write_merge(row, row, 0, 1, 'TOTAL EQUIPOS', card_header)
+        worksheet.write_merge(row+1, row+1, 0, 1, total_maquinas, card_value)
         
-        for kpi_name, kpi_value, kpi_percent in kpis:
-            worksheet.write(row, 0, kpi_name, header_resumen)
-            worksheet.write(row, 1, kpi_value, number_summary)
-            worksheet.write(row, 2, kpi_percent, header_resumen)
+        # Card 2: Operativos
+        worksheet.write_merge(row, row, 2, 3, 'OPERATIVOS', card_header)
+        worksheet.write_merge(row+1, row+1, 2, 3, equipos_operativos, card_value)
+        
+        # Card 3: Con Problemas
+        worksheet.write_merge(row, row, 4, 5, 'CON PROBLEMAS', card_header)
+        worksheet.write_merge(row+1, row+1, 4, 5, equipos_problema, card_value)
+        
+        # Card 4: Sin Revisar
+        worksheet.write_merge(row, row, 6, 7, 'SIN REVISAR', card_header)
+        worksheet.write_merge(row+1, row+1, 6, 7, sin_revisar, card_value)
+        
+        row += 4
+        
+        # SEMÁFORO DE SALUD DEL INVENTARIO
+        worksheet.write_merge(row, row, 0, 8, '🚦 INDICADOR DE SALUD', subtitle_style)
+        row += 2
+        
+        # Calcular porcentajes para el semáforo
+        pct_operativos = (equipos_operativos / total_maquinas * 100) if total_maquinas > 0 else 0
+        pct_problemas = (equipos_problema / total_maquinas * 100) if total_maquinas > 0 else 0
+        
+        # Determinar estado general
+        if pct_operativos >= 80:
+            estado_general = "🟢 EXCELENTE"
+            semaforo_style = status_excellent
+        elif pct_operativos >= 60:
+            estado_general = "🟡 BUENO" 
+            semaforo_style = status_good
+        elif pct_operativos >= 40:
+            estado_general = "🟠 REGULAR"
+            semaforo_style = status_warning
+        else:
+            estado_general = "🔴 CRÍTICO"
+            semaforo_style = status_critical
+        
+        worksheet.write_merge(row, row+1, 0, 8, f'{estado_general} ({pct_operativos:.1f}% Operativo)', semaforo_style)
+        worksheet.row(row).height = 600
+        worksheet.row(row+1).height = 400
+        
+        row += 3
+        
+        # TABLA DE ESTADOS DETALLADA (Moderna)
+        worksheet.write_merge(row, row, 0, 8, '📈 DISTRIBUCIÓN POR ESTADOS', subtitle_style)
+        row += 2
+        
+        # Headers de la tabla moderna
+        modern_header = xlwt.easyxf(
+            'pattern: pattern solid, fore_colour dark_header;'
+            'font: bold 1, colour white, height 260, name Arial;'
+            'align: horiz center, vert center;'
+            'borders: left thin, right thin, top thin, bottom thin'
+        )
+        
+        headers_modernos = ['ESTADO', 'CANTIDAD', '%', 'CONTÓMETRO TOTAL', 'ESTADO VISUAL', 'ACCIÓN REQUERIDA']
+        for col, header in enumerate(headers_modernos):
+            worksheet.write(row, col, header, modern_header)
+        row += 1
+        
+        # Mapeo de estilos modernos por estado
+        estado_configs = {
+            'lista': {
+                'style': status_excellent,
+                'visual': '🟢 LISTO',
+                'accion': 'Disponible para alquiler'
+            },
+            'revisada': {
+                'style': status_good,
+                'visual': '🔵 REVISADO',
+                'accion': 'Preparar para inventario'
+            },
+            'sin_revisar': {
+                'style': status_warning,
+                'visual': '⚪ PENDIENTE',
+                'accion': 'Revisar técnicamente'
+            },
+            'con_problemas': {
+                'style': status_warning,
+                'visual': '🟠 ATENCIÓN',
+                'accion': 'Reparación requerida'
+            },
+            'partes': {
+                'style': status_critical,
+                'visual': '🔴 CRÍTICO',
+                'accion': 'Solo para repuestos'
+            },
+            'alquilada': {
+                'style': status_good,
+                'visual': '🔵 ACTIVO',
+                'accion': 'En servicio'
+            }
+        }
+        
+        # Escribir datos de estados
+        for estado, data in estados_data.items():
+            config = estado_configs.get(estado, estado_configs['sin_revisar'])
+            estado_label = dict(reportes._fields['estado_maquina'].selection).get(estado, estado)
+            porcentaje = round((data['cantidad'] / total_maquinas) * 100, 1)
+            
+            worksheet.write(row, 0, estado_label, config['style'])
+            worksheet.write(row, 1, data['cantidad'], config['style'])
+            worksheet.write(row, 2, f"{porcentaje}%", config['style'])
+            worksheet.write(row, 3, data['contador_total'], config['style'])
+            worksheet.write(row, 4, config['visual'], config['style'])
+            worksheet.write(row, 5, config['accion'], config['style'])
             row += 1
         
-        # Ajustar anchos de columna
-        column_widths = [4500, 3000, 3000, 4000, 4000, 4000, 6000]
-        for col, width in enumerate(column_widths):
-            worksheet.col(col).width = width
+        # RESUMEN FINAL
+        row += 2
+        worksheet.write_merge(row, row, 0, 8, '💡 RECOMENDACIONES', subtitle_style)
+        row += 1
+        
+        # Generar recomendaciones automáticas
+        recomendaciones = []
+        if sin_revisar > total_maquinas * 0.3:
+            recomendaciones.append("🔍 Priorizar revisión técnica de equipos pendientes")
+        if equipos_problema > 0:
+            recomendaciones.append("🔧 Programar mantenimiento para equipos con problemas")
+        if pct_operativos < 50:
+            recomendaciones.append("⚠️ Nivel crítico: aumentar equipos operativos")
+        if not recomendaciones:
+            recomendaciones.append("✅ Inventario en buen estado general")
+        
+        for recomendacion in recomendaciones:
+            worksheet.write_merge(row, row, 0, 8, recomendacion, status_good)
+            row += 1
+        
+        # AUTO-AJUSTE DE COLUMNAS MODERNO
+        column_data_analysis = [
+            ['ESTADO'] + [dict(reportes._fields['estado_maquina'].selection).get(e, e) for e in estados_data.keys()],
+            ['CANTIDAD'] + [str(d['cantidad']) for d in estados_data.values()],
+            ['%'] + [f"{round((d['cantidad']/total_maquinas)*100, 1)}%" for d in estados_data.values()],
+            ['CONTÓMETRO TOTAL'] + [str(d['contador_total']) for d in estados_data.values()],
+            ['ESTADO VISUAL'] + ['🟢 ESTADO'],
+            ['ACCIÓN REQUERIDA'] + ['Acción necesaria a realizar']
+        ]
+        
+        for col_idx, col_data in enumerate(column_data_analysis):
+            if col_idx < len(headers_modernos):
+                max_length = max(len(str(item)) for item in col_data)
+                optimal_width = max(2500, min(max_length * 280 + 800, 8000))
+                worksheet.col(col_idx).width = optimal_width
+        
+        # Ajustar columnas restantes si las hay
+        for remaining_col in range(len(headers_modernos), 9):
+            worksheet.col(remaining_col).width = 2000
 
     def _crear_hoja_detalle(self, workbook, reportes):
         """
@@ -1277,19 +1392,67 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
 
             row += 1
 
-        # ANCHOS DE COLUMNA optimizados para los 7 campos
-        column_widths = [
-            3000,   # Fecha
-            3500,   # Marca
-            4000,   # Modelo
-            3500,   # Serie
-            3500,   # Estado
-            3500,   # Total Contómetro
-            15000   # Informe Técnico (más ancho para texto multilínea)
-        ]
+        # AUTO-AJUSTAR ANCHOS DE COLUMNA basado en contenido
+        def auto_adjust_column_width(worksheet, col_index, header_text, data_values):
+            """Calcula el ancho óptimo para una columna basado en su contenido"""
+            # Calcular ancho basado en el encabezado
+            header_width = len(header_text) * 256 + 500
+            
+            # Calcular ancho basado en el contenido más largo
+            max_content_width = 0
+            for value in data_values:
+                if value:
+                    # Para texto multilínea, tomar la línea más larga
+                    if isinstance(value, str) and '\n' in value:
+                        lines = value.split('\n')
+                        content_width = max(len(line) for line in lines) * 256
+                    else:
+                        content_width = len(str(value)) * 256
+                    max_content_width = max(max_content_width, content_width)
+            
+            # Usar el mayor entre encabezado y contenido, con límites
+            optimal_width = max(header_width, max_content_width)
+            
+            # Establecer límites mínimos y máximos
+            min_width = 2000   # Mínimo 2000 unidades
+            max_width = 20000  # Máximo 20000 unidades (para evitar columnas demasiado anchas)
+            
+            return max(min_width, min(optimal_width, max_width))
+
+        # Recopilar datos de cada columna para calcular anchos
+        column_data = [[] for _ in range(len(headers))]
         
-        for col, width in enumerate(column_widths):
-            worksheet.col(col).width = width
+        # Llenar datos de cada columna (re-iterar reportes para recopilar datos)
+        for reporte in reportes:
+            estado = reporte.estado_maquina
+            
+            # Recopilar datos por columna
+            column_data[0].append(str(reporte.fecha_generacion or ''))  # Fecha
+            column_data[1].append(reporte.marca or '')                   # Marca
+            column_data[2].append(reporte.modelo or '')                  # Modelo
+            column_data[3].append(reporte.serie or '')                   # Serie
+            column_data[4].append(dict(reporte._fields['estado_maquina'].selection).get(estado, ''))  # Estado
+            column_data[5].append(str(reporte.contador_total or 0))      # Total Contómetro
+            
+            # Informe técnico procesado
+            informe_html = reporte.informe_tecnico or ''
+            informe_limpio = re.sub('<br[^>]*>', '\n', informe_html)
+            informe_limpio = re.sub('<p[^>]*>', '\n', informe_limpio)
+            informe_limpio = re.sub('</p>', '\n', informe_limpio)
+            informe_limpio = re.sub('<div[^>]*>', '\n', informe_limpio)
+            informe_limpio = re.sub('</div>', '\n', informe_limpio)
+            informe_limpio = re.sub('<.*?>', '', informe_limpio)
+            informe_limpio = informe_limpio.replace('&nbsp;', ' ').replace('&amp;', '&')
+            lineas = [linea.strip() for linea in informe_limpio.split('\n') if linea.strip()]
+            informe_organizado = '\n'.join(lineas)
+            if len(informe_organizado) > 1000:
+                informe_organizado = informe_organizado[:997] + '...'
+            column_data[6].append(informe_organizado)                    # Informe Técnico
+        
+        # Aplicar auto-ajuste a cada columna
+        for col_index, header in enumerate(headers):
+            optimal_width = auto_adjust_column_width(worksheet, col_index, header, column_data[col_index])
+            worksheet.col(col_index).width = optimal_width
 
         # CONGELAR PANELES PARA NAVEGACIÓN
         worksheet.set_panes_frozen(True)
