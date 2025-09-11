@@ -370,10 +370,7 @@
                                 Reporte Ejecutivo - Estado de Máquinas
                             </div>
                             <div class="report-subtitle">
-                                <div>
-                                    <span class="icon-company"></span>
-                                    <t t-esc="company.display_name or 'SAT Company'"/>
-                                </div>
+                                
                                 <div>
                                     <span class="icon-time"></span>
                                     <t t-esc="fecha_actual"/>
