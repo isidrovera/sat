@@ -18,207 +18,88 @@
             <t t-call="web.external_layout">
                 <!-- Estilo de tarjeta según estado global -->
                 <t t-set="card_style">
-                    <t t-if="kpis['estado_global'] == 'excelente'">border-color:#10b981;background:linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);box-shadow:0 4px 20px rgba(16,185,129,0.15)</t>
-                    <t t-elif="kpis['estado_global'] == 'bueno'">border-color:#f59e0b;background:linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);box-shadow:0 4px 20px rgba(245,158,11,0.15)</t>
-                    <t t-elif="kpis['estado_global'] == 'regular'">border-color:#f97316;background:linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);box-shadow:0 4px 20px rgba(249,115,22,0.15)</t>
-                    <t t-else="">border-color:#ef4444;background:linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);box-shadow:0 4px 20px rgba(239,68,68,0.15)</t>
+                    <t t-if="kpis['estado_global'] == 'excelente'">border-color:#16a34a;background:#dcfce7</t>
+                    <t t-elif="kpis['estado_global'] == 'bueno'">border-color:#f59e0b;background:#fef9c3</t>
+                    <t t-elif="kpis['estado_global'] == 'regular'">border-color:#f97316;background:#ffedd5</t>
+                    <t t-else="">border-color:#dc2626;background:#fee2e2</t>
                 </t>
                 <div class="page">
                     <style>
-                        /* ===== Paleta moderna y tokens ===== */
+                        /* ===== Paleta y Tokens ===== */
                         :root{
-                            --ink:#0f172a;           /* texto principal */
-                            --ink-light:#1e293b;     /* texto secundario oscuro */
-                            --muted:#64748b;          /* texto secundario */
-                            --muted-light:#94a3b8;   /* texto terciario */
-                            --line:#e2e8f0;           /* borde suave */
-                            --line-strong:#cbd5e1;   /* borde más visible */
-                            --panel:#ffffff;          /* panel/card */
-                            --bg-soft:#f8fafc;       /* fondo suave */
-                            --zebra:#f1f5f9;         /* filas alternas */
+                            --ink:#0f172a;        /* texto principal */
+                            --muted:#64748b;      /* texto secundario */
+                            --line:#e2e8f0;       /* borde suave */
+                            --panel:#f8fafc;      /* panel/card */
+                            --zebra:#fbfdff;      /* filas alternas */
 
-                            /* Colores de estado modernos */
-                            --success:#10b981;       /* verde esmeralda */
-                            --success-light:#34d399; /* verde claro */
-                            --info:#3b82f6;          /* azul moderno */
-                            --info-light:#60a5fa;    /* azul claro */
-                            --warning:#f59e0b;       /* ámbar vibrante */
-                            --warning-light:#fbbf24; /* ámbar claro */
-                            --orange:#f97316;        /* naranja moderno */
-                            --orange-light:#fb923c;  /* naranja claro */
-                            --danger:#ef4444;        /* rojo moderno */
-                            --danger-light:#f87171;  /* rojo claro */
-                            --purple:#8b5cf6;        /* púrpura moderno */
-                            --cyan:#06b6d4;          /* cyan moderno */
-                            --gray:#6b7280;          /* gris moderno */
+                            --ok:#16a34a;         /* verde */
+                            --good:#3b82f6;       /* azul */
+                            --warn:#f59e0b;       /* ámbar */
+                            --attn:#f97316;       /* naranja */
+                            --bad:#dc2626;        /* rojo */
 
-                            --thead:#1e293b;         /* cabecera tabla */
-                            --theadText:#ffffff;     /* texto cabecera */
+                            --thead:#0b1220;      /* cabecera tabla */
+                            --theadText:#ffffff;  /* texto cabecera */
                         }
 
-                        /* ===== Tipografía moderna ===== */
-                        body { 
-                            font-size:12px; 
-                            line-height:1.5; 
-                            color:var(--ink); 
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        }
-                        h1,h2,h3 { 
-                            margin:0; 
-                            font-weight:700;
-                            letter-spacing:-0.025em;
-                        }
-                        .wrap { padding:12px 8px; }
-                        .tiny { 
-                            font-size:10px; 
-                            color:var(--muted-light); 
-                            font-weight:500;
-                        }
+                        /* ===== Tipografía / Layout ===== */
+                        body { font-size:12px; line-height:1.28; color:var(--ink); }
+                        h1,h2,h3 { margin:0; }
+                        .wrap { padding:8px 6px; }
+                        .tiny { font-size:10px; color:var(--muted); }
                         .muted { color:var(--muted); }
-                        .sec-title { 
-                            margin:16px 0 10px 0; 
-                            font-weight:700; 
-                            font-size:16px; 
-                            color:var(--ink-light);
-                            letter-spacing:-0.025em;
-                        }
+                        .sec-title { margin:12px 0 6px 0; font-weight:700; font-size:14px; }
 
-                        /* ===== Cards KPI modernos ===== */
-                        .kpis { 
-                            display:flex; 
-                            gap:16px; 
-                            margin-top:16px; 
-                        }
+                        /* ===== Cards KPI ===== */
+                        .kpis { display:flex; gap:10px; margin-top:10px; }
                         .kpi {
-                            flex:1; 
-                            border:1px solid var(--line); 
-                            border-radius:16px;
-                            padding:16px; 
-                            background:var(--panel);
-                            box-shadow:0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-                            transition:all 0.2s ease;
-                            position:relative;
-                            overflow:hidden;
+                            flex:1; border:1px solid var(--line); border-radius:10px;
+                            padding:10px; background:var(--panel);
                         }
-                        .kpi::before {
-                            content:'';
-                            position:absolute;
-                            top:0;
-                            left:0;
-                            right:0;
-                            height:3px;
-                            background:linear-gradient(90deg, var(--info), var(--success));
-                        }
-                        .kpi .head { 
-                            display:flex; 
-                            align-items:center; 
-                            gap:8px; 
-                            color:var(--muted); 
-                            font-size:11px;
-                            font-weight:600;
-                            margin-bottom:8px;
-                        }
-                        .kpi .val { 
-                            font-size:24px; 
-                            font-weight:800; 
-                            color:var(--ink-light);
-                            line-height:1.2;
-                        }
-                        .kpi .sub { 
-                            font-size:10px; 
-                            color:var(--muted); 
-                            margin-top:4px;
-                            font-weight:500;
-                        }
+                        .kpi .head { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:11px; }
+                        .kpi .val { font-size:20px; font-weight:800; margin-top:2px; }
+                        .kpi .sub { font-size:10px; color:var(--muted); }
 
-                        /* ===== Badges modernos ===== */
                         .badge {
-                            display:inline-block; 
-                            padding:4px 12px; 
-                            border-radius:20px;
-                            font-size:10px; 
-                            font-weight:700; 
-                            color:#fff; 
-                            vertical-align:middle;
-                            text-transform:uppercase;
-                            letter-spacing:0.5px;
-                            box-shadow:0 2px 4px rgba(0,0,0,0.1);
+                            display:inline-block; padding:3px 10px; border-radius:999px;
+                            font-size:11px; font-weight:700; color:#fff; vertical-align:middle;
                         }
-                        .b-lista{background:linear-gradient(135deg, var(--success), var(--success-light));}
-                        .b-revisada{background:linear-gradient(135deg, var(--info), var(--info-light));}
-                        .b-sin_revisar{background:linear-gradient(135deg, var(--warning), var(--warning-light));}
-                        .b-con_problemas{background:linear-gradient(135deg, var(--orange), var(--orange-light));}
-                        .b-partes{background:linear-gradient(135deg, var(--danger), var(--danger-light));}
-                        .b-alquilada{background:linear-gradient(135deg, var(--cyan), #22d3ee);}
-                        .b-externo{background:linear-gradient(135deg, var(--purple), #a78bfa);}
-                        .b-vendida{background:linear-gradient(135deg, var(--gray), #9ca3af);}
+                        .b-lista{background:var(--ok);}
+                        .b-revisada{background:var(--good);}
+                        .b-sin_revisar{background:var(--warn);}
+                        .b-con_problemas{background:var(--attn);}
+                        .b-partes{background:var(--bad);}
+                        .b-alquilada{background:#0ea5e9;}
+                        .b-externo{background:#8b5cf6;}
+                        .b-vendida{background:#6b7280;}
 
                         .chip {
-                            display:inline-flex; 
-                            align-items:center; 
-                            gap:8px;
-                            background:var(--panel); 
-                            border:1px solid var(--line); 
-                            border-radius:20px;
-                            padding:6px 12px; 
-                            font-size:10px;
-                            box-shadow:0 1px 2px rgba(0,0,0,0.05);
-                            font-weight:500;
+                            display:inline-flex; align-items:center; gap:6px;
+                            background:#fff; border:1px solid var(--line); border-radius:999px;
+                            padding:3px 8px; font-size:10px;
                         }
 
-                        /* ===== Alert Card moderno ===== */
+                        /* ===== Alert Card (estado global) ===== */
                         .alert {
-                            border:2px solid var(--line); 
-                            border-radius:16px;
-                            padding:16px 20px; 
-                            background:var(--panel);
-                            position:relative;
-                            overflow:hidden;
+                            border:1.5px solid var(--line); border-radius:10px;
+                            padding:10px; background:var(--panel);
                         }
 
-                        /* ===== Tablas modernas ===== */
+                        /* ===== Tablas robustas PDF ===== */
                         table.main {
-                            width:100%; 
-                            border-collapse:collapse; 
-                            table-layout:fixed; 
-                            margin-top:12px;
-                            border-radius:12px;
-                            overflow:hidden;
-                            box-shadow:0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+                            width:100%; border-collapse:collapse; table-layout:fixed; margin-top:8px;
                         }
-                        table.main thead { display: table-header-group; }
+                        table.main thead { display: table-header-group; } /* solo nuestras tablas */
                         table.main th, table.main td {
-                            border:1px solid var(--line); 
-                            padding:12px 10px; 
-                            vertical-align:top;
-                            word-wrap:break-word; 
-                            overflow-wrap:break-word; 
-                            hyphens:auto;
+                            border:1px solid var(--line); padding:6px 7px; vertical-align:top;
+                            word-wrap:break-word; overflow-wrap:break-word; hyphens:auto;
                         }
                         table.main thead th {
-                            background:linear-gradient(135deg, var(--thead), #334155); 
-                            color:var(--theadText); 
-                            font-weight:700;
-                            font-size:11px;
-                            text-transform:uppercase;
-                            letter-spacing:0.5px;
-                            border:none;
+                            background:var(--thead); color:var(--theadText); font-weight:700;
                         }
-                        tbody tr {
-                            transition:background-color 0.2s ease;
-                        }
-                        tbody tr:nth-child(odd) td { 
-                            background:var(--zebra); 
-                        }
-                        tbody tr:hover td {
-                            background:#e0f2fe;
-                        }
-                        .num { 
-                            text-align:right; 
-                            white-space:nowrap; 
-                            font-weight:600;
-                            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-                        }
+                        tbody tr:nth-child(odd) td { background:var(--zebra); }
+                        .num { text-align:right; white-space:nowrap; }
                         .nowrap { white-space:nowrap; }
 
                         /* Anchos columna */
@@ -234,60 +115,9 @@
                         .no-break, tr { page-break-inside: avoid; break-inside: avoid; }
                         .page-break-before { page-break-before: always; break-before: page; }
 
-                        /* Encabezado moderno */
-                        .report-header { 
-                            padding:16px 0 20px 0; 
-                            border-bottom:2px solid var(--line-strong);
-                            background:linear-gradient(135deg, var(--bg-soft) 0%, #ffffff 100%);
-                            border-radius:12px 12px 0 0;
-                            margin-bottom:8px;
-                        }
-                        .report-header h2 {
-                            background:linear-gradient(135deg, var(--info), var(--purple));
-                            -webkit-background-clip:text;
-                            -webkit-text-fill-color:transparent;
-                            background-clip:text;
-                            font-size:24px;
-                            margin-bottom:8px;
-                        }
-
-                        /* Efectos hover y focus para elementos interactivos */
-                        .badge:hover {
-                            transform:translateY(-1px);
-                            box-shadow:0 4px 8px rgba(0,0,0,0.15);
-                        }
-
-                        /* Mejoras para la distribución por estados */
-                        .distribution-table {
-                            background:var(--panel);
-                            border-radius:12px;
-                            overflow:hidden;
-                            box-shadow:0 4px 6px rgba(0,0,0,0.05);
-                        }
-
-                        /* Íconos y elementos decorativos */
-                        .icon {
-                            font-size:16px;
-                            opacity:0.8;
-                        }
-
-                        /* Separadores visuales */
-                        .divider {
-                            height:1px;
-                            background:linear-gradient(90deg, transparent, var(--line), transparent);
-                            margin:20px 0;
-                        }
-
-                        /* Mejoras en el footer */
-                        .footer-info {
-                            border-top:1px solid var(--line);
-                            padding-top:12px;
-                            background:var(--bg-soft);
-                            border-radius:8px;
-                            text-align:center;
-                        }
+                        /* Encabezado de contenido (evita colisión con clases de Odoo) */
+                        .report-header { padding:6px 0 10px 0; border-bottom:1px solid var(--line); }
                     </style>
-
                     <!-- Encabezado -->
                     <div class="report-header wrap no-break">
                         <h2 style="font-weight:800;">📊 Reporte Ejecutivo – Estado de Máquinas</h2>
@@ -297,19 +127,16 @@
                             <t t-esc="company.display_name"/>
                         </div>
                     </div>
-
                     <!-- KPIs -->
                     <div class="kpis wrap no-break">
                         <div class="kpi">
-                            <div class="head">
-                                <span class="icon">🗂️</span>
+                            <div class="head">🗂️
                                 <span>Total equipos</span>
                             </div>
                             <div class="val" t-esc="kpis['total']"/>
                         </div>
                         <div class="kpi">
-                            <div class="head">
-                                <span class="icon">⚙️</span>
+                            <div class="head">⚙️
                                 <span>Operativos (lista + alquilada)</span>
                             </div>
                             <div class="val">
@@ -320,35 +147,31 @@
                             </div>
                         </div>
                         <div class="kpi">
-                            <div class="head">
-                                <span class="icon">🛠️</span>
+                            <div class="head">🛠️
                                 <span>Con problemas (problemas + partes)</span>
                             </div>
                             <div class="val" t-esc="kpis['problemas']"/>
                         </div>
                         <div class="kpi">
-                            <div class="head">
-                                <span class="icon">🔎</span>
+                            <div class="head">🔎
                                 <span>Sin revisar</span>
                             </div>
                             <div class="val" t-esc="kpis['sin_revisar']"/>
                         </div>
                     </div>
-
                     <!-- Estado global -->
                     <div class="wrap">
                         <div class="alert no-break" t-att-style="card_style">
-                            <strong style="font-weight:800; font-size:16px;">
+                            <strong style="font-weight:800;">
                                 <t t-esc="kpis['badge_text']"/>
                             </strong>
-                            <span class="tiny" style="margin-left:12px;"> — Operativos:
+                            <span class="tiny"> — Operativos:
                                 <t t-esc="kpis['pct_operativos_str']"/>
                             </span>
                         </div>
                     </div>
-
                     <!-- Leyenda de estados -->
-                    <div class="wrap no-break" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:10px;">
+                    <div class="wrap no-break" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
                         <span class="chip">
                             <span class="badge b-lista">Lista</span> Inventario listo
                         </span>
@@ -374,47 +197,41 @@
                             <span class="badge b-vendida">Vendida</span> Histórico
                         </span>
                     </div>
-
                     <!-- Distribución por estados (tabla de totales) -->
                     <div class="wrap">
-                        <div class="sec-title">📈 Distribución por estados</div>
-                        <div class="distribution-table">
-                            <table class="main">
-                                <thead>
+                        <div class="sec-title">Distribución por estados</div>
+                        <table class="main">
+                            <thead>
+                                <tr>
+                                    <th>Estado</th>
+                                    <th class="num">Cantidad</th>
+                                    <th class="num">%</th>
+                                    <th class="num">Contómetro total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="by_state" t-as="s" t-key="s['label']">
                                     <tr>
-                                        <th>Estado</th>
-                                        <th class="num">Cantidad</th>
-                                        <th class="num">%</th>
-                                        <th class="num">Contómetro total</th>
+                                        <td>
+                                            <t t-esc="s['label']"/>
+                                        </td>
+                                        <td class="num">
+                                            <t t-esc="s['qty']"/>
+                                        </td>
+                                        <td class="num">
+                                            <t t-esc="s['pct_str']"/>
+                                        </td>
+                                        <td class="num">
+                                            <t t-esc="s['contador_sum']"/>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    <t t-foreach="by_state" t-as="s" t-key="s['label']">
-                                        <tr>
-                                            <td>
-                                                <t t-esc="s['label']"/>
-                                            </td>
-                                            <td class="num">
-                                                <t t-esc="s['qty']"/>
-                                            </td>
-                                            <td class="num">
-                                                <t t-esc="s['pct_str']"/>
-                                            </td>
-                                            <td class="num">
-                                                <t t-esc="s['contador_sum']"/>
-                                            </td>
-                                        </tr>
-                                    </t>
-                                </tbody>
-                            </table>
-                        </div>
+                                </t>
+                            </tbody>
+                        </table>
                     </div>
-
-                    <div class="divider"></div>
-
                     <!-- Detalle de equipos: una TABLA por ESTADO -->
                     <div class="wrap">
-                        <div class="sec-title">📋 Detalle de equipos por estado</div>
+                        <div class="sec-title">Detalle de equipos por estado</div>
                         <!-- Orden y etiquetas a mostrar -->
                         <t t-set="estados_order"
                            t-value="[
@@ -437,7 +254,7 @@
                                 <!-- Salto de página desde el segundo bloque -->
                                 <div t-attf-class="#{'' if primero else 'page-break-before'}"></div>
                                 <t t-set="primero" t-value="False"/>
-                                <div class="sec-title no-break" style="display:flex; align-items:center; gap:12px; margin-top:24px;">
+                                <div class="sec-title no-break" style="display:flex; align-items:center; gap:10px;">
                                     <span>
                                         <t t-esc="label"/>
                                     </span>
@@ -453,7 +270,7 @@
                                         <col class="w-marca"/>
                                         <col class="w-modelo"/>
                                         <col class="w-serie"/>
-                                        <col class="w-estado"/>
+                                        <col class="w-estado_maquina"/>
                                         <col class="w-total"/>
                                         <col class="w-info"/>
                                     </colgroup>
@@ -463,7 +280,7 @@
                                             <th class="w-marca">Marca</th>
                                             <th class="w-modelo">Modelo</th>
                                             <th class="w-serie">Serie</th>
-                                            <th class="w-estado">Estado</th>
+                                            <th class="w-estado_maquina">Estado</th>
                                             <th class="w-total num">Total contómetro</th>
                                             <th class="w-info">Informe técnico</th>
                                         </tr>
@@ -502,9 +319,8 @@
                             </t>
                         </t>
                     </div>
-
-                    <div class="footer-info tiny wrap">
-                        <strong>Generado por Isidro</strong> • Sistema de Gestión de Máquinas
+                    <div class="tiny wrap" style="margin-top:8px;">
+                        Generado por Isidro
                     </div>
                 </div>
             </t>
