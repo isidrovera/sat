@@ -512,7 +512,10 @@
                                         <t t-foreach="docs" t-as="r">
                                             <tr>
                                                 <td>
-                                                    <t t-esc="r.fecha_generacion.strftime('%d/%m/%Y') if r.fecha_generacion else 'Sin fecha'"/>
+                                                    <t t-if="r.fecha_generacion">
+                                                        <t t-esc="r.fecha_generacion"/>
+                                                    </t>
+                                                    <t t-else="">Sin fecha</t>
                                                 </td>
                                                 <td>
                                                     <strong t-esc="r.marca or 'N/A'"/>
@@ -525,22 +528,22 @@
                                                 </td>
                                                 <td style="text-align: center;">
                                                     <t t-set="badge_class">
-                                                        <t t-if="estado_badges.get(r.estado_maquina) == 'b-ok'">badge-success</t>
-                                                        <t t-elif="estado_badges.get(r.estado_maquina) == 'b-warn'">badge-warning</t>
-                                                        <t t-elif="estado_badges.get(r.estado_maquina) == 'b-bad'">badge-danger</t>
+                                                        <t t-if="estado_badges_data.get(r.estado_maquina) == 'b-ok'">badge-success</t>
+                                                        <t t-elif="estado_badges_data.get(r.estado_maquina) == 'b-warn'">badge-warning</t>
+                                                        <t t-elif="estado_badges_data.get(r.estado_maquina) == 'b-bad'">badge-danger</t>
                                                         <t t-else="">badge-info</t>
                                                     </t>
                                                     <span t-att-class="'badge ' + badge_class">
-                                                        <t t-esc="estado_labels.get(r.id) or r.estado_maquina or 'N/A'"/>
+                                                        <t t-esc="estado_labels_data.get(r.id) or r.estado_maquina or 'N/A'"/>
                                                     </span>
                                                 </td>
                                                 <td style="text-align: right;">
-                                                    <strong t-esc="'{:,}'.format(r.contador_total or 0)"/>
+                                                    <strong t-esc="r.contador_total or 0"/>
                                                 </td>
                                                 <td>
                                                     <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                                                         t-att-title="informes_limpios.get(r.id) or ''">
-                                                        <t t-esc="informes_limpios.get(r.id) or 'Sin informe'"/>
+                                                         t-att-title="informes_limpios_data.get(r.id) or ''">
+                                                        <t t-esc="informes_limpios_data.get(r.id) or 'Sin informe'"/>
                                                     </div>
                                                 </td>
                                                 <td style="text-align: center;">
