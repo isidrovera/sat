@@ -1,25 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
-    <!-- Acción del reporte PDF -->
     <record id="action_reporte_estado_maquinas_pdf" model="ir.actions.report">
         <field name="name">Reporte de Estado de Máquinas</field>
         <field name="model">reporte.estado.maquina</field>
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">sat.reporte_estado_maquinas_pdf</field>
         <field name="report_file">sat.reporte_estado_maquinas_pdf</field>
-        <field name="paperformat_id" ref="sat.paperformat_landscape_a4"/>
+        <!-- SIN paperformat_id -->
         <field name="print_report_name">
-            'Reporte_Estado_Maquinas_%s' % (object.semana_reporte or object.fecha_generacion or '')
-        </field>
+        'Reporte_Estado_Maquinas_%s' % (object.semana_reporte or object.fecha_generacion or '')
+    </field>
         <field name="binding_type">report</field>
     </record>
-
     <!-- Plantilla QWeb -->
     <template id="reporte_estado_maquinas_pdf" name="Reporte Estado de Máquinas">
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
-
                 <!-- Estilo de tarjeta según estado global -->
                 <t t-set="card_style">
                     <t t-if="kpis['estado_global'] == 'excelente'">border-color:#16a34a;background:#dcfce7</t>
@@ -27,7 +23,6 @@
                     <t t-elif="kpis['estado_global'] == 'regular'">border-color:#f97316;background:#ffedd5</t>
                     <t t-else="">border-color:#dc2626;background:#fee2e2</t>
                 </t>
-
                 <div class="page">
                     <style>
                         /* ===== Paleta y Tokens ===== */
@@ -123,58 +118,85 @@
                         /* Encabezado de contenido (evita colisión con clases de Odoo) */
                         .report-header { padding:6px 0 10px 0; border-bottom:1px solid var(--line); }
                     </style>
-
                     <!-- Encabezado -->
                     <div class="report-header wrap no-break">
                         <h2 style="font-weight:800;">📊 Reporte Ejecutivo – Estado de Máquinas</h2>
                         <div class="tiny">
-                            Impreso: <t t-esc="date_print"/> — Compañía: <t t-esc="company.display_name"/>
+                            Impreso:
+                            <t t-esc="date_print"/> — Compañía:
+                            <t t-esc="company.display_name"/>
                         </div>
                     </div>
-
                     <!-- KPIs -->
                     <div class="kpis wrap no-break">
                         <div class="kpi">
-                            <div class="head">🗂️ <span>Total equipos</span></div>
+                            <div class="head">🗂️
+                                <span>Total equipos</span>
+                            </div>
                             <div class="val" t-esc="kpis['total']"/>
                         </div>
                         <div class="kpi">
-                            <div class="head">⚙️ <span>Operativos (lista + alquilada)</span></div>
+                            <div class="head">⚙️
+                                <span>Operativos (lista + alquilada)</span>
+                            </div>
                             <div class="val">
                                 <t t-esc="kpis['operativos']"/>
                             </div>
-                            <div class="sub">Operativos: <t t-esc="kpis['pct_operativos_str']"/></div>
+                            <div class="sub">Operativos:
+                                <t t-esc="kpis['pct_operativos_str']"/>
+                            </div>
                         </div>
                         <div class="kpi">
-                            <div class="head">🛠️ <span>Con problemas (problemas + partes)</span></div>
+                            <div class="head">🛠️
+                                <span>Con problemas (problemas + partes)</span>
+                            </div>
                             <div class="val" t-esc="kpis['problemas']"/>
                         </div>
                         <div class="kpi">
-                            <div class="head">🔎 <span>Sin revisar</span></div>
+                            <div class="head">🔎
+                                <span>Sin revisar</span>
+                            </div>
                             <div class="val" t-esc="kpis['sin_revisar']"/>
                         </div>
                     </div>
-
                     <!-- Estado global -->
                     <div class="wrap">
                         <div class="alert no-break" t-att-style="card_style">
-                            <strong style="font-weight:800;"><t t-esc="kpis['badge_text']"/></strong>
-                            <span class="tiny"> — Operativos: <t t-esc="kpis['pct_operativos_str']"/></span>
+                            <strong style="font-weight:800;">
+                                <t t-esc="kpis['badge_text']"/>
+                            </strong>
+                            <span class="tiny"> — Operativos:
+                                <t t-esc="kpis['pct_operativos_str']"/>
+                            </span>
                         </div>
                     </div>
-
                     <!-- Leyenda de estados -->
                     <div class="wrap no-break" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
-                        <span class="chip"><span class="badge b-lista">Lista</span> Inventario listo</span>
-                        <span class="chip"><span class="badge b-revisada">Revisada</span> Check técnico OK</span>
-                        <span class="chip"><span class="badge b-sin_revisar">Sin Revisar</span> Pendiente evaluación</span>
-                        <span class="chip"><span class="badge b-con_problemas">Con Problemas</span> Requiere atención</span>
-                        <span class="chip"><span class="badge b-partes">De Partes</span> Uso como repuestos</span>
-                        <span class="chip"><span class="badge b-alquilada">Alquilada</span> En servicio</span>
-                        <span class="chip"><span class="badge b-externo">Externo</span> Tercero</span>
-                        <span class="chip"><span class="badge b-vendida">Vendida</span> Histórico</span>
+                        <span class="chip">
+                            <span class="badge b-lista">Lista</span> Inventario listo
+                        </span>
+                        <span class="chip">
+                            <span class="badge b-revisada">Revisada</span> Check técnico OK
+                        </span>
+                        <span class="chip">
+                            <span class="badge b-sin_revisar">Sin Revisar</span> Pendiente evaluación
+                        </span>
+                        <span class="chip">
+                            <span class="badge b-con_problemas">Con Problemas</span> Requiere atención
+                        </span>
+                        <span class="chip">
+                            <span class="badge b-partes">De Partes</span> Uso como repuestos
+                        </span>
+                        <span class="chip">
+                            <span class="badge b-alquilada">Alquilada</span> En servicio
+                        </span>
+                        <span class="chip">
+                            <span class="badge b-externo">Externo</span> Tercero
+                        </span>
+                        <span class="chip">
+                            <span class="badge b-vendida">Vendida</span> Histórico
+                        </span>
                     </div>
-
                     <!-- Distribución por estados (tabla de totales) -->
                     <div class="wrap">
                         <div class="sec-title">Distribución por estados</div>
@@ -190,20 +212,26 @@
                             <tbody>
                                 <t t-foreach="by_state" t-as="s" t-key="s['label']">
                                     <tr>
-                                        <td><t t-esc="s['label']"/></td>
-                                        <td class="num"><t t-esc="s['qty']"/></td>
-                                        <td class="num"><t t-esc="s['pct_str']"/></td>
-                                        <td class="num"><t t-esc="s['contador_sum']"/></td>
+                                        <td>
+                                            <t t-esc="s['label']"/>
+                                        </td>
+                                        <td class="num">
+                                            <t t-esc="s['qty']"/>
+                                        </td>
+                                        <td class="num">
+                                            <t t-esc="s['pct_str']"/>
+                                        </td>
+                                        <td class="num">
+                                            <t t-esc="s['contador_sum']"/>
+                                        </td>
                                     </tr>
                                 </t>
                             </tbody>
                         </table>
                     </div>
-
                     <!-- Detalle de equipos: una TABLA por ESTADO -->
                     <div class="wrap">
                         <div class="sec-title">Detalle de equipos por estado</div>
-
                         <!-- Orden y etiquetas a mostrar -->
                         <t t-set="estados_order"
                            t-value="[
@@ -216,28 +244,26 @@
                                ('externo','Externo'),
                                ('vendida','Vendida')
                            ]"/>
-
                         <!-- Control para saltos de página -->
                         <t t-set="primero" t-value="True"/>
-
                         <t t-foreach="estados_order" t-as="st">
                             <t t-set="code" t-value="st[0]"/>
                             <t t-set="label" t-value="st[1]"/>
                             <t t-set="rows" t-value="docs.filtered(lambda r: r.estado_maquina == code)"/>
-
                             <t t-if="rows">
                                 <!-- Salto de página desde el segundo bloque -->
                                 <div t-attf-class="#{'' if primero else 'page-break-before'}"></div>
                                 <t t-set="primero" t-value="False"/>
-
                                 <div class="sec-title no-break" style="display:flex; align-items:center; gap:10px;">
-                                    <span><t t-esc="label"/></span>
+                                    <span>
+                                        <t t-esc="label"/>
+                                    </span>
                                     <span class="badge"
                                           t-att-class="'badge b-' + (code.replace('_','-'))">
-                                        <t t-esc="label"/> — <t t-esc="len(rows)"/> equipo(s)
+                                        <t t-esc="label"/> —
+                                        <t t-esc="len(rows)"/> equipo(s)
                                     </span>
                                 </div>
-
                                 <table class="main">
                                     <colgroup>
                                         <col class="w-date"/>
@@ -262,18 +288,30 @@
                                     <tbody>
                                         <t t-foreach="rows" t-as="r" t-key="r.id">
                                             <tr>
-                                                <td class="nowrap"><t t-esc="r.fecha_generacion or ''"/></td>
-                                                <td><t t-esc="r.marca or ''"/></td>
-                                                <td><t t-esc="r.modelo or ''"/></td>
-                                                <td class="nowrap"><t t-esc="r.serie or ''"/></td>
+                                                <td class="nowrap">
+                                                    <t t-esc="r.fecha_generacion or ''"/>
+                                                </td>
+                                                <td>
+                                                    <t t-esc="r.marca or ''"/>
+                                                </td>
+                                                <td>
+                                                    <t t-esc="r.modelo or ''"/>
+                                                </td>
+                                                <td class="nowrap">
+                                                    <t t-esc="r.serie or ''"/>
+                                                </td>
                                                 <td>
                                                     <span class="badge"
                                                           t-att-class="'badge ' + (estado_badges.get(r.estado_maquina,'b-sin_revisar'))">
                                                         <t t-esc="estado_labels.get(r.id) or r.estado_maquina"/>
                                                     </span>
                                                 </td>
-                                                <td class="num"><t t-esc="r.contador_total or 0"/></td>
-                                                <td><t t-esc="informes_limpios.get(r.id) or ''"/></td>
+                                                <td class="num">
+                                                    <t t-esc="r.contador_total or 0"/>
+                                                </td>
+                                                <td>
+                                                    <t t-esc="informes_limpios.get(r.id) or ''"/>
+                                                </td>
                                             </tr>
                                         </t>
                                     </tbody>
@@ -281,14 +319,11 @@
                             </t>
                         </t>
                     </div>
-
                     <div class="tiny wrap" style="margin-top:8px;">
                         Generado por Isidro
                     </div>
                 </div>
-
             </t>
         </t>
     </template>
-
 </odoo>
