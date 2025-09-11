@@ -1,23 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Formato de papel A4 apaisado con márgenes contenidos -->
+    <!-- A4 apaisado con margen inferior un poco mayor para el pie -->
     <record id="paperformat_landscape_a4" model="report.paperformat">
         <field name="name">A4 Landscape SAT</field>
         <field name="default" eval="False"/>
         <field name="format">A4</field>
         <field name="orientation">Landscape</field>
         <field name="margin_top">10</field>
-        <field name="margin_bottom">10</field>
+        <field name="margin_bottom">14</field> <!-- antes 10 -->
         <field name="margin_left">8</field>
         <field name="margin_right">8</field>
         <field name="header_line" eval="False"/>
-        <!-- Opcional en algunos entornos: controla espaciado de header -->
         <field name="header_spacing">0</field>
-        <!-- <field name="dpi">96</field> -->
     </record>
 
-    <!-- Acción del reporte PDF -->
     <record id="action_reporte_estado_maquinas_pdf" model="ir.actions.report">
         <field name="name">Reporte de Estado de Máquinas</field>
         <field name="model">reporte.estado.maquina</field>
@@ -31,12 +28,11 @@
         <field name="binding_type">report</field>
     </record>
 
-    <!-- Plantilla QWeb del PDF -->
     <template id="reporte_estado_maquinas_pdf" name="Reporte Estado de Máquinas">
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
 
-                <!-- Precalcular estilo de tarjeta según estado global -->
+                <!-- Estilo de tarjeta por estado global -->
                 <t t-set="card_style">
                     <t t-if="kpis['estado_global'] == 'excelente'">border-color:#86efac;background:#dcfce7</t>
                     <t t-elif="kpis['estado_global'] == 'bueno'">border-color:#fde047;background:#fef9c3</t>
@@ -46,32 +42,22 @@
 
                 <div class="page">
                     <style>
-                        /* ====== Reglas de impresión y paginado ====== */
-                        @page { size: A4 landscape; }
-                        /* Evitar que se corten cabeceras/filas entre páginas */
-                        thead { display: table-header-group; }
-                        tfoot { display: table-footer-group; }
-                        tr, .no-break { page-break-inside: avoid; break-inside: avoid; }
-                        .section { page-break-inside: avoid; break-inside: avoid; }
-                        /* Margen interno general para que nada se “pegue” a los bordes */
-                        .wrap { padding: 6px 4px; }
+                        /* ====== NO USAR reglas globales de thead/tfoot ====== */
+                        /* Nada de @page ni de thead/tfoot globales */
 
-                        /* ====== Tokens y escala tipográfica ====== */
                         :root{
                             --dark:#111827; --muted:#6b7280; --border:#e5e7eb;
                             --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --info:#3b82f6;
                             --card:#f8fafc;
                         }
                         body { font-size: 12px; line-height: 1.25; color: var(--dark); }
-                        h1,h2,h3 { margin: 0; }
-
-                        /* ====== Componentes ====== */
+                        .wrap { padding: 6px 4px; }
                         .tiny{font-size:10px;color:var(--muted);}
                         .muted{color:var(--muted);}
                         .sec-title{margin:12px 0 6px 0; font-weight:700; font-size:14px;}
 
                         .kpis{display:flex; gap:10px; margin-top:10px;}
-                        .kpi{flex:1; border:1px solid var(--border); border-radius:8px; padding:8px 10px; }
+                        .kpi{flex:1; border:1px solid var(--border); border-radius:8px; padding:8px 10px;}
                         .kpi .t{font-size:11px;color:var(--muted); margin-bottom:2px;}
                         .kpi .v{font-size:18px;font-weight:700;}
 
@@ -82,11 +68,11 @@
                         .b-ok{background:var(--ok);} .b-warn{background:var(--warn);}
                         .b-bad{background:var(--bad);} .b-info{background:var(--info);}
 
-                        /* ====== Tablas robustas para PDF ====== */
+                        /* ====== Tablas: reglas ESPECÍFICAS ====== */
                         table.main{
                             width:100%;
                             border-collapse:collapse;
-                            table-layout:fixed;   /* Controla desbordes y asegura ajuste */
+                            table-layout:fixed;
                             margin-top:8px;
                         }
                         table.main th, table.main td{
@@ -100,6 +86,9 @@
                         table.main thead th{
                             background:#1f2937; color:#fff; font-weight:700;
                         }
+                        /* Repetir cabecera SOLO en tus tablas, no global */
+                        table.main thead { display: table-header-group; }
+
                         .num{text-align:right; white-space:nowrap;}
                         .nowrap{white-space:nowrap;}
                         .w-date{width: 14%;}
@@ -109,25 +98,26 @@
                         .w-estado{width: 12%;}
                         .w-total{width: 12%;}
                         .w-info{width: 23%;}
-
-                        /* Ligeras filas “zebra” sin sobrecargar tinta */
                         tbody tr:nth-child(odd) td { background: #fbfdff; }
 
-                        /* Encabezado superior con división sutil */
-                        .header {
+                        /* Evitar cortes feos en bloques clave */
+                        .no-break, tr { page-break-inside: avoid; break-inside: avoid; }
+
+                        /* Encabezado propio de la sección (evita clase .header) */
+                        .report-header {
                             padding:6px 0 10px 0; border-bottom:1px solid var(--border);
                         }
                     </style>
 
-                    <!-- Encabezado -->
-                    <div class="header wrap no-break">
+                    <!-- Encabezado de contenido del reporte -->
+                    <div class="report-header wrap no-break">
                         <h2 style="font-weight:700;">📊 Reporte Ejecutivo – Estado de Máquinas</h2>
                         <div class="tiny">
                             Impreso: <t t-esc="date_print"/> — Compañía: <t t-esc="company.display_name"/>
                         </div>
                     </div>
 
-                    <!-- KPIs (no se parten) -->
+                    <!-- KPIs -->
                     <div class="kpis wrap no-break">
                         <div class="kpi">
                             <div class="t">Total equipos</div>
@@ -159,7 +149,7 @@
                     </div>
 
                     <!-- Distribución por estados -->
-                    <div class="wrap section">
+                    <div class="wrap">
                         <div class="sec-title">Distribución por estados</div>
                         <table class="main">
                             <thead>
@@ -171,7 +161,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <t t-foreach="by_state" t-as="s">
+                                <t t-foreach="by_state" t-as="s" t-key="s['label']">
                                     <tr>
                                         <td><t t-esc="s['label']"/></td>
                                         <td class="num"><t t-esc="s['qty']"/></td>
@@ -183,11 +173,10 @@
                         </table>
                     </div>
 
-                    <!-- Detalle de equipos (cabecera repetida por página) -->
-                    <div class="wrap section">
+                    <!-- Detalle de equipos -->
+                    <div class="wrap">
                         <div class="sec-title">Detalle de equipos</div>
                         <table class="main">
-                            <!-- Definimos anchos con colgroup para evitar desbordes -->
                             <colgroup>
                                 <col class="w-date"/>
                                 <col class="w-marca"/>
@@ -209,7 +198,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <t t-foreach="docs" t-as="r">
+                                <t t-foreach="docs" t-as="r" t-key="r.id">
                                     <tr>
                                         <td class="nowrap"><t t-esc="(r.fecha_generacion or '')"/></td>
                                         <td><t t-esc="(r.marca or '')"/></td>
