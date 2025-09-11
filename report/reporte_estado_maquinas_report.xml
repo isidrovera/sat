@@ -19,160 +19,151 @@
         <field name="name">Reporte de Estado de Máquinas</field>
         <field name="model">reporte.estado.maquina</field>
         <field name="report_type">qweb-pdf</field>
-        <!-- Debe matchear con t-name de la plantilla -->
+        <!-- report_name = módulo.id_del_template -->
         <field name="report_name">sat.reporte_estado_maquinas_pdf</field>
         <field name="report_file">sat.reporte_estado_maquinas_pdf</field>
         <field name="paperformat_id" ref="sat.paperformat_landscape_a4"/>
         <field name="print_report_name">
             'Reporte_Estado_Maquinas_%s' % (object.semana_reporte or object.fecha_generacion or '')
         </field>
-        <field name="binding_model_id" ref="model_reporte_estado_maquina"/>
-        <field name="binding_type">report</field>
+        <!-- binding_model_id opcional; si quieres, usa el generado: ref="model_reporte_estado_maquina" -->
     </record>
 
-    <!-- Plantilla QWeb -->
+    <!-- Template QWeb: el id es lo que se usa en report_name -->
     <template id="reporte_estado_maquinas_pdf" name="Reporte Estado de Máquinas">
-        <!-- IMPORTANTE: el t-name debe coincidir con report_name -->
-        <t t-name="sat.reporte_estado_maquinas_pdf">
-            <t t-call="web.html_container">
-                <t t-call="web.external_layout">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
 
-                    <div class="page">
-                        <style>
-                            :root{
-                                --dark:#111827; --muted:#6b7280; --border:#e5e7eb;
-                                --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --info:#3b82f6;
-                                --card:#f8fafc;
-                            }
-                            .kpi{border:1px solid var(--border); border-radius:8px; padding:10px;}
-                            .kpi .t{font-size:12px;color:var(--muted);}
-                            .kpi .v{font-size:22px;font-weight:700;}
-                            .badge{display:inline-block;padding:4px 10px;border-radius:14px;
-                                   font-size:12px;font-weight:700;color:#fff;}
-                            .b-ok{background:var(--ok);} .b-warn{background:var(--warn);}
-                            .b-bad{background:var(--bad);} .b-info{background:var(--info);}
-                            table.main{width:100%; border-collapse:collapse; margin-top:10px;}
-                            table.main th, table.main td{border:1px solid var(--border); padding:6px;}
-                            table.main thead th{background:var(--dark); color:#fff;}
-                            .sec-title{margin:14px 0 6px 0; font-weight:700; font-size:15px;}
-                            .card{background:var(--card); border:1px solid var(--border);
-                                  border-radius:8px; padding:10px; margin:12px 0;}
-                            .tiny{font-size:11px;color:var(--muted);}
-                        </style>
+                <div class="page">
+                    <style>
+                        :root{
+                            --dark:#111827; --muted:#6b7280; --border:#e5e7eb;
+                            --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --info:#3b82f6;
+                            --card:#f8fafc;
+                        }
+                        .kpi{border:1px solid var(--border); border-radius:8px; padding:10px;}
+                        .kpi .t{font-size:12px;color:var(--muted);}
+                        .kpi .v{font-size:22px;font-weight:700;}
+                        .badge{display:inline-block;padding:4px 10px;border-radius:14px;
+                               font-size:12px;font-weight:700;color:#fff;}
+                        .b-ok{background:var(--ok);} .b-warn{background:var(--warn);}
+                        .b-bad{background:var(--bad);} .b-info{background:var(--info);}
+                        table.main{width:100%; border-collapse:collapse; margin-top:10px;}
+                        table.main th, table.main td{border:1px solid var(--border); padding:6px;}
+                        table.main thead th{background:var(--dark); color:#fff;}
+                        .sec-title{margin:14px 0 6px 0; font-weight:700; font-size:15px;}
+                        .card{background:var(--card); border:1px solid var(--border);
+                              border-radius:8px; padding:10px; margin:12px 0;}
+                        .tiny{font-size:11px;color:var(--muted);}
+                    </style>
 
-                        <!-- Encabezado -->
-                        <div style="padding:8px 0 14px 0; border-bottom:1px solid var(--border);">
-                            <h2 style="margin:0; font-weight:700;">
-                                📊 Reporte Ejecutivo – Estado de Máquinas
-                            </h2>
-                            <div class="tiny">
-                                Impreso: <t t-esc="date_print"/> — Compañía: <t t-esc="company.display_name"/>
-                            </div>
-                        </div>
-
-                        <!-- KPIs -->
-                        <div style="display:flex; gap:12px; margin-top:14px;">
-                            <div class="kpi" style="flex:1">
-                                <div class="t">Total equipos</div>
-                                <div class="v" t-esc="kpis['total']"/>
-                            </div>
-                            <div class="kpi" style="flex:1">
-                                <div class="t">Operativos (lista + alquilada)</div>
-                                <div class="v">
-                                    <t t-esc="kpis['operativos']"/>
-                                    <span class="tiny">(<t t-esc="kpis['pct_operativos_str']"/>)</span>
-                                </div>
-                            </div>
-                            <div class="kpi" style="flex:1">
-                                <div class="t">Con problemas (problemas + partes)</div>
-                                <div class="v" t-esc="kpis['problemas']"/>
-                            </div>
-                            <div class="kpi" style="flex:1">
-                                <div class="t">Sin revisar</div>
-                                <div class="v" t-esc="kpis['sin_revisar']"/>
-                            </div>
-                        </div>
-
-                        <!-- Estado global -->
-                        <div class="card"
-                             t-att-style="'border-color:#86efac;background:#dcfce7' if kpis['estado_global']=='excelente' \
-                                          else ('border-color:#fde047;background:#fef9c3' if kpis['estado_global']=='bueno' \
-                                          else ('border-color:#fdba74;background:#ffedd5' if kpis['estado_global']=='regular' \
-                                          else 'border-color:#fca5a5;background:#fee2e2'))">
-                            <strong t-esc="kpis['badge_text']"/>
-                            <span class="tiny"> — Operativos: <t t-esc="kpis['pct_operativos_str']"/></span>
-                        </div>
-
-                        <!-- Distribución por estados -->
-                        <div class="sec-title">Distribución por estados</div>
-                        <table class="main">
-                            <thead>
-                                <tr>
-                                    <th>Estado</th>
-                                    <th style="text-align:right">Cantidad</th>
-                                    <th style="text-align:right">%</th>
-                                    <th style="text-align:right">Contómetro total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-foreach="by_state" t-as="s">
-                                    <tr>
-                                        <td>
-                                            <t t-esc="s['label']"/>
-                                        </td>
-                                        <td style="text-align:right"><t t-esc="s['qty']"/></td>
-                                        <td style="text-align:right"><t t-esc="s['pct_str']"/></td>
-                                        <td style="text-align:right"><t t-esc="s['contador_sum']"/></td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </table>
-
-                        <!-- Detalle por equipo -->
-                        <div class="sec-title">Detalle de equipos</div>
-                        <table class="main">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Marca</th>
-                                    <th>Modelo</th>
-                                    <th>Serie</th>
-                                    <th>Estado</th>
-                                    <th style="text-align:right">Total contómetro</th>
-                                    <th>Informe técnico</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-foreach="docs" t-as="r">
-                                    <tr>
-                                        <td><t t-esc="(r.fecha_generacion or '')"/></td>
-                                        <td><t t-esc="(r.marca or '')"/></td>
-                                        <td><t t-esc="(r.modelo or '')"/></td>
-                                        <td><t t-esc="(r.serie or '')"/></td>
-                                        <td>
-                                            <t t-set="lbl" t-value="estado_labels.get(r.id)"/>
-                                            <span class="badge"
-                                                  t-att-class="'badge ' + (estado_badges.get(r.estado_maquina,'b-info'))">
-                                                <t t-esc="lbl or r.estado_maquina"/>
-                                            </span>
-                                        </td>
-                                        <td style="text-align:right"><t t-esc="(r.contador_total or 0)"/></td>
-                                        <td>
-                                            <t t-set="txt" t-value="informes_limpios.get(r.id)"/>
-                                            <t t-esc="txt or ''"/>
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </table>
-
-                        <div class="tiny" style="margin-top:10px;">
-                            Generado automáticamente por SAT · Odoo 18
+                    <!-- Encabezado -->
+                    <div style="padding:8px 0 14px 0; border-bottom:1px solid var(--border);">
+                        <h2 style="margin:0; font-weight:700;">
+                            📊 Reporte Ejecutivo – Estado de Máquinas
+                        </h2>
+                        <div class="tiny">
+                            Impreso: <t t-esc="date_print"/> — Compañía: <t t-esc="company.display_name"/>
                         </div>
                     </div>
 
-                </t>
+                    <!-- KPIs -->
+                    <div style="display:flex; gap:12px; margin-top:14px;">
+                        <div class="kpi" style="flex:1">
+                            <div class="t">Total equipos</div>
+                            <div class="v" t-esc="kpis['total']"/>
+                        </div>
+                        <div class="kpi" style="flex:1">
+                            <div class="t">Operativos (lista + alquilada)</div>
+                            <div class="v">
+                                <t t-esc="kpis['operativos']"/>
+                                <span class="tiny">(<t t-esc="kpis['pct_operativos_str']"/>)</span>
+                            </div>
+                        </div>
+                        <div class="kpi" style="flex:1">
+                            <div class="t">Con problemas (problemas + partes)</div>
+                            <div class="v" t-esc="kpis['problemas']"/>
+                        </div>
+                        <div class="kpi" style="flex:1">
+                            <div class="t">Sin revisar</div>
+                            <div class="v" t-esc="kpis['sin_revisar']"/>
+                        </div>
+                    </div>
+
+                    <!-- Estado global -->
+                    <div class="card"
+                         t-att-style="'border-color:#86efac;background:#dcfce7' if kpis['estado_global']=='excelente' \
+                                      else ('border-color:#fde047;background:#fef9c3' if kpis['estado_global']=='bueno' \
+                                      else ('border-color:#fdba74;background:#ffedd5' if kpis['estado_global']=='regular' \
+                                      else 'border-color:#fca5a5;background:#fee2e2'))">
+                        <strong t-esc="kpis['badge_text']"/>
+                        <span class="tiny"> — Operativos: <t t-esc="kpis['pct_operativos_str']"/></span>
+                    </div>
+
+                    <!-- Distribución por estados -->
+                    <div class="sec-title">Distribución por estados</div>
+                    <table class="main">
+                        <thead>
+                            <tr>
+                                <th>Estado</th>
+                                <th style="text-align:right">Cantidad</th>
+                                <th style="text-align:right">%</th>
+                                <th style="text-align:right">Contómetro total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="by_state" t-as="s">
+                                <tr>
+                                    <td><t t-esc="s['label']"/></td>
+                                    <td style="text-align:right"><t t-esc="s['qty']"/></td>
+                                    <td style="text-align:right"><t t-esc="s['pct_str']"/></td>
+                                    <td style="text-align:right"><t t-esc="s['contador_sum']"/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <!-- Detalle -->
+                    <div class="sec-title">Detalle de equipos</div>
+                    <table class="main">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Marca</th>
+                                <th>Modelo</th>
+                                <th>Serie</th>
+                                <th>Estado</th>
+                                <th style="text-align:right">Total contómetro</th>
+                                <th>Informe técnico</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="docs" t-as="r">
+                                <tr>
+                                    <td><t t-esc="(r.fecha_generacion or '')"/></td>
+                                    <td><t t-esc="(r.marca or '')"/></td>
+                                    <td><t t-esc="(r.modelo or '')"/></td>
+                                    <td><t t-esc="(r.serie or '')"/></td>
+                                    <td>
+                                        <span class="badge"
+                                              t-att-class="'badge ' + (estado_badges.get(r.estado_maquina,'b-info'))">
+                                            <t t-esc="estado_labels.get(r.id) or r.estado_maquina"/>
+                                        </span>
+                                    </td>
+                                    <td style="text-align:right"><t t-esc="(r.contador_total or 0)"/></td>
+                                    <td><t t-esc="informes_limpios.get(r.id) or ''"/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <div class="tiny" style="margin-top:10px;">
+                        Generado automáticamente por SAT · Odoo 18
+                    </div>
+                </div>
+
             </t>
-        </template>
+        </t>
+    </template>
 
 </odoo>
