@@ -181,9 +181,9 @@
                                                 <td class="num"><t t-esc="r.contador_total or 0"/></td>
                                                 <!-- Fecha de creación del registro -->
                                                 <td>
-                                                    <t t-esc="(fields.Datetime.context_timestamp(env, r.create_date)).strftime('%d/%m/%Y %H:%M') if r.create_date else ''"/>
-
+                                                <t t-esc="env['ir.qweb.field.datetime'].value_to_html(r.create_date, {'format': 'dd/MM/yyyy HH:mm'}) if r.create_date else ''"/>
                                                 </td>
+
                                                 <!-- Informe técnico limpio (como ya lo tienes en informes_limpios) -->
                                                 <td><t t-esc="informes_limpios.get(r.id) or ''"/></td>
                                                 <!-- Botón que abre el registro -->
