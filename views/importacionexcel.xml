@@ -18,13 +18,5 @@
         </field>
     </record>
 
-    <record id="action_excel_import_model" model="ir.actions.act_window">
-        <field name="name">Importar desde Excel</field>
-        <field name="res_model">excel.import.model</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-    </record>
-
     
-    <menuitem id="menu_excel_import_action" name="Importar desde Excel" parent="sat.ajustes" action="action_excel_import_model"/>
 </odoo>

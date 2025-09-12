@@ -138,29 +138,5 @@
         </field>
     </record>
 
-    <!-- Action -->
-    <record id="action_universal_excel_import" model="ir.actions.act_window">
-        <field name="name">Importador Universal Excel</field>
-        <field name="res_model">universal.excel.import</field>
-        <field name="view_mode">list,form</field>
-        <field name="search_view_id" ref="view_universal_excel_import_search"/>
-        <field name="context">{'search_default_my_imports': 1}</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Crear nueva importación de registros
-            </p>
-            <p>
-                Importe registros desde Excel para cualquier modelo del sistema.
-                Configure las relaciones entre modelos para mantener la integridad de los datos.
-            </p>
-        </field>
-    </record>
-
-    <!-- Menu Item -->
-    <menuitem 
-        id="menu_universal_excel_import"
-        name="Importador Universal"
-        action="action_universal_excel_import"
-        parent="sat.ajustes"
-        sequence="100"/>
+   
 </odoo>

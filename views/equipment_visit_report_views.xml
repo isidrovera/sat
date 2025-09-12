@@ -1,44 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-  <!-- ================================
-       Acción para informe de visitas
-  =================================== -->
-  <record id="action_equipment_visit_report" model="ir.actions.act_window">
-    <field name="name">Informes de Visitas</field>
-    <field name="res_model">equipment.visit.report</field>
-    <field name="view_mode">kanban,list,form</field>
-    <field name="help" type="html">
-      <p>Crea y consulta informes estadísticos sobre visitas técnicas por equipo.</p>
-    </field>
-  </record>
 
-  <!-- ================================
-       Acción para informe de desempeño de técnicos
-  =================================== -->
-  <record id="action_equipment_technician_performance_report" model="ir.actions.act_window">
-    <field name="name">Desempeño de Técnicos</field>
-    <field name="res_model">equipment.technician.performance.report</field>
-    <field name="view_mode">list,form</field>
-    <field name="help" type="html">
-      <p>Analiza el desempeño de los técnicos con métricas detalladas.</p>
-    </field>
-  </record>
-
-  <!-- ================================
-       Menú
-  =================================== -->
-  <menuitem id="menu_equipment_visit_reports"
-            name="Informes de Visitas"
-            parent="sat.ajustes"
-            action="action_equipment_visit_report"
-            sequence="90" />
-            
-  <menuitem id="menu_equipment_technician_reports"
-            name="Desempeño de Técnicos"
-            parent="sat.ajustes"
-            action="action_equipment_technician_performance_report"
-            sequence="91" />
 
   <!-- ================================
        Vista Listado (list) para informes de visitas
@@ -308,19 +271,6 @@
     </field>
   </record>
 
-  <!-- Acción para acceder a configuraciones -->
-  <record id="action_equipment_visit_report_settings" model="ir.actions.act_window">
-    <field name="name">Configuración de Informes</field>
-    <field name="res_model">equipment.visit.report.settings</field>
-    <field name="view_mode">form</field>
-    <field name="target">new</field>
-  </record>
-
-  <!-- Menú para configuraciones -->
-  <menuitem id="menu_equipment_visit_report_settings"
-            name="Configuración de Informes"
-            parent="sat.ajustes"
-            action="action_equipment_visit_report_settings"
-            sequence="92" />
+ 
 
 </odoo>

@@ -54,12 +54,6 @@
             </field>
         </record>
 
-        <record id="action_incidencias" model="ir.actions.act_window">
-            <field name="name">Incidencias</field>
-            <field name="res_model">taller.incidencia</field>
-            <field name="view_mode">list,form</field>
-        </record>
-
-        <menuitem id="sat.menu_incidencia" name="Incidencias" action="action_incidencias" parent="sat.ajustes"/>
+        
     </data>
 </odoo>

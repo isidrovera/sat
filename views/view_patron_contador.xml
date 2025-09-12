@@ -255,42 +255,7 @@
         </field>
     </record>
 
-    <!-- Acción para gestión de patrones MANTENIDA IGUAL -->
-    <record id="action_patron_contador" model="ir.actions.act_window">
-        <field name="name">Patrones de Detección</field>
-        <field name="res_model">patron.contador</field>
-        <field name="view_mode">list,form</field>
-        <field name="view_id" ref="view_patron_contador_list"/>
-        <field name="search_view_id" ref="view_patron_contador_search"/>
-        <field name="context">{'search_default_activos': 1}</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                ¡Crea patrones para detectar contadores automáticamente!
-            </p>
-            <p>
-                Los patrones permiten detectar automáticamente series y contadores 
-                desde diferentes formatos de correo. El sistema puede generar 
-                patrones automáticamente basado en los correos recibidos.
-            </p>
-            <p>
-                <strong>Empezar:</strong>
-            </p>
-            <ol>
-                <li>Haz clic en "🔧 Crear Patrones por Defecto"</li>
-                <li>El sistema generará patrones automáticamente desde correos</li>
-                <li>Personaliza o agrega nuevos patrones manualmente</li>
-                <li>Usa el botón "🧪 Probar" para validar patrones</li>
-                <li>Revisa las estadísticas de efectividad</li>
-            </ol>
-        </field>
-    </record>
-
-    <!-- Menú para patrones MANTENIDO IGUAL -->
-    <menuitem id="menu_patron_contador"
-              name="Patrones de Detección"
-              parent="sat_menu_root"
-              action="action_patron_contador"
-              sequence="85"/>
+    
 
     
 

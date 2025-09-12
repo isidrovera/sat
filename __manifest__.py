@@ -65,6 +65,7 @@
         'data/mail_permisos.xml',
         'data/correos_evaluaciones_tecnicos.xml',
         'data/email_templates_consolidated.xml',
+        'views/acciones_menus.xml',
         'views/sat_dashboard_menu.xml',
         'views/ventas.xml',
         'views/templates.xml',

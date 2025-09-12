@@ -141,30 +141,6 @@
         </field>
     </record>
 
-    <!-- Acción de Ventana -->
-    <record id="action_inspeccion_resultado" model="ir.actions.act_window">
-        <field name="name">Inspecciones</field>
-        <field name="res_model">inspeccion.resultado</field>
-        <field name="view_mode">kanban,list,form</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No hay inspecciones registradas
-            </p>
-            <p>
-                Cree una nueva inspección para evaluar las condiciones del sitio.
-            </p>
-        </field>
-    </record>
-
-    <!-- Elementos del Menú -->
-    <menuitem id="menu_inspeccion_root"
-              name="Inspecciones"
-              sequence="30"/>
-
-    <menuitem id="menu_inspeccion_resultado"
-              name="Inspecciones"
-              parent="sat.ajustes"
-              action="action_inspeccion_resultado"
-             />
+    
 
 </odoo>

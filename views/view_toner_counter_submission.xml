@@ -349,30 +349,5 @@
         </field>
     </record>
 
-    <!-- Acción de Ventana -->
-    <record id="action_toner_counter_submission" model="ir.actions.act_window">
-        <field name="name">Reportes de Contadores y Tóner</field>
-        <field name="res_model">toner.counter.submission</field>
-        <field name="view_mode">kanban,list,form</field>
-        <field name="search_view_id" ref="view_toner_counter_submission_search"/>
-        <field name="context">{
-            'search_default_pending': 1
-        }</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                ¡No hay reportes de tóner!
-            </p>
-            <p>
-                Los reportes de contadores y tóner aparecerán aquí cuando los clientes 
-                envíen información sobre sus equipos desde el formulario web.
-            </p>
-        </field>
-    </record>
-
-    <!-- Menú -->
-    <menuitem id="menu_toner_counter_submission"
-              name="Reportes de Tóner"
-              parent="sat_menu_root"
-              action="action_toner_counter_submission"
-              sequence="71"/>
+    
 </odoo>

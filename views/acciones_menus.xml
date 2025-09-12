@@ -1,0 +1,729 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- =========================================================
+         ROOT & DASHBOARD (primero en el menú)
+    ========================================================== -->
+    <!-- Menú raíz con icono -->
+    <menuitem id="sat_menu_root"
+              name="Sistema de taller"
+              web_icon="sat,static/description/icon.png"
+              sequence="1"/>
+
+    <!-- Acción cliente del dashboard -->
+    <record id="sat_dashboard_action" model="ir.actions.client">
+      <field name="name">Dashboard</field>
+      <field name="tag">sat_dashboard_tag</field>
+    </record>
+
+    <!-- Menú dashboard -->
+    <menuitem id="sat_dashboard_menu"
+              name="Dashboard"
+              parent="sat_menu_root"
+              action="sat_dashboard_action"
+              sequence="1"/>
+
+    <!-- =========================================================
+         CORE: MÁQUINAS, REPARACIONES, ALQUILER, REPUESTOS
+    ========================================================== -->
+    <!-- ACCIONES -->
+    <record id="sat.action_window" model="ir.actions.act_window">
+      <field name="name">Maquina</field>
+      <field name="res_model">sat.sat</field>
+      <field name="view_mode">list,kanban,form,pivot</field>
+      <field name="context">
+        {
+          "search_default_filter_stock": 1
+        }
+      </field>
+      <field name="help" type="html">
+        <p class="button_in_tree">Registra un equipo</p>
+      </field>
+    </record>
+
+    <record id="sat.action_reparaciones_window" model="ir.actions.act_window">
+      <field name="name">Reparaciones</field>
+      <field name="res_model">reparaciones.reparaciones</field>
+      <field name="view_mode">list,form,graph,kanban</field>
+    </record>
+
+    <record id="sat.action_alquiler_window" model="ir.actions.act_window">
+      <field name="name">Alquiler</field>
+      <field name="res_model">alquiler</field>
+      <field name="view_mode">list,form,calendar,graph,kanban</field>
+    </record>
+
+    <record id="sat.action_repuestos_window" model="ir.actions.act_window">
+      <field name="name">Repuestos alquiler</field>
+      <field name="res_model">repuestos.alquiler</field>
+      <field name="view_mode">list,form,kanban</field>
+    </record>
+
+    <!-- MENÚS -->
+    <menuitem id="sat.stock_maquinas"
+              name="Maquinas"
+              parent="sat_menu_root"
+              action="sat.action_window"
+              sequence="10"/>
+
+    <menuitem id="sat.reparaciones"
+              name="Reparaciones"
+              parent="sat_menu_root"
+              action="sat.action_reparaciones_window"
+              sequence="20"/>
+
+    <menuitem id="sat.alquiler"
+              name="Alquiler"
+              parent="sat_menu_root"
+              action="sat.action_alquiler_window"
+              sequence="30"/>
+
+    <menuitem id="sat.repuestos"
+              name="Repuestos"
+              parent="sat_menu_root"
+              action="sat.action_repuestos_window"
+              sequence="40"/>
+
+    <!-- =========================================================
+         FLUJO DE TÓNER (Reportes, Entregas, Confirmaciones)
+    ========================================================== -->
+    <!-- ACCIONES -->
+    <record id="action_toner_counter_submission" model="ir.actions.act_window">
+      <field name="name">Reportes de Contadores y Tóner</field>
+      <field name="res_model">toner.counter.submission</field>
+      <field name="view_mode">kanban,list,form</field>
+      <field name="search_view_id" ref="view_toner_counter_submission_search"/>
+      <field name="context">{ "search_default_pending": 1 }</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">¡No hay reportes de tóner!</p>
+        <p>Los reportes aparecerán aquí cuando los clientes envíen información desde el formulario web.</p>
+      </field>
+    </record>
+
+    <record id="action_toner_delivery_schedule" model="ir.actions.act_window">
+      <field name="name">Programación de Entregas</field>
+      <field name="res_model">toner.delivery.schedule</field>
+      <field name="view_mode">kanban,list,form</field>
+      <field name="context">{}</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">¡No hay entregas programadas!</p>
+        <p>Las entregas de tóner se programan automáticamente o manualmente.</p>
+      </field>
+    </record>
+
+    <record id="action_toner_delivery_dashboard" model="ir.actions.act_window">
+      <field name="name">Dashboard de Entregas</field>
+      <field name="res_model">toner.delivery.schedule</field>
+      <field name="view_mode">kanban</field>
+      <field name="context">{}</field>
+    </record>
+
+    <record id="action_toner_delivery_confirmation" model="ir.actions.act_window">
+      <field name="name">Confirmaciones de Entrega</field>
+      <field name="res_model">toner.delivery.confirmation</field>
+      <field name="view_mode">kanban,list,form,graph,pivot</field>
+      <field name="search_view_id" ref="view_toner_delivery_confirmation_search"/>
+      <field name="context">{ "search_default_draft": 1, "search_default_confirmed": 1 }</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">¡No hay confirmaciones de entrega!</p>
+        <p>Se muestran al confirmar entregas registradas.</p>
+      </field>
+    </record>
+
+    <record id="action_toner_delivery_validation_pending" model="ir.actions.act_window">
+      <field name="name">Validaciones Pendientes</field>
+      <field name="res_model">toner.delivery.confirmation</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="view_toner_delivery_confirmation_search"/>
+      <field name="domain">[("validation_status","=","pending")]</field>
+    </record>
+
+    <!-- MENÚS -->
+    <menuitem id="menu_toner_counter_submission"
+              name="Reportes de Tóner"
+              parent="sat_menu_root"
+              action="action_toner_counter_submission"
+              sequence="50"/>
+
+    <menuitem id="menu_toner_delivery_schedule"
+              name="Entregas de Tóner"
+              parent="sat_menu_root"
+              action="action_toner_delivery_schedule"
+              sequence="52"/>
+
+    <menuitem id="menu_toner_delivery_dashboard"
+              name="Dashboard de Entregas"
+              parent="sat_menu_root"
+              action="action_toner_delivery_dashboard"
+              sequence="53"/>
+
+    <menuitem id="menu_toner_delivery_confirmation"
+              name="Confirmaciones de Entrega"
+              parent="sat_menu_root"
+              action="action_toner_delivery_confirmation"
+              sequence="54"/>
+
+    <menuitem id="menu_toner_delivery_validation"
+              name="Validaciones Pendientes"
+              parent="sat_menu_root"
+              action="action_toner_delivery_validation_pending"
+              sequence="55"/>
+
+    <!-- =========================================================
+         EVALUACIONES / SERVICIO AL CLIENTE
+    ========================================================== -->
+    <record id="action_client_service_evaluation" model="ir.actions.act_window">
+      <field name="name">Evaluaciones de Servicio</field>
+      <field name="type">ir.actions.act_window</field>
+      <field name="res_model">client.service.evaluation</field>
+      <field name="view_mode">kanban,list,form</field>
+      <field name="context">{ "search_default_today": 1 }</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">¡Crea tu primera evaluación de servicio!</p>
+        <p>Registra y monitorea las evaluaciones de servicio técnico.</p>
+      </field>
+    </record>
+
+    <menuitem id="menu_service_evaluation"
+              name="Evaluaciones de Servicio"
+              parent="sat_menu_root"
+              action="action_client_service_evaluation"
+              sequence="60"/>
+
+    <record id="action_evaluacion_personal" model="ir.actions.act_window">
+      <field name="name">Evaluación de Personal</field>
+      <field name="res_model">evaluacion.personal</field>
+      <field name="view_mode">list,form,kanban,pivot,graph</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">Crear primera evaluación de personal</p>
+        <p>Realice evaluaciones periódicas del personal técnico.</p>
+      </field>
+    </record>
+
+    <menuitem id="menu_evaluacion_personal"
+              name="Evaluación de Personal"
+              parent="sat_menu_root"
+              action="action_evaluacion_personal"
+              sequence="61"/>
+
+    <!-- Wizard masivo desde lista de evaluaciones -->
+    <record id="ir_action_server_enviar_reportes_masivo" model="ir.actions.server">
+      <field name="name">Enviar Reportes por Correo</field>
+      <field name="model_id" ref="model_evaluacion_personal"/>
+      <field name="binding_model_id" ref="model_evaluacion_personal"/>
+      <field name="binding_view_types">list</field>
+      <field name="state">code</field>
+      <field name="code">
+        action = {
+          "name": "Enviar Reportes por Correo",
+          "type": "ir.actions.act_window",
+          "res_model": "evaluacion.personal.envio.masivo",
+          "view_mode": "form",
+          "target": "new",
+          "context": {"active_ids": env.context.get("active_ids", [])},
+        }
+      </field>
+    </record>
+
+    <record id="action_evaluacion_personal_envio_masivo" model="ir.actions.act_window">
+      <field name="name">Enviar Reportes por Correo</field>
+      <field name="res_model">evaluacion.personal.envio.masivo</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+      <field name="binding_model_id" ref="model_evaluacion_personal"/>
+      <field name="binding_view_types">list</field>
+    </record>
+
+    <!-- =========================================================
+         REPORTES ESTADO DE MÁQUINAS (lista completa)
+    ========================================================== -->
+    <!-- ACCIONES -->
+    <record id="action_reporte_estado_maquinas" model="ir.actions.act_window">
+      <field name="name">Reportes Estado de Máquinas</field>
+      <field name="res_model">reporte.estado.maquina</field>
+      <field name="view_mode">list,form</field>
+      <field name="view_id" ref="view_reporte_estado_maquina_list"/>
+      <field name="search_view_id" ref="view_reporte_estado_maquina_search"/>
+      <field name="context">
+        {
+          "search_default_group_by_estado": 1,
+          "search_default_filter_esta_semana": 1
+        }
+      </field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">¡Aún no hay reportes!</p>
+        <p>Se generan automáticamente cada semana o con el wizard.</p>
+      </field>
+    </record>
+
+    <record id="action_reporte_estado_maquinas_wizard" model="ir.actions.act_window">
+      <field name="name">Generar Reporte Estado Máquinas</field>
+      <field name="res_model">reporte.estado.maquina.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="view_id" ref="view_reporte_estado_maquina_wizard_form"/>
+      <field name="target">new</field>
+    </record>
+
+    <record id="action_reporte_estado_maquinas_semana_actual" model="ir.actions.act_window">
+      <field name="name">Reportes Semana Actual</field>
+      <field name="res_model">reporte.estado.maquina</field>
+      <field name="view_mode">list,form</field>
+      <field name="view_id" ref="view_reporte_estado_maquina_list"/>
+      <field name="domain">[("fecha_generacion","&gt;=", (context_today() - relativedelta(days=7)).strftime("%Y-%m-%d"))]</field>
+      <field name="context">{ "search_default_group_by_estado": 1 }</field>
+    </record>
+
+    <record id="action_reporte_estado_maquinas_sin_revisar" model="ir.actions.act_window">
+      <field name="name">Máquinas Sin Revisar</field>
+      <field name="res_model">reporte.estado.maquina</field>
+      <field name="view_mode">list,form</field>
+      <field name="view_id" ref="view_reporte_estado_maquina_list"/>
+      <field name="domain">
+        [
+          ("estado_maquina","=","sin_revisar"),
+          ("fecha_generacion","&gt;=", (context_today() - relativedelta(days=7)).strftime("%Y-%m-%d"))
+        ]
+      </field>
+    </record>
+
+    <record id="action_reporte_estado_maquinas_con_problemas" model="ir.actions.act_window">
+      <field name="name">Máquinas Con Problemas</field>
+      <field name="res_model">reporte.estado.maquina</field>
+      <field name="view_mode">list,form</field>
+      <field name="view_id" ref="view_reporte_estado_maquina_list"/>
+      <field name="domain">
+        [
+          ("estado_maquina","=","con_problemas"),
+          ("fecha_generacion","&gt;=", (context_today() - relativedelta(days=7)).strftime("%Y-%m-%d"))
+        ]
+      </field>
+    </record>
+
+    <record id="action_reporte_estado_maquinas_partes" model="ir.actions.act_window">
+      <field name="name">Máquinas de Partes</field>
+      <field name="res_model">reporte.estado.maquina</field>
+      <field name="view_mode">list,form</field>
+      <field name="view_id" ref="view_reporte_estado_maquina_list"/>
+      <field name="domain">
+        [
+          ("estado_maquina","=","partes"),
+          ("fecha_generacion","&gt;=", (context_today() - relativedelta(days=7)).strftime("%Y-%m-%d"))
+        ]
+      </field>
+    </record>
+
+    <!-- MENÚ principal y submenús -->
+    <menuitem id="menu_reporte_estado_maquinas_main"
+              name="Reportes Estado Máquinas"
+              parent="sat_menu_root"
+              sequence="70"/>
+
+    <menuitem id="menu_reporte_estado_maquinas_ver"
+              name="Ver Reportes"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas"
+              sequence="10"/>
+
+    <menuitem id="menu_reporte_estado_maquinas_generar"
+              name="Generar Reporte"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas_wizard"
+              sequence="20"/>
+
+    <menuitem id="menu_reporte_estado_maquinas_semana"
+              name="Semana Actual"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas_semana_actual"
+              sequence="30"/>
+
+    <menuitem id="menu_reporte_estado_maquinas_separator"
+              name="────────────────"
+              parent="menu_reporte_estado_maquinas_main"
+              sequence="40"/>
+
+    <menuitem id="menu_reporte_estado_maquinas_sin_revisar"
+              name="Sin Revisar"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas_sin_revisar"
+              sequence="50"/>
+
+    <menuitem id="menu_reporte_estado_maquinas_problemas"
+              name="Con Problemas"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas_con_problemas"
+              sequence="60"/>
+
+    <menuitem id="menu_reporte_estado_maquinas_partes"
+              name="De Partes"
+              parent="menu_reporte_estado_maquinas_main"
+              action="action_reporte_estado_maquinas_partes"
+              sequence="70"/>
+
+    <!-- =========================================================
+         CONTADORES AUTOMÁTICOS
+    ========================================================== -->
+    <record id="action_contador_automatico" model="ir.actions.act_window">
+      <field name="name">Contadores Automáticos</field>
+      <field name="res_model">contador.automatico</field>
+      <field name="view_mode">list,form</field>
+      <field name="context">{ "search_default_hoy": 1 }</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">¡Comienza a procesar correos de contadores!</p>
+        <p>Procesa correos con IA para detectar series, contadores y marcas.</p>
+      </field>
+    </record>
+
+    <menuitem id="menu_contador_automatico_root"
+              name="Contadores Automáticos"
+              parent="sat_menu_root"
+              action="action_contador_automatico"
+              sequence="80"/>
+
+    <record id="action_patron_contador" model="ir.actions.act_window">
+      <field name="name">Patrones de Detección</field>
+      <field name="res_model">patron.contador</field>
+      <field name="view_mode">list,form</field>
+      <field name="view_id" ref="view_patron_contador_list"/>
+      <field name="search_view_id" ref="view_patron_contador_search"/>
+      <field name="context">{ "search_default_activos": 1 }</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">¡Crea patrones para detectar contadores automáticamente!</p>
+        <p>El sistema puede generar patrones automáticamente y probarlos.</p>
+      </field>
+    </record>
+
+    <menuitem id="menu_patron_contador"
+              name="Patrones de Detección"
+              parent="sat_menu_root"
+              action="action_patron_contador"
+              sequence="85"/>
+
+    <!-- =========================================================
+         PRINTTRACKER PRO
+    ========================================================== -->
+    <!-- Contenedor -->
+    <menuitem id="menu_printtracker_root"
+              name="PrintTracker Pro"
+              parent="sat_menu_root"
+              sequence="100"/>
+
+    <!-- Separadores y herramientas -->
+    <menuitem id="menu_printtracker_consolidation"
+              name="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              parent="menu_printtracker_root"
+              sequence="50"/>
+
+    <menuitem id="menu_printtracker_tools"
+              name="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              parent="menu_printtracker_root"
+              sequence="80"/>
+
+    <!-- Acciones -->
+    <record id="action_printtracker_config" model="ir.actions.act_window">
+      <field name="name">Configuración PrintTracker</field>
+      <field name="res_model">printtracker.config</field>
+      <field name="view_mode">list,form</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">Configura la conexión con PrintTracker Pro</p>
+        <p>Define API key y entidad principal.</p>
+      </field>
+    </record>
+
+    <record id="action_printtracker_entity" model="ir.actions.act_window">
+      <field name="name">Entidades PrintTracker</field>
+      <field name="res_model">printtracker.entity</field>
+      <field name="view_mode">list,form</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">No hay entidades sincronizadas</p>
+        <p>Configura la API para comenzar.</p>
+      </field>
+    </record>
+
+    <record id="action_printtracker_meter" model="ir.actions.act_window">
+      <field name="name">Medidores PrintTracker</field>
+      <field name="res_model">printtracker.meter</field>
+      <field name="view_mode">list,form</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">No hay lecturas de medidores</p>
+        <p>Se sincronizan automáticamente desde PrintTracker Pro.</p>
+      </field>
+    </record>
+
+    <record id="action_printtracker_supply" model="ir.actions.act_window">
+      <field name="name">Suministros PrintTracker</field>
+      <field name="res_model">printtracker.supply</field>
+      <field name="view_mode">list,form</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">No hay suministros sincronizados</p>
+        <p>Se sincronizan automáticamente desde PrintTracker Pro.</p>
+      </field>
+    </record>
+
+    <!-- Consolidados / alertas (acciones referenciadas ya existentes) -->
+    <menuitem id="menu_printtracker_config"
+              name="Configuración API"
+              parent="menu_printtracker_root"
+              action="action_printtracker_config"
+              sequence="10"/>
+
+    <menuitem id="menu_printtracker_entities"
+              name="Entidades"
+              parent="menu_printtracker_root"
+              action="action_printtracker_entity"
+              sequence="20"/>
+
+    <menuitem id="menu_printtracker_meters"
+              name="Medidores"
+              parent="menu_printtracker_root"
+              action="action_printtracker_meter"
+              sequence="30"/>
+
+    <menuitem id="menu_printtracker_supplies"
+              name="Suministros"
+              parent="menu_printtracker_root"
+              action="action_printtracker_supply"
+              sequence="40"/>
+
+    <menuitem id="menu_printtracker_daily_readings"
+              name="Lecturas Diarias Consolidadas"
+              parent="menu_printtracker_root"
+              action="action_printtracker_daily_reading"
+              sequence="60"/>
+
+    <menuitem id="menu_printtracker_alerts"
+              name="Alertas del Sistema"
+              parent="menu_printtracker_root"
+              action="action_printtracker_alert"
+              sequence="70"/>
+
+    <menuitem id="menu_printtracker_consolidator"
+              name="Ejecutar Consolidación"
+              parent="menu_printtracker_root"
+              action="action_printtracker_consolidator"
+              sequence="90"/>
+
+    <menuitem id="menu_printtracker_alert_manager"
+              name="Ejecutar Revisión de Alertas"
+              parent="menu_printtracker_root"
+              action="action_printtracker_alert_manager"
+              sequence="100"/>
+
+    <!-- =========================================================
+         CONFIGURACIÓN (AJUSTES) – todo lo de setup aquí
+    ========================================================== -->
+    <menuitem id="sat.ajustes"
+              name="Configuración"
+              parent="sat_menu_root"
+              sequence="200"/>
+
+    <!-- Acciones de ajustes -->
+    <record id="sat.action_ajustes_window" model="ir.actions.act_window">
+      <field name="name">Configuración</field>
+      <field name="res_model">ajustes.ajustes</field>
+      <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="sat.action_marca_window" model="ir.actions.act_window">
+      <field name="name">Marcas</field>
+      <field name="res_model">marca.marca</field>
+      <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="sat.action_modelo_window" model="ir.actions.act_window">
+      <field name="name">Modelo</field>
+      <field name="res_model">modelo.maquina</field>
+      <field name="view_mode">list,form,kanban</field>
+    </record>
+
+    <record id="sat.action_tipo_window" model="ir.actions.act_window">
+      <field name="name">Tipo de maquina</field>
+      <field name="res_model">tipo.maquina</field>
+      <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="sat.action_falla_window" model="ir.actions.act_window">
+      <field name="name">Fallas</field>
+      <field name="res_model">fallas</field>
+      <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Doble acción de 'informes' mantenida (ambas existían) -->
+    <record id="sat.action_informe_window" model="ir.actions.act_window">
+      <field name="name">Informes</field>
+      <field name="res_model">informes</field>
+      <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_informes" model="ir.actions.act_window">
+      <field name="name">Informes</field>
+      <field name="res_model">informes</field>
+      <field name="view_mode">kanban,list,form</field>
+      <field name="context">{ "search_default_draft": 1 }</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">Crea tu primer informe</p>
+        <p>Crea informes para tus proveedores y registra los envíos.</p>
+      </field>
+    </record>
+
+    <record id="action_reparacion_foto" model="ir.actions.act_window">
+      <field name="name">Fotos de Reparaciones</field>
+      <field name="res_model">reparaciones.foto</field>
+      <field name="view_mode">list,form</field>
+      <field name="help">Gestión de fotos asociadas a las reparaciones.</field>
+    </record>
+
+    <record id="action_excel_import_model" model="ir.actions.act_window">
+      <field name="name">Importar desde Excel</field>
+      <field name="res_model">excel.import.model</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
+    <record id="action_universal_excel_import" model="ir.actions.act_window">
+      <field name="name">Importador Universal Excel</field>
+      <field name="res_model">universal.excel.import</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="view_universal_excel_import_search"/>
+      <field name="context">{ "search_default_my_imports": 1 }</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">Crear nueva importación</p>
+        <p>Importe registros desde Excel para cualquier modelo.</p>
+      </field>
+    </record>
+
+    <record id="action_incidencias" model="ir.actions.act_window">
+      <field name="name">Incidencias</field>
+      <field name="res_model">taller.incidencia</field>
+      <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_equipment_visit_report_settings" model="ir.actions.act_window">
+      <field name="name">Configuración de Informes</field>
+      <field name="res_model">equipment.visit.report.settings</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
+    <record id="action_equipment_visit_report" model="ir.actions.act_window">
+      <field name="name">Informes de Visitas</field>
+      <field name="res_model">equipment.visit.report</field>
+      <field name="view_mode">kanban,list,form</field>
+      <field name="help" type="html">
+        <p>Crea y consulta informes estadísticos sobre visitas técnicas por equipo.</p>
+      </field>
+    </record>
+
+    <record id="action_equipment_technician_performance_report" model="ir.actions.act_window">
+      <field name="name">Desempeño de Técnicos</field>
+      <field name="res_model">equipment.technician.performance.report</field>
+      <field name="view_mode">list,form</field>
+      <field name="help" type="html">
+        <p>Analiza el desempeño de los técnicos con métricas detalladas.</p>
+      </field>
+    </record>
+
+    <record id="action_solicitud_partes" model="ir.actions.act_window">
+      <field name="name">Solicitudes de Partes Alquiler</field>
+      <field name="res_model">solicitud.partes</field>
+      <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_inspeccion_resultado" model="ir.actions.act_window">
+      <field name="name">Inspecciones</field>
+      <field name="res_model">inspeccion.resultado</field>
+      <field name="view_mode">kanban,list,form</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">No hay inspecciones registradas</p>
+        <p>Cree una nueva inspección para evaluar las condiciones del sitio.</p>
+      </field>
+    </record>
+
+    <record id="action_whatsapp_notification_wizard" model="ir.actions.act_window">
+      <field name="name">Notificar Visita Técnica</field>
+      <field name="res_model">whatsapp.notification.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+      <field name="view_id" ref="view_whatsapp_notification_wizard_form"/>
+    </record>
+
+    <!-- MENÚS de ajustes -->
+    <menuitem id="sat.menu_marca" name="Marcas" parent="sat.ajustes" action="sat.action_marca_window" sequence="10"/>
+    <menuitem id="sat.menu_modelo" name="Modelo" parent="sat.ajustes" action="sat.action_modelo_window" sequence="20"/>
+    <menuitem id="sat.menu_tipo" name="Tipo de maquina" parent="sat.ajustes" action="sat.action_tipo_window" sequence="30"/>
+    <menuitem id="sat.menu_fallas" name="Registro de fallas" parent="sat.ajustes" action="sat.action_falla_window" sequence="40"/>
+    <menuitem id="sat.menu_informes" name="Informes proveedor" parent="sat.ajustes" action="sat.action_informe_window" sequence="50"/>
+    <menuitem id="menu_reparacion_foto_action" name="Fotos de Reparaciones" parent="sat.ajustes" action="action_reparacion_foto" sequence="60"/>
+    <menuitem id="menu_excel_import_action" name="Importar desde Excel" parent="sat.ajustes" action="action_excel_import_model" sequence="70"/>
+    <menuitem id="sat.menu_incidencia" name="Incidencias" parent="sat.ajustes" action="action_incidencias" sequence="80"/>
+    <menuitem id="menu_equipment_visit_reports" name="Informes de Visitas" parent="sat.ajustes" action="action_equipment_visit_report" sequence="90"/>
+    <menuitem id="menu_equipment_technician_reports" name="Desempeño de Técnicos" parent="sat.ajustes" action="action_equipment_technician_performance_report" sequence="91"/>
+    <menuitem id="menu_equipment_visit_report_settings" name="Configuración de Informes" parent="sat.ajustes" action="action_equipment_visit_report_settings" sequence="92"/>
+    <menuitem id="menu_solicitud_partes" name="Solicitudes de Partes Alquiler" parent="sat.ajustes" action="action_solicitud_partes" sequence="93"/>
+    <menuitem id="menu_universal_excel_import" name="Importador Universal" parent="sat.ajustes" action="action_universal_excel_import" sequence="100"/>
+
+    <!-- =========================================================
+         ACCIONES / SERVIDORES MANTENIDAS
+    ========================================================== -->
+    <record id="sat.action_server" model="ir.actions.server">
+      <field name="name">SAT server</field>
+      <field name="model_id" ref="model_sat_sat"/>
+      <field name="state">code</field>
+      <field name="code">
+        action = {
+          "type": "ir.actions.act_window",
+          "view_mode": "list,form",
+          "res_model": model._name,
+        }
+      </field>
+    </record>
+
+    <record id="sat.action_server_revision" model="ir.actions.server">
+      <field name="name">Ver Maquinas Para Revisión</field>
+      <field name="model_id" ref="model_sat_sat"/>
+      <field name="state">code</field>
+      <field name="code">
+        action = {
+          "type": "ir.actions.act_window",
+          "view_mode": "list",
+          "res_model": "sat.sat",
+          "domain": [("estado_ventas_id","=","para_revision")],
+          "context": {"order": "fecha_para_revision asc"},
+        }
+      </field>
+    </record>
+
+    <record id="action_crear_reparaciones" model="ir.actions.server">
+      <field name="name">Crear Reparaciones</field>
+      <field name="model_id" ref="model_sat_sat"/>
+      <field name="binding_model_id" ref="model_sat_sat"/>
+      <field name="state">code</field>
+      <field name="code">action = env["sat.sat"].browse(env.context.get("active_ids")).action_crear_reparaciones()</field>
+    </record>
+
+    <!-- =========================================================
+         MISC mantenido (Maquinas_ demo / ModelTitle)
+         * Ajusté el parent para que no apunte a 'your_root_menu'
+    ========================================================== -->
+    <record id="sat.sat_act_window" model="ir.actions.act_window">
+      <field name="name">Maquinas_</field>
+      <field name="type">ir.actions.act_window</field>
+      <field name="res_model">sat.sat</field>
+      <field name="view_type">form</field>
+      <field name="view_mode">kanban,tree,form,calendar,graph,pivot</field>
+      <field name="context">{"search_default_example_field":1}</field>
+      <field name="help" type="html">
+        <p class="oe_view_nocontent_create">
+          There is no examples click here to add new ModelTitle.
+        </p>
+      </field>
+    </record>
+
+    <menuitem id="sat.sat_menu"
+              name="ModelTitle"
+              parent="sat_menu_root"
+              action="sat.sat_act_window"
+              sequence="250"/>
+
+  </data>
+</odoo>

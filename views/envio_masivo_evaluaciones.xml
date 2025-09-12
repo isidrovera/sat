@@ -29,36 +29,7 @@
         </field>
     </record>
     
-    <!-- Acción para abrir el asistente -->
-    <record id="action_evaluacion_personal_envio_masivo" model="ir.actions.act_window">
-        <field name="name">Enviar Reportes por Correo</field>
-        <field name="res_model">evaluacion.personal.envio.masivo</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-        <field name="binding_model_id" ref="model_evaluacion_personal"/>
-        <field name="binding_view_types">list</field>
-    </record>
     
-    <!-- Acción del servidor para el botón en la vista de lista -->
-    <record id="ir_action_server_enviar_reportes_masivo" model="ir.actions.server">
-        <field name="name">Enviar Reportes por Correo</field>
-        <field name="model_id" ref="model_evaluacion_personal"/>
-        <field name="binding_model_id" ref="model_evaluacion_personal"/>
-        <field name="binding_view_types">list</field>
-        <field name="state">code</field>
-        <field name="code">
-            action = {
-                'name': 'Enviar Reportes por Correo',
-                'type': 'ir.actions.act_window',
-                'res_model': 'evaluacion.personal.envio.masivo',
-                'view_mode': 'form',
-                'target': 'new',
-                'context': {
-                    'active_ids': env.context.get('active_ids', []),
-                },
-            }
-        </field>
-    </record>
     
     <!-- Configuración de seguridad para el nuevo modelo -->
     <record id="access_evaluacion_personal_envio_masivo" model="ir.model.access">

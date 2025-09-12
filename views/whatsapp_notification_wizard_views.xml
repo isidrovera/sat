@@ -134,14 +134,7 @@
         </field>
     </record>
 
-    <!-- Acción para abrir el wizard -->
-    <record id="action_whatsapp_notification_wizard" model="ir.actions.act_window">
-        <field name="name">Notificar Visita Técnica</field>
-        <field name="res_model">whatsapp.notification.wizard</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-        <field name="view_id" ref="view_whatsapp_notification_wizard_form"/>
-    </record>
+  
 
     <!-- Vista de lista para el wizard (para historial/debug) -->
     <record id="view_whatsapp_notification_wizard_list" model="ir.ui.view">
