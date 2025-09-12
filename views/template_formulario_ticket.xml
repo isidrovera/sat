@@ -2,272 +2,32 @@
 <odoo>
     <template id="template_formulario_ticket" name="Formulario de Ticket">
         <t t-call="website.layout">
-            <div id="wrap" class="oe_structure">
-                <!-- Hero Section -->
-                <section class="bg-gradient-to-r from-blue-600 to-purple-700 text-white py-5 mb-5">
-                    <div class="container">
-                        <div class="row justify-content-center">
-                            <div class="col-lg-8 text-center">
-                                <h1 class="display-4 fw-bold mb-3">
-                                    <i class="fa fa-headset me-3"></i>
-                                    Reportar un Problema
-                                </h1>
-                                <p class="lead">Estamos aquí para ayudarte. Describe tu problema y nuestro equipo técnico te contactará pronto.</p>
-                            </div>
+            <div id="wrap" class="oe_structure oe_empty">
+                <div class="container">
+                    <h1>Reportar un Problema</h1>
+                    <form id="ticket_form" action="/public/ticket/create" method="post">
+                        <div class="form-group">
+                            <label for="partner_name">Empresa:</label>
+                            <input type="text" id="partner_name" name="partner_name" class="form-control" t-att-value="partner_name" readonly="readonly"/>
                         </div>
-                    </div>
-                </section>
-
-                <!-- Main Form Section -->
-                <div class="container mb-5">
-                    <div class="row justify-content-center">
-                        <div class="col-lg-8">
-                            <!-- Card Container -->
-                            <div class="card shadow-lg border-0 rounded-4">
-                                <div class="card-body p-5">
-                                    <form id="ticket_form" action="/public/ticket/create" method="post">
-                                        <!-- Equipment Information Section -->
-                                        <div class="mb-5">
-                                            <div class="d-flex align-items-center mb-4">
-                                                <div class="bg-primary rounded-circle p-2 me-3">
-                                                    <i class="fa fa-cogs text-white"></i>
-                                                </div>
-                                                <h3 class="mb-0 text-primary fw-semibold">Información del Equipo</h3>
-                                            </div>
-                                            
-                                            <div class="row g-4">
-                                                <div class="col-md-12">
-                                                    <div class="form-floating">
-                                                        <input type="text" 
-                                                               id="partner_name" 
-                                                               name="partner_name" 
-                                                               class="form-control bg-light" 
-                                                               t-att-value="partner_name" 
-                                                               readonly="readonly"
-                                                               placeholder="Empresa"/>
-                                                        <label for="partner_name">
-                                                            <i class="fa fa-building me-2 text-primary"></i>
-                                                            Empresa
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-md-6">
-                                                    <div class="form-floating">
-                                                        <input type="text" 
-                                                               id="product_name" 
-                                                               name="product_name" 
-                                                               class="form-control bg-light" 
-                                                               t-att-value="product_name" 
-                                                               readonly="readonly"
-                                                               placeholder="Modelo de máquina"/>
-                                                        <label for="product_name">
-                                                            <i class="fa fa-cube me-2 text-primary"></i>
-                                                            Modelo de Máquina
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-md-6">
-                                                    <div class="form-floating">
-                                                        <input type="text" 
-                                                               id="serie_id" 
-                                                               name="serie_id" 
-                                                               class="form-control bg-light" 
-                                                               t-att-value="serie_id" 
-                                                               readonly="readonly"
-                                                               placeholder="Número de serie"/>
-                                                        <label for="serie_id">
-                                                            <i class="fa fa-barcode me-2 text-primary"></i>
-                                                            Número de Serie
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Problem Description Section -->
-                                        <div class="mb-5">
-                                            <div class="d-flex align-items-center mb-4">
-                                                <div class="bg-warning rounded-circle p-2 me-3">
-                                                    <i class="fa fa-exclamation-triangle text-white"></i>
-                                                </div>
-                                                <h3 class="mb-0 text-warning fw-semibold">Descripción del Problema</h3>
-                                            </div>
-                                            
-                                            <div class="form-floating">
-                                                <textarea id="description" 
-                                                         name="description" 
-                                                         class="form-control" 
-                                                         placeholder="Describa detalladamente el problema que está experimentando..."
-                                                         style="height: 150px;"
-                                                         required="required"></textarea>
-                                                <label for="description">
-                                                    <i class="fa fa-edit me-2 text-warning"></i>
-                                                    Describa detalladamente el problema
-                                                </label>
-                                            </div>
-                                            
-                                            <!-- Help Text -->
-                                            <div class="form-text mt-2">
-                                                <i class="fa fa-info-circle me-1"></i>
-                                                Incluya detalles como: cuándo ocurrió, qué estaba haciendo, códigos de error, etc.
-                                            </div>
-                                        </div>
-
-                                        <!-- Priority Level (Optional Enhancement) -->
-                                        <div class="mb-5">
-                                            <div class="d-flex align-items-center mb-3">
-                                                <div class="bg-danger rounded-circle p-2 me-3">
-                                                    <i class="fa fa-flag text-white"></i>
-                                                </div>
-                                                <h4 class="mb-0 text-danger fw-semibold">Nivel de Prioridad</h4>
-                                            </div>
-                                            
-                                            <div class="row g-3">
-                                                <div class="col-md-4">
-                                                    <div class="form-check form-check-inline border rounded-3 p-3 h-100 priority-option" data-priority="low">
-                                                        <input class="form-check-input" type="radio" name="priority" id="priority_low" value="low" checked="checked"/>
-                                                        <label class="form-check-label w-100" for="priority_low">
-                                                            <div class="text-success fw-bold">
-                                                                <i class="fa fa-circle me-2"></i>Baja
-                                                            </div>
-                                                            <small class="text-muted">Sin urgencia</small>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="form-check form-check-inline border rounded-3 p-3 h-100 priority-option" data-priority="medium">
-                                                        <input class="form-check-input" type="radio" name="priority" id="priority_medium" value="medium"/>
-                                                        <label class="form-check-label w-100" for="priority_medium">
-                                                            <div class="text-warning fw-bold">
-                                                                <i class="fa fa-circle me-2"></i>Media
-                                                            </div>
-                                                            <small class="text-muted">Requiere atención</small>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="form-check form-check-inline border rounded-3 p-3 h-100 priority-option" data-priority="high">
-                                                        <input class="form-check-input" type="radio" name="priority" id="priority_high" value="high"/>
-                                                        <label class="form-check-label w-100" for="priority_high">
-                                                            <div class="text-danger fw-bold">
-                                                                <i class="fa fa-circle me-2"></i>Alta
-                                                            </div>
-                                                            <small class="text-muted">Urgente</small>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Submit Button -->
-                                        <div class="d-grid">
-                                            <button type="submit" class="btn btn-primary btn-lg rounded-pill py-3 fw-bold">
-                                                <i class="fa fa-paper-plane me-2"></i>
-                                                Enviar Reporte de Problema
-                                            </button>
-                                        </div>
-                                        
-                                        <!-- Additional Info -->
-                                        <div class="text-center mt-4">
-                                            <small class="text-muted">
-                                                <i class="fa fa-clock me-1"></i>
-                                                Tiempo de respuesta estimado: 2-4 horas laborales
-                                            </small>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
+                        <div class="form-group">
+                            <label for="product_name">Modelo de maquina:</label>
+                            <input type="text" id="product_name" name="product_name" class="form-control" t-att-value="product_name" readonly="readonly"/>
                         </div>
-                    </div>
+                        <div class="form-group">
+                            <label for="serie_id">Serie:</label>
+                            <input type="text" id="serie_id" name="serie_id" class="form-control" t-att-value="serie_id" readonly="readonly"/>
+                        </div>
+                        <!-- Más campos si son necesarios -->
+                        <div class="form-group">
+                            <label for="description">Descripción del problema:</label>
+                            <textarea id="description" name="description" class="form-control" placeholder="Describa el problema"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enviar</button>
+                    </form>
                 </div>
             </div>
-
-            <!-- Custom CSS -->
-            <style>
-                .bg-gradient-to-r {
-                    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-                }
-                
-                .priority-option {
-                    transition: all 0.3s ease;
-                    cursor: pointer;
-                }
-                
-                .priority-option:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                }
-                
-                .priority-option input[type="radio"]:checked ~ label {
-                    color: #495057;
-                }
-                
-                .priority-option:has(input:checked) {
-                    background-color: rgba(var(--bs-primary-rgb), 0.1);
-                    border-color: var(--bs-primary);
-                }
-                
-                .form-floating &gt; .form-control:focus ~ label,
-                .form-floating &gt; .form-control:not(:placeholder-shown) ~ label {
-                    opacity: 0.85;
-                    transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
-                }
-                
-                .card {
-                    background: rgba(255, 255, 255, 0.95);
-                    backdrop-filter: blur(10px);
-                }
-                
-                .btn-primary {
-                    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-                    border: none;
-                    transition: all 0.3s ease;
-                }
-                
-                .btn-primary:hover {
-                    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-                    transform: translateY(-1px);
-                    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
-                }
-
-                .rounded-4 {
-                    border-radius: 1rem !important;
-                }
-            </style>
-
-            <!-- JavaScript for interactivity -->
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    // Priority selection animation
-                    const priorityOptions = document.querySelectorAll('.priority-option');
-                    
-                    priorityOptions.forEach(option =&gt; {
-                        option.addEventListener('click', function() {
-                            const radio = this.querySelector('input[type="radio"]');
-                            radio.checked = true;
-                            
-                            // Remove active class from all options
-                            priorityOptions.forEach(opt =&gt; opt.classList.remove('active'));
-                            // Add active class to selected option
-                            this.classList.add('active');
-                        });
-                    });
-                    
-                    // Form validation enhancement
-                    const form = document.getElementById('ticket_form');
-                    const description = document.getElementById('description');
-                    
-                    form.addEventListener('submit', function(e) {
-                        if (description.value.trim().length &lt; 10) {
-                            e.preventDefault();
-                            alert('Por favor, proporcione una descripción más detallada del problema (mínimo 10 caracteres).');
-                            description.focus();
-                        }
-                    });
-                });
-            </script>
         </t>
     </template>
+
 </odoo>
