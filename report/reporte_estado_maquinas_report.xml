@@ -12,16 +12,13 @@
         </field>
         <field name="binding_type">report</field>
     </record>
-
     <!-- Plantilla QWeb -->
     <template id="reporte_estado_maquinas_pdf" name="Reporte Estado de Máquinas">
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
-
                 <!-- Helpers para URL absoluta y zona horaria -->
                 <t t-set="base_url" t-value="env['ir.config_parameter'].sudo().get_param('web.base.url') or ''"/>
                 <t t-set="tz" t-value="env.user.tz or 'UTC'"/>
-
                 <!-- Estilo de tarjeta según estado global -->
                 <t t-set="card_style">
                     <t t-if="kpis['estado_global'] == 'excelente'">border-color:#16a34a;background:#dcfce7</t>
@@ -29,7 +26,6 @@
                     <t t-elif="kpis['estado_global'] == 'regular'">border-color:#f97316;background:#ffedd5</t>
                     <t t-else="">border-color:#dc2626;background:#fee2e2</t>
                 </t>
-
                 <div class="page">
                     <style>
                         :root{
@@ -84,15 +80,14 @@
                         .no-break, tr { page-break-inside: avoid; break-inside: avoid; }
                         .page-break-before { page-break-before: always; break-before: page; }
                     </style>
-
                     <!-- Encabezado -->
                     <div class="report-header wrap no-break">
                         <h2 style="font-weight:800;">📊 Estado de Máquinas Alquiler</h2>
                         <div class="tiny">
-                            Generado: <t t-esc="date_print"/> — Compañía: <t t-esc="company.display_name"/>
+                            Generado:
+                            <t t-esc="date_print"/>
                         </div>
                     </div>
-
                     <!-- Distribución por estados (tabla de totales) -->
                     <div class="wrap">
                         <div class="sec-title">Distribución por estados</div>
@@ -107,19 +102,23 @@
                             <tbody>
                                 <t t-foreach="by_state" t-as="s" t-key="s['label']">
                                     <tr>
-                                        <td><t t-esc="s['label']"/></td>
-                                        <td class="num"><t t-esc="s['qty']"/></td>
-                                        <td class="num"><t t-esc="s['pct_str']"/></td>
+                                        <td>
+                                            <t t-esc="s['label']"/>
+                                        </td>
+                                        <td class="num">
+                                            <t t-esc="s['qty']"/>
+                                        </td>
+                                        <td class="num">
+                                            <t t-esc="s['pct_str']"/>
+                                        </td>
                                     </tr>
                                 </t>
                             </tbody>
                         </table>
                     </div>
-
                     <!-- Detalle de equipos: una TABLA por ESTADO -->
                     <div class="wrap">
                         <div class="sec-title">Detalle de equipos por estado</div>
-
                         <!-- Orden/etiquetas -->
                         <t t-set="estados_order"
                            t-value="[
@@ -132,32 +131,29 @@
                                ('externo','Externo'),
                                ('vendida','Vendida')
                            ]"/>
-
                         <t t-set="primero" t-value="True"/>
-
                         <t t-foreach="estados_order" t-as="st">
                             <t t-set="code" t-value="st[0]"/>
                             <t t-set="label" t-value="st[1]"/>
                             <t t-set="rows" t-value="docs.filtered(lambda r: r.estado_maquina == code)"/>
-
                             <t t-if="rows">
                                 <div t-attf-class="#{'' if primero else 'page-break-before'}"></div>
                                 <t t-set="primero" t-value="False"/>
-
                                 <div class="sec-title no-break" style="display:flex; align-items:center; gap:10px;">
-                                    <span><t t-esc="label"/></span>
+                                    <span>
+                                        <t t-esc="label"/>
+                                    </span>
                                     <span class="badge" t-att-class="'badge b-' + (code.replace('_','-'))">
-                                        <t t-esc="label"/> — <t t-esc="len(rows)"/> equipo(s)
+                                        <t t-esc="label"/> —
+                                        <t t-esc="len(rows)"/> equipo(s)
                                     </span>
                                 </div>
-
                                 <table class="main">
                                     <colgroup>
                                         <col class="w-marca"/>
                                         <col class="w-modelo"/>
                                         <col class="w-serie"/>
-                                        <col class="w-total"/>
-                                        <col class="w-creado"/>
+                                        <col class="w-total"/>                                      
                                         <col class="w-info"/>
                                         <col class="w-accion"/>
                                     </colgroup>
@@ -166,8 +162,7 @@
                                             <th class="w-marca">Marca</th>
                                             <th class="w-modelo">Modelo</th>
                                             <th class="w-serie">Serie</th>
-                                            <th class="w-total num">Contómetro</th>
-                                            <th class="w-creado">Creado</th>
+                                            <th class="w-total num">Contómetro</th>                                            
                                             <th class="w-info">Informe técnico</th>
                                             <th class="w-accion">Acción</th>
                                         </tr>
@@ -175,24 +170,28 @@
                                     <tbody>
                                         <t t-foreach="rows" t-as="r" t-key="r.id">
                                             <tr>
-                                                <td><t t-esc="r.marca or ''"/></td>
-                                                <td><t t-esc="r.modelo or ''"/></td>
-                                                <td class="nowrap"><t t-esc="r.serie or ''"/></td>
-                                                <td class="num"><t t-esc="r.contador_total or 0"/></td>
-                                                <!-- Fecha de creación del registro -->
                                                 <td>
-                                                <t t-esc="env['ir.qweb.field.datetime'].value_to_html(r.create_date, {'format': 'dd/MM/yyyy HH:mm'}) if r.create_date else ''"/>
+                                                    <t t-esc="r.marca or ''"/>
                                                 </td>
-
+                                                <td>
+                                                    <t t-esc="r.modelo or ''"/>
+                                                </td>
+                                                <td class="nowrap">
+                                                    <t t-esc="r.serie or ''"/>
+                                                </td>
+                                                <td class="num">
+                                                    <t t-esc="r.contador_total or 0"/>
+                                                </td>                                                
                                                 <!-- Informe técnico limpio (como ya lo tienes en informes_limpios) -->
-                                                <td><t t-esc="informes_limpios.get(r.id) or ''"/></td>
+                                                <td>
+                                                    <t t-esc="informes_limpios.get(r.id) or ''"/>
+                                                </td>
                                                 <!-- Botón que abre el registro -->
                                                 <td>
                                                     <a class="btn"
-   t-attf-href="#{base_url}/web#id=#{r.id}&amp;model=reporte.estado.maquina&amp;view_type=form"
-   target="_blank">Ver información
-   </a>
-
+                                                        t-attf-href="#{base_url}/web#id=#{r.id}&amp;model=reporte.estado.maquina&amp;view_type=form"
+                                                        target="_blank">Ver información
+                                                    </a>
                                                 </td>
                                             </tr>
                                         </t>
@@ -201,7 +200,6 @@
                             </t>
                         </t>
                     </div>
-
                     <div class="tiny wrap" style="margin-top:8px;">
                         Generado por Isidro
                     </div>
