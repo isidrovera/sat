@@ -11,11 +11,7 @@
         <field name="tag">sat_dashboard_tag</field>
     </record>
 
-    <!-- Menú principal con icono -->
-    <menuitem name="Sistema de taller" 
-              id="sat_menu_root" 
-              web_icon="sat,static/description/icon.png" 
-              sequence="1"/>
+   
 
     <!-- Dashboard como primer elemento -->
     <menuitem id="sat_dashboard_menu" 

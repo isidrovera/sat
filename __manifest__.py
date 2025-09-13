@@ -33,6 +33,7 @@
     'data': [
         'security/acceso.xml',
         'security/ir.model.access.csv',
+        'views/00_root_menu.xml',
         'data/ir_secuense.xml',
         'data/ir_secuense_ticket.xml',
         'data/ir.secuense_info.xml',

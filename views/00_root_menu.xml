@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- MENÚ RAÍZ SAT: debe existir antes que cualquier hijo -->
+  <menuitem id="sat_menu_root"
+            name="Sistema de taller"
+            web_icon="sat,static/description/icon.png"
+            sequence="1"/>
+</odoo>
