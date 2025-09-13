@@ -64,8 +64,7 @@
         'data/correos_alquiler.xml',
         'data/mail_permisos.xml',
         'data/correos_evaluaciones_tecnicos.xml',
-        'data/email_templates_consolidated.xml',
-        'views/acciones_menus.xml',
+        'data/email_templates_consolidated.xml',        
         'views/sat_dashboard_menu.xml',
         'views/ventas.xml',
         'views/templates.xml',
@@ -126,6 +125,7 @@
         'views/printtracker_views.xml',
         'views/reporte_maquinas_alquiler.xml',
         'views/tickets_masivos.xml',
+        'views/acciones_menus.xml',
     ],
     
     'assets': {
