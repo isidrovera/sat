@@ -104,23 +104,6 @@
                     </templates>
                 </kanban>
             </field>
-        </record>
-
-        <record id="sat.sat_act_window" model="ir.actions.act_window">
-            <field name="name">Maquinas_</field>
-            <field name="type">ir.actions.act_window</field>
-            <field name="res_model">sat.sat</field>
-            <field name="view_type">form</field>
-            <field name="view_mode">kanban,tree,form,calendar,graph,pivot</field>
-            <field name="context">{"search_default_example_field":1}</field>
-            <field name="help" type="html">
-                <p class="oe_view_nocontent_create">
-                    There is no examples click here to add new ModelTitle.
-                </p>
-            </field>
-        </record>
-
-        <menuitem name="ModelTitle" id="sat.sat_menu" parent="your_root_menu" action="sat.sat_act_window"/>
-
+        </record>        
     </data>
 </odoo>
