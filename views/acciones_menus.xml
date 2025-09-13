@@ -706,8 +706,7 @@
          * Ajusté el parent para que no apunte a 'your_root_menu'
     ========================================================== -->
     <record id="sat.sat_act_window" model="ir.actions.act_window">
-      <field name="name">Maquinas_</field>
-      <field name="type">ir.actions.act_window</field>
+      <field name="name">Maquinas_</field>     
       <field name="res_model">sat.sat</field>
       <field name="view_type">form</field>
       <field name="view_mode">kanban,tree,form,calendar,graph,pivot</field>
