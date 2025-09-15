@@ -800,9 +800,9 @@
 
     <menuitem id="menu_reparacion_intervencion"
               name="Intervenciones"
-              parent="sat_menu_root"
+              parent="sat.ajustes"
               action="action_reparacion_intervencion"
-              sequence="26"/>
+              sequence="161"/>
     
 
     
