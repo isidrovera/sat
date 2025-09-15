@@ -85,7 +85,7 @@
               <field name="componente" readonly="1"/>
             </group>
             <group>
-              <field name="line_ids" context="{'default_wizard_id': active_id}">
+              <field name="line_ids" >
                 <list editable="bottom">
                   
                   <field name="accion_sub"/>
