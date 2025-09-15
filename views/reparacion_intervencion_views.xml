@@ -6,23 +6,7 @@
     <!-- 1) CATÁLOGO: Subpartes por componente                 -->
     <!-- ===================================================== -->
 
-    <!-- SEARCH -->
-    <record id="view_reparacion_subparte_search" model="ir.ui.view">
-      <field name="name">reparacion.subparte.search</field>
-      <field name="model">reparacion.subparte</field>
-      <field name="arch" type="xml">
-        <search string="Buscar Subpartes">
-          <field name="name"/>
-          <field name="componente"/>
-          <filter string="Activos" name="active_true" domain="[('active','=',True)]"/>
-          <filter string="Archivados" name="active_false" domain="[('active','=',False)]"/>
-          <group expand="0" string="Agrupar por">
-            <filter string="Componente" context="{'group_by':'componente'}"/>
-            <filter string="Activo" context="{'group_by':'active'}"/>
-          </group>
-        </search>
-      </field>
-    </record>
+  
 
     <!-- LIST -->
     <record id="view_reparacion_subparte_list" model="ir.ui.view">
@@ -62,26 +46,7 @@
     <!-- 2) INTERVENCIONES                                     -->
     <!-- ===================================================== -->
 
-    <!-- SEARCH -->
-    <record id="view_reparacion_intervencion_search" model="ir.ui.view">
-      <field name="name">reparacion.intervencion.search</field>
-      <field name="model">reparacion.intervencion</field>
-      <field name="arch" type="xml">
-        <search string="Buscar Intervenciones">
-          <field name="reparacion_id"/>
-          <field name="componente"/>
-          <field name="accion"/>
-          <filter string="Con cambio" name="only_change" domain="[('es_cambio','=',True)]"/>
-          <filter string="Esta reparación" name="reparacion_actual"
-                  domain="[('reparacion_id','=',context.get('search_default_reparacion_id'))]"/>
-          <group expand="0" string="Agrupar por">
-            <filter string="Reparación" context="{'group_by':'reparacion_id'}"/>
-            <filter string="Componente" context="{'group_by':'componente'}"/>
-            <filter string="Acción" context="{'group_by':'accion'}"/>
-          </group>
-        </search>
-      </field>
-    </record>
+    
 
     <!-- LIST detalle (reutilizable) -->
     <record id="view_reparacion_intervencion_detalle_list" model="ir.ui.view">
@@ -162,35 +127,7 @@
       </field>
     </record>
 
-   
-
-    <!-- ===================================================== -->
-    <!-- 3) SMART BUTTON en formulario de Reparaciones         -->
-    <!-- ===================================================== -->
-
-    <!-- REEMPLAZA el ref de inherit_id por el id real de tu form de reparaciones -->
-    <record id="view_reparaciones_form_inherit_intervenciones_btn" model="ir.ui.view">
-      <field name="name">reparaciones.form.inherit.intervenciones.btn</field>
-      <field name="model">reparaciones.reparaciones</field>
-      <field name="inherit_id" ref="sat.view_reparaciones_form"/>
-      <field name="arch" type="xml">
-        <xpath expr="//form/header" position="inside">
-          <button type="action"
-                  name="%(action_reparacion_intervencion)d"
-                  string="Intervenciones"
-                  class="oe_stat_button"
-                  context="{'search_default_reparacion_id': active_id, 'default_reparacion_id': active_id}">
-            <span class="o_stat_info">
-              <span class="o_stat_text">Ver</span>
-            </span>
-          </button>
-        </xpath>
-      </field>
-    </record>
-
-    <!-- ===================================================== -->
-    <!-- 4) WIZARD: Añadir subpartes                           -->
-    <!-- ===================================================== -->
+ 
 
     <!-- LIST líneas del wizard -->
     <record id="view_reparacion_add_subparts_wizard_line_list" model="ir.ui.view">
