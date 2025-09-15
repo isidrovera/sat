@@ -1,56 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <data>
-    <!-- SEARCH -->
+
+    <!-- =========================== -->
+    <!-- SEARCH (Búsqueda avanzada)  -->
+    <!-- =========================== -->
     <record id="view_checklist_map_search" model="ir.ui.view">
-      <field name="name">checklist.map.search</field>
+      <field name="name">checklist.componente.map.search</field>
       <field name="model">checklist.componente.map</field>
       <field name="arch" type="xml">
         <search string="Buscar Mapeos">
           <field name="field_name"/>
           <field name="tipo_id"/>
-          <group expand="0" string="Agrupar">
-            <filter string="Por Tipo" name="grp_tipo" context="{'group_by':'tipo_id'}"/>
+          <field name="color"/>
+
+          <!-- Filtros rápidos -->
+          <filter name="fil_blocking" string="Puede dejar no operativo"
+                  domain="[('is_blocking','=',True)]"/>
+
+          <!-- Agrupar por -->
+          <group expand="0" string="Agrupar por">
+            <filter name="grp_tipo"  string="Tipo"   context="{'group_by':'tipo_id'}"/>
+            <filter name="grp_color" string="Color"  context="{'group_by':'color'}"/>
+            <filter name="grp_block" string="Bloqueante"
+                    context="{'group_by':'is_blocking'}"/>
           </group>
         </search>
       </field>
     </record>
 
-    <!-- LIST -->
+    <!-- ============ -->
+    <!-- LIST (lista) -->
+    <!-- ============ -->
     <record id="view_checklist_map_list" model="ir.ui.view">
-      <field name="name">checklist.map.list</field>
+      <field name="name">checklist.componente.map.list</field>
       <field name="model">checklist.componente.map</field>
       <field name="arch" type="xml">
-        <list string="Mapa Checklist → Componente" create="1" edit="1" delete="0">
+        <list string="Mapa Checklist → Componente"
+              create="1" edit="1" delete="1"
+              default_order="tipo_id asc, field_name asc">
           <field name="field_name"/>
           <field name="tipo_id"/>
-          <field name="subparte_ids" widget="many2many_tags"/>
-          <field name="estado_a_severidad"/>
+          <field name="color" optional="show"/>
+          <field name="is_blocking" optional="show"/>
+          <field name="label" optional="show"/>
         </list>
       </field>
     </record>
 
-    <!-- FORM -->
+    <!-- ============ -->
+    <!-- FORM (form)  -->
+    <!-- ============ -->
     <record id="view_checklist_map_form" model="ir.ui.view">
-      <field name="name">checklist.map.form</field>
+      <field name="name">checklist.componente.map.form</field>
       <field name="model">checklist.componente.map</field>
       <field name="arch" type="xml">
         <form string="Mapa de Checklist">
-          <group>
-            <field name="field_name" placeholder="p.ej. black_id, fusora_id, adf_id"/>
-            <field name="tipo_id"/>
-          </group>
-          <group>
-            <field name="subparte_ids" widget="many2many_tags"/>
-            <field name="estado_a_severidad" placeholder='JSON: {"si":"ok","desgaste":"warn","cambio":"critical"}'/>
-          </group>
-          <group>
-            <field name="notas"/>
-          </group>
+          <sheet>
+            <group>
+              <group>
+                <field name="field_name" placeholder="p.ej. black_id, fusora_id, adf_id, tray1_id"/>
+                <field name="tipo_id"/>
+                <field name="color"/>
+              </group>
+              <group>
+                <field name="is_blocking"/>
+                <field name="label" placeholder="Etiqueta amigable (Tray 1, ADF, etc.)"/>
+              </group>
+            </group>
+          </sheet>
         </form>
       </field>
     </record>
 
-  
+    
   </data>
 </odoo>
