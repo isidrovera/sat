@@ -2340,11 +2340,43 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         selection = field.selection(self) if callable(field.selection) else field.selection
         return dict(selection).get(val, val)
 
-    def _build_informe_html(self):
-        """Construye el HTML del informe técnico (autogenerado)."""
-        f = self._collect_findings()
+    def _get_funciones_no_operativas(self):
+        """Retorna lista de funciones que salieron 'no' (no operativas)."""
+        etiquetas = []
+        for fname, label in self._FUNCIONES:
+            if getattr(self, fname, False) == 'no':
+                etiquetas.append(label)
+        return etiquetas
 
-        # Encabezado / dato de equipo
+    def _get_toners_criticos(self):
+        """
+        Retorna lista de tóneres críticos solo si están 'vacio' o 'sin_botella'.
+        En monocromo solo considera negro.
+        """
+        criticos = []
+        for fname, label in self._TONERS:
+            if self.tipo_id != 'color' and fname != 'toner_black_id':
+                continue
+            val = getattr(self, fname, False)
+            if val in ('vacio', 'sin_botella'):
+                criticos.append(label)
+        return criticos
+
+    def _build_informe_html(self):
+        """
+        Genera un informe RESUMIDO:
+        - Siempre: texto general de mantenimiento.
+        - Solo lista EXCEPCIONES:
+            • funciones que NO operan
+            • módulos con DESGASTE o CAMBIO
+            • tóneres críticos (vacío / sin botella)
+        - Conclusión corta según severidad.
+        """
+        f = self._collect_findings()
+        funciones_no = self._get_funciones_no_operativas()
+        toners_crit = self._get_toners_criticos()
+
+        # Encabezado equipo
         equipo_txt = []
         if self.marca_id_r: equipo_txt.append(self.marca_id_r)
         if self.product_alquiler and self.product_alquiler.name:
@@ -2352,69 +2384,80 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         if self.serie_id_r: equipo_txt.append(f"Serie: {self.serie_id_r}")
         equipo_txt = " · ".join(equipo_txt) or "Equipo"
 
-        # Sección problemas reportados
         problema = (self.description or '').strip() or 'No especificado por el usuario'
-
-        # Bloques auxiliares
-        def _ul(items):
-            return '' if not items else '<ul>' + ''.join(f'<li>{it}</li>' for it in items) + '</ul>'
-
-        # Funciones
-        funciones_html = '<table class="o_table"><thead><tr><th>Función</th><th>Estado</th></tr></thead><tbody>'
-        for fname, label in self._FUNCIONES:
-            # No mostrar escaneos “no_aplica”
-            if 'scan' in fname and getattr(self, fname, '') == 'no_aplica':
-                continue
-            funciones_html += f'<tr><td>{label}</td><td>{self._label_selection(fname)}</td></tr>'
-        funciones_html += '</tbody></table>'
-
-        # Tóner (en monocromo solo negro)
-        toner_rows = []
-        for fname, label in self._TONERS:
-            if self.tipo_id != 'color' and fname != 'toner_black_id':
-                continue
-            toner_rows.append((label, self._label_selection(fname)))
-        toner_html = '<table class="o_table"><thead><tr><th>Tóner</th><th>Nivel</th></tr></thead><tbody>'
-        toner_html += ''.join(f'<tr><td>{k}</td><td>{v}</td></tr>' for k, v in toner_rows)
-        toner_html += '</tbody></table>'
 
         # Conclusión sugerida
         calidad = self._calc_calidad(f)
         if calidad == 'mala':
-            concl = "Se recomienda **no postergar** el cambio de las unidades indicadas para evitar paradas no planificadas."
+            concl = "Se requiere intervención inmediata para evitar paradas no planificadas."
         elif calidad == 'regular':
-            concl = "El equipo opera, pero presenta **desgaste** en componentes; se sugiere programar cambio preventivo."
+            concl = "Equipo operativo con desgaste; programar cambio preventivo."
         else:
-            concl = "Equipo **operativo**. Se recomienda mantenimiento preventivo según plan."
+            concl = "Equipo operativo. Mantener plan de mantenimiento preventivo."
 
-        # Construcción del HTML (marcado como autogenerado)
+        # Helpers HTML
+        def _ul(items):
+            return '' if not items else '<ul>' + ''.join(f'<li>{it}</li>' for it in items) + '</ul>'
+
+        # Bloque de excepciones (solo si hay)
+        bloques_excepciones = []
+
+        if funciones_no:
+            bloques_excepciones.append(
+                f"<p><strong>Funciones no operativas:</strong></p>{_ul(funciones_no)}"
+            )
+
+        if f['requiere_cambio']:
+            bloques_excepciones.append(
+                f"<p><strong>Requiere cambio inmediato:</strong></p>{_ul(f['requiere_cambio'])}"
+            )
+
+        if f['desgaste']:
+            bloques_excepciones.append(
+                f"<p><strong>Componentes con desgaste (recomendado cambio):</strong></p>{_ul(f['desgaste'])}"
+            )
+
+        if f['con_falla'] and not funciones_no:
+            # 'con_falla' de módulos (no funciones) si no quedaron ya cubiertos por funciones_no
+            bloques_excepciones.append(
+                f"<p><strong>Con falla:</strong></p>{_ul(f['con_falla'])}"
+            )
+
+        if toners_crit:
+            bloques_excepciones.append(
+                f"<p><strong>Consumibles críticos:</strong></p>{_ul(toners_crit)}"
+            )
+
+        excepciones_html = ''.join(bloques_excepciones)
+
+        # Texto general (siempre)
+        texto_general = (
+            "Se realizó limpieza, mantenimiento preventivo y verificación general de funcionamiento y consumibles."
+        )
+
+        # Si NO hay excepciones, no listamos nada más (solo el texto general).
+        # Si hay excepciones, mostramos SOLO ese bloque.
+        cuerpo_html = (
+            f"<p>{texto_general}</p>"
+            if not excepciones_html else
+            f"<p>{texto_general}</p>"
+            f"<h5 style='margin:12px 0 6px;'>Observaciones</h5>{excepciones_html}"
+        )
+
         html = f"""
     <div data-autogen="1" style="font-family: Arial; line-height:1.4;">
     <h4 style="margin:0 0 8px 0;">Informe técnico – {equipo_txt}</h4>
-
     <p><strong>Problema reportado:</strong> {problema}</p>
-
-    <h5 style="margin:12px 0 6px;">Hallazgos del checklist</h5>
-    {'<p>Sin observaciones relevantes.</p>' if not (f['con_falla'] or f['desgaste'] or f['requiere_cambio']) else ''}
-    {('<p><strong>Con falla:</strong></p>' + _ul(f['con_falla'])) if f['con_falla'] else ''}
-    {('<p><strong>Con desgaste (recomendado cambio):</strong></p>' + _ul(f['desgaste'])) if f['desgaste'] else ''}
-    {('<p><strong>Requiere cambio inmediato:</strong></p>' + _ul(f['requiere_cambio'])) if f['requiere_cambio'] else ''}
-
-    <h5 style="margin:12px 0 6px;">Funciones verificadas</h5>
-    {funciones_html}
-
-    <h5 style="margin:12px 0 6px;">Niveles de tóner</h5>
-    {toner_html}
-
+    {cuerpo_html}
     <h5 style="margin:12px 0 6px;">Conclusión</h5>
     <p>{concl}</p>
-
     <p style="color:#888; font-size:12px; margin-top:10px;">
         *Este bloque fue generado automáticamente a partir del checklist.*
     </p>
     </div>
     """
         return html, calidad
+
 
     def _autofill_informe_si_corresponde(self):
         """
