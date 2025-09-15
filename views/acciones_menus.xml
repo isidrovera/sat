@@ -194,14 +194,14 @@
       <field name="view_mode">list,form</field>
     </record>
 
-    <record id="action_printtracker_consolidator_srv" model="ir.actions.server">
+    <record id="action_printtracker_consolidator" model="ir.actions.server">
       <field name="name">Ejecutar Consolidación</field>
       <field name="model_id" ref="model_printtracker_config"/>
       <field name="state">code</field>
       <field name="code">env['printtracker.config'].sudo().run_consolidation()</field>
     </record>
 
-    <record id="action_printtracker_alert_manager_srv" model="ir.actions.server">
+    <record id="action_printtracker_alert_manager" model="ir.actions.server">
       <field name="name">Ejecutar Revisión de Alertas</field>
       <field name="model_id" ref="model_printtracker_config"/>
       <field name="state">code</field>
