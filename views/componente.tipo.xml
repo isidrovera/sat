@@ -22,7 +22,7 @@
       <field name="arch" type="xml">
         <list string="Tipos de Componente" create="1" edit="1" delete="0">
           <field name="name"/>
-          <field name="categoria"/>
+          
           <field name="active"/>
         </list>
       </field>
@@ -36,7 +36,7 @@
         <form string="Tipo de Componente">
           <group>
             <field name="name"/>
-            <field name="categoria"/>
+        
             <field name="descripcion"/>
             <field name="active"/>
           </group>
