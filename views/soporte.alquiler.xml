@@ -101,10 +101,12 @@
                                 </group>
                             </page>
                             <page string="Informe Técnico">
-                                <group>
-                                    <field name="informe_id"  readonly="estado == 'finalizado'"/>
-                                </group>
-                            </page>
+                                <field name="informe_id" widget="html"/>
+                                <footer>
+                                    <button name="action_regenerar_informe" type="object" string="Regenerar informe" class="btn-primary"/>
+                                </footer>
+                                </page>
+
                             <page string="Accesorios">
                                 <group>
                                     <group>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+    <!-- SEARCH -->
+    <record id="view_informe_regla_search" model="ir.ui.view">
+      <field name="name">informe.regla.search</field>
+      <field name="model">informe.regla</field>
+      <field name="arch" type="xml">
+        <search string="Buscar Reglas de Informe">
+          <field name="name"/>
+          <field name="severidad"/>
+          <field name="modelo_id"/>
+          <group expand="0" string="Agrupar">
+            <filter string="Por Severidad" name="grp_sev" context="{'group_by':'severidad'}"/>
+            <filter string="Por Modelo" name="grp_mod" context="{'group_by':'modelo_id'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- LIST -->
+    <record id="view_informe_regla_list" model="ir.ui.view">
+      <field name="name">informe.regla.list</field>
+      <field name="model">informe.regla</field>
+      <field name="arch" type="xml">
+        <list string="Reglas de Informe" create="1" edit="1" delete="0">
+          <field name="name"/>
+          <field name="severidad"/>
+          <field name="modelo_id"/>
+          <field name="activo"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- FORM -->
+    <record id="view_informe_regla_form" model="ir.ui.view">
+      <field name="name">informe.regla.form</field>
+      <field name="model">informe.regla</field>
+      <field name="arch" type="xml">
+        <form string="Regla de Informe">
+          <group>
+            <field name="name"/>
+            <field name="activo"/>
+          </group>
+          <group>
+            <field name="severidad"/>
+            <field name="modelo_id"/>
+          </group>
+          <notebook>
+            <page string="Condiciones">
+              <group>
+                <field name="condicion_json" placeholder='JSON de condiciones (ej. {"adf_id":"desgaste","fusora_id":"cambio"})'/>
+              </group>
+            </page>
+            <page string="Salida (Plantilla)">
+              <group>
+                <field name="plantilla" widget="text" placeholder="Texto que se insertará en Informe Técnico"/>
+              </group>
+            </page>
+            <page string="Vista Previa">
+              <group>
+                <field name="preview_html" widget="html" readonly="1"/>
+              </group>
+            </page>
+          </notebook>
+        </form>
+      </field>
+    </record>
+
+    
+  </data>
+</odoo>

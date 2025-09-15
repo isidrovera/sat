@@ -633,5 +633,81 @@
               action="action_inspeccion_resultado"
               sequence="130"/>
 
+
+      <!-- ACTION -->
+    <record id="action_componente_tipo" model="ir.actions.act_window">
+      <field name="name">Tipos de Componente</field>
+      <field name="res_model">componente.tipo</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="view_componente_tipo_search"/>
+    </record>
+
+    <!-- MENU (en Configuración / Ajustes) -->
+    <menuitem id="menu_componente_tipo"
+              name="Tipos de Componente"
+              parent="sat.ajustes"
+              action="action_componente_tipo"
+              sequence="155"/>
+
+
+ <!-- ACTION -->
+    <record id="action_componente_subparte" model="ir.actions.act_window">
+      <field name="name">Subpartes</field>
+      <field name="res_model">componente.subparte</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="view_componente_subparte_search"/>
+    </record>
+
+    <!-- MENU -->
+    <menuitem id="menu_componente_subparte"
+              name="Subpartes"
+              parent="sat.ajustes"
+              action="action_componente_subparte"
+              sequence="156"/>
+  <!-- ACTION -->
+    <record id="action_modelo_maquina_componente" model="ir.actions.act_window">
+      <field name="name">Componentes por Modelo</field>
+      <field name="res_model">modelo.maquina.componente</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="view_modelo_maquina_componente_search"/>
+    </record>
+
+    <!-- MENU -->
+    <menuitem id="menu_modelo_maquina_componente"
+              name="Componentes por Modelo"
+              parent="sat.ajustes"
+              action="action_modelo_maquina_componente"
+              sequence="157"/>
+
+
+      <!-- ACTION -->
+    <record id="action_informe_regla" model="ir.actions.act_window">
+      <field name="name">Reglas de Informe</field>
+      <field name="res_model">informe.regla</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="view_informe_regla_search"/>
+    </record>
+
+    <!-- MENU -->
+    <menuitem id="menu_informe_regla"
+              name="Reglas de Informe"
+              parent="sat.ajustes"
+              action="action_informe_regla"
+              sequence="158"/>
+
+      <!-- ACTION -->
+    <record id="action_checklist_map" model="ir.actions.act_window">
+      <field name="name">Mapa Checklist → Componente</field>
+      <field name="res_model">checklist.componente.map</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="view_checklist_map_search"/>
+    </record>
+
+    <!-- MENU -->
+    <menuitem id="menu_checklist_map"
+              name="Mapa Checklist → Componente"
+              parent="sat.ajustes"
+              action="action_checklist_map"
+              sequence="159"/>
   </data>
 </odoo>

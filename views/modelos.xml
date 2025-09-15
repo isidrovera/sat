@@ -274,6 +274,17 @@
                                     </div>
                                 </div>
                             </page>
+                            <page string="Componentes">
+  <field name="componente_line_ids" context="{'default_modelo_id': active_id}">
+    <list editable="bottom">
+      <field name="tipo_id"/>
+      <field name="subparte_ids" widget="many2many_tags"/>
+      <field name="critico"/>
+      <field name="frecuencia_mantenimiento"/>
+    </list>
+  </field>
+</page>
+
                         </notebook>
                     </sheet>
                 </form>

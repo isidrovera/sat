@@ -126,6 +126,11 @@
         'views/printtracker_views.xml',
         'views/reporte_maquinas_alquiler.xml',
         'views/tickets_masivos.xml',
+        'views/componente.tipo.xml',
+        'views/componente.subparte.xml',
+        'views/modelo.maquina.componente.xml',
+        'views/informe.regla.xml',
+        'views/checklist.componente.map.xml',
         'views/acciones_menus.xml',
     ],
     

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+    <!-- SEARCH -->
+    <record id="view_modelo_maquina_componente_search" model="ir.ui.view">
+      <field name="name">modelo.maquina.componente.search</field>
+      <field name="model">modelo.maquina.componente</field>
+      <field name="arch" type="xml">
+        <search string="Buscar Configuración por Modelo">
+          <field name="modelo_id"/>
+          <field name="tipo_id"/>
+          <field name="subparte_ids"/>
+          <group expand="0" string="Agrupar">
+            <filter string="Por Modelo" name="grp_mod" context="{'group_by':'modelo_id'}"/>
+            <filter string="Por Tipo" name="grp_tipo" context="{'group_by':'tipo_id'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- LIST -->
+    <record id="view_modelo_maquina_componente_list" model="ir.ui.view">
+      <field name="name">modelo.maquina.componente.list</field>
+      <field name="model">modelo.maquina.componente</field>
+      <field name="arch" type="xml">
+        <list string="Componentes por Modelo" create="1" edit="1" delete="0">
+          <field name="modelo_id"/>
+          <field name="tipo_id"/>
+          <field name="critico"/>
+          <field name="frecuencia_mantenimiento"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- FORM -->
+    <record id="view_modelo_maquina_componente_form" model="ir.ui.view">
+      <field name="name">modelo.maquina.componente.form</field>
+      <field name="model">modelo.maquina.componente</field>
+      <field name="arch" type="xml">
+        <form string="Config. Componente por Modelo">
+          <group>
+            <field name="modelo_id"/>
+            <field name="tipo_id"/>
+          </group>
+          <group>
+            <field name="subparte_ids" widget="many2many_tags"/>
+            <field name="critico"/>
+            <field name="frecuencia_mantenimiento"/>
+            <field name="notas"/>
+          </group>
+        </form>
+      </field>
+    </record>
+
+   
+  </data>
+</odoo>

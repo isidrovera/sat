@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+    <!-- SEARCH -->
+    <record id="view_componente_subparte_search" model="ir.ui.view">
+      <field name="name">componente.subparte.search</field>
+      <field name="model">componente.subparte</field>
+      <field name="arch" type="xml">
+        <search string="Buscar Subpartes">
+          <field name="name"/>
+          <field name="tipo_id"/>
+          <filter string="Activos" name="fil_activos" domain="[('active','=',True)]"/>
+          <group expand="0" string="Agrupar">
+            <filter string="Por Tipo" name="grp_tipo" context="{'group_by':'tipo_id'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- LIST -->
+    <record id="view_componente_subparte_list" model="ir.ui.view">
+      <field name="name">componente.subparte.list</field>
+      <field name="model">componente.subparte</field>
+      <field name="arch" type="xml">
+        <list string="Subpartes" create="1" edit="1" delete="0">
+          <field name="name"/>
+          <field name="tipo_id"/>
+          <field name="codigo_interno"/>
+          <field name="active"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- FORM -->
+    <record id="view_componente_subparte_form" model="ir.ui.view">
+      <field name="name">componente.subparte.form</field>
+      <field name="model">componente.subparte</field>
+      <field name="arch" type="xml">
+        <form string="Subparte">
+          <group>
+            <field name="name"/>
+            <field name="tipo_id"/>
+          </group>
+          <group>
+            <field name="codigo_interno"/>
+            <field name="descripcion"/>
+            <field name="active"/>
+          </group>
+        </form>
+      </field>
+    </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- SEARCH -->
+    <record id="view_componente_tipo_search" model="ir.ui.view">
+      <field name="name">componente.tipo.search</field>
+      <field name="model">componente.tipo</field>
+      <field name="arch" type="xml">
+        <search string="Buscar Tipo de Componente">
+          <field name="name"/>
+          <filter string="Activos" name="fil_activos" domain="[('active','=',True)]"/>
+          <filter string="Archivados" name="fil_arch" domain="[('active','=',False)]"/>
+        </search>
+      </field>
+    </record>
+
+    <!-- LIST -->
+    <record id="view_componente_tipo_list" model="ir.ui.view">
+      <field name="name">componente.tipo.list</field>
+      <field name="model">componente.tipo</field>
+      <field name="arch" type="xml">
+        <list string="Tipos de Componente" create="1" edit="1" delete="0">
+          <field name="name"/>
+          <field name="categoria"/>
+          <field name="active"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- FORM -->
+    <record id="view_componente_tipo_form" model="ir.ui.view">
+      <field name="name">componente.tipo.form</field>
+      <field name="model">componente.tipo</field>
+      <field name="arch" type="xml">
+        <form string="Tipo de Componente">
+          <group>
+            <field name="name"/>
+            <field name="categoria"/>
+            <field name="descripcion"/>
+            <field name="active"/>
+          </group>
+        </form>
+      </field>
+    </record>
+
+    
+  </data>
+</odoo>
