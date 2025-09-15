@@ -52,3 +52,7 @@ from . import printtracker_consolidator
 from . import printtracker_daily_reading
 from . import reporte_maquinas_alquiler
 from . import reporte_estado_maquinas
+from . import modelo_maquina_componentes
+from . import checklist_map
+from . import informe_regla
+from . import componente

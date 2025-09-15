@@ -162,3 +162,34 @@ access_reporte_estado_maquina_wizard_user,reporte.estado.maquina.wizard user,mod
 access_reporte_estado_maquina_wizard_admin,reporte.estado.maquina.wizard admin,model_reporte_estado_maquina_wizard,base.group_system,1,1,1,1
 access_whatsapp_notification_wizard_line_user,access_whatsapp_notification_wizard_line_user,model_whatsapp_notification_wizard_line,base.group_user,1,1,1,0
 access_whatsapp_notification_wizard_line_system,access_whatsapp_notification_wizard_line_system,model_whatsapp_notification_wizard_line,base.group_system,1,1,1,1
+
+access_componente_tipo_user,componente.tipo user,model_componente_tipo,base.group_user,1,1,0,0
+access_componente_tipo_tecnico,componente.tipo tecnico,model_componente_tipo,sat.sat_tecnica_group_user,1,1,0,0
+access_componente_tipo_ventas,componente.tipo ventas,model_componente_tipo,sat.Sat_ventas_group_user,1,1,0,0
+access_componente_tipo_system,componente.tipo system,model_componente_tipo,base.group_system,1,1,1,1
+access_componente_tipo_portal,componente.tipo portal,model_componente_tipo,base.group_portal,1,0,0,0
+
+access_componente_subparte_user,componente.subparte user,model_componente_subparte,base.group_user,1,1,0,0
+access_componente_subparte_tecnico,componente.subparte tecnico,model_componente_subparte,sat.sat_tecnica_group_user,1,1,0,0
+access_componente_subparte_ventas,componente.subparte ventas,model_componente_subparte,sat.Sat_ventas_group_user,1,1,0,0
+access_componente_subparte_system,componente.subparte system,model_componente_subparte,base.group_system,1,1,1,1
+access_componente_subparte_portal,componente.subparte portal,model_componente_subparte,base.group_portal,1,0,0,0
+
+# Nota: a Técnicos les permitimos CREAR líneas de configuración (como ya haces en modelo.maquina_tecnico)
+access_modelo_maquina_componente_user,modelo.maquina.componente user,model_modelo_maquina_componente,base.group_user,1,1,0,0
+access_modelo_maquina_componente_tecnico,modelo.maquina.componente tecnico,model_modelo_maquina_componente,sat.sat_tecnica_group_user,1,1,1,0
+access_modelo_maquina_componente_ventas,modelo.maquina.componente ventas,model_modelo_maquina_componente,sat.Sat_ventas_group_user,1,1,0,0
+access_modelo_maquina_componente_system,modelo.maquina.componente system,model_modelo_maquina_componente,base.group_system,1,1,1,1
+access_modelo_maquina_componente_portal,modelo.maquina.componente portal,model_modelo_maquina_componente,base.group_portal,1,0,0,0
+
+access_informe_regla_user,informe.regla user,model_informe_regla,base.group_user,1,1,0,0
+access_informe_regla_tecnico,informe.regla tecnico,model_informe_regla,sat.sat_tecnica_group_user,1,1,0,0
+access_informe_regla_ventas,informe.regla ventas,model_informe_regla,sat.Sat_ventas_group_user,1,1,0,0
+access_informe_regla_system,informe.regla system,model_informe_regla,base.group_system,1,1,1,1
+access_informe_regla_portal,informe.regla portal,model_informe_regla,base.group_portal,1,0,0,0
+
+access_checklist_map_user,checklist.map user,model_checklist_componente_map,base.group_user,1,1,0,0
+access_checklist_map_tecnico,checklist.map tecnico,model_checklist_componente_map,sat.sat_tecnica_group_user,1,1,0,0
+access_checklist_map_ventas,checklist.map ventas,model_checklist_componente_map,sat.Sat_ventas_group_user,1,1,0,0
+access_checklist_map_system,checklist.map system,model_checklist_componente_map,base.group_system,1,1,1,1
+access_checklist_map_portal,checklist.map portal,model_checklist_componente_map,base.group_portal,1,0,0,0
