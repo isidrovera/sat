@@ -26,8 +26,7 @@
         <list string="Componentes por Modelo" create="1" edit="1" delete="0">
           <field name="modelo_id"/>
           <field name="tipo_id"/>
-          
-          <field name="frecuencia_mantenimiento"/>
+         
         </list>
       </field>
     </record>
@@ -44,8 +43,7 @@
           </group>
           <group>
             <field name="subparte_ids" widget="many2many_tags"/>
-            
-            <field name="frecuencia_mantenimiento"/>
+         
             <field name="notas"/>
           </group>
         </form>
