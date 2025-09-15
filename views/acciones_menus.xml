@@ -253,7 +253,7 @@
         </field>
     </record>
 
-    <record id="action_printtracker_alert_manager" model="ir.actions.act_window">
+    <record id="action_printtracker_alert_manager_sr" model="ir.actions.act_window">
         <field name="name">Gestor de Alertas</field>
         <field name="res_model">printtracker.alert.manager</field>
         <field name="view_mode">form</field>
@@ -567,7 +567,7 @@
               action="action_printtracker_consolidator_sr"
               sequence="90"/>
 
-    <menuitem id="menu_printtracker_alert_manager"
+    <menuitem id="menu_printtracker_alert_manager_sr"
               name="Ejecutar Revisión de Alertas"
               parent="menu_printtracker_root"
               action="action_printtracker_alert_manager"
