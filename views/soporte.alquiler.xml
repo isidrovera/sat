@@ -103,7 +103,7 @@
                             <page string="Informe Técnico">
                                 <field name="informe_id" widget="html"/>
                                 <footer>
-                                    <button name="action_regenerar_informe" type="object" string="Regenerar informe" class="btn-primary"/>
+                                    
                                 </footer>
                                 </page>
 
