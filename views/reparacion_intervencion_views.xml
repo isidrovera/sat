@@ -63,7 +63,7 @@
       <field name="model">reparacion.add.subparts.wizard.line</field>
       <field name="arch" type="xml">
         <list editable="bottom">
-          <field name="subparte_id" options="{'no_open': True}" domain="[('componente','=',parent.componente)]"/>
+          <field name="subparte_id" options="{'no_open': True}" />
           <field name="accion_sub"/>
           <field name="codigo"/>
           <field name="cantidad"/>
@@ -87,7 +87,7 @@
             <group>
               <field name="line_ids" context="{'default_wizard_id': active_id}">
                 <list editable="bottom">
-                  <field name="subparte_id" domain="[('componente','=',parent.componente)]"/>
+                  
                   <field name="accion_sub"/>
                   <field name="codigo"/>
                   <field name="cantidad"/>
@@ -111,7 +111,7 @@
       <field name="view_mode">form</field>
       <field name="view_id" ref="view_reparacion_add_subparts_wizard_form"/>
       <field name="target">new</field>
-      <field name="context">{'default_intervencion_id': active_id}</field>
+      
     </record>
 
     <!-- ===================================================== -->
