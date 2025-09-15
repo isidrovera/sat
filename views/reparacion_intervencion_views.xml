@@ -29,6 +29,32 @@
     </search>
   </field>
 </record>
+<!-- VISTA BÚSQUEDA - Intervenciones -->
+<record id="view_reparacion_intervencion_search" model="ir.ui.view">
+  <field name="name">reparacion.intervencion.search</field>
+  <field name="model">reparacion.intervencion</field>
+  <field name="arch" type="xml">
+    <search string="Buscar Intervenciones">
+      <!-- Campos buscables -->
+      <field name="reparacion_id"/>
+      <field name="componente"/>
+      <field name="accion"/>
+      <field name="observacion"/>
+
+      <!-- Filtros rápidos -->
+      <filter name="filter_cambio" string="Es Cambio" domain="[('es_cambio','=',True)]" help="Solo intervenciones de cambio"/>
+      <filter name="filter_no_cambio" string="No es Cambio" domain="[('es_cambio','=',False)]" help="Intervenciones que no son cambio"/>
+
+      <!-- Agrupar por -->
+      <group expand="0" string="Agrupar por">
+        <filter name="grp_reparacion" string="Reparación" context="{'group_by':'reparacion_id'}"/>
+        <filter name="grp_componente" string="Componente" context="{'group_by':'componente'}"/>
+        <filter name="grp_accion" string="Acción" context="{'group_by':'accion'}"/>
+        <filter name="grp_es_cambio" string="Es Cambio" context="{'group_by':'es_cambio'}"/>
+      </group>
+    </search>
+  </field>
+</record>
     <!-- VISTA LISTA - Subpartes -->
     <record id="view_reparacion_subparte_list" model="ir.ui.view">
       <field name="name">reparacion.subparte.list</field>
