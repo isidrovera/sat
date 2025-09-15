@@ -428,70 +428,90 @@ class Reparaciones(models.Model):
         funciones_no = self._rep__funciones_con_falla()
         toners_crit = self._rep__toners_criticos()
 
-        # Encabezado equipo
-        header = []
-        if self.marca: header.append(self.marca)
-        if self.nombre_maquina: header.append(self.nombre_maquina)
-        if self.serie_id: header.append(f"Serie: {self.serie_id}")
-        equipo_txt = " · ".join(header) or "Equipo"
-
-        # Problema reportado (si tienes dos fuentes, prioriza ventas; luego proveedor)
-        problema = (self.falla_ventas or '').strip() or (self.falla_proveedor or '')
-        if not problema:
-            problema = _('No especificado por el usuario')
-
-        # Texto de intervención inferido automáticamente
-        intervencion = self._rep__infer_intervencion(f, funciones_no)
-
-        # Conclusión (calidad)
+        # Conclusión orientada a venta B2B
         calidad = self._rep__calc_calidad(f, funciones_no, toners_crit)
         if calidad == 'mala':
-            concl = _("Se requiere intervención inmediata para evitar paradas no planificadas.")
+            concl = _("Unidad requiere inversión inmediata en repuestos antes de entregarse a distribuidor.")
         elif calidad == 'regular':
-            concl = _("Equipo operativo con desgaste; programar cambio preventivo.")
+            concl = _("Unidad operativa para prueba; sugerimos cambio preventivo previo a la entrega.")
         else:
-            concl = _("Equipo operativo. Mantener plan de mantenimiento preventivo.")
+            concl = _("Unidad lista para entrega; se recomienda mantenimiento estándar en instalación.")
 
-        # Texto general SIEMPRE
+        # Texto general para máquina usada destinada a reventa
         texto_general = _(
-            "Se realizó limpieza, mantenimiento preventivo y verificación general de funcionamiento y consumibles."
+            "Se realizó limpieza, puesta a punto básica y verificación general de funcionamiento y consumibles para la venta mayorista."
         )
 
-        # Armado de “excepciones”
+        # Paleta de colores (inline CSS para HTML/PDF)
+        color_sev = {
+            'critico': '#d32f2f',   # rojo
+            'medio':   '#ef6c00',   # naranja
+            'pend':    '#616161',   # gris
+        }
+        color_calidad_bg = {
+            'mala':    '#ffebee',   # fondo rosado claro
+            'regular': '#fff8e1',   # fondo ámbar claro
+            'buena':   '#e8f5e9',   # fondo verde claro
+        }
+        color_calidad_txt = {
+            'mala':    '#c62828',
+            'regular': '#ef6c00',
+            'buena':   '#2e7d32',
+        }
+
+        # Bloques de observaciones con lenguaje comercial
         bloques = []
-
         if funciones_no:
-            bloques.append("<p><strong>Funciones con falla:</strong></p><ul>" + "".join(f"<li>{x}</li>" for x in funciones_no) + "</ul>")
+            bloques.append(
+                f"<p style='margin:6px 0;color:{color_sev['critico']};'><strong>{_('Funciones con incidencia')}:</strong></p>"
+                "<ul style='margin:0 0 8px 18px;'>"
+                + "".join(f"<li>{x}</li>" for x in funciones_no) + "</ul>"
+            )
         if f['cambio_inmediato']:
-            bloques.append("<p><strong>Requiere cambio inmediato:</strong></p><ul>" + "".join(f"<li>{x}</li>" for x in f['cambio_inmediato']) + "</ul>")
+            bloques.append(
+                f"<p style='margin:6px 0;color:{color_sev['critico']};'><strong>{_('Puntos críticos para entrega (cambio inmediato)')}:</strong></p>"
+                "<ul style='margin:0 0 8px 18px;'>"
+                + "".join(f"<li>{x}</li>" for x in f['cambio_inmediato']) + "</ul>"
+            )
         if f['desgaste']:
-            bloques.append("<p><strong>Componentes con desgaste:</strong></p><ul>" + "".join(f"<li>{x}</li>" for x in f['desgaste']) + "</ul>")
+            bloques.append(
+                f"<p style='margin:6px 0;color:{color_sev['medio']};'><strong>{_('Componentes con desgaste (recomendado cambio preventivo)')}:</strong></p>"
+                "<ul style='margin:0 0 8px 18px;'>"
+                + "".join(f"<li>{x}</li>" for x in f['desgaste']) + "</ul>"
+            )
         if f['pendientes']:
-            bloques.append("<p><strong>Pendientes / sin revisar:</strong></p><ul>" + "".join(f"<li>{x}</li>" for x in f['pendientes']) + "</ul>")
+            bloques.append(
+                f"<p style='margin:6px 0;color:{color_sev['pend']};'><strong>{_('Pendientes menores / sin revisar')}:</strong></p>"
+                "<ul style='margin:0 0 8px 18px;'>"
+                + "".join(f"<li>{x}</li>" for x in f['pendientes']) + "</ul>"
+            )
         if toners_crit:
-            bloques.append("<p><strong>Consumibles críticos:</strong></p><ul>" + "".join(f"<li>{x}</li>" for x in toners_crit) + "</ul>")
+            bloques.append(
+                f"<p style='margin:6px 0;color:{color_sev['critico']};'><strong>{_('Consumibles críticos (no incluidos en garantía de venta)')}:</strong></p>"
+                "<ul style='margin:0 0 8px 18px;'>"
+                + "".join(f"<li>{x}</li>" for x in toners_crit) + "</ul>"
+            )
 
-        excepciones_html = "".join(bloques)
+        observ_html = ""
+        if bloques:
+            observ_html = "<h5 style='margin:12px 0 6px;'>" + _("Observaciones para entrega a distribuidor") + "</h5>" + "".join(bloques)
 
-        cuerpo_html = (
-            f"<p>{texto_general}</p>" if not excepciones_html
-            else f"<p>{texto_general}</p><h5 style='margin:12px 0 6px;'>Observaciones</h5>{excepciones_html}"
-        )
-
+        # SOLO “Se realizó…” → “Conclusión”
         html = f"""
-<div data-autogen="1" style="font-family: Arial; line-height:1.5;">
-  <h4 style="margin:0 0 8px 0;">{_('Informe técnico')} – {equipo_txt}</h4>
-  <p><strong>{_('Intervención')}:</strong> {intervencion}</p>
-  <p><strong>{_('Problema reportado')}:</strong> {problema}</p>
-  {cuerpo_html}
-  <h5 style="margin:12px 0 6px;">{_('Conclusión')}</h5>
-  <p>{concl}</p>
-  <p style="color:#888; font-size:12px; margin-top:10px;">
-      *{_('Este bloque fue generado automáticamente a partir del checklist de reparación.')}*
-  </p>
-</div>
-"""
+    <div data-autogen="1" style="font-family: Arial; line-height:1.5;">
+    <p>{texto_general}</p>
+    {observ_html}
+    <h5 style="margin:12px 0 6px;">{_('Conclusión')}</h5>
+    <div style="padding:10px;border-radius:6px;background:{color_calidad_bg[calidad]};color:{color_calidad_txt[calidad]};">
+        <strong style="text-transform:capitalize;">{calidad}</strong>: {concl}
+    </div>
+    <p style="color:#888; font-size:12px; margin-top:10px;">
+        *{_('Bloque generado automáticamente a partir del checklist técnico, orientado a venta B2B.')}*
+    </p>
+    </div>
+    """
         return html, calidad
+
 
     # ==========================
     # Acción del botón
