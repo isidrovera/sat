@@ -611,70 +611,7 @@
         </field>
     </record>
 
-    <record id="action_printtracker_daily_reading" model="ir.actions.act_window">
-        <field name="name">Lecturas Diarias Consolidadas</field>
-        <field name="res_model">printtracker.daily.reading</field>
-        <field name="view_mode">list,form</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No hay lecturas consolidadas
-            </p>
-            <p>
-                Las lecturas diarias se crean automáticamente consolidando datos
-                de correos (contador.automatico) y PrintTracker API.
-            </p>
-        </field>
-    </record>
-    
-    <!-- Acción - PrintTracker Alert -->
-    <record id="action_printtracker_alert" model="ir.actions.act_window">
-        <field name="name">Alertas PrintTracker</field>
-        <field name="res_model">printtracker.alert</field>
-        <field name="view_mode">list,form</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No hay alertas activas
-            </p>
-            <p>
-                Las alertas se generan automáticamente cada 5 minutos para detectar
-                suministros bajos, equipos offline y otros problemas.
-            </p>
-        </field>
-    </record>
-    
-    <!-- Acción - PrintTracker Consolidator -->
-    <record id="action_printtracker_consolidator" model="ir.actions.act_window">
-        <field name="name">Consolidador de Datos</field>
-        <field name="res_model">printtracker.processor</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Consolidador de Datos PrintTracker
-            </p>
-            <p>
-                Ejecuta manualmente el proceso de consolidación que normalmente
-                se ejecuta automáticamente cada 2 horas.
-            </p>
-        </field>
-    </record>
-    
-    <!-- Acción - PrintTracker Alert Manager -->
-    <record id="action_printtracker_alert_manager" model="ir.actions.act_window">
-        <field name="name">Gestor de Alertas</field>
-        <field name="res_model">printtracker.alert.manager</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Gestor de Alertas PrintTracker
-            </p>
-            <p>
-                Ejecuta manualmente el proceso de revisión de alertas que normalmente
-                se ejecuta automáticamente cada 5 minutos.
-            </p>
-        </field>
-    </record>
+  
 
     <!-- =============================================== -->
     <!-- PRINTTRACKER DAILY READING - LECTURAS DIARIAS -->
