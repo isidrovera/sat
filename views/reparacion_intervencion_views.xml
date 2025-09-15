@@ -5,7 +5,30 @@
     <!-- ===================================================== -->
     <!-- 1) CATÁLOGO: Subpartes por componente                 -->
     <!-- ===================================================== -->
+    <!-- VISTA BÚSQUEDA - Subpartes -->
+<record id="view_reparacion_subparte_search" model="ir.ui.view">
+  <field name="name">reparacion.subparte.search</field>
+  <field name="model">reparacion.subparte</field>
+  <field name="arch" type="xml">
+    <search string="Buscar subpartes">
+      <!-- Campos buscables -->
+      <field name="name"/>
+      <field name="componente"/>
+      <field name="default_code"/>
+      <field name="active"/>
 
+      <!-- Filtros rápidos -->
+      <filter name="filter_active" string="Activas" domain="[('active','=',True)]" help="Solo subpartes activas"/>
+      <filter name="filter_inactive" string="Archivadas" domain="[('active','=',False)]" help="Subpartes archivadas"/>
+
+      <!-- Agrupar por -->
+      <group expand="0" string="Agrupar por">
+        <filter name="grp_componente" string="Componente" context="{'group_by':'componente'}"/>
+        <filter name="grp_active" string="Estado" context="{'group_by':'active'}"/>
+      </group>
+    </search>
+  </field>
+</record>
     <!-- VISTA LISTA - Subpartes -->
     <record id="view_reparacion_subparte_list" model="ir.ui.view">
       <field name="name">reparacion.subparte.list</field>
