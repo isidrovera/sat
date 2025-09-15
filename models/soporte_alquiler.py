@@ -2250,6 +2250,217 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                 record.color = 1  # Rojo - Para tickets cancelados
             else:
                 record.color = 0  # Color por defecto
+    _CHECKLIST_MAP = {
+        # Módulos / transporte papel
+        'adf_id': ('ADF', 2),
+        'bypass_id': ('Bypass', 2),
+        'finalizador_id': ('Finalizador', 2),
+        'tray1_id': ('Bandeja 1', 1),
+        'tray2_id': ('Bandeja 2', 1),
+        'tray3_id': ('Bandeja 3', 1),
+        'tray4_id': ('Bandeja 4', 1),
+        # Consumibles y proceso
+        'tacho_id': ('Tacho residual', 1),
+        'fusora_id': ('Unidad fusora', 3),
+        'transfer_id': ('Faja de transferencia', 3),
+        'optico_id': ('Unidad óptica', 3),
+        'black_id': ('Unidad imagen Black', 3),
+        'magenta_id': ('Unidad imagen Magenta', 3),
+        'cyan_id': ('Unidad imagen Cyan', 3),
+        'yellow_id': ('Unidad imagen Yellow', 3),
+    }
+
+    # Funciones (para mostrar estado de copia/impresión/escaneo)
+    _FUNCIONES = [
+        ('copia_id', 'Copia'),
+        ('impresion_id', 'Impresión'),
+        ('impresion_usb_id', 'Impresión USB'),
+        ('scaner_smb_id', 'Scanner SMB'),
+        ('scaner_usb_id', 'Scanner USB'),
+        ('scaner_ftp_id', 'Scanner FTP'),
+        ('scaner_mail_id', 'Scanner Mail'),
+    ]
+
+    # Tóner
+    _TONERS = [
+        ('toner_black_id', 'Tóner Negro'),
+        ('toner_cyan_id', 'Tóner Cian'),
+        ('toner_magenta_id', 'Tóner Magenta'),
+        ('toner_yellow_id', 'Tóner Amarillo'),
+    ]
+
+    def _is_autogen_informe(self):
+        """Devuelve True si el informe actual fue autogenerado (no editado manualmente)."""
+        html = (self.informe_id or '').lower()
+        return 'data-autogen="1"' in html
+
+    def _collect_findings(self):
+        """Recoge hallazgos del checklist clasificados por severidad."""
+        con_falla, desgaste, requiere_cambio, no_aplica = [], [], [], []
+        severidad_total = 0
+
+        for field_name, (etiqueta, peso) in self._CHECKLIST_MAP.items():
+            val = getattr(self, field_name, False)
+            if not val or val == 'si':
+                continue
+            if val == 'no':
+                con_falla.append(etiqueta)
+                severidad_total += (1 * peso)
+            elif val == 'desgaste':
+                desgaste.append(etiqueta)
+                severidad_total += (2 * peso)
+            elif val == 'cambio':
+                requiere_cambio.append(etiqueta)
+                severidad_total += (3 * peso)
+            elif val == 'no_aplica':
+                no_aplica.append(etiqueta)
+
+        return {
+            'con_falla': con_falla,
+            'desgaste': desgaste,
+            'requiere_cambio': requiere_cambio,
+            'no_aplica': no_aplica,
+            'score': severidad_total,
+        }
+
+    def _calc_calidad(self, findings):
+        """Devuelve 'buena' / 'regular' / 'mala' según el checklist."""
+        if findings['requiere_cambio'] or findings['con_falla']:
+            return 'mala'
+        if findings['desgaste']:
+            return 'regular'
+        return 'buena'
+
+    def _label_selection(self, field_name):
+        """Devuelve la etiqueta legible de un selection (o 'NA')."""
+        field = self._fields.get(field_name)
+        val = getattr(self, field_name, False)
+        if not field or field.type != 'selection' or not val:
+            return 'NA'
+        selection = field.selection(self) if callable(field.selection) else field.selection
+        return dict(selection).get(val, val)
+
+    def _build_informe_html(self):
+        """Construye el HTML del informe técnico (autogenerado)."""
+        f = self._collect_findings()
+
+        # Encabezado / dato de equipo
+        equipo_txt = []
+        if self.marca_id_r: equipo_txt.append(self.marca_id_r)
+        if self.product_alquiler and self.product_alquiler.name:
+            equipo_txt.append(self.product_alquiler.name.name)
+        if self.serie_id_r: equipo_txt.append(f"Serie: {self.serie_id_r}")
+        equipo_txt = " · ".join(equipo_txt) or "Equipo"
+
+        # Sección problemas reportados
+        problema = (self.description or '').strip() or 'No especificado por el usuario'
+
+        # Bloques auxiliares
+        def _ul(items):
+            return '' if not items else '<ul>' + ''.join(f'<li>{it}</li>' for it in items) + '</ul>'
+
+        # Funciones
+        funciones_html = '<table class="o_table"><thead><tr><th>Función</th><th>Estado</th></tr></thead><tbody>'
+        for fname, label in self._FUNCIONES:
+            # No mostrar escaneos “no_aplica”
+            if 'scan' in fname and getattr(self, fname, '') == 'no_aplica':
+                continue
+            funciones_html += f'<tr><td>{label}</td><td>{self._label_selection(fname)}</td></tr>'
+        funciones_html += '</tbody></table>'
+
+        # Tóner (en monocromo solo negro)
+        toner_rows = []
+        for fname, label in self._TONERS:
+            if self.tipo_id != 'color' and fname != 'toner_black_id':
+                continue
+            toner_rows.append((label, self._label_selection(fname)))
+        toner_html = '<table class="o_table"><thead><tr><th>Tóner</th><th>Nivel</th></tr></thead><tbody>'
+        toner_html += ''.join(f'<tr><td>{k}</td><td>{v}</td></tr>' for k, v in toner_rows)
+        toner_html += '</tbody></table>'
+
+        # Conclusión sugerida
+        calidad = self._calc_calidad(f)
+        if calidad == 'mala':
+            concl = "Se recomienda **no postergar** el cambio de las unidades indicadas para evitar paradas no planificadas."
+        elif calidad == 'regular':
+            concl = "El equipo opera, pero presenta **desgaste** en componentes; se sugiere programar cambio preventivo."
+        else:
+            concl = "Equipo **operativo**. Se recomienda mantenimiento preventivo según plan."
+
+        # Construcción del HTML (marcado como autogenerado)
+        html = f"""
+    <div data-autogen="1" style="font-family: Arial; line-height:1.4;">
+    <h4 style="margin:0 0 8px 0;">Informe técnico – {equipo_txt}</h4>
+
+    <p><strong>Problema reportado:</strong> {problema}</p>
+
+    <h5 style="margin:12px 0 6px;">Hallazgos del checklist</h5>
+    {'<p>Sin observaciones relevantes.</p>' if not (f['con_falla'] or f['desgaste'] or f['requiere_cambio']) else ''}
+    {('<p><strong>Con falla:</strong></p>' + _ul(f['con_falla'])) if f['con_falla'] else ''}
+    {('<p><strong>Con desgaste (recomendado cambio):</strong></p>' + _ul(f['desgaste'])) if f['desgaste'] else ''}
+    {('<p><strong>Requiere cambio inmediato:</strong></p>' + _ul(f['requiere_cambio'])) if f['requiere_cambio'] else ''}
+
+    <h5 style="margin:12px 0 6px;">Funciones verificadas</h5>
+    {funciones_html}
+
+    <h5 style="margin:12px 0 6px;">Niveles de tóner</h5>
+    {toner_html}
+
+    <h5 style="margin:12px 0 6px;">Conclusión</h5>
+    <p>{concl}</p>
+
+    <p style="color:#888; font-size:12px; margin-top:10px;">
+        *Este bloque fue generado automáticamente a partir del checklist.*
+    </p>
+    </div>
+    """
+        return html, calidad
+
+    def _autofill_informe_si_corresponde(self):
+        """
+        Genera/actualiza informe automáticamente si:
+        - el informe está vacío, o
+        - el informe actual fue autogenerado (data-autogen="1")
+        """
+        if self.informe_id and not self._is_autogen_informe():
+            # El técnico editó el informe; no sobreescribimos.
+            return
+        html, calidad = self._build_informe_html()
+        # Escribimos ambos de una vez
+        self.update({'informe_id': html, 'calidad_id': calidad})
+
+    # Un único onchange que escucha todos los campos relevantes
+    @api.onchange(
+        'description', 'tipo_id',
+        # funciones
+        'copia_id', 'impresion_id', 'impresion_usb_id',
+        'scaner_smb_id', 'scaner_usb_id', 'scaner_ftp_id', 'scaner_mail_id',
+        # checklist módulos
+        'adf_id', 'bypass_id', 'finalizador_id',
+        'tray1_id', 'tray2_id', 'tray3_id', 'tray4_id',
+        'tacho_id', 'fusora_id', 'transfer_id', 'optico_id',
+        'black_id', 'magenta_id', 'cyan_id', 'yellow_id',
+        # toner
+        'toner_black_id', 'toner_cyan_id', 'toner_magenta_id', 'toner_yellow_id',
+    )
+    def _onchange_autoinforme(self):
+        for rec in self:
+            rec._autofill_informe_si_corresponde()
+
+    # Botón opcional para regenerar el informe (útil si el técnico quiere rehacerlo)
+    def action_regenerar_informe(self):
+        for rec in self:
+            html, calidad = rec._build_informe_html()
+            rec.write({'informe_id': html, 'calidad_id': calidad})
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Informe técnico'),
+                'message': _('Informe regenerado automáticamente desde el checklist.'),
+                'type': 'success',
+            }
+        }
 
             
 class ReportTicketAlquiler(models.AbstractModel):
