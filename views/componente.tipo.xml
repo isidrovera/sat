@@ -2,44 +2,80 @@
 <odoo>
   <data>
 
-    <!-- SEARCH -->
+     <!-- =========================== -->
+    <!-- SEARCH (Búsqueda avanzada)  -->
+    <!-- =========================== -->
     <record id="view_componente_tipo_search" model="ir.ui.view">
       <field name="name">componente.tipo.search</field>
       <field name="model">componente.tipo</field>
       <field name="arch" type="xml">
         <search string="Buscar Tipo de Componente">
           <field name="name"/>
-          <filter string="Activos" name="fil_activos" />
-          <filter string="Archivados" name="fil_arch" />
+          <field name="code"/>
+
+          <!-- Filtros rápidos -->
+          <filter name="fil_criticos" string="Críticos"
+                  domain="[('is_critical','=',True)]"/>
+          <filter name="fil_sensible_color" string="Difiere por color (K/C/M/Y)"
+                  domain="[('is_color_sensitive','=',True)]"/>
+
+          <!-- Agrupar por -->
+          <group expand="0" string="Agrupar por">
+            <filter name="grp_critico" string="Crítico"
+                    context="{'group_by':'is_critical'}"/>
+            <filter name="grp_color" string="Sensibilidad por color"
+                    context="{'group_by':'is_color_sensitive'}"/>
+          </group>
         </search>
       </field>
     </record>
 
-    <!-- LIST -->
+    <!-- ============ -->
+    <!-- LIST (lista) -->
+    <!-- ============ -->
     <record id="view_componente_tipo_list" model="ir.ui.view">
       <field name="name">componente.tipo.list</field>
       <field name="model">componente.tipo</field>
       <field name="arch" type="xml">
-        <list string="Tipos de Componente" create="1" edit="1" delete="0">
-          <field name="name"/>
-          
-          <field name="active"/>
+        <list string="Tipos de Componente"
+              create="1" edit="1" delete="1"
+              default_order="sequence asc, name asc">
+          <field name="sequence" widget="handle" optional="show"/>
+          <field name="name" />
+          <field name="code" />
+          <field name="is_critical" />
+          <field name="is_color_sensitive" />
         </list>
       </field>
     </record>
 
-    <!-- FORM -->
+    <!-- ============ -->
+    <!-- FORM (form)  -->
+    <!-- ============ -->
     <record id="view_componente_tipo_form" model="ir.ui.view">
       <field name="name">componente.tipo.form</field>
       <field name="model">componente.tipo</field>
       <field name="arch" type="xml">
         <form string="Tipo de Componente">
-          <group>
-            <field name="name"/>
-        
-            <field name="descripcion"/>
-            <field name="active"/>
-          </group>
+          <sheet>
+            <div class="oe_title">
+              <h1>
+                <field name="name" placeholder="Nombre del tipo (p.ej. Fusora)"/>
+              </h1>
+            </div>
+
+            <group>
+              <group>
+                <field name="code" placeholder="Clave corta (p.ej. FUSORA)"/>
+                <field name="sequence"/>
+              </group>
+              <group>
+                <field name="is_critical"/>
+                <field name="is_color_sensitive"/>
+              </group>
+            </group>
+
+          </sheet>
         </form>
       </field>
     </record>
