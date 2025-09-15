@@ -44,7 +44,7 @@
           </group>
           <group>
             <field name="subparte_ids" widget="many2many_tags"/>
-            <field name="critico"/>
+            
             <field name="frecuencia_mantenimiento"/>
             <field name="notas"/>
           </group>
