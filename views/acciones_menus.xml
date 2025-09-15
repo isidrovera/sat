@@ -158,27 +158,61 @@
 
     <!-- PrintTracker: Config, Entidades, Medidores, Suministros -->
     <record id="action_printtracker_config" model="ir.actions.act_window">
-      <field name="name">Configuración PrintTracker</field>
-      <field name="res_model">printtracker.config</field>
-      <field name="view_mode">list,form</field>
+        <field name="name">Configuración PrintTracker</field>
+        <field name="res_model">printtracker.config</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Configura la conexión con PrintTracker Pro
+            </p>
+            <p>
+                Configura tu API key y entidad principal para sincronizar 
+                automáticamente con PrintTracker Pro.
+            </p>
+        </field>
     </record>
 
     <record id="action_printtracker_entity" model="ir.actions.act_window">
-      <field name="name">Entidades PrintTracker</field>
-      <field name="res_model">printtracker.entity</field>
-      <field name="view_mode">list,form</field>
+        <field name="name">Entidades PrintTracker</field>
+        <field name="res_model">printtracker.entity</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay entidades sincronizadas
+            </p>
+            <p>
+                Las entidades se sincronizan automáticamente desde PrintTracker Pro.
+                Configura la API para comenzar.
+            </p>
+        </field>
     </record>
 
     <record id="action_printtracker_meter" model="ir.actions.act_window">
-      <field name="name">Medidores PrintTracker</field>
-      <field name="res_model">printtracker.meter</field>
-      <field name="view_mode">list,form</field>
+        <field name="name">Medidores PrintTracker</field>
+        <field name="res_model">printtracker.meter</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay lecturas de medidores
+            </p>
+            <p>
+                Las lecturas se sincronizan automáticamente desde PrintTracker Pro.
+            </p>
+        </field>
     </record>
 
     <record id="action_printtracker_supply" model="ir.actions.act_window">
-      <field name="name">Suministros PrintTracker</field>
-      <field name="res_model">printtracker.supply</field>
-      <field name="view_mode">list,form</field>
+        <field name="name">Suministros PrintTracker</field>
+        <field name="res_model">printtracker.supply</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay suministros sincronizados
+            </p>
+            <p>
+                Los suministros se sincronizan automáticamente desde PrintTracker Pro.
+            </p>
+        </field>
     </record>
 
     <!-- OJO: estas 4 acciones deben existir o elimínalas si aún no las creas -->
@@ -189,23 +223,50 @@
     </record>
 
     <record id="action_printtracker_alert" model="ir.actions.act_window">
-      <field name="name">Alertas del Sistema</field>
-      <field name="res_model">printtracker.alert</field>
-      <field name="view_mode">list,form</field>
+        <field name="name">Alertas PrintTracker</field>
+        <field name="res_model">printtracker.alert</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay alertas activas
+            </p>
+            <p>
+                Las alertas se generan automáticamente cada 5 minutos para detectar
+                suministros bajos, equipos offline y otros problemas.
+            </p>
+        </field>
     </record>
 
-    <record id="action_printtracker_consolidator" model="ir.actions.server">
-      <field name="name">Ejecutar Consolidación</field>
-      <field name="model_id" ref="model_printtracker_config"/>
-      <field name="state">code</field>
-      <field name="code">env['printtracker.config'].sudo().run_consolidation()</field>
+    <record id="action_printtracker_consolidator" model="ir.actions.act_window">
+        <field name="name">Consolidador de Datos</field>
+        <field name="res_model">printtracker.processor</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Consolidador de Datos PrintTracker
+            </p>
+            <p>
+                Ejecuta manualmente el proceso de consolidación que normalmente
+                se ejecuta automáticamente cada 2 horas.
+            </p>
+        </field>
     </record>
 
-    <record id="action_printtracker_alert_manager" model="ir.actions.server">
-      <field name="name">Ejecutar Revisión de Alertas</field>
-      <field name="model_id" ref="model_printtracker_config"/>
-      <field name="state">code</field>
-      <field name="code">env['printtracker.config'].sudo().run_alert_review()</field>
+    <record id="action_printtracker_alert_manager" model="ir.actions.act_window">
+        <field name="name">Gestor de Alertas</field>
+        <field name="res_model">printtracker.alert.manager</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Gestor de Alertas PrintTracker
+            </p>
+            <p>
+                Ejecuta manualmente el proceso de revisión de alertas que normalmente
+                se ejecuta automáticamente cada 5 minutos.
+            </p>
+        </field>
     </record>
 
     <!-- Reportes Estado de Máquinas -->
