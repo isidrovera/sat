@@ -275,7 +275,10 @@
                                 </div>
                             </page>
                             <page string="Componentes">
-  <field name="componente_line_ids" context="{'default_modelo_id': active_id}">
+  <field name="componente_line_ids"
+       context="{'default_modelo_id': context.get('active_id')}"
+>
+
     <list editable="bottom">
       <field name="tipo_id"/>
       <field name="subparte_ids" widget="many2many_tags"/>
