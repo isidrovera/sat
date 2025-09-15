@@ -496,17 +496,22 @@ class Reparaciones(models.Model):
     # ==========================
     # Acción del botón
     # ==========================
+
+    def _rep__html_is_empty(self, html):
+        """True si el HTML está vacío (solo tags/espacios/&nbsp;/<br>)."""
+        if not html:
+            return True
+        s = html.replace('&nbsp;', ' ')
+        s = re.sub(r'<br\s*/?>', ' ', s, flags=re.I)
+        s = re.sub(r'<[^>]*>', '', s)  # quitar etiquetas
+        return s.strip() == ''
     def action_generar_informe(self):
-        """
-        Genera o regenera el informe en el campo HTML `informe`.
-        Si el informe fue editado manualmente, NO lo sobreescribe.
-        Si está vacío o fue autogenerado antes, lo reemplaza.
-        """
         for rec in self:
             try:
-                # Solo autogenera si está vacío o si la última versión fue autogenerada
-                if rec.informe and not rec._rep__is_autogen_informe():
-                    # Ya hay edición manual: no tocamos, solo notificamos
+                # Si hay contenido NO vacío y NO es autogenerado → se supone manual
+                if (rec.informe
+                    and not rec._rep__html_is_empty(rec.informe)
+                    and not rec._rep__is_autogen_informe()):
                     rec.message_post(body=_("El informe ya fue editado manualmente. No se sobrescribió."))
                     continue
 
@@ -518,16 +523,12 @@ class Reparaciones(models.Model):
                 _logger.exception("Error generando informe en reparaciones: %s", e)
                 rec.message_post(body=_("No se pudo generar el informe: %s") % e)
 
-        # Notificación visual
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
-            'params': {
-                'title': _('Informe técnico'),
-                'message': _('Informe generado.'),
-                'type': 'success',
-            }
+            'params': {'title': _('Informe técnico'), 'message': _('Informe generado.'), 'type': 'success'}
         }
+
 
     tipo_revision = fields.Selection(related='maquina_id.tipo_revision', readonly=True,store=True)
     ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id', readonly=True, store=True)
