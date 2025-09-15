@@ -56,3 +56,5 @@ from . import modelo_maquina_componentes
 from . import checklist_map
 from . import informe_regla
 from . import componente
+from . import reparacion_intervencion
+from . import reparacion_subpartes_wizard

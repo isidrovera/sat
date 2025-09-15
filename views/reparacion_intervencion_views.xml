@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- ===================================================== -->
+    <!-- 1) CATÁLOGO: Subpartes por componente                 -->
+    <!-- ===================================================== -->
+
+    <!-- SEARCH -->
+    <record id="view_reparacion_subparte_search" model="ir.ui.view">
+      <field name="name">reparacion.subparte.search</field>
+      <field name="model">reparacion.subparte</field>
+      <field name="arch" type="xml">
+        <search string="Buscar Subpartes">
+          <field name="name"/>
+          <field name="componente"/>
+          <filter string="Activos" name="active_true" domain="[('active','=',True)]"/>
+          <filter string="Archivados" name="active_false" domain="[('active','=',False)]"/>
+          <group expand="0" string="Agrupar por">
+            <filter string="Componente" context="{'group_by':'componente'}"/>
+            <filter string="Activo" context="{'group_by':'active'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- LIST -->
+    <record id="view_reparacion_subparte_list" model="ir.ui.view">
+      <field name="name">reparacion.subparte.list</field>
+      <field name="model">reparacion.subparte</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="name"/>
+          <field name="componente"/>
+          <field name="default_code"/>
+          <field name="active"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- FORM -->
+    <record id="view_reparacion_subparte_form" model="ir.ui.view">
+      <field name="name">reparacion.subparte.form</field>
+      <field name="model">reparacion.subparte</field>
+      <field name="arch" type="xml">
+        <form string="Subparte">
+          <sheet>
+            <group>
+              <field name="name"/>
+              <field name="componente"/>
+              <field name="default_code"/>
+              <field name="active"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    
+
+    <!-- ===================================================== -->
+    <!-- 2) INTERVENCIONES                                     -->
+    <!-- ===================================================== -->
+
+    <!-- SEARCH -->
+    <record id="view_reparacion_intervencion_search" model="ir.ui.view">
+      <field name="name">reparacion.intervencion.search</field>
+      <field name="model">reparacion.intervencion</field>
+      <field name="arch" type="xml">
+        <search string="Buscar Intervenciones">
+          <field name="reparacion_id"/>
+          <field name="componente"/>
+          <field name="accion"/>
+          <filter string="Con cambio" name="only_change" domain="[('es_cambio','=',True)]"/>
+          <filter string="Esta reparación" name="reparacion_actual"
+                  domain="[('reparacion_id','=',context.get('search_default_reparacion_id'))]"/>
+          <group expand="0" string="Agrupar por">
+            <filter string="Reparación" context="{'group_by':'reparacion_id'}"/>
+            <filter string="Componente" context="{'group_by':'componente'}"/>
+            <filter string="Acción" context="{'group_by':'accion'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- LIST detalle (reutilizable) -->
+    <record id="view_reparacion_intervencion_detalle_list" model="ir.ui.view">
+      <field name="name">reparacion.intervencion.detalle.list</field>
+      <field name="model">reparacion.intervencion.detalle</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="subparte_id"/>
+          <field name="accion_sub"/>
+          <field name="codigo"/>
+          <field name="cantidad"/>
+          <field name="nota"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- LIST intervenciones -->
+    <record id="view_reparacion_intervencion_list" model="ir.ui.view">
+      <field name="name">reparacion.intervencion.list</field>
+      <field name="model">reparacion.intervencion</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="reparacion_id"/>
+          <field name="componente"/>
+          <field name="accion"/>
+          <field name="es_cambio"/>
+          <field name="observacion"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- FORM intervenciones -->
+    <record id="view_reparacion_intervencion_form" model="ir.ui.view">
+      <field name="name">reparacion.intervencion.form</field>
+      <field name="model">reparacion.intervencion</field>
+      <field name="arch" type="xml">
+        <form string="Intervención">
+          <header>
+            <!-- Sin 'states'; botón siempre visible -->
+            <button name="%(action_reparacion_add_subparts_wizard)d"
+                    type="action"
+                    string="Añadir/Editar subpartes"
+                    class="oe_highlight"
+                    context="{'active_intervencion_id': active_id}"/>
+          </header>
+          <sheet>
+            <group>
+              <field name="reparacion_id" readonly="1"/>
+              <field name="componente"/>
+              <field name="accion"/>
+              <field name="es_cambio" readonly="1"/>
+              <field name="observacion" placeholder="Breve nota de la intervención"/>
+            </group>
+            <group string="Subpartes incluidas">
+              <!-- Forzamos uso del wizard: solo lectura -->
+              <field name="detalle_ids" readonly="1">
+                <list>
+                  <field name="subparte_id"/>
+                  <field name="accion_sub"/>
+                  <field name="codigo"/>
+                  <field name="cantidad"/>
+                  <field name="nota"/>
+                </list>
+                <form>
+                  <group>
+                    <field name="subparte_id"/>
+                    <field name="accion_sub"/>
+                    <field name="codigo"/>
+                    <field name="cantidad"/>
+                    <field name="nota"/>
+                  </group>
+                </form>
+              </field>
+              <label string="Usa el botón 'Añadir/Editar subpartes' para gestionar el detalle."/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+   
+
+    <!-- ===================================================== -->
+    <!-- 3) SMART BUTTON en formulario de Reparaciones         -->
+    <!-- ===================================================== -->
+
+    <!-- REEMPLAZA el ref de inherit_id por el id real de tu form de reparaciones -->
+    <record id="view_reparaciones_form_inherit_intervenciones_btn" model="ir.ui.view">
+      <field name="name">reparaciones.form.inherit.intervenciones.btn</field>
+      <field name="model">reparaciones.reparaciones</field>
+      <field name="inherit_id" ref="sat.view_reparaciones_form"/>
+      <field name="arch" type="xml">
+        <xpath expr="//form/header" position="inside">
+          <button type="action"
+                  name="%(action_reparacion_intervencion)d"
+                  string="Intervenciones"
+                  class="oe_stat_button"
+                  context="{'search_default_reparacion_id': active_id, 'default_reparacion_id': active_id}">
+            <span class="o_stat_info">
+              <span class="o_stat_text">Ver</span>
+            </span>
+          </button>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- ===================================================== -->
+    <!-- 4) WIZARD: Añadir subpartes                           -->
+    <!-- ===================================================== -->
+
+    <!-- LIST líneas del wizard -->
+    <record id="view_reparacion_add_subparts_wizard_line_list" model="ir.ui.view">
+      <field name="name">reparacion.add.subparts.wizard.line.list</field>
+      <field name="model">reparacion.add.subparts.wizard.line</field>
+      <field name="arch" type="xml">
+        <list editable="bottom">
+          <field name="subparte_id" options="{'no_open': True}" domain="[('componente','=',parent.componente)]"/>
+          <field name="accion_sub"/>
+          <field name="codigo"/>
+          <field name="cantidad"/>
+          <field name="nota"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- FORM wizard -->
+    <record id="view_reparacion_add_subparts_wizard_form" model="ir.ui.view">
+      <field name="name">reparacion.add.subparts.wizard.form</field>
+      <field name="model">reparacion.add.subparts.wizard</field>
+      <field name="arch" type="xml">
+        <form string="Seleccionar Subpartes">
+          <sheet>
+            <group>
+              <field name="reparacion_id" readonly="1"/>
+              <field name="intervencion_id" readonly="1"/>
+              <field name="componente" readonly="1"/>
+            </group>
+            <group>
+              <field name="line_ids" context="{'default_wizard_id': active_id}">
+                <list editable="bottom">
+                  <field name="subparte_id" domain="[('componente','=',parent.componente)]"/>
+                  <field name="accion_sub"/>
+                  <field name="codigo"/>
+                  <field name="cantidad"/>
+                  <field name="nota"/>
+                </list>
+              </field>
+            </group>
+          </sheet>
+          <footer>
+            <button string="Aplicar" name="action_apply" type="object" class="btn-primary"/>
+            <button string="Cancelar" special="cancel" class="btn-secondary"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+
+   
+
+  </data>
+</odoo>

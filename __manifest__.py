@@ -131,6 +131,7 @@
         'views/modelo.maquina.componente.xml',
         'views/informe.regla.xml',
         'views/checklist.componente.map.xml',
+        'views/reparacion_intervencion_views.xml',
         'views/acciones_menus.xml',
     ],
     

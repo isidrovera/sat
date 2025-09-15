@@ -770,5 +770,48 @@
               parent="sat.ajustes"
               action="action_checklist_map"
               sequence="159"/>
+
+    <!-- ACTION + MENU -->
+    <record id="action_reparacion_subparte" model="ir.actions.act_window">
+      <field name="name">Subpartes por Componente</field>
+      <field name="res_model">reparacion.subparte</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="view_reparacion_subparte_search"/>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Crea subpartes para cada componente (cilindro, cuchilla, revelador, etc.).
+        </p>
+      </field>
+    </record>
+
+    <menuitem id="menu_reparacion_subparte"
+              name="Catálogo de Subpartes"
+              parent="sat.ajustes"
+              action="action_reparacion_subparte"
+              sequence="160"/>
+
+     <!-- ACTION + (opcional) MENÚ visible -->
+    <record id="action_reparacion_intervencion" model="ir.actions.act_window">
+      <field name="name">Intervenciones</field>
+      <field name="res_model">reparacion.intervencion</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="view_reparacion_intervencion_search"/>
+    </record>
+
+    <menuitem id="menu_reparacion_intervencion"
+              name="Intervenciones"
+              parent="sat_menu_root"
+              action="action_reparacion_intervencion"
+              sequence="26"/>
+     <!-- ACTION del wizard -->
+    <record id="action_reparacion_add_subparts_wizard" model="ir.actions.act_window">
+      <field name="name">Añadir subpartes</field>
+      <field name="res_model">reparacion.add.subparts.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="view_id" ref="view_reparacion_add_subparts_wizard_form"/>
+      <field name="target">new</field>
+    </record>
+
+    
   </data>
 </odoo>

@@ -261,7 +261,274 @@ class Reparaciones(models.Model):
                                readonly=True
 
                                )
-   
+        # --- NUEVO: Intervenciones y subpartes (para repuestos/cambios) ---
+    intervencion_ids = fields.One2many(
+        'reparacion.intervencion',
+        'reparacion_id',
+        string='Intervenciones / Cambios'
+    )
+
+    _REP_CHECK_MAP = {
+        'adf_id': ('ADF', 2),
+        'bypass_id': ('Bypass', 1),
+        'finalizador_id': ('Finalizador', 2),
+        'tray1_id': ('Bandeja 1', 1),
+        'tray2_id': ('Bandeja 2', 1),
+        'tray3_id': ('Bandeja 3', 1),
+        'tray4_id': ('Bandeja 4', 1),
+        'optico_id': ('Sistema óptico', 3),   # aquí tus valores: sin_revisar/mantenimiento/revisado
+        'transfer_id': ('Banda de transferencia', 3),
+        'fusora_id': ('Faja fusora', 3),
+        'rodillo_id': ('Rodillo de presión', 2),
+        'calor_id': ('Rodillo de calor', 2),
+        'tacho_id': ('Tacho residual', 1),    # sí/no/no_aplica
+    }
+
+    # Unidades de imagen / developers con valores: requiere_cambio / nuevo / regular / gastada_pero_puede_trabajar / (no_aplica en color)
+    _REP_UNIDADES_IMG = {
+        'black_id': ('Unidad de imagen Black', 3),
+        'developerk_id': ('Developer Black', 3),
+        'magenta_id': ('Unidad de imagen Magenta', 3),
+        'developerm_id': ('Developer Magenta', 3),
+        'cyan_id': ('Unidad de imagen Cyan', 3),
+        'developerc_id': ('Developer Cyan', 3),
+        'yellow_id': ('Unidad de imagen Yellow', 3),
+        'developery_id': ('Developer Yellow', 3),
+    }
+
+    # Funciones con valores: correcto / sin_probar / falla / no_aplica
+    _REP_FUNCIONES = [
+        ('copia_id', 'Copia'),
+        ('impresion_id', 'Impresión'),
+        ('impresion_usb_id', 'Impresión USB'),
+        ('scaner_smb_id', 'Scanner SMB'),
+        ('scaner_usb_id', 'Scanner USB'),
+        ('scaner_ftp_id', 'Scanner FTP'),
+        ('scaner_mail_id', 'Scanner Mail'),
+    ]
+
+    # Tóners
+    _REP_TONERS = [
+        ('toner_black_id', 'Tóner Negro'),
+        ('toner_cyan_id', 'Tóner Cian'),
+        ('toner_magenta_id', 'Tóner Magenta'),
+        ('toner_yellow_id', 'Tóner Amarillo'),
+    ]
+
+    # ====================
+    # Helpers de extracción
+    # ====================
+    def _rep__is_autogen_informe(self):
+        html = (self.informe or '').lower()
+        return 'data-autogen="1"' in html
+
+    def _rep__funciones_con_falla(self):
+        etiquetas = []
+        for fname, label in self._REP_FUNCIONES:
+            val = getattr(self, fname, False)
+            if val == 'falla':
+                etiquetas.append(label)
+        return etiquetas
+
+    def _rep__toners_criticos(self):
+        criticos = []
+        for fname, label in self._REP_TONERS:
+            # En monocromo solo evaluamos negro
+            if self.tipo_id != 'color' and fname != 'toner_black_id':
+                continue
+            val = getattr(self, fname, False)
+            if val in ('vacio', 'sin_botella'):
+                criticos.append(label)
+        return criticos
+
+    def _rep__collect_findings(self):
+        """
+        Clasifica hallazgos:
+        - cambio_inmediato: requiere_cambio / cambio_de_repuestos
+        - desgaste: regular / gastada_pero_puede_trabajar / mantenimiento
+        - con_falla: 'no' (en tacho) o sin_revisar (para listar pendientes)
+        - no_aplica: no_aplica
+        score ponderado por 'peso'
+        """
+        cambio_inmediato, desgaste, pendientes, no_aplica = [], [], [], []
+        score = 0
+
+        # Módulos/Sistemas
+        for field_name, (etq, peso) in self._REP_CHECK_MAP.items():
+            val = getattr(self, field_name, False)
+            if not val:
+                continue
+            if val in ('cambio_de_repuestos', 'requiere_cambio'):
+                cambio_inmediato.append(etq)
+                score += 3 * peso
+            elif val in ('mantenimiento', 'regular', 'gastada_pero_puede_trabajar'):
+                desgaste.append(etq)
+                score += 2 * peso
+            elif val in ('sin_revisar', 'no'):  # 'no' para tacho_id
+                pendientes.append(etq)
+                score += 1 * peso
+            elif val == 'no_aplica':
+                no_aplica.append(etq)
+            # 'revisado' o 'si' → nada que listar
+
+        # Unidades de imagen / Developers
+        # (Respetando no_aplica para equipos mono)
+        for field_name, (etq, peso) in self._REP_UNIDADES_IMG.items():
+            if self.tipo_id != 'color' and field_name not in ('black_id', 'developerk_id'):
+                continue
+            val = getattr(self, field_name, False)
+            if not val:
+                continue
+            if val == 'requiere_cambio':
+                cambio_inmediato.append(etq)
+                score += 3 * peso
+            elif val in ('regular', 'gastada_pero_puede_trabajar'):
+                desgaste.append(etq)
+                score += 2 * peso
+            elif val == 'no_aplica':
+                no_aplica.append(etq)
+            # 'nuevo' → nada
+
+        return {
+            'cambio_inmediato': cambio_inmediato,
+            'desgaste': desgaste,
+            'pendientes': pendientes,
+            'no_aplica': no_aplica,
+            'score': score,
+        }
+
+    def _rep__calc_calidad(self, findings, funciones_falla, toners_criticos):
+        # Régimen simple y efectivo:
+        if findings['cambio_inmediato'] or funciones_falla or toners_criticos:
+            return 'mala'
+        if findings['desgaste'] or findings['pendientes']:
+            return 'regular'
+        return 'buena'
+
+    def _rep__infer_intervencion(self, findings, funciones_falla):
+        """
+        Deducción automática del 'tipo de intervención' para el texto del informe (no crea campos nuevos):
+        - Si hay requerimientos de cambio o funciones con falla → Reparación / cambio de repuestos
+        - Si hay 'mantenimiento'/'desgaste' y sin fallas graves → Mantenimiento preventivo
+        - Si todo está ok o sin revisar → Revisión/Diagnóstico
+        """
+        if findings['cambio_inmediato'] or funciones_falla:
+            return "Reparación / cambio de repuestos"
+        if findings['desgaste'] and not funciones_falla:
+            return "Mantenimiento preventivo"
+        return "Revisión / diagnóstico"
+
+    # ==========================
+    # Constructor del HTML (botón)
+    # ==========================
+    def _rep__build_informe_html(self):
+        self.ensure_one()
+
+        f = self._rep__collect_findings()
+        funciones_no = self._rep__funciones_con_falla()
+        toners_crit = self._rep__toners_criticos()
+
+        # Encabezado equipo
+        header = []
+        if self.marca: header.append(self.marca)
+        if self.nombre_maquina: header.append(self.nombre_maquina)
+        if self.serie_id: header.append(f"Serie: {self.serie_id}")
+        equipo_txt = " · ".join(header) or "Equipo"
+
+        # Problema reportado (si tienes dos fuentes, prioriza ventas; luego proveedor)
+        problema = (self.falla_ventas or '').strip() or (self.falla_proveedor or '')
+        if not problema:
+            problema = _('No especificado por el usuario')
+
+        # Texto de intervención inferido automáticamente
+        intervencion = self._rep__infer_intervencion(f, funciones_no)
+
+        # Conclusión (calidad)
+        calidad = self._rep__calc_calidad(f, funciones_no, toners_crit)
+        if calidad == 'mala':
+            concl = _("Se requiere intervención inmediata para evitar paradas no planificadas.")
+        elif calidad == 'regular':
+            concl = _("Equipo operativo con desgaste; programar cambio preventivo.")
+        else:
+            concl = _("Equipo operativo. Mantener plan de mantenimiento preventivo.")
+
+        # Texto general SIEMPRE
+        texto_general = _(
+            "Se realizó limpieza, mantenimiento preventivo y verificación general de funcionamiento y consumibles."
+        )
+
+        # Armado de “excepciones”
+        bloques = []
+
+        if funciones_no:
+            bloques.append("<p><strong>Funciones con falla:</strong></p><ul>" + "".join(f"<li>{x}</li>" for x in funciones_no) + "</ul>")
+        if f['cambio_inmediato']:
+            bloques.append("<p><strong>Requiere cambio inmediato:</strong></p><ul>" + "".join(f"<li>{x}</li>" for x in f['cambio_inmediato']) + "</ul>")
+        if f['desgaste']:
+            bloques.append("<p><strong>Componentes con desgaste:</strong></p><ul>" + "".join(f"<li>{x}</li>" for x in f['desgaste']) + "</ul>")
+        if f['pendientes']:
+            bloques.append("<p><strong>Pendientes / sin revisar:</strong></p><ul>" + "".join(f"<li>{x}</li>" for x in f['pendientes']) + "</ul>")
+        if toners_crit:
+            bloques.append("<p><strong>Consumibles críticos:</strong></p><ul>" + "".join(f"<li>{x}</li>" for x in toners_crit) + "</ul>")
+
+        excepciones_html = "".join(bloques)
+
+        cuerpo_html = (
+            f"<p>{texto_general}</p>" if not excepciones_html
+            else f"<p>{texto_general}</p><h5 style='margin:12px 0 6px;'>Observaciones</h5>{excepciones_html}"
+        )
+
+        html = f"""
+<div data-autogen="1" style="font-family: Arial; line-height:1.5;">
+  <h4 style="margin:0 0 8px 0;">{_('Informe técnico')} – {equipo_txt}</h4>
+  <p><strong>{_('Intervención')}:</strong> {intervencion}</p>
+  <p><strong>{_('Problema reportado')}:</strong> {problema}</p>
+  {cuerpo_html}
+  <h5 style="margin:12px 0 6px;">{_('Conclusión')}</h5>
+  <p>{concl}</p>
+  <p style="color:#888; font-size:12px; margin-top:10px;">
+      *{_('Este bloque fue generado automáticamente a partir del checklist de reparación.')}*
+  </p>
+</div>
+"""
+        return html, calidad
+
+    # ==========================
+    # Acción del botón
+    # ==========================
+    def action_generar_informe(self):
+        """
+        Genera o regenera el informe en el campo HTML `informe`.
+        Si el informe fue editado manualmente, NO lo sobreescribe.
+        Si está vacío o fue autogenerado antes, lo reemplaza.
+        """
+        for rec in self:
+            try:
+                # Solo autogenera si está vacío o si la última versión fue autogenerada
+                if rec.informe and not rec._rep__is_autogen_informe():
+                    # Ya hay edición manual: no tocamos, solo notificamos
+                    rec.message_post(body=_("El informe ya fue editado manualmente. No se sobrescribió."))
+                    continue
+
+                html, calidad = rec._rep__build_informe_html()
+                rec.write({'informe': html, 'calidad_id': calidad})
+                rec.message_post(body=_("Informe técnico generado automáticamente."))
+
+            except Exception as e:
+                _logger.exception("Error generando informe en reparaciones: %s", e)
+                rec.message_post(body=_("No se pudo generar el informe: %s") % e)
+
+        # Notificación visual
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Informe técnico'),
+                'message': _('Informe generado.'),
+                'type': 'success',
+            }
+        }
+
     tipo_revision = fields.Selection(related='maquina_id.tipo_revision', readonly=True,store=True)
     ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id', readonly=True, store=True)
     prioridad = fields.Selection(related='maquina_id.prioridad',readonly=True,store=True)
@@ -560,8 +827,7 @@ class Reparaciones(models.Model):
         ("mantenimiento", "Sistema Óptico Requiere Limpieza y Mantenimiento"),
         ("revisado", "Sistema Óptico Revisado y Calibrado Correctamente")
     ], string="Estado Sistema Óptico", tracking=True)
-    fusora_id = fields.Selection([('requiere_cambio', 'Requiere cambio'), ('nuevo', 'Nuevo'), ('regular', 'Regular'), ('gastada_pero_puede_trabajar', 'Gastada pero puede trabajar'), ("no_aplica", "No aplica")],
-                                 string="Faja fusora", tracking=True)
+
     transfer_id = fields.Selection([
         ('requiere_cambio', 'Banda de Transferencia Requiere Reemplazo Urgente'),
         ('no_aplica', 'No Aplica en Este Modelo'),

@@ -170,3 +170,8 @@ access_checklist_map_tecnico,checklist.map tecnico,model_checklist_componente_ma
 access_checklist_map_ventas,checklist.map ventas,model_checklist_componente_map,sat.Sat_ventas_group_user,1,1,0,0
 access_checklist_map_system,checklist.map system,model_checklist_componente_map,base.group_system,1,1,1,1
 access_checklist_map_portal,checklist.map portal,model_checklist_componente_map,base.group_portal,1,0,0,0
+access_reparacion_subparte_user,access.reparacion.subparte.user,model_reparacion_subparte,base.group_user,1,1,1,1
+access_reparacion_intervencion_user,access.reparacion.intervencion.user,model_reparacion_intervencion,base.group_user,1,1,1,1
+access_reparacion_intervencion_detalle_user,access.reparacion.intervencion.detalle.user,model_reparacion_intervencion_detalle,base.group_user,1,1,1,1
+access_reparacion_add_subparts_wizard_user,access.reparacion.add.subparts.wizard.user,model_reparacion_add_subparts_wizard,base.group_user,1,1,1,1
+access_reparacion_add_subparts_wizard_line_user,access.reparacion.add.subparts.wizard.line.user,model_reparacion_add_subparts_wizard_line,base.group_user,1,1,1,1

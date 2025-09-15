@@ -18,6 +18,10 @@
                         icon="fa-check-circle"
                         decoration-info="estado_id == 'en_revision'"
                         invisible="estado_id != 'en_revision'"/>
+                <button name="action_generar_informe"
+                type="object"
+                string="Generar informe"
+                class="oe_highlight"/>
 
                 <button string="Asignar Técnico" 
                     name="enviar_mensaje_whatsapp_reparaciones" 
