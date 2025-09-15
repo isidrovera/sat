@@ -745,3 +745,18 @@ class PrintTrackerConfig(models.Model):
         if not config:
             raise ValueError("No hay configuración activa de PrintTracker")
         return config
+
+
+    @api.model
+    def run_consolidation(self):
+        """
+        Server Action entrypoint: busca la config activa y corre la sincronización completa.
+        Debe devolver un dict de ir.actions.client (notificación).
+        """
+        config = self.get_active_config()  # ya lo tienes implementado
+        # Asegura que sea un único registro
+        if not config or len(config) != 1:
+            raise UserError(_("No se encontró una configuración activa única de PrintTracker."))
+
+        # Ejecuta tu pipeline completo (ya devuelve notificación)
+        return config.sync_all_data()
