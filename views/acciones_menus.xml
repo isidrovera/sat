@@ -201,7 +201,7 @@
       <field name="code">env['printtracker.config'].sudo().run_consolidation()</field>
     </record>
 
-    <record id="action_printtracker_alert_manager" model="ir.actions.server">
+    <record id="action_printtracker_alert_manager_srv" model="ir.actions.server">
       <field name="name">Ejecutar Revisión de Alertas</field>
       <field name="model_id" ref="model_printtracker_config"/>
       <field name="state">code</field>
