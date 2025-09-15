@@ -237,7 +237,7 @@
         </field>
     </record>
 
-    <record id="action_printtracker_consolidator" model="ir.actions.act_window">
+    <record id="action_printtracker_consolidator_sr" model="ir.actions.act_window">
         <field name="name">Consolidador de Datos</field>
         <field name="res_model">printtracker.processor</field>
         <field name="view_mode">form</field>
@@ -564,7 +564,7 @@
     <menuitem id="menu_printtracker_consolidator"
               name="Ejecutar Consolidación"
               parent="menu_printtracker_root"
-              action="action_printtracker_consolidator"
+              action="action_printtracker_consolidator_sr"
               sequence="90"/>
 
     <menuitem id="menu_printtracker_alert_manager"
