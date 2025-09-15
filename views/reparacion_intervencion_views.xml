@@ -179,7 +179,7 @@
                     type="action"
                     string="Añadir/Editar Subpartes"
                     class="oe_highlight"
-                    context="{'active_intervencion_id': active_id}"/>
+                    />
           </header>
           <sheet>
             <group>
