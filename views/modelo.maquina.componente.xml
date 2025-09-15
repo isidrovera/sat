@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <data>
-    <!-- SEARCH -->
+
+    <!-- =========================== -->
+    <!-- SEARCH (Búsqueda avanzada)  -->
+    <!-- =========================== -->
     <record id="view_modelo_maquina_componente_search" model="ir.ui.view">
       <field name="name">modelo.maquina.componente.search</field>
       <field name="model">modelo.maquina.componente</field>
@@ -10,46 +13,86 @@
           <field name="modelo_id"/>
           <field name="tipo_id"/>
           <field name="subparte_ids"/>
-          <group expand="0" string="Agrupar">
-            <filter string="Por Modelo" name="grp_mod" context="{'group_by':'modelo_id'}"/>
-            <filter string="Por Tipo" name="grp_tipo" context="{'group_by':'tipo_id'}"/>
+          <field name="color"/>
+          <field name="prioridad"/>
+
+          <!-- Filtros rápidos -->
+          <filter name="fil_color_k" string="Solo K" domain="[('color','=','k')]"/>
+          <filter name="fil_color_c" string="Solo C" domain="[('color','=','c')]"/>
+          <filter name="fil_color_m" string="Solo M" domain="[('color','=','m')]"/>
+          <filter name="fil_color_y" string="Solo Y" domain="[('color','=','y')]"/>
+
+          <filter name="fil_critico" string="Crítico" domain="[('prioridad','=','1')]"/>
+          <filter name="fil_medio"   string="Medio"   domain="[('prioridad','=','2')]"/>
+          <filter name="fil_bajo"    string="Bajo"    domain="[('prioridad','=','3')]"/>
+
+          <!-- Agrupar por -->
+          <group expand="0" string="Agrupar por">
+            <filter name="grp_mod"  string="Modelo"  context="{'group_by':'modelo_id'}"/>
+            <filter name="grp_tipo" string="Tipo"    context="{'group_by':'tipo_id'}"/>
+            <filter name="grp_color" string="Color"  context="{'group_by':'color'}"/>
+            <filter name="grp_prio"  string="Prioridad" context="{'group_by':'prioridad'}"/>
           </group>
         </search>
       </field>
     </record>
 
-    <!-- LIST -->
+    <!-- ============ -->
+    <!-- LIST (lista) -->
+    <!-- ============ -->
     <record id="view_modelo_maquina_componente_list" model="ir.ui.view">
       <field name="name">modelo.maquina.componente.list</field>
       <field name="model">modelo.maquina.componente</field>
       <field name="arch" type="xml">
-        <list string="Componentes por Modelo" create="1" edit="1" delete="0">
+        <list string="Componentes por Modelo"
+              create="1" edit="1" delete="1"
+              default_order="modelo_id asc, tipo_id asc, prioridad asc">
           <field name="modelo_id"/>
           <field name="tipo_id"/>
-         
+          <field name="color" optional="show"/>
+          <field name="prioridad" optional="show"/>
+          <field name="vida_util_paginas" optional="hide"/>
+          <field name="vida_util_meses" optional="hide"/>
         </list>
       </field>
     </record>
 
-    <!-- FORM -->
+    <!-- ============ -->
+    <!-- FORM (form)  -->
+    <!-- ============ -->
     <record id="view_modelo_maquina_componente_form" model="ir.ui.view">
       <field name="name">modelo.maquina.componente.form</field>
       <field name="model">modelo.maquina.componente</field>
       <field name="arch" type="xml">
         <form string="Config. Componente por Modelo">
-          <group>
-            <field name="modelo_id"/>
-            <field name="tipo_id"/>
-          </group>
-          <group>
-            <field name="subparte_ids" widget="many2many_tags"/>
-         
-            <field name="notas"/>
-          </group>
+          <sheet>
+            <group>
+              <group>
+                <field name="modelo_id"/>
+                <field name="tipo_id"/>
+                <field name="color"/>
+                <field name="prioridad"/>
+              </group>
+              <group>
+                <field name="vida_util_paginas"/>
+                <field name="vida_util_meses"/>
+              </group>
+            </group>
+
+            <group string="Detalles">
+              <group>
+                <field name="frase_desgaste" placeholder="Ej.: 'Se observan líneas tenues en bordes'"/>
+                <field name="frase_cambio" placeholder="Ej.: 'Aún no requiere cambio'"/>
+              </group>
+              <group>
+                <field name="subparte_ids" widget="many2many_tags"/>
+              </group>
+            </group>
+          </sheet>
         </form>
       </field>
     </record>
 
-   
+    
   </data>
 </odoo>
