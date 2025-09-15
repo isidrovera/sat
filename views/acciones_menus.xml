@@ -803,14 +803,7 @@
               parent="sat_menu_root"
               action="action_reparacion_intervencion"
               sequence="26"/>
-     <!-- ACTION del wizard -->
-    <record id="action_reparacion_add_subparts_wizard" model="ir.actions.act_window">
-      <field name="name">Añadir subpartes</field>
-      <field name="res_model">reparacion.add.subparts.wizard</field>
-      <field name="view_mode">form</field>
-      <field name="view_id" ref="view_reparacion_add_subparts_wizard_form"/>
-      <field name="target">new</field>
-    </record>
+    
 
     
   </data>
