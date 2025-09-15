@@ -9,8 +9,8 @@
       <field name="arch" type="xml">
         <search string="Buscar Tipo de Componente">
           <field name="name"/>
-          <filter string="Activos" name="fil_activos" domain="[('active','=',True)]"/>
-          <filter string="Archivados" name="fil_arch" domain="[('active','=',False)]"/>
+          <filter string="Activos" name="fil_activos" />
+          <filter string="Archivados" name="fil_arch" />
         </search>
       </field>
     </record>
