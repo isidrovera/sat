@@ -149,6 +149,7 @@
   <field name="target">new</field>
 </record>
 
+
     <!-- ===================================================== -->
     <!-- 3) INTERVENCIONES                                     -->
     <!-- ===================================================== -->
@@ -209,11 +210,17 @@
       <field name="arch" type="xml">
         <form string="Intervención">
           <header>
-            <button name="%(action_reparacion_add_subparts_wizard)d"
-                    type="action"
-                    string="Añadir/Editar Subpartes"
-                    class="oe_highlight"/>
-          </header>
+        <button name="%(action_reparacion_add_subparts_wizard)d"
+                type="action"
+                string="Añadir/Editar Subpartes"
+                class="oe_highlight"
+                context="{
+                    'active_intervencion_id': active_id,
+                    'default_intervencion_id': active_id,
+                    'default_reparacion_id': reparacion_id
+                }"/>
+      </header>
+
           <sheet>
             <group>
               <field name="reparacion_id" readonly="1"/>
