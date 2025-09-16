@@ -185,6 +185,7 @@
             'sat/static/src/xml/selection_subparts.xml',
             
             # JS Files existentes
+            'sat/static/src/js/selection_subparts.js',
             'sat/static/src/js/**/*',
           
             
