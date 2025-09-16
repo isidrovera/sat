@@ -164,6 +164,8 @@
             'sat/static/src/scss/list_dashboard.scss',
 
             # JS propios
+            'sat/static/src/js/dashboard.js',
+            'sat/static/src/js/estilo_dashboard.js',
             'sat/static/src/js/**/*',
         ],
 
