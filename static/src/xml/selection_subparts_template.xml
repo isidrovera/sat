@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates xml:space="preserve">
   <t t-name="sat.SelectionSubparts">
-  <select class="o_input"
-          t-att-value="props.value"
-          t-on-change="props.onChange"
-          t-att-disabled="props.readonly ? true : undefined">
-    <t t-foreach="props.selectionList" t-as="opt" t-key="_tIndex">
-      <t t-if="opt">
-        <!-- fuerza string en value para compatibilidad -->
-        <option t-att-value="'' + opt[0]">
-          <t t-esc="opt[1] or ''"/>
-        </option>
+    <select class="o_input"
+            t-att-value="props.value"
+            t-on-change="props.onChange"
+            t-att-disabled="props.readonly ? true : undefined">
+      <t t-foreach="props.selectionList" t-as="opt" t-key="_tIndex">
+        <t t-if="opt">
+          <option t-att-value="'' + opt[0]">
+            <t t-esc="opt[1] or ''"/>
+          </option>
+        </t>
       </t>
-    </t>
-  </select>
-</t>
+    </select>
+  </t>
 </templates>
