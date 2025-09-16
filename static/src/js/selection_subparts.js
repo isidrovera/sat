@@ -14,41 +14,49 @@ export class SelectionSubparts extends Component {
       loading: false,
     });
 
-    // Si no llegaron opciones, las pedimos al servidor vía fields_get
+    // Si aún no hay opciones, intenta pedirlas al servidor
     onWillStart(async () => {
-      if (this.state.options.length === 0 && this.props.record && this.props.name) {
-        try {
-          this.state.loading = true;
-          const modelName = this.props.record.model?.name;
-          const fieldName = this.props.name;
+      if (this.state.options.length) return;
 
-          // fields_get: queremos solo la selección de ese campo
-          const res = await this.orm.call(modelName, "fields_get", [[fieldName], ["selection"]]);
-          const sel = (res && res[fieldName] && res[fieldName].selection) || [];
-          this.state.options = Array.isArray(sel) ? sel : [];
-          // console.debug(TAG, "fields_get loaded", { modelName, fieldName, len: this.state.options.length });
-        } catch (e) {
-          // console.error(TAG, "fields_get failed", e);
-          this.state.options = [];
-        } finally {
-          this.state.loading = false;
-        }
+      const modelName = this.props.record?.model?.name;
+      const fieldName = this.props.name;
+      if (!modelName || !fieldName) return;
+
+      this.state.loading = true;
+      try {
+        // Usa el mismo context que la vista si existe
+        const ctx =
+          this.props.record?.model?.root?.context ||
+          this.props.record?.model?.context ||
+          {};
+
+        const res = await this.orm.call(
+          modelName,
+          "fields_get",
+          [[fieldName], ["selection"]],
+          { context: ctx }
+        );
+        const sel = (res && res[fieldName] && res[fieldName].selection) || [];
+        this.state.options = Array.isArray(sel) ? sel : [];
+        // console.debug(TAG, "fields_get", { modelName, fieldName, len: this.state.options.length });
+      } catch (e) {
+        // console.error(TAG, "fields_get failed", e);
+        this.state.options = [];
+      } finally {
+        this.state.loading = false;
       }
     });
   }
 }
 SelectionSubparts.template = "sat.SelectionSubparts";
 SelectionSubparts.props = {
-  // props “normales”
   value: { type: [String, Number, Boolean], optional: true },
   selectionList: { type: Array, optional: true },
   readonly: { type: Boolean, optional: true },
   onChange: { type: Function, optional: true },
-
-  // props extra que Field suele inyectar
   id: { type: [String, Number], optional: true },
-  name: { type: String, optional: true },   // <-- nombre del campo (p.ej. "black_id")
-  record: { type: Object, optional: true }, // <-- record con model/data
+  name: { type: String, optional: true },   // p.ej. "black_id"
+  record: { type: Object, optional: true }, // contiene model/data
 };
 
 const fieldRegistry = registry.category("fields");
@@ -57,16 +65,21 @@ fieldRegistry.add("selection_subparts", {
   supportedTypes: ["selection"],
 
   extractProps: (args) => {
-    const { record, value, attrs } = args;
-    const fieldName = args.name; // <- en tu caso sí viene aquí
+    const { record, value, attrs, viewType = args.viewType } = args;
+    const fieldName = args.name;
+
+    // =============== TODOS LOS ORÍGENES POSIBLES EN EL CLIENTE ===============
+    // (el nativo suele usar fieldsInfo[viewType][fieldName])
+    const selField     = args?.field?.selection || args?.field?.params?.selection;
+    const selFieldsInf = record?.model?.fieldsInfo?.[viewType]?.[fieldName]?.selection;
+    const selRootFInf  = record?.model?.root?.fieldsInfo?.[viewType]?.[fieldName]?.selection;
+    const selRootFlds  = record?.model?.root?.fields?.[fieldName]?.selection;
+    const selAttrs     = args?.attrs?.selection;
+    const selection    = selField || selFieldsInf || selRootFInf || selRootFlds || selAttrs || [];
+    // ========================================================================
+
     const currentValue = value !== undefined ? value : record?.data?.[fieldName];
-
-    // 1) Intentos “rápidos” de obtener opciones (si llegan por props)
-    const fromField = args?.field?.selection || args?.field?.params?.selection;
-    const fromAttrs = args?.attrs?.selection;
-    const selection = fromField || fromAttrs || []; // si vacío, el componente hará RPC
-
-    const readonly = Boolean(attrs?.readonly) || Boolean(record?.isReadonly);
+    const readonly     = Boolean(attrs?.readonly) || Boolean(record?.isReadonly);
 
     const onChange = (ev) => {
       const newVal = ev.target.value;
@@ -75,9 +88,21 @@ fieldRegistry.add("selection_subparts", {
       }
     };
 
+    // DEBUG útil (déjalo mientras pruebas)
+    console.debug(TAG, "extractProps", {
+      model: record?.model?.name, fieldName, viewType,
+      selFieldLen: (selField || []).length,
+      selFieldsInfLen: (selFieldsInf || []).length,
+      selRootFInfLen: (selRootFInf || []).length,
+      selRootFldsLen: (selRootFlds || []).length,
+      selAttrsLen: (selAttrs || []).length,
+      finalLen: selection.length,
+      readonly, value: currentValue,
+    });
+
     return {
       value: currentValue,
-      selectionList: selection,
+      selectionList: selection,   // si va vacío, el componente hará RPC en onWillStart
       readonly,
       onChange,
       name: fieldName,
