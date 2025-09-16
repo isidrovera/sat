@@ -1,42 +1,30 @@
 /** @odoo-module **/
 
+import { Component } from "@odoo/owl";
 import { registry } from "@web/core/registry";
-import { SelectionField } from "@web/views/fields/selection/selection_field";
-import { useService } from "@web/core/utils/hooks";
 
-export class SelectionSubparts extends SelectionField {
-    setup() {
-        super.setup();
-        this.action = useService("action");
-        this.notification = useService("notification");
-    }
+export class SelectionSubparts extends Component {}
+SelectionSubparts.template = "sat.SelectionSubparts"; // tu template QWeb
+SelectionSubparts.props = {
+    value: { type: [String, Number, Boolean, null] },
+    selectionList: { type: Array },            // [[value,label], ...]
+    readonly: { type: Boolean, optional: true },
+    onChange: { type: Function, optional: true },
+};
 
-    async onChange(ev) {
-        // Primero ejecutar el onChange original
-        const result = await super.onChange(ev);
-        
-        // Después verificar si necesitamos abrir el wizard
-        const newValue = ev.target.value;
-        if (newValue === "requiere_cambio") {
-            const resId = this.props.record.resId;
-            
-            if (!resId) {
-                this.notification.add(
-                    "Primero guarda el registro para poder añadir subpartes.", 
-                    { type: "warning" }
-                );
-                return result;
-            }
-
-            // Por ahora, solo mostrar una notificación para probar
-            this.notification.add(
-                `Campo ${this.props.name} cambió a requiere_cambio. ResId: ${resId}`,
-                { type: "info" }
-            );
-        }
-        
-        return result;
-    }
-}
-
-registry.category("fields").add("selection_subparts", SelectionSubparts);
+// Registro CORRECTO en el registry de fields:
+const fieldRegistry = registry.category("fields");
+fieldRegistry.add("selection_subparts", {
+    component: SelectionSubparts,
+    supportedTypes: ["selection"], // o lo que apliquen
+    extractProps: ({ field, record, attrs }) => ({
+        value: record.data[field.name],
+        selectionList: field.selection || [],
+        readonly: attrs.readonly || false,
+        onChange: (ev) => {
+            const newVal = ev.target.value;
+            record.update({ [field.name]: newVal });
+        },
+    }),
+    isEmpty: ({ value }) => value === undefined || value === null || value === "",
+});

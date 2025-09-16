@@ -1,18 +1,16 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<templates>
-    <t t-name="SelectionSubparts.Template">
-        <select t-att-class="props.class" 
-                t-att-id="props.id"
-                t-att-name="props.name"
-                t-on-change="onChange"
-                t-att-disabled="props.readonly">
-            <option value="">-- Seleccionar --</option>
-            <t t-foreach="selection" t-as="option" t-key="option[0]">
-                <option t-att-value="option[0]" 
-                        t-att-selected="option[0] === value ? 'selected' : undefined">
-                    <t t-esc="option[1]"/>
-                </option>
-            </t>
-        </select>
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+  <t t-name="sat.SelectionSubparts">
+  <select t-att-disabled="props.readonly"
+          class="o_input"
+          t-on-change="props.onChange"
+          t-att-value="props.value">
+    <t t-foreach="props.selectionList" t-as="opt" t-key="opt &amp;&amp; opt[0] || _tIndex">
+      <option t-att-value="opt &amp;&amp; opt[0]">
+        <t t-esc="(opt &amp;&amp; opt[1]) || ''"/>
+      </option>
     </t>
+  </select>
+</t>
+
 </templates>
