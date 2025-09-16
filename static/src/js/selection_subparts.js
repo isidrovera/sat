@@ -1,28 +1,25 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { SelectionField } from "@web/views/fields/selection/selection_field";
+import { Component } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 
-export class SelectionSubparts extends SelectionField {
+export class SelectionSubparts extends Component {
+    static template = "web.SelectionField"; // Usar el template base de Odoo
+    
     setup() {
-        // Llamar al setup del padre primero
-        super.setup();
-        
-        // Solo configurar servicios si todo está bien
         this.action = useService("action");
         this.notification = useService("notification");
     }
-
+    
     async onChange(ev) {
-        // Ejecutar onChange del padre primero
-        await super.onChange(ev);
+        const newValue = ev.target.value;
         
-        const newValue = ev?.target?.value;
+        // Actualizar el valor en el record
+        await this.props.record.update({ [this.props.name]: newValue });
         
-        // Solo actuar si el valor es "requiere_cambio"
         if (newValue === "requiere_cambio") {
-            const resId = this.props?.record?.resId;
+            const resId = this.props.record.resId;
             
             if (!resId) {
                 this.notification.add(
@@ -32,10 +29,9 @@ export class SelectionSubparts extends SelectionField {
                 return;
             }
 
-            // Abrir wizard
             await this.action.doAction({
                 type: "ir.actions.act_window",
-                name: "Añadir/Editar Subpartes",
+                name: "Añadir/Editar Subpartes", 
                 res_model: "reparacion.add.subparts.wizard",
                 target: "new",
                 views: [[false, "form"]],
@@ -48,5 +44,4 @@ export class SelectionSubparts extends SelectionField {
     }
 }
 
-// NO definir template estático - usar el del padre automáticamente
 registry.category("fields").add("selection_subparts", SelectionSubparts);
