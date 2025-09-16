@@ -267,6 +267,28 @@ class Reparaciones(models.Model):
         'reparacion_id',
         string='Intervenciones / Cambios'
     )
+    # Mapa: campo de selección -> código de componente (ReparacionSubparte.COMPONENTE)
+    _COMP_MAP_REQCAMBIO = {
+        # Módulos / sistemas
+        'adf_id': 'adf',
+        'finalizador_id': 'fin',
+        'bypass_id': 'papel',
+        'transfer_id': 'itb',
+        'fusora_id': 'fuser',
+        'rodillo_id': 'fuser',   # si prefieres separar rodillo/calor en otro componente, cámbialo
+        'calor_id':   'fuser',
+
+        # Unidades de imagen / developers
+        'black_id':      'ui_k',
+        'developerk_id': 'dev_k',
+        'magenta_id':    'ui_m',
+        'developerm_id': 'dev_m',
+        'cyan_id':       'ui_c',
+        'developerc_id': 'dev_c',
+        'yellow_id':     'ui_y',
+        'developery_id': 'dev_y',
+    }
+
 
     _REP_CHECK_MAP = {
         'adf_id': ('ADF', 2),
