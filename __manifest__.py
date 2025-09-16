@@ -182,6 +182,7 @@
             'sat/static/src/xml/dashboard.xml',
             'sat/static/src/xml/photo_gallery_template.xml',
             'sat/static/src/xml/list_view.xml',
+            'sat/static/src/xml/selection_subparts.xml',
             
             # JS Files existentes
             'sat/static/src/js/dashboard.js',
