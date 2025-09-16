@@ -142,14 +142,12 @@
 
     <!-- ACCIÓN DEL WIZARD -->
     <record id="action_reparacion_add_subparts_wizard" model="ir.actions.act_window">
-      <field name="name">Añadir/Editar Subpartes</field>
-      <field name="res_model">reparacion.add.subparts.wizard</field>
-      <field name="view_mode">form</field>
-      <field name="view_id" ref="view_reparacion_add_subparts_wizard_form"/>
-      <field name="target">new</field>
-      <!-- Pasar el registro origen (intervención) al wizard -->
-      <field name="context">{'default_intervencion_id': active_id}</field>
-    </record>
+  <field name="name">Añadir/Editar Subpartes</field>
+  <field name="res_model">reparacion.add.subparts.wizard</field>
+  <field name="view_mode">form</field>
+  <field name="view_id" ref="view_reparacion_add_subparts_wizard_form"/>
+  <field name="target">new</field>
+</record>
 
     <!-- ===================================================== -->
     <!-- 3) INTERVENCIONES                                     -->
