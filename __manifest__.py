@@ -157,6 +157,7 @@
 
         # Frontend website/portal: globs si tienes carpetas separadas
         'web.assets_frontend': [
+            'sat/static/src/xml/**/*',
             # Si usas los mismos, puedes globerlos también,
             # o separar por carpetas 'js_front' / 'css_front' si las creas.
             'sat/static/src/js/**/*',
