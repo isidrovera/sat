@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates xml:space="preserve">
   <t t-name="sat.SelectionSubpartsWrapper">
-    <!-- Rama principal: usar el widget nativo -->
-    <t t-if="props.record and props.name">
+    <!-- Si tenemos record+name, renderizamos el nativo -->
+    <t t-if="props.record and props.name and component.CoreSelection">
       <t t-component="CoreSelection"
          t-props="{
            value: props.value,
@@ -16,18 +16,15 @@
          t-on-change="onNativeChange"
       />
     </t>
-
-    <!-- Rama alternativa (fallback) -->
+    <!-- Fallback seguro (muy raro que se use en un form) -->
     <t t-else="">
       <select class="o_input"
               t-att-value="props.value"
               t-att-disabled="props.readonly ? true : undefined"
-              t-on-change="onFallbackChange">
+              t-on-change="onNativeChange">
         <t t-foreach="props.selection or []" t-as="opt" t-key="_tIndex">
           <t t-if="opt">
-            <option t-att-value="'' + opt[0]">
-              <t t-esc="opt[1] or ''"/>
-            </option>
+            <option t-att-value="'' + opt[0]"><t t-esc="opt[1] or ''"/></option>
           </t>
         </t>
         <t t-if="!(props.selection and props.selection.length)">
