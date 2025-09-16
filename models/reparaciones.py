@@ -19,6 +19,7 @@ import zipfile
 import io
 from odoo.http import request
 import uuid
+from markupsafe import Markup
 
 class Reparaciones(models.Model):
     _name = 'reparaciones.reparaciones'
