@@ -476,7 +476,7 @@
                         
                         <!-- Galería de imágenes -->
                         <div style="margin: 15px 0;">
-                            <field name="fotos_ids" widget="gallery_widget"/>
+                            <field name="fotos_ids" />
                         </div>
                         
                         <div style="margin-top: 15px; padding: 10px; background-color: #e7f5fa; border: 1px solid #bee5eb; border-radius: 6px;">
