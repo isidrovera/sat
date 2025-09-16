@@ -15,7 +15,6 @@
         'hr_attendance','hr','website','bus'
     ],
 
-    # IMPORTANTE: en 'data' NO se pueden usar globs; hay que listar archivos.
     'data': [
         'security/acceso.xml',
         'security/ir.model.access.csv',
@@ -122,46 +121,64 @@
     ],
 
     'assets': {
-        # QWeb: TODAS las plantillas bajo static/src/xml
-        'web.assets_qweb': [
-            'sat/static/src/xml/**/*',
-        ],
-
-        # Backend: TODOS tus JS/CSS/SCSS locales + las URLs externas explícitas
-        'web.assets_backend': [
-            # === URLs externas (no admiten glob) ===
+        # Sub-bundle reutilizable (convención: prefijo "_")
+        'sat._libs_dashboard': [
+            # Librerías externas (manteniendo todo)
             'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+
+            # Bootstrap / Tailwind (ojo con colisiones en backend; las mantengo por tu pedido)
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js',
+            'https://cdn.tailwindcss.com',
+
+            # Animaciones/utilidades
             'https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css',
             'https://unpkg.com/aos@2.3.1/dist/aos.css',
             'https://unpkg.com/aos@2.3.1/dist/aos.js',
-            'https://cdn.tailwindcss.com',
             'https://unpkg.com/lucide@latest/dist/umd/lucide.js',
             'https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js',
             'https://cdn.jsdelivr.net/npm/typed.js@2.0.12',
+
+            # ECharts antes de tus scripts
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
+
+            # Packs extra
             'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js',
             'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css',
             'https://unicons.iconscout.com/release/v4.0.8/css/line.css',
             'https://cdn.lordicon.com/lordicon.js',
+        ],
 
-            # === TODOS tus estilos locales ===
-            'sat/static/src/css/**/*',
-            'sat/static/src/scss/**/*',
+        'web.assets_backend': [
+            ('include', 'sat._libs_dashboard'),
 
-            # === TODO tu JS local (recursivo) ===
+            # CSS/SCSS propios
+            'sat/static/src/css/dashboard.css',
+            'sat/static/src/css/style.css',
+            'sat/static/src/css/tree_dashboard.css',
+            'sat/static/src/css/evaluation_form.css',
+            'sat/static/src/css/parts_request_message.css',
+            'sat/static/src/css/image-viewer.css',
+            'sat/static/src/css/sat_table_styles.css',
+            'sat/static/src/scss/list_dashboard.scss',
+
+            # JS propios
             'sat/static/src/js/**/*',
         ],
 
-        # Frontend website/portal: globs si tienes carpetas separadas
+        'web.assets_qweb': [
+            'sat/static/src/xml/dashboard.xml',
+            'sat/static/src/xml/photo_gallery_template.xml',
+            'sat/static/src/xml/list_view.xml',
+            'sat/static/src/xml/selection_subparts.xml',
+        ],
+
         'web.assets_frontend': [
-            'sat/static/src/xml/**/*',
-            # Si usas los mismos, puedes globerlos también,
-            # o separar por carpetas 'js_front' / 'css_front' si las creas.
-            'sat/static/src/js/**/*',
-            'sat/static/src/css/**/*',
+            'sat/static/src/js/searchFilter.js',
+            # Si necesitas FA también en website:
+            'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+            # Si llegas a mover Bootstrap/Tailwind para páginas públicas, añádelos aquí.
         ],
     },
 
