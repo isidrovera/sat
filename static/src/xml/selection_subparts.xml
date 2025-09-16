@@ -3,7 +3,7 @@
     <t t-name="sat.SelectionSubparts">
         <select t-on-change="onChange" t-att-value="value" class="o_input">
             <t t-foreach="selectionList" t-as="opt">
-                <option t-att-value="opt[0]" t-esc="opt[1]"/>
+                <option t-att-value="opt[0]"><t t-esc="opt[1]"/></option>
             </t>
         </select>
     </t>
