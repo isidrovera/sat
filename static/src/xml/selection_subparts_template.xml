@@ -1,18 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates xml:space="preserve">
-  <!-- Usamos t-component con el componente nativo que obtuvimos del registry -->
   <t t-name="sat.SelectionSubpartsWrapper">
-    <t t-component="CoreSelection"
-       t-props="{
-         value: props.value,
-         readonly: props.readonly,
-         required: props.required,
-         name: props.name,
-         record: props.record,
-         selection: props.selection,
-         options: props.options
-       }"
-       t-on-change="onNativeChange"
-    />
+    <!-- Rama principal: usar el widget nativo -->
+    <t t-if="props.record and props.name">
+      <t t-component="CoreSelection"
+         t-props="{
+           value: props.value,
+           readonly: props.readonly,
+           required: props.required,
+           name: props.name,
+           record: props.record,
+           selection: props.selection,
+           options: props.options
+         }"
+         t-on-change="onNativeChange"
+      />
+    </t>
+
+    <!-- Rama alternativa (fallback) -->
+    <t t-else="">
+      <select class="o_input"
+              t-att-value="props.value"
+              t-att-disabled="props.readonly ? true : undefined"
+              t-on-change="onFallbackChange">
+        <t t-foreach="props.selection or []" t-as="opt" t-key="_tIndex">
+          <t t-if="opt">
+            <option t-att-value="'' + opt[0]">
+              <t t-esc="opt[1] or ''"/>
+            </option>
+          </t>
+        </t>
+        <t t-if="!(props.selection and props.selection.length)">
+          <option value="">No options available</option>
+        </t>
+      </select>
+    </t>
   </t>
 </templates>
