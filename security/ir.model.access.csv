@@ -175,3 +175,4 @@ access_reparacion_intervencion_user,access.reparacion.intervencion.user,model_re
 access_reparacion_intervencion_detalle_user,access.reparacion.intervencion.detalle.user,model_reparacion_intervencion_detalle,base.group_user,1,1,1,1
 access_reparacion_add_subparts_wizard_user,access.reparacion.add.subparts.wizard.user,model_reparacion_add_subparts_wizard,base.group_user,1,1,1,1
 access_reparacion_add_subparts_wizard_line_user,access.reparacion.add.subparts.wizard.line.user,model_reparacion_add_subparts_wizard_line,base.group_user,1,1,1,1
+access_sat_selection_debug_wizard_user,sat.selection.debug.wizard user,model_sat_selection_debug_wizard,base.group_user,1,1,1,1
