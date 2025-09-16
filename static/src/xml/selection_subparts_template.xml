@@ -5,12 +5,22 @@
             t-att-value="props.value"
             t-on-change="props.onChange"
             t-att-disabled="props.readonly ? true : undefined">
-      <t t-foreach="props.selectionList" t-as="opt" t-key="_tIndex">
+      <!-- Mientras carga, muestra una opción fantasma -->
+      <t t-if="state.loading">
+        <option value="">Cargando…</option>
+      </t>
+      <!-- Opciones reales: primero las que vengan por props, o las que armamos por RPC -->
+      <t t-foreach="state.options.length ? state.options : (props.selectionList || [])"
+         t-as="opt" t-key="_tIndex">
         <t t-if="opt">
           <option t-att-value="'' + opt[0]">
             <t t-esc="opt[1] or ''"/>
           </option>
         </t>
+      </t>
+      <!-- Si no hay nada, deja un placeholder -->
+      <t t-if="!state.loading and !(state.options.length || (props.selectionList || []).length)">
+        <option value="">No options available</option>
       </t>
     </select>
   </t>
