@@ -3,35 +3,32 @@
 import { Component } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { FieldSelection } from "@web/views/fields/selection/selection_field";
 
+// === Wrapper que usa el widget nativo 'selection' y abre un wizard según la opción ===
 export class SelectionSubparts extends Component {
   setup() {
     this.action = useService("action");
   }
 
-  // Handler único: actualiza el valor y luego abre el wizard según la opción
   onNativeChange(ev) {
     const newVal = ev.target?.value;
     const { record, name } = this.props;
 
-    // 1) Actualiza el campo en el record (igual que el widget nativo)
+    // 1) actualizar el valor como hace el core
     if (record && typeof record.update === "function") {
       record.update({ [name]: newVal });
     }
 
-    // 2) Mapa de acciones (se puede pasar desde XML via options="{'action_map': {...}}")
+    // 2) abrir wizard según la opción elegida
     const actionMap =
       this.props.actionMap ||
       this.props.options?.action_map ||
       this.props.options?.actionMap ||
       {};
 
-    // 3) Arma la acción y lanza el wizard
-    const act = actionMap[newVal];
+    const act = actionMap?.[newVal];
     if (act) {
-      // Permite usar placeholders simples en context
-      const ctx = Object.assign({}, act.context || {});
+      const ctx = { ...(act.context || {}) };
       if (record?.data?.id && ctx.active_id === undefined) ctx.active_id = record.data.id;
       if (record?.data?.id && ctx.default_res_id === undefined) ctx.default_res_id = record.data.id;
 
@@ -39,7 +36,6 @@ export class SelectionSubparts extends Component {
         type: "ir.actions.act_window",
         target: "new",
         views: [[false, "form"]],
-        // lo que venga en el map sobrescribe lo anterior
         ...act,
         context: ctx,
       });
@@ -47,43 +43,42 @@ export class SelectionSubparts extends Component {
   }
 }
 
-// Usamos el nativo FieldSelection por dentro
-SelectionSubparts.components = { FieldSelection };
-SelectionSubparts.template = "sat.SelectionSubpartsWrapper";
+// === Obtenemos el componente nativo del registry (no lo importamos) ===
+const fieldsRegistry = registry.category("fields");
+const coreSelectionDef = fieldsRegistry.get("selection"); // { component, supportedTypes, ... }
+SelectionSubparts.components = { CoreSelection: coreSelectionDef.component };
 
-// Props que acepta el wrapper
+SelectionSubparts.template = "sat.SelectionSubpartsWrapper";
 SelectionSubparts.props = {
   value: { type: [String, Number, Boolean], optional: true },
   readonly: { type: Boolean, optional: true },
   required: { type: Boolean, optional: true },
   name: { type: String, optional: true },
   record: { type: Object, optional: true },
-  selection: { type: Array, optional: true },    // lista de opciones (si el core ya la trae)
-  options: { type: Object, optional: true },     // options del XML
-  actionMap: { type: Object, optional: true },   // alias de options.action_map
+  selection: { type: Array, optional: true },
+  options: { type: Object, optional: true },
+  actionMap: { type: Object, optional: true },
 };
 
-// Registro en el field registry
-const fieldRegistry = registry.category("fields");
-fieldRegistry.add("selection_subparts", {
+// Registramos el widget de campo con nuestro wrapper
+fieldsRegistry.add("selection_subparts", {
   component: SelectionSubparts,
   supportedTypes: ["selection"],
-
-  // Delegamos casi todo al core; sólo recolectamos selection y props básicas
   extractProps: (args) => {
     const { record, value, attrs, viewType = args.viewType } = args;
     const name = args.name;
 
-    // dónde puede venir la selección en el cliente
-    const selField     = args?.field?.selection || args?.field?.params?.selection;
-    const selFieldsInf = record?.model?.fieldsInfo?.[viewType]?.[name]?.selection;
-    const selRootFInf  = record?.model?.root?.fieldsInfo?.[viewType]?.[name]?.selection;
-    const selFromAttrs = args?.attrs?.selection;
-    const selection    = selField || selFieldsInf || selRootFInf || selFromAttrs || [];
-
+    // El core ya sabe sacar la selección; le pasamos sólo lo básico.
     const currentValue = value !== undefined ? value : record?.data?.[name];
-    const readonly     = Boolean(attrs?.readonly) || Boolean(record?.isReadonly);
-    const required     = Boolean(attrs?.required);
+    const readonly = Boolean(attrs?.readonly) || Boolean(record?.isReadonly);
+    const required = Boolean(attrs?.required);
+
+    // Si quieres, puedes seguir pasando una selección forzada desde la vista via attrs.selection
+    const selection =
+      args?.field?.selection ||
+      record?.model?.fieldsInfo?.[viewType]?.[name]?.selection ||
+      args?.attrs?.selection ||
+      [];
 
     return {
       name,
@@ -91,10 +86,9 @@ fieldRegistry.add("selection_subparts", {
       value: currentValue,
       readonly,
       required,
-      selection,          // si viniera vacío, FieldSelection igualmente sabe manejarlo
-      options: args.options, // para leer options.action_map
+      selection,
+      options: args.options,
     };
   },
-
   isEmpty: ({ value }) => value === undefined || value === null || value === "",
 });

@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates xml:space="preserve">
-  <!-- Wrapper que renderiza el widget nativo y captura el change -->
+  <!-- Usamos t-component con el componente nativo que obtuvimos del registry -->
   <t t-name="sat.SelectionSubpartsWrapper">
-    <FieldSelection
-      value="props.value"
-      readonly="props.readonly"
-      required="props.required"
-      name="props.name"
-      record="props.record"
-      selection="props.selection"
-      options="props.options"
-      t-on-change="onNativeChange"
+    <t t-component="CoreSelection"
+       t-props="{
+         value: props.value,
+         readonly: props.readonly,
+         required: props.required,
+         name: props.name,
+         record: props.record,
+         selection: props.selection,
+         options: props.options
+       }"
+       t-on-change="onNativeChange"
     />
   </t>
 </templates>
