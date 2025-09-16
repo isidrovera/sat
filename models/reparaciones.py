@@ -588,15 +588,17 @@ class Reparaciones(models.Model):
 
     @api.model
     def rpc_prepare_subparts_wizard(self, rec_id, field_name):
-        """Llamado desde el widget JS al seleccionar 'requiere_cambio' (antes de guardar)."""
         rec = self.browse(rec_id)
         if not rec.exists():
             raise UserError(_("Registro no encontrado."))
+
         comp = rec._COMP_MAP_REQCAMBIO.get(field_name)
         if not comp:
             raise UserError(_("No se reconoce el componente para el campo: %s") % field_name)
+
         interv = rec._ensure_intervencion_for_component(comp)
         return {'intervencion_id': interv.id}
+
 
     tipo_revision = fields.Selection(related='maquina_id.tipo_revision', readonly=True,store=True)
     ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id', readonly=True, store=True)

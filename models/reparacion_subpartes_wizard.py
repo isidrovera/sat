@@ -39,34 +39,30 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
     @api.model
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
-        ctx = self.env.context or {}
-        interv_id = (
-            ctx.get('active_intervencion_id')
-            or ctx.get('default_intervencion_id')
-            or ctx.get('active_id')  # por si abren desde acción con active_id
-        )
-        if not interv_id:
-            raise UserError(_("No se recibió la intervención activa en el contexto."))
-
-        intervencion = self.env['reparacion.intervencion'].browse(interv_id)
-        if not intervencion.exists():
-            raise UserError(_("La intervención indicada no existe (ID: %s).") % interv_id)
+        active_id = self.env.context.get('active_id')  # <- intervención
+        intervencion = self.env['reparacion.intervencion'].browse(active_id)
+        if not intervencion:
+            return res
 
         res.update({
             'reparacion_id': intervencion.reparacion_id.id,
             'intervencion_id': intervencion.id,
         })
 
-        # Precarga de líneas existentes
-        if intervencion.detalle_ids:
-            res['line_ids'] = [(0, 0, {
+        # precarga líneas existentes
+        lines_vals = []
+        for d in intervencion.detalle_ids:
+            lines_vals.append((0, 0, {
                 'subparte_id': d.subparte_id.id,
                 'accion_sub': d.accion_sub,
                 'codigo': d.codigo,
                 'cantidad': d.cantidad,
                 'nota': d.nota,
-            }) for d in intervencion.detalle_ids]
-        return res
+            }))
+        if lines_vals:
+            res['line_ids'] = lines_vals
+    return res
+
 
     def action_apply(self):
         self.ensure_one()
