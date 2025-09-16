@@ -193,7 +193,7 @@
             'sat/static/src/js/equipment_visit_report.js',
             'sat/static/src/js/sat_table_enhancements.js',
             'sat/static/src/js/contadores_dashboard.js',
-            "sat/static/src/js/selection_subparts.js",
+            'sat/static/src/js/selection_subparts.js',
             
           
             
