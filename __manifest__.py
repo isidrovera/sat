@@ -8,13 +8,28 @@
     'author': "Isidro vera polo",
     'website': "https://copiercompanysac.com",
     'category': 'Services',
-
+    
     'depends': [
-        'base','mail','contacts','sale_management','portal','web','stock','crm',
-        'purchase','project','hr_holidays','calendar','im_livechat','survey',
-        'hr_attendance','hr','website','bus'
+        'base',
+        'mail',
+        'contacts',
+        'sale_management',
+        'portal',
+        'web',
+        'stock',
+        'crm',
+        'purchase',
+        'project',
+        'hr_holidays',
+        'calendar',
+        'im_livechat',
+        'survey',
+        'hr_attendance',
+        'hr',
+        'website',
+        'bus'
     ],
-
+    
     'data': [
         'security/acceso.xml',
         'security/ir.model.access.csv',
@@ -24,10 +39,10 @@
         'data/ir.secuense_info.xml',
         'data/ir_secuense_ev.xml',
         'data/print.xml',
-        'data/cron_data.xml',
+        'data/cron_data.xml',        
         'data/cron_evaluador_diario.xml',
         'data/cron_tickets.xml',
-        'data/ir.secuence_incidencia.xml',
+        'data/ir.secuence_incidencia.xml',        
         'report/reparacion_enlace.xml',
         'report/report_reparaciones_ventas.xml',
         'report/ticket_enlace.xml',
@@ -50,7 +65,7 @@
         'data/correos_alquiler.xml',
         'data/mail_permisos.xml',
         'data/correos_evaluaciones_tecnicos.xml',
-        'data/email_templates_consolidated.xml',
+        'data/email_templates_consolidated.xml',        
         'views/sat_dashboard_menu.xml',
         'views/ventas.xml',
         'views/templates.xml',
@@ -107,7 +122,7 @@
         'views/view_toner_delivery_confirmation.xml',
         'views/view_toner_delivery_schedule.xml',
         'views/view_contador_automatico.xml',
-        'views/view_patron_contador.xml',
+        'views/view_patron_contador.xml',        
         'views/printtracker_views.xml',
         'views/reporte_maquinas_alquiler.xml',
         'views/tickets_masivos.xml',
@@ -119,41 +134,37 @@
         'views/reparacion_intervencion_views.xml',
         'views/acciones_menus.xml',
     ],
-
+    
     'assets': {
-        # Sub-bundle reutilizable (convención: prefijo "_")
-        'sat._libs_dashboard': [
-            # Librerías externas (manteniendo todo)
+        'web.assets_backend': [
+            # Chart.js y Font Awesome existentes
             'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-
-            # Bootstrap / Tailwind (ojo con colisiones en backend; las mantengo por tu pedido)
+            
+            # Bootstrap 5
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js',
-            'https://cdn.tailwindcss.com',
-
-            # Animaciones/utilidades
+            
+            # Animate.css para animaciones
             'https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css',
+            
+            # AOS (Animate On Scroll)
             'https://unpkg.com/aos@2.3.1/dist/aos.css',
             'https://unpkg.com/aos@2.3.1/dist/aos.js',
+            
+            # Tailwind CSS
+            'https://cdn.tailwindcss.com',
+            
+            # Lucide Icons
             'https://unpkg.com/lucide@latest/dist/umd/lucide.js',
+            
+            # Particles.js
             'https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js',
+            
+            # Typed.js
             'https://cdn.jsdelivr.net/npm/typed.js@2.0.12',
-
-            # ECharts antes de tus scripts
-            'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
-
-            # Packs extra
-            'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js',
-            'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css',
-            'https://unicons.iconscout.com/release/v4.0.8/css/line.css',
-            'https://cdn.lordicon.com/lordicon.js',
-        ],
-
-        'web.assets_backend': [
-            ('include', 'sat._libs_dashboard'),
-
-            # CSS/SCSS propios
+            
+            # CSS Files existentes
             'sat/static/src/css/dashboard.css',
             'sat/static/src/css/style.css',
             'sat/static/src/css/tree_dashboard.css',
@@ -161,30 +172,46 @@
             'sat/static/src/css/parts_request_message.css',
             'sat/static/src/css/image-viewer.css',
             'sat/static/src/css/sat_table_styles.css',
-            'sat/static/src/scss/list_dashboard.scss',
-
-            # JS propios
-            'sat/static/src/js/dashboard.js',
-            'sat/static/src/js/estilo_dashboard.js',
-            'sat/static/src/js/**/*',
-        ],
-
-        'web.assets_qweb': [
+            #'sat/static/src/css/contadores_dashboard.css',
+            
+            # SCSS existente
+            '/sat/static/src/scss/list_dashboard.scss',
+            
+            
+            # XML existente
             'sat/static/src/xml/dashboard.xml',
             'sat/static/src/xml/photo_gallery_template.xml',
             'sat/static/src/xml/list_view.xml',
             'sat/static/src/xml/selection_subparts.xml',
+            
+            # JS Files existentes
+            'sat/static/src/js/**/*',
+          
+            
+            # External Libraries existentes
+            'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css',
+            'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js',
+            'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css',
+            'https://unicons.iconscout.com/release/v4.0.8/css/line.css',
+            'https://cdn.lordicon.com/lordicon.js'
         ],
-
+        
         'web.assets_frontend': [
             'sat/static/src/js/searchFilter.js',
-            # Si necesitas FA también en website:
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-            # Si llegas a mover Bootstrap/Tailwind para páginas públicas, añádelos aquí.
+            
+        ],
+        
+        'web.assets_qweb': [
+            
         ],
     },
-
-    'demo': ['demo/demo_data.xml'],
+    
+    'demo': [
+        'demo/demo_data.xml',
+    ],
+    
     'installable': True,
     'application': True,
     'auto_install': False,
