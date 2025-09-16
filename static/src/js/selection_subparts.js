@@ -1,112 +1,98 @@
 /** @odoo-module **/
 
-import { Component, onWillStart, useState } from "@odoo/owl";
+import { Component } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-
-const TAG = "[selection_subparts]";
+import { FieldSelection } from "@web/views/fields/selection/selection_field";
 
 export class SelectionSubparts extends Component {
   setup() {
-    this.orm = useService("orm");
-    this.state = useState({
-      options: Array.isArray(this.props.selectionList) ? this.props.selectionList : [],
-      loading: false,
-    });
+    this.action = useService("action");
+  }
 
-    // Si aún no hay opciones, intenta pedirlas al servidor
-    onWillStart(async () => {
-      if (this.state.options.length) return;
+  // Handler único: actualiza el valor y luego abre el wizard según la opción
+  onNativeChange(ev) {
+    const newVal = ev.target?.value;
+    const { record, name } = this.props;
 
-      const modelName = this.props.record?.model?.name;
-      const fieldName = this.props.name;
-      if (!modelName || !fieldName) return;
+    // 1) Actualiza el campo en el record (igual que el widget nativo)
+    if (record && typeof record.update === "function") {
+      record.update({ [name]: newVal });
+    }
 
-      this.state.loading = true;
-      try {
-        // Usa el mismo context que la vista si existe
-        const ctx =
-          this.props.record?.model?.root?.context ||
-          this.props.record?.model?.context ||
-          {};
+    // 2) Mapa de acciones (se puede pasar desde XML via options="{'action_map': {...}}")
+    const actionMap =
+      this.props.actionMap ||
+      this.props.options?.action_map ||
+      this.props.options?.actionMap ||
+      {};
 
-        const res = await this.orm.call(
-          modelName,
-          "fields_get",
-          [[fieldName], ["selection"]],
-          { context: ctx }
-        );
-        const sel = (res && res[fieldName] && res[fieldName].selection) || [];
-        this.state.options = Array.isArray(sel) ? sel : [];
-        // console.debug(TAG, "fields_get", { modelName, fieldName, len: this.state.options.length });
-      } catch (e) {
-        // console.error(TAG, "fields_get failed", e);
-        this.state.options = [];
-      } finally {
-        this.state.loading = false;
-      }
-    });
+    // 3) Arma la acción y lanza el wizard
+    const act = actionMap[newVal];
+    if (act) {
+      // Permite usar placeholders simples en context
+      const ctx = Object.assign({}, act.context || {});
+      if (record?.data?.id && ctx.active_id === undefined) ctx.active_id = record.data.id;
+      if (record?.data?.id && ctx.default_res_id === undefined) ctx.default_res_id = record.data.id;
+
+      this.action.doAction({
+        type: "ir.actions.act_window",
+        target: "new",
+        views: [[false, "form"]],
+        // lo que venga en el map sobrescribe lo anterior
+        ...act,
+        context: ctx,
+      });
+    }
   }
 }
-SelectionSubparts.template = "sat.SelectionSubparts";
+
+// Usamos el nativo FieldSelection por dentro
+SelectionSubparts.components = { FieldSelection };
+SelectionSubparts.template = "sat.SelectionSubpartsWrapper";
+
+// Props que acepta el wrapper
 SelectionSubparts.props = {
   value: { type: [String, Number, Boolean], optional: true },
-  selectionList: { type: Array, optional: true },
   readonly: { type: Boolean, optional: true },
-  onChange: { type: Function, optional: true },
-  id: { type: [String, Number], optional: true },
-  name: { type: String, optional: true },   // p.ej. "black_id"
-  record: { type: Object, optional: true }, // contiene model/data
+  required: { type: Boolean, optional: true },
+  name: { type: String, optional: true },
+  record: { type: Object, optional: true },
+  selection: { type: Array, optional: true },    // lista de opciones (si el core ya la trae)
+  options: { type: Object, optional: true },     // options del XML
+  actionMap: { type: Object, optional: true },   // alias de options.action_map
 };
 
+// Registro en el field registry
 const fieldRegistry = registry.category("fields");
 fieldRegistry.add("selection_subparts", {
   component: SelectionSubparts,
   supportedTypes: ["selection"],
 
+  // Delegamos casi todo al core; sólo recolectamos selection y props básicas
   extractProps: (args) => {
     const { record, value, attrs, viewType = args.viewType } = args;
-    const fieldName = args.name;
+    const name = args.name;
 
-    // =============== TODOS LOS ORÍGENES POSIBLES EN EL CLIENTE ===============
-    // (el nativo suele usar fieldsInfo[viewType][fieldName])
+    // dónde puede venir la selección en el cliente
     const selField     = args?.field?.selection || args?.field?.params?.selection;
-    const selFieldsInf = record?.model?.fieldsInfo?.[viewType]?.[fieldName]?.selection;
-    const selRootFInf  = record?.model?.root?.fieldsInfo?.[viewType]?.[fieldName]?.selection;
-    const selRootFlds  = record?.model?.root?.fields?.[fieldName]?.selection;
-    const selAttrs     = args?.attrs?.selection;
-    const selection    = selField || selFieldsInf || selRootFInf || selRootFlds || selAttrs || [];
-    // ========================================================================
+    const selFieldsInf = record?.model?.fieldsInfo?.[viewType]?.[name]?.selection;
+    const selRootFInf  = record?.model?.root?.fieldsInfo?.[viewType]?.[name]?.selection;
+    const selFromAttrs = args?.attrs?.selection;
+    const selection    = selField || selFieldsInf || selRootFInf || selFromAttrs || [];
 
-    const currentValue = value !== undefined ? value : record?.data?.[fieldName];
+    const currentValue = value !== undefined ? value : record?.data?.[name];
     const readonly     = Boolean(attrs?.readonly) || Boolean(record?.isReadonly);
-
-    const onChange = (ev) => {
-      const newVal = ev.target.value;
-      if (record && typeof record.update === "function") {
-        record.update({ [fieldName]: newVal });
-      }
-    };
-
-    // DEBUG útil (déjalo mientras pruebas)
-    console.debug(TAG, "extractProps", {
-      model: record?.model?.name, fieldName, viewType,
-      selFieldLen: (selField || []).length,
-      selFieldsInfLen: (selFieldsInf || []).length,
-      selRootFInfLen: (selRootFInf || []).length,
-      selRootFldsLen: (selRootFlds || []).length,
-      selAttrsLen: (selAttrs || []).length,
-      finalLen: selection.length,
-      readonly, value: currentValue,
-    });
+    const required     = Boolean(attrs?.required);
 
     return {
+      name,
+      record,
       value: currentValue,
-      selectionList: selection,   // si va vacío, el componente hará RPC en onWillStart
       readonly,
-      onChange,
-      name: fieldName,
-      record: record,
+      required,
+      selection,          // si viniera vacío, FieldSelection igualmente sabe manejarlo
+      options: args.options, // para leer options.action_map
     };
   },
 
