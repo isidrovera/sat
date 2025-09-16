@@ -61,7 +61,7 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
             }))
         if lines_vals:
             res['line_ids'] = lines_vals
-    return res
+        return res
 
 
     def action_apply(self):
