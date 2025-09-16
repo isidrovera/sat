@@ -363,7 +363,7 @@
                                 <field name="toner_yellow_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
                                     help="Estado del tóner amarillo. Verificar nivel y distribución uniforme."/>
                                 <field name="black_id" required_for_finalization="True" 
-                                    help="Estado del tambor/unidad de imagen negro."/>
+                                    help="Estado del tambor/unidad de imagen negro." widget="selection_subparts"/>
                                 <field name="magenta_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
                                     help="Estado del tambor/unidad de imagen magenta."/>
                                 <field name="cyan_id" required_for_finalization="True" invisible="tipo_id != 'color'" 

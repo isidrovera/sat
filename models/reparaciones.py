@@ -548,7 +548,33 @@ class Reparaciones(models.Model):
             'tag': 'display_notification',
             'params': {'title': _('Informe técnico'), 'message': _('Informe generado.'), 'type': 'success'}
         }
+    def _ensure_intervencion_for_component(self, componente_code):
+        self.ensure_one()
+        Interv = self.env['reparacion.intervencion']
+        interv = Interv.search([
+            ('reparacion_id', '=', self.id),
+            ('componente', '=', componente_code),
+        ], limit=1)
+        if not interv:
+            interv = Interv.create({
+                'reparacion_id': self.id,
+                'componente': componente_code,
+                'accion': 'cambiado',
+                'observacion': _('Creado automáticamente al marcar "requiere cambio".'),
+            })
+        return interv
 
+    @api.model
+    def rpc_prepare_subparts_wizard(self, rec_id, field_name):
+        """Llamado desde el widget JS al seleccionar 'requiere_cambio' (antes de guardar)."""
+        rec = self.browse(rec_id)
+        if not rec.exists():
+            raise UserError(_("Registro no encontrado."))
+        comp = rec._COMP_MAP_REQCAMBIO.get(field_name)
+        if not comp:
+            raise UserError(_("No se reconoce el componente para el campo: %s") % field_name)
+        interv = rec._ensure_intervencion_for_component(comp)
+        return {'intervencion_id': interv.id}
 
     tipo_revision = fields.Selection(related='maquina_id.tipo_revision', readonly=True,store=True)
     ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id', readonly=True, store=True)
