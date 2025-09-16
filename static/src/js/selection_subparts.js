@@ -4,118 +4,116 @@ import { registry } from "@web/core/registry";
 import { SelectionField } from "@web/views/fields/selection/selection_field";
 import { useService } from "@web/core/utils/hooks";
 
-console.log("🚀 Cargando módulo SelectionSubparts...");
+console.log("🚀 Iniciando carga de SelectionSubparts...");
 
-class SelectionSubparts extends SelectionField {
+export class SelectionSubparts extends SelectionField {
     static template = SelectionField.template;
     
     setup() {
-        console.log("🔧 SelectionSubparts.setup() - Iniciando configuración");
+        console.log("🔧 Setup SelectionSubparts - Props:", this.props);
         
-        super.setup();
+        // Validación defensiva de props
+        if (!this.props || !this.props.name || !this.props.record) {
+            console.error("❌ Props inválidos en SelectionSubparts:", this.props);
+            super.setup();
+            return;
+        }
         
-        this.action = useService("action");
-        this.notification = useService("notification");
-
-        console.log("📝 Props del campo:", {
-            name: this.props?.name || 'undefined',
-            type: this.props?.type || 'undefined',
-            value: this.props?.record?.data?.[this.props?.name] || 'undefined',
-            record: !!this.props?.record
-        });
+        try {
+            super.setup();
+            this.action = useService("action");
+            this.notification = useService("notification");
+            
+            console.log("✅ SelectionSubparts configurado correctamente para campo:", this.props.name);
+        } catch (error) {
+            console.error("❌ Error en setup SelectionSubparts:", error);
+            throw error;
+        }
     }
 
-    get fieldInfo() {
-        return this.props?.record?.fields?.[this.props?.name] || {};
+    get selection() {
+        // Override para asegurar que siempre tenemos una selección válida
+        try {
+            return super.selection || [];
+        } catch (error) {
+            console.error("❌ Error obteniendo selection:", error);
+            return [];
+        }
     }
 
     get value() {
-        if (!this.props?.record?.data || !this.props?.name) {
+        try {
+            return super.value;
+        } catch (error) {
+            console.error("❌ Error obteniendo value:", error);
             return false;
         }
-        return this.props.record.data[this.props.name];
     }
 
     async onChange(ev) {
-        console.log("🔄 SelectionSubparts.onChange() - Evento disparado");
+        console.log("🔄 onChange SelectionSubparts disparado");
         
-        const newVal = ev?.target?.value;
-        console.log("📊 Nuevo valor seleccionado:", newVal);
-
-        // Validar que tenemos los props necesarios
-        if (!this.props || !this.props.record) {
-            console.error("❌ Props o record no están disponibles");
-            return;
-        }
-
         try {
-            // Ejecutar el onChange padre primero
+            const newValue = ev?.target?.value;
+            console.log("📊 Nuevo valor:", newValue);
+
+            // Ejecutar onChange del padre PRIMERO
             await super.onChange(ev);
-            console.log("✅ super.onChange() ejecutado correctamente");
-        } catch (error) {
-            console.error("❌ Error en super.onChange():", error);
-            return;
-        }
-
-        if (newVal !== "cambiado") {
-            console.log("⏭️ Valor no es 'cambiado', saliendo. Valor actual:", newVal);
-            return;
-        }
-
-        console.log("🎯 Valor es 'cambiado', procesando...");
-
-        const rec = this.props.record;
-        const resId = rec?.resId;
-        console.log("🆔 ID del registro:", resId);
-
-        if (!resId) {
-            const mensaje = "Primero guarda el registro para poder añadir subpartes.";
-            console.log("⚠️ Sin resId, mostrando notificación:", mensaje);
             
-            try {
-                this.notification.add(mensaje, { type: "warning" });
-                console.log("✅ Notificación mostrada correctamente");
-            } catch (error) {
-                console.error("❌ Error mostrando notificación:", error);
+            // Solo proceder si el valor es "requiere_cambio"
+            if (newValue !== "requiere_cambio") {
+                console.log("⏭️ Valor no es 'requiere_cambio', saliendo");
+                return;
             }
-            return;
-        }
 
-        const actionConfig = {
-            type: "ir.actions.act_window",
-            name: "Añadir/Editar Subpartes",
-            res_model: "reparacion.add.subparts.wizard",
-            target: "new",
-            views: [[false, "form"]],
-            context: {
-                default_reparacion_id: resId,
-                active_id: resId,
-            },
-        };
+            console.log("🎯 Procesando 'requiere_cambio'");
 
-        console.log("🚀 Ejecutando acción con configuración:", actionConfig);
+            // Validar que tenemos el record
+            const record = this.props?.record;
+            if (!record) {
+                console.error("❌ No hay record disponible");
+                return;
+            }
 
-        try {
-            await this.action.doAction(actionConfig);
-            console.log("✅ Acción ejecutada correctamente");
-        } catch (error) {
-            console.error("❌ Error ejecutando acción:", error);
-            
-            try {
+            const resId = record.resId;
+            if (!resId) {
+                console.log("⚠️ Registro no guardado");
                 this.notification.add(
-                    `Error abriendo el wizard: ${error.message}`, 
+                    "Primero guarda el registro para poder añadir subpartes.", 
+                    { type: "warning" }
+                );
+                return;
+            }
+
+            console.log("🚀 Abriendo wizard para resId:", resId);
+
+            // Abrir wizard de subpartes
+            await this.action.doAction({
+                type: "ir.actions.act_window",
+                name: "Añadir/Editar Subpartes",
+                res_model: "reparacion.add.subparts.wizard",
+                target: "new",
+                views: [[false, "form"]],
+                context: {
+                    default_reparacion_id: resId,
+                    active_id: resId,
+                    field_name: this.props.name, // Pasar el nombre del campo
+                },
+            });
+
+        } catch (error) {
+            console.error("❌ Error en onChange SelectionSubparts:", error);
+            if (this.notification) {
+                this.notification.add(
+                    `Error: ${error.message}`, 
                     { type: "danger" }
                 );
-            } catch (notifError) {
-                console.error("❌ Error mostrando notificación de error:", notifError);
             }
         }
-
-        console.log("🏁 SelectionSubparts.onChange() - Proceso completado");
     }
 }
 
-// Registrar solo en fields registry
+// Registrar el widget
+console.log("📋 Registrando widget SelectionSubparts...");
 registry.category("fields").add("selection_subparts", SelectionSubparts);
-
-console.log("✅ Widget 'selection_subparts' registrado correctamente");
+console.log("✅ Widget SelectionSubparts registrado correctamente");
