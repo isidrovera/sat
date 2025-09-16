@@ -7,18 +7,33 @@ import { useService } from "@web/core/utils/hooks";
 console.log("🚀 Cargando módulo SelectionSubparts...");
 
 class SelectionSubparts extends SelectionField {
+    static template = SelectionField.template;
+    
     setup() {
         console.log("🔧 SelectionSubparts.setup() - Iniciando configuración");
         
         super.setup();
+        
         this.action = useService("action");
         this.notification = useService("notification");
 
         console.log("📝 Props del campo:", {
-            name: this.props.name,
-            type: this.props.type,
-            value: this.props.record.data[this.props.name],
+            name: this.props?.name || 'undefined',
+            type: this.props?.type || 'undefined',
+            value: this.props?.record?.data?.[this.props?.name] || 'undefined',
+            record: !!this.props?.record
         });
+    }
+
+    get fieldInfo() {
+        return this.props?.record?.fields?.[this.props?.name] || {};
+    }
+
+    get value() {
+        if (!this.props?.record?.data || !this.props?.name) {
+            return false;
+        }
+        return this.props.record.data[this.props.name];
     }
 
     async onChange(ev) {
@@ -27,8 +42,20 @@ class SelectionSubparts extends SelectionField {
         const newVal = ev?.target?.value;
         console.log("📊 Nuevo valor seleccionado:", newVal);
 
-        // Ejecutar el onChange padre primero
-        await super.onChange(ev);
+        // Validar que tenemos los props necesarios
+        if (!this.props || !this.props.record) {
+            console.error("❌ Props o record no están disponibles");
+            return;
+        }
+
+        try {
+            // Ejecutar el onChange padre primero
+            await super.onChange(ev);
+            console.log("✅ super.onChange() ejecutado correctamente");
+        } catch (error) {
+            console.error("❌ Error en super.onChange():", error);
+            return;
+        }
 
         if (newVal !== "cambiado") {
             console.log("⏭️ Valor no es 'cambiado', saliendo. Valor actual:", newVal);
@@ -44,7 +71,13 @@ class SelectionSubparts extends SelectionField {
         if (!resId) {
             const mensaje = "Primero guarda el registro para poder añadir subpartes.";
             console.log("⚠️ Sin resId, mostrando notificación:", mensaje);
-            this.notification.add(mensaje, { type: "warning" });
+            
+            try {
+                this.notification.add(mensaje, { type: "warning" });
+                console.log("✅ Notificación mostrada correctamente");
+            } catch (error) {
+                console.error("❌ Error mostrando notificación:", error);
+            }
             return;
         }
 
@@ -67,21 +100,22 @@ class SelectionSubparts extends SelectionField {
             console.log("✅ Acción ejecutada correctamente");
         } catch (error) {
             console.error("❌ Error ejecutando acción:", error);
-            this.notification.add(
-                `Error abriendo el wizard: ${error.message}`, 
-                { type: "danger" }
-            );
+            
+            try {
+                this.notification.add(
+                    `Error abriendo el wizard: ${error.message}`, 
+                    { type: "danger" }
+                );
+            } catch (notifError) {
+                console.error("❌ Error mostrando notificación de error:", notifError);
+            }
         }
+
+        console.log("🏁 SelectionSubparts.onChange() - Proceso completado");
     }
 }
 
-// Asignar el template - usar el del padre o uno personalizado si existe
-SelectionSubparts.template = "sat.SelectionSubparts" || SelectionField.template;
-
-// Registrar en ambos registries para mayor compatibilidad
+// Registrar solo en fields registry
 registry.category("fields").add("selection_subparts", SelectionSubparts);
-registry.category("view_widgets").add("selection_subparts", {
-    component: SelectionSubparts,
-});
 
-console.log("✅ Widget 'selection_subparts' registrado en ambos registries");
+console.log("✅ Widget 'selection_subparts' registrado correctamente");
