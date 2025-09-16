@@ -522,16 +522,19 @@
 
         </record>
         <record id="reparaciones_search_view" model="ir.ui.view">
-            <field name="name">reparaciones.reparaciones.search</field>
-            <field name="model">reparaciones.reparaciones</field>
-            <field name="arch" type="xml">
-                <search string="ModelTitle">
-                    <group>
-                        <field name="serie_id" />
-                    </group>
-                </search>
-            </field>
-        </record>
+  <field name="name">reparaciones.reparaciones.search</field>
+  <field name="model">reparaciones.reparaciones</field>
+  <field name="priority">99</field>
+  <field name="arch" type="xml">
+    <search string="Reparaciones">
+      <group>
+        <field name="name"/>
+        <field name="serie_id"/>
+      </group>
+      <!-- Sin <searchpanel> -->
+    </search>
+  </field>
+</record>
         <record id="reparaciones_kanban_view" model="ir.ui.view">
     <field name="name">reparaciones.kanban</field>
     <field name="model">reparaciones.reparaciones</field>

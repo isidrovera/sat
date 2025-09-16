@@ -51,10 +51,11 @@
 
     <!-- Reparaciones -->
     <record id="sat.action_reparaciones_window" model="ir.actions.act_window">
-      <field name="name">Reparaciones</field>
-      <field name="res_model">reparaciones.reparaciones</field>
-      <field name="view_mode">list,form,graph,kanban</field>
-    </record>
+  <field name="name">Reparaciones</field>
+  <field name="res_model">reparaciones.reparaciones</field>
+  <field name="view_mode">list,form,graph,kanban</field>
+  <field name="search_view_id" ref="reparaciones_search_view"/>
+</record>
 
     <!-- Alquiler -->
     <record id="sat.action_alquiler_window" model="ir.actions.act_window">
