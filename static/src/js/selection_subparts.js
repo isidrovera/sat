@@ -1,15 +1,20 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { standardFieldProps } from "@web/views/fields/standard_field_props";
-import { Component } from "@odoo/owl";
+import { Component, onWillUpdateProps } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 
 export class SelectionSubparts extends Component {
-    static template = "SelectionSubparts.Template";
-    static props = {
-        ...standardFieldProps,
-    };
+    static template = `
+        <select class="o_input" t-on-change="onChange" t-att-disabled="props.readonly">
+            <option value="">-- Seleccionar --</option>
+            <t t-foreach="selection" t-as="option" t-key="option[0]">
+                <option t-att-value="option[0]" t-att-selected="option[0] === value ? 'selected' : null">
+                    <t t-esc="option[1]"/>
+                </option>
+            </t>
+        </select>
+    `;
 
     setup() {
         this.action = useService("action");
@@ -17,36 +22,34 @@ export class SelectionSubparts extends Component {
     }
 
     get fieldInfo() {
-        return this.props.record.fields[this.props.name];
+        return this.props.record?.fields?.[this.props.name] || {};
     }
 
     get selection() {
-        return this.fieldInfo.selection || [];
+        const fieldInfo = this.fieldInfo;
+        if (!fieldInfo.selection) return [];
+        
+        if (typeof fieldInfo.selection === 'function') {
+            return fieldInfo.selection();
+        }
+        return fieldInfo.selection;
     }
 
     get value() {
-        return this.props.record.data[this.props.name] || "";
-    }
-
-    get displayValue() {
-        const selection = this.selection;
-        for (const [key, label] of selection) {
-            if (key === this.value) {
-                return label;
-            }
-        }
-        return "";
+        return this.props.record?.data?.[this.props.name] || "";
     }
 
     async onChange(ev) {
         const newValue = ev.target.value;
         
-        // Actualizar el valor en el record
-        await this.props.record.update({ [this.props.name]: newValue });
+        // Actualizar el valor
+        if (this.props.record && this.props.name) {
+            await this.props.record.update({ [this.props.name]: newValue });
+        }
         
-        // Solo proceder si el valor es "requiere_cambio"
+        // Solo proceder si es "requiere_cambio"
         if (newValue === "requiere_cambio") {
-            const resId = this.props.record.resId;
+            const resId = this.props.record?.resId;
             
             if (!resId) {
                 this.notification.add(
@@ -56,7 +59,6 @@ export class SelectionSubparts extends Component {
                 return;
             }
 
-            // Abrir wizard
             try {
                 await this.action.doAction({
                     type: "ir.actions.act_window",
@@ -71,7 +73,7 @@ export class SelectionSubparts extends Component {
                 });
             } catch (error) {
                 this.notification.add(
-                    "Error abriendo el wizard: " + error.message,
+                    `Error: ${error.message}`,
                     { type: "danger" }
                 );
             }
@@ -79,5 +81,4 @@ export class SelectionSubparts extends Component {
     }
 }
 
-// Registrar el widget
 registry.category("fields").add("selection_subparts", SelectionSubparts);
