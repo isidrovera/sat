@@ -41,45 +41,119 @@ fieldRegistry.add("selection_subparts", {
     // 🔑 nombre del campo: usa args.name primero (algunas vistas lo pasan así)
     const fieldName = args.name || field?.name;
 
-    // info del campo: toma desde fieldInfo, o desde el modelo, o desde attrs/options
-    const fieldInfo   = field || record?.model?.fields?.[fieldName] || {};
-    const selField    = fieldInfo.selection || fieldInfo.params?.selection;
-    const selModel    = record?.model?.fields?.[fieldName]?.selection;
-    const selAttrs    = attrs?.selection;
-    const selOptions  = args.options?.selection; // por si algún caller lo pasa en options
-    const selection   = selField || selModel || selAttrs || selOptions || [];
+    // Improved selection extraction with better debugging
+    let selection = [];
+    
+    // Try multiple sources for selection data
+    if (field?.selection) {
+      selection = field.selection;
+      console.debug(TAG, "Selection found in field.selection", selection);
+    } else if (field?.params?.selection) {
+      selection = field.params.selection;
+      console.debug(TAG, "Selection found in field.params.selection", selection);
+    } else if (record?.model?.fields?.[fieldName]?.selection) {
+      selection = record.model.fields[fieldName].selection;
+      console.debug(TAG, "Selection found in record.model.fields", selection);
+    } else if (attrs?.selection) {
+      selection = attrs.selection;
+      console.debug(TAG, "Selection found in attrs.selection", selection);
+    } else if (args.options?.selection) {
+      selection = args.options.selection;
+      console.debug(TAG, "Selection found in args.options.selection", selection);
+    } else {
+      // Fallback: try to get from field definition in different ways
+      const fieldDef = record?.model?.fields?.[fieldName];
+      if (fieldDef) {
+        // Check if it's a function that needs to be called
+        if (typeof fieldDef.selection === 'function') {
+          try {
+            selection = fieldDef.selection();
+            console.debug(TAG, "Selection obtained from function call", selection);
+          } catch (error) {
+            console.error(TAG, "Error calling selection function", error);
+          }
+        } else if (fieldDef.type === 'selection' && fieldDef.selection) {
+          selection = fieldDef.selection;
+          console.debug(TAG, "Selection found in fieldDef.selection", selection);
+        }
+      }
+    }
+
+    // Ensure selection is an array and has the correct format
+    if (!Array.isArray(selection)) {
+      console.warn(TAG, "Selection is not an array, converting:", selection);
+      selection = [];
+    }
+
+    // Validate selection format - should be array of [value, label] pairs
+    selection = selection.filter(item => {
+      if (Array.isArray(item) && item.length >= 2) {
+        return true;
+      }
+      console.warn(TAG, "Invalid selection item format:", item);
+      return false;
+    });
 
     const currentValue = value !== undefined ? value : record?.data?.[fieldName];
-    const readonly     = Boolean(attrs?.readonly) || Boolean(record?.isReadonly);
+    const readonly = Boolean(attrs?.readonly) || Boolean(record?.isReadonly);
 
     const onChange = (ev) => {
       const newVal = ev.target.value;
       console.debug(TAG, "onChange", { fieldName, newVal, hasRecord: !!record });
-      if (record) record.update({ [fieldName]: newVal });
+      if (record && typeof record.update === 'function') {
+        record.update({ [fieldName]: newVal });
+      } else {
+        console.warn(TAG, "Cannot update record - record.update not available");
+      }
     };
 
-    // Logs de diagnóstico
+    // Enhanced diagnostic logs
     console.debug(TAG, "extractProps", {
       model: record?.model?.name,
       fieldName,
-      type_from_field: fieldInfo?.type,
-      selFieldLen: (selField || []).length,
-      selModelLen: (selModel || []).length,
-      selAttrsLen: (selAttrs || []).length,
-      selOptionsLen: (selOptions || []).length,
-      finalLen: selection.length,
+      type_from_field: field?.type,
+      field_has_selection: !!field?.selection,
+      field_params_has_selection: !!field?.params?.selection,
+      model_has_field: !!record?.model?.fields?.[fieldName],
+      model_field_has_selection: !!record?.model?.fields?.[fieldName]?.selection,
+      attrs_has_selection: !!attrs?.selection,
+      options_has_selection: !!args.options?.selection,
+      finalSelectionLength: selection.length,
       readonly,
       value: currentValue,
+      args: args, // Full args for debugging
     });
 
+    // Validation warnings
     if (!fieldName) {
-      console.warn(TAG, "No llegó 'fieldName' (args.name/field.name). Revisa el uso del widget en la vista.");
+      console.error(TAG, "CRITICAL: No fieldName found. Check widget usage in view. Args:", args);
     }
+    
     if (!selection.length) {
-      console.warn(TAG, "EMPTY selectionList — el <select> no tendrá opciones");
+      console.error(TAG, "CRITICAL: EMPTY selectionList — el <select> no tendrá opciones");
+      console.error(TAG, "Field definition:", field);
+      console.error(TAG, "Record model fields:", record?.model?.fields);
+      console.error(TAG, "Attrs:", attrs);
+      console.error(TAG, "Full args object:", args);
+      
+      // Try to provide helpful suggestions
+      if (field?.type !== 'selection') {
+        console.error(TAG, "Field type is not 'selection', it's:", field?.type);
+      }
+      
+      // Provide empty option to prevent complete failure
+      selection = [['', 'No options available']];
     }
 
-    return { value: currentValue, selectionList: selection, readonly, onChange };
+    return { 
+      value: currentValue, 
+      selectionList: selection, 
+      readonly, 
+      onChange,
+      id: args.id,
+      name: fieldName,
+      record: record
+    };
   },
 
   isEmpty: ({ value }) => value === undefined || value === null || value === "",
