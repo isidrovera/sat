@@ -17,76 +17,97 @@ export class SelectionSubparts extends SelectionField {
         console.log("✅ [SelectionSubparts] Servicios listos");
     }
 
+    async _ensureRecordSaved() {
+        // Intenta obtener un ID; si no hay, intenta guardar el formulario
+        let resId = this.props.record?.resId || this.props.record?.data?.id || false;
+        if (resId) return resId;
+
+        // Algunos contextos exponen save() en el record; probamos de forma segura
+        try {
+            if (this.props.record?.save) {
+                console.log("📝 [SelectionSubparts] Guardando record vía record.save()…");
+                await this.props.record.save({ stayInEdit: true });
+                resId = this.props.record?.resId || this.props.record?.data?.id || false;
+                if (resId) return resId;
+            } else if (this.props.record?.model?.root?.save) {
+                console.log("📝 [SelectionSubparts] Guardando record vía model.root.save()…");
+                await this.props.record.model.root.save({ stayInEdit: true });
+                resId = this.props.record?.resId || this.props.record?.data?.id || false;
+                if (resId) return resId;
+            }
+        } catch (e) {
+            console.warn("⚠️ [SelectionSubparts] No se pudo hacer auto-save:", e);
+        }
+        return false;
+    }
+
     async onChange(ev) {
-        // 1) Captura el valor primero (ev puede reciclarse)
+        // 1) Captura el valor antes de llamar al padre
         const selected = ev?.target?.value;
         const fallback = this.props.record?.data?.[this.props.name];
         const value = selected ?? fallback;
 
-        // 2) Llama al padre (actualiza el valor en el record)
+        // 2) Actualiza el valor en el record
         await super.onChange(ev);
 
-        // 3) Evalúa condiciones
+        // 3) Disparadores
         if (value !== "requiere_cambio" && value !== "cambio_de_repuestos") {
             return;
         }
-        if (this._opening) {
-            return; // evita dobles aperturas
-        }
+        if (this._opening) return;
         this._opening = true;
 
         try {
-            const resId = this.props.record?.resId || this.props.record?.data?.id || false;
             const model = "reparaciones.reparaciones";
+            let resId = this.props.record?.resId || this.props.record?.data?.id || false;
 
-            // Si el registro NO está guardado, evita llamar al RPC que requiere ID
+            // Si no hay ID, intenta guardar automáticamente
             if (!resId) {
-                this.notification.add(
-                    _t("Guarda el registro antes de agregar subpartes."),
-                    { type: "warning" }
+                resId = await this._ensureRecordSaved();
+            }
+
+            if (resId) {
+                // Con ID: prepara intervención en el server y abre wizard
+                const res = await this.orm.call(
+                    model,
+                    "rpc_prepare_subparts_wizard",
+                    [resId, this.props.name],
+                    {}
                 );
-                // Alternativa: abrir el wizard con defaults y sin active_id
-                // await this.action.doAction("sat.action_reparacion_add_subparts_wizard", {
-                //     additionalContext: {
-                //         active_model: model,
-                //         default_reparacion_id: false,
-                //         default_intervencion_id: false,
-                //     },
-                // });
+
+                if (res?.intervencion_id) {
+                    const ctx = {
+                        active_id: resId,
+                        active_model: model,
+                        active_intervencion_id: res.intervencion_id,
+                        default_reparacion_id: resId,
+                        default_intervencion_id: res.intervencion_id,
+                    };
+                    await this.action.doAction("sat.action_reparacion_add_subparts_wizard", {
+                        additionalContext: ctx,
+                    });
+                    return;
+                }
+                this.notification.add(_t("No se pudo preparar el asistente de subpartes."), { type: "warning" });
                 return;
             }
 
-            // Llama RPC solo si hay ID
-            const res = await this.orm.call(
-                model,
-                "rpc_prepare_subparts_wizard",
-                [resId, this.props.name],
-                {} // kwargs
-            );
-
-            if (res && res.intervencion_id) {
-                const ctx = {
-                    active_id: resId,
+            // Sin ID y no se pudo guardar: abre wizard “en blanco” (último recurso).
+            // El wizard se abrirá, el técnico selecciona subpartes, y al guardar el form principal podrás
+            // empatar esa info (si decides implementar un buffer). Si no usarás buffer, mejor forzar guardado.
+            await this.action.doAction("sat.action_reparacion_add_subparts_wizard", {
+                additionalContext: {
                     active_model: model,
-                    active_intervencion_id: res.intervencion_id,
-                    default_reparacion_id: resId,
-                    default_intervencion_id: res.intervencion_id,
-                };
-                await this.action.doAction("sat.action_reparacion_add_subparts_wizard", {
-                    additionalContext: ctx,
-                });
-            } else {
-                this.notification.add(
-                    _t("No se pudo preparar el asistente de subpartes."),
-                    { type: "warning" }
-                );
-            }
+                    active_id: false,
+                    active_intervencion_id: false,
+                    default_reparacion_id: false,
+                    default_intervencion_id: false,
+                },
+            });
+            this.notification.add(_t("El registro aún no existe; se abrió el asistente sin vínculo."), { type: "warning" });
         } catch (e) {
             console.error("❌ [SelectionSubparts] Error:", e);
-            this.notification.add(
-                _t("No se pudo abrir el asistente de subpartes."),
-                { type: "danger" }
-            );
+            this.notification.add(_t("No se pudo abrir el asistente de subpartes."), { type: "danger" });
         } finally {
             this._opening = false;
         }
