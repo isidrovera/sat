@@ -5,120 +5,94 @@ import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
 
-console.log("🚀 [SelectionSubparts] Iniciando carga del módulo para campo SELECTION");
+console.log("🚀 [SelectionSubparts] Módulo cargando…");
 
 export class SelectionSubparts extends SelectionField {
     setup() {
-        console.log("🔧 [SelectionSubparts] Ejecutando setup() para campo selection");
-        console.log("🔧 [SelectionSubparts] Props:", this.props);
-        console.log("🔧 [SelectionSubparts] Field type:", this.props.type);
-        
         super.setup();
-        
-        try {
-            this.action = useService("action");
-            this.orm = useService("orm");
-            this.notification = useService("notification");
-            console.log("✅ [SelectionSubparts] Servicios cargados correctamente");
-        } catch (error) {
-            console.error("❌ [SelectionSubparts] Error cargando servicios:", error);
-        }
-        
-        console.log("✅ [SelectionSubparts] Setup completado");
+        this.action = useService("action");
+        this.orm = useService("orm");
+        this.notification = useService("notification");
+        this._opening = false; // anti-doble click
+        console.log("✅ [SelectionSubparts] Servicios listos");
     }
 
     async onChange(ev) {
-        console.log("🎯 [SelectionSubparts] onChange() iniciado para campo selection");
-        console.log("🎯 [SelectionSubparts] Evento:", ev);
-        console.log("🎯 [SelectionSubparts] Target value:", ev.target.value);
-        
-        // Ejecutar el onChange del padre PRIMERO
+        // 1) Captura el valor primero (ev puede reciclarse)
+        const selected = ev?.target?.value;
+        const fallback = this.props.record?.data?.[this.props.name];
+        const value = selected ?? fallback;
+
+        // 2) Llama al padre (actualiza el valor en el record)
         await super.onChange(ev);
-        console.log("✅ [SelectionSubparts] super.onChange() completado");
-        
-        // Para campos selection, el valor está directamente en el target del evento
-        const selectedValue = ev.target.value;
-        console.log("📊 [SelectionSubparts] Valor seleccionado:", selectedValue);
-        
-        // También verificar el valor en el record
-        const recordValue = this.props.record.data[this.props.name];
-        console.log("📊 [SelectionSubparts] Valor en record:", recordValue);
-        
-        // Usar el valor del evento (más confiable para campos selection)
-        const value = selectedValue || recordValue;
-        console.log("📊 [SelectionSubparts] Valor final a evaluar:", value);
-        
-        if (value === "requiere_cambio" || value === "cambio_de_repuestos") {
-            console.log("🔄 [SelectionSubparts] Condición cumplida, ejecutando acción");
-            console.log("🔄 [SelectionSubparts] Record ID:", this.props.record.data.id);
-            console.log("🔄 [SelectionSubparts] Field name:", this.props.name);
-            
-            try {
-                console.log("🌐 [SelectionSubparts] Iniciando llamada RPC");
-                
-                const res = await this.orm.call(
-                    "reparaciones.reparaciones",
-                    "rpc_prepare_subparts_wizard",
-                    [this.props.record.data.id, this.props.name]
-                );
-                
-                console.log("✅ [SelectionSubparts] Respuesta RPC:", res);
-                
-                if (res && res.intervencion_id) {
-                    console.log("🎭 [SelectionSubparts] Abriendo wizard con intervencion_id:", res.intervencion_id);
-                    
-                    const actionContext = {
-                        active_id: this.props.record.data.id,
-                        active_model: "reparaciones.reparaciones",
-                        active_intervencion_id: res.intervencion_id,
-                        default_reparacion_id: this.props.record.data.id,
-                        default_intervencion_id: res.intervencion_id,
-                    };
-                    
-                    console.log("🎭 [SelectionSubparts] Contexto:", actionContext);
-                    
-                    await this.action.doAction("sat.action_reparacion_add_subparts_wizard", {
-                        additionalContext: actionContext,
-                    });
-                    
-                    console.log("✅ [SelectionSubparts] Wizard abierto exitosamente");
-                } else {
-                    console.warn("⚠️ [SelectionSubparts] No se recibió intervencion_id en la respuesta");
-                }
-            } catch (e) {
-                console.error("❌ [SelectionSubparts] Error en el proceso:", e);
-                this.notification.add(_t("No se pudo abrir el asistente de subpartes."), { type: "danger" });
-            }
-        } else {
-            console.log("🚫 [SelectionSubparts] Valor no coincide con condición");
-            console.log("🚫 [SelectionSubparts] Esperado: 'requiere_cambio' o 'cambio_de_repuestos'");
-            console.log("🚫 [SelectionSubparts] Recibido:", value);
+
+        // 3) Evalúa condiciones
+        if (value !== "requiere_cambio" && value !== "cambio_de_repuestos") {
+            return;
         }
-        
-        console.log("🎯 [SelectionSubparts] onChange() finalizado");
+        if (this._opening) {
+            return; // evita dobles aperturas
+        }
+        this._opening = true;
+
+        try {
+            const resId = this.props.record?.resId || this.props.record?.data?.id || false;
+            const model = "reparaciones.reparaciones";
+
+            // Si el registro NO está guardado, evita llamar al RPC que requiere ID
+            if (!resId) {
+                this.notification.add(
+                    _t("Guarda el registro antes de agregar subpartes."),
+                    { type: "warning" }
+                );
+                // Alternativa: abrir el wizard con defaults y sin active_id
+                // await this.action.doAction("sat.action_reparacion_add_subparts_wizard", {
+                //     additionalContext: {
+                //         active_model: model,
+                //         default_reparacion_id: false,
+                //         default_intervencion_id: false,
+                //     },
+                // });
+                return;
+            }
+
+            // Llama RPC solo si hay ID
+            const res = await this.orm.call(
+                model,
+                "rpc_prepare_subparts_wizard",
+                [resId, this.props.name],
+                {} // kwargs
+            );
+
+            if (res && res.intervencion_id) {
+                const ctx = {
+                    active_id: resId,
+                    active_model: model,
+                    active_intervencion_id: res.intervencion_id,
+                    default_reparacion_id: resId,
+                    default_intervencion_id: res.intervencion_id,
+                };
+                await this.action.doAction("sat.action_reparacion_add_subparts_wizard", {
+                    additionalContext: ctx,
+                });
+            } else {
+                this.notification.add(
+                    _t("No se pudo preparar el asistente de subpartes."),
+                    { type: "warning" }
+                );
+            }
+        } catch (e) {
+            console.error("❌ [SelectionSubparts] Error:", e);
+            this.notification.add(
+                _t("No se pudo abrir el asistente de subpartes."),
+                { type: "danger" }
+            );
+        } finally {
+            this._opening = false;
+        }
     }
 }
 
-// Para campos selection, usar las props estándar sin modificaciones
 SelectionSubparts.props = { ...standardFieldProps };
-
-console.log("📋 [SelectionSubparts] Registrando widget para campos selection");
 registry.category("fields").add("selection_subparts", SelectionSubparts);
-
-// Verificación del registro
-setTimeout(() => {
-    try {
-        const fieldsRegistry = registry.category("fields");
-        const widget = fieldsRegistry.get("selection_subparts", null);
-        
-        if (widget) {
-            console.log("✅ [SelectionSubparts] Widget registrado y verificado exitosamente");
-        } else {
-            console.error("❌ [SelectionSubparts] Widget NO encontrado en registry");
-        }
-    } catch (error) {
-        console.error("❌ [SelectionSubparts] Error verificando registro:", error);
-    }
-}, 1000);
-
-console.log("🎉 [SelectionSubparts] Módulo para campos selection cargado completamente");
+console.log("🎉 [SelectionSubparts] Widget registrado");
