@@ -74,3 +74,18 @@ class ReparacionIntervencion(models.Model):
                 rec.accion == 'cambiado' or
                 any(d.accion_sub == 'cambiado' for d in rec.detalle_ids)
             )
+    def action_open_subparts_wizard(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Añadir/Editar Subpartes',
+            'res_model': 'reparacion.add.subparts.wizard',
+            'view_mode': 'form',
+            'view_id': self.env.ref('sat.view_reparacion_add_subparts_wizard_form').id,
+            'target': 'new',
+            'context': {
+                'active_intervencion_id': self.id,
+                'default_intervencion_id': self.id,
+                'default_reparacion_id': self.reparacion_id.id,
+            },
+        }

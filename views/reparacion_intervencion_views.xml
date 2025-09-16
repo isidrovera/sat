@@ -210,18 +210,11 @@
       <field name="arch" type="xml">
         <form string="Intervención">
           <header>
-  <button name="%(action_reparacion_add_subparts_wizard)d"
-        type="action"
-        string="Añadir/Editar Subpartes"
-        class="oe_highlight"
-        context="{
-            'active_intervencion_id': id,
-            'default_intervencion_id': id,
-            'default_reparacion_id': reparacion_id
-        }"/>
-
+  <button name="action_open_subparts_wizard"
+          type="object"
+          string="Añadir/Editar Subpartes"
+          class="oe_highlight"/>
 </header>
-
 
           <sheet>
             <group>
