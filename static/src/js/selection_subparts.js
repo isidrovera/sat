@@ -122,30 +122,67 @@ export class SelectionSubparts extends SelectionField {
 }
 
 console.log("📝 [SelectionSubparts] Configurando props del widget");
-SelectionSubparts.template = "web.SelectionField";
+// No necesitas template específico, SelectionField ya tiene su template
+// SelectionSubparts.template = "web.SelectionField";
 SelectionSubparts.props = { ...standardFieldProps };
 console.log("📝 [SelectionSubparts] Props configuradas:", SelectionSubparts.props);
 
 console.log("📋 [SelectionSubparts] Registrando widget en registry");
 try {
-    registry.category("fields").add("selection_subparts", SelectionSubparts);
+    const fieldsRegistry = registry.category("fields");
+    console.log("📋 [SelectionSubparts] Fields registry:", fieldsRegistry);
+    
+    fieldsRegistry.add("selection_subparts", SelectionSubparts);
     console.log("✅ [SelectionSubparts] Widget registrado exitosamente");
+    
+    // Verificación inmediata
+    const registeredWidget = fieldsRegistry.get("selection_subparts", null);
+    if (registeredWidget) {
+        console.log("✅ [SelectionSubparts] Verificación inmediata: Widget encontrado");
+        console.log("✅ [SelectionSubparts] Clase registrada:", registeredWidget === SelectionSubparts);
+    } else {
+        console.error("❌ [SelectionSubparts] Verificación inmediata: Widget NO encontrado");
+    }
+    
 } catch (error) {
     console.error("❌ [SelectionSubparts] Error registrando widget:", error);
+    console.error("❌ [SelectionSubparts] Error stack:", error.stack);
 }
 
 // Verificar que el registry contiene nuestro widget
 setTimeout(() => {
-    const fields = registry.category("fields");
-    const registeredWidgets = fields.getAll();
-    console.log("📊 [SelectionSubparts] Widgets registrados en total:", Object.keys(registeredWidgets).length);
-    console.log("📊 [SelectionSubparts] Lista de widgets:", Object.keys(registeredWidgets));
-    
-    if (registeredWidgets.selection_subparts) {
-        console.log("✅ [SelectionSubparts] Widget encontrado en registry");
-        console.log("✅ [SelectionSubparts] Detalles del widget:", registeredWidgets.selection_subparts);
-    } else {
-        console.error("❌ [SelectionSubparts] Widget NO encontrado en registry");
+    try {
+        const fields = registry.category("fields");
+        console.log("📊 [SelectionSubparts] Registry fields category:", fields);
+        
+        // Método correcto para obtener todos los widgets
+        const registeredWidgets = fields.content;
+        console.log("📊 [SelectionSubparts] Widgets registrados (Map):", registeredWidgets);
+        console.log("📊 [SelectionSubparts] Total de widgets:", registeredWidgets.size);
+        
+        // Convertir Map a array de nombres
+        const widgetNames = Array.from(registeredWidgets.keys());
+        console.log("📊 [SelectionSubparts] Nombres de widgets:", widgetNames);
+        
+        // Verificar si nuestro widget está registrado
+        if (registeredWidgets.has("selection_subparts")) {
+            console.log("✅ [SelectionSubparts] Widget encontrado en registry");
+            console.log("✅ [SelectionSubparts] Detalles del widget:", registeredWidgets.get("selection_subparts"));
+        } else {
+            console.error("❌ [SelectionSubparts] Widget NO encontrado en registry");
+            console.error("❌ [SelectionSubparts] Widgets disponibles:", widgetNames);
+        }
+        
+        // Intentar obtener directamente
+        try {
+            const widget = fields.get("selection_subparts");
+            console.log("🔍 [SelectionSubparts] Get directo del widget:", widget);
+        } catch (getError) {
+            console.error("❌ [SelectionSubparts] Error en get directo:", getError);
+        }
+        
+    } catch (error) {
+        console.error("❌ [SelectionSubparts] Error verificando registry:", error);
     }
 }, 1000);
 
