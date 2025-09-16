@@ -1,30 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<templates xml:space="preserve" id="template">
-  <t t-name="sat.SelectionSubparts" owl="1">
-    <div class="o_field_widget o_field_selection_subparts" style="display:flex; gap:.5rem; align-items:center;">
-      <!-- Editable -->
-      <t t-if="!props.readonly">
-        <select t-on-change="onChange">
-          <t t-foreach="selection" t-as="opt" t-key="opt[0]">
-            <option t-att-value="opt[0]" t-att-selected="opt[0] === props.value ? true : undefined">
-              <t t-esc="opt[1]"/>
-            </option>
-          </t>
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+    <t t-name="sat.SelectionSubparts">
+        <select t-on-change="onChange" t-att-value="value" class="o_input">
+            <t t-foreach="selectionList" t-as="opt">
+                <option t-att-value="opt[0]" t-esc="opt[1]"/>
+            </t>
         </select>
-        <button type="button" class="btn btn-secondary btn-sm" t-on-click="openWizard">
-          Subpartes
-        </button>
-      </t>
-
-      <!-- Readonly -->
-      <t t-else="">
-        <span class="badge">
-          <t t-esc="(selection.find(s => s[0] === props.value) || [null, ''])[1]"/>
-        </span>
-        <button type="button" class="btn btn-secondary btn-sm" t-on-click="openWizard">
-          Ver/Editar Subpartes
-        </button>
-      </t>
-    </div>
-  </t>
+    </t>
 </templates>

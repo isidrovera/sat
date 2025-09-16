@@ -40,7 +40,8 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
         active_id = self.env.context.get('active_id')  # <- intervención
-        intervencion = self.env['reparacion.intervencion'].browse(active_id)
+        intervencion = self.env['reparacion.intervencion'].browse(self.env.context.get('active_intervencion_id'))
+
         if not intervencion:
             return res
 
