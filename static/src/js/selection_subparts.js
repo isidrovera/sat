@@ -1,31 +1,26 @@
 /** @odoo-module **/
 
-import { Component } from "@odoo/owl";
 import { registry } from "@web/core/registry";
+import { SelectionField } from "@web/views/fields/selection/selection_field";
 import { useService } from "@web/core/utils/hooks";
 
-class SelectionSubpartsWidget extends Component {
+// Heredamos el widget nativo de selección y añadimos lógica extra
+class SelectionSubpartsField extends SelectionField {
     setup() {
+        super.setup();
         this.action = useService("action");
         this.notification = useService("notification");
     }
-    get fieldName() {
-        return this.props.name; // p.ej. "black_id"
-    }
-    get value() {
-        return this.props.value;
-    }
-    get selectionList() {
-        const f = this.props.record.fields[this.fieldName];
-        return f?.selection || [];
-    }
+
     async onChange(ev) {
+        // Llamamos primero a la lógica nativa (escribe el valor)
+        await super.onChange(ev);
+
         const newVal = ev.target.value;
-        await this.props.record.update({ [this.fieldName]: newVal });
         if (newVal === "cambio") {
             const recId = this.props.record.resId;
             if (!recId) {
-                this.notification.add("Guarda el registro antes de abrir el wizard.", { type: "warning" });
+                this.notification.add("Guarda el registro antes de abrir el asistente.", { type: "warning" });
                 return;
             }
             await this.action.doAction("sat.action_reparacion_add_subparts_wizard", {
@@ -38,8 +33,6 @@ class SelectionSubpartsWidget extends Component {
         }
     }
 }
-SelectionSubpartsWidget.template = "sat.SelectionSubparts";
 
-registry.category("view_widgets").add("selection_subparts", {
-    component: SelectionSubpartsWidget,
-});
+// REGISTRO CORRECTO: categoría "fields"
+registry.category("fields").add("selection_subparts", SelectionSubpartsField);
