@@ -479,7 +479,7 @@
     <!-- Menú -->
     <menuitem id="menu_copier_parts"
               name="Solicitudes de Partes Reparaciones"
-              parent="sat.ajustes"
+              parent="sat_menu_root"
               action="action_copier_parts_request"
               sequence="46"/>
 
