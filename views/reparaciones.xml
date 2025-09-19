@@ -12,10 +12,7 @@
             <button name="action_finalizar_reparacion" string="Finalizar Reparación" type="object"
                     class="btn-success" decoration-info="estado_id == 'en_revision'"
                     invisible="estado_id != 'en_revision'"/>
-            <button name="action_show_selection_summary"
-                  type="object"
-                  string="Ver Selection"
-                  class="oe_highlight"/>
+            
             <button name="action_generar_informe" type="object" string="Generar informe" class="oe_highlight"/>
             <button name="enviar_mensaje_whatsapp_reparaciones" string="Asignar Técnico" type="object"
                     class="btn-primary" groups="base.group_system"
