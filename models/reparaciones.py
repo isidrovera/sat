@@ -19,7 +19,6 @@ import zipfile
 import io
 from odoo.http import request
 import uuid
-from markupsafe import Markup
 
 class Reparaciones(models.Model):
     _name = 'reparaciones.reparaciones'
@@ -589,17 +588,15 @@ class Reparaciones(models.Model):
 
     @api.model
     def rpc_prepare_subparts_wizard(self, rec_id, field_name):
+        """Llamado desde el widget JS al seleccionar 'requiere_cambio' (antes de guardar)."""
         rec = self.browse(rec_id)
         if not rec.exists():
             raise UserError(_("Registro no encontrado."))
-
         comp = rec._COMP_MAP_REQCAMBIO.get(field_name)
         if not comp:
             raise UserError(_("No se reconoce el componente para el campo: %s") % field_name)
-
         interv = rec._ensure_intervencion_for_component(comp)
         return {'intervencion_id': interv.id}
-
 
     tipo_revision = fields.Selection(related='maquina_id.tipo_revision', readonly=True,store=True)
     ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id', readonly=True, store=True)
@@ -1510,76 +1507,7 @@ class Reparaciones(models.Model):
             'context': {'default_reparacion_id': self.id, 'default_maquina_id': self.maquina_id.id}
         }
 
-    # === Helper: obtener etiqueta (label) de un Selection ===
-    def _get_selection_label(self, field_name):
-        self.ensure_one()
-        info = self.fields_get([field_name], attributes=['selection'])
-        selection = (info.get(field_name) or {}).get('selection') or []
-        mapping = dict(selection)
-        value = self[field_name]
-        return mapping.get(value) or ''
 
-    # === Acción: abrir wizard con resumen de Selection ===
-    def action_show_selection_summary(self):
-        self.ensure_one()
-
-        # Opción A: auto-detectar todos los Selection del modelo:
-        selection_fields = [
-            name for name, f in self._fields.items() if f.type == 'selection'
-        ]
-
-        # Opción B (si prefieres listar manualmente):
-        # selection_fields = ['black_id', 'otro_selection', ...]
-
-        rows = []
-        for fname in selection_fields:
-            title = self._fields[fname].string or fname
-            value = self[fname] or ''
-            label = self._get_selection_label(fname)
-            rows.append(f"""
-              <tr>
-                <td style="padding:6px;border-bottom:1px solid #eee;">{title}</td>
-                <td style="padding:6px;border-bottom:1px solid #eee;"><code>{value}</code></td>
-                <td style="padding:6px;border-bottom:1px solid #eee;">{label}</td>
-              </tr>
-            """)
-
-        html = f"""
-          <div>
-            <h3 style="margin:0 0 8px 0;">Resumen de campos Selection</h3>
-            <table style="width:100%;border-collapse:collapse;">
-              <thead>
-                <tr>
-                  <th style="text-align:left;padding:6px;border-bottom:1px solid #ccc;">Campo</th>
-                  <th style="text-align:left;padding:6px;border-bottom:1px solid #ccc;">Valor</th>
-                  <th style="text-align:left;padding:6px;border-bottom:1px solid #ccc;">Etiqueta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {''.join(rows)}
-              </tbody>
-            </table>
-          </div>
-        """
-
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Valores Selection'),
-            'res_model': 'sat.selection.debug.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {'default_html': Markup(html)},
-        }
-
-
-class SelectionDebugWizard(models.TransientModel):
-    _name = 'sat.selection.debug.wizard'
-    _description = 'Resumen de campos Selection'
-
-    html = fields.Html('Resumen', sanitize=False)
-
-    def action_close(self):
-        return {'type': 'ir.actions.act_window_close'}
 
 class CopierPartsRequest(models.Model):
     _name = 'copier.parts.request'

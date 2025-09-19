@@ -77,6 +77,23 @@
       <field name="res_model">solicitud.partes</field>
       <field name="view_mode">list,form</field>
     </record>
+    <!-- Acción -->
+    <record id="action_copier_parts_request" model="ir.actions.act_window">
+        <field name="name">Solicitudes de Partes</field>
+        <field name="res_model">copier.parts.request</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="search_view_id" ref="view_copier_parts_request_search"/>
+        <field name="context">{
+            'search_default_my_requests': 1,
+            'search_default_draft': 1
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crear una nueva solicitud de partes
+            </p>
+        </field>
+    </record>
+
 
     <!-- Evaluación de Personal -->
     <record id="action_evaluacion_personal" model="ir.actions.act_window">
@@ -457,6 +474,14 @@
               parent="sat_menu_root"
               action="action_solicitud_partes"
               sequence="45"/>
+
+    
+    <!-- Menú -->
+    <menuitem id="menu_copier_parts"
+              name="Solicitudes de Partes Reparaciones"
+              parent="sat.ajustes"
+              action="action_copier_parts_request"
+              sequence="46"/>
 
     <!-- Evaluaciones -->
     <menuitem id="menu_evaluacion_personal"
