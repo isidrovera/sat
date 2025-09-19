@@ -361,21 +361,6 @@
                 </kanban>
             </field>
         </record>
-        <record id="view_selection_debug_wizard_form" model="ir.ui.view">
-      <field name="name">sat.selection.debug.wizard.form</field>
-      <field name="model">sat.selection.debug.wizard</field>
-      <field name="arch" type="xml">
-        <form string="Valores Selection" create="0" edit="0">
-          <sheet>
-            <group>
-              <field name="html" nolabel="1"/>
-            </group>
-          </sheet>
-          <footer>
-            <button string="Cerrar" class="btn-primary" special="cancel"/>
-          </footer>
-        </form>
-      </field>
-    </record>
+       
     </data>
 </odoo>
