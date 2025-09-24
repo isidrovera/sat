@@ -643,6 +643,12 @@ class Reparaciones(models.Model):
 
     def _buscar_componentes_por_checklist(self, modelo_maquina, field_name):
         """Busca componentes del modelo según el campo del checklist marcado"""
+        import logging
+        _logger = logging.getLogger(__name__)
+        
+        _logger.info(f"=== DEBUG: Buscando componentes para field_name: {field_name}")
+        _logger.info(f"=== DEBUG: Modelo máquina: {modelo_maquina.name}")
+        _logger.info(f"=== DEBUG: Modelo máquina ID: {modelo_maquina.id}")
         
         # Mapeo de campos del checklist a código de componente + color
         mapeo_campos = {
@@ -674,13 +680,21 @@ class Reparaciones(models.Model):
         }
         
         if field_name not in mapeo_campos:
+            _logger.info(f"=== DEBUG: Campo {field_name} no encontrado en mapeo")
             return self.env['modelo.maquina.componente']
         
         codigo_componente, color = mapeo_campos[field_name]
+        _logger.info(f"=== DEBUG: Buscando código: {codigo_componente}, color: {color}")
         
         # Buscar tipo de componente por código
+        tipos_disponibles = self.env['componente.tipo'].search([])
+        _logger.info(f"=== DEBUG: Tipos de componente disponibles: {[t.code for t in tipos_disponibles]}")
+        
         tipo_componente = self.env['componente.tipo'].search([('code', '=', codigo_componente)], limit=1)
+        _logger.info(f"=== DEBUG: Tipo componente encontrado: {tipo_componente.name if tipo_componente else 'NINGUNO'}")
+        
         if not tipo_componente:
+            _logger.info(f"=== DEBUG: No se encontró tipo de componente con código: {codigo_componente}")
             return self.env['modelo.maquina.componente']
         
         # Filtrar componentes del modelo
@@ -689,11 +703,27 @@ class Reparaciones(models.Model):
             ('tipo_id', '=', tipo_componente.id)
         ]
         
+        _logger.info(f"=== DEBUG: Domain inicial: {domain}")
+        
         # Agregar filtro de color si aplica
         if color and tipo_componente.is_color_sensitive:
             domain.append(('color', '=', color))
+            _logger.info(f"=== DEBUG: Agregado filtro de color: {color}")
         
-        return self.env['modelo.maquina.componente'].search(domain)
+        _logger.info(f"=== DEBUG: Domain final: {domain}")
+        
+        # Verificar todos los componentes del modelo
+        todos_componentes = self.env['modelo.maquina.componente'].search([('modelo_id', '=', modelo_maquina.id)])
+        _logger.info(f"=== DEBUG: Total componentes del modelo: {len(todos_componentes)}")
+        for comp in todos_componentes:
+            _logger.info(f"=== DEBUG: Componente: tipo={comp.tipo_id.code}, color={comp.color}, subpartes={len(comp.subparte_ids)}")
+        
+        componentes = self.env['modelo.maquina.componente'].search(domain)
+        _logger.info(f"=== DEBUG: Componentes encontrados con filtro: {len(componentes)}")
+        for comp in componentes:
+            _logger.info(f"=== DEBUG: Componente filtrado: {comp.tipo_id.name}, subpartes: {[s.name for s in comp.subparte_ids]}")
+        
+        return componentes
     def action_generar_informe(self):
         for rec in self:
             try:
