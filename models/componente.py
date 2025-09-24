@@ -27,19 +27,19 @@ class ComponenteSubparte(models.Model):
 
     # Si el código debe ser único globalmente:
     _sql_constraints = [
-        ('codigo_uniq', 'unique(codigo)', 'El código debe ser único.')
+        ('code_uniq', 'unique(codigo)', 'El código debe ser único.')
     ]
     # Si el mismo "codigo" puede repetirse por tipo, usa esto en vez de lo anterior:
     # _sql_constraints = [
     #     ('codigo_tipo_uniq', 'unique(codigo, tipo_id)', 'Código repetido para este tipo.')
     # ]
 
-    @api.depends('codigo', 'name', 'tipo_id')
+    @api.depends('code', 'name', 'tipo_id')
     def _compute_display_name(self):
         for rec in self:
             parts = []
             if rec.codigo:
-                parts.append(rec.codigo)
+                parts.append(rec.code)
             if rec.name:
                 parts.append(rec.name)
             if rec.tipo_id:
