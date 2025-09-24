@@ -1,4 +1,4 @@
-from odoo import api, models, _
+from odoo import models, fields, api_
 from odoo.exceptions import UserError
 
 class Reparaciones(models.Model):
