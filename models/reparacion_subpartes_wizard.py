@@ -2,12 +2,31 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
+# Definir la selección localmente para evitar importación circular
+COMPONENTE_SELECTION = [
+    ('ui_k', 'Unidad de imagen Black'),
+    ('ui_c', 'Unidad de imagen Cyan'),
+    ('ui_m', 'Unidad de imagen Magenta'),
+    ('ui_y', 'Unidad de imagen Yellow'),
+    ('dev_k', 'Developer Black'),
+    ('dev_c', 'Developer Cyan'),
+    ('dev_m', 'Developer Magenta'),
+    ('dev_y', 'Developer Yellow'),
+    ('fuser', 'Fusora / Rodillos'),
+    ('itb', 'Faja/Banda de transferencia'),
+    ('adf', 'ADF'),
+    ('fin', 'Finalizador'),
+    ('opt', 'Óptico'),
+    ('papel', 'Transporte de papel / bandejas / bypass'),
+    ('otro', 'Otro'),
+]
+
 class ReparacionAddSubpartsWizardLine(models.TransientModel):
     _name = 'reparacion.add.subparts.wizard.line'
     _description = 'Línea de subpartes wizard múltiple'
 
     wizard_id = fields.Many2one('reparacion.add.subparts.wizard', required=True, ondelete='cascade')
-    componente = fields.Selection(ReparacionSubparte.COMPONENTE, string='Componente', required=True)
+    componente = fields.Selection(COMPONENTE_SELECTION, string='Componente', required=True)
     componente_display = fields.Char('Componente Display', compute='_compute_componente_display', store=True)
     intervencion_id = fields.Many2one('reparacion.intervencion', string='Intervención')
     selected = fields.Boolean('Seleccionar', default=False)
@@ -26,7 +45,7 @@ class ReparacionAddSubpartsWizardLine(models.TransientModel):
     def _compute_componente_display(self):
         for record in self:
             if record.componente:
-                componentes_dict = dict(ReparacionSubparte.COMPONENTE)
+                componentes_dict = dict(COMPONENTE_SELECTION)
                 record.componente_display = componentes_dict.get(record.componente, record.componente)
             else:
                 record.componente_display = ""
@@ -54,62 +73,21 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
             info += "</p>"
             record.componentes_info = info
 
-    @api.model
-    def default_get(self, fields_list):
-        res = super().default_get(fields_list)
-        active_id = self.env.context.get('active_id')
-        intervencion = self.env['reparacion.intervencion'].browse(self.env.context.get('active_intervencion_id'))
-
-        if not intervencion:
-            return res
-
-        res.update({
-            'reparacion_id': intervencion.reparacion_id.id,
-            'intervencion_id': intervencion.id,
-        })
-
-        # Si viene desde generar informe, cargar todas las subpartes del componente
-        if self.env.context.get('from_generar_informe'):
-            subpartes_disponibles = self.env['reparacion.subparte'].search([
-                ('componente', '=', intervencion.componente),
-                ('active', '=', True)
-            ])
-            
-            lines_vals = []
-            for subparte in subpartes_disponibles:
-                lines_vals.append((0, 0, {
-                    'subparte_id': subparte.id,
-                    'accion_sub': 'cambiado',
-                    'codigo': subparte.default_code or '',
-                    'cantidad': 1.0,
-                    'nota': '',
-                }))
-            
-            if lines_vals:
-                res['line_ids'] = lines_vals
-        else:
-            # Comportamiento original: precarga líneas existentes
-            lines_vals = []
-            for d in intervencion.detalle_ids:
-                lines_vals.append((0, 0, {
-                    'subparte_id': d.subparte_id.id,
-                    'accion_sub': d.accion_sub,
-                    'codigo': d.codigo,
-                    'cantidad': d.cantidad,
-                    'nota': d.nota,
-                }))
-            if lines_vals:
-                res['line_ids'] = lines_vals
-        
-        return res
-
     def action_apply(self):
         self.ensure_one()
-        interv = self.intervencion_id
-
-        # Borrar detalle previo y recrear solo con las seleccionadas
-        interv.detalle_ids.unlink()
+        
+        # Procesar cada intervención
+        intervenciones_procesadas = set()
+        
         for wline in self.line_ids.filtered('selected'):
+            interv = wline.intervencion_id
+            
+            # Si es la primera vez que procesamos esta intervención, limpiar detalles existentes
+            if interv.id not in intervenciones_procesadas:
+                interv.detalle_ids.unlink()
+                intervenciones_procesadas.add(interv.id)
+            
+            # Crear el detalle
             self.env['reparacion.intervencion.detalle'].create({
                 'line_id': interv.id,
                 'subparte_id': wline.subparte_id.id,
@@ -121,7 +99,7 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
 
         # Si viene desde generar informe, regenerar el informe automáticamente
         if self.env.context.get('from_generar_informe'):
-            repar = interv.reparacion_id
+            repar = self.reparacion_id
             try:
                 html, calidad = repar._rep__build_informe_html()
                 repar.write({'informe': html, 'calidad_id': calidad})
