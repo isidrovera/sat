@@ -85,7 +85,7 @@
                 <field name="frase_cambio" placeholder="Ej.: 'Aún no requiere cambio'"/>
               </group>
               <group>
-                <field name="detalle_ids" widget="many2many_tags"/>
+                <field name="detalle_ids" />
               </group>
             </group>
           </sheet>
