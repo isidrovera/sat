@@ -61,3 +61,4 @@ from . import reparacion_subpartes_wizard
 from . import componente_estado
 from . import accesorio_tipo
 from . import modelo_maquina_accesorio
+from . import accesorio_estado
