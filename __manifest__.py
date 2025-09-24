@@ -73,7 +73,7 @@
         'data/componente_subparte_data.xml',
         'data/componente_estado_data.xml',
         'data/accesorio_estado_data.xml',
-                    
+        'data/ir_actions_server_migration.xml',           
         'views/sat_dashboard_menu.xml',
         'views/ventas.xml',
         'views/templates.xml',
