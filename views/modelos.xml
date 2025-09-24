@@ -280,7 +280,7 @@
 
     <list editable="bottom">
       <field name="tipo_id"/>
-      <field name="detalle_ids" widget="many2many_tags"/>
+      <field name="detalle_ids"/>
           </list>
   </field>
 </page>
