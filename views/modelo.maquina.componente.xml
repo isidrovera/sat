@@ -12,7 +12,7 @@
         <search string="Buscar Configuración por Modelo">
           <field name="modelo_id"/>
           <field name="tipo_id"/>
-          <field name="subparte_ids"/>
+          <field name="detalle_ids"/>
           <field name="color"/>
           <field name="prioridad"/>
 
