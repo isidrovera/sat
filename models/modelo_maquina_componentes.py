@@ -25,7 +25,7 @@ class ModeloMaquinaComponente(models.Model):
 
     # Subpartes sugeridas (100% m2o vía líneas hijas, no M2M)
     detalle_ids = fields.One2many(
-        'modelo.maquina.componente.subparte', 'componente_id',
+        'modelo.componente.subparte', 'componente_id',
         string='Subpartes sugeridas'
     )
 
