@@ -175,3 +175,11 @@ access_reparacion_intervencion_user,access.reparacion.intervencion.user,model_re
 access_reparacion_intervencion_detalle_user,access.reparacion.intervencion.detalle.user,model_reparacion_intervencion_detalle,base.group_user,1,1,1,1
 access_reparacion_add_subparts_wizard_user,access.reparacion.add.subparts.wizard.user,model_reparacion_add_subparts_wizard,base.group_user,1,1,1,1
 access_reparacion_add_subparts_wizard_line_user,access.reparacion.add.subparts.wizard.line.user,model_reparacion_add_subparts_wizard_line,base.group_user,1,1,1,1
+access_componente_estado_user,componente.estado user,model_componente_estado,base.group_user,1,0,0,0
+access_componente_estado_manager,componente.estado manager,model_componente_estado,base.group_system,1,1,1,1
+access_accesorio_tipo_user,accesorio.tipo user,model_accesorio_tipo,base.group_user,1,0,0,0
+access_accesorio_tipo_manager,accesorio.tipo manager,model_accesorio_tipo,base.group_system,1,1,1,1
+access_accesorio_estado_user,accesorio.estado user,model_accesorio_estado,base.group_user,1,0,0,0
+access_accesorio_estado_manager,accesorio.estado manager,model_accesorio_estado,base.group_system,1,1,1,1
+access_modelo_maquina_accesorio_user,modelo.maquina.accesorio user,model_modelo_maquina_accesorio,base.group_user,1,0,0,0
+access_modelo_maquina_accesorio_manager,modelo.maquina.accesorio manager,model_modelo_maquina_accesorio,base.group_system,1,1,1,1

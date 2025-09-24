@@ -284,6 +284,15 @@
           </list>
   </field>
 </page>
+<page>
+    <group>
+                <field name="tipo_id" required="1"/>
+                <field name="estado_predeterminado_id"/>
+                <field name="obligatorio"/>
+                <field name="nota" colspan="4"/>
+              </group>
+</page>
+
 
                         </notebook>
                     </sheet>

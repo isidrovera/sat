@@ -1,0 +1,32 @@
+<odoo>
+  <record id="acc_tipo_lct" model="accesorio.tipo">
+    <field name="name">Bandeja LCT</field><field name="code">lct</field>
+  </record>
+  <record id="acc_tipo_ot" model="accesorio.tipo">
+    <field name="name">Bandeja de salida OT</field><field name="code">ot</field>
+  </record>
+  <record id="acc_tipo_hdd" model="accesorio.tipo">
+    <field name="name">Disco duro (HDD)</field><field name="code">hdd</field>
+  </record>
+  <record id="acc_tipo_wifi" model="accesorio.tipo">
+    <field name="name">Módulo Wi-Fi</field><field name="code">wifi</field>
+  </record>
+  <record id="acc_tipo_panel_smart" model="accesorio.tipo">
+    <field name="name">Panel Smart</field><field name="code">panel_smart</field>
+  </record>
+  <record id="acc_tipo_panel_normal" model="accesorio.tipo">
+    <field name="name">Panel LCD estándar</field><field name="code">panel_normal</field>
+  </record>
+  <record id="acc_tipo_finisher_int" model="accesorio.tipo">
+    <field name="name">Finalizador interno</field><field name="code">finisher_int</field>
+  </record>
+  <record id="acc_tipo_finisher_ext" model="accesorio.tipo">
+    <field name="name">Finalizador externo</field><field name="code">finisher_ext</field>
+  </record>
+  <record id="acc_tipo_mueble" model="accesorio.tipo">
+    <field name="name">Mueble base</field><field name="code">mueble</field>
+  </record>
+  <record id="acc_tipo_cable_poder" model="accesorio.tipo">
+    <field name="name">Cable de poder</field><field name="code">cable_poder</field>
+  </record>
+</odoo>

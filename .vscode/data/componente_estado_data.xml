@@ -1,0 +1,53 @@
+<odoo>
+  <!-- Críticos -->
+  <record id="estado_requiere_cambio" model="componente.estado">
+    <field name="name">Requiere cambio</field>
+    <field name="code">requiere_cambio</field>
+    <field name="color">1</field><field name="prioridad">1</field>
+    <field name="descripcion">Reemplazo urgente antes de entrega.</field>
+  </record>
+  <record id="estado_cambio_repuestos" model="componente.estado">
+    <field name="name">Cambio de repuestos</field>
+    <field name="code">cambio_de_repuestos</field>
+    <field name="color">1</field><field name="prioridad">1</field>
+  </record>
+
+  <!-- Medios / desgaste -->
+  <record id="estado_regular" model="componente.estado">
+    <field name="name">Regular</field>
+    <field name="code">regular</field>
+    <field name="color">3</field><field name="prioridad">2</field>
+  </record>
+  <record id="estado_gastada" model="componente.estado">
+    <field name="name">Gastada pero puede trabajar</field>
+    <field name="code">gastada_pero_puede_trabajar</field>
+    <field name="color">4</field><field name="prioridad">2</field>
+  </record>
+  <record id="estado_mantenimiento" model="componente.estado">
+    <field name="name">Mantenimiento</field>
+    <field name="code">mantenimiento</field>
+    <field name="color">4</field><field name="prioridad">2</field>
+  </record>
+
+  <!-- Bajos / info -->
+  <record id="estado_sin_revisar" model="componente.estado">
+    <field name="name">Sin revisar</field>
+    <field name="code">sin_revisar</field>
+    <field name="color">0</field><field name="prioridad">3</field>
+  </record>
+  <record id="estado_revisado" model="componente.estado">
+    <field name="name">Revisado</field>
+    <field name="code">revisado</field>
+    <field name="color">10</field><field name="prioridad">3</field>
+  </record>
+  <record id="estado_nuevo" model="componente.estado">
+    <field name="name">Nuevo</field>
+    <field name="code">nuevo</field>
+    <field name="color">10</field><field name="prioridad">3</field>
+  </record>
+  <record id="estado_no_aplica" model="componente.estado">
+    <field name="name">No aplica</field>
+    <field name="code">no_aplica</field>
+    <field name="color">0</field><field name="prioridad">3</field>
+  </record>
+</odoo>
