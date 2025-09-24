@@ -65,3 +65,4 @@ from . import accesorio_estado
 from . import color_tipo
 from . import componente_color
 from . import reparaciones_migration
+from . import reparacion_componente_evaluacion
