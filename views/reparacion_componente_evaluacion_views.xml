@@ -1,0 +1,88 @@
+<odoo>
+
+  <!-- LISTA (sin attrs/state) -->
+  <record id="view_reparacion_comp_eval_tree_v18" model="ir.ui.view">
+    <field name="name">reparacion.componente.evaluacion.tree.v18</field>
+    <field name="model">reparacion.componente.evaluacion</field>
+    <field name="arch" type="xml">
+      <list string="Evaluaciones de Componentes"
+            editable="bottom"
+            decoration-danger="estado_id.prioridad == 1"
+            decoration-warning="estado_id.prioridad == 2"
+            decoration-muted="estado_id.code == 'no_aplica'">
+        <field name="reparacion_id" invisible="1"/>
+        <field name="componente_tipo_id"/>
+        <!-- Dejamos color visible; el constraint del servidor fuerza si es necesario -->
+        <field name="color_id" optional="show"/>
+        <field name="estado_id"/>
+        <!-- Dominio estático por campos: permitido en tree -->
+        <field name="subpartes_ids" widget="many2many_tags"
+               optional="show"
+               domain="[('tipo_id','=',componente_tipo_id),
+                        '|',('color_id','=',False),('color_id','=',color_id)]"/>
+        <field name="observaciones" optional="show"/>
+      </list>
+    </field>
+  </record>
+
+  <!-- FORM (sin attrs/state; opcional, por si abres desde smart button) -->
+  <record id="view_reparacion_comp_eval_form_v18" model="ir.ui.view">
+    <field name="name">reparacion.componente.evaluacion.form.v18</field>
+    <field name="model">reparacion.componente.evaluacion</field>
+    <field name="arch" type="xml">
+      <form string="Evaluación de Componente">
+        <sheet>
+          <group>
+            <field name="reparacion_id" readonly="1"/>
+            <field name="componente_tipo_id"/>
+            <field name="color_id" placeholder="Seleccione si aplica (K/C/M/Y)"/>
+            <field name="estado_id"/>
+          </group>
+          <group string="Subpartes">
+            <field name="subpartes_ids" widget="many2many_tags"
+                   domain="[('tipo_id','=',componente_tipo_id),
+                            '|',('color_id','=',False),('color_id','=',color_id)]"/>
+          </group>
+          <group>
+            <field name="observaciones" nolabel="1" placeholder="Observaciones específicas…"/>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- SEARCH -->
+  <record id="view_reparacion_comp_eval_search_v18" model="ir.ui.view">
+    <field name="name">reparacion.componente.evaluacion.search.v18</field>
+    <field name="model">reparacion.componente.evaluacion</field>
+    <field name="arch" type="xml">
+      <search string="Buscar Evaluaciones">
+        <field name="reparacion_id"/>
+        <field name="componente_tipo_id"/>
+        <field name="estado_id"/>
+        <field name="color_id"/>
+
+        <separator/>
+        <filter name="criticos" string="Críticos" domain="[('estado_id.prioridad','=',1)]"/>
+        <filter name="medios" string="Medios" domain="[('estado_id.prioridad','=',2)]"/>
+        <filter name="no_aplica" string="No aplica" domain="[('estado_id.code','=','no_aplica')]"/>
+
+        <separator/>
+        <filter name="k" string="K" domain="[('color_id.code','=','k')]"/>
+        <filter name="c" string="C" domain="[('color_id.code','=','c')]"/>
+        <filter name="m" string="M" domain="[('color_id.code','=','m')]"/>
+        <filter name="y" string="Y" domain="[('color_id.code','=','y')]"/>
+
+        <group expand="0" string="Agrupar por">
+          <filter name="grp_rep" string="Reparación" context="{'group_by':'reparacion_id'}"/>
+          <filter name="grp_tipo" string="Tipo" context="{'group_by':'componente_tipo_id'}"/>
+          <filter name="grp_color" string="Color" context="{'group_by':'color_id'}"/>
+          <filter name="grp_estado" string="Estado" context="{'group_by':'estado_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  
+
+</odoo>

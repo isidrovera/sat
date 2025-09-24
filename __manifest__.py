@@ -141,7 +141,8 @@
         'views/checklist.componente.map.xml',
         'views/reparacion_intervencion_views.xml',
         'views/componente_estado_views.xml',
-        'views/accesorio_catalogos_views.xml',       
+        'views/accesorio_catalogos_views.xml',
+        'views/reparacion_componente_evaluacion_views.xml',      
         'views/acciones_menus.xml',
     ],
     

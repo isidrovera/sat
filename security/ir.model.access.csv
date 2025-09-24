@@ -188,3 +188,4 @@ sat_access_modelo_maquina_componente_admin,ModeloMaquinaComponente (System),mode
 sat_access_modelo_maquina_componente_subparte_admin,ModeloMaquinaComponenteSubparte (System),model_modelo_maquina_componente_subparte,base.group_system,1,1,1,1
 access_reparacion_comp_eval_user,reparacion.componente.evaluacion user,model_reparacion_componente_evaluacion,base.group_user,1,1,1,0
 access_color_tipo_user,color.tipo user,model_color_tipo,base.group_user,1,1,1,0
+access_reparacion_comp_eval_admin,reparacion.componente.evaluacion admin,model_reparacion_componente_evaluacion,base.group_system,1,1,1,1
