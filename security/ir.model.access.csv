@@ -184,3 +184,5 @@ access_accesorio_estado_manager,accesorio.estado manager,model_accesorio_estado,
 access_modelo_maquina_accesorio_user,modelo.maquina.accesorio user,model_modelo_maquina_accesorio,base.group_user,1,0,0,0
 access_modelo_maquina_accesorio_manager,modelo.maquina.accesorio manager,model_modelo_maquina_accesorio,base.group_system,1,1,1,1
 sat_access_modelo_maquina_componente_user,ModeloMaquinaComponente (Usuario),model_modelo_maquina_componente,base.group_user,1,1,1,1
+sat_access_modelo_maquina_componente_admin,ModeloMaquinaComponente (System),model_modelo_maquina_componente,base.group_system,1,1,1,1
+sat_access_modelo_maquina_componente_subparte_admin,ModeloMaquinaComponenteSubparte (System),model_modelo_maquina_componente_subparte,base.group_system,1,1,1,1
