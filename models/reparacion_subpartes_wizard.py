@@ -81,6 +81,16 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
                 'nota': wline.nota,
             })
 
+        # Si viene desde generar informe, intentar generar el informe automáticamente
+        if self.env.context.get('from_generar_informe'):
+            repar = interv.reparacion_id
+            try:
+                # Llamar recursivamente a generar informe (ya no tendrá campos pendientes)
+                return repar.action_generar_informe()
+            except Exception as e:
+                # Si falla, al menos cerrar el wizard
+                repar.message_post(body=_("Error generando informe después de completar subpartes: %s") % str(e))
+
         # Recalcular informe SOLO si tu modelo lo soporta
         repar = interv.reparacion_id
         if hasattr(repar, '_autofill_informe_si_corresponde'):

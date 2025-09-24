@@ -550,6 +550,11 @@ class Reparaciones(models.Model):
     def action_generar_informe(self):
         for rec in self:
             try:
+                # NUEVA VALIDACIÓN: Verificar campos que requieren cambio sin intervenciones
+                campos_pendientes = rec._check_campos_requieren_cambio_sin_intervencion()
+                if campos_pendientes:
+                    return rec._abrir_wizard_subpartes(campos_pendientes[0])
+                
                 # Si hay contenido NO vacío y NO es autogenerado → se supone manual
                 if (rec.informe
                     and not rec._rep__html_is_empty(rec.informe)
@@ -570,6 +575,60 @@ class Reparaciones(models.Model):
             'tag': 'display_notification',
             'params': {'title': _('Informe técnico'), 'message': _('Informe generado.'), 'type': 'success'}
         }
+
+    def _check_campos_requieren_cambio_sin_intervencion(self):
+        """Retorna lista de componentes que requieren cambio pero no tienen intervenciones"""
+        self.ensure_one()
+        componentes_pendientes = []
+        
+        for field_name, componente_code in self._COMP_MAP_REQCAMBIO.items():
+            valor_campo = getattr(self, field_name, False)
+            if valor_campo == 'requiere_cambio':
+                # Verificar si ya existe intervención para este componente
+                intervencion_existente = self.intervencion_ids.filtered(
+                    lambda x: x.componente == componente_code
+                )
+                if not intervencion_existente:
+                    componentes_pendientes.append((field_name, componente_code))
+        
+        return componentes_pendientes
+
+    def _abrir_wizard_subpartes(self, campo_componente_tuple):
+        """Abre wizard de subpartes para un componente específico"""
+        self.ensure_one()
+        field_name, componente_code = campo_componente_tuple
+        
+        # Crear la intervención para este componente
+        intervencion = self._ensure_intervencion_for_component(componente_code)
+        
+        # Obtener el nombre legible del componente
+        componente_dict = dict(self.env['reparacion.subparte'].COMPONENTE)
+        nombre_componente = componente_dict.get(componente_code, componente_code)
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': f'Especificar subpartes - {nombre_componente}',
+            'res_model': 'reparacion.add.subparts.wizard',
+            'view_mode': 'form',
+            'view_id': self.env.ref('sat.view_reparacion_add_subparts_wizard_form').id,
+            'target': 'new',
+            'context': {
+                'active_intervencion_id': intervencion.id,
+                'default_intervencion_id': intervencion.id,
+                'default_reparacion_id': self.id,
+                'from_generar_informe': True,
+            },
+        }
+    def _get_nombres_campos_pendientes(self, campos_pendientes):
+        """Convierte la lista de campos pendientes en nombres legibles"""
+        nombres = []
+        componente_dict = dict(self.env['reparacion.subparte'].COMPONENTE)
+        
+        for field_name, componente_code in campos_pendientes:
+            nombre_componente = componente_dict.get(componente_code, componente_code)
+            nombres.append(nombre_componente)
+        
+        return nombres
     def _ensure_intervencion_for_component(self, componente_code):
         self.ensure_one()
         Interv = self.env['reparacion.intervencion']

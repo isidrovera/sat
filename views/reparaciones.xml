@@ -9,6 +9,11 @@
           <!-- HEADER: Con botones mejorados e iconos modernos -->
           <header>
             <field name="estado_id" invisible="1"/>
+            <button name="action_generar_informe" 
+            type="object" 
+            string="Generar Informe Técnico"
+            class="btn-primary"
+            />
             <button string="Finalizar Reparación" 
                         name="action_finalizar_reparacion" 
                         type="object"
