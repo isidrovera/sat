@@ -288,7 +288,7 @@
     <group>
                 <field name="tipo_id" required="1"/>
                 
-                <field name="nota" colspan="4"/>
+                
               </group>
 </page>
 
