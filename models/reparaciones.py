@@ -600,29 +600,60 @@ class Reparaciones(models.Model):
         s = re.sub(r'<br\s*/?>', ' ', s, flags=re.I)
         s = re.sub(r'<[^>]*>', '', s)  # quitar etiquetas
         return s.strip() == ''
+
+    def _abrir_wizard_multiple_componentes(self, campos_pendientes):
+        """Abre wizard unificado con subpartes de múltiples componentes"""
+        self.ensure_one()
+        
+        # Crear wizard
+        wizard = self.env['reparacion.add.subparts.wizard'].create({
+            'reparacion_id': self.id,
+        })
+        
+        # Crear líneas para cada componente y sus subpartes
+        for field_name, componente_code in campos_pendientes:
+            # Asegurar que existe la intervención (vacía)
+            intervencion = self._ensure_intervencion_for_component(componente_code)
+            
+            # Buscar subpartes del componente
+            subpartes = self.env['reparacion.subparte'].search([
+                ('componente', '=', componente_code),
+                ('active', '=', True)
+            ])
+            
+            # Crear línea de wizard por cada subparte
+            for subparte in subpartes:
+                self.env['reparacion.add.subparts.wizard.line'].create({
+                    'wizard_id': wizard.id,
+                    'componente': componente_code,
+                    'intervencion_id': intervencion.id,
+                    'subparte_id': subparte.id,
+                    'selected': False,  # Por defecto no seleccionadas
+                    'accion_sub': 'cambiado',
+                    'codigo': subparte.default_code or '',
+                    'cantidad': 1.0,
+                })
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Especificar Subpartes que Requieren Cambio',
+            'res_model': 'reparacion.add.subparts.wizard',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'view_id': self.env.ref('sat.view_reparacion_add_subparts_wizard_form').id,
+            'target': 'new',
+            'context': {
+                'from_generar_informe': True,
+            },
+        }
     def action_generar_informe(self):
         for rec in self:
             try:
-                # NUEVA VALIDACIÓN: Verificar campos que requieren cambio sin intervenciones
+                # VALIDACIÓN: Verificar campos que requieren cambio sin intervenciones detalladas
                 campos_pendientes = rec._check_campos_requieren_cambio_sin_intervencion()
                 if campos_pendientes:
-                    # Crear intervenciones con todas las subpartes para todos los componentes
-                    for field_name, componente_code in campos_pendientes:
-                        intervencion = rec._ensure_intervencion_for_component(componente_code)
-                        
-                        # Si la intervención no tiene detalles, cargar todas las subpartes
-                        if not intervencion.detalle_ids:
-                            subpartes = rec.env['reparacion.subparte'].search([
-                                ('componente', '=', componente_code),
-                                ('active', '=', True)
-                            ])
-                            for subparte in subpartes:
-                                rec.env['reparacion.intervencion.detalle'].create({
-                                    'line_id': intervencion.id,
-                                    'subparte_id': subparte.id,
-                                    'accion_sub': 'cambiado',
-                                    'cantidad': 1.0,
-                                })
+                    # Abrir wizard unificado con todas las subpartes
+                    return rec._abrir_wizard_multiple_componentes(campos_pendientes)
                 
                 # Si hay contenido NO vacío y NO es autogenerado → se supone manual
                 if (rec.informe
@@ -644,18 +675,17 @@ class Reparaciones(models.Model):
             'tag': 'display_notification',
             'params': {'title': _('Informe técnico'), 'message': _('Informe generado.'), 'type': 'success'}
         }
-
     def _check_campos_requieren_cambio_sin_intervencion(self):
-        """Retorna lista de componentes que requieren cambio pero no tienen intervenciones"""
+        """Retorna lista de componentes que requieren cambio pero no tienen intervenciones CON SUBPARTES"""
         self.ensure_one()
         componentes_pendientes = []
         
         for field_name, componente_code in self._COMP_MAP_REQCAMBIO.items():
             valor_campo = getattr(self, field_name, False)
             if valor_campo == 'requiere_cambio':
-                # Verificar si ya existe intervención para este componente
+                # Verificar si existe intervención CON detalles de subpartes
                 intervencion_existente = self.intervencion_ids.filtered(
-                    lambda x: x.componente == componente_code
+                    lambda x: x.componente == componente_code and x.detalle_ids
                 )
                 if not intervencion_existente:
                     componentes_pendientes.append((field_name, componente_code))

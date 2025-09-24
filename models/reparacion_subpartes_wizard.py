@@ -4,37 +4,55 @@ from odoo.exceptions import UserError
 
 class ReparacionAddSubpartsWizardLine(models.TransientModel):
     _name = 'reparacion.add.subparts.wizard.line'
-    _description = 'Línea temporal de subpartes (wizard)'
+    _description = 'Línea de subpartes wizard múltiple'
 
     wizard_id = fields.Many2one('reparacion.add.subparts.wizard', required=True, ondelete='cascade')
-    subparte_id = fields.Many2one(
-        'reparacion.subparte', string='Subparte', required=True,
-        domain="[('componente', '=', parent.componente)]"
-    )
+    componente = fields.Selection(ReparacionSubparte.COMPONENTE, string='Componente', required=True)
+    componente_display = fields.Char('Componente Display', compute='_compute_componente_display', store=True)
+    intervencion_id = fields.Many2one('reparacion.intervencion', string='Intervención')
+    selected = fields.Boolean('Seleccionar', default=False)
+    subparte_id = fields.Many2one('reparacion.subparte', string='Subparte', required=True)
     accion_sub = fields.Selection([
         ('cambiado', 'Cambiado'),
         ('ajustado', 'Ajustado'),
         ('limpieza', 'Limpieza'),
         ('diagnosticado', 'Diagnosticado'),
-        ('na', 'No aplica'),
-    ], string='Acción', required=True, default='cambiado')
-    codigo = fields.Char('Código / SKU')
+    ], string='Acción', default='cambiado')
+    codigo = fields.Char('Código/SKU')
     cantidad = fields.Float('Cantidad', default=1.0)
     nota = fields.Char('Nota')
+
+    @api.depends('componente')
+    def _compute_componente_display(self):
+        for record in self:
+            if record.componente:
+                componentes_dict = dict(ReparacionSubparte.COMPONENTE)
+                record.componente_display = componentes_dict.get(record.componente, record.componente)
+            else:
+                record.componente_display = ""
 
 
 class ReparacionAddSubpartsWizard(models.TransientModel):
     _name = 'reparacion.add.subparts.wizard'
-    _description = 'Wizard: añadir subpartes a intervención'
+    _description = 'Wizard: seleccionar subpartes múltiples componentes'
 
-    reparacion_id = fields.Many2one(
-        'reparaciones.reparaciones', string='Reparación', required=True, readonly=True
-    )
-    intervencion_id = fields.Many2one(
-        'reparacion.intervencion', string='Intervención', required=True, readonly=True
-    )
-    componente = fields.Selection(related='intervencion_id.componente', store=False, readonly=True)
+    reparacion_id = fields.Many2one('reparaciones.reparaciones', string='Reparación', required=True, readonly=True)
+    componentes_info = fields.Html('Componentes', compute='_compute_componentes_info')
     line_ids = fields.One2many('reparacion.add.subparts.wizard.line', 'wizard_id', string='Subpartes')
+
+    @api.depends('line_ids')
+    def _compute_componentes_info(self):
+        for record in self:
+            if not record.line_ids:
+                record.componentes_info = ""
+                continue
+            
+            componentes = record.line_ids.mapped('componente_display')
+            componentes_unicos = list(set(componentes))
+            info = f"<p><strong>Componentes que requieren especificación:</strong><br/>"
+            info += "<br/>".join(f"• {comp}" for comp in componentes_unicos)
+            info += "</p>"
+            record.componentes_info = info
 
     @api.model
     def default_get(self, fields_list):
