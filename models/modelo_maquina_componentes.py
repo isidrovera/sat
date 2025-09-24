@@ -25,7 +25,7 @@ class ModeloMaquinaComponente(models.Model):
 
     # Subpartes sugeridas (100% m2o vía líneas hijas, no M2M)
     detalle_ids = fields.One2many(
-        'modelo.componente.subparte', 'componente_id',
+        'componente.subparte', 'componente_id',
         string='Subpartes sugeridas'
     )
 
@@ -60,7 +60,7 @@ class ModeloMaquinaComponenteSubparte(models.Model):
     _description = 'Subparte sugerida para un componente de modelo'
     _order = 'subparte_id'
 
-    componente_id = fields.Many2one('modelo.maquina.componente', required=True, ondelete='cascade', index=True)
+    componente_id = fields.Many2one('componente.subparte', required=True, ondelete='cascade', index=True)
     subparte_id = fields.Many2one('componente.subparte', required=True, ondelete='restrict', index=True)
     cantidad = fields.Float(string='Cantidad', default=1.0)
     nota = fields.Char(string='Nota')
