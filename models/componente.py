@@ -21,6 +21,7 @@ class ComponenteSubparte(models.Model):
     code = fields.Char(string='Código', index=True, copy=False)         # ← lo que usas en XML/vistas
     tipo_id = fields.Many2one('componente.tipo', required=True,           # ← lo que usas en XML/vistas
                               ondelete='restrict', index=True)
+    color_id = fields.Many2one('componente.color', string='Color', ondelete='restrict')
     active = fields.Boolean(default=True)
 
     display_name = fields.Char(compute='_compute_display_name', store=True)
