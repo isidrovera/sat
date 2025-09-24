@@ -35,7 +35,7 @@ class ReparacionIntervencionDetalle(models.Model):
     _description = 'Detalle de Subpartes Intervenidas'
 
     line_id = fields.Many2one('reparacion.intervencion', string='Intervención', required=True, ondelete='cascade')
-    subparte_id = fields.Many2one('reparacion.subparte', string='Subparte', required=True)
+    subparte_id = fields.Many2one('componente.subparte', string='Subparte', required=True)  # CAMBIO AQUÍ
     accion_sub = fields.Selection([
         ('cambiado', 'Cambiado'),
         ('ajustado', 'Ajustado'),

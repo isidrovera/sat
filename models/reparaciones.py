@@ -596,7 +596,7 @@ class Reparaciones(models.Model):
         return s.strip() == ''
 
     def _abrir_wizard_multiple_componentes(self, campos_pendientes):
-        """Abre wizard unificado con subpartes de múltiples componentes"""
+        """Abre wizard con subpartes del modelo específico de máquina"""
         self.ensure_one()
         
         # Crear wizard
@@ -604,42 +604,96 @@ class Reparaciones(models.Model):
             'reparacion_id': self.id,
         })
         
-        # Crear líneas para cada componente y sus subpartes
+        # Obtener modelo de máquina
+        modelo_maquina = self.maquina_id.name  # modelo.maquina
+        
+        if not modelo_maquina:
+            raise UserError(_("La máquina no tiene modelo asignado"))
+        
         for field_name, componente_code in campos_pendientes:
-            # Asegurar que existe la intervención (vacía)
+            # Crear intervención
             intervencion = self._ensure_intervencion_for_component(componente_code)
             
-            # Buscar subpartes del componente
-            subpartes = self.env['reparacion.subparte'].search([
-                ('componente', '=', componente_code),
-                ('active', '=', True)
-            ])
+            # Buscar componentes de este modelo que correspondan al tipo
+            componentes_modelo = self._buscar_componentes_por_checklist(modelo_maquina, field_name)
             
-            # Crear línea de wizard por cada subparte
-            for subparte in subpartes:
-                self.env['reparacion.add.subparts.wizard.line'].create({
-                    'wizard_id': wizard.id,
-                    'componente': componente_code,
-                    'intervencion_id': intervencion.id,
-                    'subparte_id': subparte.id,
-                    'selected': False,  # Por defecto no seleccionadas
-                    'accion_sub': 'cambiado',
-                    'codigo': subparte.default_code or '',
-                    'cantidad': 1.0,
-                })
+            # Agregar todas las subpartes de los componentes encontrados
+            for componente_modelo in componentes_modelo:
+                for subparte in componente_modelo.subparte_ids:
+                    self.env['reparacion.add.subparts.wizard.line'].create({
+                        'wizard_id': wizard.id,
+                        'componente': componente_code,
+                        'intervencion_id': intervencion.id,
+                        'subparte_id': subparte.id,
+                        'selected': False,
+                        'accion_sub': 'cambiado',
+                        'cantidad': 1.0,
+                    })
         
         return {
             'type': 'ir.actions.act_window',
-            'name': 'Especificar Subpartes que Requieren Cambio',
+            'name': f'Subpartes Específicas - {modelo_maquina.name}',
             'res_model': 'reparacion.add.subparts.wizard',
             'res_id': wizard.id,
             'view_mode': 'form',
             'view_id': self.env.ref('sat.view_reparacion_add_subparts_wizard_form').id,
             'target': 'new',
-            'context': {
-                'from_generar_informe': True,
-            },
+            'context': {'from_generar_informe': True},
         }
+
+    def _buscar_componentes_por_checklist(self, modelo_maquina, field_name):
+        """Busca componentes del modelo según el campo del checklist marcado"""
+        
+        # Mapeo de campos del checklist a código de componente + color
+        mapeo_campos = {
+            # Unidades de imagen
+            'black_id': ('IU', 'k'),
+            'magenta_id': ('IU', 'm'),
+            'cyan_id': ('IU', 'c'),
+            'yellow_id': ('IU', 'y'),
+            
+            # Developers
+            'developerk_id': ('DEVELOPER', 'k'),
+            'developerm_id': ('DEVELOPER', 'm'),
+            'developerc_id': ('DEVELOPER', 'c'),
+            'developery_id': ('DEVELOPER', 'y'),
+            
+            # Otros componentes sin color
+            'transfer_id': ('FAJA', None),
+            'fusora_id': ('FUSORA', None),
+            'rodillo_id': ('FUSORA', None),
+            'calor_id': ('FUSORA', None),
+            'adf_id': ('ADF', None),
+            'finalizador_id': ('FINISHER', None),
+            'optico_id': ('OPTICO', None),
+            'bypass_id': ('TRAY', None),
+            'tray1_id': ('TRAY', None),
+            'tray2_id': ('TRAY', None),
+            'tray3_id': ('TRAY', None),
+            'tray4_id': ('TRAY', None),
+        }
+        
+        if field_name not in mapeo_campos:
+            return self.env['modelo.maquina.componente']
+        
+        codigo_componente, color = mapeo_campos[field_name]
+        
+        # Buscar tipo de componente por código
+        tipo_componente = self.env['componente.tipo'].search([('code', '=', codigo_componente)], limit=1)
+        if not tipo_componente:
+            return self.env['modelo.maquina.componente']
+        
+        # Filtrar componentes del modelo
+        domain = [
+            ('modelo_id', '=', modelo_maquina.id),
+            ('tipo_id', '=', tipo_componente.id)
+        ]
+        
+        # Agregar filtro de color si aplica
+        if color and tipo_componente.is_color_sensitive:
+            domain.append(('color', '=', color))
+        
+        return self.env['modelo.maquina.componente'].search(domain)
     def action_generar_informe(self):
         for rec in self:
             try:

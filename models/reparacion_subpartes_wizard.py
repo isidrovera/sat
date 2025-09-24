@@ -30,7 +30,7 @@ class ReparacionAddSubpartsWizardLine(models.TransientModel):
     componente_display = fields.Char('Componente Display', compute='_compute_componente_display', store=True)
     intervencion_id = fields.Many2one('reparacion.intervencion', string='Intervención')
     selected = fields.Boolean('Seleccionar', default=False)
-    subparte_id = fields.Many2one('reparacion.subparte', string='Subparte', required=True)
+    subparte_id = fields.Many2one('componente.subparte', string='Subparte', required=True)  # CAMBIO AQUÍ
     accion_sub = fields.Selection([
         ('cambiado', 'Cambiado'),
         ('ajustado', 'Ajustado'),
