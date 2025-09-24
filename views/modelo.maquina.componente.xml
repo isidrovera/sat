@@ -3,7 +3,7 @@
   <data>
 
     <!-- =========================== -->
-    <!-- SEARCH (Búsqueda avanzada)  -->
+    <!-- SEARCH (sin detalle_ids)    -->
     <!-- =========================== -->
     <record id="view_modelo_maquina_componente_search" model="ir.ui.view">
       <field name="name">modelo.maquina.componente.search</field>
@@ -12,11 +12,10 @@
         <search string="Buscar Configuración por Modelo">
           <field name="modelo_id"/>
           <field name="tipo_id"/>
-          <field name="detalle_ids"/>
+          <!-- detalle_ids en search no aporta: lo quitamos -->
           <field name="color"/>
           <field name="prioridad"/>
 
-          <!-- Filtros rápidos -->
           <filter name="fil_color_k" string="Solo K" domain="[('color','=','k')]"/>
           <filter name="fil_color_c" string="Solo C" domain="[('color','=','c')]"/>
           <filter name="fil_color_m" string="Solo M" domain="[('color','=','m')]"/>
@@ -26,12 +25,11 @@
           <filter name="fil_medio"   string="Medio"   domain="[('prioridad','=','2')]"/>
           <filter name="fil_bajo"    string="Bajo"    domain="[('prioridad','=','3')]"/>
 
-          <!-- Agrupar por -->
           <group expand="0" string="Agrupar por">
-            <filter name="grp_mod"  string="Modelo"  context="{'group_by':'modelo_id'}"/>
-            <filter name="grp_tipo" string="Tipo"    context="{'group_by':'tipo_id'}"/>
-            <filter name="grp_color" string="Color"  context="{'group_by':'color'}"/>
-            <filter name="grp_prio"  string="Prioridad" context="{'group_by':'prioridad'}"/>
+            <filter name="grp_mod"    string="Modelo"    context="{'group_by':'modelo_id'}"/>
+            <filter name="grp_tipo"   string="Tipo"      context="{'group_by':'tipo_id'}"/>
+            <filter name="grp_color"  string="Color"     context="{'group_by':'color'}"/>
+            <filter name="grp_prio"   string="Prioridad" context="{'group_by':'prioridad'}"/>
           </group>
         </search>
       </field>
@@ -57,9 +55,9 @@
       </field>
     </record>
 
-    <!-- ============ -->
-    <!-- FORM (form)  -->
-    <!-- ============ -->
+    <!-- ============================= -->
+    <!-- FORM (padre) con O2M embebido -->
+    <!-- ============================= -->
     <record id="view_modelo_maquina_componente_form" model="ir.ui.view">
       <field name="name">modelo.maquina.componente.form</field>
       <field name="model">modelo.maquina.componente</field>
@@ -76,6 +74,7 @@
               <group>
                 <field name="vida_util_paginas"/>
                 <field name="vida_util_meses"/>
+                <field name="estado_sugerido_id"/>
               </group>
             </group>
 
@@ -84,8 +83,26 @@
                 <field name="frase_desgaste" placeholder="Ej.: 'Se observan líneas tenues en bordes'"/>
                 <field name="frase_cambio" placeholder="Ej.: 'Aún no requiere cambio'"/>
               </group>
-              <group>
-                <field name="detalle_ids" />
+
+              <group string="Subpartes sugeridas">
+                <!-- Forzamos vista correcta; NADA de widget many2many_tags -->
+                <field name="detalle_ids" context="{'default_componente_id': active_id}">
+                  <list editable="bottom">
+                    <field name="subparte_id" options="{'no_open': True}"/>
+                    <field name="cantidad"/>
+                    <field name="nota"/>
+                  </list>
+                  <form string="Subparte sugerida">
+                    <sheet>
+                      <group>
+                        <field name="componente_id" invisible="1"/>
+                        <field name="subparte_id"/>
+                        <field name="cantidad"/>
+                        <field name="nota"/>
+                      </group>
+                    </sheet>
+                  </form>
+                </field>
               </group>
             </group>
           </sheet>
@@ -93,6 +110,38 @@
       </field>
     </record>
 
-    
+    <!-- =============================================== -->
+    <!-- Vistas del comodel: modelo.maquina.componente.subparte -->
+    <!-- =============================================== -->
+    <record id="view_modelo_maquina_componente_subparte_tree" model="ir.ui.view">
+      <field name="name">modelo.maquina.componente.subparte.tree</field>
+      <field name="model">modelo.maquina.componente.subparte</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="componente_id" invisible="1"/>
+          <field name="subparte_id"/>
+          <field name="cantidad"/>
+          <field name="nota"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_modelo_maquina_componente_subparte_form" model="ir.ui.view">
+      <field name="name">modelo.maquina.componente.subparte.form</field>
+      <field name="model">modelo.maquina.componente.subparte</field>
+      <field name="arch" type="xml">
+        <form string="Subparte sugerida">
+          <sheet>
+            <group>
+              <field name="componente_id" invisible="1"/>
+              <field name="subparte_id"/>
+              <field name="cantidad"/>
+              <field name="nota"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
   </data>
 </odoo>
