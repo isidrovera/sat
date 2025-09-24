@@ -1,5 +1,5 @@
 # models/componente.py
-from odoo import models, fields
+from odoo import models, fields, api
 
 class ComponenteTipo(models.Model):
     _name = 'componente.tipo'
