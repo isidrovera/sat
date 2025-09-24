@@ -1,4 +1,4 @@
-from odoo import models, fields, api_
+from odoo import models, fields, api
 from odoo.exceptions import UserError
 
 class Reparaciones(models.Model):
@@ -113,7 +113,8 @@ class Reparaciones(models.Model):
 
             if create_vals:
                 Eval.create(create_vals)
-class Reparaciones(models.Model):
+
+class ReparacionesModelSeed(models.Model):
     _inherit = 'reparaciones.reparaciones'
 
     def action_seed_evaluaciones_desde_modelo(self):
