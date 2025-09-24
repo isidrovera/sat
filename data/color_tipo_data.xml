@@ -1,0 +1,14 @@
+<odoo noupdate="1">
+  <record id="color_tipo_k" model="color.tipo">
+    <field name="name">Black</field><field name="code">k</field><field name="sequence">1</field>
+  </record>
+  <record id="color_tipo_c" model="color.tipo">
+    <field name="name">Cyan</field><field name="code">c</field><field name="sequence">2</field>
+  </record>
+  <record id="color_tipo_m" model="color.tipo">
+    <field name="name">Magenta</field><field name="code">m</field><field name="sequence">3</field>
+  </record>
+  <record id="color_tipo_y" model="color.tipo">
+    <field name="name">Yellow</field><field name="code">y</field><field name="sequence">4</field>
+  </record>
+</odoo>

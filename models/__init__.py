@@ -62,3 +62,4 @@ from . import componente_estado
 from . import accesorio_tipo
 from . import modelo_maquina_accesorio
 from . import accesorio_estado
+from . import color_tipo

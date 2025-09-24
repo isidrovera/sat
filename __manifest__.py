@@ -66,7 +66,7 @@
         'data/mail_permisos.xml',
         'data/correos_evaluaciones_tecnicos.xml',
         'data/email_templates_consolidated.xml',
-        
+        'data/color_tipo_data.xml',
         'data/accesorio_tipo_data.xml',
         'data/componente_tipo_data.xml',
         'data/componente_subparte_data.xml',
