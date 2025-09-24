@@ -125,7 +125,7 @@
         
         <group string="Subpartes disponibles">
           <field name="line_ids" nolabel="1">
-            <list create="0" delete="0" edit="1">
+            <list editable="bottom" create="0" delete="0">
               <field name="componente_display" readonly="1"/>
               <field name="subparte_id" readonly="1"/>
               <field name="selected"/>
