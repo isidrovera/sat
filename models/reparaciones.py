@@ -549,16 +549,15 @@ class Reparaciones(models.Model):
         if not intervenciones_con_detalles:
             return ""
         
-        # Agrupar por componente
-        componentes_dict = dict(self.env['reparacion.subparte'].COMPONENTE)
+        # Usar mapeo de códigos a nombres display
         repuestos_por_componente = {}
         
         for intervencion in intervenciones_con_detalles:
-            componente_nombre = componentes_dict.get(intervencion.componente, intervencion.componente)
+            componente_nombre = self._get_component_display_name(intervencion.componente)
             if componente_nombre not in repuestos_por_componente:
                 repuestos_por_componente[componente_nombre] = []
             
-            # Solo agregar los nombres de las subpartes
+            # Agregar subpartes (ahora usa componente.subparte)
             for detalle in intervencion.detalle_ids:
                 repuestos_por_componente[componente_nombre].append(detalle.subparte_id.name)
         
@@ -812,16 +811,27 @@ class Reparaciones(models.Model):
                 'from_generar_informe': True,
             },
         }
-    def _get_nombres_campos_pendientes(self, campos_pendientes):
-        """Convierte la lista de campos pendientes en nombres legibles"""
-        nombres = []
-        componente_dict = dict(self.env['reparacion.subparte'].COMPONENTE)
-        
-        for field_name, componente_code in campos_pendientes:
-            nombre_componente = componente_dict.get(componente_code, componente_code)
-            nombres.append(nombre_componente)
-        
-        return nombres
+    def _get_component_display_name(self, componente_code):
+        """Obtiene el nombre display de un componente basado en su código"""
+        # Mapeo de códigos internos a nombres de display
+        component_names = {
+            'ui_k': 'Unidad de imagen Black',
+            'ui_c': 'Unidad de imagen Cyan', 
+            'ui_m': 'Unidad de imagen Magenta',
+            'ui_y': 'Unidad de imagen Yellow',
+            'dev_k': 'Developer Black',
+            'dev_c': 'Developer Cyan',
+            'dev_m': 'Developer Magenta', 
+            'dev_y': 'Developer Yellow',
+            'fuser': 'Fusora / Rodillos',
+            'itb': 'Faja/Banda de transferencia',
+            'adf': 'ADF',
+            'fin': 'Finalizador',
+            'opt': 'Óptico',
+            'papel': 'Transporte de papel / bandejas / bypass',
+            'otro': 'Otro',
+        }
+        return component_names.get(componente_code, componente_code)
     def _ensure_intervencion_for_component(self, componente_code):
         self.ensure_one()
         Interv = self.env['reparacion.intervencion']
