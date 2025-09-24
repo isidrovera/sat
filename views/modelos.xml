@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-
         <!-- Vista Formulario Completa del Modelo Máquina -->
         <record id="modelos_maquina_form_view" model="ir.ui.view">
             <field name="name">Modelo.modelos_maquina.form</field>
@@ -27,7 +26,6 @@
                                 </div>
                             </button>
                         </div>
-
                         <!-- Título -->
                         <div class="oe_title">
                             <label for="name"/>
@@ -35,7 +33,6 @@
                                 <field name="name" placeholder="Modelo de máquina"/>
                             </h1>
                         </div>
-
                         <!-- Información Básica -->
                         <group>
                             <group string="📋 Información Básica">
@@ -51,7 +48,6 @@
                                 <field name="equipos_activos_count" readonly="1"/>
                             </group>
                         </group>
-
                         <!-- Notebook con páginas -->
                         <notebook>
                             <!-- Página de Configuración de Tóner -->
@@ -74,7 +70,6 @@
                                                         </div>
                                                         <field name="durabilidad_toner_black"/>
                                                     </div>
-                                                    
                                                     <div class="col-12" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">
                                                             <i class="fa fa-circle text-primary me-1"></i>
@@ -82,7 +77,6 @@
                                                         </div>
                                                         <field name="durabilidad_toner_cyan"/>
                                                     </div>
-                                                    
                                                     <div class="col-12" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">
                                                             <i class="fa fa-circle text-danger me-1"></i>
@@ -90,7 +84,6 @@
                                                         </div>
                                                         <field name="durabilidad_toner_magenta"/>
                                                     </div>
-                                                    
                                                     <div class="col-12" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">
                                                             <i class="fa fa-circle text-warning me-1"></i>
@@ -99,7 +92,6 @@
                                                         <field name="durabilidad_toner_yellow"/>
                                                     </div>
                                                 </div>
-                                                
                                                 <div class="mt-3">
                                                     <button name="action_configurar_valores_predeterminados" 
                                                             type="object" 
@@ -110,7 +102,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
                                     <!-- Columna Derecha: Stock y Tiempos -->
                                     <div class="col-12 col-lg-6">
                                         <div class="card border-success">
@@ -125,17 +116,14 @@
                                                         <div class="o_form_label">Tóner Negro</div>
                                                         <field name="stock_minimo_black"/>
                                                     </div>
-                                                    
                                                     <div class="col-6" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">Tóner Cian</div>
                                                         <field name="stock_minimo_cyan"/>
                                                     </div>
-                                                    
                                                     <div class="col-6" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">Tóner Magenta</div>
                                                         <field name="stock_minimo_magenta"/>
                                                     </div>
-                                                    
                                                     <div class="col-6" column_invisible="tipo_id != 'color'">
                                                         <div class="o_form_label">Tóner Amarillo</div>
                                                         <field name="stock_minimo_yellow"/>
@@ -143,7 +131,6 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        
                                         <div class="card border-info mt-3">
                                             <div class="card-header bg-info text-white">
                                                 <h6 class="mb-0">
@@ -159,7 +146,6 @@
                                                             <span class="input-group-text">días</span>
                                                         </div>
                                                     </div>
-                                                    
                                                     <div class="col-6">
                                                         <div class="o_form_label">Margen de Seguridad</div>
                                                         <div class="input-group">
@@ -168,12 +154,11 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
                                                 <div class="mt-3">
                                                     <div class="alert alert-info mb-0">
                                                         <small>
                                                             <i class="fa fa-info-circle me-1"></i>
-                                                            <strong>Total tiempo de prevención:</strong> 
+                                                            <strong>Total tiempo de prevención:</strong>
                                                             <!-- Cambio: Usar field calculado en lugar de t-field -->
                                                             <field name="tiempo_total_prevencion" readonly="1"/> días
                                                         </small>
@@ -183,7 +168,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                
                                 <!-- Panel de Alertas -->
                                 <div class="row mt-4">
                                     <div class="col-12">
@@ -201,7 +185,6 @@
                                                             <span class="ms-2">Alertas de Stock Crítico</span>
                                                         </div>
                                                     </div>
-                                                    
                                                     <div class="col-6">
                                                         <div class="d-flex align-items-center">
                                                             <field name="alerta_consumo_alto" widget="boolean_toggle"/>
@@ -213,7 +196,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                
                                 <!-- Panel de Resumen -->
                                 <div class="row mt-4">
                                     <div class="col-12">
@@ -230,7 +212,6 @@
                                     </div>
                                 </div>
                             </page>
-                            
                             <!-- Página de Equipos Asociados -->
                             <page string="🖨️ Equipos Asociados" name="equipos">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -249,23 +230,25 @@
                                                 column_invisible="equipos_activos_count == 0"/>
                                     </div>
                                 </div>
-                                
                                 <div class="alert alert-info" column_invisible="equipos_activos_count > 0">
                                     <div class="text-center">
                                         <i class="fa fa-info-circle fa-2x mb-2"></i>
                                         <p class="mb-0">No hay equipos alquilados usando este modelo actualmente.</p>
                                     </div>
                                 </div>
-                                
                                 <div column_invisible="equipos_activos_count == 0">
                                     <p class="text-muted">
                                         <i class="fa fa-info-circle me-1"></i>
-                                        Hay <strong><field name="equipos_activos_count" readonly="1"/></strong> 
+                                        Hay
+                                        <strong>
+                                            <field name="equipos_activos_count" readonly="1"/>
+                                        </strong> 
                                         equipo(s) alquilado(s) usando este modelo.
                                     </p>
-                                    
                                     <div class="alert alert-warning">
-                                        <h6><i class="fa fa-exclamation-triangle me-2"></i>Importante</h6>
+                                        <h6>
+                                            <i class="fa fa-exclamation-triangle me-2"></i>Importante
+                                        </h6>
                                         <ul class="mb-0">
                                             <li>Los cambios en la configuración de tóner afectarán los cálculos futuros</li>
                                             <li>Use "Aplicar Configuración" para sincronizar cambios con equipos existentes</li>
@@ -275,30 +258,24 @@
                                 </div>
                             </page>
                             <page string="Componentes">
-  <field name="componente_line_ids"
+                                <field name="componente_line_ids"
        >
-
-    <list editable="bottom">
-      <field name="tipo_id"/>
-      <field name="detalle_ids"/>
-          </list>
-  </field>
-</page>
-<page>
-    <group>
-                <field name="tipo_id" required="1"/>
-                
-                
-              </group>
-</page>
-
-
+                                    <list editable="bottom">
+                                        <field name="tipo_id"/>
+                                        <field name="detalle_ids"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page>
+                                <group>
+                                    <field name="tipo_id" required="1"/>
+                                </group>
+                            </page>
                         </notebook>
                     </sheet>
                 </form>
             </field>
         </record>
-
         <!-- Vista Lista del Modelo Máquina -->
         <record id="modelos_maquina_tree_view" model="ir.ui.view">
             <field name="name">Modelos_maquina.list</field>
@@ -320,7 +297,6 @@
                 </list>
             </field>
         </record>
-
         <!-- Vista de Búsqueda del Modelo Máquina -->
         <record id="modelos_maquina_search_view" model="ir.ui.view">
             <field name="name">ProjectName.modelos_maquina.search</field>
@@ -348,7 +324,6 @@
                 </search>
             </field>
         </record>
-
         <!-- Vista Kanban del Modelo Máquina -->
         <record id="modelos_maquina_kanban_view" model="ir.ui.view">
             <field name="name">modelo.maquina.kanban</field>
@@ -375,7 +350,8 @@
                                             </strong>
                                             <br/>
                                             <small class="o_kanban_record_subtitle text-muted">
-                                                <field name="marca_id"/> - <field name="tipo_id"/>
+                                                <field name="marca_id"/> -
+                                                <field name="tipo_id"/>
                                             </small>
                                         </div>
                                         <div class="o_kanban_manage_button_section">
@@ -387,21 +363,25 @@
                                     <div class="o_kanban_record_body">
                                         <div class="row">
                                             <div class="col-6">
-                                                <strong>Precio:</strong><br/>
+                                                <strong>Precio:</strong>
+                                                <br/>
                                                 <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                                             </div>
                                             <div class="col-6">
-                                                <strong>Equipos:</strong><br/>
+                                                <strong>Equipos:</strong>
+                                                <br/>
                                                 <field name="equipos_activos_count"/> activos
                                             </div>
                                         </div>
                                         <div class="row mt8" t-if="record.gestionar_toner_automatico.raw_value">
                                             <div class="col-6">
-                                                <strong>Dur. Negro:</strong><br/>
+                                                <strong>Dur. Negro:</strong>
+                                                <br/>
                                                 <field name="durabilidad_toner_black"/> pág.
                                             </div>
                                             <div class="col-6">
-                                                <strong>Stock Min:</strong><br/>
+                                                <strong>Stock Min:</strong>
+                                                <br/>
                                                 <field name="stock_minimo_black"/> und.
                                             </div>
                                         </div>
@@ -433,6 +413,5 @@
                 </kanban>
             </field>
         </record>
-
     </data>
 </odoo>
