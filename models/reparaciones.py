@@ -514,11 +514,16 @@ class Reparaciones(models.Model):
                 + "".join(f"<li>{x}</li>" for x in toners_crit) + "</ul>"
             )
 
+        # NUEVO: Agregar sección de repuestos cambiados
+        repuestos_html = self._generar_seccion_repuestos()
+        if repuestos_html:
+            bloques.append(repuestos_html)
+
         observ_html = ""
         if bloques:
             observ_html = "<h5 style='margin:12px 0 6px;'>" + _("Observaciones para entrega a distribuidor") + "</h5>" + "".join(bloques)
 
-        # SOLO “Se realizó…” → “Conclusión”
+        # SOLO "Se realizó…" → "Conclusión"
         html = f"""
     <div data-autogen="1" style="font-family: Arial; line-height:1.5;">
     <p>{texto_general}</p>
@@ -533,6 +538,54 @@ class Reparaciones(models.Model):
     </div>
     """
         return html, calidad
+
+    def _generar_seccion_repuestos(self):
+        """Genera la sección HTML de repuestos cambiados basada en las intervenciones"""
+        if not self.intervencion_ids:
+            return ""
+        
+        # Filtrar solo intervenciones que son cambios
+        intervenciones_cambio = self.intervencion_ids.filtered('es_cambio')
+        if not intervenciones_cambio:
+            return ""
+        
+        # Agrupar por componente
+        componentes_dict = dict(self.env['reparacion.subparte'].COMPONENTE)
+        repuestos_por_componente = {}
+        
+        for intervencion in intervenciones_cambio:
+            componente_nombre = componentes_dict.get(intervencion.componente, intervencion.componente)
+            if componente_nombre not in repuestos_por_componente:
+                repuestos_por_componente[componente_nombre] = []
+            
+            # Agregar detalles de subpartes cambiadas
+            for detalle in intervencion.detalle_ids.filtered(lambda d: d.accion_sub == 'cambiado'):
+                repuestos_por_componente[componente_nombre].append({
+                    'nombre': detalle.subparte_id.name,
+                    'codigo': detalle.codigo or '',
+                    'cantidad': detalle.cantidad,
+                })
+        
+        if not repuestos_por_componente:
+            return ""
+        
+        # Generar HTML
+        html_items = []
+        for componente, subpartes in repuestos_por_componente.items():
+            html_items.append(f"<li><strong>{componente}:</strong>")
+            subpartes_list = []
+            for subparte in subpartes:
+                cantidad_str = f" (x{subparte['cantidad']})" if subparte['cantidad'] != 1 else ""
+                codigo_str = f" [{subparte['codigo']}]" if subparte['codigo'] else ""
+                subpartes_list.append(f"{subparte['nombre']}{cantidad_str}{codigo_str}")
+            html_items.append(" " + ", ".join(subpartes_list) + "</li>")
+        
+        return f"""
+    <p style='margin:6px 0;color:#2e7d32;'><strong>{_('Repuestos cambiados')}:</strong></p>
+    <ul style='margin:0 0 8px 18px;'>
+    {"".join(html_items)}
+    </ul>
+    """
 
 
     # ==========================
@@ -553,7 +606,23 @@ class Reparaciones(models.Model):
                 # NUEVA VALIDACIÓN: Verificar campos que requieren cambio sin intervenciones
                 campos_pendientes = rec._check_campos_requieren_cambio_sin_intervencion()
                 if campos_pendientes:
-                    return rec._abrir_wizard_subpartes(campos_pendientes[0])
+                    # Crear intervenciones con todas las subpartes para todos los componentes
+                    for field_name, componente_code in campos_pendientes:
+                        intervencion = rec._ensure_intervencion_for_component(componente_code)
+                        
+                        # Si la intervención no tiene detalles, cargar todas las subpartes
+                        if not intervencion.detalle_ids:
+                            subpartes = rec.env['reparacion.subparte'].search([
+                                ('componente', '=', componente_code),
+                                ('active', '=', True)
+                            ])
+                            for subparte in subpartes:
+                                rec.env['reparacion.intervencion.detalle'].create({
+                                    'line_id': intervencion.id,
+                                    'subparte_id': subparte.id,
+                                    'accion_sub': 'cambiado',
+                                    'cantidad': 1.0,
+                                })
                 
                 # Si hay contenido NO vacío y NO es autogenerado → se supone manual
                 if (rec.informe

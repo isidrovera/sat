@@ -89,9 +89,9 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
         self.ensure_one()
         interv = self.intervencion_id
 
-        # Borrar detalle previo y recrear con lo del wizard
+        # Borrar detalle previo y recrear solo con las seleccionadas
         interv.detalle_ids.unlink()
-        for wline in self.line_ids:
+        for wline in self.line_ids.filtered('selected'):
             self.env['reparacion.intervencion.detalle'].create({
                 'line_id': interv.id,
                 'subparte_id': wline.subparte_id.id,
@@ -101,23 +101,24 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
                 'nota': wline.nota,
             })
 
-        # Si viene desde generar informe, intentar generar el informe automáticamente
+        # Si viene desde generar informe, regenerar el informe automáticamente
         if self.env.context.get('from_generar_informe'):
             repar = interv.reparacion_id
             try:
-                # Llamar recursivamente a generar informe (ya no tendrá campos pendientes)
-                return repar.action_generar_informe()
+                html, calidad = repar._rep__build_informe_html()
+                repar.write({'informe': html, 'calidad_id': calidad})
+                repar.message_post(body=_("Informe técnico actualizado con subpartes especificadas."))
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Informe actualizado'), 
+                        'message': _('Las subpartes han sido guardadas y el informe regenerado.'), 
+                        'type': 'success'
+                    }
+                }
             except Exception as e:
-                # Si falla, al menos cerrar el wizard
-                repar.message_post(body=_("Error generando informe después de completar subpartes: %s") % str(e))
-
-        # Recalcular informe SOLO si tu modelo lo soporta
-        repar = interv.reparacion_id
-        if hasattr(repar, '_autofill_informe_si_corresponde'):
-            try:
-                repar._autofill_informe_si_corresponde()
-            except Exception:
-                # No bloquees el guardado del wizard si falla este paso
-                pass
+                repar.message_post(body=_("Error regenerando informe: %s") % str(e))
 
         return {'type': 'ir.actions.act_window_close'}
