@@ -58,3 +58,9 @@ from . import informe_regla
 from . import componente
 from . import reparacion_intervencion
 from . import reparacion_subpartes_wizard
+from . import componente_estado
+from . import accesorio_catalogo
+from . import accesorio_tipo
+from . import componente_tipo
+from . import componente_subparte
+from . import componente_catalogo
