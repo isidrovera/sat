@@ -540,51 +540,45 @@ class Reparaciones(models.Model):
         return html, calidad
 
     def _generar_seccion_repuestos(self):
-        """Genera la sección HTML de repuestos cambiados basada en las intervenciones"""
+        """Genera la sección HTML de componentes y subpartes que requieren cambio"""
         if not self.intervencion_ids:
             return ""
         
-        # Filtrar solo intervenciones que son cambios
-        intervenciones_cambio = self.intervencion_ids.filtered('es_cambio')
-        if not intervenciones_cambio:
+        # Filtrar intervenciones que tienen detalles
+        intervenciones_con_detalles = self.intervencion_ids.filtered(lambda x: x.detalle_ids)
+        if not intervenciones_con_detalles:
             return ""
         
         # Agrupar por componente
         componentes_dict = dict(self.env['reparacion.subparte'].COMPONENTE)
         repuestos_por_componente = {}
         
-        for intervencion in intervenciones_cambio:
+        for intervencion in intervenciones_con_detalles:
             componente_nombre = componentes_dict.get(intervencion.componente, intervencion.componente)
             if componente_nombre not in repuestos_por_componente:
                 repuestos_por_componente[componente_nombre] = []
             
-            # Agregar detalles de subpartes cambiadas
-            for detalle in intervencion.detalle_ids.filtered(lambda d: d.accion_sub == 'cambiado'):
-                repuestos_por_componente[componente_nombre].append({
-                    'nombre': detalle.subparte_id.name,
-                    'codigo': detalle.codigo or '',
-                    'cantidad': detalle.cantidad,
-                })
+            # Solo agregar los nombres de las subpartes
+            for detalle in intervencion.detalle_ids:
+                repuestos_por_componente[componente_nombre].append(detalle.subparte_id.name)
         
         if not repuestos_por_componente:
             return ""
         
-        # Generar HTML
-        html_items = []
+        # Generar HTML simple
+        html_componentes = []
         for componente, subpartes in repuestos_por_componente.items():
-            html_items.append(f"<li><strong>{componente}:</strong>")
-            subpartes_list = []
+            html_componentes.append(f"<p style='margin:8px 0 4px 0; font-weight:bold;'>{componente}</p>")
+            html_componentes.append("<ul style='margin:0 0 8px 20px;'>")
             for subparte in subpartes:
-                cantidad_str = f" (x{subparte['cantidad']})" if subparte['cantidad'] != 1 else ""
-                codigo_str = f" [{subparte['codigo']}]" if subparte['codigo'] else ""
-                subpartes_list.append(f"{subparte['nombre']}{cantidad_str}{codigo_str}")
-            html_items.append(" " + ", ".join(subpartes_list) + "</li>")
+                html_componentes.append(f"<li>{subparte}</li>")
+            html_componentes.append("</ul>")
         
         return f"""
-    <p style='margin:6px 0;color:#2e7d32;'><strong>{_('Repuestos cambiados')}:</strong></p>
-    <ul style='margin:0 0 8px 18px;'>
-    {"".join(html_items)}
-    </ul>
+    <p style='margin:6px 0;color:#e65100;'><strong>{_('Subpartes específicas que requieren cambio')}:</strong></p>
+    <div style='margin:0 0 8px 10px;'>
+    {"".join(html_componentes)}
+    </div>
     """
 
 
@@ -646,47 +640,35 @@ class Reparaciones(models.Model):
                 'from_generar_informe': True,
             },
         }
-    def _generar_seccion_repuestos(self):
-        """Genera la sección HTML de componentes y subpartes que requieren cambio"""
-        if not self.intervencion_ids:
-            return ""
-        
-        # Filtrar intervenciones que tienen detalles
-        intervenciones_con_detalles = self.intervencion_ids.filtered(lambda x: x.detalle_ids)
-        if not intervenciones_con_detalles:
-            return ""
-        
-        # Agrupar por componente
-        componentes_dict = dict(self.env['reparacion.subparte'].COMPONENTE)
-        repuestos_por_componente = {}
-        
-        for intervencion in intervenciones_con_detalles:
-            componente_nombre = componentes_dict.get(intervencion.componente, intervencion.componente)
-            if componente_nombre not in repuestos_por_componente:
-                repuestos_por_componente[componente_nombre] = []
-            
-            # Solo agregar los nombres de las subpartes
-            for detalle in intervencion.detalle_ids:
-                repuestos_por_componente[componente_nombre].append(detalle.subparte_id.name)
-        
-        if not repuestos_por_componente:
-            return ""
-        
-        # Generar HTML simple
-        html_componentes = []
-        for componente, subpartes in repuestos_por_componente.items():
-            html_componentes.append(f"<p style='margin:8px 0 4px 0; font-weight:bold;'>{componente}</p>")
-            html_componentes.append("<ul style='margin:0 0 8px 20px;'>")
-            for subparte in subpartes:
-                html_componentes.append(f"<li>{subparte}</li>")
-            html_componentes.append("</ul>")
-        
-        return f"""
-    <p style='margin:6px 0;color:#e65100;'><strong>{_('Subpartes específicas que requieren cambio')}:</strong></p>
-    <div style='margin:0 0 8px 10px;'>
-    {"".join(html_componentes)}
-    </div>
-    """
+    def action_generar_informe(self):
+        for rec in self:
+            try:
+                # VALIDACIÓN: Verificar campos que requieren cambio sin intervenciones detalladas
+                campos_pendientes = rec._check_campos_requieren_cambio_sin_intervencion()
+                if campos_pendientes:
+                    # Abrir wizard unificado con todas las subpartes
+                    return rec._abrir_wizard_multiple_componentes(campos_pendientes)
+                
+                # Si hay contenido NO vacío y NO es autogenerado → se supone manual
+                if (rec.informe
+                    and not rec._rep__html_is_empty(rec.informe)
+                    and not rec._rep__is_autogen_informe()):
+                    rec.message_post(body=_("El informe ya fue editado manualmente. No se sobrescribió."))
+                    continue
+
+                html, calidad = rec._rep__build_informe_html()
+                rec.write({'informe': html, 'calidad_id': calidad})
+                rec.message_post(body=_("Informe técnico generado automáticamente."))
+
+            except Exception as e:
+                _logger.exception("Error generando informe en reparaciones: %s", e)
+                rec.message_post(body=_("No se pudo generar el informe: %s") % e)
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {'title': _('Informe técnico'), 'message': _('Informe generado.'), 'type': 'success'}
+        }
     def _check_campos_requieren_cambio_sin_intervencion(self):
         """Retorna lista de componentes que requieren cambio pero no tienen intervenciones CON SUBPARTES"""
         self.ensure_one()
