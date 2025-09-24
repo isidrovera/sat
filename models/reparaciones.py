@@ -605,6 +605,21 @@ class Reparaciones(models.Model):
         componente_dict = dict(self.env['reparacion.subparte'].COMPONENTE)
         nombre_componente = componente_dict.get(componente_code, componente_code)
         
+        # Buscar subpartes disponibles para este componente
+        subpartes_disponibles = self.env['reparacion.subparte'].search([
+            ('componente', '=', componente_code),
+            ('active', '=', True)
+        ])
+        
+        # Crear líneas iniciales con todas las subpartes del componente
+        lineas_iniciales = []
+        for subparte in subpartes_disponibles:
+            lineas_iniciales.append((0, 0, {
+                'subparte_id': subparte.id,
+                'accion_sub': 'cambiado',
+                'cantidad': 1.0,
+            }))
+        
         return {
             'type': 'ir.actions.act_window',
             'name': f'Especificar subpartes - {nombre_componente}',
@@ -616,6 +631,7 @@ class Reparaciones(models.Model):
                 'active_intervencion_id': intervencion.id,
                 'default_intervencion_id': intervencion.id,
                 'default_reparacion_id': self.id,
+                'default_line_ids': lineas_iniciales,
                 'from_generar_informe': True,
             },
         }

@@ -39,7 +39,7 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
     @api.model
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
-        active_id = self.env.context.get('active_id')  # <- intervención
+        active_id = self.env.context.get('active_id')
         intervencion = self.env['reparacion.intervencion'].browse(self.env.context.get('active_intervencion_id'))
 
         if not intervencion:
@@ -50,20 +50,40 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
             'intervencion_id': intervencion.id,
         })
 
-        # precarga líneas existentes
-        lines_vals = []
-        for d in intervencion.detalle_ids:
-            lines_vals.append((0, 0, {
-                'subparte_id': d.subparte_id.id,
-                'accion_sub': d.accion_sub,
-                'codigo': d.codigo,
-                'cantidad': d.cantidad,
-                'nota': d.nota,
-            }))
-        if lines_vals:
-            res['line_ids'] = lines_vals
+        # Si viene desde generar informe, cargar todas las subpartes del componente
+        if self.env.context.get('from_generar_informe'):
+            subpartes_disponibles = self.env['reparacion.subparte'].search([
+                ('componente', '=', intervencion.componente),
+                ('active', '=', True)
+            ])
+            
+            lines_vals = []
+            for subparte in subpartes_disponibles:
+                lines_vals.append((0, 0, {
+                    'subparte_id': subparte.id,
+                    'accion_sub': 'cambiado',
+                    'codigo': subparte.default_code or '',
+                    'cantidad': 1.0,
+                    'nota': '',
+                }))
+            
+            if lines_vals:
+                res['line_ids'] = lines_vals
+        else:
+            # Comportamiento original: precarga líneas existentes
+            lines_vals = []
+            for d in intervencion.detalle_ids:
+                lines_vals.append((0, 0, {
+                    'subparte_id': d.subparte_id.id,
+                    'accion_sub': d.accion_sub,
+                    'codigo': d.codigo,
+                    'cantidad': d.cantidad,
+                    'nota': d.nota,
+                }))
+            if lines_vals:
+                res['line_ids'] = lines_vals
+        
         return res
-
 
     def action_apply(self):
         self.ensure_one()
