@@ -86,23 +86,24 @@
 
               <group string="Subpartes sugeridas">
                 <!-- Forzamos vista correcta; NADA de widget many2many_tags -->
-                <field name="detalle_ids" context="{'default_componente_id': active_id}">
-                  <list editable="bottom">
-                    <field name="subparte_id" options="{'no_open': True}"/>
-                    <field name="cantidad"/>
-                    <field name="nota"/>
-                  </list>
-                  <form string="Subparte sugerida">
-                    <sheet>
-                      <group>
-                        <field name="componente_id" invisible="1"/>
-                        <field name="subparte_id"/>
-                        <field name="cantidad"/>
-                        <field name="nota"/>
-                      </group>
-                    </sheet>
-                  </form>
-                </field>
+                <field name="detalle_ids">
+                <list editable="bottom">
+                  <field name="subparte_id" options="{'no_open': True}"/>
+                  <field name="cantidad"/>
+                  <field name="nota"/>
+                </list>
+                <form string="Subparte sugerida">
+                  <sheet>
+                    <group>
+                      <field name="componente_id" invisible="1"/>
+                      <field name="subparte_id"/>
+                      <field name="cantidad"/>
+                      <field name="nota"/>
+                    </group>
+                  </sheet>
+                </form>
+              </field>
+
               </group>
             </group>
           </sheet>
