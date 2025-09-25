@@ -1,5 +1,8 @@
 from odoo import models, fields, api
 from odoo.exceptions import UserError
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class Reparaciones(models.Model):
     _inherit = 'reparaciones.reparaciones'
@@ -60,6 +63,8 @@ class Reparaciones(models.Model):
         }
 
         for rec in self:
+            _logger.info(f"Migrando reparación ID: {rec.id}")
+            
             # opcional: no duplicar si ya hay evaluaciones (quita si prefieres re-migrar)
             # if rec.evaluacion_ids:
             #     continue
@@ -78,9 +83,11 @@ class Reparaciones(models.Model):
 
                 tipo = Tipo.search([('code', '=', tipo_code)], limit=1)
                 if not tipo:
+                    _logger.warning(f"No se encontró tipo de componente con code: {tipo_code}")
                     continue
                 estado = Estado.search([('code', '=', estado_code)], limit=1)
                 if not estado:
+                    _logger.warning(f"No se encontró estado de componente con code: {estado_code}")
                     continue
 
                 color_id = False
@@ -103,28 +110,40 @@ class Reparaciones(models.Model):
                         exists.observaciones = obs
                     continue
 
-                create_vals.append({
+                val = {
                     'reparacion_id': rec.id,
                     'componente_tipo_id': tipo.id,
                     'estado_id': estado.id,
                     'color_id': color_id,
                     'observaciones': obs or False,
-                })
+                }
+                _logger.info(f"Preparando crear evaluación: {val}")
+                create_vals.append(val)
 
             if create_vals:
-                Eval.create(create_vals)
-
-class ReparacionesModelSeed(models.Model):
-    _inherit = 'reparaciones.reparaciones'
+                try:
+                    created_evals = Eval.create(create_vals)
+                    _logger.info(f"Creadas {len(created_evals)} evaluaciones para reparación {rec.id}")
+                except Exception as e:
+                    _logger.error(f"Error creando evaluaciones para reparación {rec.id}: {e}")
+                    raise
 
     def action_seed_evaluaciones_desde_modelo(self):
+        """Crea evaluaciones basadas en los componentes del modelo de la máquina."""
         Eval = self.env['reparacion.componente.evaluacion']
         for rec in self:
-            modelo = rec.maquina_id and rec.maquina_id.name  # tu campo: Many2one a modelo.maquina en sat.sat.name
+            # CORREGIDO: usar el objeto completo, no solo .name
+            modelo = rec.maquina_id  # Este debe ser el objeto completo
             if not modelo:
+                _logger.warning(f"Reparación {rec.id} no tiene máquina asignada")
                 continue
+                
+            _logger.info(f"Procesando modelo: {modelo.name} para reparación {rec.id}")
+            
             # componentes del modelo
             comp_lines = self.env['modelo.maquina.componente'].search([('modelo_id', '=', modelo.id)])
+            _logger.info(f"Encontrados {len(comp_lines)} componentes para el modelo {modelo.name}")
+            
             to_create = []
             for line in comp_lines:
                 # evita duplicados (mismo tipo y color)
@@ -134,6 +153,7 @@ class ReparacionesModelSeed(models.Model):
                 ]
                 if line.color_id:
                     dup_domain.append(('color_id', '=', line.color_id.id))
+                    
                 exists = Eval.search(dup_domain, limit=1)
                 if exists:
                     # si no tiene estado, pon el sugerido
@@ -141,12 +161,20 @@ class ReparacionesModelSeed(models.Model):
                         exists.estado_id = line.estado_sugerido_id.id
                     continue
 
-                to_create.append({
+                val = {
                     'reparacion_id': rec.id,
                     'componente_tipo_id': line.tipo_id.id,
                     'color_id': line.color_id.id if line.color_id else False,
                     'estado_id': line.estado_sugerido_id.id if line.estado_sugerido_id else False,
                     'observaciones': line.frase_desgaste or False,
-                })
+                }
+                _logger.info(f"Preparando crear evaluación desde modelo: {val}")
+                to_create.append(val)
+                
             if to_create:
-                Eval.create(to_create)
+                try:
+                    created_evals = Eval.create(to_create)
+                    _logger.info(f"Creadas {len(created_evals)} evaluaciones desde modelo para reparación {rec.id}")
+                except Exception as e:
+                    _logger.error(f"Error creando evaluaciones desde modelo para reparación {rec.id}: {e}")
+                    raise
