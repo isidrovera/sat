@@ -50,4 +50,20 @@
     <field name="code">no_aplica</field>
     <field name="color">0</field><field name="prioridad">3</field>
   </record>
+  <!-- Estos son los únicos que faltan -->
+<record id="estado_correcto" model="componente.estado">
+  <field name="name">Correcto</field>
+  <field name="code">correcto</field>
+  <field name="color">10</field><field name="prioridad">3</field>
+</record>
+<record id="estado_sin_probar" model="componente.estado">
+  <field name="name">Sin probar</field>
+  <field name="code">sin_probar</field>
+  <field name="color">0</field><field name="prioridad">3</field>
+</record>
+<record id="estado_falla" model="componente.estado">
+  <field name="name">Falla</field>
+  <field name="code">falla</field>
+  <field name="color">1</field><field name="prioridad">1</field>
+</record>
 </odoo>
