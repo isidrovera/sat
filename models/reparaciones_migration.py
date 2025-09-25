@@ -36,32 +36,56 @@ class Reparaciones(models.Model):
         Color = self.env['color.tipo']
         Eval = self.env['reparacion.componente.evaluacion']
 
-        # mapa: campo -> (code tipo componente, code color opcional, observación opcional)
+        # MAPEO COMPLETO: campo -> (code tipo componente, code color opcional, observación opcional)
         FIELD_TO_TIPO = {
-            'black_id':      ('UI',          'k', 'Unidad de imagen K'),
-            'cyan_id':       ('UI',          'c', 'Unidad de imagen C'),
-            'magenta_id':    ('UI',          'm', 'Unidad de imagen M'),
-            'yellow_id':     ('UI',          'y', 'Unidad de imagen Y'),
-            'developerk_id': ('DEVELOPER',   'k', 'Developer K'),
-            'developerc_id': ('DEVELOPER',   'c', 'Developer C'),
-            'developerm_id': ('DEVELOPER',   'm', 'Developer M'),
-            'developery_id': ('DEVELOPER',   'y', 'Developer Y'),
-            'transfer_id':   ('FAJA',        None, 'Faja/Banda de transferencia (ITB)'),
-            'fusora_id':     ('FUSORA',      None, 'Fusora'),
-            'rodillo_id':    ('FUSORA',      None, 'Rodillo de presión (Fusora)'),
-            'calor_id':      ('FUSORA',      None, 'Rodillo de calor (Fusora)'),
-            'adf_id':        ('ADF',         None, 'ADF'),
-            'finalizador_id':('FINISHER',    None, 'Finalizador'),
-            'optico_id':     ('OPTICO',      None, 'Óptico'),
-            'bypass_id':     ('BYPASS',      None, 'Bypass'),
+            # === FUNCIONES ===
+            'copia_id':         ('FUNCION_COPIA',     None, 'Función de Copia'),
+            'impresion_id':     ('FUNCION_IMPRESION', None, 'Función de Impresión'),
+            'impresion_usb_id': ('FUNCION_USB_PRINT', None, 'Función Impresión USB'),
+            'scaner_smb_id':    ('FUNCION_SCAN_SMB',  None, 'Función Escaneo SMB'),
+            'scaner_usb_id':    ('FUNCION_SCAN_USB',  None, 'Función Escaneo USB'),
+            'scaner_ftp_id':    ('FUNCION_SCAN_FTP',  None, 'Función Escaneo FTP'),
+            'scaner_mail_id':   ('FUNCION_SCAN_MAIL', None, 'Función Escaneo Email'),
+            
+            # === COMPONENTES MECÁNICOS ===
+            'bypass_id':     ('BYPASS',      None, 'Bandeja Bypass'),
             'tray1_id':      ('TRAY',        None, 'Bandeja 1'),
             'tray2_id':      ('TRAY',        None, 'Bandeja 2'),
             'tray3_id':      ('TRAY',        None, 'Bandeja 3'),
             'tray4_id':      ('TRAY',        None, 'Bandeja 4'),
-            'tacho_id':      ('WASTE_TONER', None, 'Depósito de residuos'),
+            'adf_id':        ('ADF',         None, 'ADF'),
+            'finalizador_id':('FINISHER',    None, 'Finalizador'),
+            'tacho_id':      ('WASTE_TONER', None, 'Contenedor de Residuos'),
+            
+            # === COMPONENTES DE IMPRESIÓN ===
+            'fusora_id':     ('FUSORA',         None, 'Unidad Fusora'),
+            'rodillo_id':    ('TRANSFER_ROLLER', None, 'Rodillo de Transferencia'),
+            'calor_id':      ('FUSORA',         None, 'Sensores de Calor (Fusora)'),
+            'transfer_id':   ('FAJA',           None, 'Banda de Transferencia'),
+            'optico_id':     ('OPTICO',         None, 'Componentes Ópticos'),
+            
+            # === CONSUMIBLES - TÓNERS ===
+            'toner_black_id':   ('TONER_SYSTEM', 'k', 'Tóner Negro'),
+            'toner_magenta_id': ('TONER_SYSTEM', 'm', 'Tóner Magenta'),
+            'toner_cyan_id':    ('TONER_SYSTEM', 'c', 'Tóner Cyan'),
+            'toner_yellow_id':  ('TONER_SYSTEM', 'y', 'Tóner Amarillo'),
+            
+            # === CONSUMIBLES - UNIDADES DE IMAGEN ===
+            'black_id':      ('UI',          'k', 'Unidad de Imagen Negro'),
+            'magenta_id':    ('UI',          'm', 'Unidad de Imagen Magenta'),
+            'cyan_id':       ('UI',          'c', 'Unidad de Imagen Cyan'),
+            'yellow_id':     ('UI',          'y', 'Unidad de Imagen Amarillo'),
+            
+            # === CONSUMIBLES - DEVELOPERS ===
+            'developerk_id': ('DEVELOPER',   'k', 'Revelador Negro'),
+            'developerm_id': ('DEVELOPER',   'm', 'Revelador Magenta'),
+            'developerc_id': ('DEVELOPER',   'c', 'Revelador Cyan'),
+            'developery_id': ('DEVELOPER',   'y', 'Revelador Amarillo'),
         }
 
+        # MAPEO COMPLETO: valor selection -> code estado
         VAL_TO_ESTADO = {
+            # === ESTADOS GENERALES DE COMPONENTES ===
             'requiere_cambio': 'requiere_cambio',
             'cambio_de_repuestos': 'cambio_de_repuestos',
             'regular': 'regular',
@@ -71,6 +95,18 @@ class Reparaciones(models.Model):
             'revisado': 'revisado',
             'nuevo': 'nuevo',
             'no_aplica': 'no_aplica',
+            
+            # === ESTADOS DE FUNCIONES ===
+            'correcto': 'correcto',
+            'sin_probar': 'sin_probar',
+            'falla': 'falla',
+            
+            # === ESTADOS ESPECÍFICOS DE TÓNERS ===
+            'vacio': 'vacio',
+            'bajo': 'bajo',
+            'sin_botella': 'sin_botella',
+            
+            # === NORMALIZACIÓN PARA CAMPOS SÍ/NO ===
             'si': 'revisado',
             'no': 'sin_revisar',
         }
@@ -94,6 +130,7 @@ class Reparaciones(models.Model):
 
                     estado_code = VAL_TO_ESTADO.get(value)
                     if not estado_code:
+                        _logger.warning(f"Estado no reconocido '{value}' para campo {field_name}")
                         continue
 
                     tipo = Tipo.search([('code', '=', tipo_code)], limit=1)
