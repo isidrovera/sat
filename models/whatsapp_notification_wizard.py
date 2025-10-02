@@ -64,7 +64,7 @@ class WhatsappNotificationWizard(models.TransientModel):
         grupos = []
         
         try:
-            url = 'http://149.56.117.184:3005/api/groups'
+            url = 'http://51.222.13.19:3005/api/groups'
             response = requests.get(url, timeout=10)
             
             if response.status_code == 200:
