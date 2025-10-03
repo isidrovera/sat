@@ -157,7 +157,7 @@
                     <notebook>
                         <page string="Partes Solicitadas">
                             <field name="parte_ids">
-                                <tree decoration-success="estado == 'reemplazado'" 
+                                <list decoration-success="estado == 'reemplazado'" 
                                       decoration-warning="estado == 'retirado' and estado_reposicion == 'notificado'"
                                       decoration-info="estado == 'retirado' and estado_reposicion == 'pendiente'"
                                       decoration-muted="estado == 'pendiente'">
@@ -191,7 +191,7 @@
                                             invisible="estado != 'pendiente'" 
                                             class="btn-primary"
                                             title="Retirar parte del equipo"/>
-                                    
+
                                     <button name="action_reemplazar" 
                                             string="Reponer con Foto" 
                                             type="object" 
@@ -199,7 +199,7 @@
                                             invisible="estado != 'retirado'"
                                             class="btn-success"
                                             title="Confirmar reposición con foto"/>
-                                    
+
                                     <button name="action_registrar_condicion" 
                                             string="Ver Detalles" 
                                             type="object" 
@@ -211,7 +211,7 @@
                                     <field name="fecha_reemplazo" optional="hide"/>
                                     <field name="reemplazado_por" optional="hide"/>
                                     <field name="fecha_retiro_real" optional="hide"/>
-                                </tree>
+                                </list>
                                 
                                 <!-- Vista formulario de línea -->
                                 <form>
