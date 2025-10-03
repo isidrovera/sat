@@ -46,13 +46,17 @@ class SolicitudPartesLinea(models.Model):
     )
 
     def action_retirar(self):
-        """Confirmar retiro - ahora simple"""
+        """Confirmar retiro - directo sin wizard"""
         self.ensure_one()
         
         if not self.solicitud_id.autorizado_retirar_id:
             raise UserError(_('Primero debe autorizar el retiro en la solicitud'))
         
-        # Confirmar retiro directo
+        # Validar que solo el autorizado pueda retirar
+        if self.env.user != self.solicitud_id.autorizado_retirar_id:
+            raise UserError(_(f'Solo {self.solicitud_id.autorizado_retirar_id.name} puede confirmar este retiro'))
+        
+        # Confirmar retiro directo - el responsable ya está definido
         self.write({
             'estado': 'retirado',
             'fecha_retiro_real': fields.Datetime.now(),
@@ -60,10 +64,19 @@ class SolicitudPartesLinea(models.Model):
         })
         
         self.solicitud_id.message_post(
-            body=f"🔧 Parte retirada: {self.parte} por {self.env.user.name}"
+            body=f"🔧 Parte retirada: {self.parte} por {self.env.user.name}. Responsable de reposición: {self.solicitud_id.responsable_reposicion_id.name}"
         )
         
-        return True
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Retiro Confirmado',
+                'message': f'Parte "{self.parte}" retirada correctamente',
+                'type': 'success',
+                'sticky': False,
+            }
+        }
 
     def action_reemplazar(self):
         """Reponer con foto - wizard"""
@@ -152,21 +165,7 @@ class SolicitudPartesLinea(models.Model):
             else:
                 record.instalado_por_mobile_clean = ''
 
-    # MODIFICAR método action_retirar existente
-    def action_retirar(self):
-        """Confirmar retiro - ahora con wizard"""
-        self.ensure_one()
-        return {
-            'type': 'ir.actions.act_window',
-            'name': 'Confirmar Retiro',
-            'res_model': 'solicitud.partes.retiro.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {
-                'default_parte_linea_id': self.id,
-                'default_solicitud_id': self.solicitud_id.id
-            }
-        }
+   
     
     def _confirmar_retiro(self, instalado_por_id, yo_mismo=False):
         """Confirma el retiro interno"""

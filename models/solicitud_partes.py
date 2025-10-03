@@ -363,20 +363,27 @@ class SolicitudPartes(models.Model):
 
     Hola *{self.autorizado_retirar_id.name}*,
 
-    Estás autorizado para retirar:
-
     *Solicitud:* {self.name}
-    *Partes:*
+
+    *📍 RETIRAR DE:*
+    Marca: {self.maquina_origen_id.marca}
+    Máquina: {self.maquina_origen_id.name.name}
+    Serie: {self.maquina_origen_id.serie}
+    
+
+    *📦 Partes a retirar:*
     {partes}
 
-    *Responsable de reposición:* {self.responsable_reposicion_id.name}
+    *👤 Responsable de reposición:* {self.responsable_reposicion_id.name}
+
+    ⚠️ *ACCIÓN REQUERIDA:*
+    Ingresa al link y confirma el retiro de cada parte.
 
     👉 *CONFIRMAR RETIRO:*
-    {url}
-
-    Ingresa y confirma el retiro desde el botón."""
+    {url}"""
         
         self.send_whatsapp_message(self.autorizado_retirar_mobile_clean, msg)
+        _logger.info(f"WhatsApp de retiro enviado a {self.autorizado_retirar_id.name}")
     
     def _enviar_whatsapp_responsable_reposicion(self):
         """Notifica a responsable de reposición"""
@@ -393,19 +400,27 @@ class SolicitudPartes(models.Model):
 
     Hola *{self.responsable_reposicion_id.name}*,
 
-    Serás responsable de recibir e instalar:
-
     *Solicitud:* {self.name}
-    *Partes:*
+
+    *📍 EQUIPO A REPONER:*
+    Marca: {self.maquina_origen_id.marca}
+    Máquina: {self.maquina_origen_id.name.name}
+    Serie: {self.maquina_origen_id.serie}
+   
+
+    *📦 Partes a reponer:*
     {partes}
 
+    *👤 Quien retirará:* {self.autorizado_retirar_id.name}
+
     ⚠️ *IMPORTANTE:*
-    Después de instalar debes REPONER estas partes con foto.
+    Después de recibir e instalar las partes, debes REPONER con foto en este mismo equipo.
 
     👉 *VER SOLICITUD:*
     {url}"""
         
         self.send_whatsapp_message(self.responsable_reposicion_mobile_clean, msg)
+        _logger.info(f"WhatsApp de reposición enviado a {self.responsable_reposicion_id.name}")
         
     def _enviar_whatsapp_autorizacion_retiro(self):
         """Envía WhatsApp al autorizado"""
