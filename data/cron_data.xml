@@ -79,10 +79,8 @@ if config:
         <field name="state">code</field>
         <field name="code">model.action_check_reposiciones_pendientes()</field>
         <field name="interval_number">1</field>
-        <field name="interval_type">days</field>
-        <field name="numbercall">-1</field>
-        <field name="active" eval="True"/>
-        <field name="doall" eval="False"/>
+        <field name="interval_type">days</field>        
+        <field name="active" eval="True"/>        
         <field name="priority">10</field>
         <field name="user_id" ref="base.user_admin"/>
     </record>
