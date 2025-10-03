@@ -311,7 +311,7 @@ class SolicitudPartes(models.Model):
         
         self.send_whatsapp_message(JEFE_AREA_PHONE, msg)
         _logger.info(f"WhatsApp enviado al jefe de área para solicitud {self.name}")
-        def action_autorizar_retiro(self):
+    def action_autorizar_retiro(self):
         """Autorizar retiro - abre wizard para asignar responsables"""
         self.ensure_one()
         
