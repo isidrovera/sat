@@ -279,10 +279,11 @@ class SolicitudPartes(models.Model):
         """Notifica al jefe de área que debe autorizar el retiro"""
         self.ensure_one()
         
-        JEFE_AREA_PHONE = '51975399303'  # Número fijo del jefe
-        
+        JEFE_AREA_PHONE = '51975399303'
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        action_id = self.env.ref('sat.action_solicitud_partes_alquiler').id
+        
+        # Usar el XML ID correcto
+        action_id = self.env.ref('sat.action_solicitud_partes').id
         solicitud_url = f"{base_url}/web#id={self.id}&view_type=form&model=solicitud.partes&action={action_id}"
         
         partes_lista = "\n".join([
@@ -292,27 +293,25 @@ class SolicitudPartes(models.Model):
         
         msg = f"""🔧 *Solicitud de Partes Aprobada*
 
-*Solicitud:* {self.name}
-*Aprobada por:* {self.autorizado_por.name}
-*Solicitante:* {self.solicitante_id.name}
+    *Solicitud:* {self.name}
+    *Aprobada por:* {self.autorizado_por.name}
+    *Solicitante:* {self.solicitante_id.name}
 
-*Máquina Origen:* {self.maquina_origen_id.name.name} (Serie: {self.maquina_origen_id.serie})
-{'*Máquina Destino:* ' + self.maquina_destino_id.name.name if self.maquina_destino_id else ''}
+    *Máquina Origen:* {self.maquina_origen_id.name.name} (Serie: {self.maquina_origen_id.serie})
+    {'*Máquina Destino:* ' + self.maquina_destino_id.name.name if self.maquina_destino_id else ''}
 
-*Partes solicitadas:*
-{partes_lista}
+    *Partes solicitadas:*
+    {partes_lista}
 
-⚠️ *ACCIÓN REQUERIDA:*
-Debes autorizar el retiro y asignar responsables.
+    ⚠️ *ACCIÓN REQUERIDA:*
+    Debes autorizar el retiro y asignar responsables.
 
-👉 *ACCEDER A LA SOLICITUD:*
-{solicitud_url}"""
+    👉 *ACCEDER A LA SOLICITUD:*
+    {solicitud_url}"""
         
         self.send_whatsapp_message(JEFE_AREA_PHONE, msg)
-        _logger.info(f"WhatsApp enviado al jefe de área (975399303) para solicitud {self.name}")
-
-
-    def action_autorizar_retiro(self):
+        _logger.info(f"WhatsApp enviado al jefe de área para solicitud {self.name}")
+        def action_autorizar_retiro(self):
         """Autorizar retiro - abre wizard para asignar responsables"""
         self.ensure_one()
         
@@ -355,27 +354,27 @@ Debes autorizar el retiro y asignar responsables.
             return
         
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        action_id = self.env.ref('sat.action_solicitud_partes_alquiler').id
+        action_id = self.env.ref('sat.action_solicitud_partes').id
         url = f"{base_url}/web#id={self.id}&view_type=form&model=solicitud.partes&action={action_id}"
         
         partes = "\n".join([f"  • {l.parte}" for l in self.parte_ids])
         
         msg = f"""🔧 *Autorizado para Retirar Partes*
 
-Hola *{self.autorizado_retirar_id.name}*,
+    Hola *{self.autorizado_retirar_id.name}*,
 
-Estás autorizado para retirar:
+    Estás autorizado para retirar:
 
-*Solicitud:* {self.name}
-*Partes:*
-{partes}
+    *Solicitud:* {self.name}
+    *Partes:*
+    {partes}
 
-*Responsable de reposición:* {self.responsable_reposicion_id.name}
+    *Responsable de reposición:* {self.responsable_reposicion_id.name}
 
-👉 *CONFIRMAR RETIRO:*
-{url}
+    👉 *CONFIRMAR RETIRO:*
+    {url}
 
-Ingresa y confirma el retiro desde el botón."""
+    Ingresa y confirma el retiro desde el botón."""
         
         self.send_whatsapp_message(self.autorizado_retirar_mobile_clean, msg)
     
@@ -385,29 +384,29 @@ Ingresa y confirma el retiro desde el botón."""
             return
         
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        action_id = self.env.ref('sat.action_solicitud_partes_alquiler').id
+        action_id = self.env.ref('sat.action_solicitud_partes').id
         url = f"{base_url}/web#id={self.id}&view_type=form&model=solicitud.partes&action={action_id}"
         
         partes = "\n".join([f"  • {l.parte}" for l in self.parte_ids])
         
         msg = f"""🔧 *Responsable de Reposición*
 
-Hola *{self.responsable_reposicion_id.name}*,
+    Hola *{self.responsable_reposicion_id.name}*,
 
-Serás responsable de recibir e instalar:
+    Serás responsable de recibir e instalar:
 
-*Solicitud:* {self.name}
-*Partes:*
-{partes}
+    *Solicitud:* {self.name}
+    *Partes:*
+    {partes}
 
-⚠️ *IMPORTANTE:*
-Después de instalar debes REPONER estas partes con foto.
+    ⚠️ *IMPORTANTE:*
+    Después de instalar debes REPONER estas partes con foto.
 
-👉 *VER SOLICITUD:*
-{url}"""
+    👉 *VER SOLICITUD:*
+    {url}"""
         
         self.send_whatsapp_message(self.responsable_reposicion_mobile_clean, msg)
-    
+        
     def _enviar_whatsapp_autorizacion_retiro(self):
         """Envía WhatsApp al autorizado"""
         self.ensure_one()
