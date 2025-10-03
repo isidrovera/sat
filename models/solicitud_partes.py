@@ -243,27 +243,154 @@ class SolicitudPartes(models.Model):
         return self._aprobar_y_notificar()
     
     def _aprobar_y_notificar(self):
-        """Aprueba y notifica al autorizado"""
+        """Aprobar y notificar al jefe de área"""
         self.ensure_one()
-        
-        if not self.autorizado_retirar_id:
-            raise UserError(_('Debe seleccionar un autorizado para retirar'))
         
         self.write({
             'state': 'approved',
             'autorizado_por': self.env.user.id,
-            'fecha_autorizacion': fields.Datetime.now(),
-            'fecha_notificacion_retiro': fields.Datetime.now()
+            'fecha_autorizacion': fields.Datetime.now()
         })
         
-        self._enviar_whatsapp_autorizacion_retiro()
+        # Notificar al jefe de área (número fijo)
+        self._enviar_whatsapp_jefe_area()
         
         self.message_post(
-            body=f"✅ Solicitud aprobada. {self.autorizado_retirar_id.name} autorizado para retirar.",
-            partner_ids=[self.autorizado_retirar_id.partner_id.id]
+            body=f"✅ Solicitud aprobada por {self.env.user.name}. Notificación enviada a jefe de área."
         )
+    
+    def _enviar_whatsapp_jefe_area(self):
+        """Notifica al jefe de área que debe autorizar el retiro"""
+        self.ensure_one()
         
-        return True
+        JEFE_AREA_PHONE = '51975399303'  # Número fijo del jefe
+        
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        action_id = self.env.ref('sat.action_solicitud_partes_alquiler').id
+        solicitud_url = f"{base_url}/web#id={self.id}&view_type=form&model=solicitud.partes&action={action_id}"
+        
+        partes_lista = "\n".join([
+            f"  • {line.parte}" + (f" - {line.descripcion}" if line.descripcion else "")
+            for line in self.parte_ids
+        ])
+        
+        msg = f"""🔧 *Solicitud de Partes Aprobada*
+
+*Solicitud:* {self.name}
+*Aprobada por:* {self.autorizado_por.name}
+*Solicitante:* {self.solicitante_id.name}
+
+*Máquina Origen:* {self.maquina_origen_id.name.name} (Serie: {self.maquina_origen_id.serie})
+{'*Máquina Destino:* ' + self.maquina_destino_id.name.name if self.maquina_destino_id else ''}
+
+*Partes solicitadas:*
+{partes_lista}
+
+⚠️ *ACCIÓN REQUERIDA:*
+Debes autorizar el retiro y asignar responsables.
+
+👉 *ACCEDER A LA SOLICITUD:*
+{solicitud_url}"""
+        
+        self.send_whatsapp_message(JEFE_AREA_PHONE, msg)
+        _logger.info(f"WhatsApp enviado al jefe de área (975399303) para solicitud {self.name}")
+
+
+    def action_autorizar_retiro(self):
+        """Autorizar retiro - abre wizard para asignar responsables"""
+        self.ensure_one()
+        
+        if self.state != 'approved':
+            raise UserError(_('Solo se puede autorizar en estado Aprobado'))
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Autorizar Retiro y Asignar Responsables',
+            'res_model': 'solicitud.partes.autorizar.retiro.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_solicitud_id': self.id}
+        }
+    
+    def _autorizar_retiro_confirmar(self, autorizado_retirar_id, responsable_reposicion_id):
+        """Confirma la autorización con responsables asignados"""
+        self.ensure_one()
+        
+        self.write({
+            'autorizado_retirar_id': autorizado_retirar_id,
+            'responsable_reposicion_id': responsable_reposicion_id
+        })
+        
+        # Notificar a quien retira
+        self._enviar_whatsapp_autorizado_retiro()
+        
+        # Notificar a quien repone
+        self._enviar_whatsapp_responsable_reposicion()
+        
+        self.message_post(
+            body=f"✅ Retiro autorizado:\n"
+                 f"- Autorizado para retirar: {self.autorizado_retirar_id.name}\n"
+                 f"- Responsable de reposición: {self.responsable_reposicion_id.name}"
+        )
+
+    def _enviar_whatsapp_autorizado_retiro(self):
+        """Notifica a quien retira"""
+        if not self.autorizado_retirar_mobile_clean:
+            return
+        
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        action_id = self.env.ref('sat.action_solicitud_partes_alquiler').id
+        url = f"{base_url}/web#id={self.id}&view_type=form&model=solicitud.partes&action={action_id}"
+        
+        partes = "\n".join([f"  • {l.parte}" for l in self.parte_ids])
+        
+        msg = f"""🔧 *Autorizado para Retirar Partes*
+
+Hola *{self.autorizado_retirar_id.name}*,
+
+Estás autorizado para retirar:
+
+*Solicitud:* {self.name}
+*Partes:*
+{partes}
+
+*Responsable de reposición:* {self.responsable_reposicion_id.name}
+
+👉 *CONFIRMAR RETIRO:*
+{url}
+
+Ingresa y confirma el retiro desde el botón."""
+        
+        self.send_whatsapp_message(self.autorizado_retirar_mobile_clean, msg)
+    
+    def _enviar_whatsapp_responsable_reposicion(self):
+        """Notifica a responsable de reposición"""
+        if not self.responsable_reposicion_mobile_clean:
+            return
+        
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        action_id = self.env.ref('sat.action_solicitud_partes_alquiler').id
+        url = f"{base_url}/web#id={self.id}&view_type=form&model=solicitud.partes&action={action_id}"
+        
+        partes = "\n".join([f"  • {l.parte}" for l in self.parte_ids])
+        
+        msg = f"""🔧 *Responsable de Reposición*
+
+Hola *{self.responsable_reposicion_id.name}*,
+
+Serás responsable de recibir e instalar:
+
+*Solicitud:* {self.name}
+*Partes:*
+{partes}
+
+⚠️ *IMPORTANTE:*
+Después de instalar debes REPONER estas partes con foto.
+
+👉 *VER SOLICITUD:*
+{url}"""
+        
+        self.send_whatsapp_message(self.responsable_reposicion_mobile_clean, msg)
     
     def _enviar_whatsapp_autorizacion_retiro(self):
         """Envía WhatsApp al autorizado"""
@@ -334,3 +461,29 @@ Confirma el retiro desde el sistema."""
                     linea._enviar_recordatorio_reposicion()
         
         return True
+
+
+    responsable_reposicion_id = fields.Many2one(
+        'res.users',
+        string='Responsable de Reposición',
+        tracking=True,
+        help="Usuario que recibirá e instalará la parte (responsable de reponer)"
+    )
+    responsable_reposicion_mobile_clean = fields.Char(
+        string='Teléfono Responsable Reposición',
+        compute='_compute_responsable_reposicion_mobile',
+        store=True
+    )
+
+    @api.depends('responsable_reposicion_id.mobile_phone')
+    def _compute_responsable_reposicion_mobile(self):
+        """Limpia teléfono del responsable de reposición"""
+        for record in self:
+            if record.responsable_reposicion_id and record.responsable_reposicion_id.mobile_phone:
+                phone = record.responsable_reposicion_id.mobile_phone.replace('+', '')
+                phone = ''.join(phone.split())
+                if not phone.startswith('51'):
+                    phone = '51' + phone
+                record.responsable_reposicion_mobile_clean = phone
+            else:
+                record.responsable_reposicion_mobile_clean = ''

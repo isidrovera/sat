@@ -167,14 +167,30 @@ class CopierPartsController(http.Controller):
 
 class PartesController(http.Controller):
     @http.route('/partes/approve/alquiler/<string:token>', type='http', auth='public', website=True)
-    def approve_parts(self, token):
-        result = request.env['solicitud.partes'].sudo().approve_from_token(token)
-        if result.get('success'):
-            return request.render('sat.partes_approved_template_alquiler', {
-                'message': 'La solicitud de partes ha sido aprobada exitosamente.'
+def approve_parts(self, token):
+    """Aprobar desde email - solo aprueba, no asigna responsables"""
+    try:
+        solicitud = request.env['solicitud.partes'].sudo().search([
+            ('access_token', '=', token),
+            ('state', '=', 'submitted')
+        ], limit=1)
+        
+        if not solicitud:
+            return request.render('sat.partes_error_template_alquiler', {
+                'error_message': 'Solicitud no encontrada o ya fue procesada'
             })
+        
+        # Aprobar directamente (sin wizard)
+        solicitud._aprobar_y_notificar()
+        
+        return request.render('sat.partes_approved_template_alquiler', {
+            'message': f'Solicitud {solicitud.name} aprobada. Se ha notificado al jefe de área.'
+        })
+        
+    except Exception as e:
+        _logger.error(f"Error en approve_parts: {str(e)}")
         return request.render('sat.partes_error_template_alquiler', {
-            'error_message': result.get('error', 'Enlace inválido o expirado')
+            'error_message': f'Error: {str(e)}'
         })
 
     def _get_page_view_values(self, solicitud, access_token=None, **kwargs):

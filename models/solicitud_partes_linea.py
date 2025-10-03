@@ -46,14 +46,40 @@ class SolicitudPartesLinea(models.Model):
     )
 
     def action_retirar(self):
-        self.write({'estado': 'retirado'})
+        """Confirmar retiro - ahora simple"""
+        self.ensure_one()
+        
+        if not self.solicitud_id.autorizado_retirar_id:
+            raise UserError(_('Primero debe autorizar el retiro en la solicitud'))
+        
+        # Confirmar retiro directo
+        self.write({
+            'estado': 'retirado',
+            'fecha_retiro_real': fields.Datetime.now(),
+            'instalado_por': self.solicitud_id.responsable_reposicion_id.id
+        })
+        
+        self.solicitud_id.message_post(
+            body=f"🔧 Parte retirada: {self.parte} por {self.env.user.name}"
+        )
+        
+        return True
 
     def action_reemplazar(self):
-        self.write({
-            'estado': 'reemplazado',
-            'fecha_reemplazo': fields.Datetime.now(),
-            'reemplazado_por': self.env.user.id
-        })
+        """Reponer con foto - wizard"""
+        self.ensure_one()
+        
+        if self.env.user != self.instalado_por:
+            raise UserError(_(f'Solo {self.instalado_por.name} puede reponer esta parte'))
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Confirmar Reposición',
+            'res_model': 'solicitud.partes.reposicion.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_parte_linea_id': self.id}
+        }
 
     def action_registrar_condicion(self):
         return {

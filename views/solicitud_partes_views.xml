@@ -6,290 +6,285 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_submit" 
-                            string="Enviar Solicitud" 
-                            type="object" 
-                            class="oe_highlight" 
-                            invisible="state != 'draft'"/>
+        <button name="action_submit" 
+                string="Enviar Solicitud" 
+                type="object" 
+                class="oe_highlight" 
+                invisible="state != 'draft'"/>
+        
+        <button name="action_approve" 
+                string="Aprobar (Gerencia)" 
+                type="object" 
+                class="oe_highlight" 
+                invisible="state != 'submitted'"/>
+        
+        <button name="action_autorizar_retiro"
+                string="Autorizar Retiro"
+                type="object"
+                class="oe_highlight"
+                invisible="state != 'approved'"/>
+        
+        <button name="action_complete" 
+                string="Marcar como Completado" 
+                type="object" 
+                class="oe_highlight" 
+                invisible="state not in ['approved'] or not todas_retiradas"/>
+        
+        <button name="action_replace" 
+                string="Finalizar (Todas Repuestas)" 
+                type="object" 
+                class="oe_highlight" 
+                invisible="state != 'completed' or not todas_repuestas"/>
+        
+        <button name="action_reject" 
+                string="Rechazar" 
+                type="object" 
+                invisible="state in ['rejected', 'replaced']"/>
+        
+        <field name="state" widget="statusbar" options="{'clickable': '1'}"/>
+    </header>
+    
+    <sheet>
+        <!-- Botones de estadísticas -->
+        <div class="oe_button_box" name="button_box">
+            <button name="dummy_todas_retiradas"
+                    class="oe_stat_button" 
+                    icon="fa-check-circle-o" 
+                    invisible="not todas_retiradas">
+                <div class="o_field_widget o_stat_info">
+                    <span class="o_stat_text text-success">Todas</span>
+                    <span class="o_stat_text text-success">Retiradas</span>
+                </div>
+            </button>
+            
+            <button name="dummy_pendientes_reposicion"
+                    class="oe_stat_button" 
+                    icon="fa-exclamation-triangle" 
+                    invisible="not pendientes_reposicion">
+                <div class="o_field_widget o_stat_info">
+                    <span class="o_stat_text text-warning">Pendientes</span>
+                    <span class="o_stat_text text-warning">Reposición</span>
+                </div>
+            </button>
+            
+            <button name="dummy_todas_repuestas"
+                    class="oe_stat_button" 
+                    icon="fa-check-square-o" 
+                    invisible="not todas_repuestas">
+                <div class="o_field_widget o_stat_info">
+                    <span class="o_stat_text text-success">Todas</span>
+                    <span class="o_stat_text text-success">Repuestas</span>
+                </div>
+            </button>
+        </div>
+        
+        <!-- Alert de aprobación -->
+        <div class="alert alert-success" 
+             role="alert" 
+             invisible="state not in ['approved', 'completed', 'replaced']">
+            <strong>Aprobada por:</strong>
+            <field name="autorizado_por" readonly="1" class="oe_inline"/>
+            <span invisible="not fecha_autorizacion">
+                el <field name="fecha_autorizacion" readonly="1" widget="datetime"/>
+            </span>
+        </div>
+        
+        <!-- Alert de autorización de retiro -->
+        <div class="alert alert-info" 
+             role="alert" 
+             invisible="not autorizado_retirar_id or not responsable_reposicion_id">
+            <strong>Retiro Autorizado:</strong><br/>
+            <strong>Retira:</strong> <field name="autorizado_retirar_id" readonly="1" class="oe_inline"/><br/>
+            <strong>Repone:</strong> <field name="responsable_reposicion_id" readonly="1" class="oe_inline"/>
+        </div>
+        
+        <!-- Alert de pendientes -->
+        <div class="alert alert-warning" 
+             role="alert" 
+             invisible="not pendientes_reposicion">
+            <strong>Atención:</strong> 
+            Hay partes retiradas pendientes de reposición.
+        </div>
+        
+        <div class="oe_title">
+            <h1>
+                <field name="name" readonly="1"/>
+            </h1>
+        </div>
+        
+        <group>
+            <group string="Información de Máquinas">
+                <field name="maquina_origen_id" options="{'no_create': True}"/>
+                <field name="maquina_destino_id" options="{'no_create': True}"/>
+            </group>
+            
+            <group string="Información de Solicitud">
+                <field name="fecha_solicitud"/>
+                <field name="solicitante_id" options="{'no_open': True}"/>
+            </group>
+        </group>
+        
+        <group>
+            <group string="Aprobación">
+                <field name="autorizado_por" 
+                       readonly="1"
+                       invisible="not autorizado_por"/>
+                <field name="fecha_autorizacion" 
+                       readonly="1"
+                       invisible="not fecha_autorizacion"/>
+            </group>
+            
+            <group string="Autorización de Retiro">
+                <field name="autorizado_retirar_id"
+                       readonly="1"
+                       invisible="not autorizado_retirar_id"/>
+                <field name="responsable_reposicion_id"
+                       readonly="1"
+                       invisible="not responsable_reposicion_id"/>
+            </group>
+        </group>
+        
+        <group invisible="1">
+            <field name="todas_retiradas"/>
+            <field name="todas_repuestas"/>
+            <field name="pendientes_reposicion"/>
+            <field name="autorizado_retirar_mobile_clean"/>
+            <field name="responsable_reposicion_mobile_clean"/>
+            <field name="retirado_por"/>
+            <field name="fecha_retiro"/>
+            <field name="reemplazado_por"/>
+            <field name="fecha_reemplazo"/>
+        </group>
+        
+        <notebook>
+            <page string="Partes Solicitadas">
+                <field name="parte_ids">
+                    <list decoration-success="estado == 'reemplazado'" 
+                          decoration-warning="estado == 'retirado'"
+                          decoration-muted="estado == 'pendiente'">
+                        
+                        <field name="parte" string="Parte/Componente"/>
+                        <field name="descripcion"/>
+                        
+                        <field name="estado" 
+                               widget="badge" 
+                               decoration-success="estado == 'reemplazado'"
+                               decoration-warning="estado == 'retirado'"
+                               decoration-muted="estado == 'pendiente'"/>
+                        
+                        <field name="instalado_por" 
+                               optional="show"
+                               string="Responsable"/>
+                        
+                        <field name="estado_reposicion" 
+                               optional="show"
+                               invisible="estado != 'retirado'"
+                               widget="badge"
+                               decoration-warning="estado_reposicion == 'notificado'"
+                               decoration-muted="estado_reposicion == 'pendiente'"
+                               decoration-success="estado_reposicion == 'repuesta'"/>
+                        
+                        <button name="action_retirar" 
+                                string="Confirmar Retiro" 
+                                type="object" 
+                                icon="fa-arrow-right" 
+                                invisible="estado != 'pendiente'" 
+                                class="btn-primary"
+                                title="Confirmar que retiraste esta parte"/>
+
+                        <button name="action_reemplazar" 
+                                string="Reponer con Foto" 
+                                type="object" 
+                                icon="fa-camera" 
+                                invisible="estado != 'retirado'"
+                                class="btn-success"
+                                title="Confirmar reposición con foto"/>
+
+                        <button name="action_registrar_condicion" 
+                                string="Ver Detalles" 
+                                type="object" 
+                                icon="fa-info-circle" 
+                                invisible="estado != 'reemplazado'"
+                                title="Ver detalles de la reposición"/>
+                        
+                        <field name="condicion" optional="hide"/>
+                        <field name="fecha_reemplazo" optional="hide"/>
+                        <field name="reemplazado_por" optional="hide"/>
+                        <field name="fecha_retiro_real" optional="hide"/>
+                    </list>
                     
-                    <button name="action_approve" 
-                            string="Aprobar y Autorizar Retiro" 
-                            type="object" 
-                            class="oe_highlight" 
-                            invisible="state != 'submitted'"/>
-                    
-                    <button name="action_complete" 
-                            string="Marcar como Completado" 
-                            type="object" 
-                            class="oe_highlight" 
-                            invisible="state != 'approved' or not todas_retiradas"/>
-                    
-                    <button name="action_replace" 
-                            string="Finalizar (Todas Repuestas)" 
-                            type="object" 
-                            class="oe_highlight" 
-                            invisible="state != 'completed' or not todas_repuestas"/>
-                    
-                    <button name="action_reject" 
-                            string="Rechazar" 
-                            type="object" 
-                            invisible="state in ['rejected', 'replaced']"/>
-                    
-                    <field name="state" widget="statusbar" options="{'clickable': '1'}"/>
-                </header>
-                
-                <sheet>
-                    <!-- Botones de estadísticas -->
-                    <div class="oe_button_box" name="button_box">
-                        <button name="dummy_todas_retiradas"
-                                class="oe_stat_button" 
-                                icon="fa-check-circle-o" 
-                                invisible="not todas_retiradas">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text text-success">Todas</span>
-                                <span class="o_stat_text text-success">Retiradas</span>
+                    <form>
+                        <sheet>
+                            <div class="oe_button_box" name="button_box">
+                                <button name="dummy_foto_adjuntada"
+                                        class="oe_stat_button" 
+                                        icon="fa-camera"
+                                        invisible="not foto_reposicion">
+                                    <div class="o_field_widget o_stat_info">
+                                        <span class="o_stat_text">Foto</span>
+                                        <span class="o_stat_text">Adjuntada</span>
+                                    </div>
+                                </button>
                             </div>
-                        </button>
-                        
-                        <button name="dummy_pendientes_reposicion"
-                                class="oe_stat_button" 
-                                icon="fa-exclamation-triangle" 
-                                invisible="not pendientes_reposicion">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text text-warning">Pendientes</span>
-                                <span class="o_stat_text text-warning">Reposición</span>
-                            </div>
-                        </button>
-                        
-                        <button name="dummy_todas_repuestas"
-                                class="oe_stat_button" 
-                                icon="fa-check-square-o" 
-                                invisible="not todas_repuestas">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text text-success">Todas</span>
-                                <span class="o_stat_text text-success">Repuestas</span>
-                            </div>
-                        </button>
-                    </div>
-                    
-                    <!-- Alert de autorización -->
-                    <div class="alert alert-success" 
-                         role="alert" 
-                         invisible="state not in ['approved', 'completed', 'replaced'] or not autorizado_retirar_id">
-                        <strong>Autorizado para retiro:</strong>
-                        <field name="autorizado_retirar_id" 
-                               readonly="1" 
-                               class="oe_inline" 
-                               options="{'no_open': True}"/>
-                        <span invisible="not fecha_notificacion_retiro">
-                            - Notificado el 
-                            <field name="fecha_notificacion_retiro" 
-                                   readonly="1" 
-                                   widget="datetime"/>
-                        </span>
-                    </div>
-                    
-                    <!-- Alert de pendientes -->
-                    <div class="alert alert-warning" 
-                         role="alert" 
-                         invisible="not pendientes_reposicion">
-                        <strong>Atención:</strong> 
-                        Hay partes retiradas pendientes de reposición. 
-                        Se han enviado recordatorios automáticos.
-                    </div>
-                    
-                    <div class="oe_title">
-                        <h1>
-                            <field name="name" readonly="1"/>
-                        </h1>
-                    </div>
-                    
-                    <group>
-                        <group string="Información de Máquinas">
-                            <field name="maquina_origen_id" 
-                                   options="{'no_create': True}"/>
-                            <field name="maquina_destino_id" 
-                                   options="{'no_create': True}"/>
-                        </group>
-                        
-                        <group string="Información de Solicitud">
-                            <field name="fecha_solicitud"/>
-                            <field name="solicitante_id" 
-                                   options="{'no_open': True}"/>
-                            <field name="autorizado_retirar_id" 
-                                   invisible="state == 'draft'"
-                                   readonly="state != 'submitted'"
-                                   options="{'no_create': True}"/>
-                        </group>
-                    </group>
-                    
-                    <group>
-                        <group string="Aprobación">
-                            <field name="autorizado_por" 
-                                   readonly="1"
-                                   invisible="not autorizado_por"/>
-                            <field name="fecha_autorizacion" 
-                                   readonly="1"
-                                   invisible="not fecha_autorizacion"/>
-                        </group>
-                        
-                        <group string="Control de Flujo">
-                            <field name="retirado_por" 
-                                   readonly="1"
-                                   invisible="not retirado_por"/>
-                            <field name="fecha_retiro" 
-                                   readonly="1"
-                                   invisible="not fecha_retiro"/>
-                            <field name="reemplazado_por" 
-                                   readonly="1"
-                                   invisible="not reemplazado_por"/>
-                            <field name="fecha_reemplazo" 
-                                   readonly="1"
-                                   invisible="not fecha_reemplazo"/>
-                        </group>
-                    </group>
-                    
-                    <!-- Campos computed ocultos -->
-                    <group invisible="1">
-                        <field name="todas_retiradas"/>
-                        <field name="todas_repuestas"/>
-                        <field name="pendientes_reposicion"/>
-                        <field name="autorizado_retirar_mobile_clean"/>
-                    </group>
-                    
-                    <notebook>
-                        <page string="Partes Solicitadas">
-                            <field name="parte_ids">
-                                <list decoration-success="estado == 'reemplazado'" 
-                                      decoration-warning="estado == 'retirado' and estado_reposicion == 'notificado'"
-                                      decoration-info="estado == 'retirado' and estado_reposicion == 'pendiente'"
-                                      decoration-muted="estado == 'pendiente'">
-                                    
-                                    <field name="parte" string="Parte/Componente"/>
+                            
+                            <group>
+                                <group string="Información de la Parte">
+                                    <field name="parte"/>
                                     <field name="descripcion"/>
-                                    
-                                    <field name="estado" 
-                                           widget="badge" 
-                                           decoration-success="estado == 'reemplazado'"
-                                           decoration-warning="estado == 'retirado'"
-                                           decoration-muted="estado == 'pendiente'"/>
-                                    
-                                    <field name="instalado_por" 
-                                           optional="show"
-                                           string="Instalado por"/>
-                                    
-                                    <field name="estado_reposicion" 
-                                           optional="show"
-                                           invisible="estado != 'retirado'"
-                                           widget="badge"
-                                           decoration-warning="estado_reposicion == 'notificado'"
-                                           decoration-muted="estado_reposicion == 'pendiente'"
-                                           decoration-success="estado_reposicion == 'repuesta'"/>
-                                    
-                                    <!-- Botones de acción -->
-                                    <button name="action_retirar" 
-                                            string="Confirmar Retiro" 
-                                            type="object" 
-                                            icon="fa-arrow-right" 
-                                            invisible="estado != 'pendiente'" 
-                                            class="btn-primary"
-                                            title="Retirar parte del equipo"/>
-
-                                    <button name="action_reemplazar" 
-                                            string="Reponer con Foto" 
-                                            type="object" 
-                                            icon="fa-camera" 
-                                            invisible="estado != 'retirado'"
-                                            class="btn-success"
-                                            title="Confirmar reposición con foto"/>
-
-                                    <button name="action_registrar_condicion" 
-                                            string="Ver Detalles" 
-                                            type="object" 
-                                            icon="fa-info-circle" 
-                                            invisible="estado != 'reemplazado'"
-                                            title="Ver detalles de la reposición"/>
-                                    
-                                    <field name="condicion" optional="hide"/>
-                                    <field name="fecha_reemplazo" optional="hide"/>
-                                    <field name="reemplazado_por" optional="hide"/>
-                                    <field name="fecha_retiro_real" optional="hide"/>
-                                </list>
+                                    <field name="estado" widget="badge"/>
+                                </group>
                                 
-                                <!-- Vista formulario de línea -->
-                                <form>
-                                    <sheet>
-                                        <div class="oe_button_box" name="button_box">
-                                            <button name="dummy_foto_adjuntada"
-                                                    class="oe_stat_button" 
-                                                    icon="fa-camera"
-                                                    invisible="not foto_reposicion">
-                                                <div class="o_field_widget o_stat_info">
-                                                    <span class="o_stat_text">Foto</span>
-                                                    <span class="o_stat_text">Adjuntada</span>
-                                                </div>
-                                            </button>
-                                        </div>
-                                        
-                                        <group>
-                                            <group string="Información de la Parte">
-                                                <field name="parte"/>
-                                                <field name="descripcion"/>
-                                                <field name="estado" widget="badge"/>
-                                            </group>
-                                            
-                                            <group string="Control de Instalación">
-                                                <field name="instalado_por" 
-                                                       readonly="1"
-                                                       invisible="not instalado_por"/>
-                                                <field name="fecha_instalacion" 
-                                                       readonly="1"
-                                                       invisible="not fecha_instalacion"/>
-                                                <field name="fecha_retiro_real" 
-                                                       readonly="1"
-                                                       invisible="not fecha_retiro_real"/>
-                                                <field name="estado_reposicion" 
-                                                       widget="badge"
-                                                       invisible="estado != 'retirado'"/>
-                                            </group>
-                                        </group>
-                                        
-                                        <group string="Reposición" 
-                                               invisible="estado != 'reemplazado'">
-                                            <group>
-                                                <field name="condicion" readonly="1"/>
-                                                <field name="fecha_reemplazo" readonly="1"/>
-                                                <field name="reemplazado_por" readonly="1"/>
-                                            </group>
-                                            <group>
-                                                <field name="foto_reposicion" 
-                                                       widget="image" 
-                                                       class="oe_avatar"
-                                                       readonly="1"
-                                                       options="{'size': [400, 400]}"/>
-                                            </group>
-                                        </group>
-                                        
-                                        <group string="Observaciones" 
-                                               invisible="not observaciones_instalacion">
-                                            <field name="observaciones_instalacion" 
-                                                   nolabel="1" 
-                                                   readonly="1"/>
-                                        </group>
-                                        
-                                        <!-- Campos ocultos -->
-                                        <group invisible="1">
-                                            <field name="solicitud_id"/>
-                                            <field name="maquina_origen_id"/>
-                                            <field name="instalado_por_mobile_clean"/>
-                                            <field name="foto_reposicion_filename"/>
-                                        </group>
-                                    </sheet>
-                                </form>
-                            </field>
-                        </page>
-                    </notebook>
-                </sheet>
+                                <group string="Control">
+                                    <field name="instalado_por" 
+                                           readonly="1"
+                                           invisible="not instalado_por"/>
+                                    <field name="fecha_instalacion" 
+                                           readonly="1"
+                                           invisible="not fecha_instalacion"/>
+                                    <field name="fecha_retiro_real" 
+                                           readonly="1"
+                                           invisible="not fecha_retiro_real"/>
+                                    <field name="estado_reposicion" 
+                                           widget="badge"
+                                           invisible="estado != 'retirado'"/>
+                                </group>
+                            </group>
+                            
+                            <group string="Reposición" 
+                                   invisible="estado != 'reemplazado'">
+                                <group>
+                                    <field name="condicion" readonly="1"/>
+                                    <field name="fecha_reemplazo" readonly="1"/>
+                                    <field name="reemplazado_por" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="foto_reposicion" 
+                                           widget="image" 
+                                           class="oe_avatar"
+                                           readonly="1"
+                                           options="{'size': [400, 400]}"/>
+                                </group>
+                            </group>
+                            
+                            <group string="Observaciones" 
+                                   invisible="not observaciones_instalacion">
+                                <field name="observaciones_instalacion" 
+                                       nolabel="1" 
+                                       readonly="1"/>
+                            </group>
+                            
+                            <group invisible="1">
+                                <field name="solicitud_id"/>
+                                <field name="maquina_origen_id"/>
+                                <field name="instalado_por_mobile_clean"/>
+                                <field name="foto_reposicion_filename"/>
+                            </group>
+                        </sheet>
+                    </form>
+                </field>
+            </page>
+        </notebook>
+    </sheet>
                 
                 <chatter/>
             </form>

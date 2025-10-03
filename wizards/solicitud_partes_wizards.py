@@ -274,3 +274,35 @@ class SolicitudPartesReposicionWizard(models.TransientModel):
         )
         
         return {'type': 'ir.actions.act_window_close'}
+
+
+class SolicitudPartesAutorizarRetiroWizard(models.TransientModel):
+    """Wizard para autorizar retiro y asignar responsables"""
+    _name = 'solicitud.partes.autorizar.retiro.wizard'
+    _description = 'Wizard Autorizar Retiro'
+    
+    solicitud_id = fields.Many2one('solicitud.partes', required=True, readonly=True)
+    
+    autorizado_retirar_id = fields.Many2one(
+        'res.users',
+        string='Quien Retirará',
+        required=True,
+        domain="[('share', '=', False)]"
+    )
+    
+    responsable_reposicion_id = fields.Many2one(
+        'res.users',
+        string='Quien Recibirá/Repondrá',
+        required=True,
+        domain="[('share', '=', False)]"
+    )
+    
+    def action_autorizar(self):
+        self.ensure_one()
+        
+        self.solicitud_id._autorizar_retiro_confirmar(
+            self.autorizado_retirar_id.id,
+            self.responsable_reposicion_id.id
+        )
+        
+        return {'type': 'ir.actions.act_window_close'}

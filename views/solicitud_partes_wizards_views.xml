@@ -181,4 +181,47 @@
         </field>
     </record>
 
+    <record id="view_solicitud_partes_autorizar_retiro_wizard_form" model="ir.ui.view">
+    <field name="name">solicitud.partes.autorizar.retiro.wizard.form</field>
+    <field name="model">solicitud.partes.autorizar.retiro.wizard</field>
+    <field name="arch" type="xml">
+        <form string="Autorizar Retiro">
+            <group>
+                <group string="Información de la Solicitud">
+                    <field name="solicitud_id" readonly="1"/>
+                </group>
+                
+                <group string="Asignación de Responsables">
+                    <field name="autorizado_retirar_id" 
+                           options="{'no_create': True, 'no_open': True}"
+                           placeholder="Seleccione quien retirará..."/>
+                    
+                    <field name="responsable_reposicion_id"
+                           options="{'no_create': True, 'no_open': True}"
+                           placeholder="Seleccione quien repondrá..."/>
+                </group>
+            </group>
+            
+            <div class="alert alert-info" role="alert">
+                <strong>Información:</strong>
+                <ul class="mb-0 mt-2">
+                    <li><strong>Quien retirará:</strong> Sacará las partes del equipo origen</li>
+                    <li><strong>Quien repondrá:</strong> Recibirá, instalará y será responsable de reponer las partes con foto</li>
+                    <li>Ambos recibirán notificación por WhatsApp</li>
+                </ul>
+            </div>
+            
+            <footer>
+                <button string="Autorizar y Notificar" 
+                        name="action_autorizar" 
+                        type="object" 
+                        class="btn-primary"/>
+                <button string="Cancelar" 
+                        class="btn-secondary" 
+                        special="cancel"/>
+            </footer>
+        </form>
+    </field>
+</record>
+
 </odoo>
