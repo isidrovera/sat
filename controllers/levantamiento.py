@@ -166,6 +166,7 @@ class CopierPartsController(http.Controller):
 
 
 class PartesController(http.Controller):
+    
     @http.route('/partes/approve/alquiler/<string:token>', type='http', auth='public', website=True)
     def approve_parts(self, token):
         """Aprobar desde email - solo aprueba, no asigna responsables"""
@@ -176,28 +177,29 @@ class PartesController(http.Controller):
             ], limit=1)
             
             if not solicitud:
+                # Verificar si ya fue aprobada
+                solicitud_procesada = request.env['solicitud.partes'].sudo().search([
+                    ('access_token', '=', token)
+                ], limit=1)
+                
+                if solicitud_procesada:
+                    error_msg = f'Esta solicitud ya fue procesada anteriormente (Estado: {dict(solicitud_procesada._fields["state"].selection).get(solicitud_procesada.state)})'
+                else:
+                    error_msg = 'Solicitud no encontrada. El enlace puede ser inválido.'
+                
                 return request.render('sat.partes_error_template_alquiler', {
-                    'error_message': 'Solicitud no encontrada o ya fue procesada'
+                    'error_message': error_msg
                 })
             
-            # Aprobar directamente (sin wizard)
+            # Aprobar directamente
             solicitud._aprobar_y_notificar()
             
             return request.render('sat.partes_approved_template_alquiler', {
-                'message': f'Solicitud {solicitud.name} aprobada. Se ha notificado al jefe de área.'
+                'message': f'Solicitud {solicitud.name} aprobada exitosamente. Se ha notificado al jefe de área para autorizar el retiro.'
             })
             
         except Exception as e:
-            _logger.error(f"Error en approve_parts: {str(e)}")
+            _logger.error(f"Error en approve_parts con token {token}: {str(e)}", exc_info=True)
             return request.render('sat.partes_error_template_alquiler', {
-                'error_message': f'Error: {str(e)}'
+                'error_message': f'Error al procesar: {str(e)}'
             })
-
-    def _get_page_view_values(self, solicitud, access_token=None, **kwargs):
-        values = super()._get_page_view_values(solicitud, access_token, **kwargs)
-        values.update({
-            'token': access_token,
-            'page_name': 'partes',
-            'solicitud': solicitud,
-        })
-        return values

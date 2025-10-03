@@ -130,6 +130,7 @@ class SolicitudPartes(models.Model):
 
     @api.model
     def approve_from_token(self, token):
+        """Aprobar desde token de email"""
         solicitud = self.search([
             ('access_token', '=', token),
             ('state', '=', 'submitted')
@@ -137,10 +138,25 @@ class SolicitudPartes(models.Model):
 
         if solicitud:
             try:
-                solicitud.action_approve()
-                return {'success': True}
+                # Aprobar con contexto de usuario público pero guardando quien autorizó
+                solicitud.with_context(mail_create_nosubscribe=True).write({
+                    'autorizado_por': self.env.ref('base.user_admin').id  # Usuario admin por defecto
+                })
+                solicitud._aprobar_y_notificar()
+                return {'success': True, 'solicitud_id': solicitud.id}
             except Exception as e:
+                _logger.error(f"Error aprobando solicitud {solicitud.name}: {str(e)}")
                 return {'error': str(e)}
+        
+        # Buscar si ya fue aprobada
+        solicitud_aprobada = self.search([
+            ('access_token', '=', token),
+            ('state', '!=', 'submitted')
+        ], limit=1)
+        
+        if solicitud_aprobada:
+            return {'error': 'Esta solicitud ya fue procesada anteriormente'}
+        
         return {'error': 'Token inválido o solicitud no encontrada'}
 
     # ============================================================
