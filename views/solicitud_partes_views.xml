@@ -41,7 +41,8 @@
                 <sheet>
                     <!-- Botones de estadísticas -->
                     <div class="oe_button_box" name="button_box">
-                        <button class="oe_stat_button" 
+                        <button name="button_todas_retiradas"
+                                class="oe_stat_button" 
                                 type="object" 
                                 icon="fa-check-circle-o" 
                                 invisible="not todas_retiradas">
@@ -51,7 +52,8 @@
                             </div>
                         </button>
                         
-                        <button class="oe_stat_button" 
+                        <button name="button_pendientes_reposicion"
+                                class="oe_stat_button" 
                                 type="object" 
                                 icon="fa-exclamation-triangle" 
                                 invisible="not pendientes_reposicion">
@@ -61,7 +63,8 @@
                             </div>
                         </button>
                         
-                        <button class="oe_stat_button" 
+                        <button name="button_todas_repuestas"
+                                class="oe_stat_button" 
                                 type="object" 
                                 icon="fa-check-square-o" 
                                 invisible="not todas_repuestas">
