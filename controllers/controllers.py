@@ -141,7 +141,76 @@ class RepuestosAlquilerController(http.Controller):
             'repuestos': repuestos,
             'alquiler': request.env['alquiler'].sudo().browse(id_alquiler),
         })
-        
+    
+
+    @http.route('/partes/reponer/<string:token>', type='http', auth='public', website=True, csrf=False)
+    def reponer_parte_publico(self, token, **kwargs):
+        """Formulario público para reponer parte con foto"""
+        try:
+            linea = request.env['solicitud.partes.linea'].sudo().search([
+                ('access_token_linea', '=', token),
+                ('estado', '=', 'retirado')
+            ], limit=1)
+            
+            if not linea:
+                return request.render('sat.partes_error_template_alquiler', {
+                    'error_message': 'Parte no encontrada o ya fue repuesta'
+                })
+            
+            # Renderizar formulario web simplificado
+            return request.render('sat.partes_reposicion_publica_template', {
+                'linea': linea,
+                'token': token
+            })
+            
+        except Exception as e:
+            _logger.error(f"Error en reponer_parte_publico: {str(e)}")
+            return request.render('sat.partes_error_template_alquiler', {
+                'error_message': 'Error al cargar el formulario'
+            })
+    
+    @http.route('/partes/reponer/submit', type='http', auth='public', website=True, methods=['POST'], csrf=False)
+    def reponer_parte_submit(self, token, condicion, foto, observaciones='', **kwargs):
+        """Procesa la reposición desde formulario público"""
+        try:
+            linea = request.env['solicitud.partes.linea'].sudo().search([
+                ('access_token_linea', '=', token),
+                ('estado', '=', 'retirado')
+            ], limit=1)
+            
+            if not linea:
+                return request.render('sat.partes_error_template_alquiler', {
+                    'error_message': 'Parte no encontrada'
+                })
+            
+            # Validar foto
+            if not foto or not hasattr(foto, 'read'):
+                return request.render('sat.partes_error_template_alquiler', {
+                    'error_message': 'Debe adjuntar una foto'
+                })
+            
+            # Leer archivo
+            foto_data = base64.b64encode(foto.read())
+            foto_filename = foto.filename if hasattr(foto, 'filename') else 'reposicion.jpg'
+            
+            # Confirmar reposición
+            linea._confirmar_reposicion(
+                condicion,
+                foto_data,
+                foto_filename,
+                observaciones
+            )
+            
+            return request.render('sat.partes_reposicion_exitosa_template', {
+                'linea': linea,
+                'message': f'Reposición de "{linea.parte}" confirmada exitosamente'
+            })
+            
+        except Exception as e:
+            _logger.error(f"Error en reponer_parte_submit: {str(e)}")
+            return request.render('sat.partes_error_template_alquiler', {
+                'error_message': f'Error al procesar: {str(e)}'
+            })
 
 class MiModeloOnboardingController(http.Controller):
 

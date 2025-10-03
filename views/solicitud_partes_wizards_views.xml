@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- ========================================== -->
+    <!-- WIZARD 1: Aprobar y Seleccionar Autorizado -->
+    <!-- ========================================== -->
+    
+    <record id="view_solicitud_partes_aprobar_wizard_form" model="ir.ui.view">
+        <field name="name">solicitud.partes.aprobar.wizard.form</field>
+        <field name="model">solicitud.partes.aprobar.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Aprobar Solicitud">
+                <group>
+                    <group string="Información de la Solicitud">
+                        <field name="solicitud_id" readonly="1"/>
+                        <field name="solicitante" readonly="1"/>
+                        <field name="maquina_origen" readonly="1"/>
+                        <field name="serie_origen" readonly="1"/>
+                    </group>
+                    
+                    <group string="Autorización de Retiro">
+                        <field name="autorizado_retirar_id" 
+                               options="{'no_create': True, 'no_open': True}"
+                               placeholder="Seleccione usuario..."/>
+                        <field name="tiene_telefono" invisible="1"/>
+                        <field name="telefono_display" 
+                               string="Teléfono" 
+                               readonly="1"
+                               invisible="not autorizado_retirar_id"/>
+                    </group>
+                </group>
+                
+                <div class="alert alert-warning" role="alert" 
+                     invisible="tiene_telefono or not autorizado_retirar_id">
+                    <strong>⚠️ Advertencia:</strong> Este usuario no tiene teléfono registrado. 
+                    No recibirá notificación por WhatsApp.
+                </div>
+                
+                <div class="alert alert-info" role="alert" 
+                     invisible="not tiene_telefono or not autorizado_retirar_id">
+                    <strong>✅ Notificación:</strong> Se enviará WhatsApp a este usuario autorizándolo para el retiro.
+                </div>
+                
+                <footer>
+                    <button string="Aprobar y Notificar" 
+                            name="action_aprobar" 
+                            type="object" 
+                            class="btn-primary"/>
+                    <button string="Cancelar" 
+                            class="btn-secondary" 
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    
+    
+    <!-- ========================================== -->
+    <!-- WIZARD 2: Confirmar Retiro -->
+    <!-- ========================================== -->
+    
+    <record id="view_solicitud_partes_retiro_wizard_form" model="ir.ui.view">
+        <field name="name">solicitud.partes.retiro.wizard.form</field>
+        <field name="model">solicitud.partes.retiro.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirmar Retiro de Parte">
+                <group>
+                    <group string="Información de la Parte">
+                        <field name="solicitud_id" readonly="1"/>
+                        <field name="parte_linea_id" invisible="1"/>
+                        <field name="parte_nombre" readonly="1"/>
+                        <field name="parte_descripcion" readonly="1"/>
+                        <field name="maquina_origen" readonly="1"/>
+                    </group>
+                    
+                    <group string="Control de Instalación">
+                        <field name="opcion_instalacion" widget="radio"/>
+                        <field name="instalado_por_id" 
+                               invisible="opcion_instalacion == 'yo_mismo'"
+                               required="opcion_instalacion == 'otra_persona'"
+                               options="{'no_create': True, 'no_open': True}"
+                               placeholder="Seleccione instalador..."/>
+                        <field name="tiene_telefono_instalador" invisible="1"/>
+                        <field name="telefono_instalador" 
+                               readonly="1"
+                               invisible="opcion_instalacion == 'yo_mismo' or not instalado_por_id"/>
+                    </group>
+                </group>
+                
+                <div class="alert alert-info" role="alert" 
+                     invisible="opcion_instalacion != 'yo_mismo'">
+                    <strong>ℹ️ Retiro e Instalación:</strong> 
+                    Confirmas que retirarás la parte y tú mismo la instalarás. 
+                    Deberás reponer la parte después de la instalación.
+                </div>
+                
+                <div class="alert alert-warning" role="alert" 
+                     invisible="opcion_instalacion != 'otra_persona' or tiene_telefono_instalador or not instalado_por_id">
+                    <strong>⚠️ Advertencia:</strong> 
+                    Este usuario no tiene teléfono. No recibirá notificación por WhatsApp.
+                </div>
+                
+                <div class="alert alert-success" role="alert" 
+                     invisible="opcion_instalacion != 'otra_persona' or not tiene_telefono_instalador or not instalado_por_id">
+                    <strong>✅ Notificación:</strong> 
+                    Se enviará WhatsApp al instalador indicando que debe reponer la parte después.
+                </div>
+                
+                <footer>
+                    <button string="Confirmar Retiro" 
+                            name="action_confirmar_retiro" 
+                            type="object" 
+                            class="btn-primary"/>
+                    <button string="Cancelar" 
+                            class="btn-secondary" 
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    
+    
+    <!-- ========================================== -->
+    <!-- WIZARD 3: Confirmar Reposición con Foto -->
+    <!-- ========================================== -->
+    
+    <record id="view_solicitud_partes_reposicion_wizard_form" model="ir.ui.view">
+        <field name="name">solicitud.partes.reposicion.wizard.form</field>
+        <field name="model">solicitud.partes.reposicion.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirmar Reposición">
+                <group>
+                    <group string="Información">
+                        <field name="parte_linea_id" invisible="1"/>
+                        <field name="solicitud_nombre" readonly="1"/>
+                        <field name="parte_nombre" readonly="1"/>
+                        <field name="parte_descripcion" readonly="1" invisible="not parte_descripcion"/>
+                        <field name="fecha_retiro" readonly="1"/>
+                    </group>
+                    
+                    <group string="Reposición">
+                        <field name="condicion" widget="radio" required="1"/>
+                        <field name="foto_reposicion" 
+                               widget="image" 
+                               class="oe_avatar"
+                               options="{'size': [300, 300]}"/>
+                        <field name="foto_reposicion_filename" invisible="1"/>
+                    </group>
+                </group>
+                
+                <group string="Observaciones">
+                    <field name="observaciones" 
+                           nolabel="1" 
+                           placeholder="Agregue comentarios adicionales sobre la reposición..."/>
+                </group>
+                
+                <group>
+                    <field name="mostrar_ayuda" widget="boolean_toggle"/>
+                </group>
+                
+                <div class="alert alert-info" role="alert" invisible="not mostrar_ayuda">
+                    <strong>📸 Instrucciones para la foto:</strong>
+                    <ul>
+                        <li>La foto debe mostrar claramente la parte instalada</li>
+                        <li>Asegúrese de que la imagen esté enfocada y bien iluminada</li>
+                        <li>Si la parte está defectuosa, capture el defecto visible</li>
+                        <li>Esta foto servirá como evidencia de la reposición</li>
+                    </ul>
+                </div>
+                
+                <footer>
+                    <button string="Confirmar Reposición" 
+                            name="action_confirmar_reposicion" 
+                            type="object" 
+                            class="btn-success"/>
+                    <button string="Cancelar" 
+                            class="btn-secondary" 
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

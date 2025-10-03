@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- Template: Formulario Público de Reposición -->
+    <template id="partes_reposicion_publica_template" name="Formulario Reposición Pública">
+        <t t-call="website.layout">
+            <div class="container mt-5 mb-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-8 col-lg-6">
+                        
+                        <!-- Header -->
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <h3 class="mb-0">📦 Reposición de Parte</h3>
+                            </div>
+                            
+                            <div class="card-body">
+                                
+                                <!-- Información de la parte -->
+                                <div class="alert alert-info">
+                                    <h5><strong>Parte:</strong> <t t-esc="linea.parte"/></h5>
+                                    <p class="mb-1"><strong>Solicitud:</strong> <t t-esc="linea.solicitud_id.name"/></p>
+                                    <p class="mb-1"><strong>Máquina:</strong> <t t-esc="linea.solicitud_id.maquina_origen_id.name.name"/></p>
+                                    <t t-if="linea.descripcion">
+                                        <p class="mb-0"><strong>Descripción:</strong> <t t-esc="linea.descripcion"/></p>
+                                    </t>
+                                </div>
+                                
+                                <!-- Formulario -->
+                                <form method="POST" action="/partes/reponer/submit" enctype="multipart/form-data">
+                                    <input type="hidden" name="token" t-att-value="token"/>
+                                    
+                                    <!-- Condición -->
+                                    <div class="form-group mb-3">
+                                        <label class="form-label"><strong>Condición de la Parte *</strong></label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="condicion" 
+                                                   id="condicion_bueno" value="bueno" checked="checked" required="required"/>
+                                            <label class="form-check-label" for="condicion_bueno">
+                                                ✅ Buen Estado
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="condicion" 
+                                                   id="condicion_defectuoso" value="defectuoso" required="required"/>
+                                            <label class="form-check-label" for="condicion_defectuoso">
+                                                ⚠️ Defectuoso
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Foto -->
+                                    <div class="form-group mb-3">
+                                        <label class="form-label"><strong>Foto de la Parte Instalada *</strong></label>
+                                        <input type="file" 
+                                               class="form-control" 
+                                               name="foto" 
+                                               accept="image/*" 
+                                               capture="environment"
+                                               required="required"/>
+                                        <small class="form-text text-muted">
+                                            Tome una foto clara de la parte instalada
+                                        </small>
+                                    </div>
+                                    
+                                    <!-- Observaciones -->
+                                    <div class="form-group mb-4">
+                                        <label class="form-label"><strong>Observaciones (opcional)</strong></label>
+                                        <textarea class="form-control" 
+                                                  name="observaciones" 
+                                                  rows="3" 
+                                                  placeholder="Agregue comentarios adicionales..."></textarea>
+                                    </div>
+                                    
+                                    <!-- Instrucciones -->
+                                    <div class="alert alert-warning mb-4">
+                                        <strong>📸 Instrucciones:</strong>
+                                        <ul class="mb-0 mt-2">
+                                            <li>La foto debe mostrar la parte instalada</li>
+                                            <li>Asegúrese de buena iluminación</li>
+                                            <li>Si está defectuosa, capture el defecto</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- Botón -->
+                                    <button type="submit" class="btn btn-success btn-lg w-100">
+                                        ✅ Confirmar Reposición
+                                    </button>
+                                </form>
+                                
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+    
+    
+    <!-- Template: Reposición Exitosa -->
+    <template id="partes_reposicion_exitosa_template" name="Reposición Exitosa">
+        <t t-call="website.layout">
+            <div class="container mt-5 mb-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <div class="card shadow-sm">
+                            <div class="card-body text-center py-5">
+                                <div class="mb-4">
+                                    <i class="fa fa-check-circle text-success" style="font-size: 80px;"></i>
+                                </div>
+                                <h2 class="text-success mb-3">✅ Reposición Confirmada</h2>
+                                <p class="lead"><t t-esc="message"/></p>
+                                <p class="text-muted">La reposición ha sido registrada correctamente en el sistema.</p>
+                                
+                                <div class="alert alert-info mt-4">
+                                    <p class="mb-0"><strong>Solicitud:</strong> <t t-esc="linea.solicitud_id.name"/></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+    
+</odoo>

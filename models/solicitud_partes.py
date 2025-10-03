@@ -143,3 +143,194 @@ class SolicitudPartes(models.Model):
                 return {'error': str(e)}
         return {'error': 'Token inválido o solicitud no encontrada'}
 
+    # ============================================================
+# AGREGAR AL FINAL DE LA CLASE SolicitudPartes 
+# (después del método approve_from_token)
+# ============================================================
+
+    # Nuevo campo: Autorizado para retirar (diferente de quien autoriza)
+    autorizado_retirar_id = fields.Many2one(
+        'res.users', 
+        string='Autorizado para Retirar',
+        tracking=True,
+        help="Usuario autorizado para retirar las partes del equipo"
+    )
+    
+    # Campo computed para teléfono limpio
+    autorizado_retirar_mobile_clean = fields.Char(
+        string='Teléfono Autorizado (limpio)',
+        compute='_compute_autorizado_mobile_clean',
+        store=True
+    )
+    
+    # Control de notificaciones
+    fecha_notificacion_retiro = fields.Datetime(
+        string='Fecha Notificación Retiro',
+        readonly=True,
+        tracking=True
+    )
+    
+    # Campos computed para estados
+    todas_retiradas = fields.Boolean(
+        string='Todas Retiradas',
+        compute='_compute_estado_partes',
+        store=True
+    )
+    todas_repuestas = fields.Boolean(
+        string='Todas Repuestas',
+        compute='_compute_estado_partes',
+        store=True
+    )
+    pendientes_reposicion = fields.Boolean(
+        string='Pendientes Reposición',
+        compute='_compute_estado_partes',
+        store=True
+    )
+
+    @api.depends('autorizado_retirar_id.mobile_phone')
+    def _compute_autorizado_mobile_clean(self):
+        """Limpia y formatea el teléfono del autorizado"""
+        for record in self:
+            if record.autorizado_retirar_id and record.autorizado_retirar_id.mobile_phone:
+                phone = record.autorizado_retirar_id.mobile_phone.replace('+', '')
+                phone = ''.join(phone.split())
+                if not phone.startswith('51'):
+                    phone = '51' + phone
+                record.autorizado_retirar_mobile_clean = phone
+            else:
+                record.autorizado_retirar_mobile_clean = ''
+    
+    @api.depends('parte_ids.estado')
+    def _compute_estado_partes(self):
+        """Calcula estados generales de las partes"""
+        for record in self:
+            if not record.parte_ids:
+                record.todas_retiradas = False
+                record.todas_repuestas = False
+                record.pendientes_reposicion = False
+                continue
+            
+            record.todas_retiradas = all(
+                line.estado in ['retirado', 'reemplazado'] 
+                for line in record.parte_ids
+            )
+            record.todas_repuestas = all(
+                line.estado == 'reemplazado' 
+                for line in record.parte_ids
+            )
+            record.pendientes_reposicion = any(
+                line.estado == 'retirado' and line.instalado_por
+                for line in record.parte_ids
+            )
+
+    # MODIFICAR el método action_approve existente
+    def action_approve(self):
+        """Aprobar solicitud - ahora con selección de autorizado"""
+        self.ensure_one()
+        
+        # Si no hay autorizado, abrir wizard
+        if not self.autorizado_retirar_id:
+            return {
+                'type': 'ir.actions.act_window',
+                'name': 'Seleccionar Autorizado para Retiro',
+                'res_model': 'solicitud.partes.aprobar.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+                'context': {'default_solicitud_id': self.id}
+            }
+        
+        # Si ya tiene autorizado, aprobar
+        return self._aprobar_y_notificar()
+    
+    def _aprobar_y_notificar(self):
+        """Aprueba y notifica al autorizado"""
+        self.ensure_one()
+        
+        if not self.autorizado_retirar_id:
+            raise UserError(_('Debe seleccionar un autorizado para retirar'))
+        
+        self.write({
+            'state': 'approved',
+            'autorizado_por': self.env.user.id,
+            'fecha_autorizacion': fields.Datetime.now(),
+            'fecha_notificacion_retiro': fields.Datetime.now()
+        })
+        
+        self._enviar_whatsapp_autorizacion_retiro()
+        
+        self.message_post(
+            body=f"✅ Solicitud aprobada. {self.autorizado_retirar_id.name} autorizado para retirar.",
+            partner_ids=[self.autorizado_retirar_id.partner_id.id]
+        )
+        
+        return True
+    
+    def _enviar_whatsapp_autorizacion_retiro(self):
+        """Envía WhatsApp al autorizado"""
+        self.ensure_one()
+        
+        if not self.autorizado_retirar_mobile_clean:
+            _logger.warning(
+                f"Solicitud {self.name}: usuario {self.autorizado_retirar_id.name} sin teléfono"
+            )
+            return
+        
+        partes_lista = "\n".join([
+            f"  • {line.parte}" + (f" - {line.descripcion}" if line.descripcion else "")
+            for line in self.parte_ids
+        ])
+        
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        
+        msg = f"""🔧 *Retiro de Partes Autorizado*
+
+Hola *{self.autorizado_retirar_id.name}*,
+
+Estás autorizado para retirar las siguientes partes:
+
+*Solicitud:* {self.name}
+*Máquina Origen:* {self.maquina_origen_id.name.name} (Serie: {self.maquina_origen_id.serie})
+{'*Máquina Destino:* ' + self.maquina_destino_id.name.name if self.maquina_destino_id else ''}
+
+*Partes:*
+{partes_lista}
+
+*Autorizado por:* {self.autorizado_por.name}
+
+Confirma el retiro desde el sistema."""
+        
+        self.send_whatsapp_message(self.autorizado_retirar_mobile_clean, msg)
+    
+    def send_whatsapp_message(self, phone, message):
+        """Envía WhatsApp usando API externa"""
+        url = 'https://whatsapp.andessolutioncopiers.com/api/message'
+        data = {'phone': phone, 'message': message}
+        headers = {'Content-Type': 'application/json'}
+        
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=10)
+            _logger.info(f"WhatsApp - Status: {response.status_code}")
+            return response.json()
+        except Exception as e:
+            _logger.error(f"Error WhatsApp: {str(e)}")
+            return {"error": str(e)}
+    
+    def action_check_reposiciones_pendientes(self):
+        """Verifica reposiciones pendientes (cron job)"""
+        from datetime import timedelta
+        limite = fields.Datetime.now() - timedelta(hours=48)
+        
+        solicitudes = self.search([
+            ('state', 'in', ['completed', 'approved']),
+            ('pendientes_reposicion', '=', True)
+        ])
+        
+        for sol in solicitudes:
+            for linea in sol.parte_ids:
+                if (linea.estado == 'retirado' and 
+                    linea.instalado_por and 
+                    linea.fecha_retiro_real and 
+                    linea.fecha_retiro_real < limite):
+                    linea._enviar_recordatorio_reposicion()
+        
+        return True
