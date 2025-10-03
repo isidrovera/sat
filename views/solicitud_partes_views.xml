@@ -41,32 +41,7 @@
                 <sheet>
                     <!-- Botones de estadísticas -->
                     <div class="oe_button_box" name="button_box">
-    <button class="oe_stat_button" 
-            icon="fa-check-circle-o" 
-            invisible="not todas_retiradas">
-        <div class="o_field_widget o_stat_info">
-            <span class="o_stat_text text-success">Todas</span>
-            <span class="o_stat_text text-success">Retiradas</span>
-        </div>
-    </button>
-    
-    <button class="oe_stat_button" 
-            icon="fa-exclamation-triangle" 
-            invisible="not pendientes_reposicion">
-        <div class="o_field_widget o_stat_info">
-            <span class="o_stat_text text-warning">Pendientes</span>
-            <span class="o_stat_text text-warning">Reposición</span>
-        </div>
-    </button>
-    
-    <button class="oe_stat_button" 
-            icon="fa-check-square-o" 
-            invisible="not todas_repuestas">
-        <div class="o_field_widget o_stat_info">
-            <span class="o_stat_text text-success">Todas</span>
-            <span class="o_stat_text text-success">Repuestas</span>
-        </div>
-    </button>
+   
                     </div>
                     
                     <!-- Alert de autorización -->
