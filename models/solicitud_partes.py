@@ -474,23 +474,36 @@ Confirma el retiro desde el sistema."""
     
     def action_check_reposiciones_pendientes(self):
         """Verifica reposiciones pendientes (cron job)"""
+        _logger.info("CRON reposiciones: inicio")
         from datetime import timedelta
         limite = fields.Datetime.now() - timedelta(hours=48)
-        
-        solicitudes = self.search([
-            ('state', 'in', ['completed', 'approved']),
-            ('pendientes_reposicion', '=', True)
+
+        Line = self.env['solicitud.partes.linea'].sudo()
+        pendientes = Line.search([
+            ('estado', '=', 'retirado'),
+            ('instalado_por', '=', False),           # ← importante: pendiente = sin instalador
+            ('fecha_retiro_real', '!=', False),
+            ('fecha_retiro_real', '<', limite),
+            # Evitar spam si quieres (usa campo propio, ver punto 4):
+            # ('last_reminder_at', '<', fields.Datetime.now() - timedelta(hours=24)),
+            # '|', ('last_reminder_at', '=', False), ('last_reminder_at', '<', fields.Datetime.now() - timedelta(hours=24)),
         ])
-        
-        for sol in solicitudes:
-            for linea in sol.parte_ids:
-                if (linea.estado == 'retirado' and 
-                    linea.instalado_por and 
-                    linea.fecha_retiro_real and 
-                    linea.fecha_retiro_real < limite):
-                    linea._enviar_recordatorio_reposicion()
-        
+
+        _logger.info("CRON reposiciones: %s líneas encontradas para recordar", len(pendientes))
+
+        for linea in pendientes:
+            try:
+                linea._enviar_recordatorio_reposicion()
+                _logger.info("CRON reposiciones: recordatorio enviado - %s / línea %s",
+                            linea.solicitud_id.name, linea.id)
+                # Opcional anti-spam (ver punto 4):
+                # linea.write({'last_reminder_at': fields.Datetime.now()})
+            except Exception as e:
+                _logger.exception("CRON reposiciones: error notificando línea %s: %s", linea.id, e)
+
+        _logger.info("CRON reposiciones: fin")
         return True
+
 
 
     responsable_reposicion_id = fields.Many2one(
