@@ -30,7 +30,7 @@ class ReparacionAccesorioEvaluacion(models.Model):
         ondelete='restrict'
     )
     
-    subpartes_ids = fields.Many2many(
+    subparte_ids = fields.Many2many(
         'accesorio.subparte',
         'rep_acc_eval_subparte_rel',
         'eval_id', 'subparte_id',
