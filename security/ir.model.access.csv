@@ -197,3 +197,5 @@ access_modelo_maquina_accesorio_system,modelo_maquina_accesorio_system.system,mo
 access_reparacion_componente_evaluacion_system,reparacion.componente.evaluacion.system,model_reparacion_componente_evaluacion,base.group_system,1,1,1,1
 access_reparacion_acc_eval_user,Reparación Acc Evaluación (user),model_reparacion_accesorio_evaluacion,base.group_user,1,1,1,0
 access_reparacion_acc_eval_system,Reparación Acc Evaluación (system),model_reparacion_accesorio_evaluacion,base.group_system,1,1,1,1
+access_accesorio_subparte_user,accesorio.subparte_user_access,model_accesorio_subparte,base.group_user,1,1,1,0
+access_accesorio_subparte_system,accesorio.subparte_system_access,model_accesorio_subparte,base.group_system,1,1,1,1
