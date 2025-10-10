@@ -17,10 +17,11 @@
                        decoration-warning="estado_id.code == 'no_instalado'"
                        decoration-muted="estado_id.code == 'no_aplica'"
                        options="{'no_create': True}"/>
-                <field name="subpartes_ids" 
-                       widget="many2many_tags" 
-                       optional="show"
-                       domain="[('tipo_id', '=', tipo_id)]"/>
+                <field name="subparte_ids"
+       widget="many2many_tags"
+       context="{'_tipo_ctx': tipo_id}"
+       domain="[('tipo_id', '=', context.get('_tipo_ctx'))]"/>
+
                 <field name="observaciones" optional="hide"/>
             </list>
         </field>
