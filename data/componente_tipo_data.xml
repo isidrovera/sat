@@ -144,7 +144,7 @@
     <field name="is_color_sensitive">1</field>
   </record>
   <record id="comp_tipo_toner_system" model="componente.tipo">
-    <field name="name">Sistema de tóner</field>
+    <field name="name">Botella de tóner</field>
     <field name="code">TONER_SYSTEM</field>
     <field name="is_color_sensitive">1</field>
   </record>
