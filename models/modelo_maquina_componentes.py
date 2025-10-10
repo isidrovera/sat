@@ -17,7 +17,7 @@ class ModeloMaquinaComponente(models.Model):
         index=True,
         string='Modelo'
     )
-    subparte_ids = fields.One2many('modelo.maquina.subparte', 'componente_id', string='Subpartes')
+    
     tipo_id = fields.Many2one(
         'componente.tipo',
         required=True,

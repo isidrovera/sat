@@ -381,15 +381,16 @@ class ReparacionesInforme(models.Model):
             
             # Agregar todas las subpartes de los componentes encontrados
             for componente_modelo in componentes_modelo:
-                for subparte in componente_modelo.subparte_ids:
+                # ✅ CAMBIO: subparte_ids → detalle_ids
+                for detalle in componente_modelo.detalle_ids:
                     self.env['reparacion.add.subparts.wizard.line'].create({
                         'wizard_id': wizard.id,
                         'componente': componente_code,
                         'intervencion_id': intervencion.id,
-                        'subparte_id': subparte.id,
+                        'subparte_id': detalle.subparte_id.id,  # ✅ Acceder al subparte a través de detalle
                         'selected': False,
                         'accion_sub': 'cambiado',
-                        'cantidad': 1.0,
+                        'cantidad': detalle.cantidad,  # ✅ Usar la cantidad del detalle
                     })
         
         return {
@@ -402,7 +403,6 @@ class ReparacionesInforme(models.Model):
             'target': 'new',
             'context': {'from_generar_informe': True},
         }
-
     def _buscar_componentes_por_checklist(self, modelo_maquina, field_name):
         """Busca componentes del modelo según el campo del checklist marcado"""
         
