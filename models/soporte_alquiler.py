@@ -15,7 +15,7 @@ _logger = logging.getLogger(__name__)
 class ticket_alquiler(models.Model):
 
     _name = 'ticket.alquiler'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'ticket.informe.mixin']
     
 
     name = fields.Char( 'TICKET N°', default='New', copy=False, required=True, readonly=True)
