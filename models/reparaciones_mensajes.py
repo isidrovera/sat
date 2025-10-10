@@ -23,7 +23,7 @@ import uuid
 
 
 class ReparacionesMensajes(models.Model):
-    _inherit = 'reparaciones.reparacion'
+    _inherit = 'reparaciones.reparaciones'
     _description = 'Mensajes de Reparaciones'
 
     @api.depends('responsable_id.mobile_phone')
