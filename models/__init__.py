@@ -68,4 +68,4 @@ from . import reparacion_componente_evaluacion
 from . import reparaciones_migration
 from . import soporte_mensajes
 from . import contadores_ticket
-from . import ticket_informes_mixing
+from . import ticket_informe_mixin
