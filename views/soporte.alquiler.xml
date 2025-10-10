@@ -10,6 +10,7 @@
                     <header>
                         <field name="estado" widget="statusbar" options="{'clickable': '1'}"/>
                         <button name="action_regenerar_informe" type="object" string="Regenerar informe" class="btn-primary"/>
+                        <button name="action_limpiar_informe" type="object" string="Limpiar informe" class="btn-primary"/>
 
                         <button string="Cerrar" name="action_finalizar" type="object" class="btn btn-info" icon="fa-wrench" invisible="estado !='proceso'" />
                         <button name="action_cargar_contadores"
