@@ -18,10 +18,8 @@
                        decoration-muted="estado_id.code == 'no_aplica'"
                        options="{'no_create': True}"/>
                 <field name="subparte_ids"
-       widget="many2many_tags"
-       context="{'_tipo_ctx': tipo_id}"
-       domain="[('tipo_id', '=', context.get('_tipo_ctx'))]"/>
-
+                       widget="many2many_tags"
+                       domain="[('tipo_id', '=', tipo_id)]"/>
                 <field name="observaciones" optional="hide"/>
             </list>
         </field>
@@ -47,8 +45,8 @@
                                    options="{'no_create': True}"/>
                         </group>
                     </group>
-                    <group string="Subpartes Específicas" invisible="not subpartes_ids">
-                        <field name="subpartes_ids" 
+                    <group string="Subpartes Específicas" invisible="not subparte_ids">
+                        <field name="subparte_ids" 
                                widget="many2many_tags"
                                domain="[('tipo_id', '=', tipo_id)]"
                                placeholder="Seleccione subpartes intervenidas..."/>

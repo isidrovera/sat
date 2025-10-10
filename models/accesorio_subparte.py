@@ -54,3 +54,43 @@ class ModelosMaquin(models.Model):
         'modelo_id', 
         string='Accesorios del modelo'
     )
+
+
+class AccesorioSubparte(models.Model):
+    _name = 'accesorio.subparte'
+    _description = 'Subpartes de Accesorios'
+    _order = 'tipo_id, name'
+
+    name = fields.Char(
+        string='Nombre de Subparte',
+        required=True,
+        help="Ejemplo: Batería, Cargador, Cable USB, Auriculares, etc."
+    )
+    
+    tipo_id = fields.Many2one(
+        'accesorio.tipo',
+        string='Tipo de Accesorio',
+        required=True,
+        ondelete='cascade',
+        index=True,
+        help="Tipo de accesorio al que pertenece esta subparte"
+    )
+    
+    code = fields.Char(
+        string='Código',
+        help="Código identificador de la subparte"
+    )
+    
+    descripcion = fields.Text(
+        string='Descripción'
+    )
+    
+    active = fields.Boolean(
+        string='Activo',
+        default=True
+    )
+
+    _sql_constraints = [
+        ('name_tipo_unique', 'unique(name, tipo_id)',
+         'Ya existe una subparte con este nombre para este tipo de accesorio.')
+    ]
