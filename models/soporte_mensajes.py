@@ -12,7 +12,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 class SoporteMensajes(models.Model):
-    _inherit = 'ticket.soporte'
+    _inherit = 'ticket.alquiler'
     _description = 'Mensajes de Soporte'
 
     def _enviar_whatsapp_consolidado(self, tickets, cliente, tecnico):

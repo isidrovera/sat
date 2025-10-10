@@ -13,7 +13,7 @@ _logger = logging.getLogger(__name__)
 
 class ContadoresTicket(models.Model):
     
-    _inherit = 'ticket.soporte'
+    _inherit = 'ticket.alquiler'
     _description = 'Contadores Ticket'
 
     # Campo computed para controlar la visibilidad del botón
