@@ -1099,283 +1099,29 @@ class ticket_alquiler(models.Model):
                 record.color = 1  # Rojo - Para tickets cancelados
             else:
                 record.color = 0  # Color por defecto
-    # ===========================
-    #  INFORME TÉCNICO AUTOMÁTICO
-    # ===========================
-
-    # (1) Mapa de checklist (campo -> (etiqueta visible, peso de severidad))
-    _CHECKLIST_MAP = {
-        # Módulos / transporte papel
-        'adf_id': ('ADF', 2),
-        'bypass_id': ('Bypass', 2),
-        'finalizador_id': ('Finalizador', 2),
-        'tray1_id': ('Bandeja 1', 1),
-        'tray2_id': ('Bandeja 2', 1),
-        'tray3_id': ('Bandeja 3', 1),
-        'tray4_id': ('Bandeja 4', 1),
-        # Consumibles y proceso
-        'tacho_id': ('Tacho residual', 1),
-        'fusora_id': ('Unidad fusora', 3),
-        'transfer_id': ('Faja de transferencia', 3),
-        'optico_id': ('Unidad óptica', 3),
-        'black_id': ('Unidad de imagen negro', 3),
-        'magenta_id': ('Unidad de imagen magenta', 3),
-        'cyan_id': ('Unidad de imagen cian', 3),
-        'yellow_id': ('Unidad de imagen amarillo', 3),
-    }
-
-    # (2) Funciones (para detectar solo las que NO operan)
-    _FUNCIONES = [
-        ('copia_id', 'Copia'),
-        ('impresion_id', 'Impresión'),
-        ('impresion_usb_id', 'Impresión USB'),
-        ('scaner_smb_id', 'Scanner SMB'),
-        ('scaner_usb_id', 'Scanner USB'),
-        ('scaner_ftp_id', 'Scanner FTP'),
-        ('scaner_mail_id', 'Scanner Mail'),
-    ]
-
-    # (3) Tóner (solo se reporta si está vacío o sin botella)
-    _TONERS = [
-        ('toner_black_id', 'Tóner negro'),
-        ('toner_cyan_id', 'Tóner cian'),
-        ('toner_magenta_id', 'Tóner magenta'),
-        ('toner_yellow_id', 'Tóner amarillo'),
-    ]
-
-    # (4) Mensaje base natural por tipo de servicio
-    _SERVICIO_MSG = {
-        'instalacion': (
-            "Se realizó la instalación, configuración inicial y pruebas de copia, impresión y escaneo. "
-            "El equipo queda operativo para su uso."
-        ),
-        'retiro': (
-            "Se efectuó el retiro del equipo y la desconexión de sus accesorios, dejando el área ordenada."
-        ),
-        'mantenimiento_preventivo': (
-            "Se realizó un mantenimiento preventivo integral: limpieza interna y externa, "
-            "ajustes menores y verificación general de funcionamiento."
-        ),
-        'mantenimiento_correctivo': (
-            "Se realizó mantenimiento correctivo sobre las unidades reportadas, "
-            "con pruebas de validación al cierre."
-        ),
-        'cambio_repuestos': (
-            "Se reemplazaron los repuestos indicados y se efectuaron pruebas funcionales de cierre."
-        ),
-        'remoto': (
-            "Se brindó asistencia remota y se verificó el correcto funcionamiento posterior."
-        ),
-        'revision': (
-            "Se efectuó revisión general, limpieza básica y diagnóstico de funcionamiento."
-        ),
-        'alquiler': (
-            "Se preparó el equipo para alquiler con limpieza, configuración básica y pruebas iniciales."
-        ),
-    }
-
-    # -------------------------
-    # Utilidades de autogenerado
-    # -------------------------
-
-    def _is_autogen_informe(self):
-        """True si el informe actual fue autogenerado (no editado manualmente)."""
-        html = (self.informe_id or '').lower()
-        return 'data-autogen="1"' in html
-
-    def _collect_findings(self):
-        """
-        Reúne hallazgos del checklist por severidad:
-        - con_falla: módulos marcados 'no'
-        - desgaste: módulos marcados 'desgaste'
-        - requiere_cambio: módulos marcados 'cambio'
-        - score: severidad acumulada (para conclusión/calidad)
-        """
-        con_falla, desgaste, requiere_cambio, no_aplica = [], [], [], []
-        severidad_total = 0
-
-        for field_name, (etiqueta, peso) in self._CHECKLIST_MAP.items():
-            val = getattr(self, field_name, False)
-            if not val or val == 'si':
-                continue
-            if val == 'no':
-                con_falla.append(etiqueta)
-                severidad_total += 1 * peso
-            elif val == 'desgaste':
-                desgaste.append(etiqueta)
-                severidad_total += 2 * peso
-            elif val == 'cambio':
-                requiere_cambio.append(etiqueta)
-                severidad_total += 3 * peso
-            elif val == 'no_aplica':
-                no_aplica.append(etiqueta)
-
-        return {
-            'con_falla': con_falla,
-            'desgaste': desgaste,
-            'requiere_cambio': requiere_cambio,
-            'no_aplica': no_aplica,
-            'score': severidad_total,
-        }
-
-    def _calc_calidad(self, findings):
-        """Devuelve 'buena' / 'regular' / 'mala' según los hallazgos del checklist."""
-        if findings['requiere_cambio'] or findings['con_falla']:
-            return 'mala'
-        if findings['desgaste']:
-            return 'regular'
-        return 'buena'
-
-    def _get_funciones_no_operativas(self):
-        """Lista de funciones que salieron 'no' (no operativas)."""
-        etiquetas = []
-        for fname, label in self._FUNCIONES:
-            if getattr(self, fname, False) == 'no':
-                etiquetas.append(label)
-        return etiquetas
-
-    def _get_toners_criticos(self):
-        """
-        Devuelve tóneres críticos solo si están 'vacío' o 'sin_botella'.
-        En monocromo solo considera negro.
-        """
-        criticos = []
-        for fname, label in self._TONERS:
-            if self.tipo_id != 'color' and fname != 'toner_black_id':
-                continue
-            val = getattr(self, fname, False)
-            if val in ('vacio', 'sin_botella'):
-                criticos.append(label)
-        return criticos
-
-    def _service_message(self):
-        """Texto base natural según el tipo de servicio."""
-        return self._SERVICIO_MSG.get(
-            self.tipo_servicio_id or 'revision',
-            "Se realizó atención técnica y verificación general de funcionamiento."
-        )
-
-    def _build_informe_html(self):
-        """
-        Genera un informe RESUMIDO y PROFESIONAL:
-        • Siempre: texto base según el tipo de servicio (natural).
-        • Solo si corresponde: bloque “Observaciones” con EXCEPCIONES
-            - funciones que NO operan
-            - módulos con DESGASTE o que REQUIEREN CAMBIO
-            - tóneres críticos (vacío / sin botella)
-        • Conclusión breve según severidad.
-        • No muestra encabezados de equipo ni “Problema reportado”.
-        """
-        f = self._collect_findings()
-        funciones_no = self._get_funciones_no_operativas()
-        toners_crit = self._get_toners_criticos()
-
-        # Conclusión dinámica según severidad
-        calidad = self._calc_calidad(f)
-        if calidad == 'mala':
-            concl = (
-                "Condición general: *mala*. Requiere intervención inmediata para evitar "
-                "paradas no planificadas."
-            )
-        elif calidad == 'regular':
-            concl = (
-                "Condición general: *regular*. Equipo operativo con desgaste; "
-                "se recomienda programar cambio preventivo."
-            )
-        else:
-            concl = "Condición general: *buena*. Mantener el plan de mantenimiento preventivo."
-
-        def _ul(items):
-            return '' if not items else '<ul>' + ''.join(f'<li>{it}</li>' for it in items) + '</ul>'
-
-        # Construir solo las observaciones necesarias
-        bloques = []
-        if funciones_no:
-            bloques.append(f"<p><strong>Funciones no operativas</strong></p>{_ul(funciones_no)}")
-        if f['requiere_cambio']:
-            bloques.append(f"<p><strong>Requiere cambio inmediato</strong></p>{_ul(f['requiere_cambio'])}")
-        if f['desgaste']:
-            bloques.append(f"<p><strong>Componentes con desgaste</strong></p>{_ul(f['desgaste'])}")
-        # Si hay módulos “con falla” y aún no se listaron por funciones, muéstralos
-        if f['con_falla'] and not funciones_no:
-            bloques.append(f"<p><strong>Con falla</strong></p>{_ul(f['con_falla'])}")
-        if toners_crit:
-            bloques.append(f"<p><strong>Consumibles críticos</strong></p>{_ul(toners_crit)}")
-
-        excepciones_html = ''.join(bloques)
-
-        # Texto base por tipo de servicio (siempre)
-        texto_base = self._service_message()
-
-        # Cuerpo: siempre texto base; Observaciones solo si existen
-        cuerpo_html = (
-            f"<p>{texto_base}</p>"
-            if not excepciones_html else
-            f"<p>{texto_base}</p><h5 style='margin:12px 0 6px;'>Observaciones</h5>{excepciones_html}"
-        )
-
-        # Si NO hay observaciones y la calidad es "buena", mantenemos el tono sobrio
-        # y evitamos redundancias.
-        if not excepciones_html and calidad == 'buena':
-            concl = "Equipo en buen estado tras la intervención. Mantener plan de mantenimiento."
-
-        html = f"""
-    <div data-autogen="1" style="font-family: Arial; line-height:1.5;">
-    {cuerpo_html}
-    <h5 style="margin:12px 0 6px;">Conclusión</h5>
-    <p>{concl}</p>
-    <p style="color:#888; font-size:12px; margin-top:10px;">
-        *Informe generado automáticamente a partir del checklist.*
-    </p>
-    </div>
-    """
-        return html, calidad
-
-    def _autofill_informe_si_corresponde(self):
-        """
-        Genera/actualiza el informe automáticamente si:
-        - está vacío, o
-        - el informe actual fue autogenerado (data-autogen="1")
-        Respeta la edición manual del técnico.
-        """
-        if self.informe_id and not self._is_autogen_informe():
-            return
-        html, calidad = self._build_informe_html()
-        self.update({'informe_id': html, 'calidad_id': calidad})
-
-    # (onchange) Regenerar automáticamente cuando cambie servicio o checklist
+    # ✅ MANTENER el @api.onchange para llamar al mixin
     @api.onchange(
-        'tipo_servicio_id',           # <- asegura el mensaje base correcto
+        'tipo_servicio_id',
         'tipo_id',
-        # funciones
+        'description',
+        # Funciones
         'copia_id', 'impresion_id', 'impresion_usb_id',
         'scaner_smb_id', 'scaner_usb_id', 'scaner_ftp_id', 'scaner_mail_id',
-        # checklist módulos
+        # Módulos
         'adf_id', 'bypass_id', 'finalizador_id',
         'tray1_id', 'tray2_id', 'tray3_id', 'tray4_id',
+        # Componentes críticos
         'tacho_id', 'fusora_id', 'transfer_id', 'optico_id',
         'black_id', 'magenta_id', 'cyan_id', 'yellow_id',
-        # tóner
+        # Tóner
         'toner_black_id', 'toner_cyan_id', 'toner_magenta_id', 'toner_yellow_id',
+        # Contadores
+        'contometrok_id', 'contometroc_id', 'contometros_id',
     )
     def _onchange_autoinforme(self):
+        """Regenera el informe cuando cambia el checklist"""
         for rec in self:
-            rec._autofill_informe_si_corresponde()
-
-    # Botón opcional en formulario para “Regenerar informe”
-    def action_regenerar_informe(self):
-        for rec in self:
-            html, calidad = rec._build_informe_html()
-            rec.write({'informe_id': html, 'calidad_id': calidad})
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Informe técnico'),
-                'message': _('Informe regenerado automáticamente desde el checklist.'),
-                'type': 'success',
-            }
-        }
+            rec._autofill_informe_si_corresponde()  # ← Llama al método del mixin
 
             
 class ReportTicketAlquiler(models.AbstractModel):
