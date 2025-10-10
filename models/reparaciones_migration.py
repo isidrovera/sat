@@ -6,7 +6,25 @@ _logger = logging.getLogger(__name__)
 
 class Reparaciones(models.Model):
     _inherit = 'reparaciones.reparaciones'
+    migration_status = fields.Selection([
+        ('pending', 'Pendiente de migración'),
+        ('migrated', 'Migrado'),
+        ('error', 'Error en migración'),
+    ], string='Estado de Migración', default='pending', index=True, 
+       help="Estado actual de migración del checklist a evaluaciones")
 
+    migration_date = fields.Datetime(
+        string='Fecha de Migración', 
+        readonly=True,
+        help="Fecha y hora en que se ejecutó la migración"
+    )
+
+    migration_count = fields.Integer(
+        string='Evaluaciones Migradas', 
+        readonly=True, 
+        default=0,
+        help="Cantidad de evaluaciones creadas durante la migración"
+    )
     def action_migrar_checklist_a_evaluaciones(self):
         """Migra los campos selection clásicos a evaluaciones M2O (componentes Y accesorios)."""
         
