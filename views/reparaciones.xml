@@ -631,6 +631,42 @@
                   </ul>
                 </div>
               </page>
+              <!-- PESTAÑA: ACCESORIOS (SISTEMA NUEVO) -->
+<page string="Accesorios (Sistema Nuevo)" name="accesorios_eval">
+  
+  <!-- Header informativo -->
+  <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #20c997; border-radius: 4px;">
+    <h4 style="margin-top: 0; font-size: 16px; color: #20c997;">
+      <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
+    </h4>
+    <p style="margin-bottom: 5px; font-size: 13px;">
+      Accesorios opcionales instalados en la máquina:
+    </p>
+    <ul style="margin-bottom: 0; font-size: 13px;">
+      <li><b>Tipo:</b> LCT, HDD, Wi-Fi, Panel Smart, Finalizadores, etc.</li>
+      <li><b>Estado:</b> Instalado y operativo / Con falla / No instalado / No aplica</li>
+      <li><b>Subpartes:</b> Componentes específicos del accesorio</li>
+    </ul>
+  </div>
+  
+  <!-- Tabla de evaluaciones de accesorios -->
+  <separator string="Accesorios Evaluados"/>
+  <field name="accesorio_eval_ids" nolabel="1"/>
+  
+  <!-- Info adicional -->
+  <div style="margin-top: 15px; padding: 10px; background-color: #d1f2eb; border: 1px solid #c3e6cb; border-radius: 6px;">
+    <h5 style="color: #20c997; font-size: 14px; margin-top: 0;">
+      <i class="fa fa-info-circle"></i> Acerca de los Accesorios
+    </h5>
+    <ul style="margin-bottom: 0; font-size: 13px;">
+      <li><b>Opcionales:</b> Los accesorios varían según el modelo de máquina</li>
+      <li><b>Configuración por modelo:</b> Cada modelo tiene su lista de accesorios disponibles</li>
+      <li><b>No aplica:</b> Si el modelo no soporta un accesorio específico</li>
+      <li><b>Subpartes:</b> Permite detallar qué componente específico del accesorio fue intervenido</li>
+    </ul>
+  </div>
+  
+</page>
             </notebook>
           </sheet>
           

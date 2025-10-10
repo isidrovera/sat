@@ -1,32 +1,374 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <record id="acc_tipo_lct" model="accesorio.tipo">
-    <field name="name">Bandeja LCT</field><field name="code">lct</field>
-  </record>
-  <record id="acc_tipo_ot" model="accesorio.tipo">
-    <field name="name">Bandeja de salida OT</field><field name="code">ot</field>
-  </record>
-  <record id="acc_tipo_hdd" model="accesorio.tipo">
-    <field name="name">Disco duro (HDD)</field><field name="code">hdd</field>
-  </record>
-  <record id="acc_tipo_wifi" model="accesorio.tipo">
-    <field name="name">Módulo Wi-Fi</field><field name="code">wifi</field>
-  </record>
-  <record id="acc_tipo_panel_smart" model="accesorio.tipo">
-    <field name="name">Panel Smart</field><field name="code">panel_smart</field>
-  </record>
-  <record id="acc_tipo_panel_normal" model="accesorio.tipo">
-    <field name="name">Panel LCD estándar</field><field name="code">panel_normal</field>
-  </record>
-  <record id="acc_tipo_finisher_int" model="accesorio.tipo">
-    <field name="name">Finalizador interno</field><field name="code">finisher_int</field>
-  </record>
-  <record id="acc_tipo_finisher_ext" model="accesorio.tipo">
-    <field name="name">Finalizador externo</field><field name="code">finisher_ext</field>
-  </record>
-  <record id="acc_tipo_mueble" model="accesorio.tipo">
-    <field name="name">Mueble base</field><field name="code">mueble</field>
-  </record>
-  <record id="acc_tipo_cable_poder" model="accesorio.tipo">
-    <field name="name">Cable de poder</field><field name="code">cable_poder</field>
-  </record>
+    <!-- ============================================ -->
+    <!-- CATÁLOGO COMPLETO DE ACCESORIOS             -->
+    <!-- Para: Fotocopiadoras, Impresoras, Ploters,  -->
+    <!--       Duplicadoras, Escáneres, Fax, etc.    -->
+    <!-- ============================================ -->
+
+    <!-- ========================================== -->
+    <!-- ALIMENTACIÓN Y SALIDA DE PAPEL            -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_lct" model="accesorio.tipo">
+        <field name="name">Bandeja LCT (Alta Capacidad)</field>
+        <field name="code">lct</field>
+        <field name="sequence">10</field>
+        <field name="descripcion">Bandeja de papel de gran capacidad (Large Capacity Tray)</field>
+    </record>
+
+    <record id="acc_tipo_ot" model="accesorio.tipo">
+        <field name="name">Bandeja de Salida OT (Offset)</field>
+        <field name="code">ot</field>
+        <field name="sequence">20</field>
+        <field name="descripcion">Bandeja de salida con separación offset</field>
+    </record>
+
+    <record id="acc_tipo_bypass" model="accesorio.tipo">
+        <field name="name">Bandeja Bypass Manual</field>
+        <field name="code">bypass</field>
+        <field name="sequence">25</field>
+        <field name="descripcion">Bandeja de alimentación manual</field>
+    </record>
+
+    <record id="acc_tipo_tray_adicional" model="accesorio.tipo">
+        <field name="name">Bandeja Adicional</field>
+        <field name="code">tray_adicional</field>
+        <field name="sequence">30</field>
+        <field name="descripcion">Bandeja de papel adicional (2000+ hojas)</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- ALIMENTADORES AUTOMÁTICOS                 -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_adf_simple" model="accesorio.tipo">
+        <field name="name">ADF Simple (Una Cara)</field>
+        <field name="code">adf_simple</field>
+        <field name="sequence">40</field>
+        <field name="descripcion">Alimentador automático de documentos simple</field>
+    </record>
+
+    <record id="acc_tipo_adf_dual" model="accesorio.tipo">
+        <field name="name">ADF Dual (Doble Cara)</field>
+        <field name="code">adf_dual</field>
+        <field name="sequence">50</field>
+        <field name="descripcion">Alimentador automático duplex/reversible</field>
+    </record>
+
+    <record id="acc_tipo_radf" model="accesorio.tipo">
+        <field name="name">RADF (Reversing ADF)</field>
+        <field name="code">radf</field>
+        <field name="sequence">55</field>
+        <field name="descripcion">Alimentador automático reversible de documentos</field>
+    </record>
+
+    <record id="acc_tipo_spf" model="accesorio.tipo">
+        <field name="name">SPF (Single Pass Feeder)</field>
+        <field name="code">spf</field>
+        <field name="sequence">57</field>
+        <field name="descripcion">Alimentador de un solo paso para escaneo duplex</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- FINALIZADORES Y ACABADO                   -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_finisher_int" model="accesorio.tipo">
+        <field name="name">Finalizador Interno</field>
+        <field name="code">finisher_int</field>
+        <field name="sequence">60</field>
+        <field name="descripcion">Sistema de grapado/ordenado interno</field>
+    </record>
+
+    <record id="acc_tipo_finisher_ext" model="accesorio.tipo">
+        <field name="name">Finalizador Externo</field>
+        <field name="code">finisher_ext</field>
+        <field name="sequence">70</field>
+        <field name="descripcion">Torre finalizadora externa con grapado</field>
+    </record>
+
+    <record id="acc_tipo_booklet_finisher" model="accesorio.tipo">
+        <field name="name">Finalizador de Folletos</field>
+        <field name="code">booklet_finisher</field>
+        <field name="sequence">75</field>
+        <field name="descripcion">Creador de folletos con grapado central</field>
+    </record>
+
+    <record id="acc_tipo_stapler" model="accesorio.tipo">
+        <field name="name">Grapadora (Stapler)</field>
+        <field name="code">stapler</field>
+        <field name="sequence">80</field>
+        <field name="descripcion">Módulo grapador independiente</field>
+    </record>
+
+    <record id="acc_tipo_hole_punch" model="accesorio.tipo">
+        <field name="name">Perforadora (Hole Punch)</field>
+        <field name="code">hole_punch</field>
+        <field name="sequence">85</field>
+        <field name="descripcion">Perforadora de documentos (2/3/4 huecos)</field>
+    </record>
+
+    <record id="acc_tipo_folder" model="accesorio.tipo">
+        <field name="name">Plegadora (Folder)</field>
+        <field name="code">folder</field>
+        <field name="sequence">87</field>
+        <field name="descripcion">Unidad de plegado de documentos</field>
+    </record>
+
+    <record id="acc_tipo_trimmer" model="accesorio.tipo">
+        <field name="name">Cortador (Trimmer)</field>
+        <field name="code">trimmer</field>
+        <field name="sequence">89</field>
+        <field name="descripcion">Cortador de bordes para folletos</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- PANELES Y CONTROLES                       -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_panel_smart" model="accesorio.tipo">
+        <field name="name">Panel Smart Táctil</field>
+        <field name="code">panel_smart</field>
+        <field name="sequence">90</field>
+        <field name="descripcion">Panel de control inteligente con pantalla táctil</field>
+    </record>
+
+    <record id="acc_tipo_panel_normal" model="accesorio.tipo">
+        <field name="name">Panel LCD Estándar</field>
+        <field name="code">panel_normal</field>
+        <field name="sequence">100</field>
+        <field name="descripcion">Panel LCD básico no táctil</field>
+    </record>
+
+    <record id="acc_tipo_panel_color" model="accesorio.tipo">
+        <field name="name">Panel LCD Color</field>
+        <field name="code">panel_color</field>
+        <field name="sequence">105</field>
+        <field name="descripcion">Panel LCD a color de tamaño medio</field>
+    </record>
+
+    <record id="acc_tipo_teclado_num" model="accesorio.tipo">
+        <field name="name">Teclado Numérico</field>
+        <field name="code">keypad</field>
+        <field name="sequence">107</field>
+        <field name="descripcion">Teclado numérico para códigos/contadores</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- CONECTIVIDAD                              -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_wifi" model="accesorio.tipo">
+        <field name="name">Módulo Wi-Fi</field>
+        <field name="code">wifi</field>
+        <field name="sequence">110</field>
+        <field name="descripcion">Adaptador de red inalámbrica</field>
+    </record>
+
+    <record id="acc_tipo_ethernet" model="accesorio.tipo">
+        <field name="name">Tarjeta Ethernet Adicional</field>
+        <field name="code">ethernet_extra</field>
+        <field name="sequence">115</field>
+        <field name="descripcion">Tarjeta de red cableada secundaria</field>
+    </record>
+
+    <record id="acc_tipo_usb_host" model="accesorio.tipo">
+        <field name="name">Puerto USB Host</field>
+        <field name="code">usb_host</field>
+        <field name="sequence">120</field>
+        <field name="descripcion">Puerto USB para impresión directa</field>
+    </record>
+
+    <record id="acc_tipo_nfc" model="accesorio.tipo">
+        <field name="name">Lector NFC</field>
+        <field name="code">nfc</field>
+        <field name="sequence">125</field>
+        <field name="descripcion">Lector de tarjetas NFC para autenticación</field>
+    </record>
+
+    <record id="acc_tipo_fax_board" model="accesorio.tipo">
+        <field name="name">Tarjeta Fax</field>
+        <field name="code">fax_board</field>
+        <field name="sequence">130</field>
+        <field name="descripcion">Módulo de fax interno</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- ALMACENAMIENTO Y MEMORIA                  -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_hdd" model="accesorio.tipo">
+        <field name="name">Disco Duro (HDD)</field>
+        <field name="code">hdd</field>
+        <field name="sequence">140</field>
+        <field name="descripcion">Disco duro interno para almacenamiento</field>
+    </record>
+
+    <record id="acc_tipo_ssd" model="accesorio.tipo">
+        <field name="name">Disco SSD</field>
+        <field name="code">ssd</field>
+        <field name="sequence">145</field>
+        <field name="descripcion">Unidad de estado sólido</field>
+    </record>
+
+    <record id="acc_tipo_ram" model="accesorio.tipo">
+        <field name="name">Memoria RAM Adicional</field>
+        <field name="code">ram_extra</field>
+        <field name="sequence">150</field>
+        <field name="descripcion">Módulo de memoria RAM expandida</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- SOPORTE Y MOBILIARIO                      -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_mueble" model="accesorio.tipo">
+        <field name="name">Mueble Base</field>
+        <field name="code">mueble</field>
+        <field name="sequence">160</field>
+        <field name="descripcion">Mueble/gabinete base del equipo</field>
+    </record>
+
+    <record id="acc_tipo_ruedas" model="accesorio.tipo">
+        <field name="name">Ruedas/Casters</field>
+        <field name="code">ruedas</field>
+        <field name="sequence">165</field>
+        <field name="descripcion">Ruedas con freno para movilidad</field>
+    </record>
+
+    <record id="acc_tipo_support_leg" model="accesorio.tipo">
+        <field name="name">Patas de Soporte</field>
+        <field name="code">support_leg</field>
+        <field name="sequence">167</field>
+        <field name="descripcion">Patas ajustables de nivelación</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- ALIMENTACIÓN Y CABLES                     -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_cable_poder" model="accesorio.tipo">
+        <field name="name">Cable de Poder</field>
+        <field name="code">cable_poder</field>
+        <field name="sequence">170</field>
+        <field name="descripcion">Cable de alimentación principal</field>
+    </record>
+
+    <record id="acc_tipo_ups" model="accesorio.tipo">
+        <field name="name">UPS/Estabilizador</field>
+        <field name="code">ups</field>
+        <field name="sequence">175</field>
+        <field name="descripcion">Sistema de alimentación ininterrumpida</field>
+    </record>
+
+    <record id="acc_tipo_cable_usb" model="accesorio.tipo">
+        <field name="name">Cable USB</field>
+        <field name="code">cable_usb</field>
+        <field name="sequence">177</field>
+        <field name="descripcion">Cable USB tipo A/B para conexión directa</field>
+    </record>
+
+    <record id="acc_tipo_cable_red" model="accesorio.tipo">
+        <field name="name">Cable de Red</field>
+        <field name="code">cable_red</field>
+        <field name="sequence">179</field>
+        <field name="descripcion">Cable Ethernet categoría 5e/6</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- ESPECÍFICOS PARA PLOTTERS                 -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_roll_feeder" model="accesorio.tipo">
+        <field name="name">Alimentador de Rollo</field>
+        <field name="code">roll_feeder</field>
+        <field name="sequence">200</field>
+        <field name="descripcion">Sistema de alimentación de papel en rollo</field>
+    </record>
+
+    <record id="acc_tipo_basket" model="accesorio.tipo">
+        <field name="name">Canasta Receptora</field>
+        <field name="code">basket</field>
+        <field name="sequence">205</field>
+        <field name="descripcion">Bandeja receptora de gran formato</field>
+    </record>
+
+    <record id="acc_tipo_cutter" model="accesorio.tipo">
+        <field name="name">Cortador Automático</field>
+        <field name="code">auto_cutter</field>
+        <field name="sequence">210</field>
+        <field name="descripcion">Cortador automático para plotter</field>
+    </record>
+
+    <record id="acc_tipo_scanner_plotter" model="accesorio.tipo">
+        <field name="name">Escáner para Plotter</field>
+        <field name="code">scanner_plotter</field>
+        <field name="sequence">215</field>
+        <field name="descripcion">Módulo de escaneo de gran formato</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- ESPECÍFICOS PARA DUPLICADORAS             -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_master_maker" model="accesorio.tipo">
+        <field name="name">Master Maker</field>
+        <field name="code">master_maker</field>
+        <field name="sequence">220</field>
+        <field name="descripcion">Unidad creadora de masters</field>
+    </record>
+
+    <record id="acc_tipo_ink_drum" model="accesorio.tipo">
+        <field name="name">Tambor de Tinta</field>
+        <field name="code">ink_drum</field>
+        <field name="sequence">225</field>
+        <field name="descripcion">Cilindro de tinta para duplicadora</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- SEGURIDAD Y CONTROL DE ACCESO             -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_card_reader" model="accesorio.tipo">
+        <field name="name">Lector de Tarjetas</field>
+        <field name="code">card_reader</field>
+        <field name="sequence">230</field>
+        <field name="descripcion">Lector de tarjetas de proximidad/magnéticas</field>
+    </record>
+
+    <record id="acc_tipo_coin_op" model="accesorio.tipo">
+        <field name="name">Sistema de Monedas</field>
+        <field name="code">coin_operated</field>
+        <field name="sequence">235</field>
+        <field name="descripcion">Sistema de pago con monedas</field>
+    </record>
+
+    <record id="acc_tipo_job_separator" model="accesorio.tipo">
+        <field name="name">Separador de Trabajos</field>
+        <field name="code">job_separator</field>
+        <field name="sequence">237</field>
+        <field name="descripcion">Bandeja separadora de trabajos</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- OTROS ACCESORIOS COMUNES                  -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_dust_cover" model="accesorio.tipo">
+        <field name="name">Cubierta Antipolvo</field>
+        <field name="code">dust_cover</field>
+        <field name="sequence">240</field>
+        <field name="descripcion">Funda protectora contra polvo</field>
+    </record>
+
+    <record id="acc_tipo_toner_collector" model="accesorio.tipo">
+        <field name="name">Colector de Tóner Residual</field>
+        <field name="code">waste_collector</field>
+        <field name="sequence">245</field>
+        <field name="descripcion">Contenedor de tóner de desecho</field>
+    </record>
+
+    <record id="acc_tipo_humidity_unit" model="accesorio.tipo">
+        <field name="name">Unidad de Humidificación</field>
+        <field name="code">humidity_unit</field>
+        <field name="sequence">250</field>
+        <field name="descripcion">Sistema de control de humedad</field>
+    </record>
+
+    <record id="acc_tipo_document_feeder" model="accesorio.tipo">
+        <field name="name">Alimentador de Documentos</field>
+        <field name="code">doc_feeder</field>
+        <field name="sequence">255</field>
+        <field name="descripcion">Alimentador general de documentos</field>
+    </record>
+
 </odoo>

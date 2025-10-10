@@ -7,22 +7,9 @@ _logger = logging.getLogger(__name__)
 class Reparaciones(models.Model):
     _inherit = 'reparaciones.reparaciones'
 
-    # CAMPO DE CONTROL DE MIGRACIÓN
-    migration_status = fields.Selection([
-        ('pending', 'Pendiente de migración'),
-        ('migrated', 'Migrado'),
-        ('error', 'Error en migración'),
-    ], string='Estado de Migración', default='pending', index=True)
-    
-    migration_date = fields.Datetime(string='Fecha de Migración', readonly=True)
-    migration_count = fields.Integer(string='Evaluaciones Migradas', readonly=True, default=0)
-
-    evaluacion_ids = fields.One2many(
-        'reparacion.componente.evaluacion', 'reparacion_id', string='Evaluaciones'
-    )
-
     def action_migrar_checklist_a_evaluaciones(self):
-        """Migra los campos selection clásicos a evaluaciones M2O."""
+        """Migra los campos selection clásicos a evaluaciones M2O (componentes Y accesorios)."""
+        
         # FILTRAR: Solo migrar registros pendientes o con error
         records_to_migrate = self.filtered(lambda r: r.migration_status in ('pending', 'error'))
         
@@ -31,12 +18,20 @@ class Reparaciones(models.Model):
         
         _logger.info(f"Iniciando migración de {len(records_to_migrate)} registros")
         
+        # ===== MODELOS PARA COMPONENTES =====
         Tipo = self.env['componente.tipo']
         Estado = self.env['componente.estado']
         Color = self.env['color.tipo']
         Eval = self.env['reparacion.componente.evaluacion']
 
-        # MAPEO COMPLETO: campo -> (code tipo componente, code color opcional, observación opcional)
+        # ===== MODELOS PARA ACCESORIOS =====
+        AccesorioTipo = self.env['accesorio.tipo']
+        AccesorioEstado = self.env['accesorio.estado']
+        AccesorioEval = self.env['reparacion.accesorio.evaluacion']
+
+        # ========================================
+        # MAPEO COMPLETO DE COMPONENTES
+        # ========================================
         FIELD_TO_TIPO = {
             # === FUNCIONES ===
             'copia_id':         ('FUNCION_COPIA',     None, 'Función de Copia'),
@@ -83,7 +78,9 @@ class Reparaciones(models.Model):
             'developery_id': ('DEVELOPER',   'y', 'Revelador Amarillo'),
         }
 
-        # MAPEO COMPLETO: valor selection -> code estado
+        # ========================================
+        # MAPEO DE VALORES A ESTADOS (COMPONENTES)
+        # ========================================
         VAL_TO_ESTADO = {
             # === ESTADOS GENERALES DE COMPONENTES ===
             'requiere_cambio': 'requiere_cambio',
@@ -111,6 +108,33 @@ class Reparaciones(models.Model):
             'no': 'sin_revisar',
         }
 
+        # ========================================
+        # MAPEO DE ACCESORIOS
+        # ========================================
+        FIELD_TO_ACCESORIO = {
+            'lct_id': 'lct',
+            'ot_id': 'ot',
+            'hdd_id': 'hdd',
+            'adf_simple_id': 'adf_simple',  
+            'adf_dual_id': 'adf_dual',     
+            'finalizador_interno_id': 'finisher_int',
+            'finalizador_externo_id': 'finisher_ext',
+            'mueble_id': 'mueble',
+            'panel_smart_id': 'panel_smart',
+            'panel_normal_id': 'panel_normal',
+            'wi_fi_id': 'wifi',
+            'cable_poder_id': 'cable_poder',
+        }
+
+        # ========================================
+        # MAPEO DE VALORES A ESTADOS (ACCESORIOS)
+        # ========================================
+        VAL_TO_ACCESORIO_ESTADO = {
+            'si': 'instalado_operativo',
+            'no': 'no_instalado',
+            'no_aplica': 'no_aplica',
+        }
+
         migrated_count = 0
         error_count = 0
 
@@ -118,8 +142,10 @@ class Reparaciones(models.Model):
             try:
                 _logger.info(f"Migrando reparación ID: {rec.id}")
                 
-                create_vals = []
-                evaluaciones_creadas = 0
+                # ========================================
+                # PARTE 1: MIGRAR COMPONENTES
+                # ========================================
+                componentes_vals = []
                 
                 for field_name, (tipo_code, color_code, obs) in FIELD_TO_TIPO.items():
                     if field_name not in rec._fields:
@@ -137,6 +163,7 @@ class Reparaciones(models.Model):
                     if not tipo:
                         _logger.warning(f"Tipo no encontrado: {tipo_code}")
                         continue
+                    
                     estado = Estado.search([('code', '=', estado_code)], limit=1)
                     if not estado:
                         _logger.warning(f"Estado no encontrado: {estado_code}")
@@ -147,13 +174,14 @@ class Reparaciones(models.Model):
                         color = Color.search([('code', '=', color_code)], limit=1)
                         color_id = color.id if color else False
 
-                    # evita duplicados exactos (mismo tipo/color)
+                    # Evitar duplicados exactos (mismo tipo/color)
                     dup_domain = [
                         ('reparacion_id', '=', rec.id),
                         ('componente_tipo_id', '=', tipo.id),
                     ]
                     if color_id:
                         dup_domain.append(('color_id', '=', color_id))
+                    
                     exists = Eval.search(dup_domain, limit=1)
                     if exists:
                         exists.estado_id = estado.id
@@ -161,7 +189,7 @@ class Reparaciones(models.Model):
                             exists.observaciones = obs
                         continue
 
-                    create_vals.append({
+                    componentes_vals.append({
                         'reparacion_id': rec.id,
                         'componente_tipo_id': tipo.id,
                         'estado_id': estado.id,
@@ -169,17 +197,72 @@ class Reparaciones(models.Model):
                         'observaciones': obs or False,
                     })
 
-                # CREAR EVALUACIONES
-                if create_vals:
-                    created_evals = Eval.create(create_vals)
-                    evaluaciones_creadas = len(created_evals)
-                    _logger.info(f"Creadas {evaluaciones_creadas} evaluaciones para reparación {rec.id}")
+                # CREAR EVALUACIONES DE COMPONENTES
+                componentes_creados = 0
+                if componentes_vals:
+                    created_evals = Eval.create(componentes_vals)
+                    componentes_creados = len(created_evals)
+                    _logger.info(f"Creadas {componentes_creados} evaluaciones de componentes para reparación {rec.id}")
 
+                # ========================================
+                # PARTE 2: MIGRAR ACCESORIOS
+                # ========================================
+                accesorios_vals = []
+                
+                for field_name, tipo_code in FIELD_TO_ACCESORIO.items():
+                    if field_name not in rec._fields:
+                        continue
+                    value = getattr(rec, field_name, False)
+                    if not value:
+                        continue
+                    
+                    estado_code = VAL_TO_ACCESORIO_ESTADO.get(value)
+                    if not estado_code:
+                        _logger.warning(f"Estado de accesorio no reconocido '{value}' para campo {field_name}")
+                        continue
+                    
+                    tipo = AccesorioTipo.search([('code', '=', tipo_code)], limit=1)
+                    if not tipo:
+                        _logger.warning(f"Tipo de accesorio no encontrado: {tipo_code}")
+                        continue
+                    
+                    estado = AccesorioEstado.search([('code', '=', estado_code)], limit=1)
+                    if not estado:
+                        _logger.warning(f"Estado de accesorio no encontrado: {estado_code}")
+                        continue
+                    
+                    # Evitar duplicados
+                    exists = AccesorioEval.search([
+                        ('reparacion_id', '=', rec.id),
+                        ('tipo_id', '=', tipo.id)
+                    ], limit=1)
+                    
+                    if exists:
+                        exists.estado_id = estado.id
+                        continue
+                    
+                    accesorios_vals.append({
+                        'reparacion_id': rec.id,
+                        'tipo_id': tipo.id,
+                        'estado_id': estado.id,
+                    })
+
+                # CREAR EVALUACIONES DE ACCESORIOS
+                accesorios_creados = 0
+                if accesorios_vals:
+                    created_accs = AccesorioEval.create(accesorios_vals)
+                    accesorios_creados = len(created_accs)
+                    _logger.info(f"Creadas {accesorios_creados} evaluaciones de accesorios para reparación {rec.id}")
+
+                # ========================================
                 # MARCAR COMO MIGRADO
+                # ========================================
+                total_evaluaciones = componentes_creados + accesorios_creados
+                
                 rec.write({
                     'migration_status': 'migrated',
                     'migration_date': fields.Datetime.now(),
-                    'migration_count': evaluaciones_creadas
+                    'migration_count': total_evaluaciones
                 })
                 
                 migrated_count += 1
@@ -192,9 +275,10 @@ class Reparaciones(models.Model):
                     'migration_date': fields.Datetime.now(),
                 })
                 error_count += 1
-                # NO hacer raise para que continúe con los otros registros
 
+        # ========================================
         # RESULTADO FINAL
+        # ========================================
         message = f"Migración completada:\n"
         message += f"• Migrados exitosamente: {migrated_count}\n"
         message += f"• Errores: {error_count}\n"
@@ -229,66 +313,3 @@ class Reparaciones(models.Model):
                 'type': 'success',
             }
         }
-
-    def action_seed_evaluaciones_desde_modelo(self):
-        """Crea evaluaciones basadas en los componentes del modelo de la máquina."""
-        Eval = self.env['reparacion.componente.evaluacion']
-        for rec in self:
-            modelo = rec.maquina_id
-            if not modelo:
-                continue
-            comp_lines = self.env['modelo.maquina.componente'].search([('modelo_id', '=', modelo.id)])
-            to_create = []
-            for line in comp_lines:
-                dup_domain = [
-                    ('reparacion_id', '=', rec.id),
-                    ('componente_tipo_id', '=', line.tipo_id.id),
-                ]
-                if line.color_id:
-                    dup_domain.append(('color_id', '=', line.color_id.id))
-                exists = Eval.search(dup_domain, limit=1)
-                if exists:
-                    if line.estado_sugerido_id and not exists.estado_id:
-                        exists.estado_id = line.estado_sugerido_id.id
-                    continue
-
-                to_create.append({
-                    'reparacion_id': rec.id,
-                    'componente_tipo_id': line.tipo_id.id,
-                    'color_id': line.color_id.id if line.color_id else False,
-                    'estado_id': line.estado_sugerido_id.id if line.estado_sugerido_id else False,
-                    'observaciones': line.frase_desgaste or False,
-                })
-            if to_create:
-                Eval.create(to_create)
-
-    # En la clase Reparaciones, agregar después de parts_request_count:
-
-    # === SISTEMA DE MIGRACIÓN ===
-    migration_status = fields.Selection([
-        ('pending', 'Pendiente de migración'),
-        ('migrated', 'Migrado'),
-        ('error', 'Error en migración'),
-    ], string='Estado de Migración', default='pending', index=True, 
-    help="Estado actual de migración del checklist a evaluaciones")
-
-    migration_date = fields.Datetime(
-        string='Fecha de Migración', 
-        readonly=True,
-        help="Fecha y hora en que se ejecutó la migración"
-    )
-
-    migration_count = fields.Integer(
-        string='Evaluaciones Migradas', 
-        readonly=True, 
-        default=0,
-        help="Cantidad de evaluaciones creadas durante la migración"
-    )
-
-    # === RELACIÓN CON EVALUACIONES ===
-    evaluacion_ids = fields.One2many(
-        'reparacion.componente.evaluacion', 
-        'reparacion_id', 
-        string='Evaluaciones de Componentes',
-        help="Evaluaciones individuales de cada componente de la máquina"
-    )
