@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from . import ticket_informe_mixin
 from . import models
 from . import marcas
 from . import tipo_maquina
@@ -68,4 +68,3 @@ from . import reparacion_componente_evaluacion
 from . import reparaciones_migration
 from . import soporte_mensajes
 from . import contadores_ticket
-from . import ticket_informe_mixin
