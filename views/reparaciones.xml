@@ -546,6 +546,86 @@
                   </ol>
                 </div>
               </page>
+              <!-- PESTAÑA: EVALUACIONES DE COMPONENTES -->
+<page string="Evaluaciones (Sistema Nuevo)" name="evaluaciones">
+  <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #6610f2; border-radius: 4px;">
+    <h4 style="margin-top: 0; font-size: 16px; color: #6610f2;">
+      <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
+    </h4>
+    <p style="margin-bottom: 5px; font-size: 13px;">
+      Este es el nuevo sistema de evaluación basado en componentes individuales:
+    </p>
+    <ul style="margin-bottom: 0; font-size: 13px;">
+      <li><b>Componente:</b> Tipo de componente evaluado (Fusora, ADF, Tóner, etc.)</li>
+      <li><b>Color:</b> Si aplica, indica el color del componente (K/C/M/Y)</li>
+      <li><b>Estado:</b> Condición actual del componente</li>
+      <li><b>Observaciones:</b> Notas técnicas adicionales</li>
+    </ul>
+  </div>
+  
+  <!-- Estado de Migración -->
+  <group>
+    <group>
+      <field name="migration_status" widget="badge" 
+             decoration-success="migration_status == 'migrated'"
+             decoration-warning="migration_status == 'pending'"
+             decoration-danger="migration_status == 'error'"/>
+      <field name="migration_date" readonly="1"/>
+      <field name="migration_count" readonly="1"/>
+    </group>
+    <group>
+      <button name="action_migrar_checklist_a_evaluaciones" 
+              type="object" 
+              string="Migrar Checklist a Evaluaciones"
+              class="btn-primary"
+              icon="fa-sync"
+              invisible="migration_status == 'migrated'"
+              help="Convierte los campos de checklist antiguos a evaluaciones por componente"/>
+      <button name="action_reset_migration_status" 
+              type="object" 
+              string="Resetear Estado de Migración"
+              class="btn-warning"
+              icon="fa-undo"
+              groups="base.group_system"
+              invisible="migration_status == 'pending'"
+              help="Permite volver a ejecutar la migración"/>
+    </group>
+  </group>
+  
+  <!-- Tree view de evaluaciones -->
+  <field name="evaluacion_ids" mode="tree">
+    <list editable="bottom" create="true" delete="true">
+      <field name="componente_tipo_id" 
+             domain="[]"
+             options="{'no_create': True, 'no_open': True}"/>
+      <field name="color_id" 
+             optional="show"
+             options="{'no_create': True, 'no_open': True}"/>
+      <field name="estado_id" 
+             widget="badge"
+             decoration-danger="estado_id.prioridad == 1"
+             decoration-warning="estado_id.prioridad == 2"
+             decoration-success="estado_id.prioridad == 3"
+             options="{'no_create': True, 'no_open': True}"/>
+      <field name="observaciones" optional="hide"/>
+    </list>
+  </field>
+  
+  <div style="margin-top: 15px; padding: 10px; background-color: #e7e3fc; border: 1px solid #d4c5f9; border-radius: 6px;">
+    <h5 style="color: #6610f2; font-size: 14px; margin-top: 0;">
+      <i class="fa fa-info-circle"></i> ¿Qué es este sistema?
+    </h5>
+    <p style="margin-bottom: 5px; font-size: 13px;">
+      Este nuevo sistema permite:
+    </p>
+    <ul style="margin-bottom: 0; font-size: 13px;">
+      <li>Agregar o eliminar componentes dinámicamente según el modelo de máquina</li>
+      <li>Tener un catálogo centralizado de estados y tipos de componentes</li>
+      <li>Generar informes técnicos automáticos basados en las evaluaciones</li>
+      <li>Rastrear historial de cambios en cada componente</li>
+    </ul>
+  </div>
+</page>
             </notebook>
           </sheet>
           <!-- COMENTARIOS -->

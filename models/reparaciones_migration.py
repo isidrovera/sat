@@ -261,3 +261,34 @@ class Reparaciones(models.Model):
                 })
             if to_create:
                 Eval.create(to_create)
+
+    # En la clase Reparaciones, agregar después de parts_request_count:
+
+    # === SISTEMA DE MIGRACIÓN ===
+    migration_status = fields.Selection([
+        ('pending', 'Pendiente de migración'),
+        ('migrated', 'Migrado'),
+        ('error', 'Error en migración'),
+    ], string='Estado de Migración', default='pending', index=True, 
+    help="Estado actual de migración del checklist a evaluaciones")
+
+    migration_date = fields.Datetime(
+        string='Fecha de Migración', 
+        readonly=True,
+        help="Fecha y hora en que se ejecutó la migración"
+    )
+
+    migration_count = fields.Integer(
+        string='Evaluaciones Migradas', 
+        readonly=True, 
+        default=0,
+        help="Cantidad de evaluaciones creadas durante la migración"
+    )
+
+    # === RELACIÓN CON EVALUACIONES ===
+    evaluacion_ids = fields.One2many(
+        'reparacion.componente.evaluacion', 
+        'reparacion_id', 
+        string='Evaluaciones de Componentes',
+        help="Evaluaciones individuales de cada componente de la máquina"
+    )
