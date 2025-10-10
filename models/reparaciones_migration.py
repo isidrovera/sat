@@ -25,6 +25,19 @@ class Reparaciones(models.Model):
         default=0,
         help="Cantidad de evaluaciones creadas durante la migración"
     )
+    evaluacion_ids = fields.One2many(
+        'reparacion.componente.evaluacion', 
+        'reparacion_id', 
+        string='Evaluaciones de Componentes',
+        help="Evaluaciones individuales de cada componente de la máquina"
+    )
+    
+    accesorio_eval_ids = fields.One2many(
+        'reparacion.accesorio.evaluacion',
+        'reparacion_id',
+        string='Evaluaciones de Accesorios',
+        help="Evaluaciones de accesorios instalados en la máquina"
+    )
     def action_migrar_checklist_a_evaluaciones(self):
         """Migra los campos selection clásicos a evaluaciones M2O (componentes Y accesorios)."""
         
