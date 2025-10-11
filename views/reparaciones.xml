@@ -651,7 +651,20 @@
   
   <!-- Tabla de evaluaciones de accesorios -->
   <separator string="Accesorios Evaluados"/>
-  <field name="accesorio_eval_ids" nolabel="1"/>
+  <field name="accesorio_eval_ids" nolabel="1" 
+         context="{'default_reparacion_id': active_id}">
+    <list string="Evaluación de Accesorios" editable="bottom">
+      <field name="tipo_id" readonly="1"/>
+      <field name="estado_id" 
+             options="{'no_create': True, 'no_open': True}"
+             placeholder="Seleccionar estado..."/>
+      <field name="subparte_ids" widget="many2many_tags"
+             options="{'no_create': True}"
+             optional="show"/>
+      <field name="observaciones" optional="show" 
+             placeholder="Observaciones..."/>
+    </list>
+  </field>
   
   <!-- Info adicional -->
   <div style="margin-top: 15px; padding: 10px; background-color: #d1f2eb; border: 1px solid #c3e6cb; border-radius: 6px;">
