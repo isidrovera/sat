@@ -108,72 +108,129 @@ class ReparacionesInforme(models.Model):
         return 'data-autogen="1"' in html
 
     def _rep__funciones_con_falla(self):
-        etiquetas = []
-        for fname, label in self._REP_FUNCIONES:
-            val = getattr(self, fname, False)
-            if val == 'falla':
-                etiquetas.append(label)
-        return etiquetas
+        """
+        Retorna lista de funciones con falla desde evaluaciones.
+        Busca componentes tipo FUNCION_* con estado 'falla'.
+        """
+        funciones_falla = []
+        
+        for eval_comp in self.evaluacion_ids:
+            if not eval_comp.estado_id:
+                continue
+            
+            # Verificar si es un componente de tipo función
+            tipo_code = eval_comp.componente_tipo_id.code if eval_comp.componente_tipo_id else ''
+            
+            if tipo_code.startswith('FUNCION_') and eval_comp.estado_id.code == 'falla':
+                nombre = eval_comp.componente_tipo_id.name
+                funciones_falla.append(nombre)
+        
+        return funciones_falla
 
     def _rep__toners_criticos(self):
-        criticos = []
-        for fname, label in self._REP_TONERS:
-            # En monocromo solo evaluamos negro
-            if self.tipo_id != 'color' and fname != 'toner_black_id':
+        """
+        Retorna lista de tóners en estado crítico desde evaluaciones.
+        Busca componentes tipo TONER_* con estados 'vacio' o 'sin_botella'.
+        """
+        toners_criticos = []
+        
+        for eval_comp in self.evaluacion_ids:
+            if not eval_comp.estado_id:
                 continue
-            val = getattr(self, fname, False)
-            if val in ('vacio', 'sin_botella'):
-                criticos.append(label)
-        return criticos
+            
+            # Verificar si es un tóner
+            tipo_code = eval_comp.componente_tipo_id.code if eval_comp.componente_tipo_id else ''
+            
+            if tipo_code == 'TONER_SYSTEM' and eval_comp.estado_id.code in ('vacio', 'sin_botella'):
+                nombre = eval_comp.componente_tipo_id.name
+                if eval_comp.color_id:
+                    nombre = f"{nombre} {eval_comp.color_id.name}"
+                toners_criticos.append(nombre)
+        
+        return toners_criticos
 
     def _rep__collect_findings(self):
         """
-        Clasifica hallazgos:
-        - cambio_inmediato: requiere_cambio / cambio_de_repuestos
-        - desgaste: regular / gastada_pero_puede_trabajar / mantenimiento
-        - con_falla: 'no' (en tacho) o sin_revisar (para listar pendientes)
-        - no_aplica: no_aplica
-        score ponderado por 'peso'
+        Clasifica hallazgos desde evaluaciones (NO desde campos Selection).
+        Retorna:
+        - cambio_inmediato: componentes/accesorios que requieren cambio urgente
+        - desgaste: componentes con desgaste pero operativos
+        - pendientes: evaluaciones sin estado asignado
+        - no_aplica: componentes/accesorios marcados como no aplica
+        - score: puntuación ponderada
         """
-        cambio_inmediato, desgaste, pendientes, no_aplica = [], [], [], []
+        cambio_inmediato = []
+        desgaste = []
+        pendientes = []
+        no_aplica = []
         score = 0
-
-        # Módulos/Sistemas
-        for field_name, (etq, peso) in self._REP_CHECK_MAP.items():
-            val = getattr(self, field_name, False)
-            if not val:
+        
+        # ========================================
+        # ANALIZAR COMPONENTES
+        # ========================================
+        for eval_comp in self.evaluacion_ids:
+            if not eval_comp.estado_id:
+                # Sin estado asignado
+                nombre = eval_comp.componente_tipo_id.name
+                if eval_comp.color_id:
+                    nombre = f"{nombre} ({eval_comp.color_id.name})"
+                pendientes.append(nombre)
+                score += 1
                 continue
-            if val in ('cambio_de_repuestos', 'requiere_cambio'):
-                cambio_inmediato.append(etq)
+            
+            estado_code = eval_comp.estado_id.code
+            nombre = eval_comp.componente_tipo_id.name
+            if eval_comp.color_id:
+                nombre = f"{nombre} ({eval_comp.color_id.name})"
+            
+            # Prioridad del tipo de componente (si existe)
+            peso = 2  # peso por defecto
+            if hasattr(eval_comp.componente_tipo_id, 'prioridad'):
+                prioridad = eval_comp.componente_tipo_id.prioridad
+                if prioridad == '1':  # Crítico
+                    peso = 3
+                elif prioridad == '2':  # Medio
+                    peso = 2
+                elif prioridad == '3':  # Bajo
+                    peso = 1
+            
+            # Clasificar según estado
+            if estado_code in ('requiere_cambio', 'cambio_de_repuestos'):
+                cambio_inmediato.append(nombre)
                 score += 3 * peso
-            elif val in ('mantenimiento', 'regular', 'gastada_pero_puede_trabajar'):
-                desgaste.append(etq)
+            elif estado_code in ('regular', 'gastada_pero_puede_trabajar', 'mantenimiento'):
+                desgaste.append(nombre)
                 score += 2 * peso
-            elif val in ('sin_revisar', 'no'):  # 'no' para tacho_id
-                pendientes.append(etq)
+            elif estado_code in ('sin_revisar', 'sin_probar'):
+                pendientes.append(nombre)
                 score += 1 * peso
-            elif val == 'no_aplica':
-                no_aplica.append(etq)
-            # 'revisado' o 'si' → nada que listar
-
-        # Unidades de imagen / Developers
-        # (Respetando no_aplica para equipos mono)
-        for field_name, (etq, peso) in self._REP_UNIDADES_IMG.items():
-            if self.tipo_id != 'color' and field_name not in ('black_id', 'developerk_id'):
+            elif estado_code == 'no_aplica':
+                no_aplica.append(nombre)
+            # Estados OK: 'nuevo', 'revisado', 'correcto' → no se listan
+        
+        # ========================================
+        # ANALIZAR ACCESORIOS
+        # ========================================
+        for eval_acc in self.accesorio_eval_ids:
+            if not eval_acc.estado_id:
+                pendientes.append(eval_acc.tipo_id.name)
+                score += 1
                 continue
-            val = getattr(self, field_name, False)
-            if not val:
-                continue
-            if val == 'requiere_cambio':
-                cambio_inmediato.append(etq)
-                score += 3 * peso
-            elif val in ('regular', 'gastada_pero_puede_trabajar'):
-                desgaste.append(etq)
-                score += 2 * peso
-            elif val == 'no_aplica':
-                no_aplica.append(etq)
-            # 'nuevo' → nada
-
+            
+            estado_code = eval_acc.estado_id.code
+            nombre = eval_acc.tipo_id.name
+            
+            if estado_code == 'instalado_con_falla':
+                cambio_inmediato.append(nombre)
+                score += 3
+            elif estado_code == 'no_instalado':
+                # No es crítico, pero se menciona
+                desgaste.append(f"{nombre} (no instalado)")
+                score += 1
+            elif estado_code == 'no_aplica':
+                no_aplica.append(nombre)
+            # 'instalado_operativo' → OK, no se lista
+        
         return {
             'cambio_inmediato': cambio_inmediato,
             'desgaste': desgaste,
@@ -181,7 +238,6 @@ class ReparacionesInforme(models.Model):
             'no_aplica': no_aplica,
             'score': score,
         }
-
     def _rep__calc_calidad(self, findings, funciones_falla, toners_criticos):
         # Régimen simple y efectivo:
         if findings['cambio_inmediato'] or funciones_falla or toners_criticos:
