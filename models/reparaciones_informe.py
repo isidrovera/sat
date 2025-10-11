@@ -3,6 +3,7 @@ from odoo import _, models, fields, api
 from odoo.exceptions import UserError
 import logging
 import re
+import unicodedata
 
 _logger = logging.getLogger(__name__)
 
@@ -92,6 +93,61 @@ class ReparacionesInforme(models.Model):
         return False
 
     # ========================================
+    # HELPER: NORMALIZAR TIPO A CLAVE CANÓNICA
+    # ========================================
+    def _rep__canonical_tipo_code(self, tipo):
+        """
+        Devuelve un código canónico para el tipo de componente, independientemente de cómo
+        esté escrito en el catálogo (con acentos, en español/inglés, con espacios, etc.).
+
+        Posibles retornos (ejemplos):
+          'IU', 'DEVELOPER', 'FUSORA', 'ITB', 'ADF', 'FINISHER', 'OPTICO', 'TRAY', 'BYPASS', 'PAPEL'
+        """
+        if not tipo:
+            return ''
+
+        raw = (tipo.code or tipo.name or '').strip()
+
+        def _norm(s):
+            s = unicodedata.normalize('NFKD', s)
+            s = ''.join(c for c in s if not unicodedata.combining(c))
+            s = s.upper().strip()
+            s = re.sub(r'\s+', ' ', s)
+            return s
+
+        txt = _norm(raw)
+
+        alias = [
+            # Unidad de imagen / tambor
+            (('IMAGEN', 'IMAGING', 'DRUM', 'DRUM UNIT', 'IU', 'UNIDAD IMAGEN', 'UNIDAD DE IMAGEN'), 'IU'),
+            # Developer
+            (('DEVELOPER', 'DEV'), 'DEVELOPER'),
+            # Fusora
+            (('FUSORA', 'FUSOR', 'FUSER', 'FUSING', 'CALENTADOR'), 'FUSORA'),
+            # Banda de transferencia
+            (('ITB', 'TRANSFER BELT', 'TRANSFERENCIA', 'FAJA', 'BANDA'), 'ITB'),
+            # Alimentador de documentos
+            (('ADF', 'ALIMENTADOR', 'ALIMENTADOR DE DOCUMENTOS'), 'ADF'),
+            # Finalizador
+            (('FINISHER', 'FIN', 'ENGRAPADORA', 'GRAPADORA'), 'FINISHER'),
+            # Óptico / escáner
+            (('OPTICO', 'OPTICO/ESCANER', 'OPTICO ESCANER', 'OPTICO-ESCANER', 'OPTICAL', 'ESCANER', 'SCANNER', 'LSU'), 'OPTICO'),
+            # Papel / bandejas / bypass
+            (('TRAY', 'BANDEJA', 'BANDEJAS'), 'TRAY'),
+            (('BYPASS',), 'BYPASS'),
+            (('PAPEL', 'PAPER', 'TRANSPORTE PAPEL', 'TRANSPORTE DE PAPEL'), 'PAPEL'),
+            # Transfer roller a fusora (como agrupabas)
+            (('TRANSFER ROLLER', 'ROLLER TRANSFER', 'TRANSFER_ROLLER'), 'FUSORA'),
+        ]
+
+        for keys, canon in alias:
+            for k in keys:
+                if k in txt:
+                    return canon
+
+        return txt  # para logging cuando no matchea ningún alias
+
+    # ========================================
     # EXTRACCIÓN DE DATOS DESDE EVALUACIONES
     # ========================================
     def _rep__funciones_con_falla(self):
@@ -131,12 +187,7 @@ class ReparacionesInforme(models.Model):
     def _rep__collect_findings(self):
         """
         Clasifica hallazgos desde evaluaciones (NO desde campos Selection).
-        Retorna dict con:
-        - cambio_inmediato
-        - desgaste
-        - pendientes
-        - no_aplica
-        - score
+        Retorna dict: cambio_inmediato, desgaste, pendientes, no_aplica, score.
         """
         cambio_inmediato, desgaste, pendientes, no_aplica = [], [], [], []
         score = 0
@@ -156,7 +207,7 @@ class ReparacionesInforme(models.Model):
             if eval_comp.color_id:
                 nombre = f"{nombre} ({eval_comp.color_id.name})"
 
-            # Prioridad (opcional si tu catálogo lo trae)
+            # Prioridad (si existe)
             peso = 2  # default
             if hasattr(eval_comp.componente_tipo_id, 'prioridad'):
                 prioridad = eval_comp.componente_tipo_id.prioridad
@@ -176,7 +227,7 @@ class ReparacionesInforme(models.Model):
             elif estado_code == 'no_aplica':
                 no_aplica.append(nombre)
 
-        # Accesorios
+        # Accesorios (si existe el one2many)
         for eval_acc in getattr(self, 'accesorio_eval_ids', self.env['reparacion.accesorio.evaluacion']):
             if not eval_acc.estado_id:
                 pendientes.append(eval_acc.tipo_id.name); score += 1; continue
@@ -233,11 +284,7 @@ class ReparacionesInforme(models.Model):
             "Se realizó limpieza, puesta a punto básica y verificación general de funcionamiento y consumibles para la venta mayorista."
         )
 
-        color_sev = {
-            'critico': '#d32f2f',
-            'medio':   '#ef6c00',
-            'pend':    '#616161',
-        }
+        color_sev = {'critico': '#d32f2f', 'medio': '#ef6c00', 'pend': '#616161'}
         color_calidad_bg = {'mala': '#ffebee', 'regular': '#fff8e1', 'buena': '#e8f5e9'}
         color_calidad_txt = {'mala': '#c62828', 'regular': '#ef6c00', 'buena': '#2e7d32'}
 
@@ -372,7 +419,7 @@ class ReparacionesInforme(models.Model):
                 _logger.warning(
                     "[_check_campos...] No se pudo mapear eval %s (tipo=%s color=%s)",
                     evaluacion.id,
-                    evaluacion.componente_tipo_id and evaluacion.componente_tipo_id.code,
+                    evaluacion.componente_tipo_id and (evaluacion.componente_tipo_id.code or evaluacion.componente_tipo_id.name),
                     self._rep__get_color_code_from_eval(evaluacion),
                 )
                 continue
@@ -404,46 +451,40 @@ class ReparacionesInforme(models.Model):
             _logger.warning("[_get_componente_code_from_evaluacion] Eval %s sin tipo", evaluacion.id)
             return False
 
-        tipo_code = (tipo.code or '').strip().upper()
+        tipo_key = self._rep__canonical_tipo_code(tipo)
         color = self._rep__get_color_code_from_eval(evaluacion)
 
-        # Mapeo central y alias frecuentes
         TIPO_TO_CODE = {
             # Sensibles a color
-            'IU': {'k': 'ui_k', 'c': 'ui_c', 'm': 'ui_m', 'y': 'ui_y'},  # Unidad de Imagen
+            'IU': {'k': 'ui_k', 'c': 'ui_c', 'm': 'ui_m', 'y': 'ui_y'},
             'DEVELOPER': {'k': 'dev_k', 'c': 'dev_c', 'm': 'dev_m', 'y': 'dev_y'},
-            'DRUM': {'k': 'ui_k', 'c': 'ui_c', 'm': 'ui_m', 'y': 'ui_y'},
-            'DRUM_UNIT': {'k': 'ui_k', 'c': 'ui_c', 'm': 'ui_m', 'y': 'ui_y'},
-            'DEV': {'k': 'dev_k', 'c': 'dev_c', 'm': 'dev_m', 'y': 'dev_y'},
 
             # No sensibles a color
             'FUSORA': 'fuser',
-            'FUSER': 'fuser',
-            'TRANSFER_ROLLER': 'fuser',
-            'FAJA': 'itb',
             'ITB': 'itb',
-            'TRANSFER_BELT': 'itb',
             'ADF': 'adf',
             'FINISHER': 'fin',
             'OPTICO': 'opt',
             'TRAY': 'papel',
             'BYPASS': 'papel',
-
-            # Otros posibles
-            'ESCANER': 'opt',
-            'RED': 'otro',
+            'PAPEL': 'papel',
         }
 
-        mapping = TIPO_TO_CODE.get(tipo_code)
+        _logger.debug(
+            "[_get_componente_code_from_evaluacion] eval=%s raw_code='%s' name='%s' -> tipo_key='%s' color=%s",
+            evaluacion.id, (tipo.code or ''), (tipo.name or ''), tipo_key, color
+        )
+
+        mapping = TIPO_TO_CODE.get(tipo_key)
         if isinstance(mapping, dict):
             if not color:
-                _logger.debug("[_get_componente_code...] tipo=%s requiere color y no hay", tipo_code)
+                _logger.debug("[_get_componente_code...] tipo_key=%s requiere color y no hay", tipo_key)
                 return False
             res = mapping.get(color)
-            _logger.debug("[_get_componente_code...] tipo=%s color=%s -> %s", tipo_code, color, res)
+            _logger.debug("[_get_componente_code...] tipo_key=%s color=%s -> %s", tipo_key, color, res)
             return res
         else:
-            _logger.debug("[_get_componente_code...] tipo=%s -> %s", tipo_code, mapping or False)
+            _logger.debug("[_get_componente_code...] tipo_key=%s -> %s", tipo_key, mapping or False)
             return mapping or False
 
     def _ensure_intervencion_for_component(self, componente_code):
@@ -478,7 +519,7 @@ class ReparacionesInforme(models.Model):
             return
 
         wizard = self.env['reparacion.add.subparts.wizard'].create({'reparacion_id': self.id})
-        modelo_maquina = self.maquina_id  # CORRECTO: usar record, no name
+        modelo_maquina = self.maquina_id  # usar record, no name
         if not modelo_maquina:
             _logger.error("[_abrir_wizard_multiple_componentes] Máquina sin modelo id=%s", self.id)
             raise UserError(_("La máquina no tiene modelo asignado"))
@@ -592,12 +633,10 @@ class ReparacionesInforme(models.Model):
                 if 'calidad_id' in rec._fields:
                     field = rec._fields['calidad_id']
                     try:
-                        # Selection o Char
                         if isinstance(field, fields.Selection) or isinstance(field, fields.Char):
                             vals['calidad_id'] = calidad
                         else:
-                            # Many2one a un catálogo de calidades (buscar por code o name)
-                            Calidad = rec.env['reparacion.calidad'] if 'reparacion.calidad' in rec.env else False
+                            Calidad = rec.env.get('reparacion.calidad')
                             if Calidad:
                                 cal = Calidad.search([('code', '=', calidad)], limit=1) or \
                                       Calidad.search([('name', 'ilike', calidad)], limit=1)
