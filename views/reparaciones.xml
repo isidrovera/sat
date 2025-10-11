@@ -652,7 +652,7 @@
   <!-- Tabla de evaluaciones de accesorios -->
   <separator string="Accesorios Evaluados"/>
   <field name="accesorio_eval_ids" nolabel="1">
-    <list string="Evaluación de Accesorios" editable="bottom">
+    <list string="Evaluación de Accesorios" editable="bottom" create="false" delete="false">
       <field name="tipo_id" readonly="1"/>
       <field name="estado_id" 
              options="{'no_create': True, 'no_open': True}"
