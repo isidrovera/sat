@@ -66,6 +66,16 @@ class Reparaciones(models.Model):
                 except Exception as qr_error:
                     _logger.error("Error al generar el código QR para el registro ID %s: %s", record.id, str(qr_error))
 
+                # ========================================
+                # NUEVO: AUTO-CARGAR EVALUACIONES
+                # ========================================
+                try:
+                    record._seed_evaluaciones_from_modelo()
+                    _logger.info("Evaluaciones auto-cargadas para reparación ID: %s", record.id)
+                except Exception as eval_error:
+                    # NO bloquear la creación si falla la carga de evaluaciones
+                    _logger.warning("No se pudieron auto-cargar evaluaciones para reparación ID %s: %s", record.id, str(eval_error))
+
             return records
 
         except KeyError as e:
@@ -75,6 +85,90 @@ class Reparaciones(models.Model):
         except Exception as create_error:
             _logger.error("Error durante la creación de la reparación: %s", str(create_error))
             raise
+
+    def _seed_evaluaciones_from_modelo(self):
+        """
+        Carga automáticamente componentes y accesorios según el modelo de máquina.
+        El técnico luego completará el estado de cada uno.
+        """
+        self.ensure_one()
+        
+        # Validar que existe máquina y modelo
+        if not self.maquina_id or not self.maquina_id.name:
+            _logger.info(f"Reparación {self.id}: No tiene máquina o modelo asignado, skip evaluaciones")
+            return
+        
+        modelo = self.maquina_id.name  # modelo.maquina
+        _logger.info(f"Auto-cargando evaluaciones para reparación {self.id}, modelo: {modelo.name}")
+        
+        # ========================================
+        # AUTO-CARGAR COMPONENTES
+        # ========================================
+        componentes_modelo = self.env['modelo.maquina.componente'].search([
+            ('modelo_id', '=', modelo.id)
+        ])
+        
+        Eval = self.env['reparacion.componente.evaluacion']
+        componentes_creados = 0
+        
+        for comp_line in componentes_modelo:
+            # Evitar duplicados
+            exists = Eval.search([
+                ('reparacion_id', '=', self.id),
+                ('componente_tipo_id', '=', comp_line.tipo_id.id),
+                '|',
+                ('color_id', '=', False),
+                ('color_id', '=', comp_line.color_id.id if comp_line.color_id else False)
+            ], limit=1)
+            
+            if exists:
+                _logger.debug(f"Componente {comp_line.tipo_id.name} ya existe, skip")
+                continue
+            
+            # Crear evaluación con estado sugerido (técnico lo modificará)
+            Eval.create({
+                'reparacion_id': self.id,
+                'componente_tipo_id': comp_line.tipo_id.id,
+                'color_id': comp_line.color_id.id if comp_line.color_id else False,
+                'estado_id': comp_line.estado_sugerido_id.id if comp_line.estado_sugerido_id else False,
+                'observaciones': comp_line.frase_desgaste or '',
+            })
+            componentes_creados += 1
+        
+        _logger.info(f"Creados {componentes_creados} componentes para reparación {self.id}")
+        
+        # ========================================
+        # AUTO-CARGAR ACCESORIOS
+        # ========================================
+        accesorios_modelo = self.env['modelo.maquina.accesorio'].search([
+            ('modelo_id', '=', modelo.id)
+        ])
+        
+        AccEval = self.env['reparacion.accesorio.evaluacion']
+        accesorios_creados = 0
+        
+        for acc_line in accesorios_modelo:
+            # Evitar duplicados
+            exists = AccEval.search([
+                ('reparacion_id', '=', self.id),
+                ('tipo_id', '=', acc_line.tipo_id.id)
+            ], limit=1)
+            
+            if exists:
+                _logger.debug(f"Accesorio {acc_line.tipo_id.name} ya existe, skip")
+                continue
+            
+            # Crear evaluación con estado predeterminado (técnico lo modificará)
+            AccEval.create({
+                'reparacion_id': self.id,
+                'tipo_id': acc_line.tipo_id.id,
+                'estado_id': acc_line.estado_predeterminado_id.id if acc_line.estado_predeterminado_id else False,
+                'observaciones': acc_line.nota or '',
+            })
+            accesorios_creados += 1
+        
+        _logger.info(f"Creados {accesorios_creados} accesorios para reparación {self.id}")
+        _logger.info(f"Total evaluaciones auto-cargadas: {componentes_creados + accesorios_creados}")
     # --- NUEVOS CAMPOS EN Reparaciones ---
     pcloud_folder_id = fields.Char(string='pCloud Folder ID', copy=False)
     pcloud_upload_code = fields.Char(string='pCloud Upload Code', copy=False)
