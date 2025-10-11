@@ -26,8 +26,9 @@ class ReparacionAccesorioEvaluacion(models.Model):
     estado_id = fields.Many2one(
         'accesorio.estado',
         string='Estado',
-        required=True,
-        ondelete='restrict'
+        required=False,  # ✅ Cambiado a False
+        ondelete='restrict',
+        help="Estado del accesorio. Debe ser completado por el técnico."
     )
     
     subparte_ids = fields.Many2many(
