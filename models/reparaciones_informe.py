@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 from odoo import _, models, fields, api
-from odoo.exceptions import ValidationError, UserError
+from odoo.exceptions import UserError
 import logging
 import re
 
@@ -8,7 +9,7 @@ _logger = logging.getLogger(__name__)
 
 class ReparacionesInforme(models.Model):
     _inherit = 'reparaciones.reparaciones'
-    _description = 'Informe Reparaciones'
+    _description = 'Informe Reparaciones (Generación automática con hallazgos)'
 
     # ========================================
     # CAMPOS
@@ -23,18 +24,72 @@ class ReparacionesInforme(models.Model):
     # HELPERS DE VALIDACIÓN
     # ========================================
     def _rep__is_autogen_informe(self):
-        """Detecta si el informe fue autogenerado"""
+        """Detecta si el informe fue autogenerado (marca data-autogen=1)."""
         html = (self.informe or '').lower()
-        return 'data-autogen="1"' in html
+        res = 'data-autogen="1"' in html
+        _logger.debug("[_rep__is_autogen_informe] id=%s autogen=%s", self.id, res)
+        return res
 
     def _rep__html_is_empty(self, html):
-        """True si el HTML está vacío (solo tags/espacios/&nbsp;/<br>)"""
+        """True si el HTML está vacío (solo tags/espacios/&nbsp;/<br>)."""
         if not html:
+            _logger.debug("[_rep__html_is_empty] HTML vacío (None/''), retorna True")
             return True
         s = html.replace('&nbsp;', ' ')
         s = re.sub(r'<br\s*/?>', ' ', s, flags=re.I)
         s = re.sub(r'<[^>]*>', '', s)  # quitar etiquetas
-        return s.strip() == ''
+        res = (s.strip() == '')
+        _logger.debug("[_rep__html_is_empty] limpio='%s' vacío=%s", s.strip(), res)
+        return res
+
+    # ========================================
+    # HELPERS DE COLOR
+    # ========================================
+    def _rep__normalize_color_name(self, name):
+        """Convierte nombres en código 'k/c/m/y' cuando no hay code en color_id."""
+        if not name:
+            return False
+        n = str(name).strip().lower()
+        mapping = {
+            'k': 'k', 'black': 'k', 'negro': 'k',
+            'c': 'c', 'cyan': 'c',
+            'm': 'm', 'magenta': 'm',
+            'y': 'y', 'yellow': 'y', 'amarillo': 'y',
+        }
+        res = mapping.get(n, False)
+        _logger.debug("[_rep__normalize_color_name] name='%s' -> '%s'", name, res)
+        return res
+
+    def _rep__get_color_code_from_eval(self, eval_comp):
+        """
+        Retorna 'k'/'c'/'m'/'y' o False desde la evaluación.
+        Prioridad:
+        1) eval_comp.color (si existiese en DBs viejas),
+        2) eval_comp.color_id.code,
+        3) eval_comp.color_id.name -> mapeado a k/c/m/y.
+        """
+        color_legacy = getattr(eval_comp, 'color', False)
+        if color_legacy:
+            code = str(color_legacy).strip().lower()
+            if code in ('k', 'c', 'm', 'y'):
+                _logger.debug("[_rep__get_color_code_from_eval] legacy color=%s", code)
+                return code
+
+        color_id = getattr(eval_comp, 'color_id', False)
+        if color_id:
+            # code directo
+            code = getattr(color_id, 'code', False)
+            if code:
+                code = str(code).strip().lower()
+                _logger.debug("[_rep__get_color_code_from_eval] color_id.code=%s", code)
+                return code if code in ('k', 'c', 'm', 'y') else False
+            # por nombre
+            norm = self._rep__normalize_color_name(getattr(color_id, 'name', False))
+            _logger.debug("[_rep__get_color_code_from_eval] color_id.name->%s", norm)
+            return norm
+
+        _logger.debug("[_rep__get_color_code_from_eval] sin color en evaluación %s", eval_comp.id)
+        return False
 
     # ========================================
     # EXTRACCIÓN DE DATOS DESDE EVALUACIONES
@@ -45,131 +100,107 @@ class ReparacionesInforme(models.Model):
         Busca componentes tipo FUNCION_* con estado 'falla'.
         """
         funciones_falla = []
-        
         for eval_comp in self.evaluacion_ids:
             if not eval_comp.estado_id:
                 continue
-            
-            tipo_code = eval_comp.componente_tipo_id.code if eval_comp.componente_tipo_id else ''
-            
+            tipo_code = (eval_comp.componente_tipo_id.code or '').strip().upper() if eval_comp.componente_tipo_id else ''
             if tipo_code.startswith('FUNCION_') and eval_comp.estado_id.code == 'falla':
                 nombre = eval_comp.componente_tipo_id.name
                 funciones_falla.append(nombre)
-        
+        _logger.debug("[_rep__funciones_con_falla] id=%s -> %s", self.id, funciones_falla)
         return funciones_falla
 
     def _rep__toners_criticos(self):
         """
-        Retorna lista de tóners en estado crítico desde evaluaciones.
-        Busca componentes tipo TONER_* con estados 'vacio' o 'sin_botella'.
+        Retorna lista de consumibles críticos desde evaluaciones.
+        Usa tipo 'TONER_SYSTEM' y estados 'vacio' o 'sin_botella'.
         """
         toners_criticos = []
-        
         for eval_comp in self.evaluacion_ids:
             if not eval_comp.estado_id:
                 continue
-            
-            tipo_code = eval_comp.componente_tipo_id.code if eval_comp.componente_tipo_id else ''
-            
+            tipo_code = (eval_comp.componente_tipo_id.code or '').strip().upper() if eval_comp.componente_tipo_id else ''
             if tipo_code == 'TONER_SYSTEM' and eval_comp.estado_id.code in ('vacio', 'sin_botella'):
                 nombre = eval_comp.componente_tipo_id.name
                 if eval_comp.color_id:
                     nombre = f"{nombre} {eval_comp.color_id.name}"
                 toners_criticos.append(nombre)
-        
+        _logger.debug("[_rep__toners_criticos] id=%s -> %s", self.id, toners_criticos)
         return toners_criticos
 
     def _rep__collect_findings(self):
         """
         Clasifica hallazgos desde evaluaciones (NO desde campos Selection).
         Retorna dict con:
-        - cambio_inmediato: componentes/accesorios que requieren cambio urgente
-        - desgaste: componentes con desgaste pero operativos
-        - pendientes: evaluaciones sin estado asignado
-        - no_aplica: componentes/accesorios marcados como no aplica
-        - score: puntuación ponderada
+        - cambio_inmediato
+        - desgaste
+        - pendientes
+        - no_aplica
+        - score
         """
-        cambio_inmediato = []
-        desgaste = []
-        pendientes = []
-        no_aplica = []
+        cambio_inmediato, desgaste, pendientes, no_aplica = [], [], [], []
         score = 0
-        
-        # ========================================
-        # ANALIZAR COMPONENTES
-        # ========================================
+
+        # Componentes
         for eval_comp in self.evaluacion_ids:
             if not eval_comp.estado_id:
-                # Sin estado asignado
                 nombre = eval_comp.componente_tipo_id.name
                 if eval_comp.color_id:
                     nombre = f"{nombre} ({eval_comp.color_id.name})"
                 pendientes.append(nombre)
                 score += 1
                 continue
-            
+
             estado_code = eval_comp.estado_id.code
             nombre = eval_comp.componente_tipo_id.name
             if eval_comp.color_id:
                 nombre = f"{nombre} ({eval_comp.color_id.name})"
-            
-            # Prioridad del tipo de componente
-            peso = 2  # peso por defecto
+
+            # Prioridad (opcional si tu catálogo lo trae)
+            peso = 2  # default
             if hasattr(eval_comp.componente_tipo_id, 'prioridad'):
                 prioridad = eval_comp.componente_tipo_id.prioridad
-                if prioridad == '1':  # Crítico
+                if prioridad == '1':
                     peso = 3
-                elif prioridad == '2':  # Medio
+                elif prioridad == '2':
                     peso = 2
-                elif prioridad == '3':  # Bajo
+                elif prioridad == '3':
                     peso = 1
-            
-            # Clasificar según estado
+
             if estado_code in ('requiere_cambio', 'cambio_de_repuestos'):
-                cambio_inmediato.append(nombre)
-                score += 3 * peso
+                cambio_inmediato.append(nombre); score += 3 * peso
             elif estado_code in ('regular', 'gastada_pero_puede_trabajar', 'mantenimiento'):
-                desgaste.append(nombre)
-                score += 2 * peso
+                desgaste.append(nombre); score += 2 * peso
             elif estado_code in ('sin_revisar', 'sin_probar'):
-                pendientes.append(nombre)
-                score += 1 * peso
+                pendientes.append(nombre); score += 1 * peso
             elif estado_code == 'no_aplica':
                 no_aplica.append(nombre)
-            # Estados OK: 'nuevo', 'revisado', 'correcto' → no se listan
-        
-        # ========================================
-        # ANALIZAR ACCESORIOS
-        # ========================================
-        for eval_acc in self.accesorio_eval_ids:
+
+        # Accesorios
+        for eval_acc in getattr(self, 'accesorio_eval_ids', self.env['reparacion.accesorio.evaluacion']):
             if not eval_acc.estado_id:
-                pendientes.append(eval_acc.tipo_id.name)
-                score += 1
-                continue
-            
+                pendientes.append(eval_acc.tipo_id.name); score += 1; continue
             estado_code = eval_acc.estado_id.code
             nombre = eval_acc.tipo_id.name
-            
             if estado_code == 'instalado_con_falla':
-                cambio_inmediato.append(nombre)
-                score += 3
+                cambio_inmediato.append(nombre); score += 3
             elif estado_code == 'no_instalado':
-                desgaste.append(f"{nombre} (no instalado)")
-                score += 1
+                desgaste.append(f"{nombre} (no instalado)"); score += 1
             elif estado_code == 'no_aplica':
                 no_aplica.append(nombre)
-            # 'instalado_operativo' → OK, no se lista
-        
-        return {
+
+        findings = {
             'cambio_inmediato': cambio_inmediato,
             'desgaste': desgaste,
             'pendientes': pendientes,
             'no_aplica': no_aplica,
             'score': score,
         }
+        _logger.debug("[_rep__collect_findings] id=%s -> %s", self.id, findings)
+        return findings
 
     def _rep__calc_calidad(self, findings, funciones_falla, toners_criticos):
-        """Calcula calidad general de la máquina"""
+        """Calcula calidad general."""
         if findings['cambio_inmediato'] or funciones_falla or toners_criticos:
             return 'mala'
         if findings['desgaste'] or findings['pendientes']:
@@ -180,15 +211,17 @@ class ReparacionesInforme(models.Model):
     # CONSTRUCCIÓN DEL INFORME HTML
     # ========================================
     def _rep__build_informe_html(self):
-        """Construye el HTML del informe técnico"""
+        """Construye el HTML del informe técnico."""
         self.ensure_one()
+        _logger.info("[_rep__build_informe_html] Iniciando para reparacion id=%s", self.id)
 
         f = self._rep__collect_findings()
         funciones_no = self._rep__funciones_con_falla()
         toners_crit = self._rep__toners_criticos()
 
-        # Conclusión orientada a venta B2B
         calidad = self._rep__calc_calidad(f, funciones_no, toners_crit)
+        _logger.debug("[_rep__build_informe_html] calidad=%s", calidad)
+
         if calidad == 'mala':
             concl = _("Unidad requiere inversión inmediata en repuestos antes de entregarse a distribuidor.")
         elif calidad == 'regular':
@@ -200,57 +233,41 @@ class ReparacionesInforme(models.Model):
             "Se realizó limpieza, puesta a punto básica y verificación general de funcionamiento y consumibles para la venta mayorista."
         )
 
-        # Paleta de colores
         color_sev = {
             'critico': '#d32f2f',
             'medio':   '#ef6c00',
             'pend':    '#616161',
         }
-        color_calidad_bg = {
-            'mala':    '#ffebee',
-            'regular': '#fff8e1',
-            'buena':   '#e8f5e9',
-        }
-        color_calidad_txt = {
-            'mala':    '#c62828',
-            'regular': '#ef6c00',
-            'buena':   '#2e7d32',
-        }
+        color_calidad_bg = {'mala': '#ffebee', 'regular': '#fff8e1', 'buena': '#e8f5e9'}
+        color_calidad_txt = {'mala': '#c62828', 'regular': '#ef6c00', 'buena': '#2e7d32'}
 
-        # Bloques de observaciones
         bloques = []
         if funciones_no:
             bloques.append(
                 f"<p style='margin:6px 0;color:{color_sev['critico']};'><strong>{_('Funciones con incidencia')}:</strong></p>"
-                "<ul style='margin:0 0 8px 18px;'>"
-                + "".join(f"<li>{x}</li>" for x in funciones_no) + "</ul>"
+                "<ul style='margin:0 0 8px 18px;'>" + "".join(f"<li>{x}</li>" for x in funciones_no) + "</ul>"
             )
         if f['cambio_inmediato']:
             bloques.append(
                 f"<p style='margin:6px 0;color:{color_sev['critico']};'><strong>{_('Puntos críticos (cambio inmediato)')}:</strong></p>"
-                "<ul style='margin:0 0 8px 18px;'>"
-                + "".join(f"<li>{x}</li>" for x in f['cambio_inmediato']) + "</ul>"
+                "<ul style='margin:0 0 8px 18px;'>" + "".join(f"<li>{x}</li>" for x in f['cambio_inmediato']) + "</ul>"
             )
         if f['desgaste']:
             bloques.append(
                 f"<p style='margin:6px 0;color:{color_sev['medio']};'><strong>{_('Componentes con desgaste')}:</strong></p>"
-                "<ul style='margin:0 0 8px 18px;'>"
-                + "".join(f"<li>{x}</li>" for x in f['desgaste']) + "</ul>"
+                "<ul style='margin:0 0 8px 18px;'>" + "".join(f"<li>{x}</li>" for x in f['desgaste']) + "</ul>"
             )
         if f['pendientes']:
             bloques.append(
                 f"<p style='margin:6px 0;color:{color_sev['pend']};'><strong>{_('Pendientes / sin revisar')}:</strong></p>"
-                "<ul style='margin:0 0 8px 18px;'>"
-                + "".join(f"<li>{x}</li>" for x in f['pendientes']) + "</ul>"
+                "<ul style='margin:0 0 8px 18px;'>" + "".join(f"<li>{x}</li>" for x in f['pendientes']) + "</ul>"
             )
         if toners_crit:
             bloques.append(
                 f"<p style='margin:6px 0;color:{color_sev['critico']};'><strong>{_('Consumibles críticos')}:</strong></p>"
-                "<ul style='margin:0 0 8px 18px;'>"
-                + "".join(f"<li>{x}</li>" for x in toners_crit) + "</ul>"
+                "<ul style='margin:0 0 8px 18px;'>" + "".join(f"<li>{x}</li>" for x in toners_crit) + "</ul>"
             )
 
-        # Sección de repuestos cambiados
         repuestos_html = self._generar_seccion_repuestos()
         if repuestos_html:
             bloques.append(repuestos_html)
@@ -272,30 +289,31 @@ class ReparacionesInforme(models.Model):
 </p>
 </div>
 """
+        _logger.info("[_rep__build_informe_html] HTML construido (len=%s) para id=%s", len(html), self.id)
         return html, calidad
 
     def _generar_seccion_repuestos(self):
-        """Genera la sección HTML de componentes y subpartes que requieren cambio"""
+        """Genera la sección HTML de componentes y subpartes que requieren cambio."""
         if not self.intervencion_ids:
+            _logger.debug("[_generar_seccion_repuestos] Sin intervenciones id=%s", self.id)
             return ""
-        
+
         intervenciones_con_detalles = self.intervencion_ids.filtered(lambda x: x.detalle_ids)
         if not intervenciones_con_detalles:
+            _logger.debug("[_generar_seccion_repuestos] Sin detalles en intervenciones id=%s", self.id)
             return ""
-        
+
         repuestos_por_componente = {}
-        
         for intervencion in intervenciones_con_detalles:
             componente_nombre = self._get_component_display_name(intervencion.componente)
-            if componente_nombre not in repuestos_por_componente:
-                repuestos_por_componente[componente_nombre] = []
-            
+            repuestos_por_componente.setdefault(componente_nombre, [])
             for detalle in intervencion.detalle_ids:
                 repuestos_por_componente[componente_nombre].append(detalle.subparte_id.name)
-        
+
         if not repuestos_por_componente:
+            _logger.debug("[_generar_seccion_repuestos] No hay subpartes agrupadas id=%s", self.id)
             return ""
-        
+
         html_componentes = []
         for componente, subpartes in repuestos_por_componente.items():
             html_componentes.append(f"<p style='margin:8px 0 4px 0; font-weight:bold;'>{componente}</p>")
@@ -303,16 +321,16 @@ class ReparacionesInforme(models.Model):
             for subparte in subpartes:
                 html_componentes.append(f"<li>{subparte}</li>")
             html_componentes.append("</ul>")
-        
-        return f"""
-<p style='margin:6px 0;color:#e65100;'><strong>{_('Subpartes específicas que requieren cambio')}:</strong></p>
-<div style='margin:0 0 8px 10px;'>
-{"".join(html_componentes)}
-</div>
-"""
+
+        html = (
+            f"<p style='margin:6px 0;color:#e65100;'><strong>{_('Subpartes específicas que requieren cambio')}:</strong></p>"
+            f"<div style='margin:0 0 8px 10px;'>{''.join(html_componentes)}</div>"
+        )
+        _logger.debug("[_generar_seccion_repuestos] HTML subpartes len=%s id=%s", len(html), self.id)
+        return html
 
     def _get_component_display_name(self, componente_code):
-        """Obtiene el nombre display de un componente basado en su código"""
+        """Nombre amigable para códigos de intervención."""
         component_names = {
             'ui_k': 'Unidad de imagen Black',
             'ui_c': 'Unidad de imagen Cyan',
@@ -330,7 +348,9 @@ class ReparacionesInforme(models.Model):
             'papel': 'Transporte de papel',
             'otro': 'Otro',
         }
-        return component_names.get(componente_code, componente_code)
+        res = component_names.get(componente_code, componente_code)
+        _logger.debug("[_get_component_display_name] %s -> %s", componente_code, res)
+        return res
 
     # ========================================
     # VALIDACIÓN PARA WIZARD
@@ -340,90 +360,94 @@ class ReparacionesInforme(models.Model):
         Retorna lista de evaluaciones que requieren cambio pero no tienen intervenciones CON SUBPARTES.
         """
         self.ensure_one()
+        _logger.info("[_check_campos_requieren_cambio_sin_intervencion] Inicio id=%s", self.id)
+
         componentes_pendientes = []
-
         for evaluacion in self.evaluacion_ids:
-            if not evaluacion.estado_id:
+            if not evaluacion.estado_id or evaluacion.estado_id.code != 'requiere_cambio':
                 continue
 
-            # Solo procesar si requiere cambio
-            if evaluacion.estado_id.code != 'requiere_cambio':
-                continue
-
-            # Mapear a código de componente
             componente_code = self._get_componente_code_from_evaluacion(evaluacion)
-
             if not componente_code:
-                _logger.warning(f"No se pudo mapear evaluación {evaluacion.id} a código de intervención")
+                _logger.warning(
+                    "[_check_campos...] No se pudo mapear eval %s (tipo=%s color=%s)",
+                    evaluacion.id,
+                    evaluacion.componente_tipo_id and evaluacion.componente_tipo_id.code,
+                    self._rep__get_color_code_from_eval(evaluacion),
+                )
                 continue
 
-            # Verificar si existe intervención CON detalles
             intervencion_existente = self.intervencion_ids.filtered(
                 lambda x: x.componente == componente_code and x.detalle_ids
             )
-
             if not intervencion_existente:
-                color_code = self._rep__get_color_code_from_eval(evaluacion)
-                componentes_pendientes.append({
+                color_code = self._rep__get_color_code_from_eval(evaluacion) or None
+                comp = {
                     'evaluacion_id': evaluacion.id,
                     'componente_code': componente_code,
                     'tipo_id': evaluacion.componente_tipo_id.id,
-                    'color_code': color_code if color_code else None,
-                })
+                    'color_code': color_code,
+                }
+                _logger.debug("[_check_campos...] pendiente=%s", comp)
+                componentes_pendientes.append(comp)
 
+        _logger.info("[_check_campos...] total_pendientes=%s id=%s", len(componentes_pendientes), self.id)
         return componentes_pendientes
 
     def _get_componente_code_from_evaluacion(self, evaluacion):
         """
         Mapea una evaluación a su código de componente para intervenciones.
-
-        Args:
-            evaluacion: Registro de reparacion.componente.evaluacion
-
-        Returns:
-            Código de componente (str) o False
+        Devuelve str como: ui_k, dev_c, fuser, itb, adf, fin, opt, papel, otro... o False.
         """
-        tipo_code = evaluacion.componente_tipo_id.code
-        color = self._rep__get_color_code_from_eval(evaluacion)  # 'k', 'c', 'm', 'y' o False
+        tipo = evaluacion.componente_tipo_id
+        if not tipo:
+            _logger.warning("[_get_componente_code_from_evaluacion] Eval %s sin tipo", evaluacion.id)
+            return False
 
-        # Mapeo de tipos a códigos
+        tipo_code = (tipo.code or '').strip().upper()
+        color = self._rep__get_color_code_from_eval(evaluacion)
+
+        # Mapeo central y alias frecuentes
         TIPO_TO_CODE = {
-            'UI': {
-                'k': 'ui_k',
-                'c': 'ui_c',
-                'm': 'ui_m',
-                'y': 'ui_y',
-            },
-            'DEVELOPER': {
-                'k': 'dev_k',
-                'c': 'dev_c',
-                'm': 'dev_m',
-                'y': 'dev_y',
-            },
+            # Sensibles a color
+            'IU': {'k': 'ui_k', 'c': 'ui_c', 'm': 'ui_m', 'y': 'ui_y'},  # Unidad de Imagen
+            'DEVELOPER': {'k': 'dev_k', 'c': 'dev_c', 'm': 'dev_m', 'y': 'dev_y'},
+            'DRUM': {'k': 'ui_k', 'c': 'ui_c', 'm': 'ui_m', 'y': 'ui_y'},
+            'DRUM_UNIT': {'k': 'ui_k', 'c': 'ui_c', 'm': 'ui_m', 'y': 'ui_y'},
+            'DEV': {'k': 'dev_k', 'c': 'dev_c', 'm': 'dev_m', 'y': 'dev_y'},
+
+            # No sensibles a color
             'FUSORA': 'fuser',
+            'FUSER': 'fuser',
             'TRANSFER_ROLLER': 'fuser',
             'FAJA': 'itb',
+            'ITB': 'itb',
+            'TRANSFER_BELT': 'itb',
             'ADF': 'adf',
             'FINISHER': 'fin',
             'OPTICO': 'opt',
-            'BYPASS': 'papel',
             'TRAY': 'papel',
+            'BYPASS': 'papel',
+
+            # Otros posibles
+            'ESCANER': 'opt',
+            'RED': 'otro',
         }
 
         mapping = TIPO_TO_CODE.get(tipo_code)
-
         if isinstance(mapping, dict):
-            # Componente sensible a color
             if not color:
+                _logger.debug("[_get_componente_code...] tipo=%s requiere color y no hay", tipo_code)
                 return False
-            return mapping.get(color)
+            res = mapping.get(color)
+            _logger.debug("[_get_componente_code...] tipo=%s color=%s -> %s", tipo_code, color, res)
+            return res
         else:
-            # Componente sin color
-            return mapping
-
+            _logger.debug("[_get_componente_code...] tipo=%s -> %s", tipo_code, mapping or False)
+            return mapping or False
 
     def _ensure_intervencion_for_component(self, componente_code):
-        """Crea o retorna intervención existente para un componente"""
+        """Crea o retorna intervención existente para un componente."""
         self.ensure_one()
         Interv = self.env['reparacion.intervencion']
         interv = Interv.search([
@@ -431,46 +455,42 @@ class ReparacionesInforme(models.Model):
             ('componente', '=', componente_code),
         ], limit=1)
         if not interv:
+            _logger.info("[_ensure_intervencion_for_component] creando intervencion %s para rep=%s", componente_code, self.id)
             interv = Interv.create({
                 'reparacion_id': self.id,
                 'componente': componente_code,
                 'accion': 'cambiado',
                 'observacion': _('Creado automáticamente al marcar "requiere cambio".'),
             })
+        else:
+            _logger.debug("[_ensure_intervencion_for_component] usando intervencion id=%s", interv.id)
         return interv
 
     # ========================================
     # WIZARD DE SUBPARTES
     # ========================================
     def _abrir_wizard_multiple_componentes(self, componentes_pendientes):
-        """Abre wizard con subpartes del modelo de máquina"""
+        """Abre wizard con subpartes del modelo de máquina."""
         self.ensure_one()
+        _logger.info("[_abrir_wizard_multiple_componentes] start id=%s count=%s", self.id, len(componentes_pendientes))
 
         if not componentes_pendientes:
             return
 
-        wizard = self.env['reparacion.add.subparts.wizard'].create({
-            'reparacion_id': self.id,
-        })
-
-        # CORRECCIÓN: usar el record, no el nombre
-        modelo_maquina = self.maquina_id
+        wizard = self.env['reparacion.add.subparts.wizard'].create({'reparacion_id': self.id})
+        modelo_maquina = self.maquina_id  # CORRECTO: usar record, no name
         if not modelo_maquina:
+            _logger.error("[_abrir_wizard_multiple_componentes] Máquina sin modelo id=%s", self.id)
             raise UserError(_("La máquina no tiene modelo asignado"))
 
         for comp_info in componentes_pendientes:
             componente_code = comp_info['componente_code']
-
-            # Crear intervención
             intervencion = self._ensure_intervencion_for_component(componente_code)
 
-            # Buscar componentes del modelo según evaluación
-            componentes_modelo = self._buscar_componentes_modelo_por_evaluacion(
-                modelo_maquina,
-                comp_info
-            )
+            componentes_modelo = self._buscar_componentes_modelo_por_evaluacion(modelo_maquina, comp_info)
+            _logger.debug("[_abrir_wizard_multiple_componentes] comp=%s encontró %s componentes modelo",
+                          componente_code, len(componentes_modelo))
 
-            # Agregar subpartes
             for componente_modelo in componentes_modelo:
                 for detalle in componente_modelo.detalle_ids:
                     self.env['reparacion.add.subparts.wizard.line'].create({
@@ -483,7 +503,7 @@ class ReparacionesInforme(models.Model):
                         'cantidad': detalle.cantidad or 1.0,
                     })
 
-        # Construir título
+        # Título
         nombres = []
         for comp in componentes_pendientes:
             eval_rec = self.env['reparacion.componente.evaluacion'].browse(comp['evaluacion_id'])
@@ -493,6 +513,7 @@ class ReparacionesInforme(models.Model):
             nombres.append(nombre)
 
         titulo = f"Subpartes para: {', '.join(nombres)}"
+        _logger.info("[_abrir_wizard_multiple_componentes] wizard id=%s titulo='%s'", wizard.id, titulo)
 
         return {
             'type': 'ir.actions.act_window',
@@ -505,111 +526,103 @@ class ReparacionesInforme(models.Model):
             'context': {'from_generar_informe': True},
         }
 
-    def _rep__normalize_color_name(self, name):
-        """Convierte nombres en código 'k/c/m/y' cuando no hay code en color_id."""
-        if not name:
-            return False
-        n = name.strip().lower()
-        mapping = {
-            'k': 'k', 'black': 'k', 'negro': 'k',
-            'c': 'c', 'cyan': 'c',
-            'm': 'm', 'magenta': 'm',
-            'y': 'y', 'yellow': 'y', 'amarillo': 'y',
-        }
-        return mapping.get(n, False)
-
-    def _rep__get_color_code_from_eval(self, eval_comp):
-        """
-        Retorna 'k'/'c'/'m'/'y' o False, según lo que haya en la evaluación.
-        Prioridad:
-        1) eval_comp.color (compatibilidad hacia atrás si aún existe),
-        2) eval_comp.color_id.code,
-        3) eval_comp.color_id.name -> mapeado a k/c/m/y.
-        """
-        # Compatibilidad por si aún existe 'color' en algunos registros
-        color = getattr(eval_comp, 'color', False)
-        if color:
-            return color
-
-        if getattr(eval_comp, 'color_id', False):
-            code = getattr(eval_comp.color_id, 'code', False)
-            if code:
-                return code
-            return self._rep__normalize_color_name(getattr(eval_comp.color_id, 'name', False))
-
-        return False
-
-
     def _buscar_componentes_modelo_por_evaluacion(self, modelo_maquina, comp_info):
         """
         Busca componentes del modelo según la evaluación.
 
         Args:
-            modelo_maquina: Record de modelo.maquina (NO el nombre)
-            comp_info: Dict con evaluacion_id, tipo_id, color_code
-
-        Returns:
-            Recordset de modelo.maquina.componente
+            modelo_maquina: record de modelo.maquina
+            comp_info: { evaluacion_id, tipo_id, color_code?, componente_code }
         """
         domain = [
             ('modelo_id', '=', modelo_maquina.id),
-            ('tipo_id', '=', comp_info['tipo_id'])
+            ('tipo_id', '=', comp_info['tipo_id']),
         ]
 
-        # Si hay color en la evaluación, filtra por color en el modelo de componentes.
         color_code = comp_info.get('color_code')
+        mmc = self.env['modelo.maquina.componente']
         if color_code:
-            # Detecta si el modelo usa 'color' (selection k/c/m/y) o 'color_id' (Many2one)
-            mmc = self.env['modelo.maquina.componente']
             if 'color' in mmc._fields:
                 domain.append(('color', '=', color_code))
+                _logger.debug("[_buscar_componentes...] usando campo 'color'='%s'", color_code)
             elif 'color_id' in mmc._fields:
                 color_rec = self.env['color.tipo'].search([('code', '=', color_code)], limit=1)
                 if color_rec:
                     domain.append(('color_id', '=', color_rec.id))
+                    _logger.debug("[_buscar_componentes...] usando 'color_id'=%s", color_rec.id)
                 else:
-                    _logger.warning(
-                        "No se encontró color.tipo con code='%s' para el dominio; se omite filtro de color.",
-                        color_code
-                    )
+                    _logger.warning("[_buscar_componentes...] color.tipo code='%s' no encontrado; omito filtro", color_code)
+            else:
+                _logger.debug("[_buscar_componentes...] catálogo sin campo de color; omito filtro")
 
-        return self.env['modelo.maquina.componente'].search(domain)
-
+        res = mmc.search(domain)
+        _logger.debug("[_buscar_componentes...] domain=%s -> %s registros", domain, len(res))
+        return res
 
     # ========================================
     # ACCIÓN DEL BOTÓN
     # ========================================
     def action_generar_informe(self):
-        """Genera el informe técnico automáticamente"""
+        """Genera el informe técnico automáticamente y/o abre wizard de subpartes."""
+        _logger.info("[action_generar_informe] >>> INICIO batch ids=%s", self.ids)
+
+        acciones = []
         for rec in self:
             try:
-                # VALIDACIÓN: Verificar componentes que requieren cambio
+                _logger.info("[action_generar_informe] Procesando rep.id=%s", rec.id)
+
+                # 1) Validación de pendientes que requieren wizard
                 campos_pendientes = rec._check_campos_requieren_cambio_sin_intervencion()
                 if campos_pendientes:
+                    _logger.info("[action_generar_informe] rep.id=%s -> abre wizard por pendientes=%s",
+                                 rec.id, len(campos_pendientes))
                     return rec._abrir_wizard_multiple_componentes(campos_pendientes)
-                
-                # Si hay contenido manual, no sobrescribir
-                if (rec.informe
-                    and not rec._rep__html_is_empty(rec.informe)
-                    and not rec._rep__is_autogen_informe()):
+
+                # 2) Si hay contenido manual, no sobrescribir
+                if (rec.informe and not rec._rep__html_is_empty(rec.informe) and not rec._rep__is_autogen_informe()):
                     rec.message_post(body=_("El informe ya fue editado manualmente. No se sobrescribió."))
+                    _logger.info("[action_generar_informe] rep.id=%s -> informe manual existente, no se toca", rec.id)
                     continue
 
-                # Generar informe
+                # 3) Generar informe
                 html, calidad = rec._rep__build_informe_html()
-                rec.write({'informe': html, 'calidad_id': calidad})
+
+                vals = {'informe': html}
+                # Seteo robusto de calidad, si el campo existe
+                if 'calidad_id' in rec._fields:
+                    field = rec._fields['calidad_id']
+                    try:
+                        # Selection o Char
+                        if isinstance(field, fields.Selection) or isinstance(field, fields.Char):
+                            vals['calidad_id'] = calidad
+                        else:
+                            # Many2one a un catálogo de calidades (buscar por code o name)
+                            Calidad = rec.env['reparacion.calidad'] if 'reparacion.calidad' in rec.env else False
+                            if Calidad:
+                                cal = Calidad.search([('code', '=', calidad)], limit=1) or \
+                                      Calidad.search([('name', 'ilike', calidad)], limit=1)
+                                if cal:
+                                    vals['calidad_id'] = cal.id
+                                    _logger.debug("[action_generar_informe] calidad M2O=%s", cal.id)
+                    except Exception as fex:
+                        _logger.warning("[action_generar_informe] No se pudo setear calidad_id (%s)", fex)
+
+                rec.write(vals)
                 rec.message_post(body=_("Informe técnico generado automáticamente."))
+                _logger.info("[action_generar_informe] rep.id=%s -> informe generado (len=%s)", rec.id, len(html))
+                acciones.append(rec.id)
 
             except Exception as e:
-                _logger.exception("Error generando informe: %s", e)
+                _logger.exception("[action_generar_informe] rep.id=%s ERROR %s", rec.id, e)
                 rec.message_post(body=_("No se pudo generar el informe: %s") % e)
 
+        _logger.info("[action_generar_informe] <<< FIN. generados=%s", len(acciones))
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
                 'title': _('Informe técnico'),
-                'message': _('Informe generado correctamente.'),
-                'type': 'success'
+                'message': _('Informe generado correctamente.') if acciones else _('No se generó ningún informe.'),
+                'type': 'success' if acciones else 'warning'
             }
         }
