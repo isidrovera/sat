@@ -651,8 +651,7 @@
   
   <!-- Tabla de evaluaciones de accesorios -->
   <separator string="Accesorios Evaluados"/>
-  <field name="accesorio_eval_ids" nolabel="1" 
-         context="{'default_reparacion_id': active_id}">
+  <field name="accesorio_eval_ids" nolabel="1">
     <list string="Evaluación de Accesorios" editable="bottom">
       <field name="tipo_id" readonly="1"/>
       <field name="estado_id" 
