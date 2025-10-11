@@ -65,9 +65,9 @@ class ReparacionesInforme(models.Model):
         """
         Retorna 'k'/'c'/'m'/'y' o False desde la evaluación.
         Prioridad:
-        1) eval_comp.color (si existiese en DBs viejas),
+        1) eval_comp.color (legacy),
         2) eval_comp.color_id.code,
-        3) eval_comp.color_id.name -> mapeado a k/c/m/y.
+        3) eval_comp.color_id.name -> k/c/m/y.
         """
         color_legacy = getattr(eval_comp, 'color', False)
         if color_legacy:
@@ -78,13 +78,11 @@ class ReparacionesInforme(models.Model):
 
         color_id = getattr(eval_comp, 'color_id', False)
         if color_id:
-            # code directo
             code = getattr(color_id, 'code', False)
             if code:
                 code = str(code).strip().lower()
                 _logger.debug("[_rep__get_color_code_from_eval] color_id.code=%s", code)
                 return code if code in ('k', 'c', 'm', 'y') else False
-            # por nombre
             norm = self._rep__normalize_color_name(getattr(color_id, 'name', False))
             _logger.debug("[_rep__get_color_code_from_eval] color_id.name->%s", norm)
             return norm
@@ -97,11 +95,8 @@ class ReparacionesInforme(models.Model):
     # ========================================
     def _rep__canonical_tipo_code(self, tipo):
         """
-        Devuelve un código canónico para el tipo de componente, independientemente de cómo
-        esté escrito en el catálogo (con acentos, en español/inglés, con espacios, etc.).
-
-        Posibles retornos (ejemplos):
-          'IU', 'DEVELOPER', 'FUSORA', 'ITB', 'ADF', 'FINISHER', 'OPTICO', 'TRAY', 'BYPASS', 'PAPEL'
+        Devuelve un código canónico del tipo (independiente de idioma/acentos/espacios).
+        Ej.: 'IU', 'DEVELOPER', 'FUSORA', 'ITB', 'ADF', 'FINISHER', 'OPTICO', 'TRAY', 'BYPASS', 'PAPEL'
         """
         if not tipo:
             return ''
@@ -118,25 +113,16 @@ class ReparacionesInforme(models.Model):
         txt = _norm(raw)
 
         alias = [
-            # Unidad de imagen / tambor
             (('IMAGEN', 'IMAGING', 'DRUM', 'DRUM UNIT', 'IU', 'UNIDAD IMAGEN', 'UNIDAD DE IMAGEN'), 'IU'),
-            # Developer
             (('DEVELOPER', 'DEV'), 'DEVELOPER'),
-            # Fusora
             (('FUSORA', 'FUSOR', 'FUSER', 'FUSING', 'CALENTADOR'), 'FUSORA'),
-            # Banda de transferencia
             (('ITB', 'TRANSFER BELT', 'TRANSFERENCIA', 'FAJA', 'BANDA'), 'ITB'),
-            # Alimentador de documentos
             (('ADF', 'ALIMENTADOR', 'ALIMENTADOR DE DOCUMENTOS'), 'ADF'),
-            # Finalizador
             (('FINISHER', 'FIN', 'ENGRAPADORA', 'GRAPADORA'), 'FINISHER'),
-            # Óptico / escáner
-            (('OPTICO', 'OPTICO/ESCANER', 'OPTICO ESCANER', 'OPTICO-ESCANER', 'OPTICAL', 'ESCANER', 'SCANNER', 'LSU'), 'OPTICO'),
-            # Papel / bandejas / bypass
+            (('OPTICO', 'OPTICAL', 'ESCANER', 'SCANNER', 'OPTICO/ESCANER', 'LSU'), 'OPTICO'),
             (('TRAY', 'BANDEJA', 'BANDEJAS'), 'TRAY'),
             (('BYPASS',), 'BYPASS'),
             (('PAPEL', 'PAPER', 'TRANSPORTE PAPEL', 'TRANSPORTE DE PAPEL'), 'PAPEL'),
-            # Transfer roller a fusora (como agrupabas)
             (('TRANSFER ROLLER', 'ROLLER TRANSFER', 'TRANSFER_ROLLER'), 'FUSORA'),
         ]
 
@@ -151,26 +137,19 @@ class ReparacionesInforme(models.Model):
     # EXTRACCIÓN DE DATOS DESDE EVALUACIONES
     # ========================================
     def _rep__funciones_con_falla(self):
-        """
-        Retorna lista de funciones con falla desde evaluaciones.
-        Busca componentes tipo FUNCION_* con estado 'falla'.
-        """
+        """Lista funciones con falla (tipo FUNCION_*, estado 'falla')."""
         funciones_falla = []
         for eval_comp in self.evaluacion_ids:
             if not eval_comp.estado_id:
                 continue
             tipo_code = (eval_comp.componente_tipo_id.code or '').strip().upper() if eval_comp.componente_tipo_id else ''
             if tipo_code.startswith('FUNCION_') and eval_comp.estado_id.code == 'falla':
-                nombre = eval_comp.componente_tipo_id.name
-                funciones_falla.append(nombre)
+                funciones_falla.append(eval_comp.componente_tipo_id.name)
         _logger.debug("[_rep__funciones_con_falla] id=%s -> %s", self.id, funciones_falla)
         return funciones_falla
 
     def _rep__toners_criticos(self):
-        """
-        Retorna lista de consumibles críticos desde evaluaciones.
-        Usa tipo 'TONER_SYSTEM' y estados 'vacio' o 'sin_botella'.
-        """
+        """Lista consumibles críticos (TONER_SYSTEM con estado 'vacio'/'sin_botella')."""
         toners_criticos = []
         for eval_comp in self.evaluacion_ids:
             if not eval_comp.estado_id:
@@ -186,8 +165,8 @@ class ReparacionesInforme(models.Model):
 
     def _rep__collect_findings(self):
         """
-        Clasifica hallazgos desde evaluaciones (NO desde campos Selection).
-        Retorna dict: cambio_inmediato, desgaste, pendientes, no_aplica, score.
+        Clasifica hallazgos desde evaluaciones.
+        Retorna: cambio_inmediato, desgaste, pendientes, no_aplica, score.
         """
         cambio_inmediato, desgaste, pendientes, no_aplica = [], [], [], []
         score = 0
@@ -207,16 +186,10 @@ class ReparacionesInforme(models.Model):
             if eval_comp.color_id:
                 nombre = f"{nombre} ({eval_comp.color_id.name})"
 
-            # Prioridad (si existe)
-            peso = 2  # default
+            peso = 2
             if hasattr(eval_comp.componente_tipo_id, 'prioridad'):
                 prioridad = eval_comp.componente_tipo_id.prioridad
-                if prioridad == '1':
-                    peso = 3
-                elif prioridad == '2':
-                    peso = 2
-                elif prioridad == '3':
-                    peso = 1
+                peso = {'1': 3, '2': 2, '3': 1}.get(prioridad, 2)
 
             if estado_code in ('requiere_cambio', 'cambio_de_repuestos'):
                 cambio_inmediato.append(nombre); score += 3 * peso
@@ -404,7 +377,8 @@ class ReparacionesInforme(models.Model):
     # ========================================
     def _check_campos_requieren_cambio_sin_intervencion(self):
         """
-        Retorna lista de evaluaciones que requieren cambio pero no tienen intervenciones CON SUBPARTES.
+        Devuelve TODAS las evaluaciones que requieren cambio y no tienen intervención con subpartes.
+        (Estas serán listadas en el wizard.)
         """
         self.ensure_one()
         _logger.info("[_check_campos_requieren_cambio_sin_intervencion] Inicio id=%s", self.id)
@@ -428,12 +402,11 @@ class ReparacionesInforme(models.Model):
                 lambda x: x.componente == componente_code and x.detalle_ids
             )
             if not intervencion_existente:
-                color_code = self._rep__get_color_code_from_eval(evaluacion) or None
                 comp = {
                     'evaluacion_id': evaluacion.id,
                     'componente_code': componente_code,
                     'tipo_id': evaluacion.componente_tipo_id.id,
-                    'color_code': color_code,
+                    'color_code': self._rep__get_color_code_from_eval(evaluacion) or None,
                 }
                 _logger.debug("[_check_campos...] pendiente=%s", comp)
                 componentes_pendientes.append(comp)
@@ -444,7 +417,7 @@ class ReparacionesInforme(models.Model):
     def _get_componente_code_from_evaluacion(self, evaluacion):
         """
         Mapea una evaluación a su código de componente para intervenciones.
-        Devuelve str como: ui_k, dev_c, fuser, itb, adf, fin, opt, papel, otro... o False.
+        Devuelve: ui_k/dev_c/fuser/itb/adf/fin/opt/papel/otro o False.
         """
         tipo = evaluacion.componente_tipo_id
         if not tipo:
@@ -455,11 +428,8 @@ class ReparacionesInforme(models.Model):
         color = self._rep__get_color_code_from_eval(evaluacion)
 
         TIPO_TO_CODE = {
-            # Sensibles a color
             'IU': {'k': 'ui_k', 'c': 'ui_c', 'm': 'ui_m', 'y': 'ui_y'},
             'DEVELOPER': {'k': 'dev_k', 'c': 'dev_c', 'm': 'dev_m', 'y': 'dev_y'},
-
-            # No sensibles a color
             'FUSORA': 'fuser',
             'ITB': 'itb',
             'ADF': 'adf',
@@ -511,15 +481,18 @@ class ReparacionesInforme(models.Model):
     # WIZARD DE SUBPARTES
     # ========================================
     def _abrir_wizard_multiple_componentes(self, componentes_pendientes):
-        """Abre wizard con subpartes del modelo de máquina."""
+        """
+        Abre un único wizard que lista TODOS los componentes que requieren cambio,
+        con sus subpartes encontradas (usando fallbacks).
+        """
         self.ensure_one()
         _logger.info("[_abrir_wizard_multiple_componentes] start id=%s count=%s", self.id, len(componentes_pendientes))
-
         if not componentes_pendientes:
             return
 
         wizard = self.env['reparacion.add.subparts.wizard'].create({'reparacion_id': self.id})
-        modelo_maquina = self.maquina_id  # usar record, no name
+
+        modelo_maquina = self.maquina_id
         if not modelo_maquina:
             _logger.error("[_abrir_wizard_multiple_componentes] Máquina sin modelo id=%s", self.id)
             raise UserError(_("La máquina no tiene modelo asignado"))
@@ -528,11 +501,16 @@ class ReparacionesInforme(models.Model):
             componente_code = comp_info['componente_code']
             intervencion = self._ensure_intervencion_for_component(componente_code)
 
+            # 1) Busca componentes de catálogo con fallbacks
             componentes_modelo = self._buscar_componentes_modelo_por_evaluacion(modelo_maquina, comp_info)
             _logger.debug("[_abrir_wizard_multiple_componentes] comp=%s encontró %s componentes modelo",
                           componente_code, len(componentes_modelo))
 
+            # 2) Crear líneas por cada detalle encontrado
+            total_lineas = 0
             for componente_modelo in componentes_modelo:
+                if not getattr(componente_modelo, 'detalle_ids', False):
+                    continue
                 for detalle in componente_modelo.detalle_ids:
                     self.env['reparacion.add.subparts.wizard.line'].create({
                         'wizard_id': wizard.id,
@@ -543,8 +521,37 @@ class ReparacionesInforme(models.Model):
                         'accion_sub': 'cambiado',
                         'cantidad': detalle.cantidad or 1.0,
                     })
+                    total_lineas += 1
 
-        # Título
+            # 3) Si no hubo detalle_ids, usar fallback genérico por tipo (no dependiente de modelo)
+            if total_lineas == 0:
+                genericas = self._fallback_subpartes_por_tipo(comp_info['tipo_id'])
+                if genericas:
+                    _logger.warning("[_abrir_wizard_multiple_componentes] sin detalle_ids; usando %s subpartes genéricas por tipo.",
+                                    len(genericas))
+                    for sp in genericas:
+                        self.env['reparacion.add.subparts.wizard.line'].create({
+                            'wizard_id': wizard.id,
+                            'componente': componente_code,
+                            'intervencion_id': intervencion.id,
+                            'subparte_id': sp.id,
+                            'selected': False,
+                            'accion_sub': 'cambiado',
+                            'cantidad': 1.0,
+                        })
+                        total_lineas += 1
+
+            # 4) Si aún no hay nada, notifica al usuario
+            if total_lineas == 0:
+                self.message_post(body=_(
+                    "No se hallaron subpartes para <b>%(nombre)s</b> %(color)s. "
+                    "Completa el catálogo de <i>modelo.maquina.componente</i> o defínelas en <i>componente.subparte</i>.",
+                ) % {
+                    'nombre': self.env['componente.tipo'].browse(comp_info['tipo_id']).name,
+                    'color': comp_info.get('color_code') and f"({comp_info['color_code'].upper()})" or "",
+                })
+
+        # Título con todos los componentes involucrados
         nombres = []
         for comp in componentes_pendientes:
             eval_rec = self.env['reparacion.componente.evaluacion'].browse(comp['evaluacion_id'])
@@ -569,42 +576,84 @@ class ReparacionesInforme(models.Model):
 
     def _buscar_componentes_modelo_por_evaluacion(self, modelo_maquina, comp_info):
         """
-        Busca componentes del modelo según la evaluación.
-
-        Args:
-            modelo_maquina: record de modelo.maquina
-            comp_info: { evaluacion_id, tipo_id, color_code?, componente_code }
+        Busca componentes del catálogo para poblar el wizard de subpartes con
+        una estrategia de fallbacks:
+          A) modelo + tipo + color
+          B) modelo + tipo
+          C) cualquier modelo + tipo
         """
-        domain = [
-            ('modelo_id', '=', modelo_maquina.id),
-            ('tipo_id', '=', comp_info['tipo_id']),
-        ]
-
-        color_code = comp_info.get('color_code')
         mmc = self.env['modelo.maquina.componente']
-        if color_code:
-            if 'color' in mmc._fields:
-                domain.append(('color', '=', color_code))
-                _logger.debug("[_buscar_componentes...] usando campo 'color'='%s'", color_code)
-            elif 'color_id' in mmc._fields:
-                color_rec = self.env['color.tipo'].search([('code', '=', color_code)], limit=1)
-                if color_rec:
-                    domain.append(('color_id', '=', color_rec.id))
-                    _logger.debug("[_buscar_componentes...] usando 'color_id'=%s", color_rec.id)
-                else:
-                    _logger.warning("[_buscar_componentes...] color.tipo code='%s' no encontrado; omito filtro", color_code)
-            else:
-                _logger.debug("[_buscar_componentes...] catálogo sin campo de color; omito filtro")
+        color_code = comp_info.get('color_code')
+        tipo_id = comp_info['tipo_id']
 
-        res = mmc.search(domain)
-        _logger.debug("[_buscar_componentes...] domain=%s -> %s registros", domain, len(res))
-        return res
+        def _dom(base, with_color):
+            dom = list(base)
+            if with_color and color_code:
+                if 'color' in mmc._fields:
+                    dom.append(('color', '=', color_code))
+                elif 'color_id' in mmc._fields:
+                    color_rec = self.env['color.tipo'].search([('code', '=', color_code)], limit=1)
+                    if color_rec:
+                        dom.append(('color_id', '=', color_rec.id))
+            return dom
+
+        # A) modelo + tipo + color
+        domA = _dom([('modelo_id', '=', modelo_maquina.id), ('tipo_id', '=', tipo_id)], True)
+        resA = mmc.search(domA)
+        if resA:
+            _logger.debug("[_buscar_componentes...] A) %s -> %s", domA, len(resA))
+            return resA
+
+        # B) modelo + tipo (sin color)
+        domB = [('modelo_id', '=', modelo_maquina.id), ('tipo_id', '=', tipo_id)]
+        resB = mmc.search(domB)
+        if resB:
+            _logger.warning("[_buscar_componentes...] sin match por color='%s'. Usando modelo+tipo. dom=%s -> %s",
+                            color_code, domB, len(resB))
+            return resB
+
+        # C) cualquier modelo + tipo
+        domC = [('tipo_id', '=', tipo_id)]
+        resC = mmc.search(domC)
+        if resC:
+            _logger.warning("[_buscar_componentes...] sin match por modelo. Usando cualquier modelo con el mismo tipo. dom=%s -> %s",
+                            domC, len(resC))
+            return resC
+
+        _logger.error("[_buscar_componentes...] Catálogo vacío para tipo_id=%s", tipo_id)
+        return mmc.browse([])
+
+    def _fallback_subpartes_por_tipo(self, tipo_id):
+        """
+        Último recurso: devuelve subpartes genéricas del tipo (sin depender del modelo).
+        Requiere que exista el modelo 'componente.subparte' y tenga un campo 'tipo_id'.
+        """
+        Subparte = self.env.get('componente.subparte')
+        if not Subparte:
+            _logger.error("[_fallback_subpartes_por_tipo] No existe el modelo 'componente.subparte'")
+            return self.env['ir.model'].browse([])
+
+        # Intento 1: subpartes ligadas al tipo exacto
+        if 'tipo_id' in Subparte._fields:
+            res = Subparte.search([('tipo_id', '=', tipo_id)])
+            if res:
+                _logger.debug("[_fallback_subpartes_por_tipo] usando %s subpartes por tipo_id=%s", len(res), tipo_id)
+                return res
+
+        # Intento 2: cualquier subparte (muy laxo, solo para no dejar vacío)
+        res_any = Subparte.search([], limit=10)
+        if res_any:
+            _logger.warning("[_fallback_subpartes_por_tipo] no hay subpartes por tipo; devolviendo %s subpartes arbitrarias.", len(res_any))
+            return res_any
+
+        _logger.error("[_fallback_subpartes_por_tipo] catálogo de subpartes vacío.")
+        return Subparte.browse([])
 
     # ========================================
     # ACCIÓN DEL BOTÓN
     # ========================================
     def action_generar_informe(self):
-        """Genera el informe técnico automáticamente y/o abre wizard de subpartes."""
+        """Genera el informe técnico y/o abre wizard con TODOS los componentes que requieren cambio."""
         _logger.info("[action_generar_informe] >>> INICIO batch ids=%s", self.ids)
 
         acciones = []
@@ -612,7 +661,7 @@ class ReparacionesInforme(models.Model):
             try:
                 _logger.info("[action_generar_informe] Procesando rep.id=%s", rec.id)
 
-                # 1) Validación de pendientes que requieren wizard
+                # 1) Juntar TODOS los que requieren cambio y no tienen subpartes
                 campos_pendientes = rec._check_campos_requieren_cambio_sin_intervencion()
                 if campos_pendientes:
                     _logger.info("[action_generar_informe] rep.id=%s -> abre wizard por pendientes=%s",
