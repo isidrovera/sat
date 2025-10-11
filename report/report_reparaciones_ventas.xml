@@ -31,260 +31,81 @@
                                 --estado-entregada: #20c997;
                             }
 
-                            body {
-                                font-family: 'Roboto', sans-serif;
-                                color: var(--text-color);
-                                line-height: 1.6;
-                            }
+                            body { font-family: 'Roboto', sans-serif; color: var(--text-color); line-height: 1.6; }
 
-                            /* Clases de utilidad */
-                            .shadow {
-                                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                            }
-                            
-                            .rounded {
-                                border-radius: 8px;
-                            }
-                            
-                            .mb-3 {
-                                margin-bottom: 1rem;
-                            }
-                            
-                            .p-3 {
-                                padding: 1rem;
-                            }
+                            /* Utilidades */
+                            .shadow { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+                            .rounded { border-radius: 8px; }
+                            .mb-3 { margin-bottom: 1rem; }
+                            .p-3 { padding: 1rem; }
 
-                            /* Estilos de cabecera */
+                            /* Cabecera */
                             .repair-header {
                                 background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
                                 color: var(--white);
-                                padding: 25px;
-                                border-radius: 12px;
-                                margin-bottom: 30px;
+                                padding: 25px; border-radius: 12px; margin-bottom: 30px;
                                 box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-                                display: flex;
-                                align-items: center;
-                                justify-content: space-between;
-                                flex-wrap: wrap;
+                                display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
                             }
-                            
-                            .header-left {
-                                flex: 1;
-                            }
-                            
-                            .header-title {
-                                font-size: 28px;
-                                font-weight: bold;
-                                margin-bottom: 10px;
-                                color: var(--white);
-                            }
-                            
-                            .header-subtitle {
-                                font-size: 16px;
-                                color: rgba(255, 255, 255, 0.9);
-                            }
-                            
+                            .header-left { flex: 1; }
+                            .header-title { font-size: 28px; font-weight: bold; margin-bottom: 10px; color: var(--white); }
+                            .header-subtitle { font-size: 16px; color: rgba(255, 255, 255, 0.9); }
                             .header-right {
-                                background: rgba(255, 255, 255, 0.15);
-                                padding: 15px;
-                                border-radius: 8px;
-                                backdrop-filter: blur(10px);
-                                min-width: 200px;
+                                background: rgba(255, 255, 255, 0.15); padding: 15px; border-radius: 8px;
+                                backdrop-filter: blur(10px); min-width: 200px;
                             }
-                            
-                            .header-status {
-                                font-weight: bold;
-                                text-transform: uppercase;
-                                text-align: center;
+                            .header-status { font-weight: bold; text-transform: uppercase; text-align: center; }
+
+                            /* Títulos */
+                            .section-title {
+                                background: var(--secondary-color); color: var(--white);
+                                padding: 12px 20px; margin: 25px 0 15px; border-radius: 8px;
+                                font-size: 18px; font-weight: bold; display: flex; align-items: center;
+                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                            }
+                            .section-title i { margin-right: 10px; }
+
+                            /* Tarjetas */
+                            .info-card {
+                                background: var(--white); border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                                margin-bottom: 20px; overflow: hidden; border: 1px solid var(--border-color);
                             }
 
-                            /* Títulos de sección */
-                            .section-title {
-                                background: var(--secondary-color);
-                                color: var(--white);
-                                padding: 12px 20px;
-                                margin: 25px 0 15px;
-                                border-radius: 8px;
-                                font-size: 18px;
-                                font-weight: bold;
-                                display: flex;
-                                align-items: center;
-                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                            }
-                            
-                            .section-title i {
-                                margin-right: 10px;
-                            }
-                            
-                            /* Sub-secciones */
-                            .subsection-header {
-                                background: var(--primary-dark);
-                                color: var(--white);
-                                padding: 8px 15px;
-                                font-weight: bold;
-                                border-top-left-radius: 8px;
-                                border-top-right-radius: 8px;
-                            }
-                            
-                            /* Tarjetas de información */
-                            .info-card {
-                                background: var(--white);
-                                border-radius: 10px;
-                                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                                margin-bottom: 20px;
-                                overflow: hidden;
-                                border: 1px solid var(--border-color);
-                            }
-                            
                             /* Tablas */
-                            .info-table {
-                                width: 100%;
-                                border-collapse: separate;
-                                border-spacing: 0;
-                                margin-bottom: 0;
-                            }
-                            
+                            .info-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 0; }
                             .info-table th {
-                                background: var(--light-bg);
-                                color: var(--secondary-color);
-                                padding: 12px 15px;
-                                font-weight: bold;
-                                border: 1px solid var(--border-color);
+                                background: var(--light-bg); color: var(--secondary-color);
+                                padding: 12px 15px; font-weight: bold; border: 1px solid var(--border-color);
                             }
-                            
-                            .info-table td {
-                                padding: 12px 15px;
-                                border: 1px solid var(--border-color);
-                            }
-                            
-                            .info-table i {
-                                margin-right: 8px;
-                                color: var(--primary-color);
-                            }
-                            
-                            /* Encabezados de categoría */
-                            .category-header {
-                                background: var(--secondary-color);
-                                color: var(--white);
-                                padding: 10px 15px;
-                                text-align: center;
-                                font-weight: bold;
-                            }
-                            
+                            .info-table td { padding: 12px 15px; border: 1px solid var(--border-color); }
+                            .info-table i { margin-right: 8px; color: var(--primary-color); }
+                            .category-header { background: var(--secondary-color); color: var(--white); padding: 10px 15px; text-align: center; font-weight: bold; }
+
                             /* Colores para consumibles */
-                            .color-cyan {
-                                background-color: rgba(11, 190, 230, 0.15);
-                                border-left: 4px solid #0bbee6;
-                            }
-                            
-                            .color-magenta {
-                                background-color: rgba(255, 0, 208, 0.15);
-                                border-left: 4px solid #ff00d0;
-                            }
-                            
-                            .color-yellow {
-                                background-color: rgba(255, 255, 0, 0.15);
-                                border-left: 4px solid #ffff00;
-                            }
-                            
-                            .color-black {
-                                background-color: rgba(119, 120, 120, 0.15);
-                                border-left: 4px solid #777878;
-                            }
-                            
+                            .color-cyan { background-color: rgba(11, 190, 230, 0.15); border-left: 4px solid #0bbee6; }
+                            .color-magenta { background-color: rgba(255, 0, 208, 0.15); border-left: 4px solid #ff00d0; }
+                            .color-yellow { background-color: rgba(255, 255, 0, 0.15); border-left: 4px solid #ffff00; }
+                            .color-black { background-color: rgba(119, 120, 120, 0.15); border-left: 4px solid #777878; }
+
                             /* Informe técnico */
-                            .informe-tecnico {
-                                padding: 20px;
-                                background: var(--light-bg);
-                                border-radius: 8px;
-                                border-left: 4px solid var(--primary-color);
+                            .informe-tecnico { padding: 20px; background: var(--light-bg); border-radius: 8px; border-left: 4px solid var(--primary-color); }
+
+                            /* Badges de estado simples (para los nuevos bloques) */
+                            .badge {
+                                display:inline-block; padding:6px 10px; border-radius:14px; font-size:12px; font-weight:700; color:#fff;
                             }
-                            
-                            /* Insignias de estado */
-                            .status-badge {
-                                padding: 6px 12px;
-                                border-radius: 20px;
-                                font-size: 13px;
-                                font-weight: bold;
-                                display: inline-block;
-                                color: white;
-                                text-align: center;
-                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                                margin: 5px 0;
-                                min-width: 140px;
-                            }
-                            
-                            .header-subtitle .status-badge {
-                                margin-top: 10px;
-                                font-size: 14px;
-                                padding: 8px 15px;
-                            }
-                            
-                            .status-badge i {
-                                margin-right: 5px;
-                            }
-                            
-                            .status-ok {
-                                background: var(--success);
-                            }
-                            
-                            .status-warning {
-                                background: var(--warning);
-                            }
-                            
-                            .status-error {
-                                background: var(--danger);
-                            }
-                            
-                            /* Estados específicos */
-                            .status-sin-revisar {
-                                background: var(--estado-sin-revisar);
-                            }
-                            
-                            .status-para-revision {
-                                background: var(--estado-para-revision);
-                            }
-                            
-                            .status-en-revision {
-                                background: var(--estado-en-revision);
-                                color: #333;
-                            }
-                            
-                            .status-finalizado {
-                                background: var(--estado-finalizado);
-                            }
-                            
-                            .status-con-problemas {
-                                background: var(--estado-con-problemas);
-                            }
-                            
-                            .status-de-partes {
-                                background: var(--estado-de-partes);
-                            }
-                            
-                            .status-entregada {
-                                background: var(--estado-entregada);
-                            }
-                            
-                            /* Firmas */
-                            .signatures {
-                                display: flex;
-                                justify-content: space-between;
-                                margin-top: 40px;
-                            }
-                            
-                            .signature-box {
-                                flex: 0 0 45%;
-                                border-top: 2px solid var(--secondary-color);
-                                padding-top: 15px;
-                                text-align: center;
-                            }
-                            
-                            .signature-icon {
-                                font-size: 24px;
-                                color: var(--secondary-color);
-                                margin-bottom: 8px;
-                            }
+                            .badge--crit { background:#e74c3c; }
+                            .badge--med { background:#f39c12; }
+                            .badge--ok { background:#2ecc71; }
+                            .badge--na { background:#6c757d; }
+
+                            /* Puntos KCMY */
+                            .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+                            .dot--k{background:#333}.dot--c{background:#00bcd4}.dot--m{background:#e91e63}.dot--y{background:#ffeb3b}
+
+                            /* Subpartes lista */
+                            .subpartes{margin:4px 0 0 0; padding-left:18px; color:#555; font-size:12px}
+                            .subpartes li{margin:2px 0}
                         </style>
 
                         <!-- Encabezado modernizado -->
@@ -296,8 +117,6 @@
                                 </div>
                                 <div class="header-subtitle">
                                     <t t-set="estado" t-value="selection_labels.get(reparaciones.id, {}).get('estado_id', 'Sin asignar')"/>
-                                    
-                                    <!-- Visualización del estado como badge inline con HTML directo -->
                                     <t t-if="estado == 'Finalizado'">
                                         <div style="display: inline-block; background-color: #28a745; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-top: 10px;">
                                             <i class="fa fa-check-circle"></i> <t t-esc="estado"/>
@@ -351,6 +170,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <div class="section-title">
                             <i class="fa fa-info-circle"/>
                             INFORMACIÓN DEL EQUIPO
@@ -416,7 +236,6 @@
                             </table>
                         </div>
                         
-                       
                         <!-- Informe Técnico -->
                         <div class="section-title">
                             <i class="fa fa-clipboard-list"/>
@@ -451,7 +270,6 @@
                                     <th><i class="fa fa-cube"/>Mueble</th>
                                     <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('mueble_id', 'NA')"/></td>
                                 </tr>
-                                
                                 <tr>
                                     <th><i class="fa fa-box"/>LCT</th>
                                     <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('lct_id', 'NA')"/></td>
@@ -474,6 +292,53 @@
                                 </tr>
                             </table>
                         </div>
+
+                        <!-- >>> NUEVO BLOQUE AGREGADO: ACCESORIOS (SISTEMA NUEVO) -->
+                        <div class="info-card">
+                            <div style="background: var(--secondary-color); color: white; padding: 8px 15px; font-weight: bold;">
+                                <i class="fa fa-puzzle-piece"/> ACCESORIOS (SISTEMA NUEVO)
+                            </div>
+                            <table class="info-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:35%"><i class="fa fa-tag"/> Tipo</th>
+                                        <th style="width:20%"><i class="fa fa-info-circle"/> Estado</th>
+                                        <th style="width:45%"><i class="fa fa-tools"/> Subpartes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="reparaciones.accesorio_eval_ids" t-as="acc">
+                                        <tr>
+                                            <td><t t-esc="acc.tipo_id and acc.tipo_id.name or '—'"/></td>
+                                            <td>
+                                                <t t-if="acc.estado_id">
+                                                    <t t-set="ecode" t-value="acc.estado_id.code or ''"/>
+                                                    <span t-attf-class="badge #{'badge--crit' if ecode in ['requiere_cambio','cambio_de_repuestos','falla'] else ('badge--med' if ecode in ['regular','gastada_pero_puede_trabajar','mantenimiento','bajo'] else ('badge--ok' if ecode in ['nuevo','revisado','correcto','instalado_operativo'] else 'badge--na'))}">
+                                                        <t t-esc="acc.estado_id.name"/>
+                                                    </span>
+                                                </t>
+                                                <t t-else="">—</t>
+                                            </td>
+                                            <td>
+                                                <t t-if="acc.subparte_ids">
+                                                    <ul class="subpartes">
+                                                        <t t-foreach="acc.subparte_ids" t-as="sp">
+                                                            <li><i class="fa fa-chevron-right"/> <t t-esc="sp.name"/></li>
+                                                        </t>
+                                                    </ul>
+                                                </t>
+                                                <t t-else="">—</t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <t t-if="not reparaciones.accesorio_eval_ids">
+                                        <tr><td colspan="3" style="text-align:center;color:#6c757d">Sin accesorios evaluados</td></tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- <<< FIN NUEVO BLOQUE ACCESORIOS -->
+
                         <div class="section-title">
                             <i class="fa fa-tasks"/>
                             CHECK LIST
@@ -574,9 +439,8 @@
                                     <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('black_id', 'NA')"/></td>
                                 </tr>
 
-                                <!-- ELEMENTOS A COLOR - Solo mostrar si el equipo es a color -->
+                                <!-- ELEMENTOS A COLOR -->
                                 <t t-if="reparaciones.tipo_id == 'color'">
-                                    <!-- Unidades de Imagen Color -->
                                     <tr>
                                         <th><i class="fa fa-tint"/>Unidad Imagen magenta</th>
                                         <td class="color-magenta"><t t-esc="selection_labels.get(reparaciones.id, {}).get('magenta_id', 'NA')"/></td>
@@ -585,8 +449,6 @@
                                         <th><i class="fa fa-tint"/>Unidad Imagen yellow</th>
                                         <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('yellow_id', 'NA')"/></td>
                                     </tr>
-
-                                    <!-- Developers Color -->
                                     <tr>
                                         <th><i class="fa fa-flask"/>Developer black</th>
                                         <td class="color-black"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerk_id', 'NA')"/></td>
@@ -595,8 +457,6 @@
                                         <th><i class="fa fa-flask"/>Developer cyan</th>
                                         <td class="color-cyan"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developerc_id', 'NA')"/></td>
                                     </tr>
-
-                                    <!-- Toners Color -->
                                     <tr>
                                         <th><i class="fa fa-flask"/>Developer yellow</th>
                                         <td class="color-yellow"><t t-esc="selection_labels.get(reparaciones.id, {}).get('developery_id', 'NA')"/></td>
@@ -613,8 +473,7 @@
                                         <td colspan="2"></td>
                                     </tr>
                                 </t>
-                                
-                                <!-- Solo para equipos MONOCROMÁTICOS -->
+                                <!-- MONOCROMÁTICOS -->
                                 <t t-if="reparaciones.tipo_id == 'monocromatica'">
                                     <tr>
                                         <th><i class="fa fa-flask"/>Developer black</th>
@@ -626,6 +485,100 @@
                                 </t>
                             </table>
                         </div>
+
+                        <!-- >>> NUEVO BLOQUE AGREGADO: CHECK LIST (SISTEMA NUEVO) -->
+                        <div class="info-card">
+                            <div style="background: var(--secondary-color); color: white; padding: 8px 15px; font-weight: bold;">
+                                <i class="fa fa-clipboard-check"/> CHECK LIST (SISTEMA NUEVO)
+                            </div>
+
+                            <!-- Funciones -->
+                            <table class="info-table">
+                                <thead>
+                                    <tr>
+                                        <th colspan="3" class="category-header"><i class="fa fa-cogs"/> FUNCIONES</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="width:40%"><i class="fa fa-tag"/> Función</th>
+                                        <th style="width:20%"><i class="fa fa-info-circle"/> Estado</th>
+                                        <th style="width:40%"><i class="fa fa-sticky-note"/> Observaciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="reparaciones.evaluacion_ids.filtered(lambda e: (e.componente_tipo_id.code or '').startswith('FUNCION_'))" t-as="evf">
+                                        <tr>
+                                            <td><t t-esc="evf.componente_tipo_id and evf.componente_tipo_id.name or '—'"/></td>
+                                            <td>
+                                                <t t-if="evf.estado_id">
+                                                    <t t-set="ecode" t-value="evf.estado_id.code or ''"/>
+                                                    <span t-attf-class="badge #{'badge--crit' if ecode in ['requiere_cambio','cambio_de_repuestos','falla'] else ('badge--med' if ecode in ['regular','gastada_pero_puede_trabajar','mantenimiento','sin_revisar','sin_probar'] else ('badge--ok' if ecode in ['nuevo','revisado','correcto'] else 'badge--na'))}">
+                                                        <t t-esc="evf.estado_id.name"/>
+                                                    </span>
+                                                </t>
+                                                <t t-else="">—</t>
+                                            </td>
+                                            <td><t t-esc="evf.observaciones or ''"/></td>
+                                        </tr>
+                                    </t>
+                                    <t t-if="not reparaciones.evaluacion_ids.filtered(lambda e: (e.componente_tipo_id.code or '').startswith('FUNCION_'))">
+                                        <tr><td colspan="3" style="text-align:center;color:#6c757d">Sin funciones evaluadas</td></tr>
+                                    </t>
+                                </tbody>
+                            </table>
+
+                            <!-- Componentes -->
+                            <table class="info-table">
+                                <thead>
+                                    <tr>
+                                        <th colspan="4" class="category-header"><i class="fa fa-cog"/> COMPONENTES</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="width:34%"><i class="fa fa-tag"/> Componente</th>
+                                        <th style="width:12%"><i class="fa fa-palette"/> Color</th>
+                                        <th style="width:22%"><i class="fa fa-info-circle"/> Estado</th>
+                                        <th style="width:32%"><i class="fa fa-tools"/> Subpartes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="reparaciones.evaluacion_ids.filtered(lambda e: not (e.componente_tipo_id.code or '').startswith('FUNCION_'))" t-as="evc">
+                                        <tr>
+                                            <td><t t-esc="evc.componente_tipo_id and evc.componente_tipo_id.name or '—'"/></td>
+                                            <td>
+                                                <t t-if="evc.color_id">
+                                                    <t t-set="ccode" t-value="evc.color_id.code and evc.color_id.code.lower() or ''"/>
+                                                    <span class="dot" t-attf-class="dot dot--#{ccode}"/>
+                                                    <t t-esc="evc.color_id.name"/>
+                                                </t>
+                                                <t t-else="">—</t>
+                                            </td>
+                                            <td>
+                                                <t t-if="evc.estado_id">
+                                                    <t t-set="ecode" t-value="evc.estado_id.code or ''"/>
+                                                    <span t-attf-class="badge #{'badge--crit' if ecode in ['requiere_cambio','cambio_de_repuestos','falla','vacio','sin_botella'] else ('badge--med' if ecode in ['regular','gastada_pero_puede_trabajar','mantenimiento','bajo','sin_revisar','sin_probar'] else ('badge--ok' if ecode in ['nuevo','revisado','correcto'] else 'badge--na'))}">
+                                                        <t t-esc="evc.estado_id.name"/>
+                                                    </span>
+                                                </t>
+                                                <t t-else="">—</t>
+                                            </td>
+                                            <td>
+                                                <t t-if="evc.subpartes_ids">
+                                                    <ul class="subpartes">
+                                                        <t t-foreach="evc.subpartes_ids" t-as="sp">
+                                                            <li><i class="fa fa-chevron-right"/> <t t-esc="sp.name"/></li>
+                                                        </t>
+                                                    </ul>
+                                                </t>
+                                                <t t-else="">—</t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <t t-if="not reparaciones.evaluacion_ids.filtered(lambda e: not (e.componente_tipo_id.code or '').startswith('FUNCION_'))">
+                                        <tr><td colspan="4" style="text-align:center;color:#6c757d">Sin componentes evaluados</td></tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- <<< FIN NUEVO BLOQUE CHECK LIST -->
 
                         <!-- Firmas modernizadas -->
                         <div class="signatures">
