@@ -33,27 +33,70 @@ class Reparaciones(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         """ Crea una secuencia para el modelo de reparaciones y gestiona la creación de carpetas en pCloud """
+        
+        # ========================================
+        # VALIDACIÓN PREVIA: Verificar configuración del modelo
+        # ========================================
         for vals in vals_list:
-            # Asegurar que el nombre se genere si no está presente o tiene el valor por defecto 'New'
+            maquina_id = vals.get('maquina_id')
+            if maquina_id:
+                maquina = self.env['sat.sat'].browse(maquina_id)
+                if maquina and maquina.name:  # maquina.name es el modelo
+                    modelo = maquina.name
+                    
+                    # Buscar componentes y accesorios configurados
+                    componentes = self.env['modelo.maquina.componente'].search_count([
+                        ('modelo_id', '=', modelo.id)
+                    ])
+                    accesorios = self.env['modelo.maquina.accesorio'].search_count([
+                        ('modelo_id', '=', modelo.id)
+                    ])
+                    
+                    # ❌ BLOQUEAR si no tiene configuración
+                    if componentes == 0 and accesorios == 0:
+                        raise ValidationError(_(
+                            "⚠️ Configuración Incompleta del Modelo\n\n"
+                            "El modelo '%s' no tiene componentes ni accesorios configurados.\n\n"
+                            "Para crear una reparación de este modelo, primero debe configurar:\n"
+                            "• Componentes: Sistema de taller → Configuración → Componentes por Modelo\n"
+                            "• Accesorios: Sistema de taller → Configuración → Accesorios por Modelo\n\n"
+                            "Es obligatorio configurar al menos un componente o accesorio."
+                        ) % modelo.name)
+                    
+                    # ⚠️ ADVERTIR si solo tiene uno
+                    if componentes == 0:
+                        raise ValidationError(_(
+                            "⚠️ Modelo sin Componentes Configurados\n\n"
+                            "El modelo '%s' no tiene componentes técnicos configurados.\n\n"
+                            "Configure al menos los componentes básicos en:\n"
+                            "Sistema de taller → Configuración → Componentes por Modelo"
+                        ) % modelo.name)
+                    
+                    if accesorios == 0:
+                        _logger.warning(f"⚠️ Modelo {modelo.name} no tiene accesorios configurados")
+                        # No bloqueamos, solo advertimos en log
+        
+        # ========================================
+        # CONTINUAR CON CREACIÓN NORMAL
+        # ========================================
+        for vals in vals_list:
             if vals.get('name', _('New')) == _('New'):
                 vals['name'] = self.env['ir.sequence'].sudo().next_by_code('reparaciones.reparaciones') or '/'
                 _logger.info("Número secuencial asignado al campo 'name': %s", vals['name'])
 
-            # Asignar el valor inicial del contómetro al campo 'contometro_inicial' si 'contometrok_id' tiene un valor
             if 'contometrok_id' in vals:
                 vals['contometro_inicial'] = vals['contometrok_id']
                 _logger.info("Asignado 'contometro_inicial' a partir de 'contometrok_id': %s", vals['contometro_inicial'])
 
         try:
-            # Crear los registros
             records = super(Reparaciones, self).create(vals_list)
             for record in records:
                 _logger.info("Registro de reparación creado exitosamente con ID: %s", record.id)
 
                 # Crear la carpeta en pCloud
                 try:
-                    folder_id = record.create_folder_in_pcloud()  # Crear la carpeta automáticamente
-                    record.foto_galeria_nombre = f"{record.maquina_id.name.name}_{record.serie_id or 'sin_serie'}"  # Guardar el nombre de la carpeta
+                    folder_id = record.create_folder_in_pcloud()
+                    record.foto_galeria_nombre = f"{record.maquina_id.name.name}_{record.serie_id or 'sin_serie'}"
                     _logger.info("Carpeta en pCloud creada o asignada correctamente para el registro ID: %s", record.id)
                 except Exception as folder_error:
                     _logger.error("Error al crear la carpeta en pCloud para el registro ID %s: %s", record.id, str(folder_error))
@@ -66,14 +109,11 @@ class Reparaciones(models.Model):
                 except Exception as qr_error:
                     _logger.error("Error al generar el código QR para el registro ID %s: %s", record.id, str(qr_error))
 
-                # ========================================
-                # NUEVO: AUTO-CARGAR EVALUACIONES
-                # ========================================
+                # Auto-cargar evaluaciones
                 try:
                     record._seed_evaluaciones_from_modelo()
                     _logger.info("Evaluaciones auto-cargadas para reparación ID: %s", record.id)
                 except Exception as eval_error:
-                    # NO bloquear la creación si falla la carga de evaluaciones
                     _logger.warning("No se pudieron auto-cargar evaluaciones para reparación ID %s: %s", record.id, str(eval_error))
 
             return records
