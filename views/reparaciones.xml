@@ -612,12 +612,7 @@
              optional="show"
              options="{'no_create': True, 'no_open': True}"/>
       <field name="estado_id" 
-             widget="badge"
-             decoration-danger="estado_id.prioridad == 1"
-             decoration-warning="estado_id.prioridad == 2"
-             decoration-success="estado_id.prioridad == 3"
-             options="{'no_create': True, 'no_open': True}"
-             placeholder="Seleccionar estado..."/>
+            />
       <field name="observaciones" optional="show" 
              placeholder="Observaciones..."/>
     </list>
