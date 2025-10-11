@@ -87,18 +87,14 @@ class Reparaciones(models.Model):
             raise
 
     def _seed_evaluaciones_from_modelo(self):
-        """
-        Carga automáticamente componentes y accesorios según el modelo de máquina.
-        El técnico luego completará el estado de cada uno.
-        """
+        """Carga automáticamente componentes y accesorios según el modelo"""
         self.ensure_one()
         
-        # Validar que existe máquina y modelo
         if not self.maquina_id or not self.maquina_id.name:
-            _logger.info(f"Reparación {self.id}: No tiene máquina o modelo asignado, skip evaluaciones")
+            _logger.info(f"Reparación {self.id}: No tiene máquina o modelo asignado")
             return
         
-        modelo = self.maquina_id.name  # modelo.maquina
+        modelo = self.maquina_id.name
         _logger.info(f"Auto-cargando evaluaciones para reparación {self.id}, modelo: {modelo.name}")
         
         # ========================================
@@ -108,34 +104,57 @@ class Reparaciones(models.Model):
             ('modelo_id', '=', modelo.id)
         ])
         
+        if not componentes_modelo:
+            _logger.warning(f"⚠️ Modelo {modelo.name} no tiene componentes configurados")
+            return
+        
         Eval = self.env['reparacion.componente.evaluacion']
+        Color = self.env['color.tipo']
         componentes_creados = 0
         
         for comp_line in componentes_modelo:
+            # ✅ CONVERTIR color (Selection) a color_id (Many2one)
+            color_id = False
+            if comp_line.color:
+                # Buscar el registro de color.tipo correspondiente
+                color_obj = Color.search([('code', '=', comp_line.color)], limit=1)
+                if color_obj:
+                    color_id = color_obj.id
+                else:
+                    _logger.warning(f"Color '{comp_line.color}' no encontrado en color.tipo")
+            
             # Evitar duplicados
-            exists = Eval.search([
+            dup_domain = [
                 ('reparacion_id', '=', self.id),
                 ('componente_tipo_id', '=', comp_line.tipo_id.id),
-                '|',
-                ('color_id', '=', False),
-                ('color_id', '=', comp_line.color_id.id if comp_line.color_id else False)
-            ], limit=1)
+            ]
+            if color_id:
+                dup_domain.append(('color_id', '=', color_id))
+            else:
+                dup_domain.append(('color_id', '=', False))
             
+            exists = Eval.search(dup_domain, limit=1)
             if exists:
-                _logger.debug(f"Componente {comp_line.tipo_id.name} ya existe, skip")
+                _logger.debug(f"Componente {comp_line.tipo_id.name} ({comp_line.color or 'sin color'}) ya existe, skip")
                 continue
             
-            # Crear evaluación con estado sugerido (técnico lo modificará)
-            Eval.create({
+            # Crear evaluación
+            vals = {
                 'reparacion_id': self.id,
                 'componente_tipo_id': comp_line.tipo_id.id,
-                'color_id': comp_line.color_id.id if comp_line.color_id else False,
+                'color_id': color_id,
                 'estado_id': comp_line.estado_sugerido_id.id if comp_line.estado_sugerido_id else False,
                 'observaciones': comp_line.frase_desgaste or '',
-            })
-            componentes_creados += 1
+            }
+            
+            try:
+                Eval.create(vals)
+                componentes_creados += 1
+                _logger.debug(f"✓ Creado: {comp_line.tipo_id.name} ({comp_line.color or 'sin color'})")
+            except Exception as e:
+                _logger.error(f"Error creando evaluación para {comp_line.tipo_id.name}: {e}")
         
-        _logger.info(f"Creados {componentes_creados} componentes para reparación {self.id}")
+        _logger.info(f"✅ Creados {componentes_creados} componentes para reparación {self.id}")
         
         # ========================================
         # AUTO-CARGAR ACCESORIOS
@@ -143,6 +162,10 @@ class Reparaciones(models.Model):
         accesorios_modelo = self.env['modelo.maquina.accesorio'].search([
             ('modelo_id', '=', modelo.id)
         ])
+        
+        if not accesorios_modelo:
+            _logger.warning(f"⚠️ Modelo {modelo.name} no tiene accesorios configurados")
+            return
         
         AccEval = self.env['reparacion.accesorio.evaluacion']
         accesorios_creados = 0
@@ -158,17 +181,23 @@ class Reparaciones(models.Model):
                 _logger.debug(f"Accesorio {acc_line.tipo_id.name} ya existe, skip")
                 continue
             
-            # Crear evaluación con estado predeterminado (técnico lo modificará)
-            AccEval.create({
+            # Crear evaluación
+            vals = {
                 'reparacion_id': self.id,
                 'tipo_id': acc_line.tipo_id.id,
                 'estado_id': acc_line.estado_predeterminado_id.id if acc_line.estado_predeterminado_id else False,
                 'observaciones': acc_line.nota or '',
-            })
-            accesorios_creados += 1
+            }
+            
+            try:
+                AccEval.create(vals)
+                accesorios_creados += 1
+                _logger.debug(f"✓ Creado: {acc_line.tipo_id.name}")
+            except Exception as e:
+                _logger.error(f"Error creando evaluación de accesorio {acc_line.tipo_id.name}: {e}")
         
-        _logger.info(f"Creados {accesorios_creados} accesorios para reparación {self.id}")
-        _logger.info(f"Total evaluaciones auto-cargadas: {componentes_creados + accesorios_creados}")
+        _logger.info(f"✅ Creados {accesorios_creados} accesorios para reparación {self.id}")
+        _logger.info(f"🎉 Total evaluaciones auto-cargadas: {componentes_creados + accesorios_creados}")
     # --- NUEVOS CAMPOS EN Reparaciones ---
     pcloud_folder_id = fields.Char(string='pCloud Folder ID', copy=False)
     pcloud_upload_code = fields.Char(string='pCloud Upload Code', copy=False)
