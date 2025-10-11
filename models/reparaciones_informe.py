@@ -341,50 +341,51 @@ class ReparacionesInforme(models.Model):
         """
         self.ensure_one()
         componentes_pendientes = []
-        
+
         for evaluacion in self.evaluacion_ids:
             if not evaluacion.estado_id:
                 continue
-            
+
             # Solo procesar si requiere cambio
             if evaluacion.estado_id.code != 'requiere_cambio':
                 continue
-            
+
             # Mapear a código de componente
             componente_code = self._get_componente_code_from_evaluacion(evaluacion)
-            
+
             if not componente_code:
                 _logger.warning(f"No se pudo mapear evaluación {evaluacion.id} a código de intervención")
                 continue
-            
+
             # Verificar si existe intervención CON detalles
             intervencion_existente = self.intervencion_ids.filtered(
                 lambda x: x.componente == componente_code and x.detalle_ids
             )
-            
+
             if not intervencion_existente:
+                color_code = self._rep__get_color_code_from_eval(evaluacion)
                 componentes_pendientes.append({
                     'evaluacion_id': evaluacion.id,
                     'componente_code': componente_code,
                     'tipo_id': evaluacion.componente_tipo_id.id,
-                    'color': evaluacion.color if evaluacion.color else None,
+                    'color_code': color_code if color_code else None,
                 })
-        
+
         return componentes_pendientes
 
     def _get_componente_code_from_evaluacion(self, evaluacion):
         """
         Mapea una evaluación a su código de componente para intervenciones.
-        
+
         Args:
             evaluacion: Registro de reparacion.componente.evaluacion
-        
+
         Returns:
             Código de componente (str) o False
         """
         tipo_code = evaluacion.componente_tipo_id.code
-        color = evaluacion.color  # 'k', 'c', 'm', 'y' o False
-        
+        color = self._rep__get_color_code_from_eval(evaluacion)  # 'k', 'c', 'm', 'y' o False
+
         # Mapeo de tipos a códigos
         TIPO_TO_CODE = {
             'UI': {
@@ -408,9 +409,9 @@ class ReparacionesInforme(models.Model):
             'BYPASS': 'papel',
             'TRAY': 'papel',
         }
-        
+
         mapping = TIPO_TO_CODE.get(tipo_code)
-        
+
         if isinstance(mapping, dict):
             # Componente sensible a color
             if not color:
@@ -419,6 +420,7 @@ class ReparacionesInforme(models.Model):
         else:
             # Componente sin color
             return mapping
+
 
     def _ensure_intervencion_for_component(self, componente_code):
         """Crea o retorna intervención existente para un componente"""
@@ -443,31 +445,31 @@ class ReparacionesInforme(models.Model):
     def _abrir_wizard_multiple_componentes(self, componentes_pendientes):
         """Abre wizard con subpartes del modelo de máquina"""
         self.ensure_one()
-        
+
         if not componentes_pendientes:
             return
-        
+
         wizard = self.env['reparacion.add.subparts.wizard'].create({
             'reparacion_id': self.id,
         })
-        
-        modelo_maquina = self.maquina_id.name
-        
+
+        # CORRECCIÓN: usar el record, no el nombre
+        modelo_maquina = self.maquina_id
         if not modelo_maquina:
             raise UserError(_("La máquina no tiene modelo asignado"))
-        
+
         for comp_info in componentes_pendientes:
             componente_code = comp_info['componente_code']
-            
+
             # Crear intervención
             intervencion = self._ensure_intervencion_for_component(componente_code)
-            
+
             # Buscar componentes del modelo según evaluación
             componentes_modelo = self._buscar_componentes_modelo_por_evaluacion(
                 modelo_maquina,
                 comp_info
             )
-            
+
             # Agregar subpartes
             for componente_modelo in componentes_modelo:
                 for detalle in componente_modelo.detalle_ids:
@@ -480,18 +482,18 @@ class ReparacionesInforme(models.Model):
                         'accion_sub': 'cambiado',
                         'cantidad': detalle.cantidad or 1.0,
                     })
-        
+
         # Construir título
         nombres = []
         for comp in componentes_pendientes:
             eval_rec = self.env['reparacion.componente.evaluacion'].browse(comp['evaluacion_id'])
             nombre = eval_rec.componente_tipo_id.name
-            if comp.get('color'):
-                nombre = f"{nombre} ({comp['color'].upper()})"
+            if comp.get('color_code'):
+                nombre = f"{nombre} ({comp['color_code'].upper()})"
             nombres.append(nombre)
-        
+
         titulo = f"Subpartes para: {', '.join(nombres)}"
-        
+
         return {
             'type': 'ir.actions.act_window',
             'name': titulo,
@@ -503,14 +505,49 @@ class ReparacionesInforme(models.Model):
             'context': {'from_generar_informe': True},
         }
 
+    def _rep__normalize_color_name(self, name):
+        """Convierte nombres en código 'k/c/m/y' cuando no hay code en color_id."""
+        if not name:
+            return False
+        n = name.strip().lower()
+        mapping = {
+            'k': 'k', 'black': 'k', 'negro': 'k',
+            'c': 'c', 'cyan': 'c',
+            'm': 'm', 'magenta': 'm',
+            'y': 'y', 'yellow': 'y', 'amarillo': 'y',
+        }
+        return mapping.get(n, False)
+
+    def _rep__get_color_code_from_eval(self, eval_comp):
+        """
+        Retorna 'k'/'c'/'m'/'y' o False, según lo que haya en la evaluación.
+        Prioridad:
+        1) eval_comp.color (compatibilidad hacia atrás si aún existe),
+        2) eval_comp.color_id.code,
+        3) eval_comp.color_id.name -> mapeado a k/c/m/y.
+        """
+        # Compatibilidad por si aún existe 'color' en algunos registros
+        color = getattr(eval_comp, 'color', False)
+        if color:
+            return color
+
+        if getattr(eval_comp, 'color_id', False):
+            code = getattr(eval_comp.color_id, 'code', False)
+            if code:
+                return code
+            return self._rep__normalize_color_name(getattr(eval_comp.color_id, 'name', False))
+
+        return False
+
+
     def _buscar_componentes_modelo_por_evaluacion(self, modelo_maquina, comp_info):
         """
         Busca componentes del modelo según la evaluación.
-        
+
         Args:
-            modelo_maquina: Registro de modelo.maquina
-            comp_info: Dict con evaluacion_id, tipo_id, color
-        
+            modelo_maquina: Record de modelo.maquina (NO el nombre)
+            comp_info: Dict con evaluacion_id, tipo_id, color_code
+
         Returns:
             Recordset de modelo.maquina.componente
         """
@@ -518,11 +555,26 @@ class ReparacionesInforme(models.Model):
             ('modelo_id', '=', modelo_maquina.id),
             ('tipo_id', '=', comp_info['tipo_id'])
         ]
-        
-        if comp_info.get('color'):
-            domain.append(('color', '=', comp_info['color']))
-        
+
+        # Si hay color en la evaluación, filtra por color en el modelo de componentes.
+        color_code = comp_info.get('color_code')
+        if color_code:
+            # Detecta si el modelo usa 'color' (selection k/c/m/y) o 'color_id' (Many2one)
+            mmc = self.env['modelo.maquina.componente']
+            if 'color' in mmc._fields:
+                domain.append(('color', '=', color_code))
+            elif 'color_id' in mmc._fields:
+                color_rec = self.env['color.tipo'].search([('code', '=', color_code)], limit=1)
+                if color_rec:
+                    domain.append(('color_id', '=', color_rec.id))
+                else:
+                    _logger.warning(
+                        "No se encontró color.tipo con code='%s' para el dominio; se omite filtro de color.",
+                        color_code
+                    )
+
         return self.env['modelo.maquina.componente'].search(domain)
+
 
     # ========================================
     # ACCIÓN DEL BOTÓN
