@@ -1,405 +1,410 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="report_reparaciones_ventas">
-        <t t-call="web.html_container">
-            <t t-foreach="docs" t-as="reparaciones">
-                <t t-call="web.external_layout">
-                    <div class="page">
-                        <style>
-                            :root {
-                                --primary-color: #3498db;
-                                --primary-dark: #2980b9;
-                                --secondary-color: #2c3e50;
-                                --accent-color: #1abc9c;
-                                --light-bg: #f8f9fa;
-                                --border-color: #e9ecef;
-                                --text-color: #333;
-                                --text-light: #6c757d;
-                                --success: #2ecc71;
-                                --warning: #f39c12;
-                                --danger: #e74c3c;
-                                --white: #ffffff;
-                                --estado-sin-revisar: #6c757d;
-                                --estado-para-revision: #17a2b8;
-                                --estado-en-revision: #ffc107;
-                                --estado-finalizado: #28a745;
-                                --estado-con-problemas: #dc3545;
-                                --estado-de-partes: #fd7e14;
-                                --estado-entregada: #20c997;
-                            }
+  <template id="report_reparaciones_ventas">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="reparaciones">
+        <t t-call="web.external_layout">
+          <div class="page">
+            <style>
+              :root{
+                --primary-color:#3498db;--primary-dark:#2980b9;--secondary-color:#2c3e50;--accent-color:#1abc9c;
+                --light-bg:#f8f9fa;--border-color:#e9ecef;--text-color:#333;--text-light:#6c757d;--success:#2ecc71;
+                --warning:#f39c12;--danger:#e74c3c;--white:#ffffff;
+                --estado-sin-revisar:#6c757d;--estado-para-revision:#17a2b8;--estado-en-revision:#ffc107;
+                --estado-finalizado:#28a745;--estado-con-problemas:#dc3545;--estado-de-partes:#fd7e14;--estado-entregada:#20c997;
+              }
+              body{font-family:'Roboto',sans-serif;color:var(--text-color);line-height:1.6;}
+              .shadow{box-shadow:0 4px 6px rgba(0,0,0,.1);} .rounded{border-radius:8px;}
+              .mb-3{margin-bottom:1rem;} .p-3{padding:1rem;}
 
-                            body { font-family: 'Roboto', sans-serif; color: var(--text-color); line-height: 1.6; }
-                            .shadow { box-shadow: 0 4px 6px rgba(0,0,0,.1); }
-                            .rounded { border-radius: 8px; }
-                            .mb-3 { margin-bottom: 1rem; }
-                            .p-3 { padding: 1rem; }
+              .repair-header{
+                background:linear-gradient(135deg,var(--secondary-color) 0%,var(--primary-color) 100%);
+                color:var(--white);padding:25px;border-radius:12px;margin-bottom:30px;
+                box-shadow:0 6px 12px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+              }
+              .header-left{flex:1;}
+              .header-title{font-size:28px;font-weight:bold;margin-bottom:10px;color:var(--white);}
+              .header-subtitle{font-size:16px;color:rgba(255,255,255,.9);}
+              .header-right{background:rgba(255,255,255,.15);padding:15px;border-radius:8px;backdrop-filter:blur(10px);min-width:200px;}
+              .header-status{font-weight:bold;text-transform:uppercase;text-align:center;}
 
-                            .repair-header{
-                                background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
-                                color: var(--white); padding: 25px; border-radius: 12px; margin-bottom: 30px;
-                                box-shadow: 0 6px 12px rgba(0,0,0,.15); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;
-                            }
-                            .header-left{ flex:1; }
-                            .header-title{ font-size:28px; font-weight:bold; margin-bottom:10px; color:var(--white); }
-                            .header-subtitle{ font-size:16px; color:rgba(255,255,255,.9); }
-                            .header-right{ background:rgba(255,255,255,.15); padding:15px; border-radius:8px; min-width:200px; }
+              .section-title{
+                background:var(--secondary-color);color:var(--white);padding:12px 20px;margin:25px 0 15px;border-radius:8px;
+                font-size:18px;font-weight:bold;display:flex;align-items:center;box-shadow:0 2px 4px rgba(0,0,0,.1);
+              }
+              .section-title i{margin-right:10px;}
 
-                            .header-status{ font-weight:bold; text-transform:uppercase; text-align:center; }
+              .info-card{background:var(--white);border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,.1);margin-bottom:20px;overflow:hidden;border:1px solid var(--border-color);}
+              .info-table{width:100%;border-collapse:separate;border-spacing:0;margin-bottom:0;}
+              .info-table th{background:var(--light-bg);color:var(--secondary-color);padding:12px 15px;font-weight:bold;border:1px solid var(--border-color);}
+              .info-table td{padding:12px 15px;border:1px solid var(--border-color);}
+              .info-table i{margin-right:8px;color:var(--primary-color);}
 
-                            .section-title{
-                                background: var(--secondary-color); color: var(--white); padding: 12px 20px; margin: 25px 0 15px;
-                                border-radius: 8px; font-size: 18px; font-weight: bold; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,.1);
-                            }
-                            .section-title i{ margin-right:10px; }
+              .informe-tecnico{padding:20px;background:var(--light-bg);border-radius:8px;border-left:4px solid var(--primary-color);}
 
-                            .info-card{ background:#fff; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,.1); margin-bottom:20px; overflow:hidden; border:1px solid var(--border-color); }
-                            .info-table{ width:100%; border-collapse:separate; border-spacing:0; margin-bottom:0; }
-                            .info-table th{ background:var(--light-bg); color:var(--secondary-color); padding:12px 15px; font-weight:bold; border:1px solid var(--border-color); }
-                            .info-table td{ padding:12px 15px; border:1px solid var(--border-color); }
-                            .info-table i{ margin-right:8px; color:var(--primary-color); }
+              .status-badge{padding:6px 12px;border-radius:20px;font-size:13px;font-weight:bold;display:inline-block;color:white;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.1);margin:5px 0;min-width:140px;}
+              .header-subtitle .status-badge{margin-top:10px;font-size:14px;padding:8px 15px;}
+              .status-ok{background:var(--success);} .status-warning{background:var(--warning);} .status-error{background:var(--danger);}
+              .status-sin-revisar{background:var(--estado-sin-revisar);} .status-para-revision{background:var(--estado-para-revision);}
+              .status-en-revision{background:var(--estado-en-revision);color:#333;} .status-finalizado{background:var(--estado-finalizado);}
+              .status-con-problemas{background:var(--estado-con-problemas);} .status-de-partes{background:var(--estado-de-partes);} .status-entregada{background:var(--estado-entregada);}
 
-                            .category-header{ background:var(--secondary-color); color:#fff; padding:10px 15px; text-align:center; font-weight:bold; }
+              .signatures{display:flex;justify-content:space-between;margin-top:40px;}
+              .signature-box{flex:0 0 45%;border-top:2px solid var(--secondary-color);padding-top:15px;text-align:center;}
+              .signature-icon{font-size:24px;color:var(--secondary-color);margin-bottom:8px;}
 
-                            .color-cyan{ background-color: rgba(11,190,230,.15); border-left:4px solid #0bbee6; }
-                            .color-magenta{ background-color: rgba(255,0,208,.15); border-left:4px solid #ff00d0; }
-                            .color-yellow{ background-color: rgba(255,255,0,.15); border-left:4px solid #ffff00; }
-                            .color-black{ background-color: rgba(119,120,120,.15); border-left:4px solid #777878; }
+              /* Chips de subpartes */
+              .chip{display:inline-block;border:1px solid var(--border-color);padding:2px 6px;border-radius:10px;margin:2px 4px 0 0;font-size:12px;white-space:nowrap;}
+              .chip i{margin-right:4px;}
 
-                            .informe-tecnico{ padding:20px; background:var(--light-bg); border-radius:8px; border-left:4px solid var(--primary-color); }
+              /* Toner: barra */
+              .toner-bar{height:8px;border-radius:6px;background:#eee;overflow:hidden}
+              .toner-fill{height:100%}
+              .k{background:#777;} .c{background:#0bbee6;} .m{background:#ff00d0;} .y{background:#ffd400;}
 
-                            .status-badge{ padding:6px 12px; border-radius:20px; font-size:13px; font-weight:bold; display:inline-block; color:#fff; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,.1); margin:5px 0; min-width:140px; }
-                            .status-ok{ background:var(--success); } .status-warning{ background:var(--warning); } .status-error{ background:var(--danger); }
+              /* Columnas compactas */
+              .td-compact{vertical-align:top}
+            </style>
 
-                            /* Chips subpartes */
-                            .chip{
-                                display:inline-block; padding:4px 8px; border-radius:12px; background:#eef2f7; border:1px solid #dde3ea;
-                                font-size:12px; margin:2px 4px 0 0;
-                            }
-
-                            /* Barra toner */
-                            .toner-bar{ height:10px; border-radius:6px; background:#e9ecef; overflow:hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.08); }
-                            .toner-fill{ height:100%; }
-
-                            /* Estado etiquetas en tabla */
-                            .tag{
-                                display:inline-block; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600; color:#fff;
-                            }
-                            .tag-crit{ background:#d32f2f; }
-                            .tag-med{ background:#ef6c00; }
-                            .tag-pend{ background:#616161; }
-                            .tag-ok{ background:#2e7d32; }
-
-                        </style>
-
-                        <!-- Encabezado -->
-                        <div class="repair-header">
-                            <div class="header-left">
-                                <div class="header-title">
-                                    <i class="fa fa-tools"></i>
-                                    Orden de Reparación: <t t-esc="reparaciones.name"/>
-                                </div>
-                                <div class="header-subtitle">
-                                    <t t-set="estado" t-value="selection_labels.get(reparaciones.id, {}).get('estado_id', 'Sin asignar')"/>
-                                    <t t-if="estado == 'Finalizado'">
-                                        <div style="display:inline-block;background-color:#28a745;color:#fff;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
-                                            <i class="fa fa-check-circle"></i> <t t-esc="estado"/>
-                                        </div>
-                                    </t>
-                                    <t t-elif="estado == 'En revisión'">
-                                        <div style="display:inline-block;background-color:#ffc107;color:#333;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
-                                            <i class="fa fa-sync"></i> <t t-esc="estado"/>
-                                        </div>
-                                    </t>
-                                    <t t-elif="estado == 'Con problemas'">
-                                        <div style="display:inline-block;background-color:#dc3545;color:#fff;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
-                                            <i class="fa fa-exclamation-triangle"></i> <t t-esc="estado"/>
-                                        </div>
-                                    </t>
-                                    <t t-elif="estado == 'De partes'">
-                                        <div style="display:inline-block;background-color:#fd7e14;color:#fff;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
-                                            <i class="fa fa-tools"></i> <t t-esc="estado"/>
-                                        </div>
-                                    </t>
-                                    <t t-elif="estado == 'Sin revisar'">
-                                        <div style="display:inline-block;background-color:#6c757d;color:#fff;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
-                                            <i class="fa fa-clock"></i> <t t-esc="estado"/>
-                                        </div>
-                                    </t>
-                                    <t t-elif="estado == 'Para revision'">
-                                        <div style="display:inline-block;background-color:#17a2b8;color:#fff;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
-                                            <i class="fa fa-search"></i> <t t-esc="estado"/>
-                                        </div>
-                                    </t>
-                                    <t t-elif="estado == 'Entregada'">
-                                        <div style="display:inline-block;background-color:#20c997;color:#fff;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
-                                            <i class="fa fa-handshake"></i> <t t-esc="estado"/>
-                                        </div>
-                                    </t>
-                                    <t t-else="">
-                                        <div style="display:inline-block;background-color:#6c757d;color:#fff;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
-                                            <i class="fa fa-question-circle"></i> <t t-esc="estado"/>
-                                        </div>
-                                    </t>
-                                </div>
-                            </div>
-                            <div class="header-right">
-                                <div class="header-status">
-                                    Cliente: <t t-esc="reparaciones.cliente_id.name"/>
-                                </div>
-                                <div style="margin-top:10px;text-align:center;font-size:12px;">
-                                    <t t-if="reparaciones.responsable_id">
-                                        Responsable: <t t-esc="reparaciones.nombre_responsable"/>
-                                    </t>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- INFORMACIÓN DEL EQUIPO -->
-                        <div class="section-title">
-                            <i class="fa fa-info-circle"></i>
-                            INFORMACIÓN DEL EQUIPO
-                        </div>
-                        <div class="info-card mb-3">
-                            <div style="background: var(--secondary-color); color:#fff; padding:8px 15px; font-weight:bold;">
-                                <i class="fa fa-desktop"></i> IDENTIFICACIÓN DEL EQUIPO
-                            </div>
-                            <table class="info-table">
-                                <tr>
-                                    <th style="width:16%"><i class="fa fa-print"></i>Tipo de equipo</th>
-                                    <td style="width:17%"><t t-esc="reparaciones.tipo_machine"/></td>
-                                    <th style="width:16%"><i class="fa fa-tag"></i>Marca</th>
-                                    <td style="width:17%"><t t-esc="reparaciones.marca"/></td>
-                                    <th style="width:16%"><i class="fa fa-desktop"></i>Modelo</th>
-                                    <td style="width:18%"><t t-esc="reparaciones.maquina_id.name.name"/></td>
-                                </tr>
-                                <tr>
-                                    <th><i class="fa fa-barcode"></i>Número de serie</th>
-                                    <td colspan="5"><t t-esc="reparaciones.serie_id"/></td>
-                                </tr>
-                            </table>
-                        </div>
-
-                        <div class="info-card mb-3">
-                            <div style="background: var(--primary-dark); color:#fff; padding:8px 15px; font-weight:bold;">
-                                <i class="fa fa-cog"></i> ESTADO TÉCNICO
-                            </div>
-                            <table class="info-table">
-                                <tr>
-                                    <th style="width:20%"><i class="fa fa-tachometer-alt"></i>Contómetro</th>
-                                    <td style="width:30%"><t t-esc="reparaciones.contometrok_id"/></td>
-                                    <th style="width:20%"><i class="fa fa-check-circle"></i>Calidad</th>
-                                    <td style="width:30%">
-                                        <t t-if="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA') == 'Calidad de Impresión Óptima - Cumple Estándares'">
-                                            <div class="status-badge status-ok"><i class="fa fa-check"></i> Óptima</div>
-                                        </t>
-                                        <t t-elif="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA') == 'Calidad de Impresión Aceptable - Requiere Ajustes'">
-                                            <div class="status-badge status-warning"><i class="fa fa-exclamation-triangle"></i> Aceptable</div>
-                                        </t>
-                                        <t t-elif="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA') == 'Calidad de Impresión Deficiente - Requiere Atención Inmediata'">
-                                            <div class="status-badge status-error"><i class="fa fa-times"></i> Deficiente</div>
-                                        </t>
-                                        <t t-else="">
-                                            <t t-esc="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA')"/>
-                                        </t>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th><i class="fa fa-layer-group"></i>Tapas</th>
-                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('tapas_id', 'NA')"/></td>
-                                    <th><i class="fa fa-tablet"></i>Panel</th>
-                                    <td><t t-esc="selection_labels.get(reparaciones.id, {}).get('panel_id', 'NA')"/></td>
-                                </tr>
-                            </table>
-                        </div>
-
-                        <!-- INFORME TÉCNICO -->
-                        <div class="section-title">
-                            <i class="fa fa-clipboard-list"></i>
-                            INFORME TÉCNICO
-                        </div>
-                        <div class="info-card">
-                            <div class="informe-tecnico">
-                                <!-- Mostrar HTML del informe (autogenerado) -->
-                                <t t-raw="reparaciones.informe or ''"/>
-                            </div>
-                        </div>
-
-                        <!-- ACCESORIOS (desde reparacion.accesorio.evaluacion) -->
-                        <div class="section-title">
-                            <i class="fa fa-puzzle-piece"></i>
-                            ACCESORIOS
-                        </div>
-                        <div class="info-card">
-                            <table class="info-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width:30%"><i class="fa fa-puzzle-piece"></i>Accesorio</th>
-                                        <th style="width:20%"><i class="fa fa-info-circle"></i>Estado</th>
-                                        <th style="width:35%"><i class="fa fa-sitemap"></i>Subpartes</th>
-                                        <th style="width:15%"><i class="fa fa-sticky-note"></i>Obs.</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <t t-if="not reparaciones.accesorio_eval_ids">
-                                        <tr><td colspan="4" style="text-align:center;color:#6c757d;">—</td></tr>
-                                    </t>
-                                    <t t-foreach="reparaciones.accesorio_eval_ids.sorted(key=lambda a: (a.tipo_id.sequence or 0, a.tipo_id.name))" t-as="acc">
-                                        <tr>
-                                            <td>
-                                                <i class="fa fa-plug"></i>
-                                                <t t-esc="acc.tipo_id.name"/>
-                                            </td>
-                                            <td>
-                                                <t t-set="code" t-value="acc.estado_id and acc.estado_id.code or ''"/>
-                                                <t t-if="code in ['instalado_con_falla','no_instalado']">
-                                                    <span class="tag tag-med"><t t-esc="acc.estado_id.name"/></span>
-                                                </t>
-                                                <t t-elif="code in ['no_aplica']">
-                                                    <span class="tag tag-pend"><t t-esc="acc.estado_id.name"/></span>
-                                                </t>
-                                                <t t-elif="acc.estado_id">
-                                                    <span class="tag tag-ok"><t t-esc="acc.estado_id.name"/></span>
-                                                </t>
-                                                <t t-else="">
-                                                    <span class="tag tag-pend">Sin estado</span>
-                                                </t>
-                                            </td>
-                                            <td>
-                                                <t t-if="acc.subparte_ids">
-                                                    <t t-foreach="acc.subparte_ids" t-as="sp">
-                                                        <span class="chip"><t t-esc="sp.name"/></span>
-                                                    </t>
-                                                </t>
-                                                <t t-else="">—</t>
-                                            </td>
-                                            <td>
-                                                <t t-esc="acc.observaciones or ''"/>
-                                            </td>
-                                        </tr>
-                                    </t>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- CHECK LIST (Componentes evaluados) -->
-                        <div class="section-title">
-                            <i class="fa fa-tasks"></i>
-                            CHECK LIST
-                        </div>
-                        <div class="info-card">
-                            <table class="info-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width:28%"><i class="fa fa-cog"></i>Componente</th>
-                                        <th style="width:12%"><i class="fa fa-palette"></i>Color</th>
-                                        <th style="width:18%"><i class="fa fa-info-circle"></i>Estado</th>
-                                        <th style="width:27%"><i class="fa fa-sitemap"></i>Subpartes (si requiere cambio)</th>
-                                        <th style="width:15%"><i class="fa fa-percent"></i>Indicador</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <t t-if="not reparaciones.evaluacion_ids">
-                                        <tr><td colspan="5" style="text-align:center;color:#6c757d;">—</td></tr>
-                                    </t>
-
-                                    <!-- Itera componentes -->
-                                    <t t-foreach="reparaciones.evaluacion_ids.sorted(key=lambda e: (e.componente_tipo_id.sequence or 0, (e.color_id and e.color_id.sequence) or 0, e.id))" t-as="ev">
-                                        <t t-set="tipo_code" t-value="ev.componente_tipo_id.code or ''"/>
-                                        <t t-set="is_toner" t-value="tipo_code == 'TONER_SYSTEM'"/>
-                                        <t t-set="row_class" t-value="(ev.color_id and ev.color_id.code in ['c','m','y','k']) and ('color-' + (ev.color_id.code == 'c' and 'cyan' or ev.color_id.code == 'm' and 'magenta' or ev.color_id.code == 'y' and 'yellow' or 'black')) or ''"/>
-
-                                        <tr t-attf-class="#{row_class}">
-                                            <!-- Nombre de componente -->
-                                            <td>
-                                                <i t-if="is_toner" class="fa fa-tint"></i>
-                                                <i t-else="" class="fa fa-cog"></i>
-                                                <t t-esc="ev.componente_tipo_id.name"/>
-                                            </td>
-
-                                            <!-- Color (si aplica) -->
-                                            <td>
-                                                <t t-esc="ev.color_id and ev.color_id.name or '—'"/>
-                                            </td>
-
-                                            <!-- Estado con etiqueta -->
-                                            <td>
-                                                <t t-set="ecode" t-value="ev.estado_id and ev.estado_id.code or ''"/>
-                                                <t t-if="ecode in ['requiere_cambio','cambio_de_repuestos','falla','vacio','sin_botella']">
-                                                    <span class="tag tag-crit"><t t-esc="ev.estado_id and ev.estado_id.name or 'Crítico'"/></span>
-                                                </t>
-                                                <t t-elif="ecode in ['regular','gastada_pero_puede_trabajar','mantenimiento','bajo','sin_probar','sin_revisar']">
-                                                    <span class="tag tag-med"><t t-esc="ev.estado_id and ev.estado_id.name or 'Pendiente'"/></span>
-                                                </t>
-                                                <t t-elif="ecode == 'no_aplica'">
-                                                    <span class="tag tag-pend">No aplica</span>
-                                                </t>
-                                                <t t-else="">
-                                                    <span class="tag tag-ok"><t t-esc="ev.estado_id and ev.estado_id.name or 'OK'"/></span>
-                                                </t>
-                                            </td>
-
-                                            <!-- Subpartes (solo si requiere cambio o existen) -->
-                                            <td>
-                                                <t t-if="(ev.estado_id and ev.estado_id.code in ['requiere_cambio','cambio_de_repuestos','falla']) or ev.subpartes_ids">
-                                                    <t t-if="ev.subpartes_ids">
-                                                        <t t-foreach="ev.subpartes_ids" t-as="sp">
-                                                            <span class="chip"><t t-esc="sp.name"/></span>
-                                                        </t>
-                                                    </t>
-                                                    <t t-else="">—</t>
-                                                </t>
-                                                <t t-else="">—</t>
-                                            </td>
-
-                                            <!-- Indicador especial para TONER -->
-                                            <td>
-                                                <t t-if="is_toner">
-                                                    <t t-set="lvl" t-value="100"/>
-                                                    <t t-if="ev.estado_id and ev.estado_id.code == 'vacio'">
-                                                        <t t-set="lvl" t-value="0"/>
-                                                    </t>
-                                                    <t t-elif="ev.estado_id and ev.estado_id.code == 'sin_botella'">
-                                                        <t t-set="lvl" t-value="0"/>
-                                                    </t>
-                                                    <t t-elif="ev.estado_id and ev.estado_id.code == 'bajo'">
-                                                        <t t-set="lvl" t-value="25"/>
-                                                    </t>
-                                                    <div style="display:flex;align-items:center;gap:8px;">
-                                                        <i class="fa fa-tint"></i>
-                                                        <div class="toner-bar" style="flex:1;">
-                                                            <div class="toner-fill"
-                                                                 t-att-style="'width:%s%%; background:%s;'" 
-                                                                 t-attf-style="width: #{lvl}%;
-                                                                 background: #{ev.color_id and (ev.color_id.code == 'c' and '#0bbee6' or ev.color_id.code == 'm' and '#ff00d0' or ev.color_id.code == 'y' and '#e0c300' or '#777878') or '#777878'};">
-                                                            </div>
-                                                        </div>
-                                                        <span style="font-size:12px;min-width:32px;text-align:right;"><t t-esc="str(lvl)+'%'"/></span>
-                                                    </div>
-                                                </t>
-                                                <t t-else="">—</t>
-                                            </td>
-                                        </tr>
-                                    </t>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Firmas -->
-                        <div class="signatures">
-                            <div class="signature-box">
-                                <div class="signature-icon"><i class="fa fa-user-tie"></i></div>
-                                <p>Firma del Técnico</p>
-                                <p><t t-esc="reparaciones.nombre_responsable"/></p>
-                            </div>
-                            <div class="signature-box">
-                                <div class="signature-icon"><i class="fa fa-user"></i></div>
-                                <p>Firma del Cliente</p>
-                                <p><t t-esc="reparaciones.cliente_id.name"/></p>
-                            </div>
-                        </div>
+            <!-- Encabezado -->
+            <div class="repair-header">
+              <div class="header-left">
+                <div class="header-title">
+                  <i class="fa fa-tools"></i>
+                  Orden de Reparación: <t t-esc="reparaciones.name"/>
+                </div>
+                <div class="header-subtitle">
+                  <t t-set="estado" t-value="selection_labels.get(reparaciones.id, {}).get('estado_id', 'Sin asignar')"/>
+                  <t t-if="estado == 'Finalizado'">
+                    <div style="display:inline-block;background-color:#28a745;color:white;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
+                      <i class="fa fa-check-circle"></i> <t t-esc="estado"/>
                     </div>
-                </t>
-            </t>
+                  </t>
+                  <t t-elif="estado == 'En revisión'">
+                    <div style="display:inline-block;background-color:#ffc107;color:#333;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
+                      <i class="fa fa-sync"></i> <t t-esc="estado"/>
+                    </div>
+                  </t>
+                  <t t-elif="estado == 'Con problemas'">
+                    <div style="display:inline-block;background-color:#dc3545;color:white;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
+                      <i class="fa fa-exclamation-triangle"></i> <t t-esc="estado"/>
+                    </div>
+                  </t>
+                  <t t-elif="estado == 'De partes'">
+                    <div style="display:inline-block;background-color:#fd7e14;color:white;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
+                      <i class="fa fa-tools"></i> <t t-esc="estado"/>
+                    </div>
+                  </t>
+                  <t t-elif="estado == 'Sin revisar'">
+                    <div style="display:inline-block;background-color:#6c757d;color:white;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
+                      <i class="fa fa-clock"></i> <t t-esc="estado"/>
+                    </div>
+                  </t>
+                  <t t-elif="estado == 'Para revision'">
+                    <div style="display:inline-block;background-color:#17a2b8;color:white;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
+                      <i class="fa fa-search"></i> <t t-esc="estado"/>
+                    </div>
+                  </t>
+                  <t t-elif="estado == 'Entregada'">
+                    <div style="display:inline-block;background-color:#20c997;color:white;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
+                      <i class="fa fa-handshake"></i> <t t-esc="estado"/>
+                    </div>
+                  </t>
+                  <t t-else="">
+                    <div style="display:inline-block;background-color:#6c757d;color:white;padding:5px 15px;border-radius:20px;font-weight:bold;margin-top:10px;">
+                      <i class="fa fa-question-circle"></i> <t t-esc="estado"/>
+                    </div>
+                  </t>
+                </div>
+              </div>
+              <div class="header-right">
+                <div class="header-status">
+                  Cliente: <t t-esc="reparaciones.cliente_id.name"/>
+                </div>
+                <div style="margin-top:10px;text-align:center;font-size:12px;">
+                  <t t-if="reparaciones.responsable_id">
+                    Responsable: <t t-esc="reparaciones.nombre_responsable"/>
+                  </t>
+                </div>
+              </div>
+            </div>
+
+            <!-- INFORMACIÓN DEL EQUIPO -->
+            <div class="section-title">
+              <i class="fa fa-info-circle"/> INFORMACIÓN DEL EQUIPO
+            </div>
+            <div class="info-card mb-3">
+              <div style="background:var(--secondary-color);color:white;padding:8px 15px;font-weight:bold;">
+                <i class="fa fa-desktop"/> IDENTIFICACIÓN DEL EQUIPO
+              </div>
+              <table class="info-table">
+                <tr>
+                  <th style="width:16%"><i class="fa fa-print"/>Tipo de equipo</th>
+                  <td style="width:17%"><t t-esc="reparaciones.tipo_machine"/></td>
+                  <th style="width:16%"><i class="fa fa-tag"/>Marca</th>
+                  <td style="width:17%"><t t-esc="reparaciones.marca"/></td>
+                  <th style="width:16%"><i class="fa fa-desktop"/>Modelo</th>
+                  <td style="width:18%"><t t-esc="reparaciones.maquina_id.name.name"/></td>
+                </tr>
+                <tr>
+                  <th><i class="fa fa-barcode"/>Número de serie</th>
+                  <td colspan="5"><t t-esc="reparaciones.serie_id"/></td>
+                </tr>
+              </table>
+            </div>
+
+            <div class="info-card mb-3">
+              <div style="background:var(--primary-dark);color:white;padding:8px 15px;font-weight:bold;">
+                <i class="fa fa-cog"/> ESTADO TÉCNICO
+              </div>
+              <table class="info-table">
+                <tr>
+                  <th style="width:20%"><i class="fa fa-tachometer-alt"/>Contómetro</th>
+                  <td style="width:30%"><t t-esc="reparaciones.contometrok_id"/></td>
+                  <th style="width:20%"><i class="fa fa-check-circle"/>Calidad</th>
+                  <td style="width:30%">
+                    <t t-if="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA') == 'Calidad de Impresión Óptima - Cumple Estándares'">
+                      <div style="display:inline-block;background-color:#2ecc71;color:white;padding:5px 10px;border-radius:4px;">
+                        <i class="fa fa-check"></i> Óptima
+                      </div>
+                    </t>
+                    <t t-elif="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA') == 'Calidad de Impresión Aceptable - Requiere Ajustes'">
+                      <div style="display:inline-block;background-color:#f39c12;color:white;padding:5px 10px;border-radius:4px;">
+                        <i class="fa fa-exclamation-triangle"></i> Aceptable
+                      </div>
+                    </t>
+                    <t t-elif="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA') == 'Calidad de Impresión Deficiente - Requiere Atención Inmediata'">
+                      <div style="display:inline-block;background-color:#e74c3c;color:white;padding:5px 10px;border-radius:4px;">
+                        <i class="fa fa-times"></i> Deficiente
+                      </div>
+                    </t>
+                    <t t-else="">
+                      <t t-esc="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA')"/>
+                    </t>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- INFORME TÉCNICO -->
+            <div class="section-title">
+              <i class="fa fa-clipboard-list"/> INFORME TÉCNICO
+            </div>
+            <div class="info-card">
+              <div class="informe-tecnico">
+                <!-- Si tu informe trae HTML, t-raw lo respeta. Si prefieres texto plano, usa t-esc -->
+                <t t-raw="reparaciones.informe"/>
+              </div>
+            </div>
+
+            <!-- ACCESORIOS (nuevo sistema) -->
+            <div class="section-title">
+              <i class="fa fa-puzzle-piece"/> ACCESORIOS
+            </div>
+            <div class="info-card">
+              <table class="info-table">
+                <thead>
+                  <tr>
+                    <th style="width:28%"><i class="fa fa-puzzle-piece"/> Accesorio</th>
+                    <th style="width:18%"><i class="fa fa-info-circle"/> Estado</th>
+                    <th style="width:36%"><i class="fa fa-cubes"/> Subpartes</th>
+                    <th style="width:18%"><i class="fa fa-sticky-note"/> Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <t t-if="not reparaciones.accesorio_eval_ids">
+                    <tr><td colspan="4" style="text-align:center;color:var(--text-light);">— Sin accesorios evaluados —</td></tr>
+                  </t>
+                  <t t-foreach="reparaciones.accesorio_eval_ids" t-as="acc">
+                    <tr>
+                      <td class="td-compact"><i class="fa fa-puzzle-piece"></i> <t t-esc="acc.tipo_id.name"/></td>
+                      <td class="td-compact">
+                        <t t-if="acc.estado_id">
+                          <t t-set="ecode" t-value="acc.estado_id.code or ''"/>
+                          <t t-if="ecode in ['instalado_operativo','revisado','nuevo','correcto']">
+                            <span class="status-badge status-ok"><i class="fa fa-check"></i> <t t-esc="acc.estado_id.name"/></span>
+                          </t>
+                          <t t-elif="ecode in ['instalado_con_falla','requiere_cambio','cambio_de_repuestos','falla']">
+                            <span class="status-badge status-error"><i class="fa fa-exclamation-triangle"></i> <t t-esc="acc.estado_id.name"/></span>
+                          </t>
+                          <t t-elif="ecode in ['no_instalado','regular','mantenimiento','gastada_pero_puede_trabajar','sin_probar','sin_revisar']">
+                            <span class="status-badge status-warning"><i class="fa fa-info-circle"></i> <t t-esc="acc.estado_id.name"/></span>
+                          </t>
+                          <t t-else="">
+                            <span class="status-badge status-sin-revisar"><i class="fa fa-minus-circle"></i> <t t-esc="acc.estado_id.name"/></span>
+                          </t>
+                        </t>
+                        <t t-else="">—</t>
+                      </td>
+                      <td class="td-compact">
+                        <t t-set="subs" t-value="reparaciones._rep__subpartes_para_accesorio(acc)"/>
+                        <t t-if="subs">
+                          <t t-foreach="subs" t-as="spn">
+                            <span class="chip"><i class="fa fa-puzzle-piece"></i> <t t-esc="spn"/></span>
+                          </t>
+                        </t>
+                        <t t-else="">—</t>
+                      </td>
+                      <td class="td-compact"><t t-esc="acc.observaciones or '—'"/></td>
+                    </tr>
+                  </t>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- CHECK LIST (nuevo sistema de componentes) -->
+            <div class="section-title">
+              <i class="fa fa-tasks"/> CHECK LIST
+            </div>
+            <div class="info-card">
+              <table class="info-table">
+                <thead>
+                  <tr>
+                    <th style="width:28%"><i class="fa fa-cog"/> Componente</th>
+                    <th style="width:10%"><i class="fa fa-palette"/> Color</th>
+                    <th style="width:18%"><i class="fa fa-info-circle"/> Estado</th>
+                    <th style="width:26%"><i class="fa fa-tools"/> Subpartes (si requiere cambio)</th>
+                    <th style="width:18%"><i class="fa fa-sticky-note"/> Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <t t-if="not reparaciones.evaluacion_ids">
+                    <tr><td colspan="5" style="text-align:center;color:var(--text-light);">— Sin componentes evaluados —</td></tr>
+                  </t>
+
+                  <!-- 1) Fila especial: TONERS con barra/ícono -->
+                  <t t-foreach="reparaciones.evaluacion_ids" t-as="ev">
+                    <t t-set="tcode" t-value="(ev.componente_tipo_id.code or '').upper()"/>
+                    <t t-if="tcode == 'TONER_SYSTEM'">
+                      <tr>
+                        <td class="td-compact">
+                          <i class="fa fa-tint"></i>
+                          <t t-esc="ev.componente_tipo_id.name"/>
+                        </td>
+                        <td class="td-compact">
+                          <t t-esc="ev.color_id and ev.color_id.name or '—'"/>
+                        </td>
+                        <td class="td-compact">
+                          <t t-if="ev.estado_id">
+                            <t t-set="ecode" t-value="ev.estado_id.code or ''"/>
+                            <t t-if="ecode in ['correcto','revisado','nuevo']">
+                              <span class="status-badge status-ok"><i class="fa fa-check"></i> <t t-esc="ev.estado_id.name"/></span>
+                            </t>
+                            <t t-elif="ecode in ['vacio','sin_botella','falla','requiere_cambio']">
+                              <span class="status-badge status-error"><i class="fa fa-exclamation-triangle"></i> <t t-esc="ev.estado_id.name"/></span>
+                            </t>
+                            <t t-elif="ecode in ['bajo','regular','mantenimiento','sin_probar','sin_revisar']">
+                              <span class="status-badge status-warning"><i class="fa fa-info-circle"></i> <t t-esc="ev.estado_id.name"/></span>
+                            </t>
+                            <t t-else="">
+                              <span class="status-badge status-sin-revisar"><i class="fa fa-minus-circle"></i> <t t-esc="ev.estado_id.name"/></span>
+                            </t>
+                          </t>
+                          <t t-else="">—</t>
+                        </td>
+                        <td class="td-compact">
+                          <!-- Toner level bar (aprox por estado) -->
+                          <t t-set="ecode" t-value="ev.estado_id and ev.estado_id.code or ''"/>
+                          <t t-set="lvl" t-value="0"/>
+                          <t t-if="ecode=='vacio'">
+                            <t t-set="lvl" t-value="0"/>
+                          </t>
+                          <t t-elif="ecode=='sin_botella'">
+                            <t t-set="lvl" t-value="0"/>
+                          </t>
+                          <t t-elif="ecode=='bajo'">
+                            <t t-set="lvl" t-value="25"/>
+                          </t>
+                          <t t-elif="ecode in ['regular','mantenimiento']">
+                            <t t-set="lvl" t-value="50"/>
+                          </t>
+                          <t t-elif="ecode in ['revisado','correcto','nuevo']">
+                            <t t-set="lvl" t-value="100"/>
+                          </t>
+                          <div class="toner-bar">
+                            <div class="toner-fill"
+                                 t-att-class="ev.color_id and ev.color_id.code or ''"
+                                 t-att-style="'width:%s%%'" % lvl/>
+                          </div>
+                          <div style="font-size:12px;color:var(--text-light);margin-top:4px;">
+                            <i class="fa fa-tint"></i>
+                            <t t-esc="(ev.color_id and ev.color_id.name) or 'Sin color'"/> —
+                            <t t-esc="ev.estado_id and ev.estado_id.name or 'Sin estado'"/>
+                          </div>
+                        </td>
+                        <td class="td-compact"><t t-esc="ev.observaciones or '—'"/></td>
+                      </tr>
+                    </t>
+                  </t>
+
+                  <!-- 2) Resto de componentes -->
+                  <t t-foreach="reparaciones.evaluacion_ids" t-as="ev">
+                    <t t-set="tcode" t-value="(ev.componente_tipo_id.code or '').upper()"/>
+                    <t t-if="tcode != 'TONER_SYSTEM'">
+                      <tr>
+                        <td class="td-compact">
+                          <i class="fa fa-cog"></i>
+                          <t t-esc="ev.componente_tipo_id.name"/>
+                        </td>
+                        <td class="td-compact">
+                          <t t-esc="ev.color_id and ev.color_id.name or '—'"/>
+                        </td>
+                        <td class="td-compact">
+                          <t t-if="ev.estado_id">
+                            <t t-set="ecode" t-value="ev.estado_id.code or ''"/>
+                            <t t-if="ecode in ['correcto','revisado','nuevo']">
+                              <span class="status-badge status-ok"><i class="fa fa-check"></i> <t t-esc="ev.estado_id.name"/></span>
+                            </t>
+                            <t t-elif="ecode in ['requiere_cambio','cambio_de_repuestos','falla']">
+                              <span class="status-badge status-error"><i class="fa fa-exclamation-triangle"></i> <t t-esc="ev.estado_id.name"/></span>
+                            </t>
+                            <t t-elif="ecode in ['regular','mantenimiento','gastada_pero_puede_trabajar','sin_probar','sin_revisar']">
+                              <span class="status-badge status-warning"><i class="fa fa-info-circle"></i> <t t-esc="ev.estado_id.name"/></span>
+                            </t>
+                            <t t-else="">
+                              <span class="status-badge status-sin-revisar"><i class="fa fa-minus-circle"></i> <t t-esc="ev.estado_id.name"/></span>
+                            </t>
+                          </t>
+                          <t t-else="">—</t>
+                        </td>
+                        <td class="td-compact">
+                          <!-- Subpartes solo si requiere cambio/falla -->
+                          <t t-set="ecode" t-value="ev.estado_id and ev.estado_id.code or ''"/>
+                          <t t-if="ecode in ['requiere_cambio','cambio_de_repuestos','falla']">
+                            <t t-set="subs" t-value="reparaciones._rep__subpartes_para_evaluacion(ev)"/>
+                            <t t-if="subs">
+                              <t t-foreach="subs" t-as="spn">
+                                <span class="chip"><i class="fa fa-tools"></i> <t t-esc="spn"/></span>
+                              </t>
+                            </t>
+                            <t t-else="">—</t>
+                          </t>
+                          <t t-else="">—</t>
+                        </td>
+                        <td class="td-compact"><t t-esc="ev.observaciones or '—'"/></td>
+                      </tr>
+                    </t>
+                  </t>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- FIRMAS -->
+            <div class="signatures">
+              <div class="signature-box">
+                <div class="signature-icon"><i class="fa fa-user-tie"/></div>
+                <p>Firma del Técnico</p>
+                <p><t t-esc="reparaciones.nombre_responsable"/></p>
+              </div>
+              <div class="signature-box">
+                <div class="signature-icon"><i class="fa fa-user"/></div>
+                <p>Firma del Cliente</p>
+                <p><t t-esc="reparaciones.cliente_id.name"/></p>
+              </div>
+            </div>
+          </div>
         </t>
-    </template>
+      </t>
+    </t>
+  </template>
 </odoo>
