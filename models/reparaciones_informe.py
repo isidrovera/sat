@@ -721,8 +721,8 @@ class ReparacionesInforme(models.Model):
         if not accesorio_eval or not accesorio_eval.subparte_ids:
             return []
         return [sp.name for sp in accesorio_eval.subparte_ids]
-    
-    def rep__subpartes_para_evaluacion(self, componente_eval):
+
+    def get_subpartes_componente(self, componente_eval):  # ← CORREGIDO AQUÍ
         """
         Retorna lista de nombres de subpartes para un componente evaluado
         """
