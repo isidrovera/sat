@@ -4,7 +4,7 @@ from odoo.exceptions import ValidationError
 class ModelosMaquin(models.Model):
 
     _name = 'modelo.maquina'
-    _description = 'Modelo_de_maquina'
+    _description = 'Modelos de maquinas de impresión y multifuncionales'
 
     name = fields.Char(string='Modelo de maquina', required=True )
     marca_id = fields.Many2one('marca.marca', string='Marca', required=True )
