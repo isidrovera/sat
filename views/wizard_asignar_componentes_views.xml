@@ -7,53 +7,63 @@
             <form string="Asignar Componentes y Accesorios">
                 <group>
                     <field name="modelo_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                    <field name="sobrescribir_existentes"/>
                 </group>
                 
                 <notebook>
                     <page string="Componentes">
-                        <group>
-                            <field name="componente_tipo_ids" widget="many2many_tags"/>
-                            <field name="prioridad_default"/>
-                            <field name="vida_util_paginas_default"/>
-                            <field name="vida_util_meses_default"/>
-                        </group>
+                        <field name="componente_line_ids">
+                            <list editable="bottom">
+                                <field name="tipo_id"/>
+                                <field name="prioridad"/>
+                                <field name="vida_util_paginas"/>
+                                <field name="vida_util_meses"/>
+                                <field name="frase_desgaste"/>
+                                <field name="frase_cambio"/>
+                            </list>
+                            <form string="Componente">
+                                <group>
+                                    <group>
+                                        <field name="tipo_id"/>
+                                        <field name="prioridad"/>
+                                    </group>
+                                    <group>
+                                        <field name="vida_util_paginas"/>
+                                        <field name="vida_util_meses"/>
+                                    </group>
+                                </group>
+                                <group>
+                                    <field name="frase_desgaste"/>
+                                    <field name="frase_cambio"/>
+                                </group>
+                                <notebook>
+                                    <page string="Subpartes">
+                                        <field name="subparte_ids">
+                                            <tree editable="bottom">
+                                                <field name="subparte_id"/>
+                                                <field name="cantidad"/>
+                                                <field name="nota"/>
+                                            </tree>
+                                        </field>
+                                    </page>
+                                </notebook>
+                            </form>
+                        </field>
                         <group string="Nota">
                             <div class="alert alert-info">
-                                ℹ️ Los tipos sensibles a color (tóners) crearán automáticamente 4 registros (K, C, M, Y)
-                            </div>
-                        </group>
-                    </page>
-                    
-                    <page string="Subpartes">
-                        <field name="subparte_line_ids">
-                            <list editable="bottom">
-                                <field name="subparte_id"/>
-                                <field name="componente_tipo_id" placeholder="Todos los componentes"/>
-                                <field name="cantidad"/>
-                                <field name="nota"/>
-                            </list>
-                        </field>
-                        <group string="Instrucciones">
-                            <div class="alert alert-info">
-                                ℹ️ <strong>Tipo de componente:</strong><br/>
-                                • Si lo dejas vacío, la subparte se agregará a TODOS los componentes seleccionados.<br/>
-                                • Si seleccionas un tipo específico, solo se agregará a componentes de ese tipo.<br/><br/>
-                                💡 Ejemplo: Si seleccionas "Unidad Fusora" como tipo, la subparte solo se agregará a componentes tipo "Unidad Fusora".
+                                ℹ️ Los tipos sensibles a color (tóners) crearán automáticamente 4 registros (K, C, M, Y) con las mismas subpartes.
                             </div>
                         </group>
                     </page>
                     
                     <page string="Accesorios">
-                        <group>
-                            <field name="accesorio_tipo_ids" widget="many2many_tags"/>
-                            <field name="obligatorio_default"/>
-                        </group>
-                    </page>
-                    
-                    <page string="Opciones">
-                        <group>
-                            <field name="sobrescribir_existentes"/>
-                        </group>
+                        <field name="accesorio_line_ids">
+                            <list editable="bottom">
+                                <field name="tipo_id"/>
+                                <field name="obligatorio"/>
+                                <field name="nota"/>
+                            </list>
+                        </field>
                     </page>
                     
                     <page string="Resumen">
