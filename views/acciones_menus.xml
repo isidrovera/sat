@@ -5,7 +5,14 @@
     <!-- ========================================================= -->
     <!-- 1) MENÚS RAÍZ / SUB-RAÍCES (deben existir antes que hijos) -->
     <!-- ========================================================= -->
-
+    <record id="action_asignar_componentes_masivo" model="ir.actions.act_window">
+        <field name="name">Asignar Componentes/Accesorios</field>
+        <field name="res_model">wizard.asignar.componentes</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_modelo_maquina"/>
+        <field name="binding_view_types">list</field>
+    </record>
     <!-- Menú raíz principal -->
     <menuitem id="sat_menu_root"
               name="Sistema de taller"
@@ -959,13 +966,6 @@
     <field name="context">{}</field>
   </record>
   <menuitem id="menu_checklist" name="Chech" parent="menu_accesorios_root" action="action_reparacion_comp_eval_v18" sequence="80"/>
-    <record id="action_asignar_componentes_masivo" model="ir.actions.act_window">
-        <field name="name">Asignar Componentes/Accesorios</field>
-        <field name="res_model">wizard.asignar.componentes</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-        <field name="binding_model_id" ref="model_modelo_maquina"/>
-        <field name="binding_view_types">list</field>
-    </record>
+    
   </data>
 </odoo>
