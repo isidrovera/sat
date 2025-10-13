@@ -192,7 +192,6 @@
             </div>
             <div class="info-card">
               <div class="informe-tecnico">
-                <!-- Si tu informe trae HTML, t-raw lo respeta. Si prefieres texto plano, usa t-esc -->
                 <t t-raw="reparaciones.informe"/>
               </div>
             </div>
@@ -306,13 +305,13 @@
                           <!-- Toner level bar (aprox por estado) -->
                           <t t-set="ecode" t-value="ev.estado_id and ev.estado_id.code or ''"/>
                           <t t-set="lvl" t-value="0"/>
-                          <t t-if="ecode=='vacio'">
+                          <t t-if="ecode == 'vacio'">
                             <t t-set="lvl" t-value="0"/>
                           </t>
-                          <t t-elif="ecode=='sin_botella'">
+                          <t t-elif="ecode == 'sin_botella'">
                             <t t-set="lvl" t-value="0"/>
                           </t>
-                          <t t-elif="ecode=='bajo'">
+                          <t t-elif="ecode == 'bajo'">
                             <t t-set="lvl" t-value="25"/>
                           </t>
                           <t t-elif="ecode in ['regular','mantenimiento']">
@@ -324,7 +323,7 @@
                           <div class="toner-bar">
                             <div class="toner-fill"
                                  t-att-class="ev.color_id and ev.color_id.code or ''"
-                                 t-att-style="'width:%s%%'" % lvl/>
+                                 t-attf-style="width:#{lvl}%;"/>
                           </div>
                           <div style="font-size:12px;color:var(--text-light);margin-top:4px;">
                             <i class="fa fa-tint"></i>
