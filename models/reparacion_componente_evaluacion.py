@@ -78,7 +78,7 @@ class ReparacionComponenteEvaluacion(models.Model):
         return result
 
 
-    def _rep__subpartes_para_accesorio(self, accesorio_eval):
+    def get_subpartes_accesorio(self, accesorio_eval):
         """
         Retorna lista de nombres de subpartes para un accesorio evaluado
         """
@@ -86,7 +86,7 @@ class ReparacionComponenteEvaluacion(models.Model):
             return []
         return [sp.name for sp in accesorio_eval.subparte_ids]
     
-    def _rep__subpartes_para_evaluacion(self, componente_eval):
+    def rep__subpartes_para_evaluacion(self, componente_eval):
         """
         Retorna lista de nombres de subpartes para un componente evaluado
         """

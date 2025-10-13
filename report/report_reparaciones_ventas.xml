@@ -236,7 +236,7 @@
                         <t t-else="">—</t>
                       </td>
                       <td class="td-compact">
-                        <t t-set="subs" t-value="reparaciones._rep__subpartes_para_accesorio(acc)"/>
+                        <t t-set="subs" t-value="reparaciones.get_subpartes_accesorio(acc)"/>
                         <t t-if="subs">
                           <t t-foreach="subs" t-as="spn">
                             <span class="chip"><i class="fa fa-puzzle-piece"></i> <t t-esc="spn"/></span>
@@ -370,7 +370,7 @@
                           <!-- Subpartes solo si requiere cambio/falla -->
                           <t t-set="ecode" t-value="ev.estado_id and ev.estado_id.code or ''"/>
                           <t t-if="ecode in ['requiere_cambio','cambio_de_repuestos','falla']">
-                            <t t-set="subs" t-value="reparaciones._rep__subpartes_para_evaluacion(ev)"/>
+                            <t t-set="subs" t-value="reparaciones.get_subpartes_componente(ev)"/>
                             <t t-if="subs">
                               <t t-foreach="subs" t-as="spn">
                                 <span class="chip"><i class="fa fa-tools"></i> <t t-esc="spn"/></span>
