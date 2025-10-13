@@ -131,23 +131,23 @@
 
             <!-- INFORMACIÓN DEL EQUIPO -->
             <div class="section-title">
-              <i class="fa fa-info-circle"/> INFORMACIÓN DEL EQUIPO
+              <i class="fa fa-info-circle"></i> INFORMACIÓN DEL EQUIPO
             </div>
             <div class="info-card mb-3">
               <div style="background:var(--secondary-color);color:white;padding:8px 15px;font-weight:bold;">
-                <i class="fa fa-desktop"/> IDENTIFICACIÓN DEL EQUIPO
+                <i class="fa fa-desktop"></i> IDENTIFICACIÓN DEL EQUIPO
               </div>
               <table class="info-table">
                 <tr>
-                  <th style="width:16%"><i class="fa fa-print"/>Tipo de equipo</th>
+                  <th style="width:16%"><i class="fa fa-print"></i>Tipo de equipo</th>
                   <td style="width:17%"><t t-esc="reparaciones.tipo_machine"/></td>
-                  <th style="width:16%"><i class="fa fa-tag"/>Marca</th>
+                  <th style="width:16%"><i class="fa fa-tag"></i>Marca</th>
                   <td style="width:17%"><t t-esc="reparaciones.marca"/></td>
-                  <th style="width:16%"><i class="fa fa-desktop"/>Modelo</th>
+                  <th style="width:16%"><i class="fa fa-desktop"></i>Modelo</th>
                   <td style="width:18%"><t t-esc="reparaciones.maquina_id.name.name"/></td>
                 </tr>
                 <tr>
-                  <th><i class="fa fa-barcode"/>Número de serie</th>
+                  <th><i class="fa fa-barcode"></i>Número de serie</th>
                   <td colspan="5"><t t-esc="reparaciones.serie_id"/></td>
                 </tr>
               </table>
@@ -155,13 +155,13 @@
 
             <div class="info-card mb-3">
               <div style="background:var(--primary-dark);color:white;padding:8px 15px;font-weight:bold;">
-                <i class="fa fa-cog"/> ESTADO TÉCNICO
+                <i class="fa fa-cog"></i> ESTADO TÉCNICO
               </div>
               <table class="info-table">
                 <tr>
-                  <th style="width:20%"><i class="fa fa-tachometer-alt"/>Contómetro</th>
+                  <th style="width:20%"><i class="fa fa-tachometer-alt"></i>Contómetro</th>
                   <td style="width:30%"><t t-esc="reparaciones.contometrok_id"/></td>
-                  <th style="width:20%"><i class="fa fa-check-circle"/>Calidad</th>
+                  <th style="width:20%"><i class="fa fa-check-circle"></i>Calidad</th>
                   <td style="width:30%">
                     <t t-if="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA') == 'Calidad de Impresión Óptima - Cumple Estándares'">
                       <div style="display:inline-block;background-color:#2ecc71;color:white;padding:5px 10px;border-radius:4px;">
@@ -188,7 +188,7 @@
 
             <!-- INFORME TÉCNICO -->
             <div class="section-title">
-              <i class="fa fa-clipboard-list"/> INFORME TÉCNICO
+              <i class="fa fa-clipboard-list"></i> INFORME TÉCNICO
             </div>
             <div class="info-card">
               <div class="informe-tecnico">
@@ -198,16 +198,16 @@
 
             <!-- ACCESORIOS (nuevo sistema) -->
             <div class="section-title">
-              <i class="fa fa-puzzle-piece"/> ACCESORIOS
+              <i class="fa fa-puzzle-piece"></i> ACCESORIOS
             </div>
             <div class="info-card">
               <table class="info-table">
                 <thead>
                   <tr>
-                    <th style="width:28%"><i class="fa fa-puzzle-piece"/> Accesorio</th>
-                    <th style="width:18%"><i class="fa fa-info-circle"/> Estado</th>
-                    <th style="width:36%"><i class="fa fa-cubes"/> Subpartes</th>
-                    <th style="width:18%"><i class="fa fa-sticky-note"/> Observaciones</th>
+                    <th style="width:28%"><i class="fa fa-puzzle-piece"></i> Accesorio</th>
+                    <th style="width:18%"><i class="fa fa-info-circle"></i> Estado</th>
+                    <th style="width:36%"><i class="fa fa-cubes"></i> Subpartes</th>
+                    <th style="width:18%"><i class="fa fa-sticky-note"></i> Observaciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -253,17 +253,17 @@
 
             <!-- CHECK LIST (nuevo sistema de componentes) -->
             <div class="section-title">
-              <i class="fa fa-tasks"/> CHECK LIST
+              <i class="fa fa-tasks"></i> CHECK LIST
             </div>
             <div class="info-card">
               <table class="info-table">
                 <thead>
                   <tr>
-                    <th style="width:28%"><i class="fa fa-cog"/> Componente</th>
-                    <th style="width:10%"><i class="fa fa-palette"/> Color</th>
-                    <th style="width:18%"><i class="fa fa-info-circle"/> Estado</th>
-                    <th style="width:26%"><i class="fa fa-tools"/> Subpartes (si requiere cambio)</th>
-                    <th style="width:18%"><i class="fa fa-sticky-note"/> Observaciones</th>
+                    <th style="width:28%"><i class="fa fa-cog"></i> Componente</th>
+                    <th style="width:10%"><i class="fa fa-palette"></i> Color</th>
+                    <th style="width:18%"><i class="fa fa-info-circle"></i> Estado</th>
+                    <th style="width:26%"><i class="fa fa-tools"></i> Subpartes (si requiere cambio)</th>
+                    <th style="width:18%"><i class="fa fa-sticky-note"></i> Observaciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -271,7 +271,7 @@
                     <tr><td colspan="5" style="text-align:center;color:var(--text-light);">— Sin componentes evaluados —</td></tr>
                   </t>
 
-                  <!-- 1) Fila especial: TONERS con barra/ícono -->
+                  <!-- 1) Filas de TÓNER con barra -->
                   <t t-foreach="reparaciones.evaluacion_ids" t-as="ev">
                     <t t-set="tcode" t-value="(ev.componente_tipo_id.code or '').upper()"/>
                     <t t-if="tcode == 'TONER_SYSTEM'">
@@ -302,7 +302,7 @@
                           <t t-else="">—</t>
                         </td>
                         <td class="td-compact">
-                          <!-- Toner level bar (aprox por estado) -->
+                          <!-- Barra de nivel de tóner -->
                           <t t-set="ecode" t-value="ev.estado_id and ev.estado_id.code or ''"/>
                           <t t-set="lvl" t-value="0"/>
                           <t t-if="ecode == 'vacio'">
@@ -320,10 +320,9 @@
                           <t t-elif="ecode in ['revisado','correcto','nuevo']">
                             <t t-set="lvl" t-value="100"/>
                           </t>
+                          <t t-set="color_class" t-value="(ev.color_id and (ev.color_id.code or '').lower()) or ''"/>
                           <div class="toner-bar">
-                            <div class="toner-fill"
-                                 t-att-class="ev.color_id and ev.color_id.code or ''"
-                                 t-attf-style="width:#{lvl}%;"/>
+                            <div t-att-class="'toner-fill ' + (color_class or '')" t-attf-style="width:#{lvl}%;"></div>
                           </div>
                           <div style="font-size:12px;color:var(--text-light);margin-top:4px;">
                             <i class="fa fa-tint"></i>
@@ -336,7 +335,7 @@
                     </t>
                   </t>
 
-                  <!-- 2) Resto de componentes -->
+                  <!-- 2) Resto de componentes con subpartes -->
                   <t t-foreach="reparaciones.evaluacion_ids" t-as="ev">
                     <t t-set="tcode" t-value="(ev.componente_tipo_id.code or '').upper()"/>
                     <t t-if="tcode != 'TONER_SYSTEM'">
@@ -391,12 +390,12 @@
             <!-- FIRMAS -->
             <div class="signatures">
               <div class="signature-box">
-                <div class="signature-icon"><i class="fa fa-user-tie"/></div>
+                <div class="signature-icon"><i class="fa fa-user-tie"></i></div>
                 <p>Firma del Técnico</p>
                 <p><t t-esc="reparaciones.nombre_responsable"/></p>
               </div>
               <div class="signature-box">
-                <div class="signature-icon"><i class="fa fa-user"/></div>
+                <div class="signature-icon"><i class="fa fa-user"></i></div>
                 <p>Firma del Cliente</p>
                 <p><t t-esc="reparaciones.cliente_id.name"/></p>
               </div>
