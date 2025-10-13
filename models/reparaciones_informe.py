@@ -173,18 +173,15 @@ class ReparacionesInforme(models.Model):
 
         # Componentes
         for eval_comp in self.evaluacion_ids:
+            # Usar el nuevo método para obtener el nombre con color
+            nombre = self._get_nombre_componente_con_color(eval_comp)
+            
             if not eval_comp.estado_id:
-                nombre = eval_comp.componente_tipo_id.name
-                if eval_comp.color_id:
-                    nombre = f"{nombre} ({eval_comp.color_id.name})"
                 pendientes.append(nombre)
                 score += 1
                 continue
 
             estado_code = eval_comp.estado_id.code
-            nombre = eval_comp.componente_tipo_id.name
-            if eval_comp.color_id:
-                nombre = f"{nombre} ({eval_comp.color_id.name})"
 
             peso = 2
             if hasattr(eval_comp.componente_tipo_id, 'prioridad'):
@@ -722,10 +719,53 @@ class ReparacionesInforme(models.Model):
             return []
         return [sp.name for sp in accesorio_eval.subparte_ids]
 
-    def get_subpartes_componente(self, componente_eval):  # ← CORREGIDO AQUÍ
+    def get_subpartes_componente(self, componente_eval):
         """
-        Retorna lista de nombres de subpartes para un componente evaluado
+        Retorna lista de nombres de subpartes para un componente evaluado.
+        Busca en las intervenciones asociadas donde realmente están guardadas.
         """
-        if not componente_eval or not componente_eval.subpartes_ids:
+        if not componente_eval:
             return []
-        return [sp.name for sp in componente_eval.subpartes_ids]
+        
+        # Primero intentar desde el campo directo subpartes_ids (si está lleno)
+        if componente_eval.subpartes_ids:
+            return [sp.name for sp in componente_eval.subpartes_ids]
+        
+        # Si no hay, buscar en las intervenciones (DONDE REALMENTE ESTÁN)
+        componente_code = self._get_componente_code_from_evaluacion(componente_eval)
+        if not componente_code:
+            _logger.debug("[get_subpartes_componente] No se pudo obtener código para eval %s", componente_eval.id)
+            return []
+        
+        # Buscar la intervención correspondiente
+        intervencion = self.intervencion_ids.filtered(lambda x: x.componente == componente_code)
+        if not intervencion or not intervencion.detalle_ids:
+            _logger.debug("[get_subpartes_componente] No hay intervención/detalles para código %s", componente_code)
+            return []
+        
+        # Retornar los nombres de las subpartes desde los detalles
+        subpartes = [detalle.subparte_id.name for detalle in intervencion.detalle_ids if detalle.subparte_id]
+        _logger.info("[get_subpartes_componente] eval=%s código=%s -> %s subpartes", componente_eval.id, componente_code, len(subpartes))
+        return subpartes
+
+
+    def _get_nombre_componente_con_color(self, eval_comp):
+        """
+        Retorna el nombre completo del componente con su color formateado correctamente.
+        """
+        nombre = eval_comp.componente_tipo_id.name
+        
+        if eval_comp.color_id:
+            color_nombre = eval_comp.color_id.name
+            # Traducir nombres de colores si es necesario
+            color_map = {
+                'k': 'Negro', 'black': 'Negro', 'negro': 'Negro',
+                'c': 'Cyan', 'cyan': 'Cyan',
+                'm': 'Magenta', 'magenta': 'Magenta',
+                'y': 'Amarillo', 'yellow': 'Amarillo', 'amarillo': 'Amarillo',
+            }
+            color_code = eval_comp.color_id.code or ''
+            color_display = color_map.get(color_code.lower(), color_nombre)
+            nombre = f"{nombre} ({color_display})"
+        
+        return nombre
