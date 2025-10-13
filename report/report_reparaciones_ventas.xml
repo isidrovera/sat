@@ -6,7 +6,7 @@
         <t t-call="web.external_layout">
           <div class="page">
             <style>
-              /* ===== Paleta & base ===== */
+              /* ===== Paleta &amp; base ===== */
               :root{
                 --primary-color:#3498db; --primary-dark:#2b7bb3; --secondary-color:#2c3e50; --accent-color:#1abc9c;
                 --light-bg:#f7f9fb; --border-color:#e6ecf1; --text-color:#2f3640; --text-light:#6c757d; --white:#ffffff;
@@ -38,7 +38,7 @@
               }
               .section-title i{margin-right:9px;}
 
-              /* ===== Cards & tablas ===== */
+              /* ===== Cards &amp; tablas ===== */
               .info-card{background:var(--white); border-radius:12px; box-shadow:0 6px 18px rgba(30,35,40,.07); margin-bottom:16px; overflow:hidden; border:1px solid var(--border-color);}
               .info-table{width:100%; border-collapse:separate; border-spacing:0;}
               .info-table th{background:var(--light-bg); color:#243447; padding:10px 12px; font-weight:800; border:1px solid var(--border-color); font-size:12px; letter-spacing:.2px;}
