@@ -26,12 +26,12 @@
                     
                     <page string="Subpartes">
                         <field name="subparte_line_ids">
-                            <tree editable="bottom">
+                            <list editable="bottom">
                                 <field name="subparte_id"/>
                                 <field name="componente_tipo_id" placeholder="Todos los componentes"/>
                                 <field name="cantidad"/>
                                 <field name="nota"/>
-                            </tree>
+                            </list>
                         </field>
                         <group string="Instrucciones">
                             <div class="alert alert-info">
