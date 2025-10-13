@@ -13,13 +13,11 @@
                 <notebook>
                     <page string="Componentes">
                         <field name="componente_line_ids">
-                            <list editable="bottom">
+                            <list>
                                 <field name="tipo_id"/>
                                 <field name="prioridad"/>
                                 <field name="vida_util_paginas"/>
                                 <field name="vida_util_meses"/>
-                                <field name="frase_desgaste"/>
-                                <field name="frase_cambio"/>
                             </list>
                             <form string="Componente">
                                 <group>
@@ -39,11 +37,11 @@
                                 <notebook>
                                     <page string="Subpartes">
                                         <field name="subparte_ids">
-                                            <tree editable="bottom">
+                                            <list editable="bottom">
                                                 <field name="subparte_id"/>
                                                 <field name="cantidad"/>
                                                 <field name="nota"/>
-                                            </tree>
+                                            </list>
                                         </field>
                                     </page>
                                 </notebook>
