@@ -101,52 +101,72 @@
             </div>
 
             <!-- INFORMACIÓN DEL EQUIPO -->
+            <!-- INFORMACIÓN DEL EQUIPO -->
             <div class="section-title">
-              <i class="fa fa-info-circle"/> INFORMACIÓN DEL EQUIPO
-            </div>
-            <div class="info-card mb-3">
-              <div style="background:var(--secondary-color);color:white;padding:8px 15px;font-weight:bold;">
-                <i class="fa fa-desktop"/> IDENTIFICACIÓN DEL EQUIPO
-              </div>
-              <table class="info-table">
-                <tr>
-                  <th style="width:16%"><i class="fa fa-print"/>Tipo de equipo</th>
-                  <td style="width:17%"><t t-esc="reparaciones.tipo_machine"/></td>
-                  <th style="width:16%"><i class="fa fa-tag"/>Marca</th>
-                  <td style="width:17%"><t t-esc="reparaciones.marca"/></td>
-                  <th style="width:16%"><i class="fa fa-desktop"/>Modelo</th>
-                  <td style="width:18%"><t t-esc="reparaciones.maquina_id.name.name"/></td>
-                </tr>
-                <tr>
-                  <th><i class="fa fa-barcode"/>Número de serie</th>
-                  <td colspan="5"><t t-esc="reparaciones.serie_id"/></td>
-                </tr>
-              </table>
+            <i class="fa fa-info-circle"/> INFORMACIÓN DEL EQUIPO
             </div>
 
-            <div class="info-card mb-3">
-              <div style="background:var(--primary-dark);color:white;padding:8px 15px;font-weight:bold;">
-                <i class="fa fa-cog"/> ESTADO TÉCNICO
-              </div>
-              <table class="info-table">
-                <tr>
-                  <th style="width:20%"><i class="fa fa-tachometer-alt"/>Contómetro</th>
-                  <td style="width:30%"><t t-esc="reparaciones.contometrok_id"/></td>
-                  <th style="width:20%"><i class="fa fa-check-circle"/>Calidad</th>
-                  <td style="width:30%">
-                    <t t-set="cal" t-value="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'NA')"/>
-                    <t t-set="bg_cal"
-                       t-value="cal == 'Calidad de Impresión Óptima - Cumple Estándares' and '#2ecc71' or
-                                cal == 'Calidad de Impresión Aceptable - Requiere Ajustes' and '#f39c12' or
-                                cal == 'Calidad de Impresión Deficiente - Requiere Atención Inmediata' and '#e74c3c' or '#6c757d'"/>
-                    <span t-attf-style="display:inline-block;background:#{bg_cal};color:#fff;padding:5px 10px;border-radius:4px;">
-                      <i class="fa" t-attf-class="#{bg_cal == '#2ecc71' and 'fa-check' or (bg_cal == '#f39c12' and 'fa-exclamation-triangle' or 'fa-times')}"></i>
-                      <t t-esc="cal"/>
-                    </span>
-                  </td>
-                </tr>
-              </table>
-            </div>
+            <style>
+            /* Key-Value grid “kv” */
+            .kv{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border-color);border-radius:12px;overflow:hidden;box-shadow:0 2px 5px rgba(0,0,0,.05);margin-bottom:16px}
+            .kv th,.kv td{padding:10px 12px;border-right:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
+            .kv tr:last-child th,.kv tr:last-child td{border-bottom:none}
+            .kv th:last-child,.kv td:last-child{border-right:none}
+            .kv .kv-label{background:#fff;white-space:nowrap;color:#4b5563;font-weight:600}
+            .kv .kv-value{background:#fff;color:#111827}
+            .kv .muted{color:#6b7280}
+            .kv .pill{display:inline-block;padding:6px 10px;border-radius:8px;background:#f3f4f6;border:1px solid #e5e7eb}
+            .kv .icon{margin-right:6px;color:#6b7280}
+            .kv .bar{height:8px;border-radius:6px;background:#eef2f7;overflow:hidden}
+            .kv .bar-fill{height:100%;background:#4f46e5}
+            /* Badge de calidad (colores inline desde t-sets) */
+            </style>
+
+            <!-- Identificación -->
+            <table class="kv">
+            <tr>
+                <th class="kv-label" style="width:16%"><i class="fa fa-print icon"/>Tipo de equipo</th>
+                <td class="kv-value" style="width:17%"><span class="pill"><t t-esc="reparaciones.tipo_machine or '—'"/></span></td>
+
+                <th class="kv-label" style="width:16%"><i class="fa fa-tag icon"/>Marca</th>
+                <td class="kv-value" style="width:17%"><span class="pill"><t t-esc="reparaciones.marca or '—'"/></span></td>
+
+                <th class="kv-label" style="width:16%"><i class="fa fa-desktop icon"/>Modelo</th>
+                <td class="kv-value" style="width:18%"><span class="pill"><t t-esc="(reparaciones.maquina_id.name and reparaciones.maquina_id.name.name) or '—'"/></span></td>
+            </tr>
+            <tr>
+                <th class="kv-label"><i class="fa fa-barcode icon"/>Número de serie</th>
+                <td class="kv-value" colspan="5"><span class="pill"><t t-esc="reparaciones.serie_id or '—'"/></span></td>
+            </tr>
+            </table>
+
+            <!-- Estado técnico -->
+            <table class="kv">
+            <tr>
+                <th class="kv-label" style="width:22%"><i class="fa fa-tachometer-alt icon"/>Contómetro</th>
+                <td class="kv-value" style="width:28%">
+                <span class="pill" style="font-weight:700"><t t-esc="reparaciones.contometrok_id or '—'"/></span>
+                </td>
+
+                <th class="kv-label" style="width:22%"><i class="fa fa-check-circle icon"/>Calidad</th>
+                <td class="kv-value" style="width:28%">
+                <!-- Badge de calidad con colores inline garantizados -->
+                <t t-set="cal" t-value="selection_labels.get(reparaciones.id, {}).get('calidad_id', 'Sin dato')"/>
+                <t t-set="bg_cal"
+                    t-value="cal == 'Calidad de Impresión Óptima - Cumple Estándares' and '#16a34a' or
+                            cal == 'Calidad de Impresión Aceptable - Requiere Ajustes' and '#f59e0b' or
+                            cal == 'Calidad de Impresión Deficiente - Requiere Atención Inmediata' and '#dc2626' or '#6b7280'"/>
+                <t t-set="ico_cal"
+                    t-value="bg_cal == '#16a34a' and 'fa-check' or bg_cal == '#f59e0b' and 'fa-exclamation-triangle' or bg_cal == '#dc2626' and 'fa-times' or 'fa-minus-circle'"/>
+                <span t-attf-style="display:inline-block;background:#{bg_cal};color:#fff;padding:7px 12px;border-radius:10px;font-weight:700">
+                    <i t-attf-class="fa #{ico_cal}"></i>
+                    <t t-esc="cal"/>
+                </span>
+                </td>
+            </tr>
+            </table>
+
+                        </div>
 
             <!-- INFORME TÉCNICO -->
             <div class="section-title">
