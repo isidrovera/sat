@@ -390,7 +390,13 @@
     <field name="prioridad">1</field>
     <field name="descripcion">Botella instalada pero chip no leído/inválido.</field>
   </record>
-  
+  <record id="estado_bajo" model="componente.estado">
+    <field name="name">Bajo</field>
+    <field name="code">bajo</field>
+    <field name="color">3</field>
+    <field name="prioridad">2</field>
+    <field name="descripcion">Tóner en nivel bajo - aproximadamente 25%.</field>
+  </record>
   <record id="estado_sin_botella" model="componente.estado">
     <field name="name">Sin contenedor</field>
     <field name="code">sin_botella</field>
