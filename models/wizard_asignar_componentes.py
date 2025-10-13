@@ -29,6 +29,13 @@ class WizardAsignarComponentes(models.TransientModel):
         string='Tipos de Accesorios a agregar'
     )
     
+    # NUEVO: Tab de Subpartes
+    subparte_line_ids = fields.One2many(
+        'wizard.asignar.componentes.subparte',
+        'wizard_id',
+        string='Subpartes a agregar'
+    )
+    
     # Opciones
     sobrescribir_existentes = fields.Boolean(
         string='Sobrescribir si ya existen',
@@ -65,7 +72,7 @@ class WizardAsignarComponentes(models.TransientModel):
         compute='_compute_resumen'
     )
     
-    @api.depends('modelo_ids', 'componente_tipo_ids', 'accesorio_tipo_ids')
+    @api.depends('modelo_ids', 'componente_tipo_ids', 'accesorio_tipo_ids', 'subparte_line_ids')
     def _compute_resumen(self):
         for wizard in self:
             html = '<div style="padding: 10px;">'
@@ -83,6 +90,12 @@ class WizardAsignarComponentes(models.TransientModel):
                 for tipo in wizard.accesorio_tipo_ids:
                     html += f'<li style="margin-left: 20px;">• {tipo.name}</li>'
             
+            if wizard.subparte_line_ids:
+                html += f'<li><strong>Subpartes:</strong> {len(wizard.subparte_line_ids)} configuración(es)</li>'
+                for line in wizard.subparte_line_ids:
+                    tipo_nombre = line.componente_tipo_id.name if line.componente_tipo_id else 'Todos'
+                    html += f'<li style="margin-left: 20px;">• {line.subparte_id.name} → {tipo_nombre} (x{line.cantidad})</li>'
+            
             html += '</ul>'
             
             # Calcular total de registros considerando colores
@@ -97,7 +110,11 @@ class WizardAsignarComponentes(models.TransientModel):
                 len(wizard.modelo_ids) * total_componentes +
                 len(wizard.modelo_ids) * len(wizard.accesorio_tipo_ids)
             )
-            html += f'<p><strong>Total estimado de registros a crear:</strong> {total_registros}</p>'
+            html += f'<p><strong>Total estimado de registros base:</strong> {total_registros}</p>'
+            
+            if wizard.subparte_line_ids:
+                html += f'<p><strong>Subpartes a relacionar:</strong> {len(wizard.subparte_line_ids)} por componente aplicable</p>'
+            
             html += '</div>'
             
             wizard.resumen = html
@@ -122,10 +139,15 @@ class WizardAsignarComponentes(models.TransientModel):
         componentes_actualizados = 0
         accesorios_creados = 0
         accesorios_actualizados = 0
+        subpartes_creadas = 0
         errores = []
         
         ComponenteModel = self.env['modelo.maquina.componente']
         AccesorioModel = self.env['modelo.maquina.accesorio']
+        SubparteModel = self.env['modelo.maquina.componente.subparte']
+        
+        # Diccionario para guardar componentes creados y poder asignarles subpartes
+        componentes_por_modelo_tipo = {}
         
         for modelo in self.modelo_ids:
             # ===== PROCESAR COMPONENTES =====
@@ -138,12 +160,16 @@ class WizardAsignarComponentes(models.TransientModel):
                     colores = ['k', 'c', 'm', 'y']
                     for color in colores:
                         try:
-                            result = self._crear_o_actualizar_componente(
+                            result, componente = self._crear_o_actualizar_componente(
                                 ComponenteModel,
                                 modelo,
                                 tipo_comp,
                                 color
                             )
+                            # Guardar referencia para subpartes
+                            key = (modelo.id, tipo_comp.id, color)
+                            componentes_por_modelo_tipo[key] = componente
+                            
                             if result == 'creado':
                                 componentes_creados += 1
                             elif result == 'actualizado':
@@ -153,18 +179,67 @@ class WizardAsignarComponentes(models.TransientModel):
                 else:
                     # Crear componente sin color
                     try:
-                        result = self._crear_o_actualizar_componente(
+                        result, componente = self._crear_o_actualizar_componente(
                             ComponenteModel,
                             modelo,
                             tipo_comp,
                             False
                         )
+                        # Guardar referencia para subpartes
+                        key = (modelo.id, tipo_comp.id, False)
+                        componentes_por_modelo_tipo[key] = componente
+                        
                         if result == 'creado':
                             componentes_creados += 1
                         elif result == 'actualizado':
                             componentes_actualizados += 1
                     except Exception as e:
                         errores.append(f"Error en {modelo.name} - {tipo_comp.name}: {str(e)}")
+            
+            # ===== PROCESAR SUBPARTES =====
+            for subparte_line in self.subparte_line_ids:
+                # Si hay tipo específico, aplicar solo a esos componentes
+                if subparte_line.componente_tipo_id:
+                    tipos_aplicar = [subparte_line.componente_tipo_id]
+                else:
+                    # Si no hay tipo específico, aplicar a TODOS los componentes seleccionados
+                    tipos_aplicar = self.componente_tipo_ids
+                
+                for tipo_comp in tipos_aplicar:
+                    is_color_sensitive = getattr(tipo_comp, 'is_color_sensitive', False)
+                    
+                    if is_color_sensitive:
+                        colores = ['k', 'c', 'm', 'y']
+                        for color in colores:
+                            key = (modelo.id, tipo_comp.id, color)
+                            componente = componentes_por_modelo_tipo.get(key)
+                            if componente:
+                                try:
+                                    self._crear_subparte(
+                                        SubparteModel,
+                                        componente,
+                                        subparte_line.subparte_id,
+                                        subparte_line.cantidad,
+                                        subparte_line.nota
+                                    )
+                                    subpartes_creadas += 1
+                                except Exception as e:
+                                    errores.append(f"Error subparte en {modelo.name} - {tipo_comp.name} ({color.upper()}): {str(e)}")
+                    else:
+                        key = (modelo.id, tipo_comp.id, False)
+                        componente = componentes_por_modelo_tipo.get(key)
+                        if componente:
+                            try:
+                                self._crear_subparte(
+                                    SubparteModel,
+                                    componente,
+                                    subparte_line.subparte_id,
+                                    subparte_line.cantidad,
+                                    subparte_line.nota
+                                )
+                                subpartes_creadas += 1
+                            except Exception as e:
+                                errores.append(f"Error subparte en {modelo.name} - {tipo_comp.name}: {str(e)}")
             
             # ===== PROCESAR ACCESORIOS =====
             for tipo_acc in self.accesorio_tipo_ids:
@@ -188,6 +263,7 @@ class WizardAsignarComponentes(models.TransientModel):
             <ul>
                 <li><strong>Componentes creados:</strong> {componentes_creados}</li>
                 <li><strong>Componentes actualizados:</strong> {componentes_actualizados}</li>
+                <li><strong>Subpartes agregadas:</strong> {subpartes_creadas}</li>
                 <li><strong>Accesorios creados:</strong> {accesorios_creados}</li>
                 <li><strong>Accesorios actualizados:</strong> {accesorios_actualizados}</li>
             </ul>
@@ -215,7 +291,7 @@ class WizardAsignarComponentes(models.TransientModel):
         }
     
     def _crear_o_actualizar_componente(self, ComponenteModel, modelo, tipo_comp, color):
-        """Crea o actualiza un componente"""
+        """Crea o actualiza un componente. Retorna (resultado, componente)"""
         domain = [
             ('modelo_id', '=', modelo.id),
             ('tipo_id', '=', tipo_comp.id),
@@ -236,11 +312,28 @@ class WizardAsignarComponentes(models.TransientModel):
         if existente:
             if self.sobrescribir_existentes:
                 existente.write(vals)
-                return 'actualizado'
-            return 'existente'
+                return 'actualizado', existente
+            return 'existente', existente
         else:
-            ComponenteModel.create(vals)
-            return 'creado'
+            nuevo = ComponenteModel.create(vals)
+            return 'creado', nuevo
+    
+    def _crear_subparte(self, SubparteModel, componente, subparte, cantidad, nota):
+        """Crea una subparte si no existe"""
+        domain = [
+            ('componente_id', '=', componente.id),
+            ('subparte_id', '=', subparte.id)
+        ]
+        
+        existente = SubparteModel.search(domain, limit=1)
+        
+        if not existente:
+            SubparteModel.create({
+                'componente_id': componente.id,
+                'subparte_id': subparte.id,
+                'cantidad': cantidad,
+                'nota': nota,
+            })
     
     def _crear_o_actualizar_accesorio(self, AccesorioModel, modelo, tipo_acc):
         """Crea o actualiza un accesorio"""
@@ -265,3 +358,35 @@ class WizardAsignarComponentes(models.TransientModel):
         else:
             AccesorioModel.create(vals)
             return 'creado'
+
+
+# NUEVO: Modelo para las líneas de subpartes
+class WizardAsignarComponentesSubparte(models.TransientModel):
+    _name = 'wizard.asignar.componentes.subparte'
+    _description = 'Línea de subparte para asignación masiva'
+
+    wizard_id = fields.Many2one(
+        'wizard.asignar.componentes',
+        string='Wizard',
+        required=True,
+        ondelete='cascade'
+    )
+    
+    subparte_id = fields.Many2one(
+        'componente.subparte',
+        string='Subparte',
+        required=True
+    )
+    
+    componente_tipo_id = fields.Many2one(
+        'componente.tipo',
+        string='Aplicar solo a tipo de componente',
+        help='Si se deja vacío, se aplicará a TODOS los componentes seleccionados'
+    )
+    
+    cantidad = fields.Float(
+        string='Cantidad',
+        default=1.0
+    )
+    
+    nota = fields.Char(string='Nota')
