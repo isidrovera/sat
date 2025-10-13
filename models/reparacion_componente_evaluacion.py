@@ -76,3 +76,20 @@ class ReparacionComponenteEvaluacion(models.Model):
         result = super().write(vals)
         _logger.info(f"Después de write - reparacion_id: {self.reparacion_id.id if self.reparacion_id else 'VACIO'}")
         return result
+
+
+    def _rep__subpartes_para_accesorio(self, accesorio_eval):
+        """
+        Retorna lista de nombres de subpartes para un accesorio evaluado
+        """
+        if not accesorio_eval or not accesorio_eval.subparte_ids:
+            return []
+        return [sp.name for sp in accesorio_eval.subparte_ids]
+    
+    def _rep__subpartes_para_evaluacion(self, componente_eval):
+        """
+        Retorna lista de nombres de subpartes para un componente evaluado
+        """
+        if not componente_eval or not componente_eval.subpartes_ids:
+            return []
+        return [sp.name for sp in componente_eval.subpartes_ids]
