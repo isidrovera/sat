@@ -75,7 +75,7 @@ class WizardAsignarComponentes(models.TransientModel):
             if wizard.componente_tipo_ids:
                 html += f'<li><strong>Componentes:</strong> {len(wizard.componente_tipo_ids)} tipo(s)</li>'
                 for tipo in wizard.componente_tipo_ids:
-                    sensible = '(requiere color)' if getattr(tipo, 'is_color_sensitive', False) else ''
+                    sensible = '(requiere color: K, C, M, Y)' if getattr(tipo, 'is_color_sensitive', False) else ''
                     html += f'<li style="margin-left: 20px;">• {tipo.name} {sensible}</li>'
             
             if wizard.accesorio_tipo_ids:
@@ -85,8 +85,16 @@ class WizardAsignarComponentes(models.TransientModel):
             
             html += '</ul>'
             
+            # Calcular total de registros considerando colores
+            total_componentes = 0
+            for tipo in wizard.componente_tipo_ids:
+                if getattr(tipo, 'is_color_sensitive', False):
+                    total_componentes += 4  # K, C, M, Y
+                else:
+                    total_componentes += 1
+            
             total_registros = (
-                len(wizard.modelo_ids) * len(wizard.componente_tipo_ids) +
+                len(wizard.modelo_ids) * total_componentes +
                 len(wizard.modelo_ids) * len(wizard.accesorio_tipo_ids)
             )
             html += f'<p><strong>Total estimado de registros a crear:</strong> {total_registros}</p>'
@@ -130,14 +138,16 @@ class WizardAsignarComponentes(models.TransientModel):
                     colores = ['k', 'c', 'm', 'y']
                     for color in colores:
                         try:
-                            self._crear_o_actualizar_componente(
+                            result = self._crear_o_actualizar_componente(
                                 ComponenteModel,
                                 modelo,
                                 tipo_comp,
-                                color,
-                                componentes_creados,
-                                componentes_actualizados
+                                color
                             )
+                            if result == 'creado':
+                                componentes_creados += 1
+                            elif result == 'actualizado':
+                                componentes_actualizados += 1
                         except Exception as e:
                             errores.append(f"Error en {modelo.name} - {tipo_comp.name} ({color.upper()}): {str(e)}")
                 else:
@@ -147,9 +157,7 @@ class WizardAsignarComponentes(models.TransientModel):
                             ComponenteModel,
                             modelo,
                             tipo_comp,
-                            False,
-                            componentes_creados,
-                            componentes_actualizados
+                            False
                         )
                         if result == 'creado':
                             componentes_creados += 1
