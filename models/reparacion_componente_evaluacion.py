@@ -78,18 +78,4 @@ class ReparacionComponenteEvaluacion(models.Model):
         return result
 
 
-    def get_subpartes_accesorio(self, accesorio_eval):
-        """
-        Retorna lista de nombres de subpartes para un accesorio evaluado
-        """
-        if not accesorio_eval or not accesorio_eval.subparte_ids:
-            return []
-        return [sp.name for sp in accesorio_eval.subparte_ids]
     
-    def rep__subpartes_para_evaluacion(self, componente_eval):
-        """
-        Retorna lista de nombres de subpartes para un componente evaluado
-        """
-        if not componente_eval or not componente_eval.subpartes_ids:
-            return []
-        return [sp.name for sp in componente_eval.subpartes_ids]
