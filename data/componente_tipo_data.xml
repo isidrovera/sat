@@ -334,13 +334,63 @@
     <field name="prioridad">1</field>
     <field name="descripcion">Tóner agotado - 0% restante.</field>
   </record>
-  <record id="estado_bajo" model="componente.estado">
-    <field name="name">Bajo</field>
-    <field name="code">bajo</field>
+  <record id="estado_toner_10" model="componente.estado">
+    <field name="name">Tóner 10%</field>
+    <field name="code">toner_10</field>
+    <field name="color">1</field>
+    <field name="prioridad">1</field>
+    <field name="descripcion">Nivel crítico ~10%.</field>
+  </record>
+    <!-- Estados de nivel de tóner por porcentaje -->
+  <record id="estado_toner_25" model="componente.estado">
+    <field name="name">Tóner 25%</field>
+    <field name="code">toner_25</field>
     <field name="color">3</field>
     <field name="prioridad">2</field>
-    <field name="descripcion">Tóner en nivel bajo - aproximadamente 25%.</field>
+    <field name="descripcion">Nivel aproximado 25%: considerar reposición pronto.</field>
   </record>
+
+  <record id="estado_toner_50" model="componente.estado">
+    <field name="name">Tóner 50%</field>
+    <field name="code">toner_50</field>
+    <field name="color">10</field>
+    <field name="prioridad">3</field>
+    <field name="descripcion">Nivel aproximado 50%: operación normal.</field>
+  </record>
+
+  <record id="estado_toner_75" model="componente.estado">
+    <field name="name">Tóner 75%</field>
+    <field name="code">toner_75</field>
+    <field name="color">10</field>
+    <field name="prioridad">3</field>
+    <field name="descripcion">Nivel aproximado 75%: operación normal.</field>
+  </record>
+
+  <record id="estado_toner_100" model="componente.estado">
+    <field name="name">Tóner 100% (Lleno)</field>
+    <field name="code">toner_100</field>
+    <field name="color">10</field>
+    <field name="prioridad">3</field>
+    <field name="descripcion">Contenedor lleno o recién instalado.</field>
+  </record>
+
+
+  <record id="estado_toner_nd" model="componente.estado">
+    <field name="name">Tóner sin lectura</field>
+    <field name="code">toner_no_disponible</field>
+    <field name="color">0</field>
+    <field name="prioridad">3</field>
+    <field name="descripcion">No se pudo obtener el nivel de tóner (SNMP/driver).</field>
+  </record>
+
+  <record id="estado_toner_chip_error" model="componente.estado">
+    <field name="name">Error chip de tóner</field>
+    <field name="code">toner_chip_error</field>
+    <field name="color">1</field>
+    <field name="prioridad">1</field>
+    <field name="descripcion">Botella instalada pero chip no leído/inválido.</field>
+  </record>
+  
   <record id="estado_sin_botella" model="componente.estado">
     <field name="name">Sin contenedor</field>
     <field name="code">sin_botella</field>

@@ -497,4 +497,246 @@
     <field name="name">Rodillos de salida</field><field name="code">DUP_DELIVERY_ROLLERS</field>
     <field name="tipo_id" ref="comp_tipo_dup_delivery"/>
   </record>
+    <!-- ====== UI / DRUM (extras) ====== -->
+  <record id="sub_ui_charge_corona" model="componente.subparte">
+    <field name="name">Conjunto corona de carga</field><field name="code">UI_CHARGE_CORONA</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/>
+  </record>
+  <record id="sub_ui_charge_grid" model="componente.subparte">
+    <field name="name">Rejilla de carga</field><field name="code">UI_CHARGE_GRID</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/>
+  </record>
+
+  <!-- ====== DEVELOPER (extras) ====== -->
+  <record id="sub_dev_drive_motor" model="componente.subparte">
+    <field name="name">Motor de arrastre developer</field><field name="code">DEV_DRIVE_MOTOR</field>
+    <field name="tipo_id" ref="comp_tipo_developer"/>
+  </record>
+  <record id="sub_dev_clutch" model="componente.subparte">
+    <field name="name">Clutch developer</field><field name="code">DEV_CLUTCH</field>
+    <field name="tipo_id" ref="comp_tipo_developer"/>
+  </record>
+  <record id="sub_dev_sealing_blade" model="componente.subparte">
+    <field name="name">Cuchilla de sellado</field><field name="code">DEV_SEALING_BLADE</field>
+    <field name="tipo_id" ref="comp_tipo_developer"/>
+  </record>
+
+  <!-- ====== SISTEMA DE TÓNER (extras) ====== -->
+  <record id="sub_toner_motor" model="componente.subparte">
+    <field name="name">Motor de tóner</field><field name="code">TONER_MOTOR</field>
+    <field name="tipo_id" ref="comp_tipo_toner_system"/>
+  </record>
+  <record id="sub_toner_clutch" model="componente.subparte">
+    <field name="name">Clutch de tóner</field><field name="code">TONER_CLUTCH</field>
+    <field name="tipo_id" ref="comp_tipo_toner_system"/>
+  </record>
+  <record id="sub_toner_hopper" model="componente.subparte">
+    <field name="name">Tolva / Hopper de tóner</field><field name="code">TONER_HOPPER</field>
+    <field name="tipo_id" ref="comp_tipo_toner_system"/>
+  </record>
+  <record id="sub_toner_tube" model="componente.subparte">
+    <field name="name">Tubería de suministro de tóner</field><field name="code">TONER_TUBE</field>
+    <field name="tipo_id" ref="comp_tipo_toner_system"/>
+  </record>
+
+  <!-- ====== FAJA (ITB) extras ====== -->
+  <record id="sub_itb_motor" model="componente.subparte">
+    <field name="name">Motor ITB</field><field name="code">ITB_MOTOR</field>
+    <field name="tipo_id" ref="comp_tipo_faja"/>
+  </record>
+  <record id="sub_itb_contacts" model="componente.subparte">
+    <field name="name">Contactos eléctricos ITB</field><field name="code">ITB_CONTACTS</field>
+    <field name="tipo_id" ref="comp_tipo_faja"/>
+  </record>
+  <record id="sub_itb_tension" model="componente.subparte">
+    <field name="name">Resortes/guías de tensión ITB</field><field name="code">ITB_TENSION_GUIDES</field>
+    <field name="tipo_id" ref="comp_tipo_faja"/>
+  </record>
+  <record id="sub_itb_clean_unit" model="componente.subparte">
+    <field name="name">Unidad de limpieza ITB</field><field name="code">ITB_CLEAN_UNIT</field>
+    <field name="tipo_id" ref="comp_tipo_faja"/>
+  </record>
+
+  <!-- ====== TRANSFERENCIA (primaria/secundaria) ====== -->
+  <record id="sub_transfer_clean_blade" model="componente.subparte">
+    <field name="name">Cuchilla limpieza transferencia</field><field name="code">TR_CLEAN_BLADE</field>
+    <field name="tipo_id" ref="comp_tipo_transfer_roller"/>
+  </record>
+  <record id="sub_secondary_transfer_belt" model="componente.subparte">
+    <field name="name">Banda de transferencia secundaria</field><field name="code">STR_BELT</field>
+    <field name="tipo_id" ref="comp_tipo_transfer_roller"/>
+  </record>
+  <record id="sub_secondary_transfer_roller" model="componente.subparte">
+    <field name="name">Rodillo de transferencia secundaria</field><field name="code">STR_ROLLER</field>
+    <field name="tipo_id" ref="comp_tipo_transfer_roller"/>
+  </record>
+
+  <!-- ====== FUSORA (extras) ====== -->
+  <record id="sub_fuser_oil_unit" model="componente.subparte">
+    <field name="name">Unidad de aceite / Suministro</field><field name="code">FUSER_OIL_UNIT</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+  </record>
+  <record id="sub_fuser_fixing_belt" model="componente.subparte">
+    <field name="name">Banda de fijación</field><field name="code">FUSER_FIXING_BELT</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+  </record>
+  <record id="sub_fuser_pressure_springs" model="componente.subparte">
+    <field name="name">Resortes de presión</field><field name="code">FUSER_PRESSURE_SPRINGS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+  </record>
+
+  <!-- ====== ADF (extras) ====== -->
+  <record id="sub_adf_hinges" model="componente.subparte">
+    <field name="name">Bisagras ADF</field><field name="code">ADF_HINGES</field>
+    <field name="tipo_id" ref="comp_tipo_adf"/>
+  </record>
+  <record id="sub_adf_oneway_gears" model="componente.subparte">
+    <field name="name">Engranajes one-way</field><field name="code">ADF_ONEWAY_GEARS</field>
+    <field name="tipo_id" ref="comp_tipo_adf"/>
+  </record>
+  <record id="sub_adf_mylar_guides" model="componente.subparte">
+    <field name="name">Guías Mylar</field><field name="code">ADF_MYLAR_GUIDES</field>
+    <field name="tipo_id" ref="comp_tipo_adf"/>
+  </record>
+
+  <!-- ====== TRAY / BYPASS (extras) ====== -->
+  <record id="sub_tray_lift_motor" model="componente.subparte">
+    <field name="name">Motor elevación bandeja</field><field name="code">TRAY_LIFT_MOTOR</field>
+    <field name="tipo_id" ref="comp_tipo_tray"/>
+  </record>
+  <record id="sub_tray_side_guides" model="componente.subparte">
+    <field name="name">Guías laterales/correderas</field><field name="code">TRAY_SIDE_GUIDES</field>
+    <field name="tipo_id" ref="comp_tipo_tray"/>
+  </record>
+  <record id="sub_bypass_guides" model="componente.subparte">
+    <field name="name">Guías de Bypass</field><field name="code">BYPASS_GUIDES</field>
+    <field name="tipo_id" ref="comp_tipo_bypass"/>
+  </record>
+
+  <!-- ====== DÚPLEX (extras) ====== -->
+  <record id="sub_duplex_motor" model="componente.subparte">
+    <field name="name">Motor de inversión</field><field name="code">DUP_MOTOR</field>
+    <field name="tipo_id" ref="comp_tipo_duplex"/>
+  </record>
+  <record id="sub_duplex_clutch" model="componente.subparte">
+    <field name="name">Clutch de dúplex</field><field name="code">DUP_CLUTCH</field>
+    <field name="tipo_id" ref="comp_tipo_duplex"/>
+  </record>
+
+  <!-- ====== FINISHER (extras) ====== -->
+  <record id="sub_fin_staple_head" model="componente.subparte">
+    <field name="name">Cabezal de grapas</field><field name="code">FIN_STAPLE_HEAD</field>
+    <field name="tipo_id" ref="comp_tipo_finisher"/>
+  </record>
+  <record id="sub_fin_staple_waste" model="componente.subparte">
+    <field name="name">Depósito residuos de grapas</field><field name="code">FIN_STAPLE_WASTE</field>
+    <field name="tipo_id" ref="comp_tipo_finisher"/>
+  </record>
+  <record id="sub_fin_punch_die" model="componente.subparte">
+    <field name="name">Matriz de perforado</field><field name="code">FIN_PUNCH_DIE</field>
+    <field name="tipo_id" ref="comp_tipo_finisher"/>
+  </record>
+  <record id="sub_fin_drive_units" model="componente.subparte">
+    <field name="name">Motores/Clutches finisher</field><field name="code">FIN_DRIVE_UNITS</field>
+    <field name="tipo_id" ref="comp_tipo_finisher"/>
+  </record>
+
+  <!-- ====== ÓPTICO / LSU / ESCÁNER (extras) ====== -->
+  <record id="sub_opt_erase_lamp" model="componente.subparte">
+    <field name="name">Lámpara de borrado</field><field name="code">OPT_ERASE_LAMP</field>
+    <field name="tipo_id" ref="comp_tipo_optico"/>
+  </record>
+  <record id="sub_lsu_shutter" model="componente.subparte">
+    <field name="name">Obturador LSU</field><field name="code">LSU_SHUTTER</field>
+    <field name="tipo_id" ref="comp_tipo_lsu"/>
+  </record>
+  <record id="sub_lsu_lens_unit" model="componente.subparte">
+    <field name="name">Conjunto de lentes LSU</field><field name="code">LSU_LENS_UNIT</field>
+    <field name="tipo_id" ref="comp_tipo_lsu"/>
+  </record>
+  <record id="sub_sc_platen_glass" model="componente.subparte">
+    <field name="name">Cristal platen</field><field name="code">SC_PLATEN_GLASS</field>
+    <field name="tipo_id" ref="comp_tipo_scanner"/>
+  </record>
+  <record id="sub_sc_adf_glass" model="componente.subparte">
+    <field name="name">Cristal estrecho ADF</field><field name="code">SC_ADF_GLASS</field>
+    <field name="tipo_id" ref="comp_tipo_scanner"/>
+  </record>
+  <record id="sub_sc_white_ref" model="componente.subparte">
+    <field name="name">Blanco de referencia</field><field name="code">SC_WHITE_REF</field>
+    <field name="tipo_id" ref="comp_tipo_scanner"/>
+  </record>
+
+  <!-- ====== ELECTRÓNICA / POTENCIA (extras) ====== -->
+  <record id="sub_hv_cables" model="componente.subparte">
+    <field name="name">Cables HV / retornos</field><field name="code">HV_CABLES</field>
+    <field name="tipo_id" ref="comp_tipo_hv"/>
+  </record>
+  <record id="sub_hv_ground_springs" model="componente.subparte">
+    <field name="name">Resortes de puesta a tierra</field><field name="code">HV_GROUND_SPRINGS</field>
+    <field name="tipo_id" ref="comp_tipo_hv"/>
+  </record>
+  <record id="sub_psu_fuses" model="componente.subparte">
+    <field name="name">Fusibles / protectores PSU</field><field name="code">PSU_FUSES</field>
+    <field name="tipo_id" ref="comp_tipo_psu"/>
+  </record>
+  <record id="sub_psu_fan" model="componente.subparte">
+    <field name="name">Ventilador PSU</field><field name="code">PSU_FAN</field>
+    <field name="tipo_id" ref="comp_tipo_psu"/>
+  </record>
+  <record id="sub_mcu_eeprom" model="componente.subparte">
+    <field name="name">EEPROM / NVRAM</field><field name="code">MCU_EEPROM</field>
+    <field name="tipo_id" ref="comp_tipo_mcu"/>
+  </record>
+  <record id="sub_mcu_backup_battery" model="componente.subparte">
+    <field name="name">Batería backup</field><field name="code">MCU_BACKUP_BATTERY</field>
+    <field name="tipo_id" ref="comp_tipo_mcu"/>
+  </record>
+  <record id="sub_panel_cable" model="componente.subparte">
+    <field name="name">Cinta/cable del panel</field><field name="code">PANEL_FFC_FPC</field>
+    <field name="tipo_id" ref="comp_tipo_panel"/>
+  </record>
+
+  <!-- ====== LIMPIEZA / RESIDUOS (extras) ====== -->
+  <record id="sub_waste_auger" model="componente.subparte">
+    <field name="name">Sinfín de residuos</field><field name="code">WASTE_AUGER</field>
+    <field name="tipo_id" ref="comp_tipo_waste"/>
+  </record>
+  <record id="sub_clean_filters" model="componente.subparte">
+    <field name="name">Filtros de polvo/ozono</field><field name="code">CLEAN_FILTERS</field>
+    <field name="tipo_id" ref="comp_tipo_cleaning"/>
+  </record>
+
+  <!-- ====== PLOTTERS (extras) ====== -->
+  <record id="sub_ink_subtank" model="componente.subparte">
+    <field name="name">Subtanque de tinta</field><field name="code">INK_SUBTANK</field>
+    <field name="tipo_id" ref="comp_tipo_plot_head"/>
+  </record>
+  <record id="sub_ink_lines" model="componente.subparte">
+    <field name="name">Líneas/Mangueras de tinta</field><field name="code">INK_LINES</field>
+    <field name="tipo_id" ref="comp_tipo_plot_head"/>
+  </record>
+  <record id="sub_heater_dryer" model="componente.subparte">
+    <field name="name">Calefactor/Secador de medios</field><field name="code">MEDIA_HEATER_DRYER</field>
+    <field name="tipo_id" ref="comp_tipo_plot_feed"/>
+  </record>
+  <record id="sub_media_sensor" model="componente.subparte">
+    <field name="name">Sensor de presencia/ancho de medio</field><field name="code">MEDIA_SENSOR</field>
+    <field name="tipo_id" ref="comp_tipo_plot_feed"/>
+  </record>
+
+  <!-- ====== DUPLICADORAS (extras) ====== -->
+  <record id="sub_dup_ink_filter" model="componente.subparte">
+    <field name="name">Filtro de tinta</field><field name="code">DUP_INK_FILTER</field>
+    <field name="tipo_id" ref="comp_tipo_dup_ink"/>
+  </record>
+  <record id="sub_dup_feed_motor" model="componente.subparte">
+    <field name="name">Motor alimentador duplicadora</field><field name="code">DUP_FEED_MOTOR</field>
+    <field name="tipo_id" ref="comp_tipo_dup_feeder"/>
+  </record>
+  <record id="sub_dup_register_sensor" model="componente.subparte">
+    <field name="name">Sensor de registro</field><field name="code">DUP_REGISTER_SENSOR</field>
+    <field name="tipo_id" ref="comp_tipo_dup_feeder"/>
+  </record>
+
 </odoo>

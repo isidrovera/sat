@@ -370,5 +370,297 @@
         <field name="sequence">255</field>
         <field name="descripcion">Alimentador general de documentos</field>
     </record>
+    <!-- ========================================== -->
+    <!-- ALIMENTACIÓN / PAPEL (EXTRAS)             -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_duplex_unit" model="accesorio.tipo">
+        <field name="name">Unidad Dúplex</field>
+        <field name="code">duplex_unit</field>
+        <field name="sequence">260</field>
+        <field name="descripcion">Módulo de impresión a doble cara (si no es estándar)</field>
+    </record>
+
+    <record id="acc_tipo_banner_tray" model="accesorio.tipo">
+        <field name="name">Bandeja para Hojas Largas / Banner</field>
+        <field name="code">banner_tray</field>
+        <field name="sequence">265</field>
+        <field name="descripcion">Soporte para papel largo (ej. 1200 mm)</field>
+    </record>
+
+    <record id="acc_tipo_envelope_feeder" model="accesorio.tipo">
+        <field name="name">Alimentador de Sobres</field>
+        <field name="code">envelope_feeder</field>
+        <field name="sequence">270</field>
+        <field name="descripcion">Bandeja optimizada para sobres y medios especiales</field>
+    </record>
+
+    <record id="acc_tipo_long_sheet_bypass" model="accesorio.tipo">
+        <field name="name">Multi-Bypass Larga Hoja</field>
+        <field name="code">long_sheet_bypass</field>
+        <field name="sequence">275</field>
+        <field name="descripcion">Bypass para cartulinas/medios largos y gruesos</field>
+    </record>
+
+    <record id="acc_tipo_decurl_unit" model="accesorio.tipo">
+        <field name="name">Unidad Anti-Curvado (Decurl)</field>
+        <field name="code">decurl_unit</field>
+        <field name="sequence">280</field>
+        <field name="descripcion">Reduce el curvado del papel en salidas largas</field>
+    </record>
+
+    <record id="acc_tipo_tray_heater" model="accesorio.tipo">
+        <field name="name">Calentador de Bandejas</field>
+        <field name="code">tray_heater</field>
+        <field name="sequence">285</field>
+        <field name="descripcion">Módulo calefactor para humedad/medios gruesos</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- ADF / ESCÁNER (EXTRAS)                    -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_dfd" model="accesorio.tipo">
+        <field name="name">Detector de Doble Alimentación (DFD)</field>
+        <field name="code">double_feed_detection</field>
+        <field name="sequence">290</field>
+        <field name="descripcion">Sensor para evitar dobles tomas en ADF</field>
+    </record>
+
+    <record id="acc_tipo_platen_cover" model="accesorio.tipo">
+        <field name="name">Cubierta de Cristal (Platen Cover)</field>
+        <field name="code">platen_cover</field>
+        <field name="sequence">295</field>
+        <field name="descripcion">Tapa para cama plana en equipos sin ADF</field>
+    </record>
+
+    <record id="acc_tipo_flatbed_unit" model="accesorio.tipo">
+        <field name="name">Unidad Flatbed Adicional</field>
+        <field name="code">flatbed_unit</field>
+        <field name="sequence">300</field>
+        <field name="descripcion">Módulo de cama plana para escaneo de libros/ID</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- ACABADO / FINALIZADORES (EXTRAS)          -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_inserter" model="accesorio.tipo">
+        <field name="name">Inserter de Portadas</field>
+        <field name="code">inserter</field>
+        <field name="sequence">305</field>
+        <field name="descripcion">Inserción de tapas/medios especiales post-proceso</field>
+    </record>
+
+    <record id="acc_tipo_multifold" model="accesorio.tipo">
+        <field name="name">Unidad Multi-Plegado</field>
+        <field name="code">multi_fold</field>
+        <field name="sequence">310</field>
+        <field name="descripcion">C-fold, Z-fold, medio, puerta y más</field>
+    </record>
+
+    <record id="acc_tipo_stapleless" model="accesorio.tipo">
+        <field name="name">Grapado sin Grapa (Stapleless)</field>
+        <field name="code">stapleless</field>
+        <field name="sequence">315</field>
+        <field name="descripcion">Fijación por presión, sin consumibles</field>
+    </record>
+
+    <record id="acc_tipo_bridge_unit" model="accesorio.tipo">
+        <field name="name">Unidad Puente / Relay</field>
+        <field name="code">bridge_unit</field>
+        <field name="sequence">320</field>
+        <field name="descripcion">Conexión entre el equipo y el finalizador externo</field>
+    </record>
+
+    <record id="acc_tipo_hole_punch_2" model="accesorio.tipo">
+        <field name="name">Kit Perforado 2 Huecos</field>
+        <field name="code">hole_punch_2h</field>
+        <field name="sequence">325</field>
+        <field name="descripcion">Módulo de perforado de 2 orificios</field>
+    </record>
+
+    <record id="acc_tipo_hole_punch_3" model="accesorio.tipo">
+        <field name="name">Kit Perforado 3 Huecos</field>
+        <field name="code">hole_punch_3h</field>
+        <field name="sequence">330</field>
+        <field name="descripcion">Módulo de perforado de 3 orificios</field>
+    </record>
+
+    <record id="acc_tipo_hole_punch_4" model="accesorio.tipo">
+        <field name="name">Kit Perforado 4 Huecos</field>
+        <field name="code">hole_punch_4h</field>
+        <field name="sequence">335</field>
+        <field name="descripcion">Módulo de perforado de 4 orificios</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- CONECTIVIDAD (EXTRAS)                     -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_bluetooth" model="accesorio.tipo">
+        <field name="name">Módulo Bluetooth</field>
+        <field name="code">bluetooth</field>
+        <field name="sequence">340</field>
+        <field name="descripcion">Conectividad Bluetooth para impresión móvil</field>
+    </record>
+
+    <record id="acc_tipo_wifi_direct" model="accesorio.tipo">
+        <field name="name">Wi-Fi Direct</field>
+        <field name="code">wifi_direct</field>
+        <field name="sequence">345</field>
+        <field name="descripcion">Conexión directa sin punto de acceso</field>
+    </record>
+
+    <record id="acc_tipo_parallel" model="accesorio.tipo">
+        <field name="name">Interfaz Paralela IEEE-1284</field>
+        <field name="code">parallel_ieee1284</field>
+        <field name="sequence">350</field>
+        <field name="descripcion">Tarjeta de interfaz paralela legacy</field>
+    </record>
+
+    <record id="acc_tipo_serial" model="accesorio.tipo">
+        <field name="name">Interfaz Serial RS-232</field>
+        <field name="code">serial_rs232</field>
+        <field name="sequence">355</field>
+        <field name="descripcion">Tarjeta de interfaz serial para integraciones</field>
+    </record>
+
+    <record id="acc_tipo_print_server" model="accesorio.tipo">
+        <field name="name">Servidor de Impresión Externo</field>
+        <field name="code">print_server</field>
+        <field name="sequence">360</field>
+        <field name="descripcion">Servidor/bridge para colas y protocolos</field>
+    </record>
+
+    <record id="acc_tipo_ps_pdf_kit" model="accesorio.tipo">
+        <field name="name">Kit PostScript/PDF</field>
+        <field name="code">ps_pdf_kit</field>
+        <field name="sequence">365</field>
+        <field name="descripcion">Actualización de intérprete PS/PDF en el controlador</field>
+    </record>
+
+    <record id="acc_tipo_ipds" model="accesorio.tipo">
+        <field name="name">Kit IPDS</field>
+        <field name="code">ipds_kit</field>
+        <field name="sequence">370</field>
+        <field name="descripcion">Soporte IPDS para entornos mainframe</field>
+    </record>
+
+    <record id="acc_tipo_barcode_kit" model="accesorio.tipo">
+        <field name="name">Kit de Códigos de Barras</field>
+        <field name="code">barcode_kit</field>
+        <field name="sequence">375</field>
+        <field name="descripcion">Fuentes/módulos para impresión de códigos</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- SEGURIDAD / CONTROL                       -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_tpm" model="accesorio.tipo">
+        <field name="name">Módulo TPM / Seguridad HW</field>
+        <field name="code">tpm_module</field>
+        <field name="sequence">380</field>
+        <field name="descripcion">Chip de plataforma segura para claves/certificados</field>
+    </record>
+
+    <record id="acc_tipo_hdd_encrypt" model="accesorio.tipo">
+        <field name="name">Kit de Cifrado de HDD</field>
+        <field name="code">hdd_encrypt</field>
+        <field name="sequence">385</field>
+        <field name="descripcion">Cifrado/borrrado seguro de disco interno</field>
+    </record>
+
+    <record id="acc_tipo_copy_guard" model="accesorio.tipo">
+        <field name="name">Copy Guard / Marca de Agua</field>
+        <field name="code">copy_guard</field>
+        <field name="sequence">390</field>
+        <field name="descripcion">Protección contra copias no autorizadas</field>
+    </record>
+
+    <record id="acc_tipo_function_lock" model="accesorio.tipo">
+        <field name="name">Bloqueo de Funciones</field>
+        <field name="code">function_lock</field>
+        <field name="sequence">395</field>
+        <field name="descripcion">Control por usuario/departamento de funciones</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- LICENCIAS / SOFTWARE                      -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_ocr" model="accesorio.tipo">
+        <field name="name">Licencia OCR</field>
+        <field name="code">ocr_license</field>
+        <field name="sequence">400</field>
+        <field name="descripcion">Reconocimiento óptico de caracteres en escaneo</field>
+    </record>
+
+    <record id="acc_tipo_pdfa" model="accesorio.tipo">
+        <field name="name">Licencia PDF/A &amp; PDF Buscado</field>
+        <field name="code">pdfa_searchable</field>
+        <field name="sequence">405</field>
+        <field name="descripcion">Generación de PDF/A y PDF con texto buscable</field>
+    </record>
+
+    <record id="acc_tipo_pdf_comp" model="accesorio.tipo">
+        <field name="name">Compresión Avanzada de PDF</field>
+        <field name="code">pdf_compression</field>
+        <field name="sequence">410</field>
+        <field name="descripcion">Reducción de tamaño (MMR/JBIG2) para escaneos</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- PLOTTERS (EXTRAS)                         -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_dual_roll" model="accesorio.tipo">
+        <field name="name">Doble Rollo</field>
+        <field name="code">dual_roll</field>
+        <field name="sequence">415</field>
+        <field name="descripcion">Segundo rollo para cambio automático de medios</field>
+    </record>
+
+    <record id="acc_tipo_takeup_reel" model="accesorio.tipo">
+        <field name="name">Take-Up Reel (Rebobinador)</field>
+        <field name="code">takeup_reel</field>
+        <field name="sequence">420</field>
+        <field name="descripcion">Recolección automática de impresiones largas</field>
+    </record>
+
+    <record id="acc_tipo_spectrophotometer" model="accesorio.tipo">
+        <field name="name">Espectrofotómetro</field>
+        <field name="code">spectrophotometer</field>
+        <field name="sequence">425</field>
+        <field name="descripcion">Gestión de color y calibración en gran formato</field>
+    </record>
+
+    <record id="acc_tipo_rip_sw" model="accesorio.tipo">
+        <field name="name">RIP / PS Externo</field>
+        <field name="code">rip_external</field>
+        <field name="sequence">430</field>
+        <field name="descripcion">Procesador raster externo para colas avanzadas</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- DUPLICADORAS (EXTRAS)                     -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_envelope_feeder_riso" model="accesorio.tipo">
+        <field name="name">Alimentador de Sobres para Duplicadora</field>
+        <field name="code">envelope_feeder_dup</field>
+        <field name="sequence">435</field>
+        <field name="descripcion">Optimizado para masters y tintas de duplicado</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- OTROS COMUNES                              -->
+    <!-- ========================================== -->
+    <record id="acc_tipo_imprinter" model="accesorio.tipo">
+        <field name="name">Imprinter / Estampador</field>
+        <field name="code">imprinter</field>
+        <field name="sequence">440</field>
+        <field name="descripcion">Marcado de documentos (ID/fecha/hora)</field>
+    </record>
+
+    <record id="acc_tipo_ozone_filter" model="accesorio.tipo">
+        <field name="name">Filtro de Ozono/Partículas</field>
+        <field name="code">ozone_filter</field>
+        <field name="sequence">445</field>
+        <field name="descripcion">Filtro ambiental para salas de impresión</field>
+    </record>
 
 </odoo>
