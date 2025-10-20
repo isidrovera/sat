@@ -864,7 +864,7 @@
     <!-- Menú -->
     <menuitem id="menu_gemini_config"
               name="Gemini API"
-              parent="sat.menu_sat_config"
+              parent="sat.ajustes"
               action="action_gemini_configuracion"
               sequence="163"/>
   <record id="action_accesorio_tipo" model="ir.actions.act_window">
