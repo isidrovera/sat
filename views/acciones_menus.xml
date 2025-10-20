@@ -850,7 +850,7 @@
     <record id="action_gemini_configuracion" model="ir.actions.act_window">
         <field name="name">Configuración Gemini API</field>
         <field name="res_model">gemini.configuracion</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Configura la API de Google Gemini
