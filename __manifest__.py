@@ -146,7 +146,8 @@
         'views/solicitud_partes_wizards_views.xml',
         'views/partes_templates_publicos.xml',
         'views/reparacion_accesorio_evaluacion_views.xml',
-        'views/wizard_asignar_componentes_views.xml',    
+        'views/wizard_asignar_componentes_views.xml',
+        'views/gemini_config_views.xml',   
         'views/acciones_menus.xml',
     ],
     
