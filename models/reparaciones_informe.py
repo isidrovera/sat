@@ -10,12 +10,12 @@ _logger = logging.getLogger(__name__)
 
 # ===== IMPORTAR GEMINI (con manejo de errores) =====
 try:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
-    _logger.warning("google-generativeai no está instalado. Instala con: pip install google-generativeai")
-
+    _logger.warning("google-genai no instalado")
 
 class ReparacionesInforme(models.Model):
     _inherit = 'reparaciones.reparaciones'
@@ -409,54 +409,55 @@ class ReparacionesInforme(models.Model):
     # GENERACIÓN CON IA
     # ========================================
     def _generar_informe_con_ia(self):
-        """
-        Genera el informe usando Google Gemini.
-        Retorna: (html, calidad, justificacion)
-        """
+        """Genera informe con IA (NUEVA SINTAXIS)"""
         self.ensure_one()
         
-        # Verificar que la librería esté instalada
         if not GEMINI_AVAILABLE:
-            raise UserError(_(
-                "La librería de Google Gemini no está instalada.\n\n"
-                "Instala con: pip install google-generativeai"
-            ))
+            raise UserError("google-genai no instalado")
         
-        _logger.info("[_generar_informe_con_ia] Iniciando para reparacion id=%s", self.id)
+        _logger.info("[_generar_informe_con_ia] Iniciando para id=%s", self.id)
         
         try:
-            # 1) Obtener configuración y inicializar Gemini
-            config = self.env['gemini.configuracion'].get_config_activa()
-            model = self._init_gemini_model(config)
+            # 1) Configuración
+            config_gemini = self.env['gemini.configuracion'].get_config_activa()
+            gemini_setup = self._init_gemini_model(config_gemini)
             
-            # 2) Preparar datos para el prompt
+            # 2) Preparar datos
             datos = self._preparar_datos_para_ia()
             
             # 3) Construir prompt
             prompt = self._construir_prompt_ia(datos)
             
-            _logger.debug("[_generar_informe_con_ia] Prompt generado (len=%s)", len(prompt))
+            _logger.debug("[_generar_informe_con_ia] Prompt len=%s", len(prompt))
             
-            # 4) Llamar a la API de Gemini
-            _logger.info("[_generar_informe_con_ia] Llamando a Gemini API...")
-            response = model.generate_content(prompt)
+            # 4) Llamar API (NUEVA SINTAXIS)
+            _logger.info("[_generar_informe_con_ia] Llamando Gemini...")
             
-            # 5) Parsear respuesta JSON
+            response = gemini_setup['client'].models.generate_content(
+                model=gemini_setup['modelo'],
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=gemini_setup['temperature'],
+                    max_output_tokens=gemini_setup['max_tokens'],
+                    response_mime_type='application/json',  # Forzar JSON
+                )
+            )
+            
+            # 5) Parsear respuesta
             resultado = self._parsear_respuesta_ia(response.text)
             
             # 6) Registrar uso
-            config.incrementar_contador()
+            config_gemini.incrementar_contador()
             
-            # 7) Log de auditoría
+            # 7) Log
             self.message_post(
                 body=f"<b>✨ Informe generado con IA</b><br/>"
-                     f"Modelo: {config.modelo}<br/>"
-                     f"Calidad determinada: <b>{resultado['calidad'].upper()}</b><br/>"
-                     f"Justificación: {resultado['justificacion_calidad']}"
+                    f"Modelo: {gemini_setup['modelo']}<br/>"
+                    f"Calidad: <b>{resultado['calidad'].upper()}</b><br/>"
+                    f"Justificación: {resultado['justificacion_calidad']}"
             )
             
-            _logger.info("[_generar_informe_con_ia] Informe generado exitosamente. Calidad=%s", 
-                       resultado['calidad'])
+            _logger.info("[_generar_informe_con_ia] ✅ Éxito. Calidad=%s", resultado['calidad'])
             
             return (
                 resultado['informe_html'],
@@ -465,28 +466,24 @@ class ReparacionesInforme(models.Model):
             )
             
         except Exception as e:
-            _logger.error("[_generar_informe_con_ia] Error: %s", str(e))
-            # Fallback al método automático
-            _logger.warning("[_generar_informe_con_ia] Usando método automático como fallback")
+            _logger.error("[_generar_informe_con_ia] ❌ Error: %s", str(e))
+            # Fallback
+            _logger.warning("Usando método automático como fallback")
             html, calidad = self._rep__build_informe_html()
-            return (html, calidad, 'Generado automáticamente por error en IA')
+            return (html, calidad, 'Generado automáticamente (error en IA)')
     
     def _init_gemini_model(self, config):
-        """Inicializa el modelo de Gemini con la configuración"""
-        genai.configure(api_key=config.api_key)
+        """Inicializa cliente de Gemini (NUEVA SINTAXIS)"""
+        # Crear cliente con API key
+        client = genai.Client(api_key=config.api_key)
         
-        generation_config = {
-            "temperature": config.temperature,
-            "max_output_tokens": config.max_output_tokens,
-            "response_mime_type": "application/json",  # Forzar respuesta JSON
+        # Retornar objeto con config
+        return {
+            'client': client,
+            'modelo': config.modelo,
+            'temperature': config.temperature,
+            'max_tokens': config.max_output_tokens,
         }
-        
-        model = genai.GenerativeModel(
-            model_name=config.modelo,
-            generation_config=generation_config
-        )
-        
-        return model
     
     def _preparar_datos_para_ia(self):
         """
