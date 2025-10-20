@@ -866,7 +866,7 @@
               name="Gemini API"
               parent="sat.menu_sat_config"
               action="action_gemini_configuracion"
-              sequence="100"/>
+              sequence="163"/>
   <record id="action_accesorio_tipo" model="ir.actions.act_window">
     <field name="name">Tipos de accesorio</field>
     <field name="res_model">accesorio.tipo</field>
