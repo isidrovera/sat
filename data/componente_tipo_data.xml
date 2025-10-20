@@ -409,7 +409,7 @@
     <field name="name">Carcasa / Tapas</field>
     <field name="code">CARCASA</field>
     <field name="is_color_sensitive">0</field>
-    <field name="descripcion">Estado físico de la carcasa exterior del equipo</field>
+    
   </record>
 
   <!-- 2. PANEL DE CONTROL (estético) -->
@@ -417,6 +417,6 @@
     <field name="name">Panel de control</field>
     <field name="code">PANEL_CONTROL</field>
     <field name="is_color_sensitive">0</field>
-    <field name="descripcion">Estado estético y color del panel de control</field>
+ 
   </record>
 </odoo>
