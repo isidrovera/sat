@@ -681,6 +681,77 @@
   </div>
   
 </page>
+<page string="Informe Técnico" name="informe_tecnico">
+    
+    <!-- Configuración de generación -->
+    <group string="⚙️ Configuración">
+        <group>
+            <field name="modo_generacion_informe" widget="radio" 
+                   options="{'horizontal': true}"/>
+            <field name="informe_generado_por_ia" readonly="1" 
+                   invisible="informe_generado_por_ia == False"/>
+        </group>
+        <group>
+            <button name="action_generar_informe" 
+                    string="🪄 Generar Informe" 
+                    type="object" 
+                    class="oe_highlight btn-primary"
+                    help="Genera el informe técnico basado en las evaluaciones marcadas"/>
+        </group>
+    </group>
+
+    <separator/>
+
+    <!-- Observaciones del técnico -->
+    <group string="📝 Observaciones del Técnico">
+        <field name="observaciones_tecnico" 
+               widget="html" 
+               placeholder="Escribe aquí observaciones generales sobre esta reparación.&#10;&#10;Ejemplos:&#10;- 'Equipo con bajo uso, solo 15k copias'&#10;- 'Cliente reporta atascos frecuentes en bandeja 2'&#10;- 'Fusora hace ruido al imprimir'&#10;&#10;La IA usará este texto para generar un informe más preciso y contextualizado."
+               options="{'style-inline': true}"
+               nolabel="1"/>
+    </group>
+
+    <separator/>
+
+    <!-- Resultado de calidad -->
+    <group string="📊 Resultado de Evaluación" 
+           invisible="calidad_id == False">
+        <group>
+            <field name="calidad_id" readonly="1" 
+                   widget="badge"
+                   decoration-success="calidad_id == 'buena'"
+                   decoration-warning="calidad_id == 'regular'"
+                   decoration-danger="calidad_id == 'mala'"/>
+        </group>
+        <group>
+            <field name="calidad_justificacion" readonly="1" 
+                   widget="text"
+                   invisible="calidad_justificacion == False"/>
+        </group>
+    </group>
+
+    <separator/>
+
+    <!-- Informe generado -->
+    <group string="📄 Informe Generado">
+        <field name="informe" 
+               widget="html" 
+               readonly="0"
+               placeholder="El informe se generará aquí cuando presiones el botón 'Generar Informe'..."
+               nolabel="1"
+               options="{'style-inline': true, 'resizable': true}"/>
+    </group>
+
+    <!-- Información de auditoría -->
+    <group invisible="informe_generado_por_ia == False">
+        <div class="alert alert-info" role="alert" style="margin-bottom: 0px;">
+            <i class="fa fa-info-circle"/> 
+            <strong>Este informe fue generado con Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del checklist.
+            Puedes editarlo manualmente si es necesario.
+        </div>
+    </group>
+
+</page>
             </notebook>
           </sheet>
           

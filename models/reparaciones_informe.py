@@ -4,21 +4,64 @@ from odoo.exceptions import UserError
 import logging
 import re
 import unicodedata
+import json
 
 _logger = logging.getLogger(__name__)
+
+# ===== IMPORTAR GEMINI (con manejo de errores) =====
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    _logger.warning("google-generativeai no está instalado. Instala con: pip install google-generativeai")
 
 
 class ReparacionesInforme(models.Model):
     _inherit = 'reparaciones.reparaciones'
-    _description = 'Informe Reparaciones (Generación automática con hallazgos)'
+    _description = 'Informe Reparaciones (Generación automática/IA con hallazgos)'
 
     # ========================================
-    # CAMPOS
+    # CAMPOS EXISTENTES
     # ========================================
     intervencion_ids = fields.One2many(
         'reparacion.intervencion',
         'reparacion_id',
         string='Intervenciones / Cambios'
+    )
+
+    # ========================================
+    # CAMPOS NUEVOS PARA IA
+    # ========================================
+    modo_generacion_informe = fields.Selection([
+        ('automatico', 'Automático (sin IA)'),
+        ('ia', 'Con Inteligencia Artificial'),
+    ], string='Modo de Generación', default='ia',
+       help='Automático: usa lógica programada. IA: usa Google Gemini para redactar.')
+    
+    observaciones_tecnico = fields.Html(
+        string='Observaciones Generales del Técnico',
+        help='Escribe aquí cualquier observación general sobre la reparación. '
+             'La IA usará este texto para generar un informe más preciso.'
+    )
+    
+    informe_generado_por_ia = fields.Boolean(
+        string='Informe generado por IA',
+        readonly=True,
+        default=False,
+        help='Indica si este informe fue generado usando IA'
+    )
+    
+    observaciones_tecnico_original = fields.Html(
+        string='Observaciones originales (backup)',
+        readonly=True,
+        help='Copia de las observaciones antes de procesamiento por IA'
+    )
+    
+    calidad_justificacion = fields.Text(
+        string='Justificación de Calidad',
+        readonly=True,
+        help='Explicación de por qué la IA determinó esta calidad'
     )
 
     # ========================================
@@ -124,6 +167,8 @@ class ReparacionesInforme(models.Model):
             (('BYPASS',), 'BYPASS'),
             (('PAPEL', 'PAPER', 'TRANSPORTE PAPEL', 'TRANSPORTE DE PAPEL'), 'PAPEL'),
             (('TRANSFER ROLLER', 'ROLLER TRANSFER', 'TRANSFER_ROLLER'), 'FUSORA'),
+            (('CARCASA', 'TAPAS'), 'CARCASA'),
+            (('PANEL', 'PANEL CONTROL', 'PANEL_CONTROL'), 'PANEL_CONTROL'),
         ]
 
         for keys, canon in alias:
@@ -173,7 +218,7 @@ class ReparacionesInforme(models.Model):
 
         # Componentes
         for eval_comp in self.evaluacion_ids:
-            # Usar el nuevo método para obtener el nombre con color
+            # Usar el método para obtener el nombre con color
             nombre = self._get_nombre_componente_con_color(eval_comp)
             
             if not eval_comp.estado_id:
@@ -188,27 +233,18 @@ class ReparacionesInforme(models.Model):
                 prioridad = eval_comp.componente_tipo_id.prioridad
                 peso = {'1': 3, '2': 2, '3': 1}.get(prioridad, 2)
 
-            if estado_code in ('requiere_cambio', 'cambio_de_repuestos'):
+            if estado_code in ('requiere_cambio', 'cambio_de_repuestos', 'vacio', 'sin_botella', 'carcasa_rota', 'carcasa_faltante'):
                 cambio_inmediato.append(nombre); score += 3 * peso
-            elif estado_code in ('regular', 'gastada_pero_puede_trabajar', 'mantenimiento'):
+            elif estado_code in ('regular', 'gastada_pero_puede_trabajar', 'mantenimiento', 'carcasa_amarilla', 'panel_amarillo'):
                 desgaste.append(nombre); score += 2 * peso
             elif estado_code in ('sin_revisar', 'sin_probar'):
                 pendientes.append(nombre); score += 1 * peso
             elif estado_code == 'no_aplica':
                 no_aplica.append(nombre)
 
-        # Accesorios (si existe el one2many)
-        for eval_acc in getattr(self, 'accesorio_eval_ids', self.env['reparacion.accesorio.evaluacion']):
-            if not eval_acc.estado_id:
-                pendientes.append(eval_acc.tipo_id.name); score += 1; continue
-            estado_code = eval_acc.estado_id.code
-            nombre = eval_acc.tipo_id.name
-            if estado_code == 'instalado_con_falla':
-                cambio_inmediato.append(nombre); score += 3
-            elif estado_code == 'no_instalado':
-                desgaste.append(f"{nombre} (no instalado)"); score += 1
-            elif estado_code == 'no_aplica':
-                no_aplica.append(nombre)
+        # NO incluir accesorios en el informe (como solicitaste)
+        # for eval_acc in getattr(self, 'accesorio_eval_ids', self.env['reparacion.accesorio.evaluacion']):
+        #     ...
 
         findings = {
             'cambio_inmediato': cambio_inmediato,
@@ -229,10 +265,10 @@ class ReparacionesInforme(models.Model):
         return 'buena'
 
     # ========================================
-    # CONSTRUCCIÓN DEL INFORME HTML
+    # CONSTRUCCIÓN DEL INFORME HTML (AUTOMÁTICO)
     # ========================================
     def _rep__build_informe_html(self):
-        """Construye el HTML del informe técnico."""
+        """Construye el HTML del informe técnico (método automático sin IA)."""
         self.ensure_one()
         _logger.info("[_rep__build_informe_html] Iniciando para reparacion id=%s", self.id)
 
@@ -368,6 +404,328 @@ class ReparacionesInforme(models.Model):
         res = component_names.get(componente_code, componente_code)
         _logger.debug("[_get_component_display_name] %s -> %s", componente_code, res)
         return res
+
+    # ========================================
+    # GENERACIÓN CON IA
+    # ========================================
+    def _generar_informe_con_ia(self):
+        """
+        Genera el informe usando Google Gemini.
+        Retorna: (html, calidad, justificacion)
+        """
+        self.ensure_one()
+        
+        # Verificar que la librería esté instalada
+        if not GEMINI_AVAILABLE:
+            raise UserError(_(
+                "La librería de Google Gemini no está instalada.\n\n"
+                "Instala con: pip install google-generativeai"
+            ))
+        
+        _logger.info("[_generar_informe_con_ia] Iniciando para reparacion id=%s", self.id)
+        
+        try:
+            # 1) Obtener configuración y inicializar Gemini
+            config = self.env['gemini.configuracion'].get_config_activa()
+            model = self._init_gemini_model(config)
+            
+            # 2) Preparar datos para el prompt
+            datos = self._preparar_datos_para_ia()
+            
+            # 3) Construir prompt
+            prompt = self._construir_prompt_ia(datos)
+            
+            _logger.debug("[_generar_informe_con_ia] Prompt generado (len=%s)", len(prompt))
+            
+            # 4) Llamar a la API de Gemini
+            _logger.info("[_generar_informe_con_ia] Llamando a Gemini API...")
+            response = model.generate_content(prompt)
+            
+            # 5) Parsear respuesta JSON
+            resultado = self._parsear_respuesta_ia(response.text)
+            
+            # 6) Registrar uso
+            config.incrementar_contador()
+            
+            # 7) Log de auditoría
+            self.message_post(
+                body=f"<b>✨ Informe generado con IA</b><br/>"
+                     f"Modelo: {config.modelo}<br/>"
+                     f"Calidad determinada: <b>{resultado['calidad'].upper()}</b><br/>"
+                     f"Justificación: {resultado['justificacion_calidad']}"
+            )
+            
+            _logger.info("[_generar_informe_con_ia] Informe generado exitosamente. Calidad=%s", 
+                       resultado['calidad'])
+            
+            return (
+                resultado['informe_html'],
+                resultado['calidad'],
+                resultado['justificacion_calidad']
+            )
+            
+        except Exception as e:
+            _logger.error("[_generar_informe_con_ia] Error: %s", str(e))
+            # Fallback al método automático
+            _logger.warning("[_generar_informe_con_ia] Usando método automático como fallback")
+            html, calidad = self._rep__build_informe_html()
+            return (html, calidad, 'Generado automáticamente por error en IA')
+    
+    def _init_gemini_model(self, config):
+        """Inicializa el modelo de Gemini con la configuración"""
+        genai.configure(api_key=config.api_key)
+        
+        generation_config = {
+            "temperature": config.temperature,
+            "max_output_tokens": config.max_output_tokens,
+            "response_mime_type": "application/json",  # Forzar respuesta JSON
+        }
+        
+        model = genai.GenerativeModel(
+            model_name=config.modelo,
+            generation_config=generation_config
+        )
+        
+        return model
+    
+    def _preparar_datos_para_ia(self):
+        """
+        Prepara todos los datos necesarios para el prompt de IA.
+        Retorna diccionario con datos estructurados.
+        """
+        self.ensure_one()
+        
+        # Recolectar hallazgos (tu método existente)
+        findings = self._rep__collect_findings()
+        funciones_falla = self._rep__funciones_con_falla()
+        toners_crit = self._rep__toners_criticos()
+        
+        # Obtener estados de carcasa y panel
+        carcasa_eval = self.evaluacion_ids.filtered(
+            lambda e: e.componente_tipo_id.code == 'CARCASA'
+        )
+        panel_eval = self.evaluacion_ids.filtered(
+            lambda e: e.componente_tipo_id.code == 'PANEL_CONTROL'
+        )
+        
+        # Formatear componentes críticos con sus subpartes
+        componentes_criticos_detalle = []
+        for comp_nombre in findings['cambio_inmediato']:
+            # Buscar subpartes asociadas
+            for eval_comp in self.evaluacion_ids:
+                nombre_eval = self._get_nombre_componente_con_color(eval_comp)
+                if nombre_eval == comp_nombre:
+                    subpartes = self.get_subpartes_componente(eval_comp)
+                    if subpartes:
+                        componentes_criticos_detalle.append({
+                            'nombre': comp_nombre,
+                            'subpartes': subpartes,
+                            'observaciones': eval_comp.observaciones or ''
+                        })
+                    else:
+                        componentes_criticos_detalle.append({
+                            'nombre': comp_nombre,
+                            'subpartes': [],
+                            'observaciones': eval_comp.observaciones or ''
+                        })
+                    break
+        
+        # Formatear componentes con desgaste
+        componentes_desgaste_detalle = []
+        for comp_nombre in findings['desgaste']:
+            for eval_comp in self.evaluacion_ids:
+                nombre_eval = self._get_nombre_componente_con_color(eval_comp)
+                if nombre_eval == comp_nombre:
+                    componentes_desgaste_detalle.append({
+                        'nombre': comp_nombre,
+                        'observaciones': eval_comp.observaciones or ''
+                    })
+                    break
+        
+        # Observaciones del técnico (limpiar HTML si existe)
+        observaciones_texto = ''
+        if self.observaciones_tecnico:
+            # Quitar tags HTML básicos
+            observaciones_texto = re.sub(r'<[^>]+>', '', self.observaciones_tecnico)
+            observaciones_texto = observaciones_texto.strip()
+        
+        datos = {
+            'maquina': f"{self.marca or ''} {self.nombre_maquina or ''}".strip(),
+            'serie': self.serie_id or 'N/A',
+            'contador': self.contometrok_id or '0',
+            'componentes_criticos': componentes_criticos_detalle,
+            'componentes_desgaste': componentes_desgaste_detalle,
+            'funciones_falla': funciones_falla,
+            'toners_criticos': toners_crit,
+            'observaciones_tecnico': observaciones_texto,
+            'estado_carcasa': carcasa_eval.estado_id.name if carcasa_eval else 'No evaluado',
+            'estado_panel': panel_eval.estado_id.name if panel_eval else 'No evaluado',
+        }
+        
+        _logger.debug("[_preparar_datos_para_ia] Datos preparados: criticos=%s, desgaste=%s",
+                     len(componentes_criticos_detalle), len(componentes_desgaste_detalle))
+        
+        return datos
+    
+    def _construir_prompt_ia(self, datos):
+        """Construye el prompt para Gemini"""
+        
+        # Formatear componentes críticos
+        criticos_text = ""
+        if datos['componentes_criticos']:
+            for comp in datos['componentes_criticos']:
+                criticos_text += f"- {comp['nombre']}\n"
+                if comp['subpartes']:
+                    criticos_text += f"  Subpartes: {', '.join(comp['subpartes'])}\n"
+                if comp['observaciones']:
+                    criticos_text += f"  Observaciones: {comp['observaciones']}\n"
+        else:
+            criticos_text = "(ninguno)"
+        
+        # Formatear componentes con desgaste
+        desgaste_text = ""
+        if datos['componentes_desgaste']:
+            for comp in datos['componentes_desgaste']:
+                desgaste_text += f"- {comp['nombre']}\n"
+                if comp['observaciones']:
+                    desgaste_text += f"  Observaciones: {comp['observaciones']}\n"
+        else:
+            desgaste_text = "(ninguno)"
+        
+        # Formatear funciones con falla
+        funciones_text = ", ".join(datos['funciones_falla']) if datos['funciones_falla'] else "(ninguna)"
+        
+        # Formatear toners críticos
+        toners_text = ", ".join(datos['toners_criticos']) if datos['toners_criticos'] else "(ninguno)"
+        
+        prompt = f"""
+Eres un técnico experto de fotocopiadoras. Analiza esta evaluación técnica y genera un informe CORTO para VENTAS MAYORISTAS.
+
+INSTRUCCIONES IMPORTANTES:
+1. Determina la calidad general: "buena", "regular" o "mala"
+2. Genera informe HTML conciso (máximo 150 palabras)
+3. Corrige errores ortográficos en las observaciones del técnico
+4. Normaliza términos técnicos (ejemplo: "rodillo negro" → "Unidad de Imagen Black")
+5. NO inventes detalles técnicos que no estén en los datos
+6. Usa lenguaje profesional pero directo
+7. Enfoque para DISTRIBUIDORES (no usuario final)
+
+CRITERIOS DE CALIDAD:
+- BUENA: Equipo listo para entrega. Solo requiere mantenimiento estándar en instalación.
+- REGULAR: Equipo operativo pero requiere cambios preventivos recomendados antes de entrega.
+- MALA: Equipo requiere inversión inmediata en repuestos críticos antes de entregarse a distribuidor.
+
+═══════════════════════════════════════════════════════════════
+DATOS DE LA MÁQUINA:
+═══════════════════════════════════════════════════════════════
+Marca/Modelo: {datos['maquina']}
+Serie: {datos['serie']}
+Contador: {datos['contador']} copias
+
+═══════════════════════════════════════════════════════════════
+EVALUACIÓN TÉCNICA:
+═══════════════════════════════════════════════════════════════
+
+COMPONENTES CRÍTICOS (requieren cambio inmediato):
+{criticos_text}
+
+COMPONENTES CON DESGASTE (cambio preventivo recomendado):
+{desgaste_text}
+
+FUNCIONES CON FALLA:
+{funciones_text}
+
+CONSUMIBLES CRÍTICOS (tóners vacíos o sin botella):
+{toners_text}
+
+ESTADO FÍSICO:
+- Carcasa: {datos['estado_carcasa']}
+- Panel de control: {datos['estado_panel']}
+
+OBSERVACIONES DEL TÉCNICO:
+{datos['observaciones_tecnico'] or 'Sin observaciones adicionales'}
+
+═══════════════════════════════════════════════════════════════
+GENERA (en formato JSON estricto):
+═══════════════════════════════════════════════════════════════
+
+{{
+  "calidad": "buena|regular|mala",
+  "justificacion_calidad": "Una línea de máximo 100 caracteres explicando por qué esa calidad",
+  "informe_html": "HTML del informe aquí"
+}}
+
+ESTRUCTURA REQUERIDA DEL INFORME HTML:
+<div data-autogen="1" style="font-family: Arial; line-height:1.5;">
+<p>[Resumen general del estado en 1-2 líneas]</p>
+
+<h5 style="margin:12px 0 6px;">Observaciones para entrega a distribuidor</h5>
+[SOLO si hay problemas, listar componentes críticos con sus subpartes específicas]
+[SOLO si hay desgaste, listar componentes con desgaste]
+[SOLO si hay toners críticos, listarlos]
+
+<h5 style="margin:12px 0 6px;">Conclusión</h5>
+<div style="padding:10px; border-radius:6px; background:[color según calidad]; color:[texto según calidad];">
+<strong style="text-transform:capitalize;">[calidad]</strong>: [justificacion_calidad]
+</div>
+
+<p style="color:#888; font-size:12px; margin-top:10px;">
+*Informe generado con IA basado en evaluación técnica del checklist*
+</p>
+</div>
+
+COLORES PARA LA CONCLUSIÓN:
+- buena: background:#e8f5e9; color:#2e7d32;
+- regular: background:#fff8e1; color:#ef6c00;
+- mala: background:#ffebee; color:#c62828;
+
+RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
+"""
+        
+        return prompt
+    
+    def _parsear_respuesta_ia(self, response_text):
+        """Parsea la respuesta JSON de Gemini"""
+        try:
+            # Limpiar posibles markdown wrappings
+            texto_limpio = response_text.strip()
+            if texto_limpio.startswith('```json'):
+                texto_limpio = texto_limpio[7:]
+            if texto_limpio.startswith('```'):
+                texto_limpio = texto_limpio[3:]
+            if texto_limpio.endswith('```'):
+                texto_limpio = texto_limpio[:-3]
+            texto_limpio = texto_limpio.strip()
+            
+            # Parsear JSON
+            resultado = json.loads(texto_limpio)
+            
+            # Validar campos requeridos
+            if 'calidad' not in resultado:
+                raise ValueError("Respuesta sin campo 'calidad'")
+            if 'informe_html' not in resultado:
+                raise ValueError("Respuesta sin campo 'informe_html'")
+            if 'justificacion_calidad' not in resultado:
+                resultado['justificacion_calidad'] = ''
+            
+            # Validar calidad
+            if resultado['calidad'] not in ['buena', 'regular', 'mala']:
+                _logger.warning("[_parsear_respuesta_ia] Calidad inválida: %s, usando 'regular'", 
+                              resultado['calidad'])
+                resultado['calidad'] = 'regular'
+            
+            return resultado
+            
+        except json.JSONDecodeError as e:
+            _logger.error("[_parsear_respuesta_ia] Error parseando JSON: %s", e)
+            _logger.error("[_parsear_respuesta_ia] Respuesta recibida: %s", response_text[:500])
+            raise UserError(_(
+                "La IA generó una respuesta inválida.\n\n"
+                "Intenta nuevamente o usa el modo automático."
+            ))
+        except Exception as e:
+            _logger.error("[_parsear_respuesta_ia] Error inesperado: %s", e)
+            raise
 
     # ========================================
     # VALIDACIÓN PARA WIZARD
@@ -650,13 +1008,14 @@ class ReparacionesInforme(models.Model):
     # ACCIÓN DEL BOTÓN
     # ========================================
     def action_generar_informe(self):
-        """Genera el informe técnico y/o abre wizard con TODOS los componentes que requieren cambio."""
+        """Genera el informe técnico (con o sin IA según configuración) y/o abre wizard"""
         _logger.info("[action_generar_informe] >>> INICIO batch ids=%s", self.ids)
 
         acciones = []
         for rec in self:
             try:
-                _logger.info("[action_generar_informe] Procesando rep.id=%s", rec.id)
+                _logger.info("[action_generar_informe] Procesando rep.id=%s modo=%s", 
+                           rec.id, rec.modo_generacion_informe)
 
                 # 1) Juntar TODOS los que requieren cambio y no tienen subpartes
                 campos_pendientes = rec._check_campos_requieren_cambio_sin_intervencion()
@@ -671,10 +1030,20 @@ class ReparacionesInforme(models.Model):
                     _logger.info("[action_generar_informe] rep.id=%s -> informe manual existente, no se toca", rec.id)
                     continue
 
-                # 3) Generar informe
-                html, calidad = rec._rep__build_informe_html()
+                # 3) Generar según modo (IA o automático)
+                if rec.modo_generacion_informe == 'ia':
+                    html, calidad, justificacion = rec._generar_informe_con_ia()
+                else:
+                    html, calidad = rec._rep__build_informe_html()
+                    justificacion = ''
 
-                vals = {'informe': html}
+                # 4) Guardar resultados
+                vals = {
+                    'informe': html,
+                    'informe_generado_por_ia': (rec.modo_generacion_informe == 'ia'),
+                    'calidad_justificacion': justificacion,
+                }
+                
                 # Seteo robusto de calidad, si el campo existe
                 if 'calidad_id' in rec._fields:
                     field = rec._fields['calidad_id']
@@ -693,13 +1062,17 @@ class ReparacionesInforme(models.Model):
                         _logger.warning("[action_generar_informe] No se pudo setear calidad_id (%s)", fex)
 
                 rec.write(vals)
-                rec.message_post(body=_("Informe técnico generado automáticamente."))
+                
+                mensaje = _("✨ Informe técnico generado con IA.") if rec.modo_generacion_informe == 'ia' \
+                         else _("Informe técnico generado automáticamente.")
+                rec.message_post(body=mensaje)
+                
                 _logger.info("[action_generar_informe] rep.id=%s -> informe generado (len=%s)", rec.id, len(html))
                 acciones.append(rec.id)
 
             except Exception as e:
                 _logger.exception("[action_generar_informe] rep.id=%s ERROR %s", rec.id, e)
-                rec.message_post(body=_("No se pudo generar el informe: %s") % e)
+                rec.message_post(body=_("❌ No se pudo generar el informe: %s") % e)
 
         _logger.info("[action_generar_informe] <<< FIN. generados=%s", len(acciones))
         return {
@@ -707,10 +1080,14 @@ class ReparacionesInforme(models.Model):
             'tag': 'display_notification',
             'params': {
                 'title': _('Informe técnico'),
-                'message': _('Informe generado correctamente.') if acciones else _('No se generó ningún informe.'),
+                'message': _('✅ Informe generado correctamente.') if acciones else _('⚠️ No se generó ningún informe.'),
                 'type': 'success' if acciones else 'warning'
             }
         }
+
+    # ========================================
+    # HELPERS PARA SUBPARTES
+    # ========================================
     def get_subpartes_accesorio(self, accesorio_eval):
         """
         Retorna lista de nombres de subpartes para un accesorio evaluado
@@ -728,7 +1105,7 @@ class ReparacionesInforme(models.Model):
             return []
         
         # Primero intentar desde el campo directo subpartes_ids (si está lleno)
-        if componente_eval.subpartes_ids:
+        if hasattr(componente_eval, 'subpartes_ids') and componente_eval.subpartes_ids:
             return [sp.name for sp in componente_eval.subpartes_ids]
         
         # Si no hay, buscar en las intervenciones (DONDE REALMENTE ESTÁN)
@@ -747,7 +1124,6 @@ class ReparacionesInforme(models.Model):
         subpartes = [detalle.subparte_id.name for detalle in intervencion.detalle_ids if detalle.subparte_id]
         _logger.info("[get_subpartes_componente] eval=%s código=%s -> %s subpartes", componente_eval.id, componente_code, len(subpartes))
         return subpartes
-
 
     def _get_nombre_componente_con_color(self, eval_comp):
         """

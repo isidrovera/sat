@@ -203,3 +203,4 @@ access_wizard_asignar_componentes_user,wizard.asignar.componentes.user,model_wiz
 access_wizard_asignar_componentes_linea_user,wizard.asignar.componentes.linea.user,model_wizard_asignar_componentes_linea,base.group_user,1,1,1,1
 access_wizard_asignar_componentes_subparte_user,wizard.asignar.componentes.subparte.user,model_wizard_asignar_componentes_subparte,base.group_user,1,1,1,1
 access_wizard_asignar_componentes_accesorio_user,wizard.asignar.componentes.accesorio.user,model_wizard_asignar_componentes_accesorio,base.group_user,1,1,1,1
+access_gemini_configuracion_user,gemini.configuracion.user,model_gemini_configuracion,base.group_user,1,1,1,1

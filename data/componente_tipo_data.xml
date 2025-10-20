@@ -404,5 +404,19 @@
     <field name="prioridad">1</field>
     <field name="descripcion">Contenedor de tóner no instalado.</field>
   </record>
+ <!-- 1. CARCASA / TAPAS -->
+  <record id="comp_tipo_carcasa" model="componente.tipo">
+    <field name="name">Carcasa / Tapas</field>
+    <field name="code">CARCASA</field>
+    <field name="is_color_sensitive">0</field>
+    <field name="descripcion">Estado físico de la carcasa exterior del equipo</field>
+  </record>
 
+  <!-- 2. PANEL DE CONTROL (estético) -->
+  <record id="comp_tipo_panel_control" model="componente.tipo">
+    <field name="name">Panel de control</field>
+    <field name="code">PANEL_CONTROL</field>
+    <field name="is_color_sensitive">0</field>
+    <field name="descripcion">Estado estético y color del panel de control</field>
+  </record>
 </odoo>

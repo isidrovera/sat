@@ -66,4 +66,59 @@
   <field name="code">falla</field>
   <field name="color">1</field><field name="prioridad">1</field>
 </record>
+<!-- ====================================== -->
+        <!-- ESTADOS ESPECÍFICOS PARA CARCASA -->
+        <!-- ====================================== -->
+        
+        <record id="estado_carcasa_blanca" model="componente.estado">
+            <field name="name">Carcasa blanca original</field>
+            <field name="code">carcasa_blanca</field>
+            <field name="color">10</field>  <!-- Verde - Bueno -->
+            <field name="prioridad">3</field>  <!-- Baja -->
+            <field name="descripcion">Carcasa en color blanco original, todo el contorno en buen estado</field>
+        </record>
+
+        <record id="estado_carcasa_amarilla" model="componente.estado">
+            <field name="name">Carcasa amarillenta</field>
+            <field name="code">carcasa_amarilla</field>
+            <field name="color">4</field>  <!-- Amarillo - Desgaste -->
+            <field name="prioridad">2</field>  <!-- Media -->
+            <field name="descripcion">Carcasa con decoloración amarillenta por desgaste y uso</field>
+        </record>
+
+        <record id="estado_carcasa_rota" model="componente.estado">
+            <field name="name">Carcasa con roturas</field>
+            <field name="code">carcasa_rota</field>
+            <field name="color">1</field>  <!-- Rojo - Crítico -->
+            <field name="prioridad">1</field>  <!-- Alta -->
+            <field name="descripcion">Carcasa con daños físicos o roturas en alguna sección del contorno</field>
+        </record>
+
+        <record id="estado_carcasa_faltante" model="componente.estado">
+            <field name="name">Carcasa con piezas faltantes</field>
+            <field name="code">carcasa_faltante</field>
+            <field name="color">1</field>  <!-- Rojo - Crítico -->
+            <field name="prioridad">1</field>  <!-- Alta -->
+            <field name="descripcion">Carcasa con piezas faltantes en el contorno</field>
+        </record>
+
+        <!-- ====================================== -->
+        <!-- ESTADOS ESPECÍFICOS PARA PANEL -->
+        <!-- ====================================== -->
+        
+        <record id="estado_panel_blanco" model="componente.estado">
+            <field name="name">Panel blanco original</field>
+            <field name="code">panel_blanco</field>
+            <field name="color">10</field>  <!-- Verde - Bueno -->
+            <field name="prioridad">3</field>  <!-- Baja -->
+            <field name="descripcion">Panel de control en color blanco original sin desgaste</field>
+        </record>
+
+        <record id="estado_panel_amarillo" model="componente.estado">
+            <field name="name">Panel amarillento</field>
+            <field name="code">panel_amarillo</field>
+            <field name="color">4</field>  <!-- Amarillo - Desgaste -->
+            <field name="prioridad">2</field>  <!-- Media -->
+            <field name="descripcion">Panel de control amarillento por uso y exposición</field>
+        </record>
 </odoo>
