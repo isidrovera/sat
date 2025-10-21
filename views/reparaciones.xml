@@ -205,71 +205,48 @@
       <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
     </h4>
     <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
-      ✅ Haga clic en cada tarjeta para evaluar el componente
+      ✅ <b>Importante:</b> Debe completar el ESTADO de TODOS los componentes antes de finalizar
     </p>
   </div>
 
-  <separator string="📋 Componentes a Evaluar"/>
+  <separator string="📋 Componentes Evaluados"/>
   
   <field name="evaluacion_ids" nolabel="1">
-    <kanban create="false" delete="false" quick_create="false">
+    <list editable="bottom" 
+          create="false" 
+          delete="false"
+          decoration-success="estado_id"
+          decoration-warning="not estado_id">
       
-      <field name="componente_tipo_id"/>
-      <field name="color_id"/>
-      <field name="estado_id"/>
-      <field name="observaciones"/>
+      <field name="componente_tipo_id" 
+             readonly="1"
+             string="🔧 Componente"
+             options="{'no_create': True, 'no_open': True}"/>
       
-      <templates>
-        <t t-name="kanban-box">
-          
-          <!-- Tarjeta con color según si tiene estado o no -->
-          <div class="oe_kanban_card oe_kanban_global_click"
-               t-attf-style="border-left: 4px solid {{record.estado_id.raw_value ? '#28a745' : '#ffc107'}}; margin: 5px;">
-            
-            <div class="o_kanban_card_content">
-              
-              <!-- Header: Nombre del componente -->
-              <div class="o_kanban_record_top mb-2">
-                <strong class="o_kanban_record_title" style="font-size: 15px;">
-                  🔧 <field name="componente_tipo_id"/>
-                </strong>
-              </div>
-              
-              <!-- Color (si tiene) -->
-              <div t-if="record.color_id.raw_value" class="mb-2">
-                <span class="badge bg-secondary">
-                  🎨 <field name="color_id"/>
-                </span>
-              </div>
-              
-              <!-- Estado con indicador visual -->
-              <div class="mb-2">
-                <t t-if="record.estado_id.raw_value">
-                  <span class="badge bg-success" style="font-size: 12px; padding: 6px 12px;">
-                    ✅ <field name="estado_id"/>
-                  </span>
-                </t>
-                <t t-else="">
-                  <span class="badge bg-warning text-dark" style="font-size: 12px; padding: 6px 12px;">
-                    ⚠️ Pendiente de evaluar
-                  </span>
-                </t>
-              </div>
-              
-              <!-- Observaciones (si existen) -->
-              <div t-if="record.observaciones.raw_value" class="text-muted small mt-2" style="font-size: 12px;">
-                <i class="fa fa-comment-o"></i> <field name="observaciones"/>
-              </div>
-              
-            </div>
-            
-          </div>
-          
-        </t>
-      </templates>
+      <field name="color_id" 
+             readonly="1" 
+             optional="show"
+             string="🎨 Color"
+             options="{'no_create': True, 'no_open': True}"/>
       
-    </kanban>
+      <field name="estado_id" 
+             string="⭐ ESTADO (Obligatorio)"
+             placeholder="⚠️ SELECCIONAR ESTADO"
+             options="{'no_create': True, 'no_open': True}"/>
+      
+      <field name="observaciones" 
+             optional="show"
+             string="📝 Observaciones"
+             placeholder="Detalles técnicos..."/>
+      
+    </list>
   </field>
+  
+  <div class="alert alert-info" role="alert" style="margin-top: 15px; border-left: 4px solid #667eea;">
+    <i class="fa fa-info-circle"></i>
+    <b>Guía Visual:</b> Filas <span style="background-color: #fff3cd; padding: 2px 8px; border-radius: 3px;">amarillas</span> necesitan estado. 
+    Filas <span style="background-color: #d4edda; padding: 2px 8px; border-radius: 3px;">verdes</span> están completas.
+  </div>
 
 </page>
 
@@ -280,73 +257,45 @@
       <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
     </h4>
     <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
-      ✅ Haga clic en cada tarjeta para evaluar el accesorio
+      ✅ Evalúe los accesorios opcionales instalados
     </p>
   </div>
 
-  <separator string="🔌 Accesorios a Evaluar"/>
+  <separator string="🔌 Accesorios Evaluados"/>
   
   <field name="accesorio_eval_ids" nolabel="1">
-    <kanban create="false" delete="false" quick_create="false">
+    <list editable="bottom" 
+          create="false"
+          delete="false"
+          decoration-success="estado_id"
+          decoration-warning="not estado_id">
       
-      <field name="tipo_id"/>
-      <field name="estado_id"/>
-      <field name="subparte_ids"/>
-      <field name="observaciones"/>
+      <field name="tipo_id" 
+             readonly="1"
+             string="🔌 Accesorio"/>
       
-      <templates>
-        <t t-name="kanban-box">
-          
-          <div class="oe_kanban_card oe_kanban_global_click"
-               t-attf-style="border-left: 4px solid {{record.estado_id.raw_value ? '#28a745' : '#ffc107'}}; margin: 5px;">
-            
-            <div class="o_kanban_card_content">
-              
-              <!-- Nombre del accesorio -->
-              <div class="o_kanban_record_top mb-2">
-                <strong class="o_kanban_record_title" style="font-size: 15px;">
-                  🔌 <field name="tipo_id"/>
-                </strong>
-              </div>
-              
-              <!-- Estado -->
-              <div class="mb-2">
-                <t t-if="record.estado_id.raw_value">
-                  <span class="badge bg-success" style="font-size: 12px; padding: 6px 12px;">
-                    ✅ <field name="estado_id"/>
-                  </span>
-                </t>
-                <t t-else="">
-                  <span class="badge bg-warning text-dark" style="font-size: 12px; padding: 6px 12px;">
-                    ⚠️ Sin evaluar
-                  </span>
-                </t>
-              </div>
-              
-              <!-- Subpartes (si hay) -->
-              <div t-if="record.subparte_ids.raw_value and record.subparte_ids.raw_value.length > 0" class="mb-2">
-                <small class="text-muted">🔩 Subpartes:</small><br/>
-                <field name="subparte_ids" widget="many2many_tags"/>
-              </div>
-              
-              <!-- Observaciones -->
-              <div t-if="record.observaciones.raw_value" class="text-muted small mt-2" style="font-size: 12px;">
-                <i class="fa fa-comment-o"></i> <field name="observaciones"/>
-              </div>
-              
-            </div>
-            
-          </div>
-          
-        </t>
-      </templates>
+      <field name="estado_id"
+             string="⭐ ESTADO (Obligatorio)"
+             placeholder="⚠️ SELECCIONAR ESTADO"
+             options="{'no_create': True, 'no_open': True}"/>
       
-    </kanban>
+      <field name="subparte_ids" 
+             widget="many2many_tags"
+             string="🔩 Subpartes"
+             options="{'no_create': True}"
+             optional="show"/>
+      
+      <field name="observaciones" 
+             optional="show"
+             string="📝 Notas"
+             placeholder="Detalles..."/>
+      
+    </list>
   </field>
-  
-  <div class="alert alert-info" role="alert" style="margin-top: 15px; border-left: 4px solid #11998e;">
-    <i class="fa fa-info-circle"></i>
-    <b>Tip:</b> Haga clic en una tarjeta para editarla. Las tarjetas <span style="color: #ffc107;">⚠️ amarillas</span> necesitan evaluación.
+
+  <div class="alert alert-success" role="alert" style="margin-top: 15px; border-left: 4px solid #38ef7d;">
+    <i class="fa fa-lightbulb-o"></i>
+    <b>Tip:</b> Si un accesorio no aplica al modelo, márquelo como "No Aplica"
   </div>
 
 </page>
