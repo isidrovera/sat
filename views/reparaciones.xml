@@ -165,235 +165,206 @@
             <notebook>
               <!-- PESTAÑA: INFORME TÉCNICO -->
               <page string="Informe Técnico">
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #007bff; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #007bff;">
-                    <i class="fa fa-file-medical-alt"></i> Instrucciones para Informe Técnico
-                  </h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
-                                En esta sección debe documentar detalladamente el diagnóstico y las acciones realizadas:
-                            </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li>
-                      <b>Diagnóstico completo:</b> Detalle todos los problemas encontrados, causas y soluciones aplicadas.
-                    </li>
-                    <li>
-                      <b>Partes reemplazadas:</b> Liste todas las piezas reemplazadas con sus códigos de parte correspondientes.
-                    </li>
-                    <li>
-                      <b>Ajustes realizados:</b> Documente cambios en configuración, firmware o ajustes mecánicos.
-                    </li>
-                    <li>
-                      <b>Problemas pendientes:</b> Si existen problemas no resueltos, especifique claramente el motivo.
-                    </li>
-                  </ul>
-                  <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Nota:</b> Este informe es un documento técnico oficial que puede ser consultado por el cliente y otros técnicos.
-                                La precisión y detalle son fundamentales.
-                  </p>
-                </div>
-                <group>
+                <!-- Configuración de generación -->
+                <group string="⚙️ Configuración">
                   <group>
-                    <field name="informe" required_for_finalization="True"
-                                    placeholder="Detalle aquí el diagnóstico completo, procedimientos realizados, partes reemplazadas y resultados de las pruebas..." 
-                                    style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #f8f9fa;" />
+                    <field name="modo_generacion_informe" widget="radio" 
+                   options="{'horizontal': true}"/>
+                    <field name="informe_generado_por_ia" readonly="1" 
+                   invisible="informe_generado_por_ia == False"/>
                   </group>
                   <group>
-                    <field name="calidad_id" required_for_finalization="True" 
-                                    help="Evalúe la calidad general de impresión/copia del equipo después de la intervención."/>
-                    <field name="tapas_id" required_for_finalization="True" 
-                                    help="Estado de las tapas y carcasas externas. Reporte cualquier daño, incluso si es estético."/>
-                    <field name="panel_id" required_for_finalization="True" 
-                                    help="Funcionamiento del panel de control. Todos los botones y pantalla deben operar correctamente."/>
-                    <div style="margin-top: 20px; font-size: 12px; background-color: #fff3cd; padding: 10px; border-radius: 4px; border-left: 3px solid #ffc107;">
-                      <i class="fa fa-lightbulb" style="color: #ffc107;"></i>
-                      <b>Recomendación:</b>
-                      <br/>
-                                    Siempre adjunte muestras de impresión o copias escaneadas en la galería de fotos como evidencia 
-                                    de la calidad final después de la reparación.
-                    </div>
+                    <button name="action_generar_informe" 
+                    string="🪄 Generar Informe" 
+                    type="object" 
+                    class="oe_highlight btn-primary"
+                    help="Genera el informe técnico basado en las evaluaciones marcadas"/>
                   </group>
+                </group>
+                <separator/>
+                <!-- Observaciones del técnico -->
+                <group string="📝 Observaciones del Técnico">
+                  <field name="observaciones_tecnico" 
+               widget="html" 
+               placeholder="Escribe aquí observaciones generales sobre esta reparación.&#10;&#10;Ejemplos:&#10;- 'Equipo con bajo uso, solo 15k copias'&#10;- 'Cliente reporta atascos frecuentes en bandeja 2'&#10;- 'Fusora hace ruido al imprimir'&#10;&#10;La IA usará este texto para generar un informe más preciso y contextualizado."
+               options="{'style-inline': true}"
+               nolabel="1"/>
+                </group>
+                <separator/>
+                <!-- Resultado de calidad -->
+                <group string="📊 Resultado de Evaluación" 
+           invisible="calidad_id == False">
+                  <group>
+                    <field name="calidad_id" readonly="1" 
+                   widget="badge"
+                   decoration-success="calidad_id == 'buena'"
+                   decoration-warning="calidad_id == 'regular'"
+                   decoration-danger="calidad_id == 'mala'"/>
+                  </group>
+                  <group>
+                    <field name="calidad_justificacion" readonly="1" 
+                   widget="text"
+                   invisible="calidad_justificacion == False"/>
+                  </group>
+                </group>
+                <separator/>
+                <!-- Informe generado -->
+                <group string="📄 Informe Generado">
+                  <field name="informe" 
+               widget="html" 
+               readonly="0"
+               placeholder="El informe se generará aquí cuando presiones el botón 'Generar Informe'..."
+               nolabel="1"
+               options="{'style-inline': true, 'resizable': true}"/>
+                </group>
+                <!-- Información de auditoría -->
+                <group invisible="informe_generado_por_ia == False">
+                  <div class="alert alert-info" role="alert" style="margin-bottom: 0px;">
+                    <i class="fa fa-info-circle"/>
+                    <strong>Este informe fue generado con Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del checklist.
+            Puedes editarlo manualmente si es necesario.
+                  </div>
                 </group>
               </page>
-              <!-- PESTAÑA: ACCESORIOS -->
-              <page string="Accesorios">
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #28a745; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #28a745;">
-                    <i class="fa fa-puzzle-piece"></i> Verificación de Accesorios
+              <page string="Check List" name="evaluaciones">
+                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #6610f2; border-radius: 4px;">
+                  <h4 style="margin-top: 0; font-size: 16px; color: #6610f2;">
+                    <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
                   </h4>
                   <p style="margin-bottom: 5px; font-size: 13px;">
-                                Verifique detalladamente todos los accesorios del equipo. Esta información es crítica tanto para la reparación
-                                como para la entrega final al cliente:
-                            </p>
+      Este es el nuevo sistema de evaluación basado en componentes individuales:
+    </p>
                   <ul style="margin-bottom: 0; font-size: 13px;">
                     <li>
-                      <b>Estado funcional:</b> Cada accesorio debe ser probado y verificado individualmente.
+                      <b>Componente:</b> Tipo de componente evaluado (Fusora, ADF, Tóner, etc.)
                     </li>
                     <li>
-                      <b>Integridad física:</b> Reporte cualquier daño visible o desgaste excesivo.
+                      <b>Color:</b> Si aplica, indica el color del componente (K/C/M/Y)
                     </li>
                     <li>
-                      <b>Compatibilidad:</b> Confirme que todos los accesorios sean los originales o compatibles aprobados.
+                      <b>Estado:</b> Condición actual del componente
+                    </li>
+                    <li>
+                      <b>Observaciones:</b> Notas técnicas adicionales
                     </li>
                   </ul>
-                  <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Importante:</b> Todos los campos son obligatorios para finalizar la reparación. Si un accesorio no aplica para
-                                este modelo específico, seleccione la opción "No Aplica".
-                  </p>
                 </div>
+                <!-- Estado de Migración -->
                 <group>
-                  <group style="background-color: #f8fff8; border-radius: 6px; padding: 10px;">
-                    <field name="tray_id" placeholder="Detalla la cantidad de caseteras." required_for_finalization="True" 
-                                    help="Especifique número, tipo y estado de todas las bandejas de papel instaladas."/>
-                    <field name="adf_simple_id" required_for_finalization="True" 
-                                    help="Estado del alimentador automático de documentos simple (una cara)."/>
-                    <field name="adf_dual_id" required_for_finalization="True" 
-                                    help="Estado del alimentador automático de documentos doble (duplex automático)."/>
-                    <field name="finalizador_interno_id" required_for_finalization="True" 
-                                    help="Estado del finalizador interno (grapadora, perforadora, etc.)."/>
-                    <field name="finalizador_externo_id" required_for_finalization="True" 
-                                    help="Estado del finalizador externo (folleto, ordenador, etc.)."/>
-                    <field name="mueble_id" required_for_finalization="True" 
-                                    help="Estado del mueble o base del equipo."/>
-                    <field name="lct_id" required_for_finalization="True" 
-                                    help="Estado de la bandeja de gran capacidad (Large Capacity Tray)."/>
+                  <group>
+                    <field name="migration_status" widget="badge" 
+             decoration-success="migration_status == 'migrated'"
+             decoration-warning="migration_status == 'pending'"
+             decoration-danger="migration_status == 'error'"/>
+                    <field name="migration_date" readonly="1"/>
+                    <field name="migration_count" readonly="1"/>
                   </group>
-                  <group style="background-color: #f8fff8; border-radius: 6px; padding: 10px;">
-                    <field name="wi_fi_id" required_for_finalization="True" 
-                                    help="Funcionamiento del módulo Wi-Fi. Verifique conexión y estabilidad."/>
-                    <field name="cable_poder_id" required_for_finalization="True" 
-                                    help="Estado del cable de alimentación. Verificar integridad y conexión segura."/>
-                    <field name="panel_normal_id" required_for_finalization="True" 
-                                    help="Estado del panel de control estándar."/>
-                    <field name="panel_smart_id" required_for_finalization="True" 
-                                    help="Estado del panel inteligente con pantalla táctil."/>
-                    <field name="ot_id" required_for_finalization="True" 
-                                    help="Estado de la bandeja offset (separadora)."/>
-                    <field name="hdd_id" required_for_finalization="True" 
-                                    help="Estado del disco duro interno. Verificar capacidad y funcionamiento."/>
-                    <div style="margin-top: 20px; font-size: 12px; background-color: #d4edda; padding: 10px; border-radius: 4px; border-left: 3px solid #28a745;">
-                      <i class="fa fa-camera" style="color: #28a745;"></i>
-                      <b>Evidencia fotográfica:</b>
-                      <br/>
-                                    Tome fotografías de todos los accesorios, especialmente aquellos con algún daño o que
-                                    requieren reemplazo. Esto es esencial para documentación y posibles reclamos.
-                    </div>
+                  <group>
+                    <button name="action_migrar_checklist_a_evaluaciones" 
+              type="object" 
+              string="Migrar Checklist a Evaluaciones"
+              class="btn-primary"
+              icon="fa-sync"
+              invisible="migration_status == 'migrated'"
+              help="Convierte los campos de checklist antiguos a evaluaciones por componente"/>
+                    <button name="action_reset_migration_status" 
+              type="object" 
+              string="Resetear Estado de Migración"
+              class="btn-warning"
+              icon="fa-undo"
+              groups="base.group_system"
+              invisible="migration_status == 'pending'"
+              help="Permite volver a ejecutar la migración"/>
                   </group>
                 </group>
+                <!-- List view de evaluaciones - SOLO EDICIÓN -->
+                <separator string="Componentes Evaluados"/>
+                <field name="evaluacion_ids" nolabel="1">
+                  <list editable="bottom" create="false" delete="false">
+                    <field name="componente_tipo_id" 
+             readonly="1"
+             options="{'no_create': True, 'no_open': True}"/>
+                    <field name="color_id" 
+             readonly="1"
+             optional="show"
+             options="{'no_create': True, 'no_open': True}"/>
+                    <field name="estado_id" 
+            />
+                    <field name="observaciones" optional="show" 
+             placeholder="Observaciones..."/>
+                  </list>
+                </field>
+                <div style="margin-top: 15px; padding: 10px; background-color: #e7e3fc; border: 1px solid #d4c5f9; border-radius: 6px;">
+                  <h5 style="color: #6610f2; font-size: 14px; margin-top: 0;">
+                    <i class="fa fa-info-circle"></i> ¿Qué es este sistema?
+                  </h5>
+                  <p style="margin-bottom: 5px; font-size: 13px;">
+      Este nuevo sistema permite:
+    </p>
+                  <ul style="margin-bottom: 0; font-size: 13px;">
+                    <li>Evaluar componentes pre-cargados automáticamente según el modelo de máquina</li>
+                    <li>Tener un catálogo centralizado de estados y tipos de componentes</li>
+                    <li>Generar informes técnicos automáticos basados en las evaluaciones</li>
+                    <li>Rastrear historial de cambios en cada componente</li>
+                  </ul>
+                </div>
               </page>
-              <!-- PESTAÑA: CHECK LIST -->
-              <page string="Check List">
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #6f42c1; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #6f42c1;">
-                    <i class="fa fa-tasks"></i> Lista de Verificación Completa
+              <page string="Accesorios" name="accesorios_eval">
+                <!-- Header informativo -->
+                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #20c997; border-radius: 4px;">
+                  <h4 style="margin-top: 0; font-size: 16px; color: #20c997;">
+                    <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
                   </h4>
                   <p style="margin-bottom: 5px; font-size: 13px;">
-                                Este checklist debe completarse íntegramente antes de finalizar la reparación. Cada ítem representa
-                                una función o componente crítico que debe ser verificado:
-                            </p>
+      Accesorios opcionales instalados en la máquina:
+    </p>
                   <ul style="margin-bottom: 0; font-size: 13px;">
                     <li>
-                      <b>Prueba exhaustiva:</b> Cada función debe ser probada en condiciones reales de uso.
+                      <b>Tipo:</b> LCT, HDD, Wi-Fi, Panel Smart, Finalizadores, etc.
                     </li>
                     <li>
-                      <b>Verificación de calidad:</b> No basta con que funcione, debe hacerlo correctamente y con la calidad esperada.
+                      <b>Estado:</b> Instalado y operativo / Con falla / No instalado / No aplica
                     </li>
                     <li>
-                      <b>Documentación:</b> Cualquier anomalía debe ser documentada, incluso si no afecta la funcionalidad principal.
+                      <b>Subpartes:</b> Componentes específicos del accesorio
                     </li>
                   </ul>
-                  <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Proceso de verificación:</b> Para equipos color, todas las pruebas deben realizarse en todos los modos disponibles
-                                (B/N y Color). Para equipos monocromáticos, los campos de color aparecerán ocultos automáticamente.
-                  </p>
                 </div>
-                <group>
-                  <group style="background-color: #f8f0ff; border-radius: 6px; padding: 10px;">
-                    <div style="margin-bottom: 10px; font-size: 14px; font-weight: bold; color: #6f42c1; border-bottom: 1px solid #e9d8fd; padding-bottom: 5px;">
-                                    Funciones
-                                </div>
-                    <field name="copia_id" required_for_finalization="True" 
-                                    help="Funcionamiento de la función de copia. Probar simplex, duplex y diferentes ampliaciones/reducciones."/>
-                    <field name="impresion_id" required_for_finalization="True" 
-                                    help="Funcionamiento de impresión vía red. Verificar conexión y calidad de impresión."/>
-                    <field name="impresion_usb_id" required_for_finalization="True" 
-                                    help="Funcionamiento de impresión vía USB. Probar con diferentes tipos de archivos."/>
-                    <field name="scaner_smb_id" required_for_finalization="True" 
-                                    help="Funcionamiento de escaneo a carpeta compartida (SMB). Verificar conexión y calidad."/>
-                    <field name="scaner_usb_id" required_for_finalization="True" 
-                                    help="Funcionamiento de escaneo a USB. Probar diferentes formatos (PDF, JPG, TIFF)."/>
-                    <field name="scaner_ftp_id" required_for_finalization="True" 
-                                    help="Funcionamiento de escaneo a servidor FTP. Verificar conexión y transferencia."/>
-                    <field name="scaner_mail_id" required_for_finalization="True" 
-                                    help="Funcionamiento de escaneo a email. Probar con diferentes tamaños de documento."/>
-                  </group>
-                  <group style="background-color: #f8f0ff; border-radius: 6px; padding: 10px;">
-                    <div style="margin-bottom: 10px; font-size: 14px; font-weight: bold; color: #6f42c1; border-bottom: 1px solid #e9d8fd; padding-bottom: 5px;">
-                                    Componentes Mecánicos
-                                </div>
-                    <field name="bypass_id" required_for_finalization="True" 
-                                    help="Funcionamiento de la bandeja bypass (alimentación manual)."/>
-                    <field name="tray1_id" required_for_finalization="True" 
-                                    help="Funcionamiento de la bandeja 1. Probar diferentes gramajes de papel."/>
-                    <field name="tray2_id" required_for_finalization="True" 
-                                    help="Funcionamiento de la bandeja 2. Verificar detección automática de tamaño."/>
-                    <field name="tray3_id" required_for_finalization="True" 
-                                    help="Funcionamiento de la bandeja 3."/>
-                    <field name="tray4_id" required_for_finalization="True" 
-                                    help="Funcionamiento de la bandeja 4."/>
-                    <field name="adf_id" required_for_finalization="True" 
-                                    help="Funcionamiento del alimentador automático de documentos. Probar con diferentes cantidades de hojas."/>
-                    <field name="finalizador_id" required_for_finalization="True" 
-                                    help="Funcionamiento del finalizador (grapadora, perforadora, etc.)."/>
-                    <field name="tacho_id" required_for_finalization="True" 
-                                    help="Estado del contenedor de desechos. Verificar que esté limpio y correctamente instalado."/>
-                  </group>
-                </group>
-                <group>
-                  <group style="background-color: #fff0f0; border-radius: 6px; padding: 10px; margin-top: 15px;">
-                    <div style="margin-bottom: 10px; font-size: 14px; font-weight: bold; color: #dc3545; border-bottom: 1px solid #f8d7da; padding-bottom: 5px;">
-                                    Componentes de Impresión
-                                </div>
-                    <field name="fusora_id" required_for_finalization="True" 
-                                    help="Estado de la unidad fusora. Verificar temperatura y presión adecuadas."/>
-                    <field name="rodillo_id" required_for_finalization="True" 
-                                    help="Estado de los rodillos de tracción y alimentación. Verificar desgaste."/>
-                    <field name="calor_id" required_for_finalization="True" 
-                                    help="Funcionamiento de los sensores de calor y temperatura."/>
-                    <field name="transfer_id" required_for_finalization="True" 
-                                    help="Estado de la unidad de transferencia. Verificar limpieza y alineación."/>
-                    <field name="optico_id" required_for_finalization="True" 
-                                    help="Estado de los componentes ópticos (espejos, lentes, sensores)."/>
-                  </group>
-                  <group style="background-color: #fff8f0; border-radius: 6px; padding: 10px; margin-top: 15px;">
-                    <div style="margin-bottom: 10px; font-size: 14px; font-weight: bold; color: #fd7e14; border-bottom: 1px solid #ffe5d0; padding-bottom: 5px;">
-                                    Consumibles
-                                </div>
-                    <field name="toner_black_id" required_for_finalization="True" 
-                                    help="Estado del tóner negro. Verificar nivel y distribución uniforme."/>
-                    <field name="toner_magenta_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
-                                    help="Estado del tóner magenta. Verificar nivel y distribución uniforme."/>
-                    <field name="toner_cyan_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
-                                    help="Estado del tóner cyan. Verificar nivel y distribución uniforme."/>
-                    <field name="toner_yellow_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
-                                    help="Estado del tóner amarillo. Verificar nivel y distribución uniforme."/>
-                    <field name="black_id" required_for_finalization="True" 
-                                    help="Estado del tambor/unidad de imagen negro."/>
-                    <field name="magenta_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
-                                    help="Estado del tambor/unidad de imagen magenta."/>
-                    <field name="cyan_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
-                                    help="Estado del tambor/unidad de imagen cyan."/>
-                    <field name="yellow_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
-                                    help="Estado del tambor/unidad de imagen amarillo."/>
-                    <field name="developerk_id" required_for_finalization="True" 
-                                    help="Estado del revelador negro."/>
-                    <field name="developerm_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
-                                    help="Estado del revelador magenta."/>
-                    <field name="developerc_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
-                                    help="Estado del revelador cyan."/>
-                    <field name="developery_id" required_for_finalization="True" invisible="tipo_id != 'color'" 
-                                    help="Estado del revelador amarillo."/>
-                  </group>
-                </group>
+                <!-- Tabla de evaluaciones de accesorios -->
+                <separator string="Accesorios Evaluados"/>
+                <field name="accesorio_eval_ids" nolabel="1">
+                  <list string="Evaluación de Accesorios" editable="bottom" create="false" delete="false">
+                    <field name="tipo_id" readonly="1"/>
+                    <field name="estado_id" 
+             options="{'no_create': True, 'no_open': True}"
+             placeholder="Seleccionar estado..."/>
+                    <field name="subparte_ids" widget="many2many_tags"
+             options="{'no_create': True}"
+             optional="show"/>
+                    <field name="observaciones" optional="show" 
+             placeholder="Observaciones..."/>
+                  </list>
+                </field>
+                <!-- Info adicional -->
+                <div style="margin-top: 15px; padding: 10px; background-color: #d1f2eb; border: 1px solid #c3e6cb; border-radius: 6px;">
+                  <h5 style="color: #20c997; font-size: 14px; margin-top: 0;">
+                    <i class="fa fa-info-circle"></i> Acerca de los Accesorios
+                  </h5>
+                  <ul style="margin-bottom: 0; font-size: 13px;">
+                    <li>
+                      <b>Opcionales:</b> Los accesorios varían según el modelo de máquina
+                    </li>
+                    <li>
+                      <b>Configuración por modelo:</b> Cada modelo tiene su lista de accesorios disponibles
+                    </li>
+                    <li>
+                      <b>No aplica:</b> Si el modelo no soporta un accesorio específico
+                    </li>
+                    <li>
+                      <b>Subpartes:</b> Permite detallar qué componente específico del accesorio fue intervenido
+                    </li>
+                  </ul>
+                </div>
               </page>
               <page string="Detalle de falla proveedor">
                 <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #dc3545; border-radius: 4px;">
@@ -546,215 +517,8 @@
                   </ol>
                 </div>
               </page>
-              <!-- PESTAÑA: EVALUACIONES DE COMPONENTES -->
-              <page string="Evaluaciones (Sistema Nuevo)" name="evaluaciones">
-  <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #6610f2; border-radius: 4px;">
-    <h4 style="margin-top: 0; font-size: 16px; color: #6610f2;">
-      <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
-    </h4>
-    <p style="margin-bottom: 5px; font-size: 13px;">
-      Este es el nuevo sistema de evaluación basado en componentes individuales:
-    </p>
-    <ul style="margin-bottom: 0; font-size: 13px;">
-      <li>
-        <b>Componente:</b> Tipo de componente evaluado (Fusora, ADF, Tóner, etc.)
-      </li>
-      <li>
-        <b>Color:</b> Si aplica, indica el color del componente (K/C/M/Y)
-      </li>
-      <li>
-        <b>Estado:</b> Condición actual del componente
-      </li>
-      <li>
-        <b>Observaciones:</b> Notas técnicas adicionales
-      </li>
-    </ul>
-  </div>
-  
-  <!-- Estado de Migración -->
-  <group>
-    <group>
-      <field name="migration_status" widget="badge" 
-             decoration-success="migration_status == 'migrated'"
-             decoration-warning="migration_status == 'pending'"
-             decoration-danger="migration_status == 'error'"/>
-      <field name="migration_date" readonly="1"/>
-      <field name="migration_count" readonly="1"/>
-    </group>
-    <group>
-      <button name="action_migrar_checklist_a_evaluaciones" 
-              type="object" 
-              string="Migrar Checklist a Evaluaciones"
-              class="btn-primary"
-              icon="fa-sync"
-              invisible="migration_status == 'migrated'"
-              help="Convierte los campos de checklist antiguos a evaluaciones por componente"/>
-      <button name="action_reset_migration_status" 
-              type="object" 
-              string="Resetear Estado de Migración"
-              class="btn-warning"
-              icon="fa-undo"
-              groups="base.group_system"
-              invisible="migration_status == 'pending'"
-              help="Permite volver a ejecutar la migración"/>
-    </group>
-  </group>
-  
-  <!-- List view de evaluaciones - SOLO EDICIÓN -->
-  <separator string="Componentes Evaluados"/>
-  <field name="evaluacion_ids" nolabel="1">
-    <list editable="bottom" create="false" delete="false">
-      <field name="componente_tipo_id" 
-             readonly="1"
-             options="{'no_create': True, 'no_open': True}"/>
-      <field name="color_id" 
-             readonly="1"
-             optional="show"
-             options="{'no_create': True, 'no_open': True}"/>
-      <field name="estado_id" 
-            />
-      <field name="observaciones" optional="show" 
-             placeholder="Observaciones..."/>
-    </list>
-  </field>
-  
-  <div style="margin-top: 15px; padding: 10px; background-color: #e7e3fc; border: 1px solid #d4c5f9; border-radius: 6px;">
-    <h5 style="color: #6610f2; font-size: 14px; margin-top: 0;">
-      <i class="fa fa-info-circle"></i> ¿Qué es este sistema?
-    </h5>
-    <p style="margin-bottom: 5px; font-size: 13px;">
-      Este nuevo sistema permite:
-    </p>
-    <ul style="margin-bottom: 0; font-size: 13px;">
-      <li>Evaluar componentes pre-cargados automáticamente según el modelo de máquina</li>
-      <li>Tener un catálogo centralizado de estados y tipos de componentes</li>
-      <li>Generar informes técnicos automáticos basados en las evaluaciones</li>
-      <li>Rastrear historial de cambios en cada componente</li>
-    </ul>
-  </div>
-</page>
-              <!-- PESTAÑA: ACCESORIOS (SISTEMA NUEVO) -->
-<page string="Accesorios (Sistema Nuevo)" name="accesorios_eval">
-  
-  <!-- Header informativo -->
-  <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #20c997; border-radius: 4px;">
-    <h4 style="margin-top: 0; font-size: 16px; color: #20c997;">
-      <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
-    </h4>
-    <p style="margin-bottom: 5px; font-size: 13px;">
-      Accesorios opcionales instalados en la máquina:
-    </p>
-    <ul style="margin-bottom: 0; font-size: 13px;">
-      <li><b>Tipo:</b> LCT, HDD, Wi-Fi, Panel Smart, Finalizadores, etc.</li>
-      <li><b>Estado:</b> Instalado y operativo / Con falla / No instalado / No aplica</li>
-      <li><b>Subpartes:</b> Componentes específicos del accesorio</li>
-    </ul>
-  </div>
-  
-  <!-- Tabla de evaluaciones de accesorios -->
-  <separator string="Accesorios Evaluados"/>
-  <field name="accesorio_eval_ids" nolabel="1">
-    <list string="Evaluación de Accesorios" editable="bottom" create="false" delete="false">
-      <field name="tipo_id" readonly="1"/>
-      <field name="estado_id" 
-             options="{'no_create': True, 'no_open': True}"
-             placeholder="Seleccionar estado..."/>
-      <field name="subparte_ids" widget="many2many_tags"
-             options="{'no_create': True}"
-             optional="show"/>
-      <field name="observaciones" optional="show" 
-             placeholder="Observaciones..."/>
-    </list>
-  </field>
-  
-  <!-- Info adicional -->
-  <div style="margin-top: 15px; padding: 10px; background-color: #d1f2eb; border: 1px solid #c3e6cb; border-radius: 6px;">
-    <h5 style="color: #20c997; font-size: 14px; margin-top: 0;">
-      <i class="fa fa-info-circle"></i> Acerca de los Accesorios
-    </h5>
-    <ul style="margin-bottom: 0; font-size: 13px;">
-      <li><b>Opcionales:</b> Los accesorios varían según el modelo de máquina</li>
-      <li><b>Configuración por modelo:</b> Cada modelo tiene su lista de accesorios disponibles</li>
-      <li><b>No aplica:</b> Si el modelo no soporta un accesorio específico</li>
-      <li><b>Subpartes:</b> Permite detallar qué componente específico del accesorio fue intervenido</li>
-    </ul>
-  </div>
-  
-</page>
-<page string="Informe Técnico" name="informe_tecnico">
-    
-    <!-- Configuración de generación -->
-    <group string="⚙️ Configuración">
-        <group>
-            <field name="modo_generacion_informe" widget="radio" 
-                   options="{'horizontal': true}"/>
-            <field name="informe_generado_por_ia" readonly="1" 
-                   invisible="informe_generado_por_ia == False"/>
-        </group>
-        <group>
-            <button name="action_generar_informe" 
-                    string="🪄 Generar Informe" 
-                    type="object" 
-                    class="oe_highlight btn-primary"
-                    help="Genera el informe técnico basado en las evaluaciones marcadas"/>
-        </group>
-    </group>
-
-    <separator/>
-
-    <!-- Observaciones del técnico -->
-    <group string="📝 Observaciones del Técnico">
-        <field name="observaciones_tecnico" 
-               widget="html" 
-               placeholder="Escribe aquí observaciones generales sobre esta reparación.&#10;&#10;Ejemplos:&#10;- 'Equipo con bajo uso, solo 15k copias'&#10;- 'Cliente reporta atascos frecuentes en bandeja 2'&#10;- 'Fusora hace ruido al imprimir'&#10;&#10;La IA usará este texto para generar un informe más preciso y contextualizado."
-               options="{'style-inline': true}"
-               nolabel="1"/>
-    </group>
-
-    <separator/>
-
-    <!-- Resultado de calidad -->
-    <group string="📊 Resultado de Evaluación" 
-           invisible="calidad_id == False">
-        <group>
-            <field name="calidad_id" readonly="1" 
-                   widget="badge"
-                   decoration-success="calidad_id == 'buena'"
-                   decoration-warning="calidad_id == 'regular'"
-                   decoration-danger="calidad_id == 'mala'"/>
-        </group>
-        <group>
-            <field name="calidad_justificacion" readonly="1" 
-                   widget="text"
-                   invisible="calidad_justificacion == False"/>
-        </group>
-    </group>
-
-    <separator/>
-
-    <!-- Informe generado -->
-    <group string="📄 Informe Generado">
-        <field name="informe" 
-               widget="html" 
-               readonly="0"
-               placeholder="El informe se generará aquí cuando presiones el botón 'Generar Informe'..."
-               nolabel="1"
-               options="{'style-inline': true, 'resizable': true}"/>
-    </group>
-
-    <!-- Información de auditoría -->
-    <group invisible="informe_generado_por_ia == False">
-        <div class="alert alert-info" role="alert" style="margin-bottom: 0px;">
-            <i class="fa fa-info-circle"/> 
-            <strong>Este informe fue generado con Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del checklist.
-            Puedes editarlo manualmente si es necesario.
-        </div>
-    </group>
-
-</page>
             </notebook>
           </sheet>
-          
           <chatter/>
         </form>
       </field>
