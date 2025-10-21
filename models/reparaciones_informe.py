@@ -346,7 +346,7 @@ class ReparacionesInforme(models.Model):
         return html, calidad
 
     def _generar_seccion_repuestos(self):
-        """Genera la sección HTML de componentes y subpartes que requieren cambio."""
+        """Genera la sección HTML de componentes y subpartes que requieren cambio (sin duplicados)."""
         if not self.intervencion_ids:
             _logger.debug("[_generar_seccion_repuestos] Sin intervenciones id=%s", self.id)
             return ""
@@ -359,9 +359,12 @@ class ReparacionesInforme(models.Model):
         repuestos_por_componente = {}
         for intervencion in intervenciones_con_detalles:
             componente_nombre = self._get_component_display_name(intervencion.componente)
-            repuestos_por_componente.setdefault(componente_nombre, [])
+            nombres = set()
             for detalle in intervencion.detalle_ids:
-                repuestos_por_componente[componente_nombre].append(detalle.subparte_id.name)
+                if detalle.subparte_id:
+                    nombres.add(detalle.subparte_id.name)
+            if nombres:
+                repuestos_por_componente[componente_nombre] = sorted(nombres)
 
         if not repuestos_por_componente:
             _logger.debug("[_generar_seccion_repuestos] No hay subpartes agrupadas id=%s", self.id)
@@ -727,13 +730,15 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
     # ========================================
     def _check_campos_requieren_cambio_sin_intervencion(self):
         """
-        Devuelve TODAS las evaluaciones que requieren cambio y no tienen intervención con subpartes.
-        (Estas serán listadas en el wizard.)
+        Devuelve evaluaciones que requieren cambio y NO tienen intervención con subpartes.
+        Se deduplica por componente_code para no repetir el mismo componente en el wizard.
         """
         self.ensure_one()
         _logger.info("[_check_campos_requieren_cambio_sin_intervencion] Inicio id=%s", self.id)
 
         componentes_pendientes = []
+        seen = set()  # <-- evita duplicados por componente_code
+
         for evaluacion in self.evaluacion_ids:
             if not evaluacion.estado_id or evaluacion.estado_id.code != 'requiere_cambio':
                 continue
@@ -747,6 +752,12 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
                     self._rep__get_color_code_from_eval(evaluacion),
                 )
                 continue
+
+            # Si ya evaluamos este componente_code, saltar
+            if componente_code in seen:
+                _logger.debug("[_check_campos...] componente_code '%s' ya considerado, se omite duplicado", componente_code)
+                continue
+            seen.add(componente_code)
 
             intervencion_existente = self.intervencion_ids.filtered(
                 lambda x: x.componente == componente_code and x.detalle_ids
@@ -763,6 +774,7 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
 
         _logger.info("[_check_campos...] total_pendientes=%s id=%s", len(componentes_pendientes), self.id)
         return componentes_pendientes
+
 
     def _get_componente_code_from_evaluacion(self, evaluacion):
         """
@@ -831,10 +843,6 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
     # WIZARD DE SUBPARTES
     # ========================================
     def _abrir_wizard_multiple_componentes(self, componentes_pendientes):
-        """
-        Abre un único wizard que lista TODOS los componentes que requieren cambio,
-        con sus subpartes encontradas (usando fallbacks).
-        """
         self.ensure_one()
         _logger.info("[_abrir_wizard_multiple_componentes] start id=%s count=%s", self.id, len(componentes_pendientes))
         if not componentes_pendientes:
@@ -851,47 +859,61 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
             componente_code = comp_info['componente_code']
             intervencion = self._ensure_intervencion_for_component(componente_code)
 
-            # 1) Busca componentes de catálogo con fallbacks
+            # --- NUEVO: sets para deduplicar ---
+            ya_existentes = set(intervencion.detalle_ids.mapped('subparte_id').ids)
+            agregadas = set()
+
+            # 1) Buscar componentes catálogo
             componentes_modelo = self._buscar_componentes_modelo_por_evaluacion(modelo_maquina, comp_info)
             _logger.debug("[_abrir_wizard_multiple_componentes] comp=%s encontró %s componentes modelo",
-                          componente_code, len(componentes_modelo))
+                        componente_code, len(componentes_modelo))
 
-            # 2) Crear líneas por cada detalle encontrado
             total_lineas = 0
             for componente_modelo in componentes_modelo:
                 if not getattr(componente_modelo, 'detalle_ids', False):
                     continue
                 for detalle in componente_modelo.detalle_ids:
+                    sid = detalle.subparte_id.id
+                    if not sid:
+                        continue
+                    # Evitar duplicados: ya en intervención o ya agregada en este loop
+                    if sid in ya_existentes or sid in agregadas:
+                        continue
+
                     self.env['reparacion.add.subparts.wizard.line'].create({
                         'wizard_id': wizard.id,
                         'componente': componente_code,
                         'intervencion_id': intervencion.id,
-                        'subparte_id': detalle.subparte_id.id,
+                        'subparte_id': sid,
                         'selected': False,
                         'accion_sub': 'cambiado',
                         'cantidad': detalle.cantidad or 1.0,
                     })
+                    agregadas.add(sid)
                     total_lineas += 1
 
-            # 3) Si no hubo detalle_ids, usar fallback genérico por tipo (no dependiente de modelo)
+            # 3) Fallback genérico por tipo (también deduplicado)
             if total_lineas == 0:
                 genericas = self._fallback_subpartes_por_tipo(comp_info['tipo_id'])
                 if genericas:
                     _logger.warning("[_abrir_wizard_multiple_componentes] sin detalle_ids; usando %s subpartes genéricas por tipo.",
                                     len(genericas))
                     for sp in genericas:
+                        sid = sp.id
+                        if not sid or sid in ya_existentes or sid in agregadas:
+                            continue
                         self.env['reparacion.add.subparts.wizard.line'].create({
                             'wizard_id': wizard.id,
                             'componente': componente_code,
                             'intervencion_id': intervencion.id,
-                            'subparte_id': sp.id,
+                            'subparte_id': sid,
                             'selected': False,
                             'accion_sub': 'cambiado',
                             'cantidad': 1.0,
                         })
+                        agregadas.add(sid)
                         total_lineas += 1
 
-            # 4) Si aún no hay nada, notifica al usuario
             if total_lineas == 0:
                 self.message_post(body=_(
                     "No se hallaron subpartes para <b>%(nombre)s</b> %(color)s. "
@@ -901,7 +923,7 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
                     'color': comp_info.get('color_code') and f"({comp_info['color_code'].upper()})" or "",
                 })
 
-        # Título con todos los componentes involucrados
+        # (resto del método igual)
         nombres = []
         for comp in componentes_pendientes:
             eval_rec = self.env['reparacion.componente.evaluacion'].browse(comp['evaluacion_id'])
@@ -923,6 +945,7 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
             'target': 'new',
             'context': {'from_generar_informe': True},
         }
+
 
     def _buscar_componentes_modelo_por_evaluacion(self, modelo_maquina, comp_info):
         """
