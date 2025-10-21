@@ -130,6 +130,9 @@
             <notebook>
               <!-- PESTAÑA: INFORME TÉCNICO -->
               <page string="Informe Técnico">
+                
+                <group string="📊 Resultado de Evaluación"
+                >
                 <group string="📄 Informe Generado">
                   <field name="informe"
                     widget="html"
@@ -138,8 +141,6 @@
                     nolabel="1"
                     options="{'style-inline': true, 'resizable': true}" />
                 </group>
-                <group string="📊 Resultado de Evaluación"
-                >
                   <group>
                     <field name="calidad_id"
                       decoration-success="calidad_id == 'buena'"
