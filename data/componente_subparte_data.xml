@@ -25,23 +25,11 @@
     <field name="tipo_id" ref="comp_tipo_ui"/>
   </record>
   <!-- Chips por color -->
-  <record id="sub_ui_chip_k" model="componente.subparte">
-    <field name="name">Chip IU Negro</field><field name="code">UI_CHIP_K</field>
-    <field name="tipo_id" ref="comp_tipo_ui"/><field name="color_id" ref="color_k"/>
+  <record id="sub_ui_chip" model="componente.subparte">
+    <field name="name">Chip IU </field><field name="code">UI_CHIP</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/><field name="color_id" />
   </record>
-  <record id="sub_ui_chip_c" model="componente.subparte">
-    <field name="name">Chip IU Cian</field><field name="code">UI_CHIP_C</field>
-    <field name="tipo_id" ref="comp_tipo_ui"/><field name="color_id" ref="color_c"/>
-  </record>
-  <record id="sub_ui_chip_m" model="componente.subparte">
-    <field name="name">Chip IU Magenta</field><field name="code">UI_CHIP_M</field>
-    <field name="tipo_id" ref="comp_tipo_ui"/><field name="color_id" ref="color_m"/>
-  </record>
-  <record id="sub_ui_chip_y" model="componente.subparte">
-    <field name="name">Chip IU Amarillo</field><field name="code">UI_CHIP_Y</field>
-    <field name="tipo_id" ref="comp_tipo_ui"/><field name="color_id" ref="color_y"/>
-  </record>
-
+  
   <!-- ====== DEVELOPER (color y mono) ====== -->
   <record id="sub_dev_powder" model="componente.subparte">
     <field name="name">Polvo developer</field><field name="code">DEV_POWDER</field>
@@ -68,22 +56,11 @@
     <field name="tipo_id" ref="comp_tipo_developer"/>
   </record>
   <!-- Chips por color (si aplica) -->
-  <record id="sub_dev_chip_k" model="componente.subparte">
-    <field name="name">Chip Developer Negro</field><field name="code">DEV_CHIP_K</field>
-    <field name="tipo_id" ref="comp_tipo_developer"/><field name="color_id" ref="color_k"/>
+  <record id="sub_dev_chip" model="componente.subparte">
+    <field name="name">Chip Developer</field><field name="code">DEV_CHIP</field>
+    <field name="tipo_id" ref="comp_tipo_developer"/><field name="color_id"/>
   </record>
-  <record id="sub_dev_chip_c" model="componente.subparte">
-    <field name="name">Chip Developer Cian</field><field name="code">DEV_CHIP_C</field>
-    <field name="tipo_id" ref="comp_tipo_developer"/><field name="color_id" ref="color_c"/>
-  </record>
-  <record id="sub_dev_chip_m" model="componente.subparte">
-    <field name="name">Chip Developer Magenta</field><field name="code">DEV_CHIP_M</field>
-    <field name="tipo_id" ref="comp_tipo_developer"/><field name="color_id" ref="color_m"/>
-  </record>
-  <record id="sub_dev_chip_y" model="componente.subparte">
-    <field name="name">Chip Developer Amarillo</field><field name="code">DEV_CHIP_Y</field>
-    <field name="tipo_id" ref="comp_tipo_developer"/><field name="color_id" ref="color_y"/>
-  </record>
+ 
 
   <!-- ====== SISTEMA DE TÓNER (color y mono) ====== -->
   <record id="sub_toner_bottle" model="componente.subparte">
