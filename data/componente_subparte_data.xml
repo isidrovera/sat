@@ -29,6 +29,10 @@
     <field name="name">Chip IU </field><field name="code">UI_CHIP</field>
     <field name="tipo_id" ref="comp_tipo_ui"/><field name="color_id" />
   </record>
+  <record id="sub_to_chip" model="componente.subparte">
+    <field name="name">Chip Tóner </field><field name="code">TO_CHIP</field>
+    <field name="tipo_id" ref="comp_tipo_toner_system"/><field name="color_id" />
+  </record>
   
   <!-- ====== DEVELOPER (color y mono) ====== -->
   <record id="sub_dev_powder" model="componente.subparte">
