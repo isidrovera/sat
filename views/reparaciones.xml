@@ -155,156 +155,219 @@
                 <field name="nombre_proveedor" invisible='True' />
                 <field name="autorizacion_cambio_digitos" invisible="True"/>
                 <field name="autenticacion_correcta" invisible="True"/>
-                
+                <div style="margin-top: 10px; font-size: 12px; background-color: #e9ecef; padding: 8px; border-radius: 4px;">
+                  <i class="fa fa-exclamation-circle" style="color: #dc3545;"></i>
+                  <b>Importante:</b> Verifique siempre que el número de serie coincida 
+                            exactamente con el físico. Tome fotografía clara de la etiqueta al iniciar la revisión.
+                </div>
               </group>
             </group>
             <notebook>
               <!-- PESTAÑA: INFORME TÉCNICO -->
               <page string="Informe Técnico">
                 <!-- Configuración de generación -->
-                <group string="⚙️ Configuración">
-                  <group>
-                    <field name="modo_generacion_informe" widget="radio" 
+    <group string="⚙️ Configuración">
+        <group>
+            <field name="modo_generacion_informe" widget="radio" 
                    options="{'horizontal': true}"/>
-                    <field name="informe_generado_por_ia" readonly="1" 
+            <field name="informe_generado_por_ia" readonly="1" 
                    invisible="informe_generado_por_ia == False"/>
-                  </group>
-                  <group>
-                    <button name="action_generar_informe" 
+        </group>
+        <group>
+            <button name="action_generar_informe" 
                     string="🪄 Generar Informe" 
                     type="object" 
                     class="oe_highlight btn-primary"
                     help="Genera el informe técnico basado en las evaluaciones marcadas"/>
-                  </group>
-                </group>
-                <separator/>
-                <!-- Observaciones del técnico -->
-                <group string="📝 Observaciones del Técnico">
-                  <field name="observaciones_tecnico" 
+        </group>
+    </group>
+
+    <separator/>
+
+    <!-- Observaciones del técnico -->
+    <group string="📝 Observaciones del Técnico">
+        <field name="observaciones_tecnico" 
                widget="html" 
                placeholder="Escribe aquí observaciones generales sobre esta reparación.&#10;&#10;Ejemplos:&#10;- 'Equipo con bajo uso, solo 15k copias'&#10;- 'Cliente reporta atascos frecuentes en bandeja 2'&#10;- 'Fusora hace ruido al imprimir'&#10;&#10;La IA usará este texto para generar un informe más preciso y contextualizado."
                options="{'style-inline': true}"
                nolabel="1"/>
-                </group>
-                <separator/>
-                <!-- Resultado de calidad -->
-                <group string="📊 Resultado de Evaluación" 
+    </group>
+
+    <separator/>
+
+    <!-- Resultado de calidad -->
+    <group string="📊 Resultado de Evaluación" 
            invisible="calidad_id == False">
-                  <group>
-                    <field name="calidad_id"  
+        <group>
+            <field name="calidad_id" readonly="1" 
                    widget="badge"
                    decoration-success="calidad_id == 'buena'"
                    decoration-warning="calidad_id == 'regular'"
                    decoration-danger="calidad_id == 'mala'"/>
-                  </group>
-                  <group>
-                    <field name="calidad_justificacion"  
+        </group>
+        <group>
+            <field name="calidad_justificacion" readonly="1" 
                    widget="text"
                    invisible="calidad_justificacion == False"/>
-                  </group>
-                </group>
-                <separator/>
-                <!-- Informe generado -->
-                <group string="📄 Informe Generado">
-                  <field name="informe" 
+        </group>
+    </group>
+
+    <separator/>
+
+    <!-- Informe generado -->
+    <group string="📄 Informe Generado">
+        <field name="informe" 
                widget="html" 
                readonly="0"
                placeholder="El informe se generará aquí cuando presiones el botón 'Generar Informe'..."
                nolabel="1"
                options="{'style-inline': true, 'resizable': true}"/>
-                </group>
-                <!-- Información de auditoría -->
-                <group invisible="informe_generado_por_ia == False">
-                  <div class="alert alert-info" role="alert" style="margin-bottom: 0px;">
-                    <i class="fa fa-info-circle"/>
-                    <strong>Este informe fue generado con Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del checklist.
+    </group>
+
+    <!-- Información de auditoría -->
+    <group invisible="informe_generado_por_ia == False">
+        <div class="alert alert-info" role="alert" style="margin-bottom: 0px;">
+            <i class="fa fa-info-circle"/> 
+            <strong>Este informe fue generado con Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del checklist.
             Puedes editarlo manualmente si es necesario.
-                  </div>
-                </group>
+        </div>
+    </group>
               </page>
-              <page string="Check List" name="evaluaciones">
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #6610f2; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #6610f2;">
-                    <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
-                  </h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
+                           <page string="Check List" name="evaluaciones">
+  <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #6610f2; border-radius: 4px;">
+    <h4 style="margin-top: 0; font-size: 16px; color: #6610f2;">
+      <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
+    </h4>
+    <p style="margin-bottom: 5px; font-size: 13px;">
       Este es el nuevo sistema de evaluación basado en componentes individuales:
     </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li>
-                      <b>Componente:</b> Tipo de componente evaluado (Fusora, ADF, Tóner, etc.)
-                    </li>
-                    <li>
-                      <b>Color:</b> Si aplica, indica el color del componente (K/C/M/Y)
-                    </li>
-                    <li>
-                      <b>Estado:</b> Condición actual del componente
-                    </li>
-                    <li>
-                      <b>Observaciones:</b> Notas técnicas adicionales
-                    </li>
-                  </ul>
-                </div>
-                
-               
-              </page>
-              <page string="Accesorios" name="accesorios_eval">
-                <!-- Header informativo -->
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #20c997; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #20c997;">
-                    <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
-                  </h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
+    <ul style="margin-bottom: 0; font-size: 13px;">
+      <li>
+        <b>Componente:</b> Tipo de componente evaluado (Fusora, ADF, Tóner, etc.)
+      </li>
+      <li>
+        <b>Color:</b> Si aplica, indica el color del componente (K/C/M/Y)
+      </li>
+      <li>
+        <b>Estado:</b> Condición actual del componente
+      </li>
+      <li>
+        <b>Observaciones:</b> Notas técnicas adicionales
+      </li>
+    </ul>
+  </div>
+  
+  <!-- Estado de Migración -->
+  <group>
+    <group>
+      <field name="migration_status" widget="badge" 
+             decoration-success="migration_status == 'migrated'"
+             decoration-warning="migration_status == 'pending'"
+             decoration-danger="migration_status == 'error'"/>
+      <field name="migration_date" readonly="1"/>
+      <field name="migration_count" readonly="1"/>
+    </group>
+    <group>
+      <button name="action_migrar_checklist_a_evaluaciones" 
+              type="object" 
+              string="Migrar Checklist a Evaluaciones"
+              class="btn-primary"
+              icon="fa-sync"
+              invisible="migration_status == 'migrated'"
+              help="Convierte los campos de checklist antiguos a evaluaciones por componente"/>
+      <button name="action_reset_migration_status" 
+              type="object" 
+              string="Resetear Estado de Migración"
+              class="btn-warning"
+              icon="fa-undo"
+              groups="base.group_system"
+              invisible="migration_status == 'pending'"
+              help="Permite volver a ejecutar la migración"/>
+    </group>
+  </group>
+  
+  <!-- List view de evaluaciones - SOLO EDICIÓN -->
+  <separator string="Componentes Evaluados"/>
+  <field name="evaluacion_ids" nolabel="1">
+    <list editable="bottom" create="false" delete="false">
+      <field name="componente_tipo_id" 
+             readonly="1"
+             options="{'no_create': True, 'no_open': True}"/>
+      <field name="color_id" 
+             readonly="1"
+             optional="show"
+             options="{'no_create': True, 'no_open': True}"/>
+      <field name="estado_id" 
+            />
+      <field name="observaciones" optional="show" 
+             placeholder="Observaciones..."/>
+    </list>
+  </field>
+  
+  <div style="margin-top: 15px; padding: 10px; background-color: #e7e3fc; border: 1px solid #d4c5f9; border-radius: 6px;">
+    <h5 style="color: #6610f2; font-size: 14px; margin-top: 0;">
+      <i class="fa fa-info-circle"></i> ¿Qué es este sistema?
+    </h5>
+    <p style="margin-bottom: 5px; font-size: 13px;">
+      Este nuevo sistema permite:
+    </p>
+    <ul style="margin-bottom: 0; font-size: 13px;">
+      <li>Evaluar componentes pre-cargados automáticamente según el modelo de máquina</li>
+      <li>Tener un catálogo centralizado de estados y tipos de componentes</li>
+      <li>Generar informes técnicos automáticos basados en las evaluaciones</li>
+      <li>Rastrear historial de cambios en cada componente</li>
+    </ul>
+  </div>
+</page>
+ 
+<page string="Accesorios" name="accesorios_eval">
+  
+  <!-- Header informativo -->
+  <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #20c997; border-radius: 4px;">
+    <h4 style="margin-top: 0; font-size: 16px; color: #20c997;">
+      <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
+    </h4>
+    <p style="margin-bottom: 5px; font-size: 13px;">
       Accesorios opcionales instalados en la máquina:
     </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li>
-                      <b>Tipo:</b> LCT, HDD, Wi-Fi, Panel Smart, Finalizadores, etc.
-                    </li>
-                    <li>
-                      <b>Estado:</b> Instalado y operativo / Con falla / No instalado / No aplica
-                    </li>
-                    <li>
-                      <b>Subpartes:</b> Componentes específicos del accesorio
-                    </li>
-                  </ul>
-                </div>
-                <!-- Tabla de evaluaciones de accesorios -->
-                <separator string="Accesorios Evaluados"/>
-                <field name="accesorio_eval_ids" nolabel="1">
-                  <list string="Evaluación de Accesorios" editable="bottom" create="false" delete="false">
-                    <field name="tipo_id" readonly="1"/>
-                    <field name="estado_id" 
+    <ul style="margin-bottom: 0; font-size: 13px;">
+      <li><b>Tipo:</b> LCT, HDD, Wi-Fi, Panel Smart, Finalizadores, etc.</li>
+      <li><b>Estado:</b> Instalado y operativo / Con falla / No instalado / No aplica</li>
+      <li><b>Subpartes:</b> Componentes específicos del accesorio</li>
+    </ul>
+  </div>
+  
+  <!-- Tabla de evaluaciones de accesorios -->
+  <separator string="Accesorios Evaluados"/>
+  <field name="accesorio_eval_ids" nolabel="1">
+    <list string="Evaluación de Accesorios" editable="bottom" create="false" delete="false">
+      <field name="tipo_id" readonly="1"/>
+      <field name="estado_id" 
              options="{'no_create': True, 'no_open': True}"
              placeholder="Seleccionar estado..."/>
-                    <field name="subparte_ids" widget="many2many_tags"
+      <field name="subparte_ids" widget="many2many_tags"
              options="{'no_create': True}"
              optional="show"/>
-                    <field name="observaciones" optional="show" 
+      <field name="observaciones" optional="show" 
              placeholder="Observaciones..."/>
-                  </list>
-                </field>
-                <!-- Info adicional -->
-                <div style="margin-top: 15px; padding: 10px; background-color: #d1f2eb; border: 1px solid #c3e6cb; border-radius: 6px;">
-                  <h5 style="color: #20c997; font-size: 14px; margin-top: 0;">
-                    <i class="fa fa-info-circle"></i> Acerca de los Accesorios
-                  </h5>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li>
-                      <b>Opcionales:</b> Los accesorios varían según el modelo de máquina
-                    </li>
-                    <li>
-                      <b>Configuración por modelo:</b> Cada modelo tiene su lista de accesorios disponibles
-                    </li>
-                    <li>
-                      <b>No aplica:</b> Si el modelo no soporta un accesorio específico
-                    </li>
-                    <li>
-                      <b>Subpartes:</b> Permite detallar qué componente específico del accesorio fue intervenido
-                    </li>
-                  </ul>
-                </div>
-              </page>
+    </list>
+  </field>
+  
+  <!-- Info adicional -->
+  <div style="margin-top: 15px; padding: 10px; background-color: #d1f2eb; border: 1px solid #c3e6cb; border-radius: 6px;">
+    <h5 style="color: #20c997; font-size: 14px; margin-top: 0;">
+      <i class="fa fa-info-circle"></i> Acerca de los Accesorios
+    </h5>
+    <ul style="margin-bottom: 0; font-size: 13px;">
+      <li><b>Opcionales:</b> Los accesorios varían según el modelo de máquina</li>
+      <li><b>Configuración por modelo:</b> Cada modelo tiene su lista de accesorios disponibles</li>
+      <li><b>No aplica:</b> Si el modelo no soporta un accesorio específico</li>
+      <li><b>Subpartes:</b> Permite detallar qué componente específico del accesorio fue intervenido</li>
+    </ul>
+  </div>
+  
+</page>
+             
               <page string="Detalle de falla proveedor">
                 <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #dc3545; border-radius: 4px;">
                   <h4 style="margin-top: 0; font-size: 16px; color: #dc3545;">
@@ -456,8 +519,12 @@
                   </ol>
                 </div>
               </page>
+              
+ 
+
             </notebook>
           </sheet>
+          
           <chatter/>
         </form>
       </field>
