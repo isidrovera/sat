@@ -195,14 +195,14 @@
                 <group string="📊 Resultado de Evaluación" 
            invisible="calidad_id == False">
                   <group>
-                    <field name="calidad_id" readonly="1" 
+                    <field name="calidad_id"  
                    widget="badge"
                    decoration-success="calidad_id == 'buena'"
                    decoration-warning="calidad_id == 'regular'"
                    decoration-danger="calidad_id == 'mala'"/>
                   </group>
                   <group>
-                    <field name="calidad_justificacion" readonly="1" 
+                    <field name="calidad_justificacion"  
                    widget="text"
                    invisible="calidad_justificacion == False"/>
                   </group>
