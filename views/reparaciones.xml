@@ -58,27 +58,7 @@
                     options="{'no_required_fields_validation': true}"
                 />
           </header>
-          <!-- ALERTA PARA REPARACIONES EN PROCESO -->
-          <div class="alert alert-info" role="alert" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;" invisible="estado_id != 'en_revision'">
-            <i class="fa fa-spinner fa-spin fa-2x" style="color: #0d6efd;"></i>
-            <div>
-              <strong style="font-size: 15px;">REPARACIÓN EN PROCESO</strong>
-              <br/>
-              <b>Recordatorio:</b> Complete todos los campos marcados como requeridos para finalización y documente adecuadamente 
-                    todas las acciones realizadas. El informe técnico debe ser detallado y preciso.
-            </div>
-          </div>
-          <!-- ALERTA PARA PRIORIDAD ALTA -->
-          <div class="alert alert-danger" role="alert" style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;" invisible="prioridad != 'alta'">
-            <i class="fa fa-exclamation-triangle fa-2x" style="color: #dc3545;"></i>
-            <div>
-              <strong style="font-size: 15px;">¡REPARACIÓN DE ALTA PRIORIDAD!</strong>
-              <br/>
-              <b>Tiempo máximo de atención: 24 horas</b>
-              <br/>
-                    Esta reparación ha sido marcada como urgente. Se requiere atención inmediata y actualización constante del progreso.
-            </div>
-          </div>
+          
           <sheet>
             <!-- TÍTULO DE LA REPARACIÓN -->
             <div class="oe_title">
@@ -86,10 +66,7 @@
               <h1>
                 <field name="name" placeholder="Número/ID de Reparación" style="font-size: 20px;"/>
               </h1>
-              <div style="margin-top: 5px; font-size: 13px; color: #6c757d; border-top: 1px dotted #ddd; padding-top: 5px;">
-                <i class="fa fa-info-circle"></i> Identificador único de esta orden de reparación. 
-                        Referencia este número en todas las comunicaciones relacionadas con esta reparación.
-              </div>
+              
             </div>
             <!-- CLIENTE -->
             <div class="oe_title">
@@ -97,20 +74,13 @@
               <h1>
                 <field name="cliente_id" placeholder="Seleccione el cliente" widget="many2one_avatar" style="font-size: 20px;"/>
               </h1>
-              <div style="margin-top: 5px; font-size: 13px; color: #6c757d; border-top: 1px dotted #ddd; padding-top: 5px;">
-                <i class="fa fa-user-tag"></i> Cliente asociado a este equipo. Toda comunicación y coordinación debe hacerse 
-                        directamente con el contacto principal de esta cuenta.
-              </div>
+              
             </div>
             <!-- DATOS PRINCIPALES EN GRUPOS -->
             <group>
               <!-- GRUPO: DATOS PARA REVISIÓN -->
               <group string="Datos para la revisión" style="background-color: #f0f9ff; border-radius: 8px; padding: 15px; border-left: 4px solid #0d6efd;">
-                <div style="margin-bottom: 15px; font-size: 13px; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;">
-                  <i class="fa fa-clipboard-check"></i>
-                  <b>Instrucciones:</b> Esta sección contiene la información necesaria 
-                            para programar y asignar correctamente la reparación. Complete todos los campos antes de asignar al técnico.
-                </div>
+                
                 <field name="prioridad" widget="badge" 
                             help="Define la urgencia de atención: Alta (24h), Media (48h), Baja (72h). Asignaciones de prioridad alta requieren aprobación de supervisor."/>
                 <field name="tipo_revision" widget="badge"
@@ -121,19 +91,11 @@
                             help="Técnico responsable asignado a esta reparación. Este técnico será el único autorizado para actualizar el estado de la reparación."/>
                 <field name="responsable_mobile_clean" 
                             help="Número de contacto directo del técnico para coordinaciones urgentes."/>
-                <div style="margin-top: 10px; font-size: 12px; background-color: #e7f1ff; padding: 8px; border-radius: 4px;">
-                  <i class="fa fa-mobile-alt" style="color: #0d6efd;"></i>
-                  <b>Nota:</b> El técnico asignado debe confirmar la recepción 
-                            de la asignación respondiendo al mensaje de WhatsApp dentro de las 2 horas siguientes.
-                </div>
+                
               </group>
               <!-- GRUPO: DATOS DEL EQUIPO -->
               <group string="Datos del equipo" style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; border-left: 4px solid #495057;">
-                <div style="margin-bottom: 15px; font-size: 13px; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;">
-                  <i class="fa fa-print"></i>
-                  <b>Instrucciones:</b> Verifique que los datos del equipo coincidan exactamente con 
-                            lo físico. Cualquier discrepancia debe ser reportada inmediatamente, especialmente en número de serie.
-                </div>
+                
                 <field name="importacion"
                             help="Referencia del lote de importación al que pertenece este equipo."/>
                 <field name="nombre_proveedor"
@@ -155,11 +117,7 @@
                 <field name="nombre_proveedor" invisible='True' />
                 <field name="autorizacion_cambio_digitos" invisible="True"/>
                 <field name="autenticacion_correcta" invisible="True"/>
-                <div style="margin-top: 10px; font-size: 12px; background-color: #e9ecef; padding: 8px; border-radius: 4px;">
-                  <i class="fa fa-exclamation-circle" style="color: #dc3545;"></i>
-                  <b>Importante:</b> Verifique siempre que el número de serie coincida 
-                            exactamente con el físico. Tome fotografía clara de la etiqueta al iniciar la revisión.
-                </div>
+                
               </group>
             </group>
             <notebook>
@@ -199,14 +157,14 @@
     <group string="📊 Resultado de Evaluación" 
            invisible="calidad_id == False">
         <group>
-            <field name="calidad_id" readonly="1" 
-                   widget="badge"
+            <field name="calidad_id"  
+                   
                    decoration-success="calidad_id == 'buena'"
                    decoration-warning="calidad_id == 'regular'"
                    decoration-danger="calidad_id == 'mala'"/>
         </group>
         <group>
-            <field name="calidad_justificacion" readonly="1" 
+            <field name="calidad_justificacion"  
                    widget="text"
                    invisible="calidad_justificacion == False"/>
         </group>
