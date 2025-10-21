@@ -198,98 +198,181 @@
                     checklist. Puedes editarlo manualmente si es necesario. </div>
                 </group>
               </page>
-              <page string="Check List" name="evaluaciones">
-                <div
-                  style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #6610f2; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #6610f2;">
-                    <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes </h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
-                    Este es el nuevo sistema de evaluación basado en componentes individuales:
-                  </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li>
-                      <b>Componente:</b> Tipo de componente evaluado (Fusora, ADF, Tóner, etc.) </li>
-                    <li>
-                      <b>Color:</b> Si aplica, indica el color del componente (K/C/M/Y) </li>
-                    <li>
-                      <b>Estado:</b> Condición actual del componente </li>
-                    <li>
-                      <b>Observaciones:</b> Notas técnicas adicionales </li>
-                  </ul>
-                </div>
+              <!-- ========================================== -->
+                        <!-- PÁGINA 1: COMPONENTES TÉCNICOS -->
+                        <!-- ========================================== -->
+                        <page string="Check List" name="evaluaciones">
+                            
+                            <!-- Header con gradiente y info -->
+                            <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                                <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
+                                    <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
+                                </h4>
+                                <p style="margin-bottom: 8px; font-size: 14px; opacity: 0.95;">
+                                    Evalúe el estado de cada componente técnico de la máquina:
+                                </p>
+                                <ul style="margin-bottom: 0; font-size: 13px; opacity: 0.9; line-height: 1.6;">
+                                    <li><b>Componente:</b> Tipo de componente evaluado (Fusora, ADF, Tóner, etc.)</li>
+                                    <li><b>Color:</b> Si aplica, indica el color del componente (K/C/M/Y)</li>
+                                    <li><b>⭐ Estado:</b> Condición actual del componente <span style="background-color: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-weight: bold;">OBLIGATORIO</span></li>
+                                    <li><b>Observaciones:</b> Notas técnicas adicionales</li>
+                                </ul>
+                            </div>
 
+                            <!-- Separator con emoji -->
+                            <separator string="📋 Componentes Evaluados" style="margin-top: 15px;"/>
+                            
+                            <!-- TABLA DE COMPONENTES CON MEJORAS VISUALES -->
+                            <field name="evaluacion_ids" nolabel="1" context="{'default_reparacion_id': active_id}">
+                                <list editable="bottom" 
+                                      create="false" 
+                                      delete="false"
+                                      decoration-success="estado_id"
+                                      decoration-warning="not estado_id"
+                                      decoration-muted="estado_id and estado_id.name == 'No Aplica'">
+                                    
+                                    <!-- Columna 1: Tipo de Componente (readonly) -->
+                                    <field name="componente_tipo_id" 
+                                           readonly="1"
+                                           string="🔧 Componente Técnico"
+                                           options="{'no_create': True, 'no_open': True}" />
+                                    
+                                    <!-- Columna 2: Color (readonly, opcional) -->
+                                    <field name="color_id" 
+                                           readonly="1" 
+                                           optional="show"
+                                           string="🎨 Color"
+                                           options="{'no_create': True, 'no_open': True}" />
+                                    
+                                    <!-- Columna 3: ESTADO - Campo Principal EDITABLE -->
+                                    <field name="estado_id" 
+                                           string="⭐ ESTADO (Obligatorio)"
+                                           placeholder="⚠️ DEBE SELECCIONAR EL ESTADO DEL COMPONENTE"
+                                           class="o_required_modifier"
+                                           options="{'no_create': True, 'no_open': True}"
+                                           help="Seleccione el estado actual de este componente" />
+                                    
+                                    <!-- Columna 4: Observaciones (opcional) -->
+                                    <field name="observaciones" 
+                                           optional="show"
+                                           string="📝 Observaciones Técnicas"
+                                           placeholder="Agregar detalles técnicos si es necesario..."
+                                           help="Notas adicionales sobre el estado del componente" />
+                                    
+                                </list>
+                            </field>
+                            
+                            <!-- Alert de ayuda visual -->
+                            <div class="alert alert-info" role="alert" style="margin-top: 15px; border-left: 4px solid #667eea; background-color: #e7f3ff;">
+                                <h5 style="margin-top: 0; color: #667eea; font-size: 14px; font-weight: 600;">
+                                    <i class="fa fa-info-circle"></i> Guía Visual
+                                </h5>
+                                <p style="margin-bottom: 8px; font-size: 13px;">
+                                    Las filas cambian de color según su estado:
+                                </p>
+                                <ul style="margin-bottom: 0; font-size: 13px; line-height: 1.8;">
+                                    <li><span style="display: inline-block; width: 20px; height: 20px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 3px; vertical-align: middle; margin-right: 8px;"></span> <b>Amarillo:</b> Falta seleccionar el estado (⚠️ pendiente)</li>
+                                    <li><span style="display: inline-block; width: 20px; height: 20px; background-color: #d4edda; border: 1px solid #28a745; border-radius: 3px; vertical-align: middle; margin-right: 8px;"></span> <b>Verde:</b> Estado completado correctamente (✅ listo)</li>
+                                    <li><span style="display: inline-block; width: 20px; height: 20px; background-color: #e2e3e5; border: 1px solid #6c757d; border-radius: 3px; vertical-align: middle; margin-right: 8px;"></span> <b>Gris:</b> Marcado como "No Aplica"</li>
+                                </ul>
+                            </div>
 
-                <!-- List view de evaluaciones - SOLO EDICIÓN -->
-                <separator string="Componentes Evaluados" />
-                <field name="evaluacion_ids" nolabel="1">
-                  <list editable="bottom" create="false" delete="false">
-                    <field name="componente_tipo_id"
-                      readonly="1"
-                      options="{'no_create': True, 'no_open': True}" />
-                    <field name="color_id"
-                      readonly="1"
-                      optional="show"
-                      options="{'no_create': True, 'no_open': True}" />
-                    <field name="estado_id"
-                    />
-                    <field name="observaciones" optional="show"
-                      placeholder="Observaciones..." />
-                  </list>
-                </field>
+                        </page>
 
+                        <!-- ========================================== -->
+                        <!-- PÁGINA 2: ACCESORIOS -->
+                        <!-- ========================================== -->
+                        <page string="Accesorios" name="accesorios_eval">
 
-              </page>
+                            <!-- Header con gradiente verde -->
+                            <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);">
+                                <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
+                                    <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
+                                </h4>
+                                <p style="margin-bottom: 8px; font-size: 14px; opacity: 0.95;">
+                                    Evalúe los accesorios opcionales instalados en la máquina:
+                                </p>
+                                <ul style="margin-bottom: 0; font-size: 13px; opacity: 0.9; line-height: 1.6;">
+                                    <li><b>Tipo:</b> LCT, HDD, Wi-Fi, Panel Smart, Finalizadores, etc.</li>
+                                    <li><b>⭐ Estado:</b> Instalado y operativo / Con falla / No instalado / No aplica <span style="background-color: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-weight: bold;">OBLIGATORIO</span></li>
+                                    <li><b>Subpartes:</b> Componentes específicos del accesorio intervenidos</li>
+                                    <li><b>Observaciones:</b> Notas técnicas adicionales</li>
+                                </ul>
+                            </div>
 
-              <page string="Accesorios" name="accesorios_eval">
+                            <!-- Separator con emoji -->
+                            <separator string="🔌 Accesorios Evaluados" style="margin-top: 15px;"/>
+                            
+                            <!-- TABLA DE ACCESORIOS CON MEJORAS VISUALES -->
+                            <field name="accesorio_eval_ids" nolabel="1" context="{'default_reparacion_id': active_id}">
+                                <list string="Evaluación de Accesorios" 
+                                      editable="bottom" 
+                                      create="false"
+                                      delete="false"
+                                      decoration-success="estado_id"
+                                      decoration-warning="not estado_id"
+                                      decoration-muted="estado_id and estado_id.name == 'No Aplica'">
+                                    
+                                    <!-- Columna 1: Tipo de Accesorio (readonly) -->
+                                    <field name="tipo_id" 
+                                           readonly="1"
+                                           string="🔌 Tipo de Accesorio" />
+                                    
+                                    <!-- Columna 2: ESTADO - Campo Principal EDITABLE -->
+                                    <field name="estado_id"
+                                           string="⭐ ESTADO (Obligatorio)"
+                                           placeholder="⚠️ DEBE SELECCIONAR EL ESTADO"
+                                           class="o_required_modifier"
+                                           options="{'no_create': True, 'no_open': True}"
+                                           help="Seleccione el estado actual de este accesorio" />
+                                    
+                                    <!-- Columna 3: Subpartes (opcional) -->
+                                    <field name="subparte_ids" 
+                                           widget="many2many_tags"
+                                           string="🔩 Subpartes Intervenidas"
+                                           options="{'no_create': True, 'color_field': 'color'}"
+                                           optional="show"
+                                           help="Seleccione las subpartes específicas que fueron intervenidas" />
+                                    
+                                    <!-- Columna 4: Observaciones (opcional) -->
+                                    <field name="observaciones" 
+                                           optional="show"
+                                           string="📝 Notas Técnicas"
+                                           placeholder="Agregar detalles adicionales..."
+                                           help="Observaciones sobre el accesorio" />
+                                    
+                                </list>
+                            </field>
 
-                <!-- Header informativo -->
-                <div
-                  style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #20c997; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #20c997;">
-                    <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios </h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
-                    Accesorios opcionales instalados en la máquina:
-                  </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li><b>Tipo:</b> LCT, HDD, Wi-Fi, Panel Smart, Finalizadores, etc.</li>
-                    <li><b>Estado:</b> Instalado y operativo / Con falla / No instalado / No aplica</li>
-                    <li><b>Subpartes:</b> Componentes específicos del accesorio</li>
-                  </ul>
-                </div>
+                            <!-- Info adicional con diseño mejorado -->
+                            <div class="alert alert-success" role="alert" style="margin-top: 15px; border-left: 4px solid #38ef7d; background-color: #d4edda;">
+                                <h5 style="color: #11998e; font-size: 14px; margin-top: 0; font-weight: 600;">
+                                    <i class="fa fa-lightbulb-o"></i> Acerca de los Accesorios
+                                </h5>
+                                <ul style="margin-bottom: 0; font-size: 13px; line-height: 1.8;">
+                                    <li><b>Opcionales:</b> Los accesorios varían según el modelo de máquina</li>
+                                    <li><b>Configuración por modelo:</b> Cada modelo tiene su lista de accesorios disponibles</li>
+                                    <li><b>No aplica:</b> Si el modelo no soporta un accesorio específico, márquelo como "No Aplica"</li>
+                                    <li><b>Subpartes:</b> Permite detallar qué componente específico del accesorio fue intervenido</li>
+                                </ul>
+                            </div>
 
-                <!-- Tabla de evaluaciones de accesorios -->
-                <separator string="Accesorios Evaluados" />
-                <field name="accesorio_eval_ids" nolabel="1">
-                  <list string="Evaluación de Accesorios" editable="bottom" create="false"
-                    delete="false">
-                    <field name="tipo_id" readonly="1" />
-                    <field name="estado_id"
-                      options="{'no_create': True, 'no_open': True}"
-                      placeholder="Seleccionar estado..." />
-                    <field name="subparte_ids" widget="many2many_tags"
-                      options="{'no_create': True}"
-                      optional="show" />
-                    <field name="observaciones" optional="show"
-                      placeholder="Observaciones..." />
-                  </list>
-                </field>
+                            <!-- Ayuda visual (igual que componentes) -->
+                            <div class="alert alert-info" role="alert" style="margin-top: 10px; border-left: 4px solid #11998e; background-color: #d1ecf1;">
+                                <h5 style="margin-top: 0; color: #11998e; font-size: 14px; font-weight: 600;">
+                                    <i class="fa fa-info-circle"></i> Guía Visual
+                                </h5>
+                                <p style="margin-bottom: 8px; font-size: 13px;">
+                                    Las filas cambian de color según su estado:
+                                </p>
+                                <ul style="margin-bottom: 0; font-size: 13px; line-height: 1.8;">
+                                    <li><span style="display: inline-block; width: 20px; height: 20px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 3px; vertical-align: middle; margin-right: 8px;"></span> <b>Amarillo:</b> Falta seleccionar el estado (⚠️ pendiente)</li>
+                                    <li><span style="display: inline-block; width: 20px; height: 20px; background-color: #d4edda; border: 1px solid #28a745; border-radius: 3px; vertical-align: middle; margin-right: 8px;"></span> <b>Verde:</b> Estado completado correctamente (✅ listo)</li>
+                                    <li><span style="display: inline-block; width: 20px; height: 20px; background-color: #e2e3e5; border: 1px solid #6c757d; border-radius: 3px; vertical-align: middle; margin-right: 8px;"></span> <b>Gris:</b> Marcado como "No Aplica"</li>
+                                </ul>
+                            </div>
 
-                <!-- Info adicional -->
-                <div
-                  style="margin-top: 15px; padding: 10px; background-color: #d1f2eb; border: 1px solid #c3e6cb; border-radius: 6px;">
-                  <h5 style="color: #20c997; font-size: 14px; margin-top: 0;">
-                    <i class="fa fa-info-circle"></i> Acerca de los Accesorios </h5>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li><b>Opcionales:</b> Los accesorios varían según el modelo de máquina</li>
-                    <li><b>Configuración por modelo:</b> Cada modelo tiene su lista de accesorios
-                      disponibles</li>
-                    <li><b>No aplica:</b> Si el modelo no soporta un accesorio específico</li>
-                    <li><b>Subpartes:</b> Permite detallar qué componente específico del accesorio
-                      fue intervenido</li>
-                  </ul>
-                </div>
-
-              </page>
+                        </page>
 
               <page string="Detalle de falla proveedor">
                 <div
