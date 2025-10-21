@@ -45,6 +45,7 @@
           <field name="code" />
           <field name="is_critical" />
           <field name="is_color_sensitive" />
+          <field name="active" invisible="1"/>
         </list>
       </field>
     </record>

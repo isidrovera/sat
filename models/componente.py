@@ -1,6 +1,5 @@
 # models/componente.py
 from odoo import models, fields, api
-
 class ComponenteTipo(models.Model):
     _name = 'componente.tipo'
     _description = 'Tipo de Componente (IU, Fusora, Faja, ADF, Tray, etc.)'
@@ -10,6 +9,9 @@ class ComponenteTipo(models.Model):
     is_color_sensitive = fields.Boolean(string="Difiere por color (K/C/M/Y)", default=False)
     is_critical = fields.Boolean(string="Crítico (puede dejar no operativo)", default=True)
     sequence = fields.Integer(default=10)
+
+    # Habilita archivar/desarchivar
+    active = fields.Boolean(default=True)
 
 
 class ComponenteSubparte(models.Model):
