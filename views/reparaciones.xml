@@ -8,315 +8,322 @@
         <form string="Gestión de Reparaciones">
           <!-- HEADER: Con botones mejorados e iconos modernos -->
           <header>
-            <field name="estado_id" invisible="1"/>
-            <button name="action_generar_informe" 
-            type="object" 
-            string="Generar Informe Técnico"
-            class="btn-primary"
+            <field name="estado_id" invisible="1" />
+            <button name="action_generar_informe"
+              type="object"
+              string="Generar Informe Técnico"
+              class="btn-primary"
             />
-            <button string="Finalizar Reparación" 
-                        name="action_finalizar_reparacion" 
-                        type="object"
-                        class="btn-success"
-                        help="Completa el proceso de reparación. Solo use este botón cuando TODAS las verificaciones hayan sido completadas satisfactoriamente y el equipo esté operativo 100%."
-                        icon="fa-check-circle"
-                        decoration-info="estado_id == 'en_revision'"
-                        invisible="estado_id != 'en_revision'"/>
-            <button string="Asignar Técnico" 
-                    name="enviar_mensaje_whatsapp_reparaciones" 
-                    type="object"
-                    class="btn-primary"
-                    help="Asigna este equipo a un técnico especializado. Automáticamente enviará una notificación por WhatsApp con los detalles de la asignación."
-                    icon="fa-user-plus"
-                    groups="base.group_system"
-                    decoration-info="estado_id in ('para_revision', 'sin_revisar')"
-                    invisible="estado_id not in ('para_revision', 'sin_revisar')"/>
-            <button string="Generar QR" 
-                        name="imprimir_reporte_qr" 
-                        type="object"
-                        class="btn-info"
-                        help="Genera e imprime un código QR único para este equipo. Útil para seguimiento y control de inventario durante el proceso de reparación."
-                        icon="fa-qrcode"
-                        decoration-info="estado_id == 'en_revision'"
-                        invisible="estado_id != 'en_revision'"/>
-            <button name="action_open_gallery" 
-                    type="object" 
-                    string="Galería de Fotos"
-                    class="btn-secondary"
-                    help="Visualiza todas las fotografías tomadas durante el diagnóstico y proceso de reparación del equipo."
-                    icon="fa-camera"
-                    decoration-info="estado_id in ('en_revision', 'para_revision', 'finalizado', 'entregada')"
-                    invisible="estado_id not in ('en_revision', 'para_revision', 'finalizado', 'entregada')"/>
+            <button string="Finalizar Reparación"
+              name="action_finalizar_reparacion"
+              type="object"
+              class="btn-success"
+              help="Completa el proceso de reparación. Solo use este botón cuando TODAS las verificaciones hayan sido completadas satisfactoriamente y el equipo esté operativo 100%."
+              icon="fa-check-circle"
+              decoration-info="estado_id == 'en_revision'"
+              invisible="estado_id != 'en_revision'" />
+            <button string="Asignar Técnico"
+              name="enviar_mensaje_whatsapp_reparaciones"
+              type="object"
+              class="btn-primary"
+              help="Asigna este equipo a un técnico especializado. Automáticamente enviará una notificación por WhatsApp con los detalles de la asignación."
+              icon="fa-user-plus"
+              groups="base.group_system"
+              decoration-info="estado_id in ('para_revision', 'sin_revisar')"
+              invisible="estado_id not in ('para_revision', 'sin_revisar')" />
+            <button string="Generar QR"
+              name="imprimir_reporte_qr"
+              type="object"
+              class="btn-info"
+              help="Genera e imprime un código QR único para este equipo. Útil para seguimiento y control de inventario durante el proceso de reparación."
+              icon="fa-qrcode"
+              decoration-info="estado_id == 'en_revision'"
+              invisible="estado_id != 'en_revision'" />
+            <button name="action_open_gallery"
+              type="object"
+              string="Galería de Fotos"
+              class="btn-secondary"
+              help="Visualiza todas las fotografías tomadas durante el diagnóstico y proceso de reparación del equipo."
+              icon="fa-camera"
+              decoration-info="estado_id in ('en_revision', 'para_revision', 'finalizado', 'entregada')"
+              invisible="estado_id not in ('en_revision', 'para_revision', 'finalizado', 'entregada')" />
             <field name="estado_id" widget="statusbar" statusbar_visible="true" />
-            <button 
-                    name="action_request_parts" 
-                    string="Solicitar Partes" 
-                    type="object" 
-                    class="oe_highlight"
-                    icon="fa-cogs"
-                    help="Crea una solicitud formal de partes necesarias para completar la reparación. Complete primero el diagnóstico técnico antes de solicitar partes."
-                    options="{'no_required_fields_validation': true}"
-                />
+            <button
+              name="action_request_parts"
+              string="Solicitar Partes"
+              type="object"
+              class="oe_highlight"
+              icon="fa-cogs"
+              help="Crea una solicitud formal de partes necesarias para completar la reparación. Complete primero el diagnóstico técnico antes de solicitar partes."
+              options="{'no_required_fields_validation': true}"
+            />
           </header>
-          
+
           <sheet>
             <!-- TÍTULO DE LA REPARACIÓN -->
             <div class="oe_title">
               <label for="name" style="font-size: 16px; color: #212529;">Referencia de Reparación</label>
               <h1>
-                <field name="name" placeholder="Número/ID de Reparación" style="font-size: 20px;"/>
+                <field name="name" placeholder="Número/ID de Reparación" style="font-size: 20px;" />
               </h1>
-              
+
             </div>
             <!-- CLIENTE -->
             <div class="oe_title">
               <label for="cliente_id" style="font-size: 16px; color: #212529;">Cliente</label>
               <h1>
-                <field name="cliente_id" placeholder="Seleccione el cliente" widget="many2one_avatar" style="font-size: 20px;"/>
+                <field name="cliente_id" placeholder="Seleccione el cliente"
+                  widget="many2one_avatar" style="font-size: 20px;" />
               </h1>
-              
+
             </div>
             <!-- DATOS PRINCIPALES EN GRUPOS -->
             <group>
               <!-- GRUPO: DATOS PARA REVISIÓN -->
-              <group string="Datos para la revisión" style="background-color: #f0f9ff; border-radius: 8px; padding: 15px; border-left: 4px solid #0d6efd;">
-                
-                <field name="prioridad" widget="badge" 
-                            help="Define la urgencia de atención: Alta (24h), Media (48h), Baja (72h). Asignaciones de prioridad alta requieren aprobación de supervisor."/>
+              <group string="Datos para la revisión"
+                style="background-color: #f0f9ff; border-radius: 8px; padding: 15px; border-left: 4px solid #0d6efd;">
+
+                <field name="prioridad" widget="badge"
+                  help="Define la urgencia de atención: Alta (24h), Media (48h), Baja (72h). Asignaciones de prioridad alta requieren aprobación de supervisor." />
                 <field name="tipo_revision" widget="badge"
-                            help="Tipo de revisión requerida. Determina el protocolo técnico a seguir y el tipo de pruebas a realizar."/>
+                  help="Tipo de revisión requerida. Determina el protocolo técnico a seguir y el tipo de pruebas a realizar." />
                 <field name="ubicacion_id" widget="badge"
-                            help="Ubicación física actual del equipo. Asegúrese de que esta información sea exacta para evitar demoras en la localización."/>
-                <field name="responsable_id" widget="many2one_avatar" options="{'no_create': True}" readonly="estado_id == 'en_revision'"
-                            help="Técnico responsable asignado a esta reparación. Este técnico será el único autorizado para actualizar el estado de la reparación."/>
-                <field name="responsable_mobile_clean" 
-                            help="Número de contacto directo del técnico para coordinaciones urgentes."/>
-                
+                  help="Ubicación física actual del equipo. Asegúrese de que esta información sea exacta para evitar demoras en la localización." />
+                <field name="responsable_id" widget="many2one_avatar" options="{'no_create': True}"
+                  readonly="estado_id == 'en_revision'"
+                  help="Técnico responsable asignado a esta reparación. Este técnico será el único autorizado para actualizar el estado de la reparación." />
+                <field name="responsable_mobile_clean"
+                  help="Número de contacto directo del técnico para coordinaciones urgentes." />
+
               </group>
               <!-- GRUPO: DATOS DEL EQUIPO -->
-              <group string="Datos del equipo" style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; border-left: 4px solid #495057;">
-                
+              <group string="Datos del equipo"
+                style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; border-left: 4px solid #495057;">
+
                 <field name="importacion"
-                            help="Referencia del lote de importación al que pertenece este equipo."/>
+                  help="Referencia del lote de importación al que pertenece este equipo." />
                 <field name="nombre_proveedor"
-                            help="Proveedor original del equipo."/>
+                  help="Proveedor original del equipo." />
                 <field name="tipo_id" invisible="1" />
                 <field name="tipo_machine"
-                            help="Categoría del equipo (fotocopiadora, impresora, multifuncional, etc.)."/>
+                  help="Categoría del equipo (fotocopiadora, impresora, multifuncional, etc.)." />
                 <field name="marca"
-                            help="Marca del fabricante del equipo."/>
-                <field name="maquina_id" domain="[('estado_ventas_id', '=', 'sin_revisar')]" options="{'no_create': True}" readonly="estado_id == 'en_revision'" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
-                            help="Modelo específico del equipo. Esta información es crucial para la identificación de partes compatibles."/>
-                <field name="serie_id" readonly="True" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
-                            help="NÚMERO DE SERIE ÚNICO. Verifique física y visualmente que coincida con lo que aparece en la etiqueta del equipo."/>
+                  help="Marca del fabricante del equipo." />
+                <field name="maquina_id" domain="[('estado_ventas_id', '=', 'sin_revisar')]"
+                  options="{'no_create': True}" readonly="estado_id == 'en_revision'"
+                  style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
+                  help="Modelo específico del equipo. Esta información es crucial para la identificación de partes compatibles." />
+                <field name="serie_id" readonly="True"
+                  style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
+                  help="NÚMERO DE SERIE ÚNICO. Verifique física y visualmente que coincida con lo que aparece en la etiqueta del equipo." />
                 <field name="contometrok_id"
-                            help="Contador interno de impresiones/copias, ubicado en configuración o menú de información del equipo."/>
+                  help="Contador interno de impresiones/copias, ubicado en configuración o menú de información del equipo." />
                 <field name="contometro_inicial"
-                            help="Lectura inicial del contómetro al momento de iniciar la reparación. Sirve como referencia para pruebas técnicas."/>
+                  help="Lectura inicial del contómetro al momento de iniciar la reparación. Sirve como referencia para pruebas técnicas." />
                 <field name="nombre_maquina" invisible='True' />
                 <field name="nombre_proveedor" invisible='True' />
-                <field name="autorizacion_cambio_digitos" invisible="True"/>
-                <field name="autenticacion_correcta" invisible="True"/>
-                
+                <field name="autorizacion_cambio_digitos" invisible="True" />
+                <field name="autenticacion_correcta" invisible="True" />
+
               </group>
             </group>
             <notebook>
               <!-- PESTAÑA: INFORME TÉCNICO -->
               <page string="Informe Técnico">
+                <group string="📄 Informe Generado">
+                  <field name="informe"
+                    widget="html"
+                    readonly="0"
+                    placeholder="El informe se generará aquí cuando presiones el botón 'Generar Informe'..."
+                    nolabel="1"
+                    options="{'style-inline': true, 'resizable': true}" />
+                </group>
+                <group string="📊 Resultado de Evaluación"
+                >
+                  <group>
+                    <field name="calidad_id"
+                      decoration-success="calidad_id == 'buena'"
+                      decoration-warning="calidad_id == 'regular'"
+                      decoration-danger="calidad_id == 'mala'" />
+                  </group>
+                  <group>
+                    <field name="calidad_justificacion"
+                      widget="text"
+                      invisible="calidad_justificacion == False" />
+                  </group>
+                </group>
                 <!-- Configuración de generación -->
-    <group string="⚙️ Configuración">
-        <group>
-            <field name="modo_generacion_informe" widget="radio" 
-                   options="{'horizontal': true}"/>
-            <field name="informe_generado_por_ia" readonly="1" 
-                   invisible="informe_generado_por_ia == False"/>
-        </group>
-        <group>
-            <button name="action_generar_informe" 
-                    string="🪄 Generar Informe" 
-                    type="object" 
-                    class="oe_highlight btn-primary"
-                    help="Genera el informe técnico basado en las evaluaciones marcadas"/>
-        </group>
-    </group>
+                <group string="⚙️ Configuración">
+                  <group>
+                    <field name="modo_generacion_informe" widget="radio"
+                      options="{'horizontal': true}" />
+                    <field name="informe_generado_por_ia" readonly="1"
+                      invisible="informe_generado_por_ia == False" />
+                  </group>
+                  <group>
+                    <button name="action_generar_informe"
+                      string="🪄 Generar Informe"
+                      type="object"
+                      class="oe_highlight btn-primary"
+                      help="Genera el informe técnico basado en las evaluaciones marcadas" />
+                  </group>
+                </group>
 
-    <separator/>
+                <separator />
 
-    <!-- Observaciones del técnico -->
-    <group string="📝 Observaciones del Técnico">
-        <field name="observaciones_tecnico" 
-               widget="html" 
-               placeholder="Escribe aquí observaciones generales sobre esta reparación.&#10;&#10;Ejemplos:&#10;- 'Equipo con bajo uso, solo 15k copias'&#10;- 'Cliente reporta atascos frecuentes en bandeja 2'&#10;- 'Fusora hace ruido al imprimir'&#10;&#10;La IA usará este texto para generar un informe más preciso y contextualizado."
-               options="{'style-inline': true}"
-               nolabel="1"/>
-    </group>
+                <!-- Observaciones del técnico -->
+                <group string="📝 Observaciones del Técnico">
+                  <field name="observaciones_tecnico"
+                    widget="html"
+                    placeholder="Escribe aquí observaciones generales sobre esta reparación.&#10;&#10;Ejemplos:&#10;- 'Equipo con bajo uso, solo 15k copias'&#10;- 'Cliente reporta atascos frecuentes en bandeja 2'&#10;- 'Fusora hace ruido al imprimir'&#10;&#10;La IA usará este texto para generar un informe más preciso y contextualizado."
+                    options="{'style-inline': true}"
+                    nolabel="1" />
+                </group>
 
-    <separator/>
+                <separator />
 
-    <!-- Resultado de calidad -->
-    <group string="📊 Resultado de Evaluación" 
-           invisible="calidad_id == False">
-        <group>
-            <field name="calidad_id"  
-                   
-                   decoration-success="calidad_id == 'buena'"
-                   decoration-warning="calidad_id == 'regular'"
-                   decoration-danger="calidad_id == 'mala'"/>
-        </group>
-        <group>
-            <field name="calidad_justificacion"  
-                   widget="text"
-                   invisible="calidad_justificacion == False"/>
-        </group>
-    </group>
+                <!-- Resultado de calidad -->
 
-    <separator/>
 
-    <!-- Informe generado -->
-    <group string="📄 Informe Generado">
-        <field name="informe" 
-               widget="html" 
-               readonly="0"
-               placeholder="El informe se generará aquí cuando presiones el botón 'Generar Informe'..."
-               nolabel="1"
-               options="{'style-inline': true, 'resizable': true}"/>
-    </group>
+                <separator />
 
-    <!-- Información de auditoría -->
-    <group invisible="informe_generado_por_ia == False">
-        <div class="alert alert-info" role="alert" style="margin-bottom: 0px;">
-            <i class="fa fa-info-circle"/> 
-            <strong>Este informe fue generado con Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del checklist.
-            Puedes editarlo manualmente si es necesario.
-        </div>
-    </group>
+
+                <!-- Información de auditoría -->
+                <group invisible="informe_generado_por_ia == False">
+                  <div class="alert alert-info" role="alert" style="margin-bottom: 0px;">
+                    <i class="fa fa-info-circle" /> 
+            <strong>Este informe fue generado con
+                    Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del
+                    checklist. Puedes editarlo manualmente si es necesario. </div>
+                </group>
               </page>
-                           <page string="Check List" name="evaluaciones">
-  <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #6610f2; border-radius: 4px;">
-    <h4 style="margin-top: 0; font-size: 16px; color: #6610f2;">
-      <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
-    </h4>
-    <p style="margin-bottom: 5px; font-size: 13px;">
-      Este es el nuevo sistema de evaluación basado en componentes individuales:
-    </p>
-    <ul style="margin-bottom: 0; font-size: 13px;">
-      <li>
-        <b>Componente:</b> Tipo de componente evaluado (Fusora, ADF, Tóner, etc.)
-      </li>
-      <li>
-        <b>Color:</b> Si aplica, indica el color del componente (K/C/M/Y)
-      </li>
-      <li>
-        <b>Estado:</b> Condición actual del componente
-      </li>
-      <li>
-        <b>Observaciones:</b> Notas técnicas adicionales
-      </li>
-    </ul>
-  </div>
-  
-  
-  <!-- List view de evaluaciones - SOLO EDICIÓN -->
-  <separator string="Componentes Evaluados"/>
-  <field name="evaluacion_ids" nolabel="1">
-    <list editable="bottom" create="false" delete="false">
-      <field name="componente_tipo_id" 
-             readonly="1"
-             options="{'no_create': True, 'no_open': True}"/>
-      <field name="color_id" 
-             readonly="1"
-             optional="show"
-             options="{'no_create': True, 'no_open': True}"/>
-      <field name="estado_id" 
-            />
-      <field name="observaciones" optional="show" 
-             placeholder="Observaciones..."/>
-    </list>
-  </field>
-  
- 
-</page>
- 
-<page string="Accesorios" name="accesorios_eval">
-  
-  <!-- Header informativo -->
-  <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #20c997; border-radius: 4px;">
-    <h4 style="margin-top: 0; font-size: 16px; color: #20c997;">
-      <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
-    </h4>
-    <p style="margin-bottom: 5px; font-size: 13px;">
-      Accesorios opcionales instalados en la máquina:
-    </p>
-    <ul style="margin-bottom: 0; font-size: 13px;">
-      <li><b>Tipo:</b> LCT, HDD, Wi-Fi, Panel Smart, Finalizadores, etc.</li>
-      <li><b>Estado:</b> Instalado y operativo / Con falla / No instalado / No aplica</li>
-      <li><b>Subpartes:</b> Componentes específicos del accesorio</li>
-    </ul>
-  </div>
-  
-  <!-- Tabla de evaluaciones de accesorios -->
-  <separator string="Accesorios Evaluados"/>
-  <field name="accesorio_eval_ids" nolabel="1">
-    <list string="Evaluación de Accesorios" editable="bottom" create="false" delete="false">
-      <field name="tipo_id" readonly="1"/>
-      <field name="estado_id" 
-             options="{'no_create': True, 'no_open': True}"
-             placeholder="Seleccionar estado..."/>
-      <field name="subparte_ids" widget="many2many_tags"
-             options="{'no_create': True}"
-             optional="show"/>
-      <field name="observaciones" optional="show" 
-             placeholder="Observaciones..."/>
-    </list>
-  </field>
-  
-  <!-- Info adicional -->
-  <div style="margin-top: 15px; padding: 10px; background-color: #d1f2eb; border: 1px solid #c3e6cb; border-radius: 6px;">
-    <h5 style="color: #20c997; font-size: 14px; margin-top: 0;">
-      <i class="fa fa-info-circle"></i> Acerca de los Accesorios
-    </h5>
-    <ul style="margin-bottom: 0; font-size: 13px;">
-      <li><b>Opcionales:</b> Los accesorios varían según el modelo de máquina</li>
-      <li><b>Configuración por modelo:</b> Cada modelo tiene su lista de accesorios disponibles</li>
-      <li><b>No aplica:</b> Si el modelo no soporta un accesorio específico</li>
-      <li><b>Subpartes:</b> Permite detallar qué componente específico del accesorio fue intervenido</li>
-    </ul>
-  </div>
-  
-</page>
-             
-              <page string="Detalle de falla proveedor">
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #dc3545; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #dc3545;">
-                    <i class="fa fa-exclamation-triangle"></i> Fallas Reportadas por Proveedor
-                  </h4>
+              <page string="Check List" name="evaluaciones">
+                <div
+                  style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #6610f2; border-radius: 4px;">
+                  <h4 style="margin-top: 0; font-size: 16px; color: #6610f2;">
+                    <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes </h4>
                   <p style="margin-bottom: 5px; font-size: 13px;">
-                                En esta sección se documentan los problemas reportados originalmente por el proveedor:
-                            </p>
+                    Este es el nuevo sistema de evaluación basado en componentes individuales:
+                  </p>
                   <ul style="margin-bottom: 0; font-size: 13px;">
                     <li>
-                      <b>Descripción original:</b> Transcriba exactamente la descripción de falla proporcionada por el proveedor.
-                    </li>
+                      <b>Componente:</b> Tipo de componente evaluado (Fusora, ADF, Tóner, etc.) </li>
                     <li>
-                      <b>Evidencia recibida:</b> Adjunte las fotografías o documentación proporcionada por el proveedor.
-                    </li>
+                      <b>Color:</b> Si aplica, indica el color del componente (K/C/M/Y) </li>
                     <li>
-                      <b>Correlación:</b> Después del diagnóstico, indique si la falla reportada coincide con lo encontrado.
-                    </li>
+                      <b>Estado:</b> Condición actual del componente </li>
+                    <li>
+                      <b>Observaciones:</b> Notas técnicas adicionales </li>
+                  </ul>
+                </div>
+
+
+                <!-- List view de evaluaciones - SOLO EDICIÓN -->
+                <separator string="Componentes Evaluados" />
+                <field name="evaluacion_ids" nolabel="1">
+                  <list editable="bottom" create="false" delete="false">
+                    <field name="componente_tipo_id"
+                      readonly="1"
+                      options="{'no_create': True, 'no_open': True}" />
+                    <field name="color_id"
+                      readonly="1"
+                      optional="show"
+                      options="{'no_create': True, 'no_open': True}" />
+                    <field name="estado_id"
+                    />
+                    <field name="observaciones" optional="show"
+                      placeholder="Observaciones..." />
+                  </list>
+                </field>
+
+
+              </page>
+
+              <page string="Accesorios" name="accesorios_eval">
+
+                <!-- Header informativo -->
+                <div
+                  style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #20c997; border-radius: 4px;">
+                  <h4 style="margin-top: 0; font-size: 16px; color: #20c997;">
+                    <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios </h4>
+                  <p style="margin-bottom: 5px; font-size: 13px;">
+                    Accesorios opcionales instalados en la máquina:
+                  </p>
+                  <ul style="margin-bottom: 0; font-size: 13px;">
+                    <li><b>Tipo:</b> LCT, HDD, Wi-Fi, Panel Smart, Finalizadores, etc.</li>
+                    <li><b>Estado:</b> Instalado y operativo / Con falla / No instalado / No aplica</li>
+                    <li><b>Subpartes:</b> Componentes específicos del accesorio</li>
+                  </ul>
+                </div>
+
+                <!-- Tabla de evaluaciones de accesorios -->
+                <separator string="Accesorios Evaluados" />
+                <field name="accesorio_eval_ids" nolabel="1">
+                  <list string="Evaluación de Accesorios" editable="bottom" create="false"
+                    delete="false">
+                    <field name="tipo_id" readonly="1" />
+                    <field name="estado_id"
+                      options="{'no_create': True, 'no_open': True}"
+                      placeholder="Seleccionar estado..." />
+                    <field name="subparte_ids" widget="many2many_tags"
+                      options="{'no_create': True}"
+                      optional="show" />
+                    <field name="observaciones" optional="show"
+                      placeholder="Observaciones..." />
+                  </list>
+                </field>
+
+                <!-- Info adicional -->
+                <div
+                  style="margin-top: 15px; padding: 10px; background-color: #d1f2eb; border: 1px solid #c3e6cb; border-radius: 6px;">
+                  <h5 style="color: #20c997; font-size: 14px; margin-top: 0;">
+                    <i class="fa fa-info-circle"></i> Acerca de los Accesorios </h5>
+                  <ul style="margin-bottom: 0; font-size: 13px;">
+                    <li><b>Opcionales:</b> Los accesorios varían según el modelo de máquina</li>
+                    <li><b>Configuración por modelo:</b> Cada modelo tiene su lista de accesorios
+                      disponibles</li>
+                    <li><b>No aplica:</b> Si el modelo no soporta un accesorio específico</li>
+                    <li><b>Subpartes:</b> Permite detallar qué componente específico del accesorio
+                      fue intervenido</li>
+                  </ul>
+                </div>
+
+              </page>
+
+              <page string="Detalle de falla proveedor">
+                <div
+                  style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #dc3545; border-radius: 4px;">
+                  <h4 style="margin-top: 0; font-size: 16px; color: #dc3545;">
+                    <i class="fa fa-exclamation-triangle"></i> Fallas Reportadas por Proveedor </h4>
+                  <p style="margin-bottom: 5px; font-size: 13px;">
+                    En esta sección se documentan los problemas reportados originalmente por el
+                    proveedor:
+                  </p>
+                  <ul style="margin-bottom: 0; font-size: 13px;">
+                    <li>
+                      <b>Descripción original:</b> Transcriba exactamente la descripción de falla
+                      proporcionada por el proveedor. </li>
+                    <li>
+                      <b>Evidencia recibida:</b> Adjunte las fotografías o documentación
+                      proporcionada por el proveedor. </li>
+                    <li>
+                      <b>Correlación:</b> Después del diagnóstico, indique si la falla reportada
+                      coincide con lo encontrado. </li>
                   </ul>
                   <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Nota importante:</b> Esta información es fundamental para análisis de garantía y reclamos al proveedor.
-                                Sea preciso y objetivo en la documentación.
-                  </p>
+                    <b>Nota importante:</b> Esta información es fundamental para análisis de
+                    garantía y reclamos al proveedor. Sea preciso y objetivo en la documentación. </p>
                 </div>
                 <group>
                   <group>
-                    <field name="falla_proveedor" placeholder="Describa exactamente la falla reportada por el proveedor..." 
-                                    style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #fff9f9;" />
+                    <field name="falla_proveedor"
+                      placeholder="Describa exactamente la falla reportada por el proveedor..."
+                      style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #fff9f9;" />
                   </group>
                   <group>
-                    <field name="foto_problema" widget="image"/>
-                    <div style="font-size: 13px; color: #6c757d; margin-top: 10px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                    <field name="foto_problema" widget="image" />
+                    <div
+                      style="font-size: 13px; color: #6c757d; margin-top: 10px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
                       <b>Instrucciones para documentación fotográfica:</b>
                       <ul style="margin-top: 5px; margin-bottom: 0;">
                         <li>Adjunte las fotos originales proporcionadas por el proveedor</li>
@@ -330,119 +337,74 @@
               </page>
               <!-- PESTAÑA: DETALLE FALLA VENTAS -->
               <page string="Detalle falla ventas">
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #ffc107; border-radius: 4px;">
+                <div
+                  style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #ffc107; border-radius: 4px;">
                   <h4 style="margin-top: 0; font-size: 16px; color: #ffc107;">
-                    <i class="fa fa-store"></i> Fallas Reportadas por Ventas
-                  </h4>
+                    <i class="fa fa-store"></i> Fallas Reportadas por Ventas </h4>
                   <p style="margin-bottom: 5px; font-size: 13px;">
-                                Documente aquí los problemas o condiciones especiales reportados por el departamento de ventas:
-                            </p>
+                    Documente aquí los problemas o condiciones especiales reportados por el
+                    departamento de ventas:
+                  </p>
                   <ul style="margin-bottom: 0; font-size: 13px;">
                     <li>
-                      <b>Contexto comercial:</b> Incluya información sobre el contexto de venta (demo, exhibición, venta regular).
-                    </li>
+                      <b>Contexto comercial:</b> Incluya información sobre el contexto de venta
+                      (demo, exhibición, venta regular). </li>
                     <li>
-                      <b>Compromisos comerciales:</b> Documente cualquier compromiso hecho al cliente sobre la reparación.
-                    </li>
+                      <b>Compromisos comerciales:</b> Documente cualquier compromiso hecho al
+                      cliente sobre la reparación. </li>
                     <li>
-                      <b>Expectativas de tiempo:</b> Si hay plazos comerciales comprometidos, indíquelos claramente.
-                    </li>
+                      <b>Expectativas de tiempo:</b> Si hay plazos comerciales comprometidos,
+                      indíquelos claramente. </li>
                   </ul>
                   <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Importante para coordinación:</b> Esta información ayuda a priorizar y coordinar con el área comercial.
-                                La comunicación clara entre técnica y ventas es esencial para la satisfacción del cliente.
-                  </p>
+                    <b>Importante para coordinación:</b> Esta información ayuda a priorizar y
+                    coordinar con el área comercial. La comunicación clara entre técnica y ventas es
+                    esencial para la satisfacción del cliente. </p>
                 </div>
                 <group>
                   <group>
-                    <field name="falla_ventas" placeholder="Detalle aquí los problemas reportados por ventas y cualquier compromiso comercial relacionado..." 
-                                    style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #fffbf0;" />
+                    <field name="falla_ventas"
+                      placeholder="Detalle aquí los problemas reportados por ventas y cualquier compromiso comercial relacionado..."
+                      style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #fffbf0;" />
                   </group>
                   <group>
-                    <div style="border: 1px solid #ffeeba; background-color: #fff3cd; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                    <div
+                      style="border: 1px solid #ffeeba; background-color: #fff3cd; padding: 15px; border-radius: 6px; margin-top: 10px;">
                       <h5 style="color: #856404; font-size: 14px; margin-top: 0;">
-                        <i class="fa fa-exchange-alt"></i> Proceso de Coordinación Técnica-Ventas
-                      </h5>
+                        <i class="fa fa-exchange-alt"></i> Proceso de Coordinación Técnica-Ventas </h5>
                       <ol style="margin-bottom: 0; font-size: 13px; padding-left: 20px;">
                         <li style="margin-bottom: 5px;">
-                          <b>Validación técnica:</b> El departamento técnico debe validar si los compromisos de ventas son factibles.
-                        </li>
+                          <b>Validación técnica:</b> El departamento técnico debe validar si los
+                          compromisos de ventas son factibles. </li>
                         <li style="margin-bottom: 5px;">
-                          <b>Comunicación de hallazgos:</b> Cualquier discrepancia entre lo ofrecido y lo factible debe comunicarse inmediatamente.
-                        </li>
+                          <b>Comunicación de hallazgos:</b> Cualquier discrepancia entre lo ofrecido
+                          y lo factible debe comunicarse inmediatamente. </li>
                         <li style="margin-bottom: 5px;">
-                          <b>Actualización de tiempos:</b> Mantener informado al equipo de ventas sobre los plazos reales de reparación.
-                        </li>
+                          <b>Actualización de tiempos:</b> Mantener informado al equipo de ventas
+                          sobre los plazos reales de reparación. </li>
                         <li>
-                          <b>Documentación final:</b> Al completar la reparación, documentar claramente lo que se reparó para facilitar la comunicación con el cliente.
-                        </li>
+                          <b>Documentación final:</b> Al completar la reparación, documentar
+                          claramente lo que se reparó para facilitar la comunicación con el cliente. </li>
                       </ol>
                     </div>
                   </group>
                 </group>
               </page>
               <!-- PESTAÑA: GALERÍA DE FOTOS -->
-              <page string="Galería de Fotos" name="fotos" groups="base.group_system" >
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #17a2b8; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #17a2b8;">
-                    <i class="fa fa-images"></i> Documentación Fotográfica
-                  </h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
-                                La documentación fotográfica completa es esencial para el seguimiento del proceso de reparación:
-                            </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li>
-                      <b>Fotos iniciales:</b> Capture el estado del equipo al recibirlo (exterior e interior).
-                    </li>
-                    <li>
-                      <b>Componentes dañados:</b> Documente claramente todas las piezas con problemas antes de reemplazarlas.
-                    </li>
-                    <li>
-                      <b>Proceso de reparación:</b> Registre los pasos clave durante la reparación para referencia futura.
-                    </li>
-                    <li>
-                      <b>Resultado final:</b> Tome fotos del equipo reparado y muestras de impresión/copia como evidencia.
-                    </li>
-                  </ul>
-                  <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Requerimientos de imagen:</b> Las fotos deben ser claras, bien iluminadas y enfocadas. Incluya una regla o referencia
-                                de tamaño cuando sea relevante. Todas las etiquetas y números de serie deben ser legibles en las imágenes.
-                  </p>
-                </div>
+              <page string="Galería de Fotos" name="fotos" groups="base.group_system">
+
                 <!-- Galería de imágenes -->
                 <div style="margin: 15px 0;">
-                  <field name="fotos_ids" widget="gallery_widget"/>
+                  <field name="fotos_ids" widget="gallery_widget" />
                 </div>
-                <div style="margin-top: 15px; padding: 10px; background-color: #e7f5fa; border: 1px solid #bee5eb; border-radius: 6px;">
-                  <h5 style="color: #0c5460; font-size: 14px; margin-top: 0;">
-                    <i class="fa fa-camera-retro"></i> Protocolo de Documentación Visual
-                  </h5>
-                  <ol style="margin-bottom: 0; font-size: 13px; padding-left: 20px;">
-                    <li style="margin-bottom: 5px;">
-                      <b>Fotos de identificación:</b> Siempre incluya fotos del número de serie y etiquetas del fabricante.
-                    </li>
-                    <li style="margin-bottom: 5px;">
-                      <b>Antes y después:</b> Documente el estado de cada componente antes y después de la intervención.
-                    </li>
-                    <li style="margin-bottom: 5px;">
-                      <b>Muestras de calidad:</b> Incluya imágenes de impresiones/copias realizadas para evaluación de calidad.
-                    </li>
-                    <li style="margin-bottom: 5px;">
-                      <b>Organización:</b> Nombre las imágenes con formato descriptivo (ej: "SN12345_FusoraDañada_Antes").
-                    </li>
-                    <li>
-                      <b>Resolución:</b> Use imágenes de al menos 1200x800 píxeles para permitir zoom en detalles importantes.
-                    </li>
-                  </ol>
-                </div>
+
               </page>
-              
- 
+
 
             </notebook>
           </sheet>
-          
-          <chatter/>
+
+          <chatter />
         </form>
       </field>
     </record>
@@ -461,7 +423,11 @@
           <field name="tipo_revision" widget="badge" />
           <field name="ubicacion_id" widget="badge" />
           <field name="responsable_id" widget="many2one_avatar" />
-          <field name="estado_id" widget="badge" decoration-muted="estado_id == 'en_revision'" decoration-info="estado_id == 'en_revision'" decoration-success="estado_id == 'finalizado'" decoration-danger="estado_id not in ('sin_revisar','en_revision','finalizado','entregada')" decoration-warning="estado_id == 'entregada'" />
+          <field name="estado_id" widget="badge" decoration-muted="estado_id == 'en_revision'"
+            decoration-info="estado_id == 'en_revision'"
+            decoration-success="estado_id == 'finalizado'"
+            decoration-danger="estado_id not in ('sin_revisar','en_revision','finalizado','entregada')"
+            decoration-warning="estado_id == 'entregada'" />
         </list>
         <!-- Aplicar el dominio solo para el grupo técnico -->
       </field>
@@ -482,8 +448,8 @@
       <field name="model">reparaciones.reparaciones</field>
       <field name="arch" type="xml">
         <kanban class="o_kanban_dashboard" default_group_by="estado_id"
-            decoration-success="estado_id == 'finalizado'"
-            sample="1">
+          decoration-success="estado_id == 'finalizado'"
+          sample="1">
           <field name="name" />
           <field name="cliente_id" />
           <field name="marca" />
@@ -499,107 +465,110 @@
           <field name="responsable_id" />
           <field name="asesora_id" />
           <progressbar field="estado_id"
-                colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger", "en_revision": "info"}' />
+            colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger", "en_revision": "info"}' />
           <templates>
             <t t-name="card">
               <div class="oe_kanban_global_click position-relative shadow-sm rounded">
                 <!-- Header con número de reparación -->
-                <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
+                <div
+                  class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
                   <div class="d-flex align-items-center">
-                    <i class="fa fa-file-invoice text-primary me-2" title="Número de Reparación"/>
-                    <field name="name" class="fw-bold"/>
+                    <i class="fa fa-file-invoice text-primary me-2" title="Número de Reparación" />
+                    <field name="name" class="fw-bold" />
                   </div>
                 </div>
                 <!-- Contenido principal -->
                 <div class="p-3">
                   <!-- Cliente y Asesora -->
                   <div class="d-flex align-items-center mb-2">
-                    <i class="fa fa-building text-info me-2" title="Cliente"/>
+                    <i class="fa fa-building text-info me-2" title="Cliente" />
                     <span class="text-muted me-1">Cliente:</span>
-                    <field name="cliente_id" class="fw-bold"/>
+                    <field name="cliente_id" class="fw-bold" />
                   </div>
                   <div class="d-flex align-items-center mb-2">
-                    <i class="fa fa-female text-pink me-2" title="Asesora"/>
+                    <i class="fa fa-female text-pink me-2" title="Asesora" />
                     <span class="text-muted me-1">Asesora:</span>
-                    <field name="asesora_id"/>
+                    <field name="asesora_id" />
                   </div>
                   <!-- Marca -->
                   <div class="d-flex align-items-center mb-2">
-                    <i class="fa fa-copyright text-success me-2" title="Marca"/>
+                    <i class="fa fa-copyright text-success me-2" title="Marca" />
                     <span class="text-muted me-1">Marca:</span>
-                    <field name="marca"/>
+                    <field name="marca" />
                   </div>
                   <!-- Modelo -->
                   <div class="d-flex align-items-center mb-2">
-                    <i class="fa fa-print text-primary me-2" title="Modelo"/>
+                    <i class="fa fa-print text-primary me-2" title="Modelo" />
                     <span class="text-muted me-1">Modelo:</span>
                     <field name="maquina_id" />
                   </div>
                   <!-- Serie -->
                   <div class="d-flex align-items-center mb-2">
-                    <i class="fa fa-qrcode text-secondary me-2" title="Serie"/>
+                    <i class="fa fa-qrcode text-secondary me-2" title="Serie" />
                     <span class="text-muted me-1">Serie:</span>
                     <field name="serie_id" />
                   </div>
                   <!-- Contómetro -->
                   <div class="d-flex align-items-center mb-2">
-                    <i class="fa fa-calculator text-purple me-2" title="Contómetro"/>
+                    <i class="fa fa-calculator text-purple me-2" title="Contómetro" />
                     <span class="text-muted me-1">Contómetro:</span>
-                    <field name="contometrok_id"/>
+                    <field name="contometrok_id" />
                   </div>
                   <!-- Observaciones -->
                   <div class="d-flex align-items-center mb-2">
-                    <i class="fa fa-question-circle text-danger me-2" title="Observaciones"/>
+                    <i class="fa fa-question-circle text-danger me-2" title="Observaciones" />
                     <span class="text-muted me-1">Obs:</span>
-                    <field name="falla_ventas" class="text-truncate"/>
+                    <field name="falla_ventas" class="text-truncate" />
                   </div>
                   <!-- Importación -->
                   <div class="d-flex align-items-center mb-2">
-                    <i class="fa fa-plane text-success me-2" title="Importación"/>
+                    <i class="fa fa-plane text-success me-2" title="Importación" />
                     <span class="text-muted me-1">Import.:</span>
-                    <field name="importacion"/>
+                    <field name="importacion" />
                   </div>
                   <!-- Estado y Tipo de revisión -->
-                  <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-2">
+                  <div
+                    class="d-flex justify-content-between align-items-center mb-2 border-top pt-2">
                     <div class="d-flex align-items-center">
-                      <i class="fa fa-check-circle text-warning me-1" title="Estado"/>
+                      <i class="fa fa-check-circle text-warning me-1" title="Estado" />
                       <field name="estado_id" widget="badge"
-                                        decoration-success="estado_id == 'finalizado'"
-                                        decoration-warning="estado_id == 'en_revision'"
-                                        decoration-danger="estado_id == 'con_problemas'"/>
+                        decoration-success="estado_id == 'finalizado'"
+                        decoration-warning="estado_id == 'en_revision'"
+                        decoration-danger="estado_id == 'con_problemas'" />
                     </div>
                     <div>
-                      <i class="fa fa-wrench text-info me-1" title="Tipo"/>
-                      <field name="tipo_revision" widget="badge"/>
+                      <i class="fa fa-wrench text-info me-1" title="Tipo" />
+                      <field name="tipo_revision" widget="badge" />
                     </div>
                   </div>
                   <!-- Ubicación y Prioridad -->
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="d-flex align-items-center">
-                      <i class="fa fa-location-arrow text-danger me-1" title="Ubicación"/>
-                      <field name="ubicacion_id"/>
+                      <i class="fa fa-location-arrow text-danger me-1" title="Ubicación" />
+                      <field name="ubicacion_id" />
                     </div>
                     <div class="d-flex align-items-center">
-                      <i class="fa fa-exclamation-circle text-warning me-1" title="Prioridad"/>
-                      <field name="prioridad" widget="priority"/>
+                      <i class="fa fa-exclamation-circle text-warning me-1" title="Prioridad" />
+                      <field name="prioridad" widget="priority" />
                     </div>
                   </div>
                   <!-- Footer con técnico -->
                   <div class="pt-2 border-top">
                     <div class="d-flex align-items-center">
-                      <i class="fa fa-male text-primary me-1" title="Técnico"/>
+                      <i class="fa fa-male text-primary me-1" title="Técnico" />
                       <span class="text-muted me-1">Técnico:</span>
-                      <field name="responsable_id"/>
+                      <field name="responsable_id" />
                     </div>
                   </div>
                 </div>
                 <!-- Indicador lateral de estado -->
-                <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
+                <div
+                  t-attf-class="position-absolute top-0 start-0 h-100 w-1 
                             #{record.estado_id.raw_value == 'finalizado' ? 'bg-success' : 
                             record.estado_id.raw_value == 'con_problemas' ? 'bg-danger' :
                             record.estado_id.raw_value == 'en_revision' ? 'bg-info' : 
-                            record.estado_id.raw_value == 'de_partes' ? 'bg-warning' : 'bg-secondary'}"/>
-                    </div>
+                            record.estado_id.raw_value == 'de_partes' ? 'bg-warning' : 'bg-secondary'}" />
+              </div>
             </t>
           </templates>
         </kanban>
