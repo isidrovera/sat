@@ -993,121 +993,66 @@ class Reparaciones(models.Model):
     
     
     def action_finalizar_reparacion(self):
-        # Primero validamos los campos requeridos para finalización
+        """
+        Finaliza la reparación validando todos los requisitos necesarios.
+        
+        Validaciones realizadas:
+        - Campos básicos: informe y calidad
+        - Evaluaciones de componentes completadas
+        - Evaluaciones de accesorios completadas
+        - Contómetro actualizado y validado
+        - Mínimo de fotos requeridas
+        - Autenticación del usuario
+        """
         self.ensure_one()
         
-        # Lista de campos marcados con required_for_finalization=True
-        required_fields = [
-            'informe', 'calidad_id', 'tapas_id', 'panel_id',
-            'tray_id', 'adf_simple_id', 'adf_dual_id', 'finalizador_interno_id',
-            'finalizador_externo_id', 'mueble_id', 'lct_id', 'wi_fi_id',
-            'cable_poder_id', 'panel_normal_id', 'panel_smart_id', 'ot_id', 'hdd_id',
-            'copia_id', 'impresion_id', 'impresion_usb_id', 'scaner_smb_id',
-            'scaner_usb_id', 'scaner_ftp_id', 'scaner_mail_id', 'bypass_id',
-            'tray1_id', 'tray2_id', 'tray3_id', 'tray4_id', 'adf_id',
-            'finalizador_id', 'tacho_id', 'fusora_id', 'rodillo_id',
-            'calor_id', 'transfer_id', 'optico_id', 'toner_black_id',
-            'black_id', 'developerk_id'
-        ]
-        
-        # Agregar campos específicos para equipos a color
-        if self.tipo_id == 'color':
-            required_fields.extend([
-                'toner_magenta_id', 'toner_cyan_id', 'toner_yellow_id',
-                'magenta_id', 'cyan_id', 'yellow_id',
-                'developerm_id', 'developerc_id', 'developery_id'
-            ])
-        
-        # Validar que todos los campos requeridos tengan valor
-        missing_fields = []
-        for field in required_fields:
-            if not self[field]:
-                field_name = self._fields[field].string
-                missing_fields.append(field_name)
-        
-        if missing_fields:
-            raise ValidationError(_(
-                "Para finalizar la reparación, debes completar los siguientes campos: %s"
-            ) % ", ".join(missing_fields))
-        
-        # Continuar con el código original de la función action_finalizar_reparacion
-        # Deshabilitar las reglas de acceso temporalmente para evitar restricciones
-        self = self.sudo()  # Utilizamos sudo() para evitar restricciones de acceso
-
         _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
-
-        # Verificar si la autenticación ya fue realizada
-        if not self.autenticacion_correcta:
-            _logger.info(f"Autenticación requerida para el usuario {self.env.user.id}")
-            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')
-            if grupo_validacion in self.env.user.groups_id:
-                _logger.info("Usuario pertenece al grupo que necesita autenticación. Llamando al wizard de autenticación.")
-                return {
-                    'type': 'ir.actions.act_window',
-                    'res_model': 'reparacion.autenticacion.wizard',
-                    'view_mode': 'form',
-                    'target': 'new',
-                    'context': {'default_reparacion_id': self.id},
-                }
-
-        # Verificar que contometrok_id y contometro_inicial sean cadenas y no estén vacíos
-        if not self.contometrok_id or not self.contometro_inicial:
-            _logger.error(f"Reparación ID {self.id}: Los datos del contómetro no están configurados correctamente.")
-            raise UserError(_("❗ <b>Error en el Contómetro</b>: Los valores del contómetro no están configurados correctamente. Verifique e intente nuevamente."))
-
-        # Verificar si el contómetro fue actualizado
-        if self.contometrok_id == self.contometro_inicial:
-            _logger.warning(f"Reparación ID {self.id}: El contómetro no ha sido actualizado. Contómetro actual: {self.contometrok_id}")
-            raise UserError(_("❗ Error en el Contómetro: El contómetro no ha sido actualizado. Debe ser diferente del valor inicial."))
-
-        # Validar la cantidad de dígitos
-        if len(self.contometrok_id) != len(self.contometro_inicial):
-            if not self.autorizacion_cambio_digitos:
-                _logger.warning(f"Reparación ID {self.id}: Diferencia en la cantidad de dígitos del contómetro y sin autorización. Contómetro actual: {self.contometrok_id}, Contómetro inicial: {self.contometro_inicial}")
-                raise UserError(_("❗ Error en el Número de Dígitos: La cantidad de dígitos del contómetro actual no coincide con el inicial. Contacte al administrador para obtener autorización de cambio."))
-
-        # Validar cantidad mínima de fotos
-        if len(self.fotos_ids) < 10:
-            _logger.warning(f"Reparación ID {self.id}: Número insuficiente de fotos. Cantidad actual: {len(self.fotos_ids)}")
-            raise UserError(_("❗ Error en la Documentación Fotográfica: Se requieren al menos 10 fotos para finalizar la reparación. Actualmente hay %s fotos.") % len(self.fotos_ids))
-
-        # CORRECCIÓN: Generar el reporte QR usando la misma lógica que funciona en imprimir_reporte_qr
-        _logger.info(f"Generando reporte QR para reparación ID: {self.id}")
-        try:
-            _logger.info(f"Intentando generar reporte QR para reparación ID: {self.id}")
-            report = self.env.ref('sat.action_report_qr_codes_reparaciones_template')
-            # Generar el reporte de la misma forma que en imprimir_reporte_qr
-            report.with_context(discard_logo_check=True).report_action(self)
-            _logger.info(f"Reporte QR generado exitosamente para reparación ID: {self.id}")
-        except Exception as e:
-            _logger.error(f"Error generando reporte QR para reparación ID {self.id}: {e}")
-            # Si el reporte falla, no debe detener el proceso de finalización
-            _logger.warning("Continuando con el proceso de finalización sin el reporte QR")
-
-        try:
-            _logger.info(f"Enviando mensaje a la asesora para reparación ID: {self.id}")
-            self.enviar_mensaje_finalizacion_asesora()
-        except Exception as e:
-            _logger.error(f"Error enviando el mensaje a la asesora para reparación ID {self.id}: {e}")
-
-        try:
-            _logger.info(f"Enviando correo de finalización para reparación ID: {self.id}")
-            template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
-            template_id.send_mail(self.id, force_send=True)
-        except Exception as e:
-            _logger.error(f"Error enviando el correo para reparación ID {self.id}: {e}")
-
+        
+        # ====== VALIDACIONES DE CAMPOS BÁSICOS ======
+        self._validar_campos_basicos()
+        
+        # ====== VALIDACIONES DE EVALUACIONES ======
+        self._validar_evaluaciones_componentes()
+        self._validar_evaluaciones_accesorios()
+        
+        # ====== VALIDACIÓN DE AUTENTICACIÓN ======
+        if not self._validar_autenticacion():
+            return self._abrir_wizard_autenticacion()
+        
+        # ====== VALIDACIÓN DE CONTÓMETRO ======
+        self._validar_contometro()
+        
+        # ====== VALIDACIÓN DE FOTOS ======
+        self._validar_fotos_minimas()
+        
+        # ====== PROCESO DE FINALIZACIÓN ======
+        _logger.info(f"Todas las validaciones pasaron. Procediendo con la finalización.")
+        
+        # Usar sudo() solo para operaciones específicas
+        self_sudo = self.sudo()
+        
+        # Generar reporte QR (no crítico si falla)
+        self._generar_reporte_qr()
+        
+        # Enviar notificaciones (registrar errores pero no detener)
+        self._enviar_notificaciones()
+        
+        # Cambiar estado a finalizado
         _logger.info(f"Cambiando estado a 'finalizado' para reparación ID: {self.id}")
-        self.estado_id = "finalizado"
-        _logger.info(f"Estado cambiado a 'finalizado' para reparación ID: {self.id}")
+        self_sudo.estado_id = "finalizado"
+        _logger.info(f"Estado cambiado exitosamente a 'finalizado'")
         
-        # Crear la próxima reparación sin verificar el estado
-        _logger.info(f"Creando siguiente reparación para reparación ID: {self.id}")
-        self.sudo()._create_next_reparacion()
-
-        _logger.info(f"Proceso de finalización completado para reparación ID: {self.id}")
+        # Crear siguiente reparación
+        try:
+            _logger.info(f"Creando siguiente reparación para reparación ID: {self.id}")
+            self_sudo._create_next_reparacion()
+            _logger.info(f"Siguiente reparación creada exitosamente")
+        except Exception as e:
+            _logger.error(f"Error creando siguiente reparación para ID {self.id}: {e}")
         
-        # Retornamos directamente a la vista de lista
+        _logger.info(f"Proceso de finalización completado exitosamente para reparación ID: {self.id}")
+        
+        # Retornar a la vista de lista
         return {
             'type': 'ir.actions.act_window',
             'view_mode': 'list',
@@ -1115,6 +1060,253 @@ class Reparaciones(models.Model):
             'view_id': False,
             'target': 'main',
         }
+
+
+    def _validar_campos_basicos(self):
+        """Valida que los campos básicos estén completados"""
+        self.ensure_one()
+        
+        campos_faltantes = []
+        
+        if not self.informe or not self.informe.strip():
+            campos_faltantes.append('Informe')
+        
+        if not self.calidad_id:
+            campos_faltantes.append('Calidad')
+        
+        if campos_faltantes:
+            raise ValidationError(_(
+                "❗ <b>Campos Requeridos Incompletos</b>\n\n"
+                "Para finalizar la reparación, debes completar los siguientes campos:\n"
+                "• %s"
+            ) % "\n• ".join(campos_faltantes))
+        
+        _logger.info(f"Validación de campos básicos completada para reparación ID: {self.id}")
+
+
+    def _validar_evaluaciones_componentes(self):
+        """Valida que todos los componentes tengan estado completado"""
+        self.ensure_one()
+        
+        evaluaciones_componentes = self.env['reparacion.componente.evaluacion'].search([
+            ('reparacion_id', '=', self.id)
+        ])
+        
+        if not evaluaciones_componentes:
+            _logger.warning(f"No se encontraron evaluaciones de componentes para reparación ID: {self.id}")
+            return
+        
+        sin_estado = evaluaciones_componentes.filtered(lambda e: not e.estado_id)
+        
+        if sin_estado:
+            nombres_faltantes = []
+            for evaluacion in sin_estado:
+                nombre = evaluacion.componente_tipo_id.name
+                if evaluacion.color_id:
+                    nombre += f" ({evaluacion.color_id.name})"
+                nombres_faltantes.append(nombre)
+            
+            raise ValidationError(_(
+                "❗ <b>Evaluación de Componentes Incompleta</b>\n\n"
+                "Para finalizar la reparación, debes completar el estado de los siguientes componentes:\n"
+                "• %s"
+            ) % "\n• ".join(nombres_faltantes))
+        
+        _logger.info(f"Validación de componentes completada: {len(evaluaciones_componentes)} componentes evaluados")
+
+
+    def _validar_evaluaciones_accesorios(self):
+        """Valida que todos los accesorios tengan estado completado"""
+        self.ensure_one()
+        
+        evaluaciones_accesorios = self.env['reparacion.accesorio.evaluacion'].search([
+            ('reparacion_id', '=', self.id)
+        ])
+        
+        if not evaluaciones_accesorios:
+            _logger.warning(f"No se encontraron evaluaciones de accesorios para reparación ID: {self.id}")
+            return
+        
+        sin_estado = evaluaciones_accesorios.filtered(lambda e: not e.estado_id)
+        
+        if sin_estado:
+            nombres_faltantes = [e.tipo_id.name for e in sin_estado]
+            
+            raise ValidationError(_(
+                "❗ <b>Evaluación de Accesorios Incompleta</b>\n\n"
+                "Para finalizar la reparación, debes completar el estado de los siguientes accesorios:\n"
+                "• %s"
+            ) % "\n• ".join(nombres_faltantes))
+        
+        _logger.info(f"Validación de accesorios completada: {len(evaluaciones_accesorios)} accesorios evaluados")
+
+
+    def _validar_autenticacion(self):
+        """Verifica si el usuario necesita autenticación"""
+        if self.autenticacion_correcta:
+            return True
+        
+        try:
+            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')
+            necesita_autenticacion = grupo_validacion in self.env.user.groups_id
+            
+            if necesita_autenticacion:
+                _logger.info(f"Usuario {self.env.user.name} requiere autenticación")
+            
+            return not necesita_autenticacion
+        except Exception as e:
+            _logger.error(f"Error verificando grupo de autenticación: {e}")
+            return True
+
+
+    def _abrir_wizard_autenticacion(self):
+        """Abre el wizard de autenticación"""
+        _logger.info(f"Abriendo wizard de autenticación para usuario {self.env.user.name}")
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'reparacion.autenticacion.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_reparacion_id': self.id},
+        }
+
+
+    def _normalizar_contometro(self, valor):
+        """
+        Normaliza el valor del contómetro eliminando caracteres no numéricos.
+        
+        Args:
+            valor: Valor del contómetro (puede contener comas, puntos, espacios, letras)
+        
+        Returns:
+            str: Solo los dígitos numéricos
+        """
+        if not valor:
+            return ""
+        
+        import re
+        valor_limpio = re.sub(r'[^\d]', '', str(valor))
+        
+        return valor_limpio
+
+
+    def _validar_contometro(self):
+        """Valida que el contómetro haya sido actualizado correctamente"""
+        self.ensure_one()
+        
+        if not self.contometrok_id or not self.contometro_inicial:
+            raise UserError(_(
+                "❗ <b>Error en el Contómetro</b>\n\n"
+                "Los valores del contómetro no están configurados correctamente.\n"
+                "Verifique e intente nuevamente."
+            ))
+        
+        contometro_actual = self._normalizar_contometro(self.contometrok_id)
+        contometro_inicial = self._normalizar_contometro(self.contometro_inicial)
+        
+        _logger.info(f"Contómetro - Original: '{self.contometrok_id}' → Normalizado: '{contometro_actual}'")
+        _logger.info(f"Contómetro Inicial - Original: '{self.contometro_inicial}' → Normalizado: '{contometro_inicial}'")
+        
+        if not contometro_actual or not contometro_inicial:
+            raise UserError(_(
+                "❗ <b>Error en el Contómetro</b>\n\n"
+                "Los valores del contómetro no contienen números válidos.\n"
+                "Contómetro actual: %s\n"
+                "Contómetro inicial: %s"
+            ) % (self.contometrok_id, self.contometro_inicial))
+        
+        if contometro_actual == contometro_inicial:
+            raise UserError(_(
+                "❗ <b>Error en el Contómetro</b>\n\n"
+                "El contómetro no ha sido actualizado.\n"
+                "Debe ser diferente del valor inicial.\n\n"
+                "Valor actual: %s\n"
+                "Valor inicial: %s"
+            ) % (self.contometrok_id, self.contometro_inicial))
+        
+        try:
+            contometro_actual_int = int(contometro_actual)
+            contometro_inicial_int = int(contometro_inicial)
+            
+            if contometro_actual_int < contometro_inicial_int:
+                raise UserError(_(
+                    "❗ <b>Error en el Contómetro</b>\n\n"
+                    "El contómetro actual (%s) no puede ser menor que el inicial (%s).\n"
+                    "Verifique los valores ingresados."
+                ) % (contometro_actual, contometro_inicial))
+            
+        except ValueError as e:
+            _logger.error(f"Error convirtiendo contómetros a enteros: {e}")
+            raise UserError(_(
+                "❗ <b>Error en el Contómetro</b>\n\n"
+                "Los valores del contómetro contienen caracteres inválidos.\n"
+                "Solo se permiten números."
+            ))
+        
+        if len(contometro_actual) != len(contometro_inicial):
+            if not self.autorizacion_cambio_digitos:
+                raise UserError(_(
+                    "❗ <b>Error en el Número de Dígitos</b>\n\n"
+                    "La cantidad de dígitos del contómetro ha cambiado:\n"
+                    "• Contómetro inicial: %s dígitos (%s)\n"
+                    "• Contómetro actual: %s dígitos (%s)\n\n"
+                    "Contacte al administrador para obtener autorización de cambio."
+                ) % (
+                    len(contometro_inicial), contometro_inicial,
+                    len(contometro_actual), contometro_actual
+                ))
+            else:
+                _logger.info(f"Cambio de dígitos autorizado para reparación ID: {self.id}")
+        
+        _logger.info(f"Validación de contómetro completada exitosamente")
+
+
+    def _validar_fotos_minimas(self):
+        """Valida que haya suficientes fotos documentadas"""
+        self.ensure_one()
+        
+        FOTOS_MINIMAS = 10
+        cantidad_fotos = len(self.fotos_ids)
+        
+        if cantidad_fotos < FOTOS_MINIMAS:
+            raise UserError(_(
+                "❗ <b>Error en la Documentación Fotográfica</b>\n\n"
+                "Se requieren al menos <b>%s fotos</b> para finalizar la reparación.\n"
+                "Actualmente hay <b>%s fotos</b> adjuntas.\n\n"
+                "Por favor, agregue %s fotos más."
+            ) % (FOTOS_MINIMAS, cantidad_fotos, FOTOS_MINIMAS - cantidad_fotos))
+        
+        _logger.info(f"Validación de fotos completada: {cantidad_fotos} fotos documentadas")
+
+
+    def _generar_reporte_qr(self):
+        """Genera el reporte QR de la reparación (operación no crítica)"""
+        try:
+            _logger.info(f"Generando reporte QR para reparación ID: {self.id}")
+            report = self.env.ref('sat.action_report_qr_codes_reparaciones_template')
+            report.with_context(discard_logo_check=True).report_action(self)
+            _logger.info(f"Reporte QR generado exitosamente")
+        except Exception as e:
+            _logger.warning(f"No se pudo generar el reporte QR para reparación ID {self.id}: {e}")
+
+
+    def _enviar_notificaciones(self):
+        """Envía todas las notificaciones de finalización (operación no crítica)"""
+        
+        try:
+            _logger.info(f"Enviando mensaje a la asesora para reparación ID: {self.id}")
+            self.enviar_mensaje_finalizacion_asesora()
+            _logger.info(f"Mensaje enviado exitosamente a la asesora")
+        except Exception as e:
+            _logger.error(f"Error enviando mensaje a la asesora para reparación ID {self.id}: {e}")
+        
+        try:
+            _logger.info(f"Enviando correo de finalización para reparación ID: {self.id}")
+            template_id = self.env.ref('sat.email_template_finalizacion_reparacion')
+            template_id.send_mail(self.id, force_send=True)
+            _logger.info(f"Correo de finalización enviado exitosamente")
+        except Exception as e:
+            _logger.error(f"Error enviando correo de finalización para reparación ID {self.id}: {e}")
 
     def imprimir_reporte_qr(self):
         self.ensure_one()

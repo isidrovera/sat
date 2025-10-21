@@ -666,9 +666,7 @@ ESTRUCTURA REQUERIDA DEL INFORME HTML:
 <strong style="text-transform:capitalize;">[calidad]</strong>: [justificacion_calidad]
 </div>
 
-<p style="color:#888; font-size:12px; margin-top:10px;">
-*Informe generado con IA basado en evaluación técnica del checklist*
-</p>
+
 </div>
 
 COLORES PARA LA CONCLUSIÓN:
