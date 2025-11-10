@@ -211,57 +211,36 @@
 
   <separator string="📋 Componentes Evaluados"/>
   
-  <field name="evaluacion_ids" nolabel="1" widget="one2many_kanban">
-    <kanban create="false" delete="false" quick_create="false" edit="true">
-        
-        <!-- Campos que vamos a usar dentro de las tarjetas -->
-        <field name="componente_tipo_id"/>
-        <field name="color_id"/>
-        <field name="estado_id"/>
-        <field name="observaciones"/>
-
-        <templates>
-            <t t-name="kanban-box">
-                <div class="oe_kanban_global_click o_kanban_record">
-                    
-                    <!-- Encabezado: componente y color -->
-                    <div class="o_kanban_primary_left">
-                        <strong>
-                            <field name="componente_tipo_id"
-                                   options="{'no_create': True, 'no_open': True}"/>
-                        </strong>
-                        <span t-if="record.color_id.value">
-                            (<field name="color_id"
-                                    options="{'no_create': True, 'no_open': True}"/>)
-                        </span>
-                    </div>
-
-                    <!-- Estado tipo etiqueta grande -->
-                    <div class="o_kanban_primary_right">
-                        <span class="badge badge-pill"
-                              t-att-class="record.estado_id.value ? 'badge-success' : 'badge-warning'">
-                            <t t-if="record.estado_id.value">
-                                <field name="estado_id"
-                                       options="{'no_create': True, 'no_open': True}"/>
-                            </t>
-                            <t t-if="!record.estado_id.value">
-                                ⚠ SELECCIONAR ESTADO
-                            </t>
-                        </span>
-                    </div>
-
-                    <!-- Observaciones -->
-                    <div class="o_kanban_secondary">
-                        <small class="text-muted">📝 <field name="observaciones"
-                                                            placeholder="Detalles técnicos..."/></small>
-                    </div>
-
-                </div>
-            </t>
-        </templates>
-    </kanban>
-</field>
-
+  <field name="evaluacion_ids" nolabel="1">
+    <list editable="bottom" 
+          create="false" 
+          delete="false"
+          decoration-success="estado_id"
+          decoration-warning="not estado_id">
+      
+      <field name="componente_tipo_id" 
+             readonly="1"
+             string="🔧 Componente"
+             options="{'no_create': True, 'no_open': True}"/>
+      
+      <field name="color_id" 
+             readonly="1" 
+             optional="show"
+             string="🎨 Color"
+             options="{'no_create': True, 'no_open': True}"/>
+      
+      <field name="estado_id" 
+             string="⭐ ESTADO (Obligatorio)"
+             placeholder="⚠️ SELECCIONAR ESTADO"
+             options="{'no_create': True, 'no_open': True}"/>
+      
+      <field name="observaciones" 
+             optional="show"
+             string="📝 Observaciones"
+             placeholder="Detalles técnicos..."/>
+      
+    </list>
+  </field>
   
   <div class="alert alert-info" role="alert" style="margin-top: 15px; border-left: 4px solid #667eea;">
     <i class="fa fa-info-circle"></i>

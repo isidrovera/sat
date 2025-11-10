@@ -2,150 +2,193 @@
   <!-- ====================================== -->
   <!-- TIPOS DE COMPONENTE COMPLETOS -->
   <!-- ====================================== -->
+
   <!-- ÓPTICO / LÁSER -->
-    <record id="comp_tipo_lsu" model="componente.tipo">
-      <field name="name">LSU (Unidad láser)</field>
-      <field name="code">LSU</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_scanner" model="componente.tipo">
-      <field name="name">Scanner / Óptico</field>
-      <field name="code">SCANNER</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
+  <record id="comp_tipo_lsu" model="componente.tipo">
+    <field name="name">LSU (Unidad láser)</field>
+    <field name="code">LSU</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
 
-    <!-- ELECTRÓNICA / POTENCIA -->
-    <record id="comp_tipo_hv" model="componente.tipo">
-      <field name="name">Alto Voltaje (HV)</field>
-      <field name="code">HV</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_psu" model="componente.tipo">
-      <field name="name">Fuente de poder (PSU)</field>
-      <field name="code">PSU</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_mcu" model="componente.tipo">
-      <field name="name">Placa principal (MCU)</field>
-      <field name="code">MCU</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_nic" model="componente.tipo">
-      <field name="name">Tarjeta de red (NIC)</field>
-      <field name="code">NIC</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_wifi" model="componente.tipo">
-      <field name="name">Módulo Wi-Fi</field>
-      <field name="code">WIFI</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_panel" model="componente.tipo">
-      <field name="name">Panel / Interfaz</field>
-      <field name="code">PANEL</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_hdd" model="componente.tipo">
-      <field name="name">Almacenamiento (HDD/SSD)</field>
-      <field name="code">HDD_SSD</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_fan" model="componente.tipo">
-      <field name="name">Ventiladores</field>
-      <field name="code">FAN</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
+  <record id="comp_tipo_scanner" model="componente.tipo">
+    <field name="name">Scanner / Óptico</field>
+    <field name="code">SCANNER</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
 
-    <!-- LIMPIEZA -->
-    <record id="comp_tipo_cleaning" model="componente.tipo">
-      <field name="name">Limpieza</field>
-      <field name="code">CLEANING</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
+  <record id="comp_tipo_optico" model="componente.tipo">
+    <field name="name">Óptico</field>
+    <field name="code">OPTICO</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
 
-    <!-- PLOTTERS -->
-    <record id="comp_tipo_plot_head" model="componente.tipo">
-      <field name="name">Cabezal de impresión</field>
-      <field name="code">PLOT_HEAD</field>
-      <field name="is_color_sensitive">1</field>
-    </record>
-    <record id="comp_tipo_plot_carriage" model="componente.tipo">
-      <field name="name">Carro de impresión</field>
-      <field name="code">PLOT_CARRIAGE</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_plot_service" model="componente.tipo">
-      <field name="name">Estación de servicio</field>
-      <field name="code">PLOT_SERVICE</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_plot_encoder" model="componente.tipo">
-      <field name="name">Encoder</field>
-      <field name="code">PLOT_ENCODER</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_plot_feed" model="componente.tipo">
-      <field name="name">Alimentación de papel</field>
-      <field name="code">PLOT_FEED</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_plot_cutter" model="componente.tipo">
-      <field name="name">Corte</field>
-      <field name="code">PLOT_CUTTER</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_plot_vacuum" model="componente.tipo">
-      <field name="name">Vacío</field>
-      <field name="code">PLOT_VACUUM</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
+  <!-- ELECTRÓNICA / POTENCIA -->
+  <record id="comp_tipo_hv" model="componente.tipo">
+    <field name="name">Alto Voltaje (HV)</field>
+    <field name="code">HV</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
 
-    <!-- DUPLICADORAS -->
-    <record id="comp_tipo_dup_drum" model="componente.tipo">
-      <field name="name">Tambor duplicadora</field>
-      <field name="code">DUP_DRUM</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_dup_master" model="componente.tipo">
-      <field name="name">Master</field>
-      <field name="code">DUP_MASTER</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_dup_ink" model="componente.tipo">
-      <field name="name">Tinta duplicadora</field>
-      <field name="code">DUP_INK</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_dup_feeder" model="componente.tipo">
-      <field name="name">Alimentador duplicadora</field>
-      <field name="code">DUP_FEEDER</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_dup_pressure" model="componente.tipo">
-      <field name="name">Presión duplicadora</field>
-      <field name="code">DUP_PRESSURE</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-    <record id="comp_tipo_dup_delivery" model="componente.tipo">
-      <field name="name">Salida duplicadora</field>
-      <field name="code">DUP_DELIVERY</field>
-      <field name="is_color_sensitive">0</field>
-    </record>
-  <!-- ====== MFP / FOTOCOPIADORAS ====== -->
+  <record id="comp_tipo_psu" model="componente.tipo">
+    <field name="name">Fuente de poder (PSU)</field>
+    <field name="code">PSU</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_mcu" model="componente.tipo">
+    <field name="name">Placa principal (MCU)</field>
+    <field name="code">MCU</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_nic" model="componente.tipo">
+    <field name="name">Tarjeta de red (NIC)</field>
+    <field name="code">NIC</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_wifi" model="componente.tipo">
+    <field name="name">Módulo Wi-Fi</field>
+    <field name="code">WIFI</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_panel" model="componente.tipo">
+    <field name="name">Panel / Interfaz</field>
+    <field name="code">PANEL</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_hdd" model="componente.tipo">
+    <field name="name">Almacenamiento (HDD/SSD)</field>
+    <field name="code">HDD_SSD</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_fan" model="componente.tipo">
+    <field name="name">Ventiladores</field>
+    <field name="code">FAN</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <!-- LIMPIEZA -->
+  <record id="comp_tipo_cleaning" model="componente.tipo">
+    <field name="name">Limpieza</field>
+    <field name="code">CLEANING</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <!-- PLOTTERS -->
+  <record id="comp_tipo_plot_head" model="componente.tipo">
+    <field name="name">Cabezal de impresión</field>
+    <field name="code">PLOT_HEAD</field>
+    <field name="is_color_sensitive">1</field>
+  </record>
+
+  <record id="comp_tipo_plot_carriage" model="componente.tipo">
+    <field name="name">Carro de impresión</field>
+    <field name="code">PLOT_CARRIAGE</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_plot_service" model="componente.tipo">
+    <field name="name">Estación de servicio</field>
+    <field name="code">PLOT_SERVICE</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_plot_encoder" model="componente.tipo">
+    <field name="name">Encoder</field>
+    <field name="code">PLOT_ENCODER</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_plot_feed" model="componente.tipo">
+    <field name="name">Alimentación de papel</field>
+    <field name="code">PLOT_FEED</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_plot_cutter" model="componente.tipo">
+    <field name="name">Corte</field>
+    <field name="code">PLOT_CUTTER</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_plot_vacuum" model="componente.tipo">
+    <field name="name">Vacío</field>
+    <field name="code">PLOT_VACUUM</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <!-- Unidad de calentamiento/secado de medios (plotter solvent / eco-solvent / textil) -->
+  <record id="comp_tipo_heater" model="componente.tipo">
+    <field name="name">Calentador / Secador de medio</field>
+    <field name="code">MEDIA_HEATER</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <!-- DUPLICADORAS -->
+  <record id="comp_tipo_dup_drum" model="componente.tipo">
+    <field name="name">Tambor duplicadora</field>
+    <field name="code">DUP_DRUM</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_dup_master" model="componente.tipo">
+    <field name="name">Master</field>
+    <field name="code">DUP_MASTER</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_dup_ink" model="componente.tipo">
+    <field name="name">Tinta duplicadora</field>
+    <field name="code">DUP_INK</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_dup_feeder" model="componente.tipo">
+    <field name="name">Alimentador duplicadora</field>
+    <field name="code">DUP_FEEDER</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_dup_pressure" model="componente.tipo">
+    <field name="name">Presión duplicadora</field>
+    <field name="code">DUP_PRESSURE</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_dup_delivery" model="componente.tipo">
+    <field name="name">Salida duplicadora</field>
+    <field name="code">DUP_DELIVERY</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <!-- ====== MFP / FOTOCOPIADORAS / IMPRESORAS LÁSER ====== -->
   <!-- Sensibles a color -->
   <record id="comp_tipo_ui" model="componente.tipo">
     <field name="name">Unidad de imagen (IU/Drum)</field>
     <field name="code">UI</field>
     <field name="is_color_sensitive">1</field>
   </record>
+
   <record id="comp_tipo_developer" model="componente.tipo">
     <field name="name">Developer</field>
     <field name="code">DEVELOPER</field>
     <field name="is_color_sensitive">1</field>
   </record>
+
   <record id="comp_tipo_toner_system" model="componente.tipo">
-    <field name="name">Botella de tóner</field>
+    <field name="name">Botella de tóner / Sistema de suministro</field>
     <field name="code">TONER_SYSTEM</field>
+    <field name="is_color_sensitive">1</field>
+  </record>
+
+  <!-- Cartucho combinado para impresora pequeña (toner+drum en una sola pieza) -->
+  <record id="comp_tipo_cartucho_allinone" model="componente.tipo">
+    <field name="name">Cartucho completo (Tóner+Tambor)</field>
+    <field name="code">CARTUCHO_ALLIN_ONE</field>
     <field name="is_color_sensitive">1</field>
   </record>
 
@@ -155,83 +198,142 @@
     <field name="code">FAJA</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
+  <!-- Transferencia primaria/secundaria -->
   <record id="comp_tipo_transfer_roller" model="componente.tipo">
     <field name="name">Rodillo de transferencia</field>
     <field name="code">TRANSFER_ROLLER</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
+  <record id="comp_tipo_transfer_sec" model="componente.tipo">
+    <field name="name">Transferencia secundaria</field>
+    <field name="code">TRANSFER_SEC</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
   <record id="comp_tipo_fusora" model="componente.tipo">
     <field name="name">Fusora (Fuser)</field>
     <field name="code">FUSORA</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
   <record id="comp_tipo_adf" model="componente.tipo">
     <field name="name">ADF (Alimentador de documentos)</field>
     <field name="code">ADF</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
   <record id="comp_tipo_tray" model="componente.tipo">
     <field name="name">Bandejas de papel (TRAY)</field>
     <field name="code">TRAY</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
   <record id="comp_tipo_bypass" model="componente.tipo">
     <field name="name">Bypass</field>
     <field name="code">BYPASS</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
+  <!-- Registro de papel (registro, embragues, rodillos de timing) -->
+  <record id="comp_tipo_registro_papel" model="componente.tipo">
+    <field name="name">Módulo de registro de papel</field>
+    <field name="code">REGISTRO_PAPEL</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <!-- Dúplex -->
   <record id="comp_tipo_duplex" model="componente.tipo">
     <field name="name">Unidad dúplex</field>
     <field name="code">DUPLEX</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
+  <!-- Salida estándar (sin finisher grande) -->
+  <record id="comp_tipo_salida_std" model="componente.tipo">
+    <field name="name">Salida estándar</field>
+    <field name="code">SALIDA_STD</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <!-- Finisher / Acabado -->
   <record id="comp_tipo_finisher" model="componente.tipo">
     <field name="name">Finalizador (Finisher)</field>
     <field name="code">FINISHER</field>
     <field name="is_color_sensitive">0</field>
   </record>
-  <record id="comp_tipo_optico" model="componente.tipo">
-    <field name="name">Óptico</field>
-    <field name="code">OPTICO</field>
+
+  <!-- Cableado -->
+  <record id="comp_tipo_harness" model="componente.tipo">
+    <field name="name">Cableado / Arnés</field>
+    <field name="code">HARNESS</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
+  <!-- Residuos -->
   <record id="comp_tipo_waste" model="componente.tipo">
     <field name="name">Depósito de residuos (Waste)</field>
     <field name="code">WASTE_TONER</field>
     <field name="is_color_sensitive">0</field>
   </record>
 
-  <!-- ====== FUNCIONES DE LA MÁQUINA ====== -->
+  <!-- Carcasa / estética / estructura -->
+  <record id="comp_tipo_carcasa" model="componente.tipo">
+    <field name="name">Carcasa / Tapas</field>
+    <field name="code">CARCASA</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_panel_control" model="componente.tipo">
+    <field name="name">Panel de control</field>
+    <field name="code">PANEL_CONTROL</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <record id="comp_tipo_tapa_platen" model="componente.tipo">
+    <field name="name">Tapa / Bisagras del cristal</field>
+    <field name="code">TAPA_PLATEN</field>
+    <field name="is_color_sensitive">0</field>
+  </record>
+
+  <!-- ====== FUNCIONES DE LA MÁQUINA (lógicas/servicio) ====== -->
   <record id="comp_tipo_func_copia" model="componente.tipo">
     <field name="name">Función de Copia</field>
     <field name="code">FUNCION_COPIA</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
   <record id="comp_tipo_func_impresion" model="componente.tipo">
     <field name="name">Función de Impresión</field>
     <field name="code">FUNCION_IMPRESION</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
   <record id="comp_tipo_func_usb_print" model="componente.tipo">
     <field name="name">Función Impresión USB</field>
     <field name="code">FUNCION_USB_PRINT</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
   <record id="comp_tipo_func_scan_smb" model="componente.tipo">
     <field name="name">Función Escaneo SMB</field>
     <field name="code">FUNCION_SCAN_SMB</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
   <record id="comp_tipo_func_scan_usb" model="componente.tipo">
     <field name="name">Función Escaneo USB</field>
     <field name="code">FUNCION_SCAN_USB</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
   <record id="comp_tipo_func_scan_ftp" model="componente.tipo">
     <field name="name">Función Escaneo FTP</field>
     <field name="code">FUNCION_SCAN_FTP</field>
     <field name="is_color_sensitive">0</field>
   </record>
+
   <record id="comp_tipo_func_scan_mail" model="componente.tipo">
     <field name="name">Función Escaneo Email</field>
     <field name="code">FUNCION_SCAN_MAIL</field>
@@ -241,7 +343,7 @@
   <!-- ====================================== -->
   <!-- ESTADOS DE COMPONENTE COMPLETOS -->
   <!-- ====================================== -->
-  
+
   <!-- Críticos -->
   <record id="estado_requiere_cambio" model="componente.estado">
     <field name="name">Requiere cambio</field>
@@ -250,6 +352,7 @@
     <field name="prioridad">1</field>
     <field name="descripcion">Reemplazo urgente antes de entrega.</field>
   </record>
+
   <record id="estado_cambio_repuestos" model="componente.estado">
     <field name="name">Cambio de repuestos</field>
     <field name="code">cambio_de_repuestos</field>
@@ -264,12 +367,14 @@
     <field name="color">3</field>
     <field name="prioridad">2</field>
   </record>
+
   <record id="estado_gastada" model="componente.estado">
     <field name="name">Gastada pero puede trabajar</field>
     <field name="code">gastada_pero_puede_trabajar</field>
     <field name="color">4</field>
     <field name="prioridad">2</field>
   </record>
+
   <record id="estado_mantenimiento" model="componente.estado">
     <field name="name">Mantenimiento</field>
     <field name="code">mantenimiento</field>
@@ -284,18 +389,21 @@
     <field name="color">0</field>
     <field name="prioridad">3</field>
   </record>
+
   <record id="estado_revisado" model="componente.estado">
     <field name="name">Revisado</field>
     <field name="code">revisado</field>
     <field name="color">10</field>
     <field name="prioridad">3</field>
   </record>
+
   <record id="estado_nuevo" model="componente.estado">
     <field name="name">Nuevo</field>
     <field name="code">nuevo</field>
     <field name="color">10</field>
     <field name="prioridad">3</field>
   </record>
+
   <record id="estado_no_aplica" model="componente.estado">
     <field name="name">No aplica</field>
     <field name="code">no_aplica</field>
@@ -311,6 +419,7 @@
     <field name="prioridad">3</field>
     <field name="descripcion">Función operando correctamente.</field>
   </record>
+
   <record id="estado_sin_probar" model="componente.estado">
     <field name="name">Sin probar</field>
     <field name="code">sin_probar</field>
@@ -318,6 +427,7 @@
     <field name="prioridad">3</field>
     <field name="descripcion">Función no verificada.</field>
   </record>
+
   <record id="estado_falla" model="componente.estado">
     <field name="name">Falla</field>
     <field name="code">falla</field>
@@ -334,6 +444,7 @@
     <field name="prioridad">1</field>
     <field name="descripcion">Tóner agotado - 0% restante.</field>
   </record>
+
   <record id="estado_toner_10" model="componente.estado">
     <field name="name">Tóner 10%</field>
     <field name="code">toner_10</field>
@@ -341,9 +452,9 @@
     <field name="prioridad">1</field>
     <field name="descripcion">Nivel crítico ~10%.</field>
   </record>
-    <!-- Estados de nivel de tóner por porcentaje -->
+
   <record id="estado_toner_25" model="componente.estado">
-    <field name="name">Tóner 25%</field>
+    <field name="name">Tóner 25%</</field>
     <field name="code">toner_25</field>
     <field name="color">3</field>
     <field name="prioridad">2</field>
@@ -359,7 +470,7 @@
   </record>
 
   <record id="estado_toner_75" model="componente.estado">
-    <field name="name">Tóner 75%</field>
+    <field name="name">Tóner 75%</</field>
     <field name="code">toner_75</field>
     <field name="color">10</field>
     <field name="prioridad">3</field>
@@ -373,7 +484,6 @@
     <field name="prioridad">3</field>
     <field name="descripcion">Contenedor lleno o recién instalado.</field>
   </record>
-
 
   <record id="estado_toner_nd" model="componente.estado">
     <field name="name">Tóner sin lectura</field>
@@ -390,6 +500,7 @@
     <field name="prioridad">1</field>
     <field name="descripcion">Botella instalada pero chip no leído/inválido.</field>
   </record>
+
   <record id="estado_bajo" model="componente.estado">
     <field name="name">Bajo</field>
     <field name="code">bajo</field>
@@ -397,6 +508,7 @@
     <field name="prioridad">2</field>
     <field name="descripcion">Tóner en nivel bajo - aproximadamente 25%.</field>
   </record>
+
   <record id="estado_sin_botella" model="componente.estado">
     <field name="name">Sin contenedor</field>
     <field name="code">sin_botella</field>
@@ -404,19 +516,5 @@
     <field name="prioridad">1</field>
     <field name="descripcion">Contenedor de tóner no instalado.</field>
   </record>
- <!-- 1. CARCASA / TAPAS -->
-  <record id="comp_tipo_carcasa" model="componente.tipo">
-    <field name="name">Carcasa / Tapas</field>
-    <field name="code">CARCASA</field>
-    <field name="is_color_sensitive">0</field>
-    
-  </record>
 
-  <!-- 2. PANEL DE CONTROL (estético) -->
-  <record id="comp_tipo_panel_control" model="componente.tipo">
-    <field name="name">Panel de control</field>
-    <field name="code">PANEL_CONTROL</field>
-    <field name="is_color_sensitive">0</field>
- 
-  </record>
 </odoo>
