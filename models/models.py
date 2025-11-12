@@ -261,6 +261,33 @@ class SatSat(models.Model):
         _logger.debug('Activador set to: %s', ', '.join([rec.activador for rec in self]))
 
     contometro = fields.Char(string='Contometro', required=True, tracking=True,)
+    ultima_actualizacion_snmp = fields.Datetime(
+        string='Última Actualización SNMP',
+        readonly=True,
+        help='Fecha y hora de la última vez que SNMP actualizó el contador',
+        copy=False
+    )
+
+    contador_antes_snmp = fields.Char(
+        string='Contador Previo a SNMP',
+        readonly=True,
+        help='Valor del contador antes de la última actualización SNMP',
+        copy=False
+    )
+
+    total_actualizaciones_snmp = fields.Integer(
+        string='Total Actualizaciones SNMP',
+        readonly=True,
+        default=0,
+        help='Cantidad de veces que SNMP ha actualizado esta máquina',
+        copy=False
+    )
+
+    ultima_fuente_actualizacion = fields.Selection([
+        ('manual', 'Manual'),
+        ('snmp', 'SNMP'),
+        ('reparacion', 'Reparación'),
+    ], string='Última Fuente', readonly=True, default='manual', copy=False)
     marca = fields.Char(string='Marca', related='name.marca_id.name', readonly=True, store=True, tracking=True
                         )
     precio_venta = fields.Float(string='Precio de venta', related='name.precio_venta', readonly=True, tracking=True)

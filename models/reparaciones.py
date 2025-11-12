@@ -1191,9 +1191,13 @@ class Reparaciones(models.Model):
 
 
     def _validar_contometro(self):
-        """Valida que el contómetro haya sido actualizado correctamente"""
+        """
+        Valida que el contómetro haya sido actualizado correctamente con lógica inteligente
+        que considera las actualizaciones de SNMP durante la reparación.
+        """
         self.ensure_one()
         
+        # ====== VALIDACIÓN INICIAL ======
         if not self.contometrok_id or not self.contometro_inicial:
             raise UserError(_(
                 "❗ <b>Error en el Contómetro</b>\n\n"
@@ -1201,40 +1205,30 @@ class Reparaciones(models.Model):
                 "Verifique e intente nuevamente."
             ))
         
-        contometro_actual = self._normalizar_contometro(self.contometrok_id)
+        # ====== NORMALIZAR VALORES ======
+        contometro_tecnico = self._normalizar_contometro(self.contometrok_id)
         contometro_inicial = self._normalizar_contometro(self.contometro_inicial)
+        contometro_maquina_actual = self._normalizar_contometro(self.maquina_id.contometro)
         
-        _logger.info(f"Contómetro - Original: '{self.contometrok_id}' → Normalizado: '{contometro_actual}'")
-        _logger.info(f"Contómetro Inicial - Original: '{self.contometro_inicial}' → Normalizado: '{contometro_inicial}'")
+        _logger.info(f"[Validación Contador] Reparación ID: {self.id}")
+        _logger.info(f"[Validación Contador] Inicial: {contometro_inicial}")
+        _logger.info(f"[Validación Contador] Técnico ingresó: {contometro_tecnico}")
+        _logger.info(f"[Validación Contador] Máquina actual (SNMP): {contometro_maquina_actual}")
         
-        if not contometro_actual or not contometro_inicial:
+        # ====== VALIDAR FORMATO ======
+        if not contometro_tecnico or not contometro_inicial:
             raise UserError(_(
                 "❗ <b>Error en el Contómetro</b>\n\n"
                 "Los valores del contómetro no contienen números válidos.\n"
-                "Contómetro actual: %s\n"
+                "Contómetro ingresado: %s\n"
                 "Contómetro inicial: %s"
             ) % (self.contometrok_id, self.contometro_inicial))
         
-        if contometro_actual == contometro_inicial:
-            raise UserError(_(
-                "❗ <b>Error en el Contómetro</b>\n\n"
-                "El contómetro no ha sido actualizado.\n"
-                "Debe ser diferente del valor inicial.\n\n"
-                "Valor actual: %s\n"
-                "Valor inicial: %s"
-            ) % (self.contometrok_id, self.contometro_inicial))
-        
+        # ====== CONVERTIR A ENTEROS ======
         try:
-            contometro_actual_int = int(contometro_actual)
-            contometro_inicial_int = int(contometro_inicial)
-            
-            if contometro_actual_int < contometro_inicial_int:
-                raise UserError(_(
-                    "❗ <b>Error en el Contómetro</b>\n\n"
-                    "El contómetro actual (%s) no puede ser menor que el inicial (%s).\n"
-                    "Verifique los valores ingresados."
-                ) % (contometro_actual, contometro_inicial))
-            
+            contador_tecnico_int = int(contometro_tecnico)
+            contador_inicial_int = int(contometro_inicial)
+            contador_maquina_int = int(contometro_maquina_actual)
         except ValueError as e:
             _logger.error(f"Error convirtiendo contómetros a enteros: {e}")
             raise UserError(_(
@@ -1243,7 +1237,139 @@ class Reparaciones(models.Model):
                 "Solo se permiten números."
             ))
         
-        if len(contometro_actual) != len(contometro_inicial):
+        # ====== PARÁMETROS DE TOLERANCIA ======
+        TOLERANCIA_INFERIOR = 100   # Puede estar hasta 100 copias por debajo del SNMP
+        TOLERANCIA_SUPERIOR = 500   # Puede estar hasta 500 copias por encima del SNMP
+        
+        _logger.info(f"[Validación Contador] Tolerancias: -{TOLERANCIA_INFERIOR} / +{TOLERANCIA_SUPERIOR}")
+        
+        # ====== CASO 1: Contador menor que el inicial (ERROR) ======
+        if contador_tecnico_int < contador_inicial_int:
+            raise UserError(_(
+                "❌ <b>Error: Contador Menor que el Inicial</b>\n\n"
+                "El contador no puede retroceder.\n\n"
+                "• Contador inicial: <b>%s</b>\n"
+                "• Contador ingresado: <b>%s</b>\n"
+                "• Diferencia: <b>-%s</b>\n\n"
+                "Por favor, verifique el valor ingresado."
+            ) % (
+                f"{contador_inicial_int:,}",
+                f"{contador_tecnico_int:,}",
+                f"{contador_inicial_int - contador_tecnico_int:,}"
+            ))
+        
+        # ====== CASO 2: Contador igual al SNMP actual (ACEPTAR) ======
+        if contador_tecnico_int == contador_maquina_int:
+            _logger.info(f"[Validación Contador] ✅ ACEPTADO: Igual al SNMP ({contador_maquina_int})")
+            
+            # Registrar actualización en la máquina
+            self.maquina_id.sudo().write({
+                'ultima_fuente_actualizacion': 'reparacion',
+            })
+            
+            self.message_post(
+                body=_(
+                    "✅ <b>Contador Validado Automáticamente</b><br/>"
+                    "El contador coincide con la última actualización SNMP.<br/>"
+                    "Valor: <b>%s</b>"
+                ) % f"{contador_tecnico_int:,}"
+            )
+            return True
+        
+        # ====== CASO 3: Técnico está dentro de tolerancia INFERIOR del SNMP ======
+        if contador_maquina_int - TOLERANCIA_INFERIOR <= contador_tecnico_int < contador_maquina_int:
+            diferencia = contador_maquina_int - contador_tecnico_int
+            _logger.info(f"[Validación Contador] ✅ ACEPTADO: Dentro de tolerancia inferior (-%s)", diferencia)
+            
+            # Registrar actualización
+            self.maquina_id.sudo().write({
+                'contometro': contometro_tecnico,
+                'ultima_fuente_actualizacion': 'reparacion',
+            })
+            
+            self.message_post(
+                body=_(
+                    "✅ <b>Contador Validado con Tolerancia</b><br/>"
+                    "El técnico tomó el contador antes de la actualización SNMP.<br/>"
+                    "• Contador ingresado: <b>%s</b><br/>"
+                    "• Último SNMP: <b>%s</b><br/>"
+                    "• Diferencia aceptable: <b>-%s copias</b>"
+                ) % (
+                    f"{contador_tecnico_int:,}",
+                    f"{contador_maquina_int:,}",
+                    f"{diferencia:,}"
+                )
+            )
+            return True
+        
+        # ====== CASO 4: Técnico está dentro de tolerancia SUPERIOR ======
+        if contador_maquina_int < contador_tecnico_int <= contador_maquina_int + TOLERANCIA_SUPERIOR:
+            diferencia = contador_tecnico_int - contador_maquina_int
+            _logger.info(f"[Validación Contador] ✅ ACEPTADO: Copias de prueba (+%s)", diferencia)
+            
+            # Actualizar contador de la máquina
+            self.maquina_id.sudo().write({
+                'contometro': contometro_tecnico,
+                'ultima_fuente_actualizacion': 'reparacion',
+            })
+            
+            self.message_post(
+                body=_(
+                    "✅ <b>Contador Actualizado: Copias de Prueba</b><br/>"
+                    "El técnico realizó copias de prueba adicionales.<br/>"
+                    "• Contador ingresado: <b>%s</b><br/>"
+                    "• Último SNMP: <b>%s</b><br/>"
+                    "• Copias de prueba: <b>+%s</b>"
+                ) % (
+                    f"{contador_tecnico_int:,}",
+                    f"{contador_maquina_int:,}",
+                    f"{diferencia:,}"
+                )
+            )
+            return True
+        
+        # ====== CASO 5: Contador demasiado bajo (ERROR) ======
+        if contador_tecnico_int < contador_maquina_int - TOLERANCIA_INFERIOR:
+            diferencia = contador_maquina_int - contador_tecnico_int
+            raise UserError(_(
+                "❌ <b>Error: Contador Demasiado Bajo</b>\n\n"
+                "El contador ingresado está muy por debajo del valor reportado por SNMP.\n\n"
+                "• Contador inicial: <b>%s</b>\n"
+                "• Último SNMP: <b>%s</b>\n"
+                "• Contador ingresado: <b>%s</b>\n"
+                "• Diferencia: <b>-%s</b>\n\n"
+                "Tolerancia máxima: <b>-%s copias</b>\n\n"
+                "Por favor, verifique el contador de la máquina."
+            ) % (
+                f"{contador_inicial_int:,}",
+                f"{contador_maquina_int:,}",
+                f"{contador_tecnico_int:,}",
+                f"{diferencia:,}",
+                TOLERANCIA_INFERIOR
+            ))
+        
+        # ====== CASO 6: Contador demasiado alto (ERROR) ======
+        if contador_tecnico_int > contador_maquina_int + TOLERANCIA_SUPERIOR:
+            diferencia = contador_tecnico_int - contador_maquina_int
+            raise UserError(_(
+                "❌ <b>Error: Contador Irreal</b>\n\n"
+                "El contador ingresado es demasiado alto en comparación con el SNMP.\n\n"
+                "• Contador inicial: <b>%s</b>\n"
+                "• Último SNMP: <b>%s</b>\n"
+                "• Contador ingresado: <b>%s</b>\n"
+                "• Diferencia: <b>+%s</b>\n\n"
+                "Tolerancia máxima: <b>+%s copias</b>\n\n"
+                "¿Realmente se hicieron tantas copias de prueba?"
+            ) % (
+                f"{contador_inicial_int:,}",
+                f"{contador_maquina_int:,}",
+                f"{contador_tecnico_int:,}",
+                f"{diferencia:,}",
+                TOLERANCIA_SUPERIOR
+            ))
+        
+        # ====== VALIDACIÓN DE CAMBIO DE DÍGITOS ======
+        if len(contometro_tecnico) != len(contometro_inicial):
             if not self.autorizacion_cambio_digitos:
                 raise UserError(_(
                     "❗ <b>Error en el Número de Dígitos</b>\n\n"
@@ -1252,14 +1378,14 @@ class Reparaciones(models.Model):
                     "• Contómetro actual: %s dígitos (%s)\n\n"
                     "Contacte al administrador para obtener autorización de cambio."
                 ) % (
-                    len(contometro_inicial), contometro_inicial,
-                    len(contometro_actual), contometro_actual
+                    len(contometro_inicial), f"{contador_inicial_int:,}",
+                    len(contometro_tecnico), f"{contador_tecnico_int:,}"
                 ))
             else:
                 _logger.info(f"Cambio de dígitos autorizado para reparación ID: {self.id}")
         
-        _logger.info(f"Validación de contómetro completada exitosamente")
-
+        _logger.info(f"[Validación Contador] ✅ Validación completada exitosamente")
+        return True
 
     def _validar_fotos_minimas(self):
         """Valida que haya suficientes fotos documentadas"""

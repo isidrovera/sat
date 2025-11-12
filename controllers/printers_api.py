@@ -13,6 +13,73 @@ def _norm(s):
     """Normaliza strings eliminando espacios extra"""
     return (s or '').strip()
 
+def clean_brand_from_model(model_text, brand_name):
+    """
+    Elimina el nombre de la marca del inicio del modelo si está presente.
+    
+    Ejemplos:
+    - "KONICA MINOLTA bizhub 364e" + "KONICA" → "bizhub 364e"
+    - "Canon iR-ADV C3330" + "CANON" → "iR-ADV C3330"
+    - "RICOH Aficio MP C3004" + "RICOH" → "Aficio MP C3004"
+    """
+    if not model_text or not brand_name:
+        return model_text
+    
+    text = model_text.strip()
+    brand_upper = brand_name.upper()
+    text_upper = text.upper()
+    
+    # Lista de variaciones del nombre de marca a eliminar
+    brand_variations = []
+    
+    if brand_upper in ['KONICA', 'KONICA MINOLTA', 'MINOLTA']:
+        brand_variations = [
+            'KONICA MINOLTA ',
+            'KONICA-MINOLTA ',
+            'KONICAMINOLTA ',
+            'KONICA ',
+            'MINOLTA ',
+        ]
+    elif brand_upper == 'CANON':
+        brand_variations = ['CANON ']
+    elif brand_upper == 'RICOH':
+        brand_variations = ['RICOH ']
+    elif brand_upper == 'KYOCERA':
+        brand_variations = ['KYOCERA ']
+    elif brand_upper in ['HP', 'HEWLETT', 'HEWLETT PACKARD']:
+        brand_variations = [
+            'HEWLETT-PACKARD ',
+            'HEWLETT PACKARD ',
+            'HP ',
+        ]
+    elif brand_upper == 'XEROX':
+        brand_variations = ['XEROX ']
+    elif brand_upper == 'BROTHER':
+        brand_variations = ['BROTHER ']
+    elif brand_upper == 'SAMSUNG':
+        brand_variations = ['SAMSUNG ']
+    elif brand_upper == 'SHARP':
+        brand_variations = ['SHARP ']
+    elif brand_upper == 'LEXMARK':
+        brand_variations = ['LEXMARK ']
+    else:
+        # Marca genérica
+        brand_variations = [
+            brand_upper + ' ',
+            brand_upper + '-',
+        ]
+    
+    # Intentar eliminar cada variación
+    for variation in brand_variations:
+        if text_upper.startswith(variation):
+            result = text[len(variation):].strip()
+            _logger.info("[SNMP Clean] Limpiado '%s' → '%s' (eliminado: %s)", 
+                        model_text, result, variation.strip())
+            return result
+    
+    _logger.debug("[SNMP Clean] No se encontró marca al inicio: '%s'", model_text)
+    return text
+
 def normalize_model_by_brand(model_text, brand):
     """
     Normaliza nombres de modelos según la marca específica para comparación.
@@ -88,25 +155,20 @@ def extract_version_suffix(model_text):
     """
     Extrae el sufijo de versión (I, II, III, i, etc.)
     Retorna (texto_sin_sufijo, sufijo)
-    
-    Ejemplos:
-    - "iR-ADV C3330 III" → ("iR-ADV C3330", "III")
-    - "ADVANCE IRC3330i" → ("ADVANCE IRC3330", "i")
-    - "MP C3004" → ("MP C3004", None)
     """
     if not model_text:
         return model_text, None
     
     text = model_text.strip()
     
-    # Buscar sufijos romanos al final (I, II, III, IV, V, etc.)
+    # Buscar sufijos romanos al final
     match = re.search(r'\s+(I{1,3}|IV|V|VI|VII|VIII|IX|X)$', text, re.IGNORECASE)
     if match:
         suffix = match.group(1).upper()
         base = text[:match.start()].strip()
         return base, suffix
     
-    # Buscar letra 'i' sola al final (común en Canon)
+    # Buscar letra 'i' sola al final
     match = re.search(r'(\d)([i])$', text, re.IGNORECASE)
     if match:
         suffix = match.group(2).lower()
@@ -144,11 +206,9 @@ def calculate_similarity_score(model_snmp, model_db, brand):
     """
     Calcula score de similitud entre dos modelos (0.0 a 1.0)
     """
-    # Normalizar ambos modelos
     norm_snmp = normalize_model_by_brand(model_snmp, brand)
     norm_db = normalize_model_by_brand(model_db, brand)
     
-    # Extraer versiones
     base_snmp, version_snmp = extract_version_suffix(norm_snmp)
     base_db, version_db = extract_version_suffix(norm_db)
     
@@ -157,18 +217,16 @@ def calculate_similarity_score(model_snmp, model_db, brand):
     
     # Si las bases normalizadas son idénticas
     if base_snmp == base_db:
-        # Si las versiones también coinciden o una no tiene versión
         if version_snmp == version_db or not version_snmp or not version_db:
             _logger.debug("[SNMP Score] ✅ MATCH PERFECTO (bases idénticas)")
             return 1.0
         else:
-            # Bases iguales pero versiones diferentes
             _logger.debug("[SNMP Score] ⚠️ Bases iguales, versiones diferentes")
             return 0.90
     
     score = 0.0
     
-    # 1. Score por tokens comunes (50% del peso)
+    # 1. Score por tokens comunes (50%)
     tokens_snmp = set(base_snmp.split())
     tokens_db = set(base_db.split())
     
@@ -180,7 +238,7 @@ def calculate_similarity_score(model_snmp, model_db, brand):
         score += token_score * 0.5
         _logger.debug("[SNMP Score] Tokens comunes: %s | Score: %.2f", common_tokens, token_score)
     
-    # 2. Score por números en mismo orden (40% del peso)
+    # 2. Score por números en mismo orden (40%)
     nums_snmp = ''.join(re.findall(r'\d+', base_snmp))
     nums_db = ''.join(re.findall(r'\d+', base_db))
     
@@ -192,7 +250,7 @@ def calculate_similarity_score(model_snmp, model_db, brand):
             score += 0.20
             _logger.debug("[SNMP Score] ⚠️ Números parcialmente coinciden")
     
-    # 3. Score por similitud de longitud (10% del peso)
+    # 3. Score por similitud de longitud (10%)
     len_diff = abs(len(base_snmp) - len(base_db))
     max_len = max(len(base_snmp), len(base_db))
     if max_len > 0:
@@ -302,7 +360,6 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
     
     domain = []
     
-    # Filtrar por marca
     brand_obj = None
     if brand_name:
         brand_obj = env['marca.marca'].sudo().search([('name', '=ilike', brand_name)], limit=1)
@@ -310,7 +367,6 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
             domain.append(('marca_id', '=', brand_obj.id))
             _logger.info("[SNMP Match] Filtrando por marca: %s (ID: %s)", brand_obj.name, brand_obj.id)
     
-    # Filtrar por tipo de color
     domain.append(('tipo_id', '=', tipo_color_snmp))
     _logger.info("[SNMP Match] Filtrando por tipo: %s", tipo_color_snmp)
     
@@ -321,13 +377,11 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
     best_score = 0.0
     
     for candidate in candidates:
-        # Verificar que tengan el mismo núcleo
         _, core_candidate, _ = parse_model(candidate.name)
         
         if not core_candidate or core_candidate != core_snmp:
             continue
         
-        # Calcular similitud
         score = calculate_similarity_score(model_snmp, candidate.name, brand_name)
         
         _logger.debug("[SNMP Match] Evaluando: %s | Score: %.3f", candidate.name, score)
@@ -336,7 +390,6 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
             best_score = score
             best_match = candidate
     
-    # Umbral para MODIFICAR: 85% de similitud
     THRESHOLD_UPDATE = 0.85
     
     if best_match and best_score >= THRESHOLD_UPDATE:
@@ -350,7 +403,6 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
             best_match.sudo().write({'name': model_snmp})
             _logger.info("[SNMP Match] ✅ Modelo ACTUALIZADO exitosamente")
             
-            # ✅ CORRECCIÓN: Registrar en chatter de todos los equipos con este modelo
             try:
                 Sat = env['sat.sat'].sudo()
                 equipos = Sat.search([('name', '=', best_match.id)])
@@ -374,7 +426,6 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
         except Exception as e:
             _logger.error("[SNMP Match] ❌ Error modificando modelo: %s", e)
             _logger.exception("[SNMP Match] Traceback:")
-            # Si falla la modificación, al menos retornamos el modelo encontrado
             return best_match, 'exact', False
     
     elif best_match:
@@ -435,9 +486,15 @@ class SNMPPublicController(http.Controller):
         _logger.info("[SNMP INTAKE] Payload: %s", payload)
         
         serial = _norm(payload.get('serial'))
-        model_snmp = _norm(payload.get('model'))
+        model_snmp_raw = _norm(payload.get('model'))
         brand = _norm(payload.get('brand'))
         total_counter = payload.get('total_counter')
+
+        # ✅ Limpiar marca del modelo
+        model_snmp = clean_brand_from_model(model_snmp_raw, brand)
+        
+        if model_snmp != model_snmp_raw:
+            _logger.info("[SNMP INTAKE] Modelo limpiado: '%s' → '%s'", model_snmp_raw, model_snmp)
 
         _logger.info("[SNMP INTAKE] Serial: %s | Modelo: %s | Marca: %s | Contador: %s",
                     serial or 'N/A', model_snmp or 'N/A', brand or 'N/A', total_counter or 'N/A')
@@ -547,52 +604,64 @@ class SNMPPublicController(http.Controller):
         }
 
     def _safe_update_counters(self, sat, total_counter):
-        """Actualiza contador con detección de decremento"""
-        vals = {}
+        """Actualiza contador con registro de historial SNMP"""
+        if total_counter is None:
+            return
         
-        if total_counter is not None:
-            try:
-                contador_anterior = int(sat.contometro) if sat.contometro and str(sat.contometro).isdigit() else 0
-                contador_nuevo = int(total_counter)
+        try:
+            # Normalizar contadores
+            contador_actual_str = str(sat.contometro or '0')
+            contador_nuevo_str = str(total_counter)
+            
+            # Limpiar solo números
+            contador_actual = int(re.sub(r'[^\d]', '', contador_actual_str))
+            contador_nuevo = int(re.sub(r'[^\d]', '', contador_nuevo_str))
+            
+            _logger.info("[SNMP Contador] Actual: %s | Nuevo: %s", contador_actual, contador_nuevo)
+            
+            # Detectar decremento
+            if contador_actual > 0 and contador_nuevo < contador_actual:
+                diferencia = contador_actual - contador_nuevo
+                _logger.warning("[SNMP] ⚠️ CONTADOR DECRECIÓ: %s -> %s (-%s)", 
+                              contador_actual, contador_nuevo, diferencia)
                 
-                if contador_anterior > 0 and contador_nuevo < contador_anterior:
-                    diferencia = contador_anterior - contador_nuevo
-                    _logger.warning("[SNMP] ⚠️ CONTADOR DECRECIÓ: %s -> %s (-%s)", 
-                                  contador_anterior, contador_nuevo, diferencia)
-                    
-                    sat.message_post(
-                        body=_("⚠️ <b>Contador decreció</b><br/>"
-                               "Anterior: <b>%s</b><br/>"
-                               "Nuevo: <b>%s</b><br/>"
-                               "Diferencia: <b>-%s</b>")
-                             % (f"{contador_anterior:,}", f"{contador_nuevo:,}", f"{diferencia:,}"))
-                    
-                    usr = find_logistics_user(request.env)
-                    if usr:
-                        try:
-                            request.env['mail.activity'].sudo().create({
-                                'res_model_id': request.env['ir.model']._get_id('sat.sat'),
-                                'res_id': sat.id,
-                                'user_id': usr.id,
-                                'summary': _("Revisar contador decreciente"),
-                                'note': _("Contador disminuyó de %s a %s (-%s copias)") 
-                                       % (f"{contador_anterior:,}", f"{contador_nuevo:,}", f"{diferencia:,}"),
-                                'activity_type_id': request.env.ref('mail.mail_activity_data_todo').id,
-                            })
-                        except Exception as e:
-                            _logger.error("[SNMP] Error creando actividad: %s", e)
+                sat.message_post(
+                    body=_("⚠️ <b>Contador decreció por SNMP</b><br/>"
+                           "Anterior: <b>%s</b><br/>"
+                           "Nuevo: <b>%s</b><br/>"
+                           "Diferencia: <b>-%s</b>")
+                         % (f"{contador_actual:,}", f"{contador_nuevo:,}", f"{diferencia:,}"))
                 
-                vals['contometro'] = str(total_counter)
-                _logger.info("[SNMP] Contador: %s -> %s", sat.contometro or 'N/A', total_counter)
-            except Exception as e:
-                _logger.error("[SNMP] Error procesando contador: %s", e)
-        
-        if vals:
-            try:
-                sat.sudo().write(vals)
-                _logger.info("[SNMP] ✅ Contador actualizado")
-            except Exception as e:
-                _logger.error("[SNMP] ❌ Error actualizando contador: %s", e)
+                usr = find_logistics_user(request.env)
+                if usr:
+                    try:
+                        request.env['mail.activity'].sudo().create({
+                            'res_model_id': request.env['ir.model']._get_id('sat.sat'),
+                            'res_id': sat.id,
+                            'user_id': usr.id,
+                            'summary': _("Revisar contador decreciente (SNMP)"),
+                            'note': _("Contador disminuyó de %s a %s (-%s copias)") 
+                                   % (f"{contador_actual:,}", f"{contador_nuevo:,}", f"{diferencia:,}"),
+                            'activity_type_id': request.env.ref('mail.mail_activity_data_todo').id,
+                        })
+                    except Exception as e:
+                        _logger.error("[SNMP] Error creando actividad: %s", e)
+            
+            # Actualizar campos
+            vals = {
+                'contometro': contador_nuevo_str,
+                'contador_antes_snmp': contador_actual_str,
+                'ultima_actualizacion_snmp': request.env['ir.fields'].browse(1)._fields['create_date'].now(),
+                'total_actualizaciones_snmp': sat.total_actualizaciones_snmp + 1,
+                'ultima_fuente_actualizacion': 'snmp',
+            }
+            
+            sat.sudo().write(vals)
+            _logger.info("[SNMP] ✅ Contador actualizado: %s -> %s", contador_actual, contador_nuevo)
+            
+        except Exception as e:
+            _logger.error("[SNMP] ❌ Error actualizando contador: %s", e)
+            _logger.exception("[SNMP] Traceback:")
 
     def _notify_core_mismatch(self, sat, snmp_model, current_model):
         """Notifica diferencia de núcleo"""
