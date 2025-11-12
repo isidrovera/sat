@@ -1,3 +1,4 @@
+
 from odoo import http
 from odoo.http import request, Response
 import logging
@@ -482,6 +483,7 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception("[UPLOAD] Error general: %s", str(e))
             return json.dumps({'success': False, 'error': f'Error interno: {str(e)}', 'code': 'INTERNAL_ERROR'})
+
     @http.route('/gallery/pcloud/uploadinfo/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
     def pcloud_uploadinfo(self, reparacion_id):
         """
@@ -685,8 +687,8 @@ class GalleryController(http.Controller):
                     _logger.error("[PCLOUD_UPLOADINFO] Último error: %s", data.get('error', 'Error desconocido'))
                     
                     # Información diagnóstica para el usuario
-                    user_info = validate_data.get('email', 'N/A')
-                    is_premium = validate_data.get('premium', False)
+                    user_info = validate_data.get('email', 'N/A') if 'validate_data' in locals() else 'N/A'
+                    is_premium = validate_data.get('premium', False) if 'validate_data' in locals() else False
                     
                     return {
                         'success': False,
@@ -964,7 +966,6 @@ class GalleryController(http.Controller):
                     skipped += 1
                     continue
 
-                # Obtener URL de descarga (opcional; el modelo ya tiene _get_file_url si lo necesitas)
                 # Crear registro sin foto_binario (para NO re-subir):
                 vals = {
                     'reparacion_id': reparacion.id,
@@ -981,7 +982,6 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception('Error en sync_from_pcloud: %s', e)
             return {'success': False, 'error': 'Error interno'}
-
 
     @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
     def download_photo(self, foto_id):
@@ -1025,9 +1025,6 @@ class GalleryController(http.Controller):
             _logger.exception("Error al descargar todas las fotos: %s", str(e))
             return request.not_found()
 
-
-
-
     @http.route('/gallery/next-sequence/<int:reparacion_id>', type='http', auth='user', methods=['GET'])
     def get_next_sequence(self, reparacion_id):
         """Obtiene la siguiente secuencia disponible para una reparación"""
@@ -1064,6 +1061,7 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception("[NEXT_SEQUENCE] Error: %s", str(e))
             return self._json_response({'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'})
+
     @http.route('/gallery/cleanup-sequences/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
     def cleanup_duplicate_sequences(self, reparacion_id):
         """Limpia secuencias duplicadas y reorganiza las existentes"""
@@ -1110,7 +1108,6 @@ class GalleryController(http.Controller):
             _logger.exception("[CLEANUP_SEQUENCES] Error: %s", str(e))
             return {'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'}
 
-
     @http.route('/web/session/check', type='http', auth='public', methods=['POST'], csrf=False)
     def check_session_status(self):
         """Verifica el estado de la sesión actual"""
@@ -1141,8 +1138,6 @@ class GalleryController(http.Controller):
                 'uid': False,
                 'is_authenticated': False
             })
-
-
 
     # === NUEVO: obtener upload link de pCloud para subir directo desde el navegador ===
     @http.route('/gallery/pcloud/uploadlink/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
@@ -1201,6 +1196,7 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception('get_upload_link error')
             return {'success': False, 'error': 'Error interno'}
+
     @http.route('/gallery/pcloud/proxy-upload', type='http', auth='user', methods=['POST'], csrf=False)
     def proxy_upload(self, **kw):
         """
@@ -1223,8 +1219,6 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception('Error en proxy_upload: %s', e)
             return request.make_json_response({'success': False, 'error': 'Proxy error'}, status=500)
-    # NUEVA RUTA ALTERNATIVA QUE NO USA createuploadlink
-    # Agrega este método al controlador
 
     @http.route('/gallery/pcloud/direct-upload/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
     def pcloud_direct_upload_info(self, reparacion_id):
@@ -1282,7 +1276,6 @@ class GalleryController(http.Controller):
                 'processing_time': round(elapsed, 2)
             }
 
-    # TAMBIÉN AGREGA ESTE MÉTODO PARA MANEJAR LA SUBIDA DIRECTA
     @http.route('/gallery/pcloud/upload-direct/<int:reparacion_id>', type='http', auth='user', methods=['POST'], csrf=False)
     def pcloud_upload_direct(self, reparacion_id, **kwargs):
         """
@@ -1345,7 +1338,7 @@ class GalleryController(http.Controller):
                         'sequence': int(sequence) if sequence.isdigit() else 1,
                         'file_id': str(file_id),
                         'state': 'done',
-                        'size': metadata.get('size', file.content_length or 0),
+                        'size': metadata.get('size', getattr(file, 'content_length', 0) or 0),
                         'mimetype': metadata.get('contenttype', file.mimetype)
                     }
                     
@@ -1373,10 +1366,3 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.exception("[PCLOUD_UPLOAD_DIRECT] Error: %s", str(e))
             return self._json_response({'success': False, 'error': f'Error interno: {str(e)}'})
-
-    def _json_response(self, data):
-        """Retorna una respuesta JSON válida"""
-        return Response(
-            json.dumps(data),
-            headers=[('Content-Type', 'application/json')]
-        )

@@ -1131,3 +1131,64 @@ class ReparacionFoto(models.Model):
         except Exception as e:
             _logger.exception("[UPLOADLINK] Error get_upload_post_url: %s", str(e))
             return False
+
+    # === NUEVO: listar archivo por nombre y registrar sin binario (upload directo a pCloud) ===
+    def _find_file_in_folder(self, folder_id, filename, pcloud_config):
+        """Busca un archivo por nombre en la carpeta pCloud (no recursivo)."""
+        try:
+            url = f"{pcloud_config.hostname}/listfolder"
+            params = {
+                'access_token': pcloud_config.access_token,
+                'folderid': folder_id
+            }
+            r = requests.get(url, params=params, timeout=15)
+            data = r.json() if r.status_code == 200 else {}
+            if data.get('result') == 0:
+                for e in data.get('metadata', {}).get('contents', []):
+                    if not e.get('isfolder') and e.get('name') == filename:
+                        return {'file_id': e.get('fileid'), 'size': e.get('size'), 'contenttype': e.get('contenttype')}
+            return None
+        except Exception as e:
+            _logger.exception("[FIND_FILE] Error listando carpeta %s: %s", folder_id, str(e))
+            return None
+
+    @api.model
+    def register_from_pcloud(self, reparacion_id, filename, sequence=None):
+        """
+        Crea el registro 'reparaciones.foto' para un archivo que ya fue subido
+        directamente a pCloud en la carpeta de la reparación.
+        """
+        _logger.info("[REGISTER_FROM_PCLOUD] reparacion_id=%s filename=%s sequence=%s", reparacion_id, filename, sequence)
+        rep = self.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+        if not rep.exists():
+            raise ValidationError('Reparación no encontrada')
+        cfg = self.env['pcloud.configuracion'].sudo().search([], limit=1)
+        if not cfg or not cfg.access_token or not cfg.hostname:
+            raise ValidationError("Configuración de pCloud no encontrada")
+
+        folder_id = self._obtener_folder_id(rep, cfg)
+        meta = self._find_file_in_folder(folder_id, filename, cfg)
+        if not meta:
+            raise ValidationError("Archivo no encontrado en la carpeta de la reparación")
+
+        if sequence is None:
+            last = self.search([('reparacion_id','=', reparacion_id)], order='sequence desc', limit=1)
+            sequence = (last.sequence or 0) + 1
+
+        vals = {
+            'reparacion_id': reparacion_id,
+            'nombre_foto': filename,
+            'file_id': meta['file_id'],
+            'size': meta.get('size') or 0,
+            'mimetype': meta.get('contenttype') or 'application/octet-stream',
+            'sequence': sequence,
+            'state': 'done',
+        }
+        rec = self.sudo().create(vals)
+        thumb = self._get_thumb_url(rec.file_id, cfg) or f'/gallery/preview/{rec.id}'
+        return {
+            'id': rec.id,
+            'sequence': rec.sequence,
+            'nombre_foto': rec.nombre_foto,
+            'thumb_url': thumb,
+        }
