@@ -286,8 +286,6 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
     3. CREAR: Si no encuentra ninguno, crea nuevo
     
     Retorna: (modelo, acción, modificado)
-    - acción: 'exact', 'updated', 'created'
-    - modificado: True si se modificó el nombre del modelo
     """
     Mod = env['modelo.maquina'].sudo()
     
@@ -302,7 +300,6 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
     # ============ PASO 2: Búsqueda SIMILAR para MODIFICAR ============
     _logger.info("[SNMP Match] Paso 2: Búsqueda SIMILAR (para modificar)")
     
-    # Construir dominio de búsqueda
     domain = []
     
     # Filtrar por marca
@@ -353,20 +350,31 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
             best_match.sudo().write({'name': model_snmp})
             _logger.info("[SNMP Match] ✅ Modelo ACTUALIZADO exitosamente")
             
-            # Registrar en chatter de todos los equipos con este modelo
-            equipos = env['sat.sat'].sudo().search([('name', '=', best_match.id)])
-            for equipo in equipos:
-                equipo.message_post(
-                    body=_("📝 <b>Modelo actualizado automáticamente por SNMP</b><br/>"
-                           "Nombre anterior: <b>%s</b><br/>"
-                           "Nombre nuevo: <b>%s</b><br/>"
-                           "Razón: Coincidencia de %.1f%% con datos SNMP")
-                         % (nombre_anterior, model_snmp, best_score * 100))
+            # ✅ CORRECCIÓN: Registrar en chatter de todos los equipos con este modelo
+            try:
+                Sat = env['sat.sat'].sudo()
+                equipos = Sat.search([('name', '=', best_match.id)])
+                _logger.info("[SNMP Match] Notificando a %s equipos sobre el cambio de nombre", len(equipos))
+                
+                for equipo in equipos:
+                    try:
+                        equipo.message_post(
+                            body=_("📝 <b>Modelo actualizado automáticamente por SNMP</b><br/>"
+                                   "Nombre anterior: <b>%s</b><br/>"
+                                   "Nombre nuevo: <b>%s</b><br/>"
+                                   "Razón: Coincidencia de %.1f%% con datos SNMP")
+                                 % (nombre_anterior, model_snmp, best_score * 100))
+                    except Exception as e_msg:
+                        _logger.warning("[SNMP Match] No se pudo notificar a equipo %s: %s", equipo.id, e_msg)
+            except Exception as e_equipos:
+                _logger.warning("[SNMP Match] No se pudo notificar cambios a equipos: %s", e_equipos)
             
             return best_match, 'updated', True
             
         except Exception as e:
             _logger.error("[SNMP Match] ❌ Error modificando modelo: %s", e)
+            _logger.exception("[SNMP Match] Traceback:")
+            # Si falla la modificación, al menos retornamos el modelo encontrado
             return best_match, 'exact', False
     
     elif best_match:
@@ -398,6 +406,7 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
         return created, 'created', False
     except Exception as e:
         _logger.error("[SNMP Match] ❌ Error creando modelo: %s", e)
+        _logger.exception("[SNMP Match] Traceback:")
         return None, 'failed', False
 
 class SNMPPublicController(http.Controller):
