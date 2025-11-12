@@ -144,6 +144,22 @@
             transform: translateY(0);
           }
 
+          .btn-download-all {
+            background: linear-gradient(135deg, var(--success-color) 0%, #00a383 100%);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);
+          }
+
+          .btn-download-all:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 184, 148, 0.4);
+            color: #fff;
+          }
+
+          .btn-download-all:active {
+            transform: translateY(0);
+          }
+
           /* PHOTO GRID - Responsive mejorado */
           .photo-grid { 
             display: grid;
@@ -476,11 +492,22 @@
               </div>
 
               <div class="action-buttons">
-                <!-- SOLO CÁMARA -->
+                <!-- BOTÓN CÁMARA -->
                 <button id="cameraBtn" class="btn btn-camera">
                   <i class="fa-solid fa-camera"></i> 
                   <span>Tomar foto</span>
                 </button>
+                
+                <!-- BOTÓN DESCARGAR TODAS -->
+                <t t-if="fotos and len(fotos) > 0">
+                  <a t-attf-href="/gallery/download_all/#{reparacion.id}" 
+                     class="btn btn-download-all"
+                     title="Descargar todas las fotos en ZIP">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Descargar todas (<t t-esc="len(fotos)"/>)</span>
+                  </a>
+                </t>
+                
                 <input id="cameraCapture" type="file" accept="image/*" capture="environment" style="display:none"/>
                 <div id="loadingOverlay" class="hidden">
                   <i class="fa-solid fa-spinner fa-spin"></i> Subiendo...

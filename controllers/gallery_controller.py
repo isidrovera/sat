@@ -29,7 +29,7 @@ def _json_auth_required():
 
 class GalleryController(http.Controller):
 
-    # Cache en memoria para sesiones de subida “legacy”
+    # Cache en memoria para sesiones de subida "legacy"
     _upload_sessions = {}
 
     # ---------------------
@@ -288,43 +288,94 @@ class GalleryController(http.Controller):
             return self._json({'success': False, 'code': 'INTERNAL_ERROR', 'error': 'Error interno'}, status=500)
 
     # ------------------------------------
-    # DESCARGA INDIVIDUAL (PÚBLICO) / ZIP
+    # DESCARGA INDIVIDUAL (PÚBLICO)
     # ------------------------------------
     @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
     def download_photo(self, foto_id):
-        foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
-        if not foto.exists():
-            _logger.error("[DOWNLOAD] Foto %s no encontrada", foto_id)
+        """Descarga una foto individual."""
+        try:
+            foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
+            if not foto.exists():
+                _logger.error("[DOWNLOAD] Foto %s no encontrada", foto_id)
+                return request.not_found()
+            
+            content = foto.get_download_content()
+            if not content:
+                _logger.error("[DOWNLOAD] No se pudo obtener contenido de foto %s", foto_id)
+                return request.not_found()
+            
+            return request.make_response(
+                base64.b64decode(content['content']),
+                headers=[
+                    ('Content-Type', content['content_type']),
+                    ('Content-Disposition', f'attachment; filename="{content["filename"]}"'),
+                    ('Cache-Control', 'no-cache'),
+                ]
+            )
+        except Exception as e:
+            _logger.exception("[DOWNLOAD] Error descargando foto %s: %s", foto_id, e)
             return request.not_found()
-        content = foto.get_download_content()
-        if not content:
-            return request.not_found()
-        return request.make_response(
-            base64.b64decode(content['content']),
-            headers=[
-                ('Content-Type', content['content_type']),
-                ('Content-Disposition', f'attachment; filename="{content["filename"]}"')
-            ]
-        )
 
+    # ------------------------------------
+    # DESCARGA MASIVA EN ZIP (PÚBLICO)
+    # ------------------------------------
     @http.route('/gallery/download_all/<int:reparacion_id>', type='http', auth='public')
     def download_all(self, reparacion_id):
+        """Descarga todas las fotos de una reparación en un archivo ZIP."""
         try:
-            foto_obj = request.env['reparaciones.foto'].sudo()
-            ids = foto_obj.search([('reparacion_id', '=', reparacion_id)]).ids
-            res = foto_obj.get_photos_zip(ids)
-            if not res:
+            _logger.info("[DOWNLOAD_ALL] Iniciando descarga ZIP para reparación %s", reparacion_id)
+            
+            # Verificar que existe la reparación
+            reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                _logger.error("[DOWNLOAD_ALL] Reparación %s no encontrada", reparacion_id)
                 return request.not_found()
+            
+            # Buscar todas las fotos de esta reparación
+            foto_obj = request.env['reparaciones.foto'].sudo()
+            fotos = foto_obj.search([('reparacion_id', '=', reparacion_id)])
+            
+            if not fotos:
+                _logger.warning("[DOWNLOAD_ALL] No hay fotos para la reparación %s", reparacion_id)
+                return Response(
+                    json.dumps({'error': 'No hay fotos para descargar'}),
+                    status=404,
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            _logger.info("[DOWNLOAD_ALL] Generando ZIP con %s fotos", len(fotos))
+            
+            # Generar el ZIP usando el método del modelo
+            res = foto_obj.get_photos_zip(fotos.ids)
+            
+            if not res or not res.get('content'):
+                _logger.error("[DOWNLOAD_ALL] Error generando ZIP para reparación %s", reparacion_id)
+                return request.not_found()
+            
+            # Nombre del archivo ZIP
+            machine_name = reparacion.maquina_id.name.name if reparacion.maquina_id and reparacion.maquina_id.name else 'Sin_Maquina'
+            serie = reparacion.serie_id or 'Sin_Serie'
+            filename = res.get('filename', f'Fotos_{machine_name}_{serie}.zip')
+            
+            _logger.info("[DOWNLOAD_ALL] Enviando ZIP: %s (%s fotos)", filename, len(fotos))
+            
             return request.make_response(
                 base64.b64decode(res['content']),
                 headers=[
                     ('Content-Type', 'application/zip'),
-                    ('Content-Disposition', f'attachment; filename="{res["filename"]}"')
+                    ('Content-Disposition', f'attachment; filename="{filename}"'),
+                    ('Cache-Control', 'no-cache'),
+                    ('Content-Length', str(len(base64.b64decode(res['content'])))),
                 ]
             )
+            
         except Exception as e:
-            _logger.exception("[DOWNLOAD_ALL] Error: %s", e)
-            return request.not_found()
+            _logger.exception("[DOWNLOAD_ALL] Error generando ZIP para reparación %s: %s", reparacion_id, e)
+            return Response(
+                json.dumps({'error': 'Error generando archivo ZIP'}),
+                status=500,
+                headers=[('Content-Type', 'application/json')]
+            )
 
     # ------------------------------------
     # SECUENCIA (HTTP JSON), REQUIERE LOGIN
@@ -422,28 +473,3 @@ class GalleryController(http.Controller):
         except Exception as e:
             _logger.warning("[SESSION_CHECK] Error: %s", e)
             return self._json({'success': False, 'error': 'Error verificando sesión', 'uid': False, 'is_authenticated': False}, status=500)
-
-    # --------------------------
-    # (OPCIONAL) ENDPOINT LEGACY
-    # --------------------------
-    @http.route('/gallery/upload/<int:reparacion_id>', type='http', auth='user', methods=['POST'], csrf=False)
-    def upload_photo_legacy(self, reparacion_id, **kwargs):
-        """Se mantiene solo por compatibilidad. No recomendamos usarlo (envía binario a Odoo)."""
-        if not request.env.user or request.env.user._is_public():
-            return _login_redirect_response()
-        try:
-            files = request.httprequest.files.getlist('files[]')
-            if not files:
-                return self._json({'success': False, 'error': 'No se encontraron archivos'}, status=400)
-            uploaded = []
-            for f in files:
-                foto = request.env['reparaciones.foto'].sudo().create({
-                    'reparacion_id': reparacion_id,
-                    'nombre_foto': f.filename,
-                    'foto_binario': base64.b64encode(f.read()),
-                })
-                uploaded.append({'id': foto.id, 'nombre': foto.nombre_foto})
-            return self._json({'success': True, 'uploaded_count': len(uploaded), 'files': uploaded})
-        except Exception as e:
-            _logger.exception("[UPLOAD_LEGACY] Error: %s", e)
-            return self._json({'success': False, 'error': 'Error interno'}, status=500)
