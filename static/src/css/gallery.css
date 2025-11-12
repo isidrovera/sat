@@ -1,97 +1,227 @@
-/* /sat/static/src/css/gallery.css */
-.photo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1rem;
-    padding: 1rem;
+/* Galería de fotos - Widget */
+.o_gallery_widget {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
 }
 
-.photo-card {
-    border: 1px solid #ddd;
+.o_gallery_toolbar {
+    margin-bottom: 20px;
+}
+
+/* Grid de fotos */
+.o_gallery_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    padding: 10px 0;
+}
+
+/* Card de foto individual */
+.o_gallery_item {
+    position: relative;
+    background: white;
     border-radius: 8px;
     overflow: hidden;
-    background: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
-.photo-container {
+.o_gallery_item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.o_gallery_item_selectable {
+    cursor: pointer;
+}
+
+.o_gallery_item_selected {
+    border: 3px solid #007bff;
+    transform: translateY(-2px);
+}
+
+/* Checkbox de selección */
+.o_gallery_checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.o_gallery_checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* Contenedor de imagen */
+.o_gallery_image_container {
     position: relative;
-    padding-top: 75%;
-    background: #f8f9fa;
+    padding-top: 75%; /* Aspect ratio 4:3 */
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     overflow: hidden;
 }
 
-.photo-container img {
+.o_gallery_image {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: opacity 0.3s ease;
+    transition: transform 0.3s ease;
 }
 
-.photo-container img.loading {
-    opacity: 0;
+.o_gallery_item:hover .o_gallery_image {
+    transform: scale(1.05);
 }
 
-.actions-bar {
+/* Badge de secuencia */
+.o_gallery_badge {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    display: flex;
-    gap: 0.5rem;
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 5;
 }
 
-.photo-card:hover .actions-bar {
+/* Info de la foto */
+.o_gallery_info {
+    padding: 10px;
+    border-top: 1px solid #e9ecef;
+}
+
+.o_gallery_name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #2d3436;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.o_gallery_meta {
+    font-size: 0.75rem;
+    color: #636e72;
+}
+
+/* Botón de descarga */
+.o_gallery_download_btn {
+    position: absolute;
+    bottom: 55px;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 10;
+    background: white !important;
+}
+
+.o_gallery_item:hover .o_gallery_download_btn {
     opacity: 1;
 }
 
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
-    display: none;
-    justify-content: center;
+/* Modal */
+.o_gallery_modal {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.o_gallery_modal .modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.o_gallery_modal .modal-body {
+    background: #000;
+    display: flex;
     align-items: center;
-    z-index: 9999;
+    justify-content: center;
+    min-height: 400px;
 }
 
-.loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #3498db;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.o_gallery_modal .modal-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
 }
 
-@keyframes spin {
+/* Responsive */
+@media (max-width: 768px) {
+    .o_gallery_grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+    }
+    
+    .o_gallery_item {
+        margin-bottom: 0;
+    }
+    
+    .o_gallery_download_btn {
+        opacity: 1; /* Siempre visible en móvil */
+    }
+}
+
+@media (max-width: 576px) {
+    .o_gallery_grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+    }
+    
+    .o_gallery_widget {
+        padding: 10px;
+    }
+}
+
+/* Loading state */
+.o_gallery_widget .fa-spinner {
+    animation: fa-spin 1s infinite linear;
+}
+
+@keyframes fa-spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
 
-.retry-badge {
-    position: absolute;
-    bottom: 0.5rem;
-    left: 0.5rem;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
+/* Progress bar personalizada */
+.o_gallery_widget .progress {
+    background-color: #e9ecef;
+    border-radius: 8px;
 }
 
-.photo-name {
+.o_gallery_widget .progress-bar {
+    background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%);
+    font-weight: 600;
     font-size: 0.875rem;
-    color: #6c757d;
-    margin-bottom: 0.5rem;
+}
+
+/* Badges */
+.o_gallery_toolbar .badge {
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* Botones de toolbar */
+.o_gallery_toolbar .btn {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.o_gallery_toolbar .btn:hover {
+    transform: translateY(-1px);
+}
+
+.o_gallery_toolbar .btn:active {
+    transform: translateY(0);
 }

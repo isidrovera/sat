@@ -188,6 +188,7 @@
             'sat/static/src/css/parts_request_message.css',
             'sat/static/src/css/image-viewer.css',
             'sat/static/src/css/sat_table_styles.css',
+            'sat/static/src/css/gallery.css',
             #'sat/static/src/css/contadores_dashboard.css',
             
             # SCSS existente
@@ -202,6 +203,7 @@
             
             # JS Files existentes
             'sat/static/src/js/selection_subparts.js',
+            'sat/static/src/js/gallery_widget.js',
             'sat/static/src/js/**/*',
           
             
