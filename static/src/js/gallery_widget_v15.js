@@ -1,4 +1,4 @@
-// sat/static/src/js/gallery.js
+// sat/static/src/js/gallery_widget_v15.js
 // Galería: cámara continua + lote + pCloud directo + eliminar + visor con zoom
 (function () {
   'use strict';
@@ -6,16 +6,13 @@
   // --- Se ejecuta SOLO en /gallery/<id> ---
   document.addEventListener('DOMContentLoaded', function () {
     const path = window.location.pathname;
-    if (!/^\/gallery\/\d+\/?$/.test(path)) return; // no invadir otras vistas
-
+    if (!/^\/gallery\/\d+\/?$/.test(path)) return;
     galleryApp.init();
   });
 
   const galleryApp = {
     // ---- estado ----
     capturedPhotos: [],           // [{file, previewUrl, name, size}]
-    currentSession: null,         // id de sesión (fallback)
-    pcloudUploadUrl: null,        // https://api.pcloud.com/uploadtolink?code=...
     reparacionId: null,
     continuousMode: true,         // reabrir cámara tras cada captura
     uploadingBatch: false,
@@ -31,7 +28,6 @@
       this.ensureAuxUI();
       this.bindEvents();
       this.initializeCameraSession();
-      this.bootstrapSession(); // valida y obtiene upload link
     },
 
     qs() {
@@ -39,7 +35,7 @@
       this.els.cameraInput = document.getElementById('cameraCapture');
       this.els.photoGrid   = document.getElementById('photoGrid');
       this.els.loading     = document.getElementById('loadingOverlay');
-      // modal visor (si el template ya lo trae)
+      // modal visor
       this.els.modal       = document.getElementById('slideshowModal');
       this.els.modalImg    = document.getElementById('slideshowImage');
       this.els.modalClose  = document.getElementById('slideshowClose');
@@ -48,21 +44,16 @@
     },
 
     ensureAuxUI() {
-      // Barra de lote (pendientes + acciones), se inserta al lado de los botones si existen
+      // Barra de lote
       let header = document.querySelector('.header-card .action-buttons') ||
                    document.querySelector('.header-card') ||
                    document.body;
 
-      // contenedor de cola
       let batchBar = document.getElementById('batchBar');
       if (!batchBar) {
         batchBar = document.createElement('div');
         batchBar.id = 'batchBar';
-        batchBar.style.display = 'flex';
-        batchBar.style.flexWrap = 'wrap';
-        batchBar.style.alignItems = 'center';
-        batchBar.style.gap = '8px';
-        batchBar.style.marginLeft = '8px';
+        batchBar.className = 'd-flex flex-wrap align-items-center gap-2 mt-2';
         header.appendChild(batchBar);
       }
 
@@ -71,14 +62,12 @@
       if (!toggle) {
         toggle = document.createElement('button');
         toggle.id = 'toggleContinuous';
-        toggle.className = 'btn btn-outline-secondary';
+        toggle.className = 'btn btn-outline-secondary btn-sm';
         toggle.title = 'Modo continuo';
-        toggle.innerHTML = '<i class="fa-solid fa-repeat"></i> Modo continuo';
+        toggle.innerHTML = '<i class="fa-solid fa-repeat"></i> Continuo';
         batchBar.appendChild(toggle);
-        this.els.toggleContinuous = toggle;
-      } else {
-        this.els.toggleContinuous = toggle;
       }
+      this.els.toggleContinuous = toggle;
 
       // indicador cola
       let badge = document.getElementById('batchCount');
@@ -96,8 +85,8 @@
       if (!sendBtn) {
         sendBtn = document.createElement('button');
         sendBtn.id = 'sendBatch';
-        sendBtn.className = 'btn btn-success';
-        sendBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Enviar lote';
+        sendBtn.className = 'btn btn-success btn-sm';
+        sendBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Enviar';
         sendBtn.disabled = true;
         batchBar.appendChild(sendBtn);
       }
@@ -108,8 +97,8 @@
       if (!clearBtn) {
         clearBtn = document.createElement('button');
         clearBtn.id = 'clearBatch';
-        clearBtn.className = 'btn btn-outline-danger';
-        clearBtn.innerHTML = '<i class="fa-solid fa-trash"></i> Descartar';
+        clearBtn.className = 'btn btn-outline-danger btn-sm';
+        clearBtn.innerHTML = '<i class="fa-solid fa-trash"></i> Limpiar';
         clearBtn.disabled = true;
         batchBar.appendChild(clearBtn);
       }
@@ -120,26 +109,26 @@
       if (!strip) {
         strip = document.createElement('div');
         strip.id = 'pendingStrip';
-        strip.style.display = 'flex';
-        strip.style.flexWrap = 'nowrap';
-        strip.style.overflowX = 'auto';
-        strip.style.gap = '8px';
-        strip.style.padding = '8px 0';
+        strip.className = 'd-flex flex-nowrap overflow-auto gap-2 py-2';
         const headerCard = document.querySelector('.header-card');
         (headerCard || document.body).appendChild(strip);
       }
       this.els.pendingStrip = strip;
 
-      // Si el template NO trae modal, creamos uno simple con zoom
+      // Si el template NO trae modal, creamos uno
       if (!this.els.modal) {
         const m = document.createElement('div');
         m.id = 'slideshowModal';
-        m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:1050;';
+        m.className = 'slideshow-modal';
         m.innerHTML = `
-          <button id="slideshowClose" class="btn btn-light" style="position:absolute;top:12px;right:12px;">Cerrar</button>
-          <button id="slideshowPrev"  class="btn btn-light" style="position:absolute;left:12px;top:50%;">‹</button>
-          <button id="slideshowNext"  class="btn btn-light" style="position:absolute;right:12px;top:50%;">›</button>
-          <img id="slideshowImage" alt="Foto" style="max-width:90vw;max-height:85vh;cursor:grab;transform-origin:center center;">
+          <div class="slideshow-content">
+            <button id="slideshowClose" class="slideshow-close" title="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+            <button id="slideshowPrev" class="slideshow-prev" title="Anterior"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="slideshow-image-container">
+              <img id="slideshowImage" alt="Foto" style="cursor:grab;">
+            </div>
+            <button id="slideshowNext" class="slideshow-next" title="Siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
         `;
         document.body.appendChild(m);
         this.els.modal = m;
@@ -147,10 +136,8 @@
         this.els.modalClose = m.querySelector('#slideshowClose');
         this.els.modalPrev  = m.querySelector('#slideshowPrev');
         this.els.modalNext  = m.querySelector('#slideshowNext');
-        this._attachZoomHandlers();
-      } else {
-        this._attachZoomHandlers();
       }
+      this._attachZoomHandlers();
     },
 
     bindEvents() {
@@ -160,12 +147,14 @@
           this.els.cameraInput?.click();
         });
       }
+      
       // Input cámara
       if (this.els.cameraInput) {
         this.els.cameraInput.setAttribute('accept', 'image/*');
         this.els.cameraInput.setAttribute('capture', 'environment');
         this.els.cameraInput.addEventListener('change', (e) => this.handleCameraCapture(e));
       }
+      
       // Toggle continuo
       if (this.els.toggleContinuous) {
         this.els.toggleContinuous.addEventListener('click', () => {
@@ -173,10 +162,11 @@
           this.els.toggleContinuous.classList.toggle('btn-outline-secondary',  this.continuousMode);
           this.els.toggleContinuous.classList.toggle('btn-secondary',         !this.continuousMode);
           this.els.toggleContinuous.innerHTML = this.continuousMode
-            ? '<i class="fa-solid fa-repeat"></i> Modo continuo'
-            : '<i class="fa-solid fa-hand"></i> Modo manual';
+            ? '<i class="fa-solid fa-repeat"></i> Continuo'
+            : '<i class="fa-solid fa-hand"></i> Manual';
         });
       }
+      
       // Enviar / Descartar lote
       this.els.sendBatch?.addEventListener('click', () => this.uploadBatch());
       this.els.clearBatch?.addEventListener('click', () => this.clearPending());
@@ -200,7 +190,6 @@
       this.els.modalPrev ?.addEventListener('click', () => this.navigateViewer(-1));
       this.els.modalNext ?.addEventListener('click', () => this.navigateViewer(1));
       this.els.modal?.addEventListener('click', (e) => {
-        // cerrar si click fuera de la imagen
         if (e.target === this.els.modal) this.closeViewer();
       });
     },
@@ -211,8 +200,9 @@
         const r = await fetch('/web/session/check', { method: 'POST' });
         const data = await r.json();
         if (data?.success && data?.is_authenticated) return true;
-      } catch (e) {}
-      // redirigir a login SOLO en acciones sensibles
+      } catch (e) {
+        console.error('Error checking session:', e);
+      }
       const redirect = `/web/login?redirect=${encodeURIComponent(location.pathname)}`;
       window.location.href = redirect;
       return false;
@@ -222,39 +212,6 @@
     initializeCameraSession() {
       this.capturedPhotos = [];
       this.updateBatchUI();
-    },
-
-    async bootstrapSession() {
-      // 1) Validación (para fallback)
-      try {
-        const validateResp = await fetch(`/gallery/upload/validate/${this.reparacionId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ file_count: 0, total_size: 0 })
-        });
-        const vres = await validateResp.json();
-        if (vres?.success) this.currentSession = vres.session_id || null;
-      } catch (e) {
-        console.warn('validate_upload error', e);
-      }
-
-      // 2) Obtener upload link a la carpeta de la reparación
-      try {
-        const resp = await fetch(`/gallery/pcloud/uploadlink/${this.reparacionId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        });
-        const r = await resp.json();
-        const data = r.result || r;
-        if (data.success && data.endpoint && data.code) {
-          this.pcloudUploadUrl = `${data.endpoint}?code=${encodeURIComponent(data.code)}`;
-        } else {
-          console.warn('No hay upload link (se usará fallback si es necesario):', data.error || data);
-        }
-      } catch (e) {
-        console.warn('get_upload_link error; se usará fallback', e);
-      }
     },
 
     // --------------- captura & cola ---------------
@@ -271,7 +228,8 @@
           } else {
             if (height > maxDim) { width = Math.round(width * (maxDim / height)); height = maxDim; }
           }
-          canvas.width = width; canvas.height = height;
+          canvas.width = width; 
+          canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
           canvas.toBlob((blob) => {
             const name = (file.name || `image_${Date.now()}.jpg`).replace(/\s+/g, '_');
@@ -286,9 +244,19 @@
     async handleCameraCapture(e) {
       const files = Array.from(e.target.files || []);
       if (!files.length) return;
+      
       const inputFile = files[0];
-      const compressed = await this.compressImage(inputFile, 5, 0.85);
-      this.enqueue(compressed);
+      this.showLoading(true, 'Comprimiendo imagen...');
+      
+      try {
+        const compressed = await this.compressImage(inputFile, 5, 0.85);
+        this.enqueue(compressed);
+      } catch (error) {
+        console.error('Error comprimiendo imagen:', error);
+        alert('Error al procesar la imagen');
+      } finally {
+        this.showLoading(false);
+      }
 
       // reabrir cámara si está activo el modo continuo
       this.els.cameraInput.value = '';
@@ -308,33 +276,21 @@
       if (!this.els.pendingStrip) return;
       const item = this.capturedPhotos[idx];
       const wrap = document.createElement('div');
-      wrap.className = 'pending-item';
-      wrap.style.position = 'relative';
-      wrap.style.width = '72px';
-      wrap.style.height = '72px';
-      wrap.style.borderRadius = '8px';
-      wrap.style.overflow = 'hidden';
-      wrap.style.boxShadow = '0 2px 4px rgba(0,0,0,.12)';
+      wrap.className = 'pending-item position-relative';
+      wrap.style.cssText = 'width:80px;height:80px;border-radius:8px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,.12);flex-shrink:0;';
       wrap.dataset.idx = String(idx);
 
       const img = document.createElement('img');
       img.src = item.previewUrl;
       img.alt = item.name || 'foto';
-      img.style.width = '100%';
-      img.style.height = '100%';
-      img.style.objectFit = 'cover';
-      img.style.cursor = 'zoom-in';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;cursor:zoom-in;';
       img.addEventListener('click', () => this.openTempZoom(img.src));
 
       const rm = document.createElement('button');
       rm.type = 'button';
       rm.title = 'Quitar de lote';
-      rm.className = 'btn btn-sm btn-danger';
-      rm.style.position = 'absolute';
-      rm.style.right = '4px';
-      rm.style.top = '4px';
-      rm.style.padding = '2px 6px';
-      rm.style.lineHeight = '1';
+      rm.className = 'btn btn-sm btn-danger position-absolute';
+      rm.style.cssText = 'right:4px;top:4px;padding:2px 6px;line-height:1;';
       rm.innerHTML = '<i class="fa-solid fa-xmark"></i>';
       rm.addEventListener('click', () => this.removePending(wrap));
 
@@ -379,7 +335,7 @@
       this.els.loading.classList.toggle('hidden', !show);
     },
 
-    // --------------- subida ---------------
+    // --------------- subida DIRECTA ---------------
     async uploadBatch() {
       // Verifica sesión SOLO al intentar subir
       if (!(await this.ensureAuthOrRedirect())) return;
@@ -393,9 +349,11 @@
         for (let i = 0; i < this.capturedPhotos.length; i++) {
           const item = this.capturedPhotos[i];
           this.showLoading(true, `Subiendo ${i + 1}/${this.capturedPhotos.length}...`);
-          await this.uploadOne(item.file);
+          await this.uploadOneDirectToPcloud(item.file);
         }
         this.clearPending();
+        // Recargar para ver las nuevas fotos
+        setTimeout(() => window.location.reload(), 500);
       } catch (e) {
         console.error('Error en subida por lotes', e);
         alert('Ocurrió un error subiendo el lote: ' + (e.message || e));
@@ -406,91 +364,52 @@
       }
     },
 
-    async uploadOne(file) {
+    async uploadOneDirectToPcloud(file) {
       try {
+        // Obtener siguiente secuencia
         const seq = await this.getNextSequence();
-        const up = await this.uploadDirectToPcloud(file); // lanza si falla
-        const reg = await this.registerUploaded(up.pcloud, file.name, file.size, seq);
-        if (reg?.id) {
-          // Pintar tarjeta nueva (respuesta de /register devuelve id y thumb_url)
-          this.appendPhotoCard({
-            id: reg.id,
-            sequence: seq,
-            nombre_foto: file.name,
-            thumb_url: reg.thumb_url || `/gallery/preview/${reg.id}`
-          });
-        } else if (reg?.foto) {
-          this.appendPhotoCard(reg.foto);
-        }
-      } catch (e) {
-        // Fallback si no hay upload link o falló
-        if (!this.currentSession) throw e;
+        
+        // Crear FormData con el archivo y secuencia
         const fd = new FormData();
         fd.append('file', file);
-        fd.append('sequence', await this.getNextSequence());
-        fd.append('reparacion_id', this.reparacionId);
-        const r = await fetch(`/gallery/upload/single/${this.currentSession}`, { method: 'POST', body: fd });
-        const j = await r.json();
-        if (!j?.success) throw new Error(j?.error || 'Fallback falló');
-        window.location.reload();
+        fd.append('sequence', seq);
+
+        // Subir directamente al endpoint que maneja pCloud
+        const url = `/gallery/pcloud/upload-direct/${this.reparacionId}`;
+        const resp = await fetch(url, {
+          method: 'POST',
+          body: fd
+        });
+
+        if (!resp.ok) {
+          const errorText = await resp.text();
+          throw new Error(`HTTP ${resp.status}: ${errorText}`);
+        }
+
+        const result = await resp.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Error desconocido al subir');
+        }
+
+        console.log('✓ Subida exitosa:', result);
+        return result;
+
+      } catch (error) {
+        console.error('Error en uploadOneDirectToPcloud:', error);
+        throw error;
       }
     },
 
-    async uploadDirectToPcloud(file) {
-      if (!(await this.ensureAuthOrRedirect())) throw new Error('AUTH_REQUIRED');
-      if (!this.pcloudUploadUrl) throw new Error('NO_PCL_UPLOADLINK');
-
-      const fd = new FormData();
-      const safeName = (file.name || `image_${Date.now()}.jpg`).replace(/\s+/g, '_');
-      fd.append('file', file, safeName);
-      const url = this.pcloudUploadUrl.includes('?') ? `${this.pcloudUploadUrl}&renameifexists=1` : `${this.pcloudUploadUrl}?renameifexists=1`;
-
-      const resp = await fetch(url, { method: 'POST', body: fd });
-      if (!resp.ok) throw new Error(`PCLOUD_UPLOAD:${resp.status}`);
-
-      let data = {};
-      try { data = await resp.json(); } catch (e) {}
-      if (data.result !== 0) throw new Error(data.error || 'pCloud devolvió error');
-      const meta = Array.isArray(data.metadata) ? data.metadata[0] : null;
-      const fileid = meta?.fileid || (Array.isArray(data.fileids) ? data.fileids[0] : null);
-      if (!fileid) throw new Error('No se obtuvo fileid de pCloud');
-
-      return {
-        success: true,
-        pcloud: {
-          fileid: String(fileid),
-          size: meta?.size || file.size || 0,
-          contenttype: meta?.contenttype || file.type || 'image/jpeg'
-        }
-      };
-    },
-
-    async registerUploaded(pcloudMeta, filename, size, sequence) {
-      const payload = {
-        reparacion_id: Number(this.reparacionId),
-        sequence: Number(sequence || 0),
-        filename: filename || 'foto.jpg',
-        pcloud: {
-          fileid: pcloudMeta.fileid,
-          size: Number(pcloudMeta.size || size || 0),
-          contenttype: pcloudMeta.contenttype || 'image/jpeg'
-        }
-      };
-      const r = await fetch('/gallery/pcloud/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const j = await r.json();
-      if (!j?.success) throw new Error(j?.error || 'Registro falló');
-      return j;
-    },
-
     async getNextSequence() {
-      const r = await fetch(`/gallery/next-sequence/${this.reparacionId}`);
-      const j = await r.json();
-      const res = j.result || j;
-      return res.next_sequence || 1;
+      try {
+        const r = await fetch(`/gallery/next-sequence/${this.reparacionId}`);
+        const j = await r.json();
+        return j.next_sequence || 1;
+      } catch (e) {
+        console.warn('Error obteniendo secuencia, usando 1', e);
+        return 1;
+      }
     },
 
     // --------------- UI: grid existente ---------------
@@ -501,8 +420,8 @@
       div.setAttribute('data-foto-id', f.id);
       div.innerHTML = `
         <div class="photo-container" data-open-viewer="1" data-download-url="/gallery/download/${f.id}">
-          <span class="photo-badge">Foto</span>
-          <img src="${f.thumb_url || ('/gallery/preview/' + f.id)}" alt="Foto"/>
+          <span class="photo-badge"><i class="fa-solid fa-image"></i> Foto</span>
+          <img src="${f.thumb_url || ('/gallery/preview/' + f.id)}" alt="Foto" loading="lazy"/>
         </div>
         <div class="photo-info">
           <span>#${f.sequence || 0} — ${this.escapeHtml(f.nombre_foto || '')}</span>
@@ -520,7 +439,6 @@
 
     // --------------- eliminar ---------------
     async handleDeleteClick(e) {
-      // Verifica sesión SOLO al intentar eliminar
       if (!(await this.ensureAuthOrRedirect())) return;
 
       const btn = e.target.closest('.btn-delete-photo');
@@ -556,16 +474,18 @@
       this._resetZoom();
       if (this.els.modalImg) this.els.modalImg.src = url;
       if (this.els.modal) {
-        this.els.modal.style.display = 'flex';
+        this.els.modal.classList.add('show');
         document.body.style.overflow = 'hidden';
       }
     },
+
     closeViewer() {
       if (this.els.modal) {
-        this.els.modal.style.display = 'none';
+        this.els.modal.classList.remove('show');
         document.body.style.overflow = '';
       }
     },
+
     navigateViewer(delta) {
       if (!this.viewer.list?.length) return;
       this.viewer.index = (this.viewer.index + delta + this.viewer.list.length) % this.viewer.list.length;
@@ -577,7 +497,6 @@
     },
 
     openTempZoom(src) {
-      // zoom rápido al tocar miniatura del lote
       this.openViewer('pending', src);
     },
 
@@ -604,6 +523,7 @@
         lastX = e.clientX;
         lastY = e.clientY;
       });
+
       window.addEventListener('mousemove', (e) => {
         if (!dragging) return;
         originX += (e.clientX - lastX);
@@ -612,6 +532,7 @@
         lastY = e.clientY;
         apply();
       });
+
       window.addEventListener('mouseup', () => {
         dragging = false;
         img.style.cursor = 'grab';
@@ -634,7 +555,7 @@
         e.preventDefault();
         if (e.touches.length === 2) {
           const d = getDist(e.touches[0], e.touches[1]);
-          const factor = (d - touchStartDist) / 200; // sensibilidad
+          const factor = (d - touchStartDist) / 200;
           scale = clampScale(scale + factor);
           touchStartDist = d;
           apply();
@@ -642,18 +563,28 @@
           const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
           originX += (tx - lastX);
           originY += (ty - lastY);
-          lastX = tx; lastY = ty;
+          lastX = tx; 
+          lastY = ty;
           apply();
         }
       }, { passive: false });
 
       img.addEventListener('dblclick', () => {
-        if (scale === 1) { scale = 2; } else { scale = 1; originX = 0; originY = 0; }
+        if (scale === 1) { 
+          scale = 2; 
+        } else { 
+          scale = 1; 
+          originX = 0; 
+          originY = 0; 
+        }
         apply();
       });
 
       this._resetZoom = function () {
-        scale = 1; originX = 0; originY = 0; apply();
+        scale = 1; 
+        originX = 0; 
+        originY = 0; 
+        apply();
       };
     },
 
