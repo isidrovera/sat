@@ -10,43 +10,440 @@
         <style>
           :root {
             --primary-color: #4a90e2;
+            --primary-dark: #3a7bc8;
             --secondary-color: #f5f6fa;
             --text-color: #2d3436;
-            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --text-muted: #636e72;
+            --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.12);
             --success-color: #00b894;
             --camera-color: #fd79a8;
+            --danger-color: #d63031;
+            --border-radius: 12px;
+            --transition: all 0.3s ease;
           }
-          body { background-color: var(--secondary-color); color: var(--text-color); font-family: system-ui, -apple-system, sans-serif; }
-          .header-card { background: #fff; border-radius: 15px; box-shadow: var(--card-shadow); margin: 1rem; padding: 1.25rem; }
-          .header-content { display: flex; flex-direction: column; gap: .75rem; }
-          @media (min-width: 992px) { .header-content { flex-direction: row; justify-content: space-between; align-items: center; } }
-          .header-info h2 { font-size: 1.5rem; margin: 0; color: var(--primary-color); }
-          .action-buttons { display: flex; flex-wrap: wrap; gap: .5rem; align-items:center;}
-          .btn { padding: .5rem 1rem; border-radius: 10px; font-weight: 600; }
-          .btn-camera { background-color: var(--camera-color); color: #fff; }
-          .btn-camera:hover { background-color: #e84393; color: #fff; transform: translateY(-1px); }
-          .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .5rem .75rem; margin-top: .5rem; }
-          .meta-pill { background:#f8f9fa; border:1px solid #eee; border-radius:10px; padding:.4rem .6rem; font-size:.9rem; }
-          .meta-pill b{ color:#343a40; }
-          .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; padding: 1rem; }
-          .photo-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: var(--card-shadow); }
-          .photo-container { position: relative; padding-top: 75%; background: #f8f9fa; cursor: zoom-in; }
-          .photo-container img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .25s; }
-          .photo-container:hover img { transform: scale(1.03); }
-          .photo-info { padding: .6rem .75rem; border-top: 1px solid #eee; font-size: .85rem; color: #555; display:flex; justify-content:space-between; align-items:center; gap:.5rem;}
-          .photo-badge { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.7); color:#fff; padding:2px 6px; border-radius: 4px; font-size: .7rem; }
-          .slideshow-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 10000; align-items: center; justify-content: center; }
-          .slideshow-modal.show { display: flex; }
-          .slideshow-content { position: relative; width: 96vw; height: 92vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.75rem; }
-          .slideshow-image-container { flex:1; width:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-          #slideshowImage { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
-          .slideshow-close, .slideshow-prev, .slideshow-next { position: absolute; top: 16px; background: rgba(0,0,0,.6); color:#fff; border:0; width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; }
-          .slideshow-close { right: 16px; }
-          .slideshow-prev, .slideshow-next { top: 50%; transform: translateY(-50%); }
-          .slideshow-prev { left: 16px; }
-          .slideshow-next { right: 16px; }
-          .hidden { display:none !important; }
-          #pendingStrip { border-top: 1px dashed #e5e7eb; margin-top:.5rem; padding-top:.5rem; }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          body { 
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+          }
+
+          .container-fluid {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0;
+          }
+
+          /* HEADER CARD */
+          .header-card { 
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            margin: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(0,0,0,0.05);
+          }
+
+          .header-content { 
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+          }
+
+          .header-info h2 { 
+            font-size: clamp(1.25rem, 4vw, 1.75rem);
+            margin: 0 0 1rem 0;
+            color: var(--primary-color);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+
+          .header-info h2::before {
+            content: '📸';
+            font-size: 1.5em;
+          }
+
+          /* META GRID - Responsive mejorado */
+          .meta-grid { 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+          }
+
+          .meta-pill { 
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+          }
+
+          .meta-pill:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(74, 144, 226, 0.1);
+          }
+
+          .meta-pill b { 
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          /* ACTION BUTTONS */
+          .action-buttons { 
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: flex-start;
+          }
+
+          .btn { 
+            padding: 0.65rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+          }
+
+          .btn-camera { 
+            background: linear-gradient(135deg, var(--camera-color) 0%, #e84393 100%);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(253, 121, 168, 0.3);
+          }
+
+          .btn-camera:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(253, 121, 168, 0.4);
+          }
+
+          .btn-camera:active {
+            transform: translateY(0);
+          }
+
+          /* PHOTO GRID - Responsive mejorado */
+          .photo-grid { 
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+            gap: 1.25rem;
+            padding: 1rem;
+          }
+
+          /* Ajustes para diferentes pantallas */
+          @media (min-width: 576px) {
+            .photo-grid {
+              grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }
+          }
+
+          @media (min-width: 768px) {
+            .header-content { 
+              flex-direction: row;
+              justify-content: space-between;
+              align-items: flex-start;
+            }
+            
+            .action-buttons {
+              justify-content: flex-end;
+            }
+
+            .photo-grid {
+              grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+              padding: 1.5rem;
+            }
+          }
+
+          @media (min-width: 1200px) {
+            .photo-grid {
+              grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+          }
+
+          /* PHOTO CARD */
+          .photo-card { 
+            background: #fff;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            border: 1px solid rgba(0,0,0,0.05);
+          }
+
+          .photo-card:hover {
+            box-shadow: var(--card-shadow-hover);
+            transform: translateY(-4px);
+          }
+
+          .photo-container { 
+            position: relative;
+            padding-top: 75%;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            cursor: zoom-in;
+            overflow: hidden;
+          }
+
+          .photo-container img { 
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+          }
+
+          .photo-container:hover img { 
+            transform: scale(1.08);
+          }
+
+          .photo-badge { 
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            z-index: 10;
+          }
+
+          .photo-info { 
+            padding: 0.85rem;
+            border-top: 1px solid #f1f3f5;
+            font-size: 0.875rem;
+            color: var(--text-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+          }
+
+          .photo-info > span {
+            font-weight: 500;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .btn-sm {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 6px;
+          }
+
+          .btn-outline-secondary {
+            border: 1px solid #dee2e6;
+            color: var(--text-muted);
+            background: transparent;
+          }
+
+          .btn-outline-secondary:hover {
+            background: var(--text-muted);
+            color: white;
+            border-color: var(--text-muted);
+          }
+
+          .btn-outline-danger {
+            border: 1px solid #fecccb;
+            color: var(--danger-color);
+            background: transparent;
+          }
+
+          .btn-outline-danger:hover {
+            background: var(--danger-color);
+            color: white;
+            border-color: var(--danger-color);
+          }
+
+          /* SLIDESHOW MODAL */
+          .slideshow-modal { 
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+          }
+
+          .slideshow-modal.show { 
+            display: flex;
+            animation: fadeIn 0.3s ease;
+          }
+
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+
+          .slideshow-content { 
+            position: relative;
+            width: 96vw;
+            height: 92vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+          }
+
+          .slideshow-image-container { 
+            flex: 1;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+          }
+
+          #slideshowImage { 
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+          }
+
+          .slideshow-close, .slideshow-prev, .slideshow-next { 
+            position: absolute;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            border: 2px solid rgba(255,255,255,0.3);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 1.25rem;
+          }
+
+          .slideshow-close:hover, .slideshow-prev:hover, .slideshow-next:hover {
+            background: rgba(255,255,255,0.25);
+            transform: scale(1.1);
+          }
+
+          .slideshow-close { 
+            top: 20px;
+            right: 20px;
+          }
+
+          .slideshow-prev, .slideshow-next { 
+            top: 50%;
+            transform: translateY(-50%);
+          }
+
+          .slideshow-prev { left: 20px; }
+          .slideshow-next { right: 20px; }
+
+          /* LOADING OVERLAY */
+          #loadingOverlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 1.5rem 2.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            z-index: 9999;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+          }
+
+          .hidden { 
+            display: none !important;
+          }
+
+          #pendingStrip { 
+            border-top: 2px dashed #dee2e6;
+            margin-top: 1rem;
+            padding-top: 1rem;
+          }
+
+          /* MOBILE OPTIMIZATIONS */
+          @media (max-width: 575px) {
+            .header-card {
+              margin: 0.75rem;
+              padding: 1rem;
+            }
+
+            .photo-grid {
+              padding: 0.75rem;
+              gap: 1rem;
+            }
+
+            .photo-info {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 0.5rem;
+            }
+
+            .photo-info > span {
+              white-space: normal;
+            }
+
+            .slideshow-close, .slideshow-prev, .slideshow-next {
+              width: 40px;
+              height: 40px;
+              font-size: 1rem;
+            }
+
+            .slideshow-prev { left: 10px; }
+            .slideshow-next { right: 10px; }
+            .slideshow-close { top: 10px; right: 10px; }
+          }
+
+          /* SCROLLBAR STYLING */
+          ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+          }
+
+          ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+          }
+
+          ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 5px;
+          }
+
+          ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+          }
         </style>
       </head>
       <body>
@@ -56,7 +453,7 @@
             <div class="header-content">
               <div class="header-info">
                 <h2>
-                  Galería de reparación
+                  Reparación
                   <t t-if="reparacion.name">
                     <t t-esc="reparacion.name"/>
                   </t>
@@ -64,29 +461,30 @@
                     <t t-esc="reparacion.id"/>
                   </t>
                 </h2>
-               
 
                 <!-- Datos de equipo / técnico -->
                 <div class="meta-grid">
                   <div class="meta-pill">
-                    <b>Equipo:</b>
-                    <t t-esc="(reparacion.maquina_id and (reparacion.maquina_id.display_name or reparacion.maquina_id.name)) or '—'"/>
+                    <b>Equipo</b>
+                    <span><t t-esc="(reparacion.maquina_id and (reparacion.maquina_id.display_name or reparacion.maquina_id.name)) or '—'"/></span>
                   </div>
                   <div class="meta-pill">
-                    <b>Serie:</b>
-                    <t t-esc="reparacion.serie_id or '—'"/>
+                    <b>Serie</b>
+                    <span><t t-esc="reparacion.serie_id or '—'"/></span>
                   </div>
-                  
                 </div>
               </div>
 
               <div class="action-buttons">
                 <!-- SOLO CÁMARA -->
                 <button id="cameraBtn" class="btn btn-camera">
-                  <i class="fa-solid fa-camera"></i> Tomar foto
+                  <i class="fa-solid fa-camera"></i> 
+                  <span>Tomar foto</span>
                 </button>
                 <input id="cameraCapture" type="file" accept="image/*" capture="environment" style="display:none"/>
-                <div id="loadingOverlay" class="hidden">Subiendo...</div>
+                <div id="loadingOverlay" class="hidden">
+                  <i class="fa-solid fa-spinner fa-spin"></i> Subiendo...
+                </div>
               </div>
             </div>
           </div>
@@ -96,11 +494,15 @@
             <t t-foreach="fotos" t-as="f">
               <div class="photo-card" t-att-data-foto-id="f['id']">
                 <div class="photo-container" data-open-viewer="1" t-att-data-download-url="'/gallery/download/%s' % f['id']">
-                  <span class="photo-badge">Foto</span>
-                  <img t-att-src="f.get('thumb_url') or ('/gallery/preview/%s' % f['id'])" alt="Foto"/>
+                  <span class="photo-badge">
+                    <i class="fa-solid fa-image"></i> Foto
+                  </span>
+                  <img t-att-src="f.get('thumb_url') or ('/gallery/preview/%s' % f['id'])" alt="Foto" loading="lazy"/>
                 </div>
                 <div class="photo-info">
-                  <span>#<t t-esc="f.get('sequence', 0)"/> — <t t-esc="f.get('nombre_foto','')"/></span>
+                  <span>
+                    #<t t-esc="f.get('sequence', 0)"/> — <t t-esc="f.get('nombre_foto','Sin nombre')"/>
+                  </span>
                   <div class="d-flex gap-2">
                     <a class="btn btn-sm btn-outline-secondary" t-att-href="'/gallery/download/%s' % f['id']" target="_blank" title="Descargar">
                       <i class="fa-solid fa-download"></i>
@@ -118,12 +520,18 @@
         <!-- Modal visor -->
         <div id="slideshowModal" class="slideshow-modal" aria-hidden="true">
           <div class="slideshow-content">
-            <button class="slideshow-close" id="slideshowClose" title="Cerrar"><i class="fa-solid fa-xmark"></i></button>
-            <button class="slideshow-prev" id="slideshowPrev" title="Anterior"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="slideshow-close" id="slideshowClose" title="Cerrar" aria-label="Cerrar">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+            <button class="slideshow-prev" id="slideshowPrev" title="Anterior" aria-label="Foto anterior">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
             <div class="slideshow-image-container">
               <img id="slideshowImage" src="" alt="Imagen completa"/>
             </div>
-            <button class="slideshow-next" id="slideshowNext" title="Siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="slideshow-next" id="slideshowNext" title="Siguiente" aria-label="Foto siguiente">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
           </div>
         </div>
 
