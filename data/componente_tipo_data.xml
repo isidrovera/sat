@@ -454,7 +454,7 @@
   </record>
 
   <record id="estado_toner_25" model="componente.estado">
-    <field name="name">Tóner 25%</</field>
+    <field name="name">Tóner 25%</field>
     <field name="code">toner_25</field>
     <field name="color">3</field>
     <field name="prioridad">2</field>
@@ -470,7 +470,7 @@
   </record>
 
   <record id="estado_toner_75" model="componente.estado">
-    <field name="name">Tóner 75%</</field>
+    <field name="name">Tóner 75%</field>
     <field name="code">toner_75</field>
     <field name="color">10</field>
     <field name="prioridad">3</field>
