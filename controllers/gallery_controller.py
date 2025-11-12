@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 from odoo import http
 from odoo.http import request, Response
 import logging
@@ -12,35 +12,98 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 _logger = logging.getLogger(__name__)
 
+
 class GalleryController(http.Controller):
-    
-    # Cache para sesiones de subida
+    """
+    Controlador de galería con:
+    - Vista pública de galería y preview.
+    - Subida DIRECTA y rápida a pCloud (uploadfile).
+    - (Opcional) Upload link con createuploadlink.
+    - Registro en Odoo tras subir a pCloud.
+    - Eliminación de fotos (requiere login).
+    - Descarga individual y en lote (usa método del modelo).
+    - Limpieza y obtención de secuencias.
+    - Verificación de sesión bajo demanda.
+    """
+
+    # Cache en-memoria por proceso para sesiones legacy (fallback)
     _upload_sessions = {}
 
+    # --------------------- Utilidades internas ---------------------
+
+    def _json_response(self, data, status=200, headers=None):
+        """Respuesta JSON segura."""
+        try:
+            return request.make_json_response(data, status=status, headers=headers)
+        except Exception:
+            return Response(
+                json.dumps(data, ensure_ascii=False),
+                status=status,
+                headers=[('Content-Type', 'application/json; charset=utf-8')] + (headers or []),
+            )
+
+    def _serve_placeholder(self):
+        """Sirve una imagen placeholder si no hay preview real."""
+        try:
+            module_path = os.path.dirname(os.path.dirname(__file__))
+            placeholder_path = os.path.join(module_path, 'static', 'src', 'img', 'placeholder.png')
+            if os.path.exists(placeholder_path):
+                with open(placeholder_path, 'rb') as f:
+                    return Response(
+                        f.read(),
+                        headers=[
+                            ('Content-Type', 'image/png'),
+                            ('Cache-Control', 'public, max-age=7200'),
+                        ]
+                    )
+        except Exception as e:
+            _logger.error("[PLACEHOLDER] Error: %s", str(e))
+        return Response(status=404)
+
     def _get_safe_sequence(self, reparacion_id, preferred_sequence=None):
-        """Obtiene una secuencia segura para usar, evitando duplicados"""
+        """Obtiene una secuencia segura evitando duplicados."""
         foto_obj = request.env['reparaciones.foto'].sudo()
-        
+
         if preferred_sequence:
-            # Verificar si la secuencia preferida está disponible
             existing = foto_obj.search([
                 ('reparacion_id', '=', reparacion_id),
                 ('sequence', '=', preferred_sequence)
             ], limit=1)
-            
             if not existing:
                 return preferred_sequence
-        
-        # Buscar la siguiente secuencia disponible
+
         max_sequence = foto_obj.search([
             ('reparacion_id', '=', reparacion_id)
         ], order='sequence desc', limit=1)
-        
+
         return (max_sequence.sequence if max_sequence else 0) + 1
-    
+
+    def _get_pcloud_host(self):
+        """Devuelve el host de pCloud, por defecto https://api.pcloud.com"""
+        pc = request.env['pcloud.configuracion'].sudo().search([], limit=1)
+        host = (pc.hostname or '').strip() if pc else ''
+        return host or 'https://api.pcloud.com'
+
+    def _get_pcloud_token(self):
+        pc = request.env['pcloud.configuracion'].sudo().search([], limit=1)
+        return (pc.access_token or '').strip() if pc else ''
+
+    def _ensure_logged_user_json(self):
+        """Si no hay usuario logueado, devuelve dict con AUTH_REQUIRED y url de login (para JSON)."""
+        if not request.env.user or request.env.user._is_public():
+            return {
+                'success': False,
+                'code': 'AUTH_REQUIRED',
+                'error': 'Necesitas iniciar sesión',
+                'redirect_login': '/web/login?redirect=' + request.httprequest.path
+            }
+        return None
+
+    # --------------------- Vistas públicas ---------------------
+
     @http.route('/gallery/<int:reparacion_id>', type='http', auth='public', website=True)
     def gallery_page(self, reparacion_id, **kwargs):
-        """Renderiza la página de galería"""
+        """Renderiza la página de galería (pública)."""
         _logger.info("[GALLERY] Accediendo a galería para reparación ID: %s", reparacion_id)
         try:
             reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
@@ -48,18 +111,15 @@ class GalleryController(http.Controller):
                 _logger.error("[GALLERY] Reparación no encontrada: %s", reparacion_id)
                 return request.not_found()
 
-            # Obtener fotos con previsualizaciones
             foto_model = request.env['reparaciones.foto'].sudo()
             fotos = foto_model.get_photos_preview(reparacion_id)
-            
-            # Modificar las URLs para usar el nuevo endpoint de preview
+
             if fotos:
                 for foto in fotos:
                     foto['thumb_url'] = f'/gallery/preview/{foto["id"]}'
-                    
+
             _logger.info("[GALLERY] Se encontraron %s fotos", len(fotos) if fotos else 0)
-            
-            # Renderizar template
+
             return request.render('sat.gallery_page_template', {
                 'reparacion': reparacion,
                 'fotos': fotos or [],
@@ -70,7 +130,7 @@ class GalleryController(http.Controller):
 
     @http.route('/gallery/preview/<int:foto_id>', type='http', auth='public')
     def get_preview(self, foto_id):
-        """Nuevo endpoint para servir previsualizaciones optimizadas"""
+        """Sirve previsualizaciones (thumb) con caché."""
         try:
             foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
             if not foto.exists():
@@ -94,7 +154,7 @@ class GalleryController(http.Controller):
                         ('X-Content-Type-Options', 'nosniff'),
                     ]
                     return Response(response.content, headers=headers)
-            except:
+            except Exception:
                 pass
 
             return self._serve_placeholder()
@@ -102,51 +162,40 @@ class GalleryController(http.Controller):
             _logger.exception("[PREVIEW] Error: %s", str(e))
             return self._serve_placeholder()
 
-    def _serve_placeholder(self):
-        """Sirve una imagen placeholder"""
-        try:
-            module_path = os.path.dirname(os.path.dirname(__file__))
-            placeholder_path = os.path.join(module_path, 'static', 'src', 'img', 'placeholder.png')
-            if os.path.exists(placeholder_path):
-                with open(placeholder_path, 'rb') as f:
-                    return Response(
-                        f.read(),
-                        headers=[
-                            ('Content-Type', 'image/png'),
-                            ('Cache-Control', 'public, max-age=7200'),
-                        ]
-                    )
-        except Exception as e:
-            _logger.error("[PLACEHOLDER] Error: %s", str(e))
-        return Response(status=404)
+    # --------------------- Validación y progreso (fallback legacy) ---------------------
 
     @http.route('/gallery/upload/validate/<int:reparacion_id>', type='json', auth='public', methods=['POST'])
     def validate_upload(self, reparacion_id, file_count=0, total_size=0):
-        """Valida si la subida es posible antes de comenzar"""
+        """
+        Valida previo a subir. SOLO exige login si luego subirás (JS decide).
+        Mantiene compatibilidad con flujo legacy por sesión.
+        """
         try:
-            _logger.info("[VALIDATE] Validando subida: %s archivos, %s bytes", file_count, total_size)
-            
-            # Verificar que la reparación existe
+            _logger.info("[VALIDATE] Reparación %s | files=%s, size=%s", reparacion_id, file_count, total_size)
+
             reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
             if not reparacion.exists():
                 return {'success': False, 'error': 'Reparación no encontrada', 'code': 'REPARACION_NOT_FOUND'}
-            
-            # Verificar permisos de usuario
+
+            # Si no hay login, no rompemos la vista: informamos que hará falta para subir
             if not request.env.user or request.env.user._is_public():
-                return {'success': False, 'error': 'Necesitas iniciar sesión para subir archivos', 'code': 'AUTH_REQUIRED'}
-            
-            # Verificar límites
-            max_files = 50  # Límite máximo de archivos por sesión
-            max_total_size = 100 * 1024 * 1024  # 100MB total
-            max_file_size = 10 * 1024 * 1024   # 10MB por archivo
-            
+                return {
+                    'success': True,
+                    'session_id': None,
+                    'limits': {'max_file_size': 10 * 1024 * 1024, 'max_files': 50, 'max_total_size': 100 * 1024 * 1024},
+                    'auth': {'required_for_upload': True}
+                }
+
+            max_files = 50
+            max_total_size = 100 * 1024 * 1024
+            max_file_size = 10 * 1024 * 1024
+
             if file_count > max_files:
                 return {'success': False, 'error': f'Máximo {max_files} archivos permitidos', 'code': 'TOO_MANY_FILES'}
-            
+
             if total_size > max_total_size:
                 return {'success': False, 'error': f'Tamaño total excede {max_total_size/1024/1024:.0f}MB', 'code': 'SIZE_EXCEEDED'}
-            
-            # Generar ID de sesión
+
             session_id = str(uuid.uuid4())
             self._upload_sessions[session_id] = {
                 'reparacion_id': reparacion_id,
@@ -156,10 +205,10 @@ class GalleryController(http.Controller):
                 'results': [],
                 'start_time': time.time()
             }
-            
-            _logger.info("[VALIDATE] Validación exitosa, sesión: %s", session_id)
+
+            _logger.info("[VALIDATE] OK, sesión: %s", session_id)
             return {
-                'success': True, 
+                'success': True,
                 'session_id': session_id,
                 'limits': {
                     'max_file_size': max_file_size,
@@ -167,39 +216,37 @@ class GalleryController(http.Controller):
                     'max_total_size': max_total_size
                 }
             }
-            
         except Exception as e:
-            _logger.exception("[VALIDATE] Error en validación: %s", str(e))
+            _logger.exception("[VALIDATE] Error: %s", str(e))
             return {'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'}
 
     @http.route('/gallery/upload/single/<session_id>', type='http', auth='user', methods=['POST'], csrf=False)
     def upload_single_photo(self, session_id, **kwargs):
-        """Sube un solo archivo y actualiza el progreso de la sesión"""
+        """Sube 1 archivo (fallback legacy, no recomendado si ya usas subida directa a pCloud)."""
         try:
-            _logger.info("[UPLOAD_SINGLE] Subiendo archivo para sesión: %s", session_id)
-            
-            # Verificar sesión válida
+            _logger.info("[UPLOAD_SINGLE] Sesión: %s", session_id)
+
             if session_id not in self._upload_sessions:
                 return self._json_response({'success': False, 'error': 'Sesión inválida', 'code': 'INVALID_SESSION'})
-            
-            session_data = self._upload_sessions[session_id]
-            
-            # Verificar que el usuario sigue autenticado
+
             if not request.env.user or request.env.user._is_public():
-                return self._json_response({'success': False, 'error': 'Sesión expirada, inicia sesión nuevamente', 'code': 'SESSION_EXPIRED'})
-            
-            # Obtener archivo
+                return self._json_response({
+                    'success': False,
+                    'error': 'Sesión expirada, inicia sesión nuevamente',
+                    'code': 'SESSION_EXPIRED',
+                    'redirect_login': '/web/login?redirect=' + request.httprequest.path
+                }, status=401)
+
+            session_data = self._upload_sessions[session_id]
             files = request.httprequest.files.getlist('file')
             if not files:
                 session_data['failed'] += 1
                 return self._json_response({'success': False, 'error': 'No se encontró archivo', 'code': 'NO_FILE'})
-            
-            file = files[0]  # Solo procesamos un archivo
-            
-            # NUEVO: Obtener secuencia del formulario o calcular automáticamente
+
+            file = files[0]
+
             sequence = request.httprequest.form.get('sequence')
             if not sequence:
-                # Si no se proporciona secuencia, obtener la siguiente disponible
                 foto_obj = request.env['reparaciones.foto'].sudo()
                 max_sequence = foto_obj.search([
                     ('reparacion_id', '=', session_data['reparacion_id'])
@@ -210,55 +257,59 @@ class GalleryController(http.Controller):
                     sequence = int(sequence)
                 except ValueError:
                     sequence = 1
-            
-            _logger.info("[UPLOAD_SINGLE] Usando secuencia %s para archivo: %s", sequence, file.filename)
-            
-            # Validar archivo individual
-            validation_result = self._validate_single_file(file)
+
+            def _validate_single_file(f):
+                if not f or not f.filename:
+                    return {'valid': False, 'error': 'Archivo vacío'}
+                if not any(f.filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']):
+                    return {'valid': False, 'error': 'Tipo de archivo no permitido'}
+                f.seek(0, 2)
+                size = f.tell()
+                f.seek(0)
+                max_size = 10 * 1024 * 1024
+                if size > max_size:
+                    return {'valid': False, 'error': f'Archivo excede {max_size/1024/1024:.0f}MB'}
+                if size == 0:
+                    return {'valid': False, 'error': 'Archivo vacío'}
+                return {'valid': True}
+
+            validation_result = _validate_single_file(file)
             if not validation_result['valid']:
                 session_data['failed'] += 1
-                session_data['results'].append({
-                    'filename': file.filename,
-                    'success': False,
-                    'error': validation_result['error']
-                })
+                session_data['results'].append({'filename': file.filename, 'success': False, 'error': validation_result['error']})
                 return self._json_response({
-                    'success': False, 
-                    'error': validation_result['error'], 
+                    'success': False,
+                    'error': validation_result['error'],
                     'code': 'INVALID_FILE',
                     'progress': self._get_session_progress(session_id)
                 })
-            
-            # Procesar archivo
+
             try:
-                _logger.info("[UPLOAD_SINGLE] Procesando archivo: %s (%s bytes)", file.filename, len(file.read()))
-                file.seek(0)  # Reset file pointer después de la validación
-                
+                _logger.info("[UPLOAD_SINGLE] Procesando: %s", file.filename)
+                data_bytes = file.read()
+                file.seek(0)
                 foto_data = {
                     'reparacion_id': session_data['reparacion_id'],
                     'nombre_foto': file.filename,
-                    'foto_binario': base64.b64encode(file.read()),
-                    'sequence': sequence,  # NUEVO: Asignar secuencia específica
+                    'foto_binario': base64.b64encode(data_bytes),
+                    'sequence': sequence,
                 }
-                
-                # Verificar si ya existe una foto con esa secuencia y manejar duplicados
+
                 existing_foto = request.env['reparaciones.foto'].sudo().search([
                     ('reparacion_id', '=', session_data['reparacion_id']),
                     ('sequence', '=', sequence)
                 ], limit=1)
-                
+
                 if existing_foto:
-                    # Si existe, buscar la siguiente secuencia libre
-                    _logger.warning("[UPLOAD_SINGLE] Secuencia %s ya existe, buscando siguiente libre", sequence)
+                    _logger.warning("[UPLOAD_SINGLE] Secuencia %s existe, re-asignando", sequence)
                     max_sequence = request.env['reparaciones.foto'].sudo().search([
                         ('reparacion_id', '=', session_data['reparacion_id'])
                     ], order='sequence desc', limit=1)
                     sequence = (max_sequence.sequence if max_sequence else 0) + 1
                     foto_data['sequence'] = sequence
-                    _logger.info("[UPLOAD_SINGLE] Nueva secuencia asignada: %s", sequence)
-                
+
                 foto = request.env['reparaciones.foto'].sudo().create(foto_data)
-                
+
                 if foto:
                     session_data['uploaded'] += 1
                     session_data['results'].append({
@@ -268,9 +319,6 @@ class GalleryController(http.Controller):
                         'sequence': foto.sequence,
                         'url': foto.url_foto
                     })
-                    _logger.info("[UPLOAD_SINGLE] Archivo subido exitosamente: %s -> ID:%s, Secuencia:%s", 
-                            file.filename, foto.id, foto.sequence)
-                    
                     return self._json_response({
                         'success': True,
                         'foto_id': foto.id,
@@ -280,60 +328,49 @@ class GalleryController(http.Controller):
                     })
                 else:
                     raise Exception("No se pudo crear el registro de foto")
-                    
+
             except Exception as e:
                 error_msg = str(e)
-                _logger.error("[UPLOAD_SINGLE] Error procesando archivo %s: %s", file.filename, error_msg)
+                _logger.error("[UPLOAD_SINGLE] Error: %s", error_msg)
                 session_data['failed'] += 1
-                session_data['results'].append({
-                    'filename': file.filename,
-                    'success': False,
-                    'error': error_msg
-                })
-                
+                session_data['results'].append({'filename': file.filename, 'success': False, 'error': error_msg})
                 return self._json_response({
                     'success': False,
                     'error': f'Error procesando {file.filename}: {error_msg}',
                     'code': 'PROCESSING_ERROR',
                     'progress': self._get_session_progress(session_id)
                 })
-                
+
         except RequestEntityTooLarge:
-            return self._json_response({'success': False, 'error': 'Archivo demasiado grande', 'code': 'FILE_TOO_LARGE'})
+            return self._json_response({'success': False, 'error': 'Archivo demasiado grande', 'code': 'FILE_TOO_LARGE'}, status=413)
         except Exception as e:
             _logger.exception("[UPLOAD_SINGLE] Error general: %s", str(e))
-            return self._json_response({'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'})
+            return self._json_response({'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'}, status=500)
 
     @http.route('/gallery/upload/progress/<session_id>', type='json', auth='user', methods=['GET'])
     def get_upload_progress(self, session_id):
-        """Obtiene el progreso actual de una sesión de subida"""
+        """Estado del progreso (legacy)."""
         try:
             if session_id not in self._upload_sessions:
                 return {'success': False, 'error': 'Sesión no encontrada'}
-            
-            progress = self._get_session_progress(session_id)
-            return {'success': True, 'progress': progress}
-            
+
+            return {'success': True, 'progress': self._get_session_progress(session_id)}
         except Exception as e:
             _logger.exception("[PROGRESS] Error: %s", str(e))
             return {'success': False, 'error': str(e)}
 
     @http.route('/gallery/upload/complete/<session_id>', type='json', auth='user', methods=['POST'])
     def complete_upload_session(self, session_id):
-        """Finaliza una sesión de subida y devuelve el resumen"""
+        """Finaliza sesión (legacy)."""
         try:
             if session_id not in self._upload_sessions:
                 return {'success': False, 'error': 'Sesión no encontrada'}
-            
+
             session_data = self._upload_sessions[session_id]
             progress = self._get_session_progress(session_id)
-            
-            # Limpiar sesión después de obtener datos
             del self._upload_sessions[session_id]
-            
-            _logger.info("[COMPLETE] Sesión completada: %s subidos, %s fallidos", 
-                        session_data['uploaded'], session_data['failed'])
-            
+
+            _logger.info("[COMPLETE] Subidos=%s, fallidos=%s", session_data['uploaded'], session_data['failed'])
             return {
                 'success': True,
                 'summary': {
@@ -345,44 +382,17 @@ class GalleryController(http.Controller):
                 },
                 'progress': progress
             }
-            
         except Exception as e:
             _logger.exception("[COMPLETE] Error: %s", str(e))
             return {'success': False, 'error': str(e)}
 
-    def _validate_single_file(self, file):
-        """Valida un archivo individual"""
-        if not file or not file.filename:
-            return {'valid': False, 'error': 'Archivo vacío'}
-        
-        # Validar tipo de archivo
-        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp']
-        if not any(file.filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']):
-            return {'valid': False, 'error': 'Tipo de archivo no permitido'}
-        
-        # Validar tamaño
-        file.seek(0, 2)  # Ir al final del archivo
-        size = file.tell()
-        file.seek(0)     # Volver al inicio
-        
-        max_size = 10 * 1024 * 1024  # 10MB
-        if size > max_size:
-            return {'valid': False, 'error': f'Archivo excede {max_size/1024/1024:.0f}MB'}
-        
-        if size == 0:
-            return {'valid': False, 'error': 'Archivo vacío'}
-        
-        return {'valid': True}
-
     def _get_session_progress(self, session_id):
-        """Calcula el progreso de una sesión"""
+        """Calcula progreso (legacy)."""
         if session_id not in self._upload_sessions:
             return None
-        
         session_data = self._upload_sessions[session_id]
         total = session_data['file_count']
         completed = session_data['uploaded'] + session_data['failed']
-        
         return {
             'total': total,
             'uploaded': session_data['uploaded'],
@@ -392,474 +402,179 @@ class GalleryController(http.Controller):
             'is_complete': completed >= total
         }
 
-    def _json_response(self, data):
-        """Retorna una respuesta JSON válida"""
-        return Response(
-            json.dumps(data),
-            headers=[('Content-Type', 'application/json')]
-        )
+    # --------------------- Subida directa y registro pCloud ---------------------
 
-    # MANTENER MÉTODOS EXISTENTES SIN CAMBIOS
-    @http.route('/gallery/upload/<int:reparacion_id>', type='http', auth='user', methods=['POST'], csrf=False)
-    def upload_photo(self, reparacion_id, **kwargs):
-        """Maneja la subida de fotos - MÉTODO ORIGINAL MANTENIDO PARA COMPATIBILIDAD"""
-        _logger.info("[UPLOAD] Iniciando subida para reparación %s", reparacion_id)
-        try:
-            # Verificar autenticación con mensaje específico
-            if not request.env.user or request.env.user._is_public():
-                return json.dumps({'success': False, 'error': 'Sesión expirada. Por favor, inicia sesión nuevamente.', 'code': 'AUTH_REQUIRED'})
-            
-            files = request.httprequest.files.getlist('files[]')
-            if not files:
-                _logger.warning("[UPLOAD] No se encontraron archivos")
-                return json.dumps({'success': False, 'error': 'No se encontraron archivos', 'code': 'NO_FILES'})
-
-            uploaded_files = []
-            failed_files = []
-            
-            _logger.info("[UPLOAD] Procesando %s archivos", len(files))
-            
-            for index, file in enumerate(files):
-                try:
-                    _logger.info("[UPLOAD] Procesando archivo %s/%s: %s", index + 1, len(files), file.filename)
-                    
-                    # Validar archivo
-                    validation = self._validate_single_file(file)
-                    if not validation['valid']:
-                        failed_files.append({
-                            'filename': file.filename,
-                            'error': validation['error']
-                        })
-                        continue
-                    
-                    foto_data = {
-                        'reparacion_id': reparacion_id,
-                        'nombre_foto': file.filename,
-                        'foto_binario': base64.b64encode(file.read()),
-                    }
-                    foto = request.env['reparaciones.foto'].sudo().create(foto_data)
-                    if foto:
-                        uploaded_files.append({
-                            'id': foto.id,
-                            'nombre': foto.nombre_foto,
-                            'url': foto.url_foto
-                        })
-                        _logger.info("[UPLOAD] Foto subida correctamente: %s", foto.id)
-                    else:
-                        failed_files.append({
-                            'filename': file.filename,
-                            'error': 'No se pudo crear el registro'
-                        })
-                        
-                except Exception as e:
-                    error_msg = str(e)
-                    _logger.error("[UPLOAD] Error al procesar archivo %s: %s", file.filename, error_msg)
-                    failed_files.append({
-                        'filename': file.filename,
-                        'error': error_msg
-                    })
-
-            # Respuesta detallada con archivos exitosos y fallidos
-            response_data = {
-                'success': len(uploaded_files) > 0,
-                'files': uploaded_files,
-                'uploaded_count': len(uploaded_files),
-                'failed_count': len(failed_files),
-                'total_count': len(files)
-            }
-            
-            if failed_files:
-                response_data['failed_files'] = failed_files
-                response_data['message'] = f'Se subieron {len(uploaded_files)} de {len(files)} archivos'
-            else:
-                response_data['message'] = f'Se subieron todos los {len(uploaded_files)} archivos correctamente'
-            
-            _logger.info("[UPLOAD] Completado: %s exitosos, %s fallidos", len(uploaded_files), len(failed_files))
-            return json.dumps(response_data)
-            
-        except RequestEntityTooLarge:
-            _logger.error("[UPLOAD] Archivo demasiado grande")
-            return json.dumps({'success': False, 'error': 'Uno o más archivos son demasiado grandes', 'code': 'FILE_TOO_LARGE'})
-        except Exception as e:
-            _logger.exception("[UPLOAD] Error general: %s", str(e))
-            return json.dumps({'success': False, 'error': f'Error interno: {str(e)}', 'code': 'INTERNAL_ERROR'})
-
-    @http.route('/gallery/pcloud/uploadinfo/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
-    def pcloud_uploadinfo(self, reparacion_id):
+    @http.route('/gallery/pcloud/direct-upload/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
+    def pcloud_direct_upload_info(self, reparacion_id):
         """
-        Método completo para crear upload link de pCloud con múltiples enfoques
-        para resolver el problema "Log in required" en createuploadlink.
+        Devuelve info para subida DIRECTA con uploadfile (rápida).
+        El JS puede optar por POST directo a /gallery/pcloud/upload-direct/<id>.
         """
         start_time = time.time()
-        _logger.info("[PCLOUD_UPLOADINFO] === INICIO OPTIMIZADO (timeout: 30s max) ===")
-        _logger.info("[PCLOUD_UPLOADINFO] Reparación ID: %s", reparacion_id)
-        
+        _logger.info("[PCLOUD_DIRECT] Preparando subida directa | rep=%s", reparacion_id)
+
         try:
+            # Requiere login solo aquí (subir)
+            need = self._ensure_logged_user_json()
+            if need:
+                return need
+
             env = request.env
-            
-            # 1. Verificaciones rápidas
             reparacion = env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
             if not reparacion.exists():
-                _logger.error("[PCLOUD_UPLOADINFO] Reparación no encontrada: %s", reparacion_id)
-                return {
-                    'success': False, 
-                    'error': 'Reparación no encontrada',
-                    'code': 'REPARACION_NOT_FOUND'
-                }
-            
+                return {'success': False, 'error': 'Reparación no encontrada'}
+
+            token = self._get_pcloud_token()
+            if not token:
+                return {'success': False, 'error': 'Configuración pCloud faltante'}
+
+            host = self._get_pcloud_host()
+
+            # Valida token rápido
+            try:
+                v = requests.get(f"{host}/userinfo", params={'access_token': token}, timeout=6)
+                jv = v.json() if v.content else {}
+                if v.status_code != 200 or jv.get('result') != 0:
+                    return {'success': False, 'error': 'Token inválido o sesión pCloud no aceptada', 'code': 'PCLOUD_AUTH'}
+            except Exception as e:
+                _logger.exception("[PCLOUD_DIRECT] userinfo error")
+                return {'success': False, 'error': 'No se pudo validar token con pCloud', 'code': 'PCLOUD_AUTH'}
+
+            folder_id = self._get_folder_id_fast(reparacion, request.env['pcloud.configuracion'].sudo().search([], limit=1))
+            if not folder_id:
+                return {'success': False, 'error': 'Error obteniendo carpeta', 'code': 'PCLOUD_FOLDER'}
+
             elapsed = time.time() - start_time
-            _logger.info("[PCLOUD_UPLOADINFO] Reparación verificada en %.2fs", elapsed)
-            
-            # 2. Configuración de pCloud
-            pconf = env['pcloud.configuracion'].sudo().search([], limit=1)
-            if not pconf or not pconf.access_token or not pconf.hostname:
-                _logger.error("[PCLOUD_UPLOADINFO] Configuración pCloud incompleta")
-                return {
-                    'success': False, 
-                    'error': 'Configuración de pCloud incompleta',
-                    'code': 'PCLOUD_CONFIG_MISSING'
-                }
-            
-            elapsed = time.time() - start_time
-            _logger.info("[PCLOUD_UPLOADINFO] Config obtenida en %.2fs", elapsed)
-            
-            # 3. Validación de token
-            _logger.info("[PCLOUD_UPLOADINFO] Validando token (timeout: 5s)...")
-            try:
-                validate_url = f"{pconf.hostname}/userinfo"
-                validate_params = {'access_token': pconf.access_token}
-                
-                validate_response = requests.get(validate_url, params=validate_params, timeout=5)
-                elapsed = time.time() - start_time
-                _logger.info("[PCLOUD_UPLOADINFO] Token validado en %.2fs", elapsed)
-                
-                if validate_response.status_code != 200:
-                    _logger.error("[PCLOUD_UPLOADINFO] Error HTTP validación: %s", validate_response.status_code)
-                    return {
-                        'success': False, 
-                        'error': 'Error de conexión con pCloud',
-                        'code': 'PCLOUD_CONNECTION_ERROR'
-                    }
-                
-                validate_data = validate_response.json() if validate_response.content else {}
-                if validate_data.get('result') != 0:
-                    error_msg = validate_data.get('error', 'Token inválido')
-                    _logger.error("[PCLOUD_UPLOADINFO] Token inválido: %s", error_msg)
-                    return {
-                        'success': False, 
-                        'error': f'Token de pCloud inválido: {error_msg}',
-                        'code': 'PCLOUD_TOKEN_INVALID'
-                    }
-                    
-            except requests.exceptions.Timeout:
-                _logger.error("[PCLOUD_UPLOADINFO] Timeout validando token")
-                return {
-                    'success': False, 
-                    'error': 'Timeout validando pCloud',
-                    'code': 'PCLOUD_VALIDATION_TIMEOUT'
-                }
-            except Exception as e:
-                _logger.error("[PCLOUD_UPLOADINFO] Error validando token: %s", str(e))
-                return {
-                    'success': False, 
-                    'error': 'Error de conexión con pCloud',
-                    'code': 'PCLOUD_CONNECTION_ERROR'
-                }
-            
-            # 4. Obtener folder_id
-            _logger.info("[PCLOUD_UPLOADINFO] Obteniendo folder_id...")
-            try:
-                folder_id = self._get_folder_id_fast(reparacion, pconf)
-                if not folder_id:
-                    _logger.error("[PCLOUD_UPLOADINFO] Error obteniendo folder_id")
-                    return {
-                        'success': False, 
-                        'error': 'Error creando carpeta en pCloud',
-                        'code': 'PCLOUD_FOLDER_ERROR'
-                    }
-                
-                elapsed = time.time() - start_time
-                _logger.info("[PCLOUD_UPLOADINFO] Folder ID obtenido en %.2fs: %s", elapsed, folder_id)
-                
-            except Exception as e:
-                elapsed = time.time() - start_time
-                _logger.error("[PCLOUD_UPLOADINFO] Error folder_id en %.2fs: %s", elapsed, str(e))
-                return {
-                    'success': False, 
-                    'error': f'Error creando carpeta: {str(e)}',
-                    'code': 'PCLOUD_FOLDER_ERROR'
-                }
-            
-            # 5. CREAR UPLOAD LINK CON MÚLTIPLES ENFOQUES
-            _logger.info("[PCLOUD_UPLOADINFO] Creando upload link con múltiples enfoques...")
-            upload_code = None
-            method_used = None
-            
-            try:
-                # ENFOQUE 1: Método estándar con GET
-                _logger.info("[PCLOUD_UPLOADINFO] Enfoque 1: createuploadlink estándar (GET)")
-                url = f"{pconf.hostname}/createuploadlink"
-                params = {
-                    'access_token': pconf.access_token,
-                    'folderid': folder_id,
-                    'comment': f"Odoo Upload - Reparación {reparacion_id}",
-                    'maxfiles': 20,
-                    'maxspace': 100 * 1024 * 1024  # 100MB
-                }
-                
-                response = requests.get(url, params=params, timeout=8)
-                data = response.json() if response.content else {}
-                
-                _logger.info("[PCLOUD_UPLOADINFO] Enfoque 1 response: status=%s, result=%s", 
-                            response.status_code, data.get('result'))
-                
-                if response.status_code == 200 and data.get('result') == 0 and data.get('code'):
-                    upload_code = data.get('code')
-                    method_used = "GET_standard"
-                    _logger.info("[PCLOUD_UPLOADINFO] Enfoque 1 EXITOSO - código: %s", upload_code)
-                    
-                elif data.get('error') and 'log in required' in data.get('error', '').lower():
-                    _logger.warning("[PCLOUD_UPLOADINFO] Enfoque 1 falló: %s", data.get('error'))
-                    
-                    # ENFOQUE 2: Parámetros mínimos
-                    _logger.info("[PCLOUD_UPLOADINFO] Enfoque 2: parámetros mínimos")
-                    minimal_params = {
-                        'access_token': pconf.access_token,
-                        'folderid': folder_id
-                    }
-                    
-                    response2 = requests.get(url, params=minimal_params, timeout=8)
-                    data2 = response2.json() if response2.content else {}
-                    
-                    _logger.info("[PCLOUD_UPLOADINFO] Enfoque 2 response: status=%s, result=%s", 
-                                response2.status_code, data2.get('result'))
-                    
-                    if response2.status_code == 200 and data2.get('result') == 0 and data2.get('code'):
-                        upload_code = data2.get('code')
-                        method_used = "GET_minimal"
-                        _logger.info("[PCLOUD_UPLOADINFO] Enfoque 2 EXITOSO - código: %s", upload_code)
-                    
-                    else:
-                        # ENFOQUE 3: Endpoint público con POST
-                        _logger.info("[PCLOUD_UPLOADINFO] Enfoque 3: endpoint público con POST")
-                        public_url = "https://api.pcloud.com/createuploadlink"
-                        
-                        response3 = requests.post(public_url, data=minimal_params, timeout=8)
-                        data3 = response3.json() if response3.content else {}
-                        
-                        _logger.info("[PCLOUD_UPLOADINFO] Enfoque 3 response: status=%s, result=%s", 
-                                    response3.status_code, data3.get('result'))
-                        
-                        if response3.status_code == 200 and data3.get('result') == 0 and data3.get('code'):
-                            upload_code = data3.get('code')
-                            method_used = "POST_public"
-                            _logger.info("[PCLOUD_UPLOADINFO] Enfoque 3 EXITOSO - código: %s", upload_code)
-                        
-                        else:
-                            # ENFOQUE 4: Reintentar con token refrescado
-                            _logger.info("[PCLOUD_UPLOADINFO] Enfoque 4: revalidar token y reintentar")
-                            
-                            # Volver a validar token por si cambió algo
-                            revalidate_response = requests.get(validate_url, params=validate_params, timeout=3)
-                            revalidate_data = revalidate_response.json() if revalidate_response.content else {}
-                            
-                            if revalidate_response.status_code == 200 and revalidate_data.get('result') == 0:
-                                _logger.info("[PCLOUD_UPLOADINFO] Token sigue válido, reintentando createuploadlink")
-                                
-                                
-                                time.sleep(1)
-                                
-                                response4 = requests.get(url, params=minimal_params, timeout=8)
-                                data4 = response4.json() if response4.content else {}
-                                
-                                if response4.status_code == 200 and data4.get('result') == 0 and data4.get('code'):
-                                    upload_code = data4.get('code')
-                                    method_used = "GET_retry"
-                                    _logger.info("[PCLOUD_UPLOADINFO] Enfoque 4 EXITOSO - código: %s", upload_code)
-                                else:
-                                    _logger.error("[PCLOUD_UPLOADINFO] Enfoque 4 falló: %s", data4.get('error'))
-                            else:
-                                _logger.error("[PCLOUD_UPLOADINFO] Token ya no es válido en revalidación")
-                
-                # Si ningún enfoque funcionó
-                if not upload_code:
-                    _logger.error("[PCLOUD_UPLOADINFO] TODOS LOS ENFOQUES FALLARON")
-                    _logger.error("[PCLOUD_UPLOADINFO] Último error: %s", data.get('error', 'Error desconocido'))
-                    
-                    # Información diagnóstica para el usuario
-                    user_info = validate_data.get('email', 'N/A') if 'validate_data' in locals() else 'N/A'
-                    is_premium = validate_data.get('premium', False) if 'validate_data' in locals() else False
-                    
-                    return {
-                        'success': False,
-                        'error': 'No se pudo crear upload link con ningún método. Token válido para userinfo pero rechazado para createuploadlink.',
-                        'code': 'PCLOUD_CREATELINK_ALL_METHODS_FAILED',
-                        'debug_info': {
-                            'user_email': user_info,
-                            'is_premium': is_premium,
-                            'last_error': data.get('error', 'N/A'),
-                            'methods_tried': ['GET_standard', 'GET_minimal', 'POST_public', 'GET_retry'],
-                            'suggestion': 'Verificar permisos del token de pCloud o contactar administrador'
-                        }
-                    }
-                
-            except requests.exceptions.Timeout:
-                elapsed = time.time() - start_time
-                _logger.error("[PCLOUD_UPLOADINFO] Timeout creando upload link en %.2fs", elapsed)
-                return {
-                    'success': False, 
-                    'error': 'Timeout creando upload link',
-                    'code': 'PCLOUD_CREATELINK_TIMEOUT'
-                }
-            except Exception as e:
-                elapsed = time.time() - start_time
-                _logger.error("[PCLOUD_UPLOADINFO] Error creando upload link en %.2fs: %s", elapsed, str(e))
-                return {
-                    'success': False, 
-                    'error': f'Error creando upload link: {str(e)}',
-                    'code': 'PCLOUD_CREATELINK_ERROR'
-                }
-            
-            # 6. Respuesta exitosa
-            total_elapsed = time.time() - start_time
-            _logger.info("[PCLOUD_UPLOADINFO] === COMPLETADO EN %.2fs CON MÉTODO: %s ===", 
-                        total_elapsed, method_used)
-            
+            _logger.info("[PCLOUD_DIRECT] Listo en %.2fs", elapsed)
+
             return {
                 'success': True,
-                'link_code': upload_code,
+                'method': 'direct_upload',
                 'folder_id': folder_id,
-                'reparacion_id': reparacion_id,
-                'upload_endpoint': 'https://api.pcloud.com/uploadtolink',
-                'processing_time': round(total_elapsed, 2),
-                'method_used': method_used
-            }
-            
-        except Exception as e:
-            total_elapsed = time.time() - start_time
-            _logger.exception("[PCLOUD_UPLOADINFO] ERROR CRÍTICO en %.2fs: %s", total_elapsed, str(e))
-            request.env.cr.rollback()
-            
-            return {
-                'success': False, 
-                'error': 'Error interno del servidor',
-                'code': 'INTERNAL_SERVER_ERROR',
-                'processing_time': round(total_elapsed, 2)
+                'upload_endpoint': f"{host}/uploadfile",
+                'processing_time': round(elapsed, 2),
             }
 
-    def _get_folder_id_fast(self, reparacion, pcloud_config):
-        """Versión optimizada para obtener folder_id con timeouts cortos"""
-        _logger.info("[FOLDER_FAST] Iniciando obtención rápida de folder_id")
-        
-        try:
-            # Nombre de carpeta simplificado
-            machine_name = reparacion.maquina_id.name.name if reparacion.maquina_id and reparacion.maquina_id.name else 'Sin_Maquina'
-            serie = reparacion.serie_id or 'Sin_Serie'
-            folder_name = f"{machine_name}_{serie}"
-            
-            _logger.info("[FOLDER_FAST] Carpeta objetivo: %s", folder_name)
-            
-            # Verificar carpeta raíz
-            root_folder_id = self._get_or_create_folder_fast('fotos_reparaciones', 0, pcloud_config, timeout=5)
-            if not root_folder_id:
-                raise Exception("No se pudo obtener carpeta raíz")
-            
-            _logger.info("[FOLDER_FAST] Carpeta raíz ID: %s", root_folder_id)
-            
-            # Verificar carpeta específica
-            target_folder_id = self._get_or_create_folder_fast(folder_name, root_folder_id, pcloud_config, timeout=8)
-            if not target_folder_id:
-                raise Exception(f"No se pudo obtener carpeta {folder_name}")
-            
-            _logger.info("[FOLDER_FAST] Carpeta objetivo ID: %s", target_folder_id)
-            return target_folder_id
-            
         except Exception as e:
-            _logger.error("[FOLDER_FAST] Error: %s", str(e))
-            return None
+            elapsed = time.time() - start_time
+            _logger.exception("[PCLOUD_DIRECT] Error: %s", str(e))
+            return {'success': False, 'error': f'Error interno: {str(e)}', 'processing_time': round(elapsed, 2)}
 
-    def _get_or_create_folder_fast(self, folder_name, parent_id, pcloud_config, timeout=6):
-        """Obtiene o crea carpeta con timeout específico"""
-        _logger.info("[FOLDER_FAST] Procesando carpeta '%s' en padre %s (timeout: %ss)", 
-                    folder_name, parent_id, timeout)
-        
+    @http.route('/gallery/pcloud/upload-direct/<int:reparacion_id>', type='http', auth='user', methods=['POST'], csrf=False)
+    def pcloud_upload_direct(self, reparacion_id, **kwargs):
+        """
+        Subida DIRECTA a pCloud con uploadfile (máxima velocidad).
+        Recibe 'file' y opcional 'sequence'.
+        """
+        _logger.info("[PCLOUD_UPLOAD_DIRECT] Iniciando subida directa rep=%s", reparacion_id)
         try:
-            # Listar carpetas existentes
-            list_url = f"{pcloud_config.hostname}/listfolder"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'folderid': parent_id,
-                'nofiles': 1  # Solo carpetas
+            # Requiere login
+            if not request.env.user or request.env.user._is_public():
+                return self._json_response({
+                    'success': False,
+                    'error': 'Necesitas iniciar sesión',
+                    'code': 'AUTH_REQUIRED',
+                    'redirect_login': '/web/login?redirect=' + request.httprequest.path
+                }, status=401)
+
+            reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not reparacion.exists():
+                return self._json_response({'success': False, 'error': 'Reparación no encontrada'})
+
+            token = self._get_pcloud_token()
+            host = self._get_pcloud_host()
+            if not token:
+                return self._json_response({'success': False, 'error': 'Configuración pCloud faltante'})
+
+            files = request.httprequest.files.getlist('file')
+            if not files:
+                return self._json_response({'success': False, 'error': 'No se encontró archivo'})
+
+            file = files[0]
+            seq_raw = request.httprequest.form.get('sequence')
+            try:
+                sequence = int(seq_raw) if seq_raw else self._get_safe_sequence(reparacion_id)
+            except Exception:
+                sequence = self._get_safe_sequence(reparacion_id)
+
+            folder_id = self._get_folder_id_fast(reparacion, request.env['pcloud.configuracion'].sudo().search([], limit=1))
+            if not folder_id:
+                return self._json_response({'success': False, 'error': 'Error obteniendo carpeta'})
+
+            upload_url = f"{host}/uploadfile"
+            upload_files = {'file': (file.filename, file.stream, file.mimetype)}
+            upload_data = {
+                'access_token': token,
+                'folderid': folder_id,
+                'renameifexists': 1,
+                'nopartial': 1
             }
-            
-            response = requests.get(list_url, params=params, timeout=timeout)
-            if response.status_code != 200:
-                _logger.warning("[FOLDER_FAST] HTTP %s listando carpeta", response.status_code)
-                raise Exception(f"HTTP {response.status_code} listando carpetas")
-            
-            result = response.json()
-            if result.get('result') != 0:
-                _logger.warning("[FOLDER_FAST] pCloud error listando: %s", result.get('error'))
-                raise Exception(f"pCloud error: {result.get('error')}")
-            
-            # Buscar carpeta existente
-            contents = result.get('metadata', {}).get('contents', [])
-            for item in contents:
-                if item.get('isfolder') and item.get('name') == folder_name:
-                    folder_id = item.get('folderid')
-                    _logger.info("[FOLDER_FAST] Carpeta existente encontrada: %s", folder_id)
-                    return folder_id
-            
-            # Crear nueva carpeta
-            _logger.info("[FOLDER_FAST] Creando nueva carpeta: %s", folder_name)
-            create_url = f"{pcloud_config.hostname}/createfolder"
-            create_params = {
-                'access_token': pcloud_config.access_token,
-                'name': folder_name,
-                'folderid': parent_id
-            }
-            
-            create_response = requests.get(create_url, params=create_params, timeout=timeout)
-            if create_response.status_code != 200:
-                raise Exception(f"HTTP {create_response.status_code} creando carpeta")
-            
-            create_result = create_response.json()
-            if create_result.get('result') != 0:
-                error_msg = create_result.get('error', 'Error desconocido')
-                raise Exception(f"pCloud error creando carpeta: {error_msg}")
-            
-            new_folder_id = create_result.get('metadata', {}).get('folderid')
-            if not new_folder_id:
-                raise Exception("No se recibió ID de carpeta creada")
-            
-            _logger.info("[FOLDER_FAST] Nueva carpeta creada: %s", new_folder_id)
-            return new_folder_id
-            
-        except requests.exceptions.Timeout:
-            _logger.error("[FOLDER_FAST] Timeout procesando carpeta '%s'", folder_name)
-            return None
+
+            rp = requests.post(upload_url, files=upload_files, data=upload_data, timeout=60)
+            jr = rp.json() if rp.content else {}
+
+            if rp.status_code == 200 and jr.get('result') == 0:
+                meta = (jr.get('metadata') or [{}])[0]
+                file_id = meta.get('fileid')
+                if not file_id:
+                    return self._json_response({'success': False, 'error': 'pCloud no devolvió fileid'})
+
+                Foto = request.env['reparaciones.foto'].sudo()
+                rec = Foto.create({
+                    'reparacion_id': reparacion_id,
+                    'nombre_foto': file.filename,
+                    'sequence': sequence,
+                    'file_id': str(file_id),
+                    'state': 'done',
+                    'size': meta.get('size', getattr(file, 'content_length', 0) or 0),
+                    'mimetype': meta.get('contenttype', file.mimetype)
+                })
+
+                _logger.info("[PCLOUD_UPLOAD_DIRECT] Foto creada ID=%s file_id=%s", rec.id, file_id)
+                return self._json_response({
+                    'success': True,
+                    'foto_id': rec.id,
+                    'file_id': file_id,
+                    'filename': file.filename,
+                    'sequence': rec.sequence,
+                    'method': 'direct_upload'
+                })
+
+            return self._json_response({
+                'success': False,
+                'error': f"Error de pCloud: {jr.get('error','desconocido')}",
+                'raw': jr
+            })
+
         except Exception as e:
-            _logger.error("[FOLDER_FAST] Error procesando carpeta '%s': %s", folder_name, str(e))
-            return None
+            _logger.exception("[PCLOUD_UPLOAD_DIRECT] Error: %s", str(e))
+            return self._json_response({'success': False, 'error': f'Error interno: {str(e)}'}, status=500)
 
     @http.route('/gallery/pcloud/register', type='json', auth='user', methods=['POST'])
     def pcloud_register_file(self, **payload):
         """
-        Crea el registro reparaciones.foto con el file ya subido a pCloud
-        payload esperado:
+        Registra en Odoo una foto YA subida a pCloud.
+        payload:
         {
           "reparacion_id": 123,
           "sequence": 7,
           "filename": "image.jpg",
-          "pcloud": {
-             "fileid": 7783...,
-             "size": 123456,
-             "contenttype": "image/jpeg"
-          }
+          "pcloud": {"fileid": "7783...", "size": 123456, "contenttype": "image/jpeg"}
         }
         """
         try:
-            reparacion_id = int(payload.get('reparacion_id'))
+            need = self._ensure_logged_user_json()
+            if need:
+                return need
+
+            # Aceptar payload robustamente si entra vacío
+            if not payload:
+                try:
+                    payload = request.httprequest.get_json(silent=True) or {}
+                except Exception:
+                    payload = {}
+
+            reparacion_id = int(payload.get('reparacion_id') or 0)
             sequence = int(payload.get('sequence') or 0)
             filename = payload.get('filename') or 'foto.jpg'
             pcloud_meta = payload.get('pcloud') or {}
@@ -874,7 +589,9 @@ class GalleryController(http.Controller):
             if not pconf:
                 return {'success': False, 'error': 'Config pCloud no disponible'}
 
-            # Crear registro sin foto_binario (no dispara subida)
+            if not sequence:
+                sequence = self._get_safe_sequence(reparacion_id)
+
             rec = Foto.create({
                 'reparacion_id': reparacion_id,
                 'nombre_foto': filename,
@@ -885,7 +602,6 @@ class GalleryController(http.Controller):
                 'state': 'done',
             })
 
-            # Actualiza URLs (descarga y thumb) como plus
             file_url = rec._get_file_url(rec.file_id, pconf)
             thumb_url = rec._get_thumb_url(rec.file_id, pconf)
             rec.write({
@@ -905,30 +621,125 @@ class GalleryController(http.Controller):
             request.env.cr.rollback()
             return {'success': False, 'error': str(e)}
 
-    @http.route('/gallery/delete/<int:foto_id>', type='http', auth='user', methods=['POST'], csrf=False)
-    def delete_photo(self, foto_id):
-        """Elimina una foto"""
-        try:
-            # Verificar autenticación
-            if not request.env.user or request.env.user._is_public():
-                return json.dumps({'success': False, 'error': 'Sesión expirada. Por favor, inicia sesión nuevamente.', 'code': 'AUTH_REQUIRED'})
-            
-            foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
-            if foto.exists():
-                foto.unlink()
-                return json.dumps({'success': True})
-            return json.dumps({'success': False, 'error': 'Foto no encontrada', 'code': 'NOT_FOUND'})
-        except Exception as e:
-            return json.dumps({'success': False, 'error': str(e), 'code': 'INTERNAL_ERROR'})
+    # --------------------- Upload link (opcional) ---------------------
 
-    # === MEJORA: sync también crea registros nuevos si detecta archivos nuevos en la carpeta pCloud ===
+    @http.route('/gallery/pcloud/uploadlink/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
+    def get_upload_link(self, reparacion_id, **kw):
+        """
+        (Opcional) Crea upload link (createuploadlink) y devuelve endpoint + code.
+        Se robusteció el acceso al payload para evitar AttributeError de jsonrequest.
+        """
+        try:
+            # Requiere login solo para subir
+            need = self._ensure_logged_user_json()
+            if need:
+                return need
+
+            # Payload robusto: primero **kw, luego intento JSON crudo
+            try:
+                payload = kw or request.httprequest.get_json(silent=True) or {}
+            except Exception:
+                payload = {}
+
+            file_count = int(payload.get('file_count') or 1)
+            total_size = int(payload.get('total_size') or 10_000_000)
+
+            rep = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+            if not rep.exists():
+                return {'success': False, 'error': 'Reparación no encontrada'}
+
+            # Asegurar carpeta (usa tu método si existe; si no, uno rápido)
+            folder_id = None
+            if hasattr(rep, 'create_folder_in_pcloud'):
+                folder_id = rep.create_folder_in_pcloud()
+            if not folder_id:
+                folder_id = self._get_folder_id_fast(rep, request.env['pcloud.configuracion'].sudo().search([], limit=1))
+            if not folder_id:
+                return {'success': False, 'error': 'Error creando/obteniendo carpeta en pCloud'}
+
+            token = self._get_pcloud_token()
+            host = self._get_pcloud_host()
+            if not token:
+                return {'success': False, 'error': 'Falta configuración de pCloud'}
+
+            # Validar token antes
+            try:
+                u = requests.get(f"{host}/userinfo", params={'access_token': token}, timeout=8)
+                uj = u.json() if u.content else {}
+                if u.status_code != 200 or uj.get('result') != 0:
+                    return {'success': False, 'code': 'PCLOUD_AUTH', 'error': f"Token inválido: {uj.get('error','sin detalle')}"}
+            except Exception:
+                _logger.exception("[UPLOAD_LINK] userinfo error")
+                return {'success': False, 'code': 'PCLOUD_AUTH', 'error': 'No se pudo validar token con pCloud'}
+
+            # Crear upload link
+            try:
+                url = f"{host}/createuploadlink"
+                params = {
+                    'access_token': token,
+                    'folderid': folder_id,
+                    'maxfiles': file_count,
+                    'maxspace': total_size,
+                    'comment': f"Upload Odoo Reparación {rep.name or rep.id}",
+                }
+                r = requests.get(url, params=params, timeout=12)
+                data = r.json() if r.content else {}
+                if r.status_code == 200 and data.get('result') == 0 and data.get('code'):
+                    return {
+                        'success': True,
+                        'endpoint': 'https://api.pcloud.com/uploadtolink',
+                        'code': data['code'],
+                    }
+                _logger.error("[UPLOAD_LINK] Error pCloud: %s", data)
+                return {'success': False, 'error': f"pCloud error: {data.get('error','sin detalle')}", 'pcloud': data}
+            except Exception:
+                _logger.exception('[UPLOAD_LINK] createuploadlink error')
+                return {'success': False, 'error': 'Error creando upload link en pCloud'}
+
+        except Exception:
+            _logger.exception('get_upload_link error')
+            return {'success': False, 'error': 'Error interno'}
+
+    @http.route('/gallery/pcloud/proxy-upload', type='http', auth='user', methods=['POST'], csrf=False)
+    def proxy_upload(self, **kw):
+        """
+        Fallback por CORS: recibe 'code' + 'file' y reenvía a uploadtolink (público).
+        """
+        try:
+            if not request.env.user or request.env.user._is_public():
+                return self._json_response({
+                    'success': False, 'error': 'Necesitas iniciar sesión',
+                    'code': 'AUTH_REQUIRED',
+                    'redirect_login': '/web/login?redirect=' + request.httprequest.path
+                }, status=401)
+
+            code = request.httprequest.form.get('code')
+            f = request.httprequest.files.get('file')
+            if not code or not f:
+                return request.make_json_response({'success': False, 'error': 'Faltan parámetros'}, status=400)
+
+            files = {'file': (f.filename, f.stream, f.mimetype)}
+            data = {'code': code}
+            r = requests.post('https://api.pcloud.com/uploadtolink', data=data, files=files, timeout=120)
+            jr = r.json() if r.content else {}
+            ok = (r.status_code == 200 and jr.get('result') == 0)
+            return request.make_json_response({'success': ok, 'raw': jr}, status=200 if ok else 500)
+        except Exception as e:
+            _logger.exception('Error en proxy_upload: %s', e)
+            return request.make_json_response({'success': False, 'error': 'Proxy error'}, status=500)
+
+    # --------------------- Sync / eliminación / descarga ---------------------
+
     @http.route('/gallery/sync/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
     def sync_from_pcloud(self, reparacion_id, **kw):
         """
-        Si NO lo tenías ya: sincroniza archivos nuevos del folder de pCloud → crea reparaciones.foto
-        (Idempotente por file_id). Devuelve un resumen.
+        Sincroniza archivos nuevos del folder pCloud -> crea reparaciones.foto (idempotente por file_id).
         """
         try:
+            need = self._ensure_logged_user_json()
+            if need:
+                return need
+
             env = request.env
             reparacion = env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
             if not reparacion.exists():
@@ -938,17 +749,15 @@ class GalleryController(http.Controller):
             if not pcloud_config or not pcloud_config.access_token:
                 return {'success': False, 'error': 'Falta configuración de pCloud'}
 
-            # Asegurar folder
-            folder_id = reparacion._ensure_pcloud_folder()
+            folder_id = reparacion._ensure_pcloud_folder() if hasattr(reparacion, '_ensure_pcloud_folder') else None
+            if not folder_id:
+                folder_id = self._get_folder_id_fast(reparacion, pcloud_config)
 
-            # Listar contenidos de la carpeta
-            list_url = f"{pcloud_config.hostname}/listfolder"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'folderid': folder_id
-            }
+            host = self._get_pcloud_host()
+            list_url = f"{host}/listfolder"
+            params = {'access_token': pcloud_config.access_token, 'folderid': folder_id}
             r = requests.get(list_url, params=params, timeout=15)
-            data = r.json()
+            data = r.json() if r.content else {}
             if r.status_code != 200 or data.get('result') != 0:
                 return {'success': False, 'error': f"listfolder error: {data}"}
 
@@ -961,12 +770,10 @@ class GalleryController(http.Controller):
                 if it.get('isfolder'):
                     continue
                 file_id = str(it.get('fileid'))
-                # ¿ya existe?
                 if Foto.search_count([('reparacion_id', '=', reparacion.id), ('file_id', '=', file_id)]):
                     skipped += 1
                     continue
 
-                # Crear registro sin foto_binario (para NO re-subir):
                 vals = {
                     'reparacion_id': reparacion.id,
                     'nombre_foto': it.get('name') or f'foto_{file_id}.jpg',
@@ -983,19 +790,39 @@ class GalleryController(http.Controller):
             _logger.exception('Error en sync_from_pcloud: %s', e)
             return {'success': False, 'error': 'Error interno'}
 
+    @http.route('/gallery/delete/<int:foto_id>', type='http', auth='user', methods=['POST'], csrf=False)
+    def delete_photo(self, foto_id):
+        """Elimina una foto (requiere login)."""
+        try:
+            if not request.env.user or request.env.user._is_public():
+                return self._json_response({
+                    'success': False,
+                    'error': 'Sesión expirada. Por favor, inicia sesión.',
+                    'code': 'AUTH_REQUIRED',
+                    'redirect_login': '/web/login?redirect=' + request.httprequest.path
+                }, status=401)
+
+            foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
+            if foto.exists():
+                foto.unlink()
+                return self._json_response({'success': True})
+            return self._json_response({'success': False, 'error': 'Foto no encontrada', 'code': 'NOT_FOUND'})
+        except Exception as e:
+            return self._json_response({'success': False, 'error': str(e), 'code': 'INTERNAL_ERROR'}, status=500)
+
     @http.route('/gallery/download/<int:foto_id>', type='http', auth='public')
     def download_photo(self, foto_id):
-        """Devuelve la imagen directamente para descargar"""
+        """Descarga individual."""
         foto = request.env['reparaciones.foto'].sudo().browse(foto_id)
         if not foto.exists():
-            _logger.error(f"[DOWNLOAD_PHOTO] Foto con ID {foto_id} no encontrada")
+            _logger.error(f"[DOWNLOAD_PHOTO] Foto ID {foto_id} no encontrada")
             return request.not_found()
-    
+
         content_info = foto.get_download_content()
         if not content_info:
-            _logger.error(f"[DOWNLOAD_PHOTO] No se pudo obtener contenido para la foto con ID {foto_id}")
+            _logger.error(f"[DOWNLOAD_PHOTO] No se pudo obtener contenido para foto ID {foto_id}")
             return request.not_found()
-    
+
         return request.make_response(
             base64.b64decode(content_info['content']),
             headers=[
@@ -1006,14 +833,14 @@ class GalleryController(http.Controller):
 
     @http.route('/gallery/download_all/<int:reparacion_id>', type='http', auth='public')
     def download_all(self, reparacion_id):
-        """Descarga todas las fotos en ZIP"""
+        """Descarga en ZIP (usa implementación de modelo get_photos_zip)."""
         try:
             foto_obj = request.env['reparaciones.foto'].sudo()
             result = foto_obj.get_photos_zip(foto_obj.search([('reparacion_id', '=', reparacion_id)]).ids)
-            
+
             if not result:
                 return request.not_found()
-                
+
             return request.make_response(
                 base64.b64decode(result['content']),
                 headers=[
@@ -1025,344 +852,225 @@ class GalleryController(http.Controller):
             _logger.exception("Error al descargar todas las fotos: %s", str(e))
             return request.not_found()
 
+    # --------------------- Secuencias / sesión ---------------------
+
     @http.route('/gallery/next-sequence/<int:reparacion_id>', type='http', auth='user', methods=['GET'])
     def get_next_sequence(self, reparacion_id):
-        """Obtiene la siguiente secuencia disponible para una reparación"""
+        """Siguiente secuencia disponible (requiere login)."""
         try:
-            _logger.info("[NEXT_SEQUENCE] Obteniendo siguiente secuencia para reparación: %s", reparacion_id)
-            
-            # Verificar autenticación
             if not request.env.user or request.env.user._is_public():
-                return self._json_response({'success': False, 'error': 'Sesión expirada', 'code': 'AUTH_REQUIRED'})
-            
-            # Verificar que la reparación existe
+                return self._json_response({
+                    'success': False, 'error': 'Sesión expirada', 'code': 'AUTH_REQUIRED',
+                    'redirect_login': '/web/login?redirect=' + request.httprequest.path
+                }, status=401)
+
             reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
             if not reparacion.exists():
-                return self._json_response({'success': False, 'error': 'Reparación no encontrada', 'code': 'REPARACION_NOT_FOUND'})
-            
-            # Obtener la secuencia máxima actual + 1
+                return self._json_response({'success': False, 'error': 'Reparación no encontrada', 'code': 'REPARACION_NOT_FOUND'}, status=404)
+
             foto_obj = request.env['reparaciones.foto'].sudo()
-            max_sequence = foto_obj.search([
-                ('reparacion_id', '=', reparacion_id)
-            ], order='sequence desc', limit=1)
-            
+            max_sequence = foto_obj.search([('reparacion_id', '=', reparacion_id)], order='sequence desc', limit=1)
             next_sequence = (max_sequence.sequence if max_sequence else 0) + 1
-            
-            _logger.info("[NEXT_SEQUENCE] Siguiente secuencia para reparación %s: %s", reparacion_id, next_sequence)
-            
-            response_data = {
-                'success': True,
-                'next_sequence': next_sequence,
-                'reparacion_id': reparacion_id
-            }
-            
-            return self._json_response(response_data)
-            
+
+            return self._json_response({'success': True, 'next_sequence': next_sequence, 'reparacion_id': reparacion_id})
         except Exception as e:
             _logger.exception("[NEXT_SEQUENCE] Error: %s", str(e))
-            return self._json_response({'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'})
+            return self._json_response({'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'}, status=500)
 
     @http.route('/gallery/cleanup-sequences/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
     def cleanup_duplicate_sequences(self, reparacion_id):
-        """Limpia secuencias duplicadas y reorganiza las existentes"""
+        """Reorganiza secuencias consecutivas (requiere login)."""
         try:
-            _logger.info("[CLEANUP_SEQUENCES] Limpiando secuencias para reparación: %s", reparacion_id)
-            
-            # Verificar autenticación
-            if not request.env.user or request.env.user._is_public():
-                return {'success': False, 'error': 'Sesión expirada', 'code': 'AUTH_REQUIRED'}
-            
-            # Verificar que la reparación existe
+            need = self._ensure_logged_user_json()
+            if need:
+                return need
+
             reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
             if not reparacion.exists():
                 return {'success': False, 'error': 'Reparación no encontrada', 'code': 'REPARACION_NOT_FOUND'}
-            
+
             foto_obj = request.env['reparaciones.foto'].sudo()
-            
-            # Obtener todas las fotos de la reparación ordenadas por fecha de creación
-            fotos = foto_obj.search([
-                ('reparacion_id', '=', reparacion_id)
-            ], order='create_date asc')
-            
+            fotos = foto_obj.search([('reparacion_id', '=', reparacion_id)], order='create_date asc')
             if not fotos:
                 return {'success': True, 'message': 'No hay fotos para limpiar'}
-            
-            # Reorganizar secuencias secuencialmente
+
             cleaned_count = 0
             for index, foto in enumerate(fotos, start=1):
                 if foto.sequence != index:
                     foto.write({'sequence': index})
                     cleaned_count += 1
-            
-            _logger.info("[CLEANUP_SEQUENCES] Limpieza completada para reparación %s: %s fotos reorganizadas", 
-                        reparacion_id, cleaned_count)
-            
+
             return {
                 'success': True,
                 'cleaned_count': cleaned_count,
                 'total_fotos': len(fotos),
                 'message': f'Se reorganizaron {cleaned_count} fotos'
             }
-            
+
         except Exception as e:
             _logger.exception("[CLEANUP_SEQUENCES] Error: %s", str(e))
             return {'success': False, 'error': 'Error interno del servidor', 'code': 'INTERNAL_ERROR'}
 
     @http.route('/web/session/check', type='http', auth='public', methods=['POST'], csrf=False)
     def check_session_status(self):
-        """Verifica el estado de la sesión actual"""
+        """Verifica estado de sesión; no rompe vista pública."""
         try:
-            # Verificar si hay un usuario autenticado
             if request.env.user and not request.env.user._is_public():
-                result = {
-                    'success': True,
-                    'uid': request.env.user.id,
-                    'username': request.env.user.name,
-                    'is_authenticated': True
-                }
+                result = {'success': True, 'uid': request.env.user.id, 'username': request.env.user.name, 'is_authenticated': True}
             else:
-                result = {
-                    'success': True,
-                    'uid': False,
-                    'username': None,
-                    'is_authenticated': False
-                }
-            
-            return json.dumps(result)
-            
+                result = {'success': True, 'uid': False, 'username': None, 'is_authenticated': False}
+            return self._json_response(result)
         except Exception as e:
-            _logger.warning("[SESSION_CHECK] Error verificando sesión: %s", str(e))
-            return json.dumps({
-                'success': False,
-                'error': 'Error verificando sesión',
-                'uid': False,
-                'is_authenticated': False
-            })
+            _logger.warning("[SESSION_CHECK] Error: %s", str(e))
+            return self._json_response({'success': False, 'error': 'Error verificando sesión', 'uid': False, 'is_authenticated': False}, status=500)
 
-    # === NUEVO: obtener upload link de pCloud para subir directo desde el navegador ===
-    @http.route('/gallery/pcloud/uploadlink/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
-    def get_upload_link(self, reparacion_id, **kw):
-        """Devuelve {success, endpoint, code, error} siempre."""
+    # --------------------- Soporte pCloud: folders ---------------------
+
+    def _get_folder_id_fast(self, reparacion, pcloud_config):
+        """Obtiene/crea folder destino rápidamente."""
+        _logger.info("[FOLDER_FAST] Resolviendo folder_id")
         try:
-            payload = request.jsonrequest or {}
-            file_count = int(payload.get('file_count') or 1)
-            total_size = int(payload.get('total_size') or 10_000_000)
+            machine_name = reparacion.maquina_id.name.name if getattr(reparacion, 'maquina_id', False) and getattr(reparacion.maquina_id, 'name', False) else 'Sin_Maquina'
+            serie = reparacion.serie_id or 'Sin_Serie'
+            folder_name = f"{machine_name}_{serie}"
 
-            rep = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
-            if not rep.exists():
-                return {'success': False, 'error': 'Reparación no encontrada'}
+            root_folder_id = self._get_or_create_folder_fast('fotos_reparaciones', 0, pcloud_config, timeout=6)
+            if not root_folder_id:
+                raise Exception("No se pudo obtener carpeta raíz")
 
-            # Asegura carpeta en pCloud (usa tu método existente)
-            folder_id = rep.create_folder_in_pcloud()
+            target_folder_id = self._get_or_create_folder_fast(folder_name, root_folder_id, pcloud_config, timeout=8)
+            if not target_folder_id:
+                raise Exception(f"No se pudo obtener carpeta {folder_name}")
 
-            pc = request.env['pcloud.configuracion'].sudo().search([], limit=1)
-            if not pc or not pc.access_token or not pc.hostname:
-                return {'success': False, 'error': 'Falta configuración de pCloud'}
-
-            # 1) Validar token antes (userinfo)
-            try:
-                u = requests.get(f"{pc.hostname}/userinfo", params={'access_token': pc.access_token}, timeout=10)
-                uj = u.json()
-                if u.status_code != 200 or uj.get('result') != 0:
-                    return {'success': False, 'code': 'PCLOUD_AUTH', 'error': f"Token inválido: {uj.get('error','sin detalle')}"}
-            except Exception as e:
-                _logger.exception("userinfo error")
-                return {'success': False, 'code': 'PCLOUD_AUTH', 'error': 'No se pudo validar token con pCloud'}
-
-            # 2) Crear upload link
-            try:
-                url = f"{pc.hostname}/createuploadlink"
-                params = {
-                    'access_token': pc.access_token,
-                    'folderid': folder_id,
-                    'maxfiles': file_count,
-                    'maxspace': total_size,  # bytes
-                    'comment': f"Upload Odoo Reparación {rep.name or rep.id}",
-                }
-                r = requests.get(url, params=params, timeout=15)
-                data = r.json()
-                if r.status_code == 200 and data.get('result') == 0 and data.get('code'):
-                    return {
-                        'success': True,
-                        'endpoint': 'https://api.pcloud.com/uploadtolink',
-                        'code': data['code'],
-                    }
-                # Error de pCloud normalizado
-                return {'success': False, 'error': f"pCloud error: {data.get('error','sin detalle')}", 'pcloud': data}
-            except Exception as e:
-                _logger.exception('createuploadlink error')
-                return {'success': False, 'error': 'Error creando upload link en pCloud'}
-
+            return target_folder_id
         except Exception as e:
-            _logger.exception('get_upload_link error')
-            return {'success': False, 'error': 'Error interno'}
+            _logger.error("[FOLDER_FAST] Error: %s", str(e))
+            return None
 
-    @http.route('/gallery/pcloud/proxy-upload', type='http', auth='user', methods=['POST'], csrf=False)
-    def proxy_upload(self, **kw):
-        """
-        OPCIONAL: Fallback por si CORS bloquea la subida directa desde el navegador.
-        Recibe 'code' y 'file' y los reenvía a https://api.pcloud.com/uploadtolink
-        """
+    def _get_or_create_folder_fast(self, folder_name, parent_id, pcloud_config, timeout=6):
+        """Listar y crear carpeta en pCloud con timeouts cortos."""
         try:
-            code = request.httprequest.form.get('code')
-            f = request.httprequest.files.get('file')
-            if not code or not f:
-                return request.make_json_response({'success': False, 'error': 'Faltan parámetros'}, status=400)
+            host = (pcloud_config.hostname or 'https://api.pcloud.com').strip()
+            token = (pcloud_config.access_token or '').strip()
+            if not token:
+                raise Exception("Token pCloud vacío")
 
-            # Reenvío al endpoint público de pCloud (sin token)
-            files = {'file': (f.filename, f.stream, f.mimetype)}
-            data = {'code': code}
-            r = requests.post('https://api.pcloud.com/uploadtolink', data=data, files=files, timeout=120)
-            jr = r.json() if r.content else {}
-            ok = (r.status_code == 200 and jr.get('result') == 0)
-            return request.make_json_response({'success': ok, 'raw': jr}, status=200 if ok else 500)
-        except Exception as e:
-            _logger.exception('Error en proxy_upload: %s', e)
-            return request.make_json_response({'success': False, 'error': 'Proxy error'}, status=500)
+            # listfolder
+            list_url = f"{host}/listfolder"
+            params = {'access_token': token, 'folderid': parent_id, 'nofiles': 1}
+            response = requests.get(list_url, params=params, timeout=timeout)
+            if response.status_code != 200:
+                raise Exception(f"HTTP {response.status_code} listando carpetas")
 
-    @http.route('/gallery/pcloud/direct-upload/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
-    def pcloud_direct_upload_info(self, reparacion_id):
-        """
-        Método alternativo que no usa createuploadlink.
-        En su lugar, prepara la subida directa usando el token existente.
-        """
-        start_time = time.time()
-        _logger.info("[PCLOUD_DIRECT] === MÉTODO SIN CREATEUPLOADLINK ===")
-        _logger.info("[PCLOUD_DIRECT] Reparación ID: %s", reparacion_id)
-        
-        try:
-            env = request.env
-            
-            # Verificaciones básicas
-            reparacion = env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
-            if not reparacion.exists():
-                return {'success': False, 'error': 'Reparación no encontrada'}
-            
-            pconf = env['pcloud.configuracion'].sudo().search([], limit=1)
-            if not pconf or not pconf.access_token:
-                return {'success': False, 'error': 'Configuración pCloud faltante'}
-            
-            # Validar token (ya sabemos que esto funciona)
-            validate_url = f"{pconf.hostname}/userinfo"
-            validate_response = requests.get(validate_url, params={'access_token': pconf.access_token}, timeout=5)
-            if validate_response.status_code != 200:
-                return {'success': False, 'error': 'Token inválido'}
-            
-            # Obtener folder_id
-            folder_id = self._get_folder_id_fast(reparacion, pconf)
-            if not folder_id:
-                return {'success': False, 'error': 'Error obteniendo carpeta'}
-            
-            elapsed = time.time() - start_time
-            _logger.info("[PCLOUD_DIRECT] Preparación completada en %.2fs", elapsed)
-            
-            # En lugar de createuploadlink, devolvemos información para subida directa
-            return {
-                'success': True,
-                'method': 'direct_upload',
-                'folder_id': folder_id,
-                'upload_endpoint': f"{pconf.hostname}/uploadfile",
-                'access_token': pconf.access_token,  # Solo para uso interno
-                'processing_time': round(elapsed, 2),
-                'note': 'Subida directa sin createuploadlink'
-            }
-            
-        except Exception as e:
-            elapsed = time.time() - start_time
-            _logger.exception("[PCLOUD_DIRECT] Error: %s", str(e))
-            return {
-                'success': False,
-                'error': f'Error interno: {str(e)}',
-                'processing_time': round(elapsed, 2)
-            }
-
-    @http.route('/gallery/pcloud/upload-direct/<int:reparacion_id>', type='http', auth='user', methods=['POST'], csrf=False)
-    def pcloud_upload_direct(self, reparacion_id, **kwargs):
-        """
-        Subida directa a pCloud sin usar createuploadlink.
-        Utiliza directamente uploadfile con el token.
-        """
-        _logger.info("[PCLOUD_UPLOAD_DIRECT] Iniciando subida directa para reparación %s", reparacion_id)
-        
-        try:
-            # Verificaciones básicas
-            reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
-            if not reparacion.exists():
-                return self._json_response({'success': False, 'error': 'Reparación no encontrada'})
-            
-            pconf = request.env['pcloud.configuracion'].sudo().search([], limit=1)
-            if not pconf or not pconf.access_token:
-                return self._json_response({'success': False, 'error': 'Configuración pCloud faltante'})
-            
-            # Obtener archivo
-            files = request.httprequest.files.getlist('file')
-            if not files:
-                return self._json_response({'success': False, 'error': 'No se encontró archivo'})
-            
-            file = files[0]
-            sequence = request.httprequest.form.get('sequence', '1')
-            
-            # Obtener folder_id
-            folder_id = self._get_folder_id_fast(reparacion, pconf)
-            if not folder_id:
-                return self._json_response({'success': False, 'error': 'Error obteniendo carpeta'})
-            
-            # Subir directamente usando uploadfile
-            _logger.info("[PCLOUD_UPLOAD_DIRECT] Subiendo archivo %s a carpeta %s", file.filename, folder_id)
-            
-            upload_url = f"{pconf.hostname}/uploadfile"
-            upload_files = {'file': (file.filename, file.stream, file.mimetype)}
-            upload_data = {
-                'access_token': pconf.access_token,
-                'folderid': folder_id,
-                'renameifexists': 1,
-                'nopartial': 1
-            }
-            
-            response = requests.post(upload_url, files=upload_files, data=upload_data, timeout=30)
             result = response.json() if response.content else {}
-            
-            _logger.info("[PCLOUD_UPLOAD_DIRECT] Respuesta de pCloud: status=%s, result=%s", 
-                        response.status_code, result.get('result'))
-            
-            if response.status_code == 200 and result.get('result') == 0:
-                # Subida exitosa - crear registro en Odoo
-                metadata = result.get('metadata', [{}])[0]
-                file_id = metadata.get('fileid')
-                
-                if file_id:
-                    # Crear registro de foto
+            if result.get('result') != 0:
+                raise Exception(f"pCloud error listando: {result.get('error')}")
+
+            for item in result.get('metadata', {}).get('contents', []):
+                if item.get('isfolder') and item.get('name') == folder_name:
+                    return item.get('folderid')
+
+            # createfolder
+            create_url = f"{host}/createfolder"
+            create_params = {'access_token': token, 'name': folder_name, 'folderid': parent_id}
+            create_response = requests.get(create_url, params=create_params, timeout=timeout)
+            if create_response.status_code != 200:
+                raise Exception(f"HTTP {create_response.status_code} creando carpeta")
+
+            create_result = create_response.json() if create_response.content else {}
+            if create_result.get('result') != 0:
+                raise Exception(f"pCloud error creando carpeta: {create_result.get('error', 'desconocido')}")
+
+            new_folder_id = create_result.get('metadata', {}).get('folderid')
+            if not new_folder_id:
+                raise Exception("pCloud no devolvió folderid")
+
+            return new_folder_id
+        except requests.exceptions.Timeout:
+            _logger.error("[FOLDER_FAST] Timeout procesando carpeta '%s'", folder_name)
+            return None
+        except Exception as e:
+            _logger.error("[FOLDER_FAST] Error '%s': %s", folder_name, str(e))
+            return None
+
+    # --------------------- Upload legacy masivo (compatibilidad) ---------------------
+
+    @http.route('/gallery/upload/<int:reparacion_id>', type='http', auth='user', methods=['POST'], csrf=False)
+    def upload_photo(self, reparacion_id, **kwargs):
+        """Compatibilidad: subida múltiple al binario de Odoo (menos rápida que pCloud)."""
+        _logger.info("[UPLOAD] Iniciando subida para reparación %s", reparacion_id)
+        try:
+            if not request.env.user or request.env.user._is_public():
+                return json.dumps({
+                    'success': False,
+                    'error': 'Sesión expirada. Por favor, inicia sesión nuevamente.',
+                    'code': 'AUTH_REQUIRED',
+                    'redirect_login': '/web/login?redirect=' + request.httprequest.path
+                })
+
+            files = request.httprequest.files.getlist('files[]')
+            if not files:
+                _logger.warning("[UPLOAD] No se encontraron archivos")
+                return json.dumps({'success': False, 'error': 'No se encontraron archivos', 'code': 'NO_FILES'})
+
+            uploaded_files = []
+            failed_files = []
+
+            def _validate_single_file(f):
+                if not f or not f.filename:
+                    return {'valid': False, 'error': 'Archivo vacío'}
+                if not any(f.filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']):
+                    return {'valid': False, 'error': 'Tipo de archivo no permitido'}
+                f.seek(0, 2)
+                size = f.tell()
+                f.seek(0)
+                max_size = 10 * 1024 * 1024
+                if size > max_size:
+                    return {'valid': False, 'error': f'Archivo excede {max_size/1024/1024:.0f}MB'}
+                if size == 0:
+                    return {'valid': False, 'error': 'Archivo vacío'}
+                return {'valid': True}
+
+            for index, file in enumerate(files):
+                try:
+                    validation = _validate_single_file(file)
+                    if not validation['valid']:
+                        failed_files.append({'filename': file.filename, 'error': validation['error']})
+                        continue
+
                     foto_data = {
                         'reparacion_id': reparacion_id,
                         'nombre_foto': file.filename,
-                        'sequence': int(sequence) if sequence.isdigit() else 1,
-                        'file_id': str(file_id),
-                        'state': 'done',
-                        'size': metadata.get('size', getattr(file, 'content_length', 0) or 0),
-                        'mimetype': metadata.get('contenttype', file.mimetype)
+                        'foto_binario': base64.b64encode(file.read()),
                     }
-                    
                     foto = request.env['reparaciones.foto'].sudo().create(foto_data)
-                    
-                    _logger.info("[PCLOUD_UPLOAD_DIRECT] Foto creada exitosamente: ID=%s, file_id=%s", 
-                                foto.id, file_id)
-                    
-                    return self._json_response({
-                        'success': True,
-                        'foto_id': foto.id,
-                        'file_id': file_id,
-                        'filename': file.filename,
-                        'sequence': foto.sequence,
-                        'method': 'direct_upload'
-                    })
-                else:
-                    return self._json_response({'success': False, 'error': 'No se recibió file_id de pCloud'})
-            
-            else:
-                error_msg = result.get('error', 'Error desconocido')
-                _logger.error("[PCLOUD_UPLOAD_DIRECT] Error de pCloud: %s", error_msg)
-                return self._json_response({'success': False, 'error': f'Error de pCloud: {error_msg}'})
-                
+                    if foto:
+                        uploaded_files.append({'id': foto.id, 'nombre': foto.nombre_foto, 'url': foto.url_foto})
+                    else:
+                        failed_files.append({'filename': file.filename, 'error': 'No se pudo crear el registro'})
+
+                except Exception as e:
+                    failed_files.append({'filename': file.filename, 'error': str(e)})
+
+            response_data = {
+                'success': len(uploaded_files) > 0,
+                'files': uploaded_files,
+                'uploaded_count': len(uploaded_files),
+                'failed_count': len(failed_files),
+                'total_count': len(files)
+            }
+            response_data['message'] = (
+                f"Se subieron {len(uploaded_files)} de {len(files)} archivos"
+                if failed_files else f"Se subieron todos los {len(uploaded_files)} archivos correctamente"
+            )
+            if failed_files:
+                response_data['failed_files'] = failed_files
+
+            return json.dumps(response_data)
+
+        except RequestEntityTooLarge:
+            _logger.error("[UPLOAD] Archivo demasiado grande")
+            return json.dumps({'success': False, 'error': 'Uno o más archivos son demasiado grandes', 'code': 'FILE_TOO_LARGE'})
         except Exception as e:
-            _logger.exception("[PCLOUD_UPLOAD_DIRECT] Error: %s", str(e))
-            return self._json_response({'success': False, 'error': f'Error interno: {str(e)}'})
+            _logger.exception("[UPLOAD] Error general: %s", str(e))
+            return json.dumps({'success': False, 'error': f'Error interno: {str(e)}', 'code': 'INTERNAL_ERROR'})
