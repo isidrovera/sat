@@ -69,8 +69,8 @@
 
                     <div id="photoGrid" class="photo-grid">
                         <t t-foreach="fotos" t-as="f">
-                            <div class="photo-card" data-foto-id="<t t-esc='f[&quot;id&quot;]'/>">
-                                <div class="photo-container" data-open-viewer="1" data-download-url="/gallery/download/<t t-esc='f[&quot;id&quot;]'/>">
+                            <div class="photo-card" t-att-data-foto-id="f['id']">
+                                <div class="photo-container" data-open-viewer="1" t-att-data-download-url="'/gallery/download/%s' % f['id']">
                                     <span class="photo-badge">Foto</span>
                                     <img t-att-src="f.get('thumb_url') or ('/gallery/preview/%s' % f['id'])" alt="Foto"/>
                                 </div>
@@ -97,7 +97,7 @@
                     </div>
                 </div>
 
-                <script src="/sat/static/src/js/gallery.js"></script>
+                <script src="/sat/static/src/js/gallery_widget_v15.js"></script>
             </body>
         </html>
     </template>
