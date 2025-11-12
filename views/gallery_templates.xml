@@ -78,10 +78,7 @@
                     <b>Serie:</b>
                     <t t-esc="reparacion.serie_id or '—'"/>
                   </div>
-                  <div class="meta-pill">
-                    <b>Cliente:</b>
-                    <t t-esc="(reparacion.partner_id and reparacion.partner_id.display_name) or '—'"/>
-                  </div>
+                  
                   <div class="meta-pill">
                     <b>Técnico:</b>
                     <t t-esc="(getattr(reparacion, 'tecnico_id', False) and reparacion.tecnico_id.name) or (getattr(reparacion, 'user_id', False) and reparacion.user_id.name) or '—'"/>
