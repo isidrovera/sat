@@ -35,7 +35,6 @@
           .photo-container:hover img { transform: scale(1.03); }
           .photo-info { padding: .6rem .75rem; border-top: 1px solid #eee; font-size: .85rem; color: #555; display:flex; justify-content:space-between; align-items:center; gap:.5rem;}
           .photo-badge { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.7); color:#fff; padding:2px 6px; border-radius: 4px; font-size: .7rem; }
-          /* Modal (visor de imagen completa) */
           .slideshow-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 10000; align-items: center; justify-content: center; }
           .slideshow-modal.show { display: flex; }
           .slideshow-content { position: relative; width: 96vw; height: 92vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.75rem; }
@@ -47,7 +46,6 @@
           .slideshow-prev { left: 16px; }
           .slideshow-next { right: 16px; }
           .hidden { display:none !important; }
-          /* tira de pendientes (se inserta desde JS) */
           #pendingStrip { border-top: 1px dashed #e5e7eb; margin-top:.5rem; padding-top:.5rem; }
         </style>
       </head>
@@ -68,7 +66,7 @@
                 </h2>
                 <div class="text-muted">Solo captura con cámara (adjuntar está desactivado)</div>
 
-                <!-- Datos de equipo / cliente / técnico -->
+                <!-- Datos de equipo / técnico -->
                 <div class="meta-grid">
                   <div class="meta-pill">
                     <b>Equipo:</b>
@@ -79,18 +77,6 @@
                     <t t-esc="reparacion.serie_id or '—'"/>
                   </div>
                   
-                  <div class="meta-pill">
-                    <b>Técnico:</b>
-                    <t t-esc="(getattr(reparacion, 'tecnico_id', False) and reparacion.tecnico_id.name) or (getattr(reparacion, 'user_id', False) and reparacion.user_id.name) or '—'"/>
-                  </div>
-                  <div class="meta-pill">
-                    <b>Estado:</b>
-                    <t t-esc="getattr(reparacion, 'state', False) or '—'"/>
-                  </div>
-                  <div class="meta-pill">
-                    <b>Fecha:</b>
-                    <t t-esc="(reparacion.create_date and reparacion.create_date.strftime('%Y-%m-%d %H:%M')) or '—'"/>
-                  </div>
                 </div>
               </div>
 
@@ -99,9 +85,7 @@
                 <button id="cameraBtn" class="btn btn-camera">
                   <i class="fa-solid fa-camera"></i> Tomar foto
                 </button>
-                <!-- Input oculto solo-cámara -->
                 <input id="cameraCapture" type="file" accept="image/*" capture="environment" style="display:none"/>
-                <!-- Overlay básico -->
                 <div id="loadingOverlay" class="hidden">Subiendo...</div>
               </div>
             </div>
@@ -121,7 +105,6 @@
                     <a class="btn btn-sm btn-outline-secondary" t-att-href="'/gallery/download/%s' % f['id']" target="_blank" title="Descargar">
                       <i class="fa-solid fa-download"></i>
                     </a>
-                    <!-- Botón eliminar compatible con JS (.btn-delete-photo) -->
                     <button type="button" class="btn btn-sm btn-outline-danger btn-delete-photo" title="Eliminar">
                       <i class="fa-solid fa-trash"></i>
                     </button>
@@ -144,7 +127,6 @@
           </div>
         </div>
 
-        <!-- Importa el JS de multi-captura que generamos -->
         <script src="/sat/static/src/js/gallery_widget_v15.js"></script>
       </body>
     </html>
