@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import http, _
+from odoo import http, _, fields
 from odoo.http import request
 import re
 import logging
@@ -651,7 +651,7 @@ class SNMPPublicController(http.Controller):
             vals = {
                 'contometro': contador_nuevo_str,
                 'contador_antes_snmp': contador_actual_str,
-                'ultima_actualizacion_snmp': request.env['ir.fields'].browse(1)._fields['create_date'].now(),
+                'ultima_actualizacion_snmp': fields.Datetime.now(),
                 'total_actualizaciones_snmp': sat.total_actualizaciones_snmp + 1,
                 'ultima_fuente_actualizacion': 'snmp',
             }
