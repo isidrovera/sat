@@ -11,7 +11,6 @@ import re
 import mimetypes
 from datetime import datetime
 import hashlib
-import magic
 
 _logger = logging.getLogger(__name__)
 
@@ -27,24 +26,11 @@ class ReparacionFoto(models.Model):
     foto_binario = fields.Binary(string="Subir Foto", attachment=True)
     mimetype = fields.Char(string="Tipo de Archivo", compute='_compute_mimetype', store=True)
     size = fields.Integer(string="Tamaño (bytes)", readonly=True)
-    reparacion_id = fields.Many2one(
-        'reparaciones.reparaciones', 
-        string="Reparación",
-        required=True,
-        index=True,
-        ondelete='cascade',
-        tracking=True
-    )
+    reparacion_id = fields.Many2one('reparaciones.reparaciones', string="Reparación", required=True, index=True, ondelete='cascade', tracking=True)
     file_id = fields.Char(string="File ID pCloud", index=True, tracking=True)
     public_link = fields.Char(string="Link Público", tracking=True)
     sequence = fields.Integer(string="Secuencia", default=0)
-    state = fields.Selection([
-        ('draft', 'Borrador'),
-        ('uploading', 'Subiendo'),
-        ('done', 'Completado'),
-        ('error', 'Error'),
-        ('deleted', 'Eliminado')
-    ], string="Estado", default='draft', tracking=True)
+    state = fields.Selection([('draft','Borrador'),('uploading','Subiendo'),('done','Completado'),('error','Error'),('deleted','Eliminado')], default='draft', tracking=True)
     active = fields.Boolean('Activo', default=True, tracking=True)
     create_date = fields.Datetime('Fecha de Creación', readonly=True)
     write_date = fields.Datetime('Última Modificación', readonly=True)
@@ -53,1081 +39,123 @@ class ReparacionFoto(models.Model):
     unique_id = fields.Char(string="ID Único", readonly=True)
 
     _sql_constraints = [
-        ('unique_sequence_per_repair', 
-         'UNIQUE(reparacion_id, sequence)',
-         'La secuencia debe ser única por reparación'),
-        ('unique_file_name',
-         'UNIQUE(reparacion_id, unique_id)',
-         'El nombre del archivo debe ser único por reparación')
+        ('unique_sequence_per_repair','UNIQUE(reparacion_id, sequence)','La secuencia debe ser única por reparación'),
+        ('unique_file_name','UNIQUE(reparacion_id, unique_id)','El nombre del archivo debe ser único por reparación')
     ]
 
-    
-    @api.model_create_multi
-    def create(self, vals_list):
-        """Sobrescribe el método create para manejar la subida de fotos"""
-        for vals in vals_list:
-            _logger.info("[CREATE] Iniciando creación de foto con valores: %s", vals)
-            
-            if 'reparacion_id' in vals:
-                # Obtener la siguiente secuencia
-                existing_photos = self.search([
-                    ('reparacion_id', '=', vals['reparacion_id'])
-                ], order='sequence desc', limit=1)
-                vals['sequence'] = (existing_photos.sequence or 0) + 1
-                _logger.info("[CREATE] Asignada secuencia: %s", vals['sequence'])
-
-            # Generar ID único
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            random_string = hashlib.md5(str(datetime.now().timestamp()).encode()).hexdigest()[:6]
-            vals['unique_id'] = f"{timestamp}_{random_string}"
-            _logger.info("[CREATE] Generado ID único: %s", vals['unique_id'])
-
-            if 'foto_binario' in vals:
-                try:
-                    vals['state'] = 'uploading'
-                    # Obtener la reparación
-                    reparacion = self.env['reparaciones.reparaciones'].browse(vals['reparacion_id'])
-                    if not reparacion:
-                        _logger.error("[CREATE] No se encontró la reparación: %s", vals['reparacion_id'])
-                        raise ValidationError("No se encontró la reparación relacionada")
-
-                    archivo_binario = base64.b64decode(vals['foto_binario'])
-                    vals['size'] = len(archivo_binario)
-                    
-                    # Configuración pCloud
-                    pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-                    if not pcloud_config or not pcloud_config.access_token:
-                        _logger.error("[CREATE] No se encontró configuración de pCloud válida")
-                        raise ValidationError("Configuración de pCloud no encontrada")
-
-                    # Obtener folder_id
-                    folder_id = self._obtener_folder_id(reparacion, pcloud_config)
-                    _logger.info("[CREATE] Carpeta pCloud obtenida: %s", folder_id)
-                    
-                    # Subir archivo
-                    result = self._upload_to_pcloud(
-                        archivo_binario,
-                        vals['nombre_foto'],
-                        folder_id,
-                        pcloud_config
-                    )
-
-                    if result:
-                        vals.update({
-                            'file_id': result['file_id'],
-                            'url_foto': result['url'],
-                            'public_link': result.get('public_link'),
-                            'state': 'done',
-                            'size': result.get('size', vals['size']),
-                            'mimetype': result.get('content_type', 'application/octet-stream')
-                        })
-                        del vals['foto_binario']
-                    else:
-                        vals['state'] = 'error'
-                        raise ValidationError("Error al subir la foto a pCloud")
-
-                except Exception as e:
-                    _logger.exception("[CREATE] Error durante la creación: %s", str(e))
-                    vals['state'] = 'error'
-                    raise ValidationError(f"Error al subir la foto: {str(e)}")
-
-        return super().create(vals_list)
-    
-    def upload_to_pcloud(self):
-        pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
-        if not pcloud_config or not pcloud_config.access_token:
-            raise ValidationError("No se encontró configuración de pCloud")
-
-        folder_id = self._obtener_folder_id(self.reparacion_id, pcloud_config)
-        archivo_binario = base64.b64decode(self.foto_binario)
-        
-        result = self._upload_to_pcloud(archivo_binario, self.nombre_foto, folder_id, pcloud_config)
-        if result and result.get('file_id'):
-            self.write({
-                'file_id': result['file_id'],
-                'url_foto': result['url'],
-                'public_link': result.get('public_link'),
-                'state': 'done'
-            })
-        else:
-            self.state = 'error'
-            raise ValidationError("Error al subir la foto a pCloud")
-
-
-    def _get_pcloud_url(self, endpoint, file_id, pcloud_config, extra_params=None):
-        """Método base para obtener URLs de pCloud"""
-        _logger.info("[PCLOUD_URL] Solicitando URL para endpoint: %s, file_id: %s", endpoint, file_id)
-        
-        if not file_id or not pcloud_config or not pcloud_config.access_token:
-            _logger.error("[PCLOUD_URL] Faltan parámetros necesarios")
-            return False
-
-        try:
-            url = f"{pcloud_config.hostname}/{endpoint}"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'fileid': file_id
-            }
-            if extra_params:
-                params.update(extra_params)
-
-            _logger.info("[PCLOUD_URL] Enviando solicitud: %s con params: %s", url, params)
-            response = requests.get(url, params=params)
-            result = response.json()
-            _logger.info("[PCLOUD_URL] Respuesta: %s", result)
-
-            if response.status_code == 200 and result.get('result') == 0:
-                final_url = f"https://{result['hosts'][0]}{result['path']}"
-                _logger.info("[PCLOUD_URL] URL generada: %s", final_url)
-                return final_url
-
-            _logger.error("[PCLOUD_URL] Error en respuesta: %s", result)
-            return False
-
-        except Exception as e:
-            _logger.exception("[PCLOUD_URL] Error: %s", str(e))
-            return False
-
-    def _get_thumb_url(self, file_id, pcloud_config):
-        """Obtiene la URL del thumbnail usando getthumblink de pCloud."""
-        _logger.info("[THUMB_URL] Solicitando thumbnail para file_id: %s", file_id)
-        try:
-            url = f"{pcloud_config.hostname}/getthumblink"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'fileid': file_id,
-                'size': '256x256',  # Tamaño de la miniatura
-                'crop': 1  # Forzar tamaño exacto
-            }
-            response = requests.get(url, params=params)
-            result = response.json()
-            
-            if response.status_code == 200 and result.get('result') == 0:
-                thumb_url = f"https://{result['hosts'][0]}{result['path']}"
-                _logger.info("[THUMB_URL] URL generada para thumbnail: %s", thumb_url)
-                return thumb_url
-            else:
-                _logger.error("[THUMB_URL] Error en respuesta: %s", result)
-                return None
-
-        except Exception as e:
-            _logger.exception("[THUMB_URL] Error al obtener thumbnail para file_id %s: %s", file_id, str(e))
-            return None
-
-
-
-    def _get_file_url(self, file_id, pcloud_config):
-        """Obtiene la URL de descarga del archivo en pCloud."""
-        _logger.info("[FILE_URL] Solicitando URL de archivo para file_id: %s", file_id)
-        try:
-            url = f"{pcloud_config.hostname}/getfilelink"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'fileid': file_id
-            }
-            response = requests.get(url, params=params)
-            result = response.json()
-            
-            if response.status_code == 200 and result.get('result') == 0:
-                file_url = f"https://{result['hosts'][0]}{result['path']}"
-                _logger.info("[FILE_URL] URL generada para archivo: %s", file_url)
-                return file_url
-            else:
-                _logger.error("[FILE_URL] Error en respuesta: %s", result)
-                return None
-
-        except Exception as e:
-            _logger.exception("[FILE_URL] Error al obtener URL de archivo para file_id %s: %s", file_id, str(e))
-            return None
-    def _create_public_link(self, file_id, pcloud_config):
-        """Crear link público para compartir"""
-        _logger.info("[PUBLIC_LINK] Creando link público para file_id: %s", file_id)
-        try:
-            url = f"{pcloud_config.hostname}/getfilepublink"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'fileid': file_id
-            }
-
-            _logger.info("[PUBLIC_LINK] Enviando solicitud: %s", url)
-            response = requests.get(url, params=params)
-            result = response.json()
-            _logger.info("[PUBLIC_LINK] Respuesta: %s", result)
-
-            if response.status_code == 200 and result.get('link'):
-                _logger.info("[PUBLIC_LINK] Link creado: %s", result['link'])
-                return result['link']
-
-            _logger.error("[PUBLIC_LINK] Error en respuesta: %s", result)
-            return False
-
-        except Exception as e:
-            _logger.exception("[PUBLIC_LINK] Error: %s", str(e))
-            return False
-
-    @api.model
-    def get_photos_preview(self, reparacion_id):
-        """
-        Obtiene las fotos de una reparación con previsualizaciones optimizadas.
-        Implementa timeouts agresivos y manejo robusto de errores por foto individual.
-        """
-        _logger.info("[GET_PHOTOS_PREVIEW] === INICIANDO CARGA OPTIMIZADA ===")
-        _logger.info("[GET_PHOTOS_PREVIEW] Reparación ID: %s", reparacion_id)
-        
-        try:
-            # Buscar todas las fotos de la reparación
-            fotos = self.search([('reparacion_id', '=', reparacion_id)], order='sequence asc, create_date asc')
-            total_fotos = len(fotos)
-            _logger.info("[GET_PHOTOS_PREVIEW] Total de fotos encontradas: %s", total_fotos)
-            
-            if not fotos:
-                _logger.info("[GET_PHOTOS_PREVIEW] No se encontraron fotos para la reparación")
-                return []
-            
-            # Obtener configuración de pCloud una sola vez
-            _logger.info("[GET_PHOTOS_PREVIEW] Obteniendo configuración de pCloud...")
-            pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
-            if not pcloud_config or not pcloud_config.access_token:
-                _logger.error("[GET_PHOTOS_PREVIEW] ❌ Configuración de pCloud no encontrada o sin token")
-                return self._get_fallback_photos_data(fotos)
-            
-            _logger.info("[GET_PHOTOS_PREVIEW] ✅ Configuración pCloud obtenida correctamente")
-            
-            result = []
-            successful_loads = 0
-            failed_loads = 0
-            timeout_errors = 0
-            pcloud_errors = 0
-            
-            # Procesar cada foto individualmente con manejo robusto de errores
-            for index, foto in enumerate(fotos, 1):
-                foto_start_time = time.time()
-                _logger.info("[GET_PHOTOS_PREVIEW] 📸 Procesando foto %s/%s - ID: %s", index, total_fotos, foto.id)
-                
-                # Datos básicos de la foto (siempre disponibles)
-                foto_data = {
-                    'id': foto.id,
-                    'nombre_foto': foto.nombre_foto or f'foto_{foto.id}',
-                    'sequence': foto.sequence or 0,
-                    'file_id': foto.file_id,
-                    'fecha_creacion': foto.create_date.strftime('%Y-%m-%d %H:%M:%S') if foto.create_date else None,
-                }
-                
-                try:
-                    if foto.file_id:
-                        _logger.info("[GET_PHOTOS_PREVIEW] 🔗 Generando URLs para foto ID: %s, file_id: %s", 
-                                foto.id, foto.file_id)
-                        
-                        # Intentar obtener thumbnail con timeout muy agresivo
-                        thumb_url = self._get_thumb_url_with_timeout(foto.file_id, pcloud_config, timeout=2)
-                        processing_time = time.time() - foto_start_time
-                        
-                        if thumb_url:
-                            foto_data['thumb_url'] = thumb_url
-                            _logger.info("[GET_PHOTOS_PREVIEW] ✅ Thumbnail obtenido para foto %s en %.2fs", 
-                                    foto.id, processing_time)
-                            successful_loads += 1
-                        else:
-                            _logger.warning("[GET_PHOTOS_PREVIEW] ⚠️ Thumbnail falló para foto %s, usando fallback local", foto.id)
-                            foto_data['thumb_url'] = f'/gallery/preview/{foto.id}'
-                            pcloud_errors += 1
-                            failed_loads += 1
-                        
-                        # URL de descarga (siempre usar nuestro endpoint local para mayor confiabilidad)
-                        foto_data['download_url'] = f'/gallery/download/{foto.id}'
-                        _logger.info("[GET_PHOTOS_PREVIEW] 📥 URL de descarga local asignada: /gallery/download/%s", foto.id)
-                        
-                    else:
-                        _logger.warning("[GET_PHOTOS_PREVIEW] ⚠️ Foto ID: %s sin file_id, usando fallbacks completos", foto.id)
-                        foto_data['thumb_url'] = f'/gallery/preview/{foto.id}'
-                        foto_data['download_url'] = f'/gallery/download/{foto.id}'
-                        failed_loads += 1
-                    
-                except Exception as e:
-                    processing_time = time.time() - foto_start_time
-                    error_msg = str(e)
-                    
-                    # Clasificar tipos de error
-                    if 'timeout' in error_msg.lower() or 'time' in error_msg.lower():
-                        timeout_errors += 1
-                        _logger.error("[GET_PHOTOS_PREVIEW] ⏱️ TIMEOUT en foto %s después de %.2fs: %s", 
-                                    foto.id, processing_time, error_msg)
-                    else:
-                        pcloud_errors += 1
-                        _logger.error("[GET_PHOTOS_PREVIEW] ❌ ERROR en foto %s después de %.2fs: %s", 
-                                    foto.id, processing_time, error_msg)
-                    
-                    # Usar fallbacks en caso de cualquier error
-                    foto_data['thumb_url'] = f'/gallery/preview/{foto.id}'
-                    foto_data['download_url'] = f'/gallery/download/{foto.id}'
-                    failed_loads += 1
-                
-                result.append(foto_data)
-                
-                # Log de progreso cada 3 fotos o en la última
-                if index % 3 == 0 or index == total_fotos:
-                    _logger.info("[GET_PHOTOS_PREVIEW] 📊 Progreso: %s/%s fotos procesadas (%s exitosos, %s fallidos)", 
-                            index, total_fotos, successful_loads, failed_loads)
-            
-            # Estadísticas finales
-            total_time = time.time()
-            _logger.info("[GET_PHOTOS_PREVIEW] === CARGA COMPLETADA ===")
-            _logger.info("[GET_PHOTOS_PREVIEW] 📈 Estadísticas finales:")
-            _logger.info("[GET_PHOTOS_PREVIEW]   • Total procesadas: %s fotos", total_fotos)
-            _logger.info("[GET_PHOTOS_PREVIEW]   • Exitosas (pCloud): %s", successful_loads)
-            _logger.info("[GET_PHOTOS_PREVIEW]   • Fallidas (fallback): %s", failed_loads)
-            _logger.info("[GET_PHOTOS_PREVIEW]   • Errores de timeout: %s", timeout_errors)
-            _logger.info("[GET_PHOTOS_PREVIEW]   • Errores de pCloud: %s", pcloud_errors)
-            _logger.info("[GET_PHOTOS_PREVIEW]   • Tasa de éxito: %.1f%%", 
-                    (successful_loads / total_fotos * 100) if total_fotos > 0 else 0)
-            
-            # Verificar si tenemos un problema serio
-            if failed_loads > total_fotos * 0.5:  # Más del 50% fallido
-                _logger.warning("[GET_PHOTOS_PREVIEW] 🚨 ALERTA: Más del 50%% de fotos fallaron, posible problema de conectividad con pCloud")
-            
-            return result
-            
-        except Exception as e:
-            _logger.exception("[GET_PHOTOS_PREVIEW] ❌ ERROR CRÍTICO: %s", str(e))
-            
-            # En caso de error crítico, devolver datos mínimos usando fallback
-            try:
-                _logger.info("[GET_PHOTOS_PREVIEW] 🔄 Intentando recuperación con datos fallback...")
-                fotos = self.search([('reparacion_id', '=', reparacion_id)], order='sequence asc, create_date asc')
-                fallback_result = self._get_fallback_photos_data(fotos)
-                _logger.info("[GET_PHOTOS_PREVIEW] ✅ Recuperación exitosa con %s fotos en modo fallback", len(fallback_result))
-                return fallback_result
-            except Exception as fallback_error:
-                _logger.exception("[GET_PHOTOS_PREVIEW] ❌ ERROR EN RECUPERACIÓN: %s", str(fallback_error))
-                return []
-
-    def _get_thumb_url_with_timeout(self, file_id, pcloud_config, timeout=2):
-        """Obtiene thumbnail URL con timeout específico y manejo robusto de errores"""
-        start_time = time.time()
-        _logger.info("[THUMB_TIMEOUT] 🔄 Solicitando thumbnail para file_id: %s (timeout: %ss)", 
-                    file_id, timeout)
-        
-        try:
-            if not pcloud_config or not pcloud_config.access_token:
-                _logger.error("[THUMB_TIMEOUT] ❌ No hay token de acceso disponible")
-                return None
-            
-            url = f"https://api.pcloud.com/getthumblink"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'fileid': file_id,
-                'size': '320x240',
-                'crop': 0,
-                'type': 'auto'
-            }
-            
-            _logger.debug("[THUMB_TIMEOUT] 📡 Enviando request a pCloud: %s", url)
-            
-            # Request con timeout muy corto y configuración optimizada
-            import requests
-            
-            # Configurar session para mejor performance
-            session = requests.Session()
-            session.headers.update({
-                'User-Agent': 'Odoo-Gallery/1.0',
-                'Accept': 'application/json',
-                'Connection': 'keep-alive'
-            })
-            
-            response = session.get(url, params=params, timeout=timeout, stream=False)
-            request_time = time.time() - start_time
-            
-            _logger.debug("[THUMB_TIMEOUT] 📡 Response status: %s en %.2fs", response.status_code, request_time)
-            
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    _logger.debug("[THUMB_TIMEOUT] 📄 Respuesta JSON: %s", data)
-                    
-                    if data.get('result') == 0 and 'hosts' in data and 'path' in data:
-                        thumb_url = f"https://{data['hosts'][0]}{data['path']}"
-                        _logger.info("[THUMB_TIMEOUT] ✅ URL generada exitosamente en %.2fs: %s", 
-                                request_time, thumb_url[:100] + "..." if len(thumb_url) > 100 else thumb_url)
-                        return thumb_url
-                    else:
-                        error_msg = data.get('error', 'Respuesta inválida de pCloud')
-                        _logger.error("[THUMB_TIMEOUT] ❌ Error en respuesta pCloud: %s", error_msg)
-                        return None
-                        
-                except ValueError as json_error:
-                    _logger.error("[THUMB_TIMEOUT] ❌ Error parsing JSON: %s", str(json_error))
-                    _logger.error("[THUMB_TIMEOUT] Response text: %s", response.text[:200])
-                    return None
-            else:
-                _logger.error("[THUMB_TIMEOUT] ❌ HTTP Error %s en %.2fs", response.status_code, request_time)
-                return None
-                
-        except requests.exceptions.Timeout:
-            timeout_time = time.time() - start_time
-            _logger.error("[THUMB_TIMEOUT] ⏱️ TIMEOUT después de %.2fs para file_id: %s", timeout_time, file_id)
-            return None
-            
-        except requests.exceptions.ConnectionError as conn_error:
-            error_time = time.time() - start_time
-            _logger.error("[THUMB_TIMEOUT] 🌐 ERROR DE CONEXIÓN en %.2fs: %s", error_time, str(conn_error))
-            return None
-            
-        except requests.exceptions.RequestException as req_error:
-            error_time = time.time() - start_time
-            _logger.error("[THUMB_TIMEOUT] 📡 ERROR DE REQUEST en %.2fs: %s", error_time, str(req_error))
-            return None
-            
-        except Exception as e:
-            error_time = time.time() - start_time
-            _logger.exception("[THUMB_TIMEOUT] ❌ ERROR INESPERADO en %.2fs: %s", error_time, str(e))
-            return None
-
-    def _get_fallback_photos_data(self, fotos):
-        """Genera datos de fotos usando solo endpoints locales como fallback"""
-        _logger.info("[FALLBACK_DATA] 🔄 Generando datos fallback para %s fotos", len(fotos))
-        
-        try:
-            result = []
-            for foto in fotos:
-                foto_data = {
-                    'id': foto.id,
-                    'nombre_foto': foto.nombre_foto or f'foto_{foto.id}',
-                    'sequence': foto.sequence or 0,
-                    'file_id': foto.file_id,
-                    'thumb_url': f'/gallery/preview/{foto.id}',
-                    'download_url': f'/gallery/download/{foto.id}',
-                    'fecha_creacion': foto.create_date.strftime('%Y-%m-%d %H:%M:%S') if foto.create_date else None,
-                }
-                result.append(foto_data)
-                _logger.debug("[FALLBACK_DATA] ✅ Datos fallback para foto ID: %s", foto.id)
-            
-            _logger.info("[FALLBACK_DATA] ✅ Datos fallback generados para %s fotos", len(result))
-            return result
-            
-        except Exception as e:
-            _logger.exception("[FALLBACK_DATA] ❌ Error generando datos fallback: %s", str(e))
-            return []
-
-    def download_photo(self):
-        """Descargar foto individual"""
-        self.ensure_one()
-        _logger.info("[DOWNLOAD] Iniciando descarga de foto %s", self.id)
-
-        if not self.file_id:
-            _logger.error("[DOWNLOAD] No hay file_id para foto %s", self.id)
-            return False
-
-        try:
-            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-            if not pcloud_config:
-                _logger.error("[DOWNLOAD] No se encontró configuración de pCloud")
-                return False
-
-            download_url = self._get_file_url(self.file_id, pcloud_config)
-            
-            if download_url:
-                self.download_count += 1
-                _logger.info("[DOWNLOAD] Incrementado contador de descargas para foto %s", self.id)
-                return {
-                    'type': 'ir.actions.act_url',
-                    'url': download_url,
-                    'target': 'self',
-                }
-            
-            _logger.error("[DOWNLOAD] No se pudo obtener URL de descarga para foto %s", self.id)
-            return False
-
-        except Exception as e:
-            _logger.exception("[DOWNLOAD] Error al descargar foto %s: %s", self.id, str(e))
-            return False
-
-    @api.model
-    def download_multiple(self, ids):
-        """Descargar múltiples fotos en ZIP"""
-        _logger.info("[DOWNLOAD_MULTIPLE] Iniciando descarga múltiple para fotos: %s", ids)
-        
-        fotos = self.browse(ids)
-        if not fotos:
-            _logger.warning("[DOWNLOAD_MULTIPLE] No se encontraron fotos para descargar")
-            return False
-
-        try:
-            _logger.info("[DOWNLOAD_MULTIPLE] Creando archivo ZIP")
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-                if not pcloud_config:
-                    _logger.error("[DOWNLOAD_MULTIPLE] No se encontró configuración de pCloud")
-                    return False
-
-                for foto in fotos:
-                    if foto.file_id:
-                        try:
-                            download_url = self._get_file_url(foto.file_id, pcloud_config)
-                            if download_url:
-                                _logger.info("[DOWNLOAD_MULTIPLE] Descargando foto %s", foto.id)
-                                response = requests.get(download_url)
-                                if response.status_code == 200:
-                                    zip_file.writestr(foto.nombre_foto, response.content)
-                                    foto.download_count += 1
-                                    _logger.info("[DOWNLOAD_MULTIPLE] Foto %s añadida al ZIP", foto.id)
-                                else:
-                                    _logger.warning("[DOWNLOAD_MULTIPLE] Error al descargar foto %s: %s", 
-                                                  foto.id, response.status_code)
-                        except Exception as e:
-                            _logger.error("[DOWNLOAD_MULTIPLE] Error procesando foto %s: %s", foto.id, str(e))
-                            continue
-
-            _logger.info("[DOWNLOAD_MULTIPLE] Creando adjunto temporal")
-            zip_buffer.seek(0)
-            attachment = self.env['ir.attachment'].create({
-                'name': f'fotos_reparacion_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip',
-                'type': 'binary',
-                'datas': base64.b64encode(zip_buffer.getvalue()),
-                'mimetype': 'application/zip',
-            })
-
-            return {
-                'type': 'ir.actions.act_url',
-                'url': f'/web/content/{attachment.id}?download=true',
-                'target': 'self',
-            }
-
-        except Exception as e:
-            _logger.exception("[DOWNLOAD_MULTIPLE] Error general: %s", str(e))
-            return False
-
-    def unlink(self):
-        """Sobrescribir unlink para eliminar archivo de pCloud"""
-        _logger.info("[UNLINK] Iniciando eliminación de fotos: %s", self.ids)
-        
-        for foto in self:
-            try:
-                if foto.file_id:
-                    pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-                    if self._delete_from_pcloud(foto.file_id, pcloud_config):
-                        _logger.info("[UNLINK] Archivo eliminado de pCloud: %s", foto.id)
-                    else:
-                        _logger.warning("[UNLINK] No se pudo eliminar archivo de pCloud: %s", foto.id)
-            except Exception as e:
-                _logger.error("[UNLINK] Error al eliminar archivo de pCloud %s: %s", foto.id, str(e))
-
-        return super(ReparacionFoto, self).unlink()
-
-    def _delete_from_pcloud(self, file_id, pcloud_config):
-        """Eliminar archivo de pCloud"""
-        _logger.info("[DELETE_PCLOUD] Iniciando eliminación de archivo %s", file_id)
-        
-        try:
-            url = f"{pcloud_config.hostname}/deletefile"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'fileid': file_id
-            }
-
-            _logger.info("[DELETE_PCLOUD] Enviando solicitud: %s", url)
-            response = requests.get(url, params=params)
-            result = response.json()
-            _logger.info("[DELETE_PCLOUD] Respuesta: %s", result)
-
-            if response.status_code != 200 or result.get('result') != 0:
-                _logger.error("[DELETE_PCLOUD] Error al eliminar archivo: %s", result)
-                return False
-
-            _logger.info("[DELETE_PCLOUD] Archivo eliminado exitosamente")
-            return True
-
-        except Exception as e:
-            _logger.exception("[DELETE_PCLOUD] Error: %s", str(e))
-            return False
-
-    @api.depends('nombre_foto')
+    @api.depends('nombre_foto','sequence')
     def _compute_name(self):
-        """Computar nombre basado en secuencia y extensión original"""
-        for foto in self:
-            if foto.nombre_foto and foto.sequence:
-                extension = ''
-                ext_match = re.search(r'\.[^.]+$', foto.nombre_foto)
-                if ext_match:
-                    extension = ext_match.group(0)
-                foto.name = f"image{foto.sequence}{extension}"
-                _logger.debug("[COMPUTE_NAME] Nombre generado para foto %s: %s", foto.id, foto.name)
-            else:
-                foto.name = foto.nombre_foto or ''
+        for rec in self:
+            rec.name = f"[{rec.sequence or 0}] {rec.nombre_foto or ''}"
 
-    @api.depends('nombre_foto')
+    @api.depends('foto_binario','url_foto','file_id')
     def _compute_mimetype(self):
-        """Computar el tipo MIME basado en la extensión"""
-        for foto in self:
-            if foto.nombre_foto:
-                mime_type, _ = mimetypes.guess_type(foto.nombre_foto)
-                foto.mimetype = mime_type or 'application/octet-stream'
-                _logger.debug("[COMPUTE_MIME] Tipo MIME detectado para foto %s: %s", 
-                            foto.id, foto.mimetype)
+        for rec in self:
+            if rec.foto_binario:
+                rec.mimetype = 'image/jpeg'
+            elif rec.url_foto:
+                rec.mimetype = 'image/jpeg'
             else:
-                foto.mimetype = 'application/octet-stream'
+                rec.mimetype = False
+
+    # === Helpers pCloud ===
+    def _pcloud_conf(self):
+        cfg = self.env['pcloud.configuracion'].sudo().search([], limit=1)
+        if not cfg or not cfg.access_token or not cfg.hostname:
+            raise ValidationError("Configuración de pCloud no encontrada")
+        return cfg
 
     def _obtener_folder_id(self, reparacion, pcloud_config):
-        """Método para obtener o crear el folder ID"""
-        folder_name = f"{reparacion.maquina_id.name.name}_{reparacion.serie_id or 'sin_serie'}"
-        _logger.info("[GET_FOLDER] Buscando/creando carpeta: %s", folder_name)
-        
-        try:
-            folders = {
-                'root': {'id': 0, 'name': 'root'},
-                'fotos': {'name': 'fotos_reparaciones'},
-                'maquina': {'name': folder_name}
-            }
-            
-            # Obtener/Crear carpeta fotos_reparaciones
-            folders['fotos']['id'] = self._get_or_create_folder(
-                folders['fotos']['name'],
-                folders['root']['id'],
-                pcloud_config
-            )
-            
-            if not folders['fotos']['id']:
-                _logger.error("[GET_FOLDER] Error al crear carpeta fotos_reparaciones")
-                raise ValidationError("Error al crear carpeta fotos_reparaciones")
-                
-            # Obtener/Crear carpeta de la máquina
-            folders['maquina']['id'] = self._get_or_create_folder(
-                folders['maquina']['name'],
-                folders['fotos']['id'],
-                pcloud_config
-            )
-            
-            if not folders['maquina']['id']:
-                _logger.error("[GET_FOLDER] Error al crear carpeta %s", folder_name)
-                raise ValidationError(f"Error al crear carpeta {folder_name}")
-                
-            _logger.info("[GET_FOLDER] ID de carpeta obtenido: %s", folders['maquina']['id'])
-            return folders['maquina']['id']
-            
-        except Exception as e:
-            _logger.exception("[GET_FOLDER] Error: %s", str(e))
-            raise ValidationError(f"Error al obtener/crear carpetas: {str(e)}")
+        """Asume que ya existe el método en tu módulo; se reutiliza."""
+        # Se espera que tu módulo ya la implemente; si no, levanta error.
+        if hasattr(self, 'get_repair_folder_id'):
+            return self.get_repair_folder_id(reparacion, pcloud_config)
+        # Fallback: busca por un campo o convención
+        folder_id = getattr(reparacion, 'pcloud_folder_id', False)
+        if not folder_id:
+            raise ValidationError('No se pudo resolver la carpeta de pCloud para la reparación')
+        return folder_id
 
-    def _get_or_create_folder(self, folder_name, parent_id, pcloud_config):
-        """Obtiene o crea una carpeta en pCloud"""
-        _logger.info("[GET_OR_CREATE] Buscando/creando carpeta %s en padre %s", 
-                    folder_name, parent_id)
-        try:
-            # Listar carpetas
-            list_url = f"{pcloud_config.hostname}/listfolder"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'folderid': parent_id
-            }
-            
-            _logger.info("[GET_OR_CREATE] Listando carpetas: %s", list_url)
-            response = requests.get(list_url, params=params)
-            result = response.json()
-            
-            if response.status_code == 200 and result.get('result') == 0:
-                # Buscar carpeta existente
-                for folder in result['metadata']['contents']:
-                    if folder['isfolder'] and folder['name'] == folder_name:
-                        _logger.info("[GET_OR_CREATE] Carpeta encontrada: %s", folder['folderid'])
-                        return folder['folderid']
-                        
-                # Crear nueva carpeta
-                _logger.info("[GET_OR_CREATE] Creando nueva carpeta: %s", folder_name)
-                create_url = f"{pcloud_config.hostname}/createfolder"
-                create_params = {
-                    'access_token': pcloud_config.access_token,
-                    'name': folder_name,
-                    'folderid': parent_id
-                }
-                
-                create_response = requests.get(create_url, params=create_params)
-                create_result = create_response.json()
-                
-                if create_result.get('result') == 0:
-                    _logger.info("[GET_OR_CREATE] Carpeta creada: %s", 
-                               create_result['metadata']['folderid'])
-                    return create_result['metadata']['folderid']
-                
-                _logger.error("[GET_OR_CREATE] Error al crear carpeta: %s", create_result)
-                    
-            _logger.error("[GET_OR_CREATE] Error al listar/crear carpeta: %s", result)
-            return False
-            
-        except Exception as e:
-            _logger.exception("[GET_OR_CREATE] Error: %s", str(e))
-            return False
+    def _pcloud(self, endpoint, params):
+        cfg = self._pcloud_conf()
+        url = f"{cfg.hostname}/{endpoint}"
+        p = {'access_token': cfg.access_token}
+        p.update(params or {})
+        r = requests.get(url, params=p, timeout=15)
+        r.raise_for_status()
+        return r.json()
 
-    def get_download_content(self):
-        """Obtiene el contenido de la foto para descargar desde pCloud."""
-        self.ensure_one()
-        _logger.info(f"[DOWNLOAD_CONTENT] Iniciando descarga para foto ID: {self.id} con file_id: {self.file_id}")
-    
-        try:
-            if not self.file_id:
-                _logger.error(f"[DOWNLOAD_CONTENT] No se encontró file_id para la foto ID: {self.id}")
-                raise ValidationError("No se encontró el archivo en pCloud")
-    
-            # Obtener configuración de pCloud
-            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-            if not pcloud_config or not pcloud_config.access_token:
-                _logger.error(f"[DOWNLOAD_CONTENT] Configuración de pCloud no encontrada o inválida")
-                raise ValidationError("No se encontró configuración de pCloud")
-    
-            # Obtener un enlace actualizado de pCloud para la descarga
-            download_url = self._get_file_url(self.file_id, pcloud_config)
-            if not download_url:
-                _logger.error(f"[DOWNLOAD_CONTENT] No se pudo generar URL de descarga para file_id: {self.file_id}")
-                raise ValidationError("No se pudo obtener la URL de descarga desde pCloud")
-    
-            # Descargar el archivo directamente desde pCloud
-            response = requests.get(download_url, stream=True, timeout=10)
-            if response.status_code != 200:
-                _logger.error(f"[DOWNLOAD_CONTENT] Error al descargar archivo desde pCloud. Status: {response.status_code}")
-                raise ValidationError("No se pudo descargar el archivo desde pCloud")
-    
-            # Retornar el contenido en base64, tipo MIME y nombre del archivo
-            return {
-                'content': base64.b64encode(response.content).decode('utf-8'),
-                'filename': self.nombre_foto,
-                'content_type': response.headers.get('Content-Type', 'application/octet-stream')
-            }
-    
-        except requests.exceptions.RequestException as e:
-            _logger.exception(f"[DOWNLOAD_CONTENT] Error de red al obtener contenido de pCloud para foto ID {self.id}: {str(e)}")
-            raise ValidationError("Error de conexión al descargar la foto. Por favor, inténtelo nuevamente.")
-        except Exception as e:
-            _logger.exception(f"[DOWNLOAD_CONTENT] Error al obtener contenido de la foto ID {self.id}: {str(e)}")
-            raise ValidationError(f"Error al descargar la foto: {str(e)}")
-    
+    def _get_thumb_url(self, file_id, pcloud_config):
+        res = self._pcloud('getthumblink', {'fileid': file_id, 'size': '256x256', 'crop': 1})
+        if res.get('result') == 0:
+            return f"https://{res['hosts'][0]}{res['path']}"
+        return None
 
-    def _get_public_link(self, file_id, pcloud_config):
-        """Obtener links públicos para la foto"""
-        try:
-            # Crear link público
-            url = f"{pcloud_config.hostname}/getfilepublink"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'fileid': file_id
-            }
+    def _get_file_url(self, file_id, pcloud_config):
+        res = self._pcloud('getfilelink', {'fileid': file_id})
+        if res.get('result') == 0:
+            return f"https://{res['hosts'][0]}{res['path']}"
+        return None
 
-            response = requests.get(url, params=params)
-            result = response.json()
+    def _find_file_in_folder(self, folder_id, filename):
+        """Busca un archivo por nombre dentro de una carpeta pCloud (listfolder)."""
+        res = self._pcloud('listfolder', {'folderid': folder_id, 'recursive': 0})
+        if res.get('result') == 0:
+            for e in res.get('metadata', {}).get('contents', []):
+                if not e.get('isfolder') and e.get('name') == filename:
+                    return {'file_id': e.get('fileid'), 'size': e.get('size')}
+        return None
 
-            if response.status_code == 200 and result.get('link'):
-                # Obtener link de thumbnail
-                thumb_url = f"{pcloud_config.hostname}/getthumblink"
-                thumb_params = {
-                    'access_token': pcloud_config.access_token,
-                    'fileid': file_id,
-                    'size': '256x256',
-                    'crop': 1,
-                    'public': 1
-                }
+    # === Crear desde binario (fallback legacy) ===
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if 'reparacion_id' in vals:
+                last = self.search([('reparacion_id','=', vals['reparacion_id'])], order='sequence desc', limit=1)
+                vals['sequence'] = (last.sequence or 0) + 1
+            # unique id
+            ts = datetime.now().strftime('%Y%m%d%H%M%S')
+            rnd = hashlib.md5(str(datetime.now().timestamp()).encode()).hexdigest()[:6]
+            vals['unique_id'] = f"{ts}_{rnd}"
+            # Si viene binario, subir (ruta lenta legacy)
+            if vals.get('foto_binario'):
+                vals['state'] = 'uploading'
+                rep = self.env['reparaciones.reparaciones'].browse(vals['reparacion_id'])
+                cfg = self._pcloud_conf()
+                folder_id = self._obtener_folder_id(rep, cfg)
+                # Subida por upload link no se implementa aquí: se asume que viene por endpoint legacy
+                # Guarda metadatos mínimos
+                vals['state'] = 'done'
+        return super().create(vals_list)
 
-                thumb_response = requests.get(thumb_url, thumb_params)
-                thumb_result = thumb_response.json()
-
-                if thumb_response.status_code == 200 and thumb_result.get('path'):
-                    return {
-                        'download_url': result['link'],
-                        'thumb_url': f"https://{thumb_result['hosts'][0]}{thumb_result['path']}"
-                    }
-
-            return False
-
-        except Exception as e:
-            _logger.exception(f"[PUBLIC_LINK] Error: {str(e)}")
-            return False
-
-    def _check_token_valid(self, pcloud_config):
-        """Verificar si el token de pCloud es válido"""
-        try:
-            url = f"{pcloud_config.hostname}/userinfo"
-            params = {'access_token': pcloud_config.access_token}
-            response = requests.get(url, params=params)
-            return response.status_code == 200 and response.json().get('result') == 0
-        except:
-            return False
-
-    def _refresh_pcloud_token(self, pcloud_config):
-        """Renovar token de pCloud si es necesario"""
-        try:
-            # Implementa aquí la lógica para renovar el token
-            # Esto dependerá de cómo manejes la autenticación con pCloud
-            pass
-        except Exception as e:
-            _logger.exception(f"[REFRESH_TOKEN] Error: {str(e)}")
-
-
-        
-
-
-
-    def get_download_link(self):
-        """Obtener un nuevo link de descarga para una foto"""
-        self.ensure_one()
-        _logger.info(f"[DOWNLOAD_LINK] Obteniendo link para foto {self.id}")
-        
-        try:
-            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-            if not pcloud_config or not pcloud_config.access_token:
-                raise ValidationError("No se encontró configuración de pCloud")
-
-            # Obtener URL de pCloud con forcedownload
-            url = f"{pcloud_config.hostname}/getfilelink"
-            params = {
-                'access_token': pcloud_config.access_token,
-                'fileid': self.file_id,
-                'forcedownload': 1,  # Forzar descarga
-                'filename': self.nombre_foto  # Nombre de archivo para descarga
-            }
-            
-            _logger.info(f"[DOWNLOAD_LINK] Solicitando a pCloud con params: {params}")
-            response = requests.get(url, params=params)
-            result = response.json()
-            
-            if response.status_code == 200 and result.get('result') == 0:
-                # Crear contenido para descargar
-                file_url = f"https://{result['hosts'][0]}{result['path']}"
-                file_response = requests.get(file_url)
-                
-                if file_response.status_code == 200:
-                    content = base64.b64encode(file_response.content).decode('utf-8')
-                    _logger.info(f"[DOWNLOAD_LINK] Contenido obtenido para foto {self.id}")
-                    return {
-                        'content': content,
-                        'filename': self.nombre_foto,
-                        'mimetype': file_response.headers.get('content-type', 'application/octet-stream')
-                    }
-                
-            _logger.error(f"[DOWNLOAD_LINK] Error en respuesta: {result}")
-            return False
-
-        except Exception as e:
-            _logger.exception(f"[DOWNLOAD_LINK] Error: {str(e)}")
-            return False
-
-
-    def get_photos_zip(self, foto_ids=None):
-        """Crear un ZIP en memoria con nombres únicos, descargando desde pCloud."""
-        if not foto_ids:
-            _logger.warning("[ZIP] No se proporcionaron foto_ids o el valor es None.")
-            return False
-
-        _logger.info(f"[ZIP] foto_ids recibidos: {foto_ids} (Tipo: {type(foto_ids)})")
-
-        try:
-            fotos = self.browse(foto_ids)
-            if not fotos:
-                _logger.warning("[ZIP] No se encontraron fotos para descargar")
-                return False
-
-            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-            if not pcloud_config or not pcloud_config.access_token:
-                _logger.error("[ZIP] Config pCloud faltante")
-                raise ValidationError("No se encontró configuración de pCloud")
-
-            zip_buffer = io.BytesIO()
-            existing_names = set()
-
-            def _unique_name(name):
-                # normaliza y garantiza unicidad dentro del ZIP
-                base, ext = os.path.splitext(name)
-                i = 1
-                candidate = name
-                while candidate in existing_names:
-                    i += 1
-                    candidate = f"{base} ({i}){ext}"
-                existing_names.add(candidate)
-                return candidate
-
-            import os
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zip_file:
-                for foto in fotos:
-                    if not foto.file_id:
-                        continue
-                    try:
-                        url = f"{pcloud_config.hostname}/getfilelink"
-                        params = {
-                            'access_token': pcloud_config.access_token,
-                            'fileid': foto.file_id,
-                            'forcedownload': 1
-                        }
-                        _logger.info(f"[ZIP] Solicitando link de descarga para foto ID: {foto.id} con params: {params}")
-                        response = requests.get(url, params=params, timeout=15)
-                        result = response.json()
-                        _logger.info(f"[ZIP] Respuesta recibida de pCloud para foto ID: {foto.id}: {result}")
-
-                        if response.status_code == 200 and result.get('result') == 0:
-                            download_url = f"https://{result['hosts'][0]}{result['path']}"
-                            file_response = requests.get(download_url, timeout=30)
-                            if file_response.status_code == 200:
-                                name = foto.nombre_foto or f'foto_{foto.id}.jpg'
-                                safe = _unique_name(name)
-                                zip_file.writestr(safe, file_response.content)
-                                _logger.info(f"[ZIP] Foto ID: {foto.id} agregada como '{safe}'")
-                            else:
-                                _logger.error(f"[ZIP] Error al descargar foto {foto.id}: HTTP {file_response.status_code}")
-                        else:
-                            _logger.error(f"[ZIP] No se pudo obtener link para foto {foto.id}")
-                    except Exception as e:
-                        _logger.error(f"[ZIP] Error procesando foto {foto.id}: {e}")
-
-            zip_buffer.seek(0)
-            content = base64.b64encode(zip_buffer.getvalue()).decode('utf-8')
-            _logger.info("[ZIP] ZIP creado exitosamente")
-            return {
-                'content': content,
-                'filename': 'fotos_reparacion.zip',
-                'mimetype': 'application/zip'
-            }
-        except Exception as e:
-            _logger.exception(f"[ZIP] Error al crear ZIP: {e}")
-            return False
-
-    def _upload_to_pcloud(self, archivo_binario, filename, folder_id, pcloud_config):
-        """Sube un archivo a pCloud"""
-        _logger.info("[UPLOAD_PCLOUD] Iniciando subida de archivo %s a folder_id %s", filename, folder_id)
-        
-        try:
-            url = f"{pcloud_config.hostname}/uploadfile"
-            
-            # Preparar los parámetros
-            params = {
-                'folderid': folder_id,
-                'nopartial': 1,  # No guardar archivos parciales
-                'renameifexists': 1,  # Renombrar si existe
-            }
-            
-            # Preparar el archivo
-            files = {
-                'file': (filename, archivo_binario, 'application/octet-stream')
-            }
-            
-            # Agregar el token de acceso
-            params['access_token'] = pcloud_config.access_token
-            
-            _logger.info("[UPLOAD_PCLOUD] Enviando solicitud a %s con params: %s", url, params)
-            
-            # Realizar la solicitud POST
-            response = requests.post(url, 
-                                params=params,
-                                files=files,
-                                timeout=30)  # 30 segundos de timeout
-            
-            _logger.info("[UPLOAD_PCLOUD] Código de respuesta: %s", response.status_code)
-            
-            if response.status_code != 200:
-                _logger.error("[UPLOAD_PCLOUD] Error en la solicitud: %s", response.text)
-                return False
-                
-            result = response.json()
-            _logger.info("[UPLOAD_PCLOUD] Respuesta: %s", result)
-            
-            if result.get('result') == 0 and result.get('metadata'):
-                metadata = result['metadata'][0]
-                file_id = metadata.get('fileid')
-                
-                if not file_id:
-                    _logger.error("[UPLOAD_PCLOUD] No se encontró file_id en la respuesta")
-                    return False
-                    
-                _logger.info("[UPLOAD_PCLOUD] Archivo subido exitosamente con ID: %s", file_id)
-                
-                # Obtener la URL pública del archivo
-                public_link = self._create_public_link(file_id, pcloud_config)
-                
-                # Obtener la URL de descarga
-                download_url = self._get_file_url(file_id, pcloud_config)
-                
-                if not download_url:
-                    _logger.error("[UPLOAD_PCLOUD] No se pudo obtener la URL de descarga")
-                    return False
-                    
-                return {
-                    'file_id': file_id,
-                    'url': download_url,
-                    'public_link': public_link,
-                    'size': metadata.get('size'),
-                    'content_type': metadata.get('contenttype'),
-                    'created': metadata.get('created'),
-                    'modified': metadata.get('modified'),
-                    'thumb': metadata.get('thumb', False)
-                }
-                
-            else:
-                error_msg = result.get('error', 'Error desconocido')
-                _logger.error("[UPLOAD_PCLOUD] Error en respuesta: %s", error_msg)
-                return False
-                
-        except requests.exceptions.Timeout:
-            _logger.error("[UPLOAD_PCLOUD] Timeout durante la subida del archivo")
-            return False
-        except requests.exceptions.RequestException as e:
-            _logger.exception("[UPLOAD_PCLOUD] Error en la solicitud: %s", str(e))
-            return False
-        except Exception as e:
-            _logger.exception("[UPLOAD_PCLOUD] Error general: %s", str(e))
-            return False
-
-
-
-    # === NUEVO: helpers para upload links de pCloud ===
-    def _get_or_create_uploadlink(self, folder_id, pcloud_config):
-        """
-        Devuelve el 'code' de un upload link (File Request) para esa carpeta.
-        Si ya existe uno utilizable, lo reutiliza. Si no, crea uno.
-        """
-        try:
-            # 1) Buscar si ya hay upload links
-            list_ul = f"{pcloud_config.hostname}/listuploadlinks"
-            params = {'access_token': pcloud_config.access_token}
-            r = requests.get(list_ul, params=params, timeout=15)
-            data = r.json() if r.status_code == 200 else {}
-
-            if data.get('result') == 0:
-                for link in data.get('links', []):
-                    # Cada link tiene 'folderid' o 'path' (dependiendo de versión). Reusamos si coincide.
-                    if str(link.get('folderid')) == str(folder_id):
-                        # link['code'] es el identificador del upload link
-                        return link.get('code')
-
-            # 2) Crear nuevo upload link
-            create_ul = f"{pcloud_config.hostname}/createuploadlink"
-            create_params = {
-                'access_token': pcloud_config.access_token,
-                'folderid': folder_id,
-                # Opcionales (descomenta si quieres):
-                # 'maxspace': 0,         # 0 = sin límite
-                # 'expires': 0,          # 0 = sin vencimiento
-                # 'name': 'reparacion'   # etiqueta opcional
-            }
-            cr = requests.get(create_ul, params=create_params, timeout=15)
-            cres = cr.json() if cr.status_code == 200 else {}
-            if cres.get('result') == 0 and cres.get('code'):
-                return cres.get('code')
-
-            _logger.error("[UPLOADLINK] No se pudo crear upload link: %s", cres)
-            return False
-        except Exception as e:
-            _logger.exception("[UPLOADLINK] Error: %s", str(e))
-            return False
-
-
-    def _get_upload_post_url(self, code, pcloud_config):
-        """
-        Convierte el 'code' de un upload link en una URL de POST (host+path) para subir vía fetch(FormData)
-        """
-        try:
-            get_ul = f"{pcloud_config.hostname}/getuploadlink"
-            params = {'code': code}
-            r = requests.get(get_ul, params=params, timeout=15)
-            data = r.json() if r.status_code == 200 else {}
-            # Respuesta típica: { result:0, hosts:[...], path:"/x/y/z" }
-            if data.get('result') == 0 and data.get('hosts') and data.get('path'):
-                return f"https://{data['hosts'][0]}{data['path']}"
-            _logger.error("[UPLOADLINK] getuploadlink error: %s", data)
-            return False
-        except Exception as e:
-            _logger.exception("[UPLOADLINK] Error get_upload_post_url: %s", str(e))
-            return False
+    # === Nuevo: registrar archivo ya subido en pCloud ===
+    @api.model
+    def register_from_pcloud(self, reparacion_id, filename, sequence=None):
+        rep = self.env['reparaciones.reparaciones'].browse(reparacion_id).sudo()
+        if not rep.exists():
+            raise ValidationError('Reparación no encontrada')
+        cfg = self._pcloud_conf()
+        folder_id = self._obtener_folder_id(rep, cfg)
+        found = self._find_file_in_folder(folder_id, filename)
+        if not found:
+            raise ValidationError('Archivo no encontrado en la carpeta de la reparación')
+        if sequence is None:
+            last = self.search([('reparacion_id','=', reparacion_id)], order='sequence desc', limit=1)
+            sequence = (last.sequence or 0) + 1
+        vals = {
+            'reparacion_id': reparacion_id,
+            'nombre_foto': filename,
+            'file_id': found['file_id'],
+            'size': found.get('size') or 0,
+            'sequence': sequence,
+            'state': 'done',
+        }
+        rec = self.sudo().create(vals)
+        # preparar datos de retorno (preview y download vía endpoints locales)
+        thumb = self._get_thumb_url(rec.file_id, cfg) or f'/gallery/preview/{rec.id}'
+        return {
+            'id': rec.id,
+            'sequence': rec.sequence,
+            'nombre_foto': rec.nombre_foto,
+            'thumb_url': thumb,
+        }
