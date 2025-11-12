@@ -6,13 +6,13 @@ class ModelosMaquin(models.Model):
     _name = 'modelo.maquina'
     _description = 'Modelos de maquinas de impresión y multifuncionales'
 
-    name = fields.Char(string='Modelo de maquina', required=True )
+    name = fields.Char(string='Modelo de maquina', required=True, tracking=True )
     marca_id = fields.Many2one('marca.marca', string='Marca', required=True )
-    tipo_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')], required=True
+    tipo_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')], required=True, tracking=True
                                )
     precio_venta = fields.Float('Precio de venta', required=True
                                 )
-    tipo_maquina_id = fields.Many2one('tipo.maquina', string='Tipo de maquina', required=True )
+    tipo_maquina_id = fields.Many2one('tipo.maquina', string='Tipo de maquina', required=True, tracking=True )
 
     @api.model
     def _default_currency_id(self):
