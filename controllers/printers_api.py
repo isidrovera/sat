@@ -3,6 +3,7 @@ from odoo import http, _
 from odoo.http import request
 import re
 import logging
+import json
 
 _logger = logging.getLogger(__name__)
 
@@ -152,7 +153,23 @@ class SNMPPublicController(http.Controller):
         Espera JSON con: serial, model, brand, total_counter
         No crea sat.sat. Solo actualiza si la serie existe.
         """
-        payload = request.jsonrequest or {}
+        # ✅ CORRECCIÓN: Manejo compatible con diferentes versiones de Odoo
+        try:
+            # Odoo 17+
+            if hasattr(request, 'get_json_data'):
+                payload = request.get_json_data()
+            # Odoo 15/16
+            elif hasattr(request, 'jsonrequest'):
+                payload = request.jsonrequest
+            # Usar kwargs directamente (método más simple y confiable)
+            elif kwargs:
+                payload = kwargs
+            # Fallback manual
+            else:
+                payload = json.loads(request.httprequest.data.decode('utf-8'))
+        except Exception as e:
+            _logger.error("[SNMP INTAKE] Error parseando JSON: %s", e)
+            payload = {}
         
         _logger.info("="*80)
         _logger.info("[SNMP INTAKE] Nueva solicitud recibida")
