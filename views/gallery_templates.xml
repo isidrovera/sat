@@ -64,7 +64,7 @@
                     <t t-esc="reparacion.id"/>
                   </t>
                 </h2>
-                <div class="text-muted">Solo captura con cámara (adjuntar está desactivado)</div>
+               
 
                 <!-- Datos de equipo / técnico -->
                 <div class="meta-grid">
