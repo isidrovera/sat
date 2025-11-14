@@ -386,7 +386,59 @@ class ReparacionesInforme(models.Model):
         return html
 
     def _get_component_display_name(self, componente_code):
-        """Nombre amigable para códigos de intervención."""
+        """
+        Devuelve un nombre amigable para el código de componente usado en
+        reparacion.intervencion.componente.
+
+        Formato nuevo (dinámico):
+          - "t<TIPO_ID>"
+          - "t<TIPO_ID>_<k|c|m|y>"
+
+        También soporta algunos códigos antiguos simples como "fuser", "itb",
+        "adf", "fin", "opt", "papel", etc. por compatibilidad de pruebas.
+        """
+        if not componente_code:
+            return ''
+
+        code = str(componente_code).strip()
+
+        # =========================
+        # 1) ESQUEMA NUEVO: t<ID>[_color]
+        # =========================
+        m = re.match(r'^t(\d+)(?:_([kcmy]))?$', code)
+        if m:
+            tipo_id = int(m.group(1))
+            color_code = m.group(2)
+
+            Tipo = self.env['componente.tipo']
+            tipo = Tipo.browse(tipo_id)
+
+            if tipo and tipo.exists():
+                nombre = tipo.name or f"Componente {tipo_id}"
+            else:
+                nombre = f"Componente {tipo_id}"
+
+            # Mapear color a descripción legible
+            if color_code:
+                color_map = {
+                    'k': 'Black',
+                    'c': 'Cyan',
+                    'm': 'Magenta',
+                    'y': 'Yellow',
+                }
+                color_desc = color_map.get(color_code.lower(), color_code.upper())
+                nombre = f"{nombre} ({color_desc})"
+
+            _logger.debug(
+                "[_get_component_display_name] code='%s' -> tipo_id=%s nombre='%s'",
+                code, tipo_id, nombre
+            )
+            return nombre
+
+        # =========================
+        # 2) COMPATIBILIDAD LEGACY
+        # (por si tienes registros viejos tipo 'fuser', 'ui_k', etc.)
+        # =========================
         component_names = {
             'ui_k': 'Unidad de imagen Black',
             'ui_c': 'Unidad de imagen Cyan',
@@ -397,16 +449,25 @@ class ReparacionesInforme(models.Model):
             'dev_m': 'Developer Magenta',
             'dev_y': 'Developer Yellow',
             'fuser': 'Fusora / Rodillos',
+            'fusora': 'Fusora / Rodillos',
             'itb': 'Faja/Banda de transferencia',
             'adf': 'ADF',
             'fin': 'Finalizador',
+            'finisher': 'Finalizador',
             'opt': 'Óptico',
             'papel': 'Transporte de papel',
+            'tray': 'Bandejas de papel',
+            'bypass': 'Bypass',
             'otro': 'Otro',
         }
-        res = component_names.get(componente_code, componente_code)
-        _logger.debug("[_get_component_display_name] %s -> %s", componente_code, res)
-        return res
+
+        nombre_legacy = component_names.get(code.lower(), code)
+        _logger.debug(
+            "[_get_component_display_name] LEGACY code='%s' -> '%s'",
+            code, nombre_legacy
+        )
+        return nombre_legacy
+
 
     # ========================================
     # GENERACIÓN CON IA
@@ -778,46 +839,55 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
 
     def _get_componente_code_from_evaluacion(self, evaluacion):
         """
-        Mapea una evaluación a su código de componente para intervenciones.
-        Devuelve: ui_k/dev_c/fuser/itb/adf/fin/opt/papel/otro o False.
+        Mapea una evaluación a su código de componente para intervenciones,
+        de forma 100% dinámica.
+
+        Nuevo formato de código:
+          - Sin color:    t<TIPO_ID>
+          - Con color:    t<TIPO_ID>_<k|c|m|y>
+
+        Ejemplos:
+          tipo_id = 15 (IU), color=k  -> "t15_k"
+          tipo_id = 8  (Fusora) sin color -> "t8"
         """
         tipo = evaluacion.componente_tipo_id
         if not tipo:
-            _logger.warning("[_get_componente_code_from_evaluacion] Eval %s sin tipo", evaluacion.id)
+            _logger.warning(
+                "[_get_componente_code_from_evaluacion] Eval %s sin tipo",
+                evaluacion.id
+            )
             return False
 
-        tipo_key = self._rep__canonical_tipo_code(tipo)
+        # base dinámico: prefijo "t" + id del tipo
+        base_code = f"t{tipo.id}"
+
+        # obtener color lógico k/c/m/y (si lo hay)
         color = self._rep__get_color_code_from_eval(evaluacion)
 
-        TIPO_TO_CODE = {
-            'IU': {'k': 'ui_k', 'c': 'ui_c', 'm': 'ui_m', 'y': 'ui_y'},
-            'DEVELOPER': {'k': 'dev_k', 'c': 'dev_c', 'm': 'dev_m', 'y': 'dev_y'},
-            'FUSORA': 'fuser',
-            'ITB': 'itb',
-            'ADF': 'adf',
-            'FINISHER': 'fin',
-            'OPTICO': 'opt',
-            'TRAY': 'papel',
-            'BYPASS': 'papel',
-            'PAPEL': 'papel',
-        }
+        # si el tipo es sensible a color, exigimos color
+        if tipo.is_color_sensitive:
+            if not color:
+                _logger.warning(
+                    "[_get_componente_code_from_evaluacion] Tipo '%s' (id=%s) "
+                    "requiere color pero la evaluación %s no tiene color válido.",
+                    tipo.name, tipo.id, evaluacion.id
+                )
+                return False
+            componente_code = f"{base_code}_{color}"
+        else:
+            componente_code = base_code
 
         _logger.debug(
-            "[_get_componente_code_from_evaluacion] eval=%s raw_code='%s' name='%s' -> tipo_key='%s' color=%s",
-            evaluacion.id, (tipo.code or ''), (tipo.name or ''), tipo_key, color
+            "[_get_componente_code_from_evaluacion] eval=%s tipo='%s' (id=%s) "
+            "is_color_sensitive=%s color=%s -> code='%s'",
+            evaluacion.id,
+            (tipo.code or tipo.name),
+            tipo.id,
+            tipo.is_color_sensitive,
+            color,
+            componente_code,
         )
-
-        mapping = TIPO_TO_CODE.get(tipo_key)
-        if isinstance(mapping, dict):
-            if not color:
-                _logger.debug("[_get_componente_code...] tipo_key=%s requiere color y no hay", tipo_key)
-                return False
-            res = mapping.get(color)
-            _logger.debug("[_get_componente_code...] tipo_key=%s color=%s -> %s", tipo_key, color, res)
-            return res
-        else:
-            _logger.debug("[_get_componente_code...] tipo_key=%s -> %s", tipo_key, mapping or False)
-            return mapping or False
+        return componente_code
 
     def _ensure_intervencion_for_component(self, componente_code):
         """Crea o retorna intervención existente para un componente."""
