@@ -280,12 +280,12 @@ class ReparacionesInforme(models.Model):
         _logger.debug("[_rep__build_informe_html] calidad=%s", calidad)
 
         # ========================================
-        # INFORME CORTO Y NATURAL
+        # INFORME ESTRUCTURADO Y LEGIBLE
         # ========================================
-        parrafos = []
+        html_parts = []
         
         # Texto inicial
-        parrafos.append("Se realizó revisión completa de la máquina con las pruebas necesarias.")
+        html_parts.append('<p>Se realizó revisión completa de la máquina con las pruebas necesarias.</p>')
         
         # Componentes críticos (requieren cambio)
         if f['cambio_inmediato'] or funciones_no or toners_crit:
@@ -298,41 +298,34 @@ class ReparacionesInforme(models.Model):
                 componentes_cambio.extend(toners_crit)
             
             if componentes_cambio:
-                lista_comp = ', '.join(componentes_cambio[:-1])
-                if len(componentes_cambio) > 1:
-                    lista_comp += f" y {componentes_cambio[-1]}"
-                else:
-                    lista_comp = componentes_cambio[0]
-                
-                parrafos.append(f"Las siguientes unidades requieren cambio: {lista_comp}.")
+                lista = ', '.join(componentes_cambio)
+                html_parts.append(f'<p>Las siguientes unidades requieren cambio: {lista}.</p>')
         
-        # Componentes con desgaste (opcional)
+        # Componentes con desgaste
         if f['desgaste']:
-            lista_desg = ', '.join(f['desgaste'][:-1])
-            if len(f['desgaste']) > 1:
-                lista_desg += f" y {f['desgaste'][-1]}"
-            else:
-                lista_desg = f['desgaste'][0]
-            parrafos.append(f"Se recomienda cambio preventivo de: {lista_desg}.")
+            lista = ', '.join(f['desgaste'])
+            html_parts.append(f'<p>Se recomienda cambio preventivo de: {lista}.</p>')
         
-        # Subpartes específicas (si existen)
-        repuestos_texto = self._generar_texto_repuestos()
-        if repuestos_texto:
-            parrafos.append(repuestos_texto)
+        # Subpartes específicas con estructura
+        subpartes_html = self._generar_subpartes_estructuradas()
+        if subpartes_html:
+            html_parts.append('<p><strong>Específicamente:</strong></p>')
+            html_parts.append(subpartes_html)
         
-        # Conclusión según calidad
+        # Conclusión
         if calidad == 'mala':
-            parrafos.append("La unidad requiere inversión inmediata en repuestos antes de entrega.")
+            html_parts.append('<p>La unidad requiere inversión inmediata en repuestos antes de entrega.</p>')
         elif calidad == 'regular':
-            parrafos.append("La unidad está operativa pero se recomienda realizar los cambios preventivos antes de entrega.")
+            html_parts.append('<p>La unidad está operativa pero se recomienda realizar los cambios preventivos antes de entrega.</p>')
         else:
-            parrafos.append("La unidad está lista para entrega con mantenimiento estándar.")
+            html_parts.append('<p>La unidad está lista para entrega con mantenimiento estándar.</p>')
 
-        # Construir HTML simple
-        html = '<div data-autogen="1" style="font-family: Arial; line-height:1.6;">\n'
-        for parrafo in parrafos:
-            html += f'<p style="margin:8px 0;">{parrafo}</p>\n'
-        html += '</div>'
+        # Construir HTML
+        html = f'''
+    <div data-autogen="1" style="font-family: Arial; line-height:1.6;">
+    {''.join(html_parts)}
+    </div>
+    '''
         
         _logger.info("[_rep__build_informe_html] HTML construido (len=%s) para id=%s", len(html), self.id)
         return html, calidad
