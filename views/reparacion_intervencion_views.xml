@@ -202,7 +202,7 @@
       <field name="arch" type="xml">
         <list string="Intervenciones">
           <field name="reparacion_id"/>
-          <field name="componente"/>
+          <field name="componente_display"/>
           <field name="accion"/>
           <field name="es_cambio"/>
           <field name="observacion"/>
@@ -226,7 +226,7 @@
           <sheet>
             <group>
               <field name="reparacion_id" readonly="1"/>
-              <field name="componente"/>
+              <field name="componente_display"/>
               <field name="accion"/>
               <field name="es_cambio" readonly="1"/>
               <field name="observacion" placeholder="Breve nota de la intervención"/>
