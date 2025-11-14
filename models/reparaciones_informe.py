@@ -1255,8 +1255,8 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
             _logger.debug("[get_subpartes_componente] No se pudo obtener código para eval %s", componente_eval.id)
             return []
         
-        # Buscar la intervención correspondiente
-        intervencion = self.intervencion_ids.filtered(lambda x: x.componente == componente_code)
+        # ✅ CAMBIO: Buscar por componente_code (dinámico) en lugar de componente (Selection)
+        intervencion = self.intervencion_ids.filtered(lambda x: x.componente_code == componente_code)
         if not intervencion or not intervencion.detalle_ids:
             _logger.debug("[get_subpartes_componente] No hay intervención/detalles para código %s", componente_code)
             return []
