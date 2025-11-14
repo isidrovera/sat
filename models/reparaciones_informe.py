@@ -287,32 +287,16 @@ class ReparacionesInforme(models.Model):
         # Texto inicial
         html_parts.append('<p>Se realizó revisión completa de la máquina con las pruebas necesarias.</p>')
         
-        # ✅ SOLO mostrar lista de componentes SI NO hay subpartes detalladas
+        # Subpartes específicas (SOLO para componentes que requieren cambio)
         subpartes_html = self._generar_subpartes_estructuradas()
-        
-        if not subpartes_html:
-            # Si NO hay subpartes detalladas, mostrar la lista simple de componentes
-            if f['cambio_inmediato'] or funciones_no or toners_crit:
-                componentes_cambio = []
-                if f['cambio_inmediato']:
-                    componentes_cambio.extend(f['cambio_inmediato'])
-                if funciones_no:
-                    componentes_cambio.extend(funciones_no)
-                if toners_crit:
-                    componentes_cambio.extend(toners_crit)
-                
-                if componentes_cambio:
-                    lista = ', '.join(componentes_cambio)
-                    html_parts.append(f'<p>Las siguientes unidades requieren cambio: {lista}.</p>')
-            
-            # Componentes con desgaste
-            if f['desgaste']:
-                lista = ', '.join(f['desgaste'])
-                html_parts.append(f'<p>Se recomienda cambio preventivo de: {lista}.</p>')
-        else:
-            # Si HAY subpartes detalladas, ir directo a "Específicamente:"
-            html_parts.append('<p><strong>Específicamente:</strong></p>')
+        if subpartes_html:
+            html_parts.append('<p><strong>Los siguientes componentes requieren cambio:</strong></p>')
             html_parts.append(subpartes_html)
+        
+        # Componentes con desgaste (SIN subpartes, solo nombres)
+        if f['desgaste']:
+            lista = ', '.join(f['desgaste'])
+            html_parts.append(f'<p>Se recomienda cambio preventivo de: {lista}.</p>')
         
         # Conclusión
         if calidad == 'mala':
@@ -333,7 +317,7 @@ class ReparacionesInforme(models.Model):
         return html, calidad
 
     def _generar_subpartes_estructuradas(self):
-        """Genera HTML estructurado de componentes y sus subpartes"""
+        """Genera HTML estructurado de componentes y sus subpartes SOLO para los que requieren cambio"""
         if not self.intervencion_ids:
             return ""
 
@@ -343,10 +327,18 @@ class ReparacionesInforme(models.Model):
 
         html_parts = []
         
+        # Solo incluir componentes que están en cambio_inmediato
+        f = self._rep__collect_findings()
+        componentes_requieren_cambio = set(f['cambio_inmediato'])
+        
         for intervencion in intervenciones_con_detalles:
             # Obtener nombre del componente
             codigo = intervencion.componente_code if intervencion.componente_code else intervencion.componente
             componente_nombre = self._get_component_display_name(codigo)
+            
+            # ✅ SOLO mostrar si el componente requiere cambio
+            if componente_nombre not in componentes_requieren_cambio:
+                continue
             
             # Obtener subpartes
             subpartes = [d.subparte_id.name for d in intervencion.detalle_ids if d.subparte_id]
