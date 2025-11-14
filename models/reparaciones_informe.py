@@ -889,25 +889,62 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
         )
         return componente_code
 
+    def _map_componente_code_to_selection(self, componente_code):
+        """
+        Convierte un código dinámico (ui_k, dev_c, t88_k, etc.) en un valor
+        válido para el Selection reparacion.intervencion.componente.
+
+        - Si el código ya es uno de los permitidos, se usa tal cual.
+        - Si no, cae a 'otro'.
+        """
+        if not componente_code:
+            return 'otro'
+
+        componente_code = str(componente_code).strip()
+        allowed = {
+            'ui_k', 'ui_c', 'ui_m', 'ui_y',
+            'dev_k', 'dev_c', 'dev_m', 'dev_y',
+            'fuser', 'itb', 'adf', 'fin',
+            'opt', 'papel', 'otro',
+        }
+        if componente_code in allowed:
+            return componente_code
+        # cualquier cosa no mapeada (como 't88_k') va a 'otro'
+        return 'otro'
+
+
     def _ensure_intervencion_for_component(self, componente_code):
-        """Crea o retorna intervención existente para un componente."""
+        """Crea o retorna intervención existente para un componente (dinámico)."""
         self.ensure_one()
         Interv = self.env['reparacion.intervencion']
+
+        # Buscar por código dinámico
         interv = Interv.search([
             ('reparacion_id', '=', self.id),
-            ('componente', '=', componente_code),
+            ('componente_code', '=', componente_code),
         ], limit=1)
+
         if not interv:
-            _logger.info("[_ensure_intervencion_for_component] creando intervencion %s para rep=%s", componente_code, self.id)
+            # mapear a valor Selection válido para campo 'componente'
+            sel_value = self._map_componente_code_to_selection(componente_code)
+            _logger.info(
+                "[_ensure_intervencion_for_component] creando intervencion %s (selection=%s) para rep=%s",
+                componente_code, sel_value, self.id
+            )
             interv = Interv.create({
                 'reparacion_id': self.id,
-                'componente': componente_code,
+                'componente_code': componente_code,
+                'componente': sel_value,
                 'accion': 'cambiado',
                 'observacion': _('Creado automáticamente al marcar "requiere cambio".'),
             })
         else:
-            _logger.debug("[_ensure_intervencion_for_component] usando intervencion id=%s", interv.id)
+            _logger.debug(
+                "[_ensure_intervencion_for_component] usando intervencion id=%s (code=%s)",
+                interv.id, componente_code
+            )
         return interv
+
 
     # ========================================
     # WIZARD DE SUBPARTES

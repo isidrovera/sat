@@ -7,10 +7,6 @@ class ReparacionSubparte(models.Model):
     _description = 'Catálogo de Subpartes por Componente'
     _order = 'componente, name'
 
-    # NOTA:
-    # Esta lista se puede seguir usando como referencia "clásica",
-    # pero YA NO limita a reparacion.intervencion.componente,
-    # porque ahora ese campo es Char dinámico.
     COMPONENTE = [
         ('ui_k', 'Unidad de imagen Black'),
         ('ui_c', 'Unidad de imagen Cyan'),
@@ -30,7 +26,7 @@ class ReparacionSubparte(models.Model):
     ]
 
     name = fields.Char('Subparte', required=True)
-    # Este catálogo puede seguir usando Selection porque es estático
+    # Este catálogo puede seguir usando Selection tranquilamente
     componente = fields.Selection(COMPONENTE, string='Componente', required=True)
     default_code = fields.Char('Código sugerido')
     active = fields.Boolean(default=True)
@@ -46,7 +42,6 @@ class ReparacionIntervencionDetalle(models.Model):
         required=True,
         ondelete='cascade'
     )
-    # Ya migrado a componente.subparte (catálogo nuevo)
     subparte_id = fields.Many2one(
         'componente.subparte',
         string='Subparte',
@@ -76,21 +71,19 @@ class ReparacionIntervencion(models.Model):
         ondelete='cascade'
     )
 
-    # ⚠️ CAMBIO IMPORTANTE:
-    # Antes: Selection(ReparacionSubparte.COMPONENTE)
-    # Ahora: Char dinámico para aceptar cualquier código ('ui_k', 'dev_c', 't88_k', etc.)
-    #
-    # A nivel de BD, Selection se guarda como VARCHAR, así que el cambio es
-    # transparente: no se pierde data y Odoo no necesita migración manual.
-    componente = fields.Char(
+    # ⚠️ Campo original como Selection (NO lo tocamos más)
+    componente = fields.Selection(
+        ReparacionSubparte.COMPONENTE,
         string='Componente',
         required=True,
-        help="Código interno del componente (ej: ui_k, dev_c, fuser, t88_k, etc.)"
     )
 
-    # Si quieres, podemos más adelante añadir un campo compute Many2one/Selection
-    # solo para mostrar una etiqueta bonita en formularios, pero no es obligatorio
-    # para que el flujo del wizard/informe funcione.
+    # ⚠️ Campo NUEVO dinámico para código técnico interno
+    componente_code = fields.Char(
+        string='Código componente',
+        help="Código técnico interno (ej: ui_k, dev_c, t88_k, etc.)",
+        index=True,
+    )
 
     accion = fields.Selection([
         ('cambiado', 'Cambio de repuesto(s)'),
