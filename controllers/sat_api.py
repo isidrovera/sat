@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from odoo import http, fields
 from odoo.http import request
 import logging
@@ -7,9 +8,19 @@ _logger = logging.getLogger(__name__)
 
 class SatApiController(http.Controller):
 
-    @http.route('/sat/api/checkin', type='json', auth='public', methods=['POST'], csrf=False)
+    @http.route('/sat/api/checkin', type='json', auth='public',
+                methods=['POST'], csrf=False)
     def sat_checkin(self, **kw):
-        payload = request.jsonrequest or {}
+        """
+        Endpoint JSON sencillo para:
+        - action = 'lookup'  -> solo consulta serie
+        - action = 'confirm' -> registra check de ingreso (ok/obs)
+        """
+        # Odoo 18: para type='json' los datos vienen ya como dict en request.params
+        # y también en request.jsonrequest; usamos ambos por seguridad.
+        payload = getattr(request, 'jsonrequest', None) or request.params or {}
+
+        _logger.info("sat_checkin payload: %s", payload)
 
         serial = (payload.get('serial') or '').strip()
         source = (payload.get('source') or 'unknown').strip()
@@ -50,7 +61,7 @@ class SatApiController(http.Controller):
             'ubicacion': rec.ubicacion_id or '',
         }
 
-        # Solo lookup (consulta)
+        # --- Solo consulta (lookup) ---
         if action == 'lookup' or not status:
             return {
                 'ok': True,
@@ -62,7 +73,7 @@ class SatApiController(http.Controller):
                 'record': record_data,
             }
 
-        # --- confirmación (aquí va la lógica de check-in) ---
+        # --- Confirmación de check de ingreso ---
         dt_now = fields.Datetime.now()
         dt_str = fields.Datetime.to_string(dt_now)
 
@@ -89,6 +100,7 @@ class SatApiController(http.Controller):
             subtype_xmlid='mail.mt_note',
         )
 
+        # Si viene observación, la pegamos en descripcion y activador
         if status == 'obs' and observation:
             try:
                 rec.sudo().write({
