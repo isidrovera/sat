@@ -279,71 +279,91 @@ class ReparacionesInforme(models.Model):
         calidad = self._rep__calc_calidad(f, funciones_no, toners_crit)
         _logger.debug("[_rep__build_informe_html] calidad=%s", calidad)
 
-        if calidad == 'mala':
-            concl = _("Unidad requiere inversión inmediata en repuestos antes de entregarse a distribuidor.")
-        elif calidad == 'regular':
-            concl = _("Unidad operativa para prueba; sugerimos cambio preventivo previo a la entrega.")
-        else:
-            concl = _("Unidad lista para entrega; se recomienda mantenimiento estándar en instalación.")
-
-        texto_general = _(
-            "Se realizó limpieza, puesta a punto básica y verificación general de funcionamiento y consumibles para la venta mayorista."
-        )
-
-        color_sev = {'critico': '#d32f2f', 'medio': '#ef6c00', 'pend': '#616161'}
-        color_calidad_bg = {'mala': '#ffebee', 'regular': '#fff8e1', 'buena': '#e8f5e9'}
-        color_calidad_txt = {'mala': '#c62828', 'regular': '#ef6c00', 'buena': '#2e7d32'}
-
-        bloques = []
-        if funciones_no:
-            bloques.append(
-                f"<p style='margin:6px 0;color:{color_sev['critico']};'><strong>{_('Funciones con incidencia')}:</strong></p>"
-                "<ul style='margin:0 0 8px 18px;'>" + "".join(f"<li>{x}</li>" for x in funciones_no) + "</ul>"
-            )
-        if f['cambio_inmediato']:
-            bloques.append(
-                f"<p style='margin:6px 0;color:{color_sev['critico']};'><strong>{_('Puntos críticos (cambio inmediato)')}:</strong></p>"
-                "<ul style='margin:0 0 8px 18px;'>" + "".join(f"<li>{x}</li>" for x in f['cambio_inmediato']) + "</ul>"
-            )
+        # ========================================
+        # INFORME CORTO Y NATURAL
+        # ========================================
+        parrafos = []
+        
+        # Texto inicial
+        parrafos.append("Se realizó revisión completa de la máquina con las pruebas necesarias.")
+        
+        # Componentes críticos (requieren cambio)
+        if f['cambio_inmediato'] or funciones_no or toners_crit:
+            componentes_cambio = []
+            if f['cambio_inmediato']:
+                componentes_cambio.extend(f['cambio_inmediato'])
+            if funciones_no:
+                componentes_cambio.extend(funciones_no)
+            if toners_crit:
+                componentes_cambio.extend(toners_crit)
+            
+            if componentes_cambio:
+                lista_comp = ', '.join(componentes_cambio[:-1])
+                if len(componentes_cambio) > 1:
+                    lista_comp += f" y {componentes_cambio[-1]}"
+                else:
+                    lista_comp = componentes_cambio[0]
+                
+                parrafos.append(f"Las siguientes unidades requieren cambio: {lista_comp}.")
+        
+        # Componentes con desgaste (opcional)
         if f['desgaste']:
-            bloques.append(
-                f"<p style='margin:6px 0;color:{color_sev['medio']};'><strong>{_('Componentes con desgaste')}:</strong></p>"
-                "<ul style='margin:0 0 8px 18px;'>" + "".join(f"<li>{x}</li>" for x in f['desgaste']) + "</ul>"
-            )
-        if f['pendientes']:
-            bloques.append(
-                f"<p style='margin:6px 0;color:{color_sev['pend']};'><strong>{_('Pendientes / sin revisar')}:</strong></p>"
-                "<ul style='margin:0 0 8px 18px;'>" + "".join(f"<li>{x}</li>" for x in f['pendientes']) + "</ul>"
-            )
-        if toners_crit:
-            bloques.append(
-                f"<p style='margin:6px 0;color:{color_sev['critico']};'><strong>{_('Consumibles críticos')}:</strong></p>"
-                "<ul style='margin:0 0 8px 18px;'>" + "".join(f"<li>{x}</li>" for x in toners_crit) + "</ul>"
-            )
+            lista_desg = ', '.join(f['desgaste'][:-1])
+            if len(f['desgaste']) > 1:
+                lista_desg += f" y {f['desgaste'][-1]}"
+            else:
+                lista_desg = f['desgaste'][0]
+            parrafos.append(f"Se recomienda cambio preventivo de: {lista_desg}.")
+        
+        # Subpartes específicas (si existen)
+        repuestos_texto = self._generar_texto_repuestos()
+        if repuestos_texto:
+            parrafos.append(repuestos_texto)
+        
+        # Conclusión según calidad
+        if calidad == 'mala':
+            parrafos.append("La unidad requiere inversión inmediata en repuestos antes de entrega.")
+        elif calidad == 'regular':
+            parrafos.append("La unidad está operativa pero se recomienda realizar los cambios preventivos antes de entrega.")
+        else:
+            parrafos.append("La unidad está lista para entrega con mantenimiento estándar.")
 
-        repuestos_html = self._generar_seccion_repuestos()
-        if repuestos_html:
-            bloques.append(repuestos_html)
-
-        observ_html = ""
-        if bloques:
-            observ_html = "<h5 style='margin:12px 0 6px;'>" + _("Observaciones para entrega a distribuidor") + "</h5>" + "".join(bloques)
-
-        html = f"""
-<div data-autogen="1" style="font-family: Arial; line-height:1.5;">
-<p>{texto_general}</p>
-{observ_html}
-<h5 style="margin:12px 0 6px;">{_('Conclusión')}</h5>
-<div style="padding:10px;border-radius:6px;background:{color_calidad_bg[calidad]};color:{color_calidad_txt[calidad]};">
-    <strong style="text-transform:capitalize;">{calidad}</strong>: {concl}
-</div>
-<p style="color:#888; font-size:12px; margin-top:10px;">
-    *{_('Bloque generado automáticamente a partir del checklist técnico.')}*
-</p>
-</div>
-"""
+        # Construir HTML simple
+        html = '<div data-autogen="1" style="font-family: Arial; line-height:1.6;">\n'
+        for parrafo in parrafos:
+            html += f'<p style="margin:8px 0;">{parrafo}</p>\n'
+        html += '</div>'
+        
         _logger.info("[_rep__build_informe_html] HTML construido (len=%s) para id=%s", len(html), self.id)
         return html, calidad
+
+
+    def _generar_texto_repuestos(self):
+        """Genera texto corto de subpartes que requieren cambio"""
+        if not self.intervencion_ids:
+            return ""
+
+        intervenciones_con_detalles = self.intervencion_ids.filtered(lambda x: x.detalle_ids)
+        if not intervenciones_con_detalles:
+            return ""
+
+        # Agrupar subpartes por componente
+        componentes_con_subpartes = []
+        for intervencion in intervenciones_con_detalles:
+            codigo = intervencion.componente_code if intervencion.componente_code else intervencion.componente
+            componente_nombre = self._get_component_display_name(codigo)
+            
+            subpartes = [d.subparte_id.name for d in intervencion.detalle_ids if d.subparte_id]
+            if subpartes:
+                subpartes_texto = ', '.join(subpartes)
+                componentes_con_subpartes.append(f"{componente_nombre} ({subpartes_texto})")
+        
+        if not componentes_con_subpartes:
+            return ""
+        
+        # Construir texto natural
+        texto = "Específicamente: " + '; '.join(componentes_con_subpartes) + "."
+        return texto
 
     def _generar_seccion_repuestos(self):
         """Genera la sección HTML de componentes y subpartes que requieren cambio (sin duplicados)."""
