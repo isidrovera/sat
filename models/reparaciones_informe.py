@@ -287,28 +287,30 @@ class ReparacionesInforme(models.Model):
         # Texto inicial
         html_parts.append('<p>Se realizó revisión completa de la máquina con las pruebas necesarias.</p>')
         
-        # Componentes críticos (requieren cambio)
-        if f['cambio_inmediato'] or funciones_no or toners_crit:
-            componentes_cambio = []
-            if f['cambio_inmediato']:
-                componentes_cambio.extend(f['cambio_inmediato'])
-            if funciones_no:
-                componentes_cambio.extend(funciones_no)
-            if toners_crit:
-                componentes_cambio.extend(toners_crit)
-            
-            if componentes_cambio:
-                lista = ', '.join(componentes_cambio)
-                html_parts.append(f'<p>Las siguientes unidades requieren cambio: {lista}.</p>')
-        
-        # Componentes con desgaste
-        if f['desgaste']:
-            lista = ', '.join(f['desgaste'])
-            html_parts.append(f'<p>Se recomienda cambio preventivo de: {lista}.</p>')
-        
-        # Subpartes específicas con estructura
+        # ✅ SOLO mostrar lista de componentes SI NO hay subpartes detalladas
         subpartes_html = self._generar_subpartes_estructuradas()
-        if subpartes_html:
+        
+        if not subpartes_html:
+            # Si NO hay subpartes detalladas, mostrar la lista simple de componentes
+            if f['cambio_inmediato'] or funciones_no or toners_crit:
+                componentes_cambio = []
+                if f['cambio_inmediato']:
+                    componentes_cambio.extend(f['cambio_inmediato'])
+                if funciones_no:
+                    componentes_cambio.extend(funciones_no)
+                if toners_crit:
+                    componentes_cambio.extend(toners_crit)
+                
+                if componentes_cambio:
+                    lista = ', '.join(componentes_cambio)
+                    html_parts.append(f'<p>Las siguientes unidades requieren cambio: {lista}.</p>')
+            
+            # Componentes con desgaste
+            if f['desgaste']:
+                lista = ', '.join(f['desgaste'])
+                html_parts.append(f'<p>Se recomienda cambio preventivo de: {lista}.</p>')
+        else:
+            # Si HAY subpartes detalladas, ir directo a "Específicamente:"
             html_parts.append('<p><strong>Específicamente:</strong></p>')
             html_parts.append(subpartes_html)
         
