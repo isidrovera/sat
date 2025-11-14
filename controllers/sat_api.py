@@ -8,17 +8,20 @@ _logger = logging.getLogger(__name__)
 
 class SatApiController(http.Controller):
 
-    @http.route('/sat/api/checkin', type='json', auth='public',
+    @http.route('/sat/api/checkin', type='http', auth='public',
                 methods=['POST'], csrf=False)
     def sat_checkin(self, **kw):
         """
-        Endpoint JSON sencillo para:
+        Endpoint HTTP+JSON sencillo para:
         - action = 'lookup'  -> solo consulta serie
         - action = 'confirm' -> registra check de ingreso (ok/obs)
         """
-        # Odoo 18: para type='json' los datos vienen ya como dict en request.params
-        # y también en request.jsonrequest; usamos ambos por seguridad.
-        payload = getattr(request, 'jsonrequest', None) or request.params or {}
+        # Leer JSON crudo del body (sin JSON-RPC)
+        try:
+            payload = request.httprequest.get_json(force=True, silent=True) or {}
+        except Exception as e:
+            _logger.error("Error parseando JSON en /sat/api/checkin: %s", e)
+            payload = {}
 
         _logger.info("sat_checkin payload: %s", payload)
 
@@ -30,23 +33,23 @@ class SatApiController(http.Controller):
         observation = (payload.get('observation') or '').strip()
 
         if not serial:
-            return {
+            return request.make_json_response({
                 'ok': False,
                 'code': 'missing_serial',
                 'message': 'No se recibió número de serie.'
-            }
+            })
 
         Sat = request.env['sat.sat'].sudo()
         rec = Sat.search([('serie_id', '=', serial)], limit=1)
 
         if not rec:
-            return {
+            return request.make_json_response({
                 'ok': False,
                 'code': 'not_found',
                 'message': 'Serie no encontrada en el registro de máquinas.',
                 'serial': serial,
                 'raw_value': raw_value,
-            }
+            })
 
         record_data = {
             'id': rec.id,
@@ -63,7 +66,7 @@ class SatApiController(http.Controller):
 
         # --- Solo consulta (lookup) ---
         if action == 'lookup' or not status:
-            return {
+            return request.make_json_response({
                 'ok': True,
                 'code': 'lookup_ok',
                 'message': 'Serie encontrada.',
@@ -71,7 +74,7 @@ class SatApiController(http.Controller):
                 'raw_value': raw_value,
                 'source': source,
                 'record': record_data,
-            }
+            })
 
         # --- Confirmación de check de ingreso ---
         dt_now = fields.Datetime.now()
@@ -100,7 +103,6 @@ class SatApiController(http.Controller):
             subtype_xmlid='mail.mt_note',
         )
 
-        # Si viene observación, la pegamos en descripcion y activador
         if status == 'obs' and observation:
             try:
                 rec.sudo().write({
@@ -110,7 +112,7 @@ class SatApiController(http.Controller):
             except Exception as e:
                 _logger.error("Error guardando observación de ingreso en descripcion: %s", e)
 
-        return {
+        return request.make_json_response({
             'ok': True,
             'code': 'confirm_ok',
             'message': 'Check de ingreso registrado correctamente.',
@@ -120,4 +122,4 @@ class SatApiController(http.Controller):
             'status': status,
             'observation': observation,
             'record': record_data,
-        }
+        })
