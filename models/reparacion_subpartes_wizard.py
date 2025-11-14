@@ -25,30 +25,60 @@ class ReparacionAddSubpartsWizardLine(models.TransientModel):
     _name = 'reparacion.add.subparts.wizard.line'
     _description = 'Línea de subpartes wizard múltiple'
 
-    wizard_id = fields.Many2one('reparacion.add.subparts.wizard', required=True, ondelete='cascade')
-    componente = fields.Selection(COMPONENTE_SELECTION, string='Componente', required=True)
-    componente_display = fields.Char('Componente Display', compute='_compute_componente_display', store=True)
-    intervencion_id = fields.Many2one('reparacion.intervencion', string='Intervención')
+    wizard_id = fields.Many2one(
+        'reparacion.add.subparts.wizard',
+        required=True,
+        ondelete='cascade'
+    )
+
+    # ⚠️ CAMBIO IMPORTANTE:
+    # Antes: Selection(COMPONENTE_SELECTION)
+    # Ahora: CHAR dinámico, acepta ui_k, dev_c, fuser, t88_k, t88_y, etc.
+    componente = fields.Char(
+        string='Código componente',
+        required=True,
+        help="Código interno del componente: ui_k, dev_c, fuser, t88_k, etc."
+    )
+
+    # Nombre bonito calculado para mostrar en el wizard
+    componente_display = fields.Char(
+        'Componente',
+        compute='_compute_componente_display',
+        store=True
+    )
+
+    intervencion_id = fields.Many2one(
+        'reparacion.intervencion',
+        string='Intervención'
+    )
+
     selected = fields.Boolean('Seleccionar', default=False)
-    subparte_id = fields.Many2one('componente.subparte', string='Subparte', required=True)  # CAMBIO AQUÍ
+
+    subparte_id = fields.Many2one(
+        'componente.subparte',
+        string='Subparte',
+        required=True
+    )
+
     accion_sub = fields.Selection([
         ('cambiado', 'Cambiado'),
         ('ajustado', 'Ajustado'),
         ('limpieza', 'Limpieza'),
         ('diagnosticado', 'Diagnosticado'),
+        ('na', 'No aplica'),
     ], string='Acción', default='cambiado')
+
     codigo = fields.Char('Código/SKU')
     cantidad = fields.Float('Cantidad', default=1.0)
     nota = fields.Char('Nota')
 
     @api.depends('componente')
     def _compute_componente_display(self):
+        mapping = dict(COMPONENTE_SELECTION)
         for record in self:
-            if record.componente:
-                componentes_dict = dict(COMPONENTE_SELECTION)
-                record.componente_display = componentes_dict.get(record.componente, record.componente)
-            else:
-                record.componente_display = ""
+            code = (record.componente or '').strip()
+            # Si el código existe en la tabla, usamos el nombre; si no, mostramos el código tal cual.
+            record.componente_display = mapping.get(code, code)
 
 
 class ReparacionAddSubpartsWizard(models.TransientModel):
