@@ -358,7 +358,10 @@ class ReparacionesInforme(models.Model):
 
         repuestos_por_componente = {}
         for intervencion in intervenciones_con_detalles:
-            componente_nombre = self._get_component_display_name(intervencion.componente)
+            # ✅ CAMBIO: Usar componente_code (dinámico) en lugar de componente (Selection)
+            codigo = intervencion.componente_code if intervencion.componente_code else intervencion.componente
+            componente_nombre = self._get_component_display_name(codigo)
+            
             nombres = set()
             for detalle in intervencion.detalle_ids:
                 if detalle.subparte_id:
