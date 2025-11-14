@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
 
+
 class ReparacionSubparte(models.Model):
     _name = 'reparacion.subparte'
     _description = 'Catálogo de Subpartes por Componente'
     _order = 'componente, name'
 
+    # NOTA:
+    # Esta lista se puede seguir usando como referencia "clásica",
+    # pero YA NO limita a reparacion.intervencion.componente,
+    # porque ahora ese campo es Char dinámico.
     COMPONENTE = [
         ('ui_k', 'Unidad de imagen Black'),
         ('ui_c', 'Unidad de imagen Cyan'),
@@ -25,6 +30,7 @@ class ReparacionSubparte(models.Model):
     ]
 
     name = fields.Char('Subparte', required=True)
+    # Este catálogo puede seguir usando Selection porque es estático
     componente = fields.Selection(COMPONENTE, string='Componente', required=True)
     default_code = fields.Char('Código sugerido')
     active = fields.Boolean(default=True)
@@ -34,8 +40,18 @@ class ReparacionIntervencionDetalle(models.Model):
     _name = 'reparacion.intervencion.detalle'
     _description = 'Detalle de Subpartes Intervenidas'
 
-    line_id = fields.Many2one('reparacion.intervencion', string='Intervención', required=True, ondelete='cascade')
-    subparte_id = fields.Many2one('componente.subparte', string='Subparte', required=True)  # CAMBIO AQUÍ
+    line_id = fields.Many2one(
+        'reparacion.intervencion',
+        string='Intervención',
+        required=True,
+        ondelete='cascade'
+    )
+    # Ya migrado a componente.subparte (catálogo nuevo)
+    subparte_id = fields.Many2one(
+        'componente.subparte',
+        string='Subparte',
+        required=True
+    )
     accion_sub = fields.Selection([
         ('cambiado', 'Cambiado'),
         ('ajustado', 'Ajustado'),
@@ -53,8 +69,29 @@ class ReparacionIntervencion(models.Model):
     _description = 'Intervenciones y Cambios en Reparaciones'
     _order = 'id desc'
 
-    reparacion_id = fields.Many2one('reparaciones.reparaciones', string='Reparación', required=True, ondelete='cascade')
-    componente = fields.Selection(ReparacionSubparte.COMPONENTE, string='Componente', required=True)
+    reparacion_id = fields.Many2one(
+        'reparaciones.reparaciones',
+        string='Reparación',
+        required=True,
+        ondelete='cascade'
+    )
+
+    # ⚠️ CAMBIO IMPORTANTE:
+    # Antes: Selection(ReparacionSubparte.COMPONENTE)
+    # Ahora: Char dinámico para aceptar cualquier código ('ui_k', 'dev_c', 't88_k', etc.)
+    #
+    # A nivel de BD, Selection se guarda como VARCHAR, así que el cambio es
+    # transparente: no se pierde data y Odoo no necesita migración manual.
+    componente = fields.Char(
+        string='Componente',
+        required=True,
+        help="Código interno del componente (ej: ui_k, dev_c, fuser, t88_k, etc.)"
+    )
+
+    # Si quieres, podemos más adelante añadir un campo compute Many2one/Selection
+    # solo para mostrar una etiqueta bonita en formularios, pero no es obligatorio
+    # para que el flujo del wizard/informe funcione.
+
     accion = fields.Selection([
         ('cambiado', 'Cambio de repuesto(s)'),
         ('ajustado', 'Ajuste / calibración'),
@@ -62,18 +99,27 @@ class ReparacionIntervencion(models.Model):
         ('diagnosticado', 'Diagnóstico'),
     ], string='Acción realizada', required=True, default='cambiado')
 
-    detalle_ids = fields.One2many('reparacion.intervencion.detalle', 'line_id', string='Subpartes')
+    detalle_ids = fields.One2many(
+        'reparacion.intervencion.detalle',
+        'line_id',
+        string='Subpartes'
+    )
     observacion = fields.Char('Observación')
 
-    es_cambio = fields.Boolean(compute='_compute_es_cambio', store=True)
+    es_cambio = fields.Boolean(
+        compute='_compute_es_cambio',
+        store=True,
+        string='Implica cambio de repuesto'
+    )
 
     @api.depends('accion', 'detalle_ids.accion_sub')
     def _compute_es_cambio(self):
         for rec in self:
             rec.es_cambio = (
-                rec.accion == 'cambiado' or
-                any(d.accion_sub == 'cambiado' for d in rec.detalle_ids)
+                rec.accion == 'cambiado'
+                or any(d.accion_sub == 'cambiado' for d in rec.detalle_ids)
             )
+
     def action_open_subparts_wizard(self):
         self.ensure_one()
         return {
