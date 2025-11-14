@@ -330,7 +330,39 @@ class ReparacionesInforme(models.Model):
         _logger.info("[_rep__build_informe_html] HTML construido (len=%s) para id=%s", len(html), self.id)
         return html, calidad
 
+    def _generar_subpartes_estructuradas(self):
+        """Genera HTML estructurado de componentes y sus subpartes"""
+        if not self.intervencion_ids:
+            return ""
 
+        intervenciones_con_detalles = self.intervencion_ids.filtered(lambda x: x.detalle_ids)
+        if not intervenciones_con_detalles:
+            return ""
+
+        html_parts = []
+        
+        for intervencion in intervenciones_con_detalles:
+            # Obtener nombre del componente
+            codigo = intervencion.componente_code if intervencion.componente_code else intervencion.componente
+            componente_nombre = self._get_component_display_name(codigo)
+            
+            # Obtener subpartes
+            subpartes = [d.subparte_id.name for d in intervencion.detalle_ids if d.subparte_id]
+            
+            if subpartes:
+                # Componente como título
+                html_parts.append(f'<p style="margin:10px 0 5px 0;"><strong>{componente_nombre}:</strong></p>')
+                
+                # Lista de subpartes
+                html_parts.append('<ul style="margin:0 0 10px 20px;">')
+                for subparte in subpartes:
+                    html_parts.append(f'<li>{subparte}</li>')
+                html_parts.append('</ul>')
+        
+        if not html_parts:
+            return ""
+        
+        return ''.join(html_parts)
     def _generar_texto_repuestos(self):
         """Genera texto corto de subpartes que requieren cambio"""
         if not self.intervencion_ids:
