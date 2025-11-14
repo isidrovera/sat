@@ -964,63 +964,81 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
 
         for comp_info in componentes_pendientes:
             componente_code = comp_info['componente_code']
+
+            # Crear/obtener intervención (ya soporta componente_code + bucket)
             intervencion = self._ensure_intervencion_for_component(componente_code)
 
-            # --- NUEVO: sets para deduplicar ---
+            # Determinar bucket para el wizard (ui_k, dev_c, fuser, papel, otro…)
+            bucket = self._bucket_from_component_code(componente_code)
+
+            # Evitar duplicados
             ya_existentes = set(intervencion.detalle_ids.mapped('subparte_id').ids)
             agregadas = set()
 
-            # 1) Buscar componentes catálogo
+            # Buscar componentes del modelo
             componentes_modelo = self._buscar_componentes_modelo_por_evaluacion(modelo_maquina, comp_info)
-            _logger.debug("[_abrir_wizard_multiple_componentes] comp=%s encontró %s componentes modelo",
-                        componente_code, len(componentes_modelo))
+            _logger.debug(
+                "[_abrir_wizard_multiple_componentes] comp=%s encontró %s componentes modelo",
+                componente_code, len(componentes_modelo)
+            )
 
             total_lineas = 0
+
+            # 1) Subpartes detalladas del modelo
             for componente_modelo in componentes_modelo:
                 if not getattr(componente_modelo, 'detalle_ids', False):
                     continue
+
                 for detalle in componente_modelo.detalle_ids:
                     sid = detalle.subparte_id.id
                     if not sid:
                         continue
-                    # Evitar duplicados: ya en intervención o ya agregada en este loop
+
                     if sid in ya_existentes or sid in agregadas:
                         continue
 
                     self.env['reparacion.add.subparts.wizard.line'].create({
                         'wizard_id': wizard.id,
-                        'componente': componente_code,
+                        'componente': bucket,                # <- Selection seguro
+                        'componente_code': componente_code,   # <- dinámico real
                         'intervencion_id': intervencion.id,
                         'subparte_id': sid,
                         'selected': False,
                         'accion_sub': 'cambiado',
                         'cantidad': detalle.cantidad or 1.0,
                     })
+
                     agregadas.add(sid)
                     total_lineas += 1
 
-            # 3) Fallback genérico por tipo (también deduplicado)
+            # 2) Fallback genérico por tipo
             if total_lineas == 0:
                 genericas = self._fallback_subpartes_por_tipo(comp_info['tipo_id'])
                 if genericas:
-                    _logger.warning("[_abrir_wizard_multiple_componentes] sin detalle_ids; usando %s subpartes genéricas por tipo.",
-                                    len(genericas))
+                    _logger.warning(
+                        "[_abrir_wizard_multiple_componentes] sin detalle_ids; usando %s subpartes genéricas por tipo.",
+                        len(genericas)
+                    )
                     for sp in genericas:
                         sid = sp.id
                         if not sid or sid in ya_existentes or sid in agregadas:
                             continue
+
                         self.env['reparacion.add.subparts.wizard.line'].create({
                             'wizard_id': wizard.id,
-                            'componente': componente_code,
+                            'componente': bucket,
+                            'componente_code': componente_code,
                             'intervencion_id': intervencion.id,
                             'subparte_id': sid,
                             'selected': False,
                             'accion_sub': 'cambiado',
                             'cantidad': 1.0,
                         })
+
                         agregadas.add(sid)
                         total_lineas += 1
 
+            # 3) Notificación si no se pudo encontrar nada
             if total_lineas == 0:
                 self.message_post(body=_(
                     "No se hallaron subpartes para <b>%(nombre)s</b> %(color)s. "
@@ -1030,7 +1048,7 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
                     'color': comp_info.get('color_code') and f"({comp_info['color_code'].upper()})" or "",
                 })
 
-        # (resto del método igual)
+        # Título dinámico del wizard
         nombres = []
         for comp in componentes_pendientes:
             eval_rec = self.env['reparacion.componente.evaluacion'].browse(comp['evaluacion_id'])
@@ -1052,6 +1070,7 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
             'target': 'new',
             'context': {'from_generar_informe': True},
         }
+
 
 
     def _buscar_componentes_modelo_por_evaluacion(self, modelo_maquina, comp_info):
