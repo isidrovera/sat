@@ -968,9 +968,6 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
             # Crear/obtener intervención (ya soporta componente_code + bucket)
             intervencion = self._ensure_intervencion_for_component(componente_code)
 
-            # Determinar bucket para el wizard (ui_k, dev_c, fuser, papel, otro…)
-            bucket = self._bucket_from_component_code(componente_code)
-
             # Evitar duplicados
             ya_existentes = set(intervencion.detalle_ids.mapped('subparte_id').ids)
             agregadas = set()
@@ -999,8 +996,8 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
 
                     self.env['reparacion.add.subparts.wizard.line'].create({
                         'wizard_id': wizard.id,
-                        'componente': bucket,                # <- Selection seguro
-                        'componente_code': componente_code,   # <- dinámico real
+                        'componente': 'otro',                 # <- FIJO: siempre 'otro' (campo legacy)
+                        'componente_code': componente_code,   # <- DINÁMICO: el valor real
                         'intervencion_id': intervencion.id,
                         'subparte_id': sid,
                         'selected': False,
@@ -1026,8 +1023,8 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
 
                         self.env['reparacion.add.subparts.wizard.line'].create({
                             'wizard_id': wizard.id,
-                            'componente': bucket,
-                            'componente_code': componente_code,
+                            'componente': 'otro',                 # <- FIJO: siempre 'otro' (campo legacy)
+                            'componente_code': componente_code,   # <- DINÁMICO: el valor real
                             'intervencion_id': intervencion.id,
                             'subparte_id': sid,
                             'selected': False,
@@ -1070,10 +1067,7 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
             'target': 'new',
             'context': {'from_generar_informe': True},
         }
-
-
-
-    def _buscar_componentes_modelo_por_evaluacion(self, modelo_maquina, comp_info):
+        def _buscar_componentes_modelo_por_evaluacion(self, modelo_maquina, comp_info):
         """
         Busca componentes del catálogo para poblar el wizard de subpartes con
         una estrategia de fallbacks:

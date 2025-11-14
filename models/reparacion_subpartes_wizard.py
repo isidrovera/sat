@@ -31,18 +31,18 @@ class ReparacionAddSubpartsWizardLine(models.TransientModel):
         ondelete='cascade'
     )
 
-    # ⚠️ CAMBIO IMPORTANTE:
-    # Antes: Selection(COMPONENTE_SELECTION)
-    # Ahora: CHAR dinámico, acepta ui_k, dev_c, fuser, t88_k, t88_y, etc.
+    # ⚠️ Campo CHAR dinámico (el que usamos realmente)
     componente_code = fields.Char(
         string='Código componente',
         required=True,
         help="Código interno del componente: ui_k, dev_c, fuser, t88_k, etc."
     )
+    
+    # ⚠️ Campo Selection LEGACY (mantener para evitar errores de BD, pero siempre será 'otro')
     componente = fields.Selection(
-        ReparacionSubparte.COMPONENTE,
+        COMPONENTE_SELECTION,
         string='Componente',
-        required=True,
+        default='otro',
     )
 
     # Nombre bonito calculado para mostrar en el wizard
@@ -79,14 +79,21 @@ class ReparacionAddSubpartsWizardLine(models.TransientModel):
 
     @api.depends('componente', 'componente_code')
     def _compute_componente_display(self):
-        comp_dict = dict(COMPONENTE_SELECTION)
         for record in self:
-            etiqueta = comp_dict.get(record.componente, record.componente or '')
-            if record.componente_code and record.componente_code != record.componente:
-                record.componente_display = f"{etiqueta} [{record.componente_code}]"
+            if record.componente_code:
+                # Intentar obtener nombre amigable
+                try:
+                    nombre = self.env['reparaciones.reparaciones']._get_component_display_name(
+                        record.componente_code
+                    )
+                    record.componente_display = nombre
+                except:
+                    # Fallback si falla
+                    comp_dict = dict(COMPONENTE_SELECTION)
+                    record.componente_display = comp_dict.get(record.componente_code, record.componente_code)
             else:
-                record.componente_display = etiqueta or record.componente_code or ""
-
+                comp_dict = dict(COMPONENTE_SELECTION)
+                record.componente_display = comp_dict.get(record.componente, record.componente or '')
 
 
 class ReparacionAddSubpartsWizard(models.TransientModel):
