@@ -1,42 +1,50 @@
 # -*- coding: utf-8 -*-
-from odoo import http, fields
-from odoo.http import request
 import logging
+
+from odoo import http, fields, _
+from odoo.http import request
 
 _logger = logging.getLogger(__name__)
 
 
-class SatApiController(http.Controller):
+class SatApi(http.Controller):
 
-    @http.route('/sat/api/checkin', type='http', auth='public',
-                methods=['POST'], csrf=False)
-    def sat_checkin(self, **kw):
+    @http.route('/sat/api/checkin', type='http', auth='public', methods=['POST'], csrf=False)
+    def sat_checkin(self, **kwargs):
         """
-        Endpoint HTTP+JSON sencillo para:
-        - action = 'lookup'  -> solo consulta serie
-        - action = 'confirm' -> registra check de ingreso (ok/obs)
+        Endpoint usado por el scanner externo.
+
+        Espera JSON como:
+        {
+          "serial": "2RK07735",
+          "source": "qr" | "ocr" | "otro",
+          "raw_value": "2RK07735",
+          "action": "lookup" | "confirm",
+          "status": "ok" | "obs",        # solo si action == "confirm"
+          "observation": "texto opcional" # solo si action == "confirm"
+        }
         """
-        # Leer JSON crudo del body (sin JSON-RPC)
+        # -------- leer JSON crudo del body --------
         try:
             payload = request.httprequest.get_json(force=True, silent=True) or {}
-        except Exception as e:
-            _logger.error("Error parseando JSON en /sat/api/checkin: %s", e)
+        except Exception:
             payload = {}
 
         _logger.info("sat_checkin payload: %s", payload)
 
         serial = (payload.get('serial') or '').strip()
-        source = (payload.get('source') or 'unknown').strip()
-        raw_value = (payload.get('raw_value') or serial).strip()
+        source = (payload.get('source') or '').strip().lower() or 'unknown'
+        raw_value = (payload.get('raw_value') or '').strip()
         action = (payload.get('action') or 'lookup').strip().lower()
         status = (payload.get('status') or '').strip().lower()
         observation = (payload.get('observation') or '').strip()
 
+        # -------- validaciones básicas --------
         if not serial:
             return request.make_json_response({
-                'ok': False,
-                'code': 'missing_serial',
-                'message': 'No se recibió número de serie.'
+                "ok": False,
+                "code": "missing_serial",
+                "message": _("No se recibió número de serie.")
             })
 
         Sat = request.env['sat.sat'].sudo()
@@ -44,82 +52,101 @@ class SatApiController(http.Controller):
 
         if not rec:
             return request.make_json_response({
-                'ok': False,
-                'code': 'not_found',
-                'message': 'Serie no encontrada en el registro de máquinas.',
-                'serial': serial,
-                'raw_value': raw_value,
+                "ok": False,
+                "code": "not_found",
+                "message": _("No se encontró equipo con esa serie."),
+                "serial": serial,
+                "raw_value": raw_value,
+                "source": source,
             })
 
-        record_data = {
-            'id': rec.id,
-            'serie': rec.serie_id,
-            'modelo': rec.name.name if rec.name else '',
-            'marca': rec.marca or '',
-            'tipo_maquina': rec.tipo_maquina or '',
-            'tipo': rec.tipo_id or '',
-            'contometro': rec.contometro or '',
-            'estado_ventas': rec.estado_ventas_id or '',
-            'disponibilidad': rec.disponibilidad_id or '',
-            'ubicacion': rec.ubicacion_id or '',
-        }
+        # -------- helper para armar ficha de respuesta --------
+        def _record_data(r):
+            return {
+                "id": r.id,
+                "serie": r.serie_id,
+                "modelo": r.name.name if r.name else "",
+                "marca": r.marca or "",
+                "tipo_maquina": r.tipo_maquina or "",
+                "tipo": r.tipo_id or "",
+                "contometro": r.contometro or "",
+                "estado_ventas": r.estado_ventas_id or "",
+                "disponibilidad": r.disponibilidad_id or "",
+                "ubicacion": r.ubicacion_id or "",
+                "check_ingreso": bool(r.check_ingreso),
+                "ingreso_estado": r.ingreso_estado or "",
+                "ingreso_fecha": r.ingreso_fecha and fields.Datetime.to_string(r.ingreso_fecha) or "",
+                "ingreso_fuente": r.ingreso_fuente or "",
+            }
 
-        # --- Solo consulta (lookup) ---
-        if action == 'lookup' or not status:
+        # -------- sólo consulta (lookup) --------
+        if action == 'lookup':
             return request.make_json_response({
-                'ok': True,
-                'code': 'lookup_ok',
-                'message': 'Serie encontrada.',
-                'serial': serial,
-                'raw_value': raw_value,
-                'source': source,
-                'record': record_data,
+                "ok": True,
+                "code": "lookup_ok",
+                "message": _("Serie encontrada."),
+                "serial": serial,
+                "raw_value": raw_value,
+                "source": source,
+                "record": _record_data(rec),
             })
 
-        # --- Confirmación de check de ingreso ---
-        dt_now = fields.Datetime.now()
-        dt_str = fields.Datetime.to_string(dt_now)
-
-        if status == 'ok':
-            resumen = "Check de ingreso: OK"
-        elif status == 'obs':
-            resumen = "Check de ingreso: con observación"
-        else:
-            resumen = "Check de ingreso"
-
-        detalle = f"""
-<b>{resumen}</b><br/>
-- Fuente: {source or '-'}<br/>
-- Valor leído: {raw_value or '-'}<br/>
-- Serie: {serial}<br/>
-- Fecha registro: {dt_str}
-"""
-        if observation:
-            detalle += f"<br/><b>Observación:</b> {observation}"
-
-        rec.message_post(
-            body=detalle,
-            message_type='comment',
-            subtype_xmlid='mail.mt_note',
-        )
-
-        if status == 'obs' and observation:
-            try:
-                rec.sudo().write({
-                    'descripcion': (rec.descripcion or '') + "\n[Check ingreso] " + observation,
-                    'activador': 'si',
+        # -------- confirmación de ingreso (confirm) --------
+        if action == 'confirm':
+            if status not in ('ok', 'obs'):
+                return request.make_json_response({
+                    "ok": False,
+                    "code": "invalid_status",
+                    "message": _("El estado de confirmación debe ser 'ok' o 'obs'."),
                 })
-            except Exception as e:
-                _logger.error("Error guardando observación de ingreso en descripcion: %s", e)
 
+            vals = {
+                "check_ingreso": True,
+                "ingreso_estado": status,
+                "ingreso_fecha": fields.Datetime.now(),
+            }
+
+            # fuente de ingreso si coincide con alguna conocida
+            if source in ('qr', 'ocr', 'manual'):
+                vals["ingreso_fuente"] = source
+
+            # si viene observación y status = 'obs', la metemos en descripcion
+            if status == 'obs' and observation:
+                if rec.descripcion:
+                    nueva_desc = "%s\n\nIngreso scanner (%s): %s" % (
+                        rec.descripcion,
+                        (source or 'scanner').upper(),
+                        observation,
+                    )
+                else:
+                    nueva_desc = "Ingreso scanner (%s): %s" % (
+                        (source or 'scanner').upper(),
+                        observation,
+                    )
+                vals["descripcion"] = nueva_desc
+
+            rec.write(vals)
+
+            # mensaje para chatter
+            msg = _("Ingreso confirmado vía scanner (estado: %s).") % (status.upper(),)
+            if status == 'obs' and observation:
+                msg += _("<br/>Observación: %s") % observation
+            rec.message_post(body=msg)
+
+            return request.make_json_response({
+                "ok": True,
+                "code": "confirm_ok",
+                "message": _("Ingreso registrado correctamente.") if status == 'ok'
+                           else _("Ingreso registrado con observación."),
+                "serial": serial,
+                "raw_value": raw_value,
+                "source": source,
+                "record": _record_data(rec),
+            })
+
+        # -------- acción desconocida --------
         return request.make_json_response({
-            'ok': True,
-            'code': 'confirm_ok',
-            'message': 'Check de ingreso registrado correctamente.',
-            'serial': serial,
-            'raw_value': raw_value,
-            'source': source,
-            'status': status,
-            'observation': observation,
-            'record': record_data,
+            "ok": False,
+            "code": "invalid_action",
+            "message": _("Acción no soportada: %s") % action,
         })

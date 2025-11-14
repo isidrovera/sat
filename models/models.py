@@ -248,6 +248,37 @@ class SatSat(models.Model):
                                  default='no', tracking=True
                                  )
     descripcion = fields.Text(string='Descripción', tracking=True)
+    check_ingreso = fields.Boolean(
+        string='Ingreso registrado',
+        help='Indica si el equipo ya fue ingresado/descargado mediante el scanner.'
+    )
+
+    ingreso_estado = fields.Selection(
+        [
+            ('ok', 'OK (sin observaciones)'),
+            ('obs', 'Con observaciones'),
+        ],
+        string='Estado de ingreso',
+        tracking=True,
+        help='Resultado del check de ingreso realizado vía scanner.'
+    )
+
+    ingreso_fecha = fields.Datetime(
+        string='Fecha de ingreso',
+        tracking=True,
+        help='Fecha y hora en que se confirmó el ingreso mediante el scanner.'
+    )
+
+    ingreso_fuente = fields.Selection(
+        [
+            ('qr', 'QR / Código de barras'),
+            ('ocr', 'OCR (foto)'),
+            ('manual', 'Manual'),
+        ],
+        string='Fuente de ingreso',
+        tracking=True,
+        help='Origen del registro de ingreso (QR, OCR o manual).'
+    )
     @api.onchange('descripcion')
     def _onchange_descripcion(self):
         _logger.debug('Onchange Description for Record IDs: %s', self.ids)
