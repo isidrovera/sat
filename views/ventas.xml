@@ -275,6 +275,23 @@
                   </ol>
                 </div>
               </page>
+              <page string="Ingreso scanner">
+                    <group>
+                        <group>
+                            <field name="check_ingreso" readonly="1"/>
+                            <field name="ingreso_estado" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="ingreso_fecha" readonly="1"/>
+                            <field name="ingreso_fuente" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Observaciones (scanner)">
+                        <!-- reutilizamos tu campo existente -->
+                        <field name="descripcion"/>
+                    </group>
+                </page>
             </notebook>
           </sheet>
           
