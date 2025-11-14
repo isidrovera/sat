@@ -321,24 +321,20 @@ class ReparacionesInforme(models.Model):
         if not self.intervencion_ids:
             return ""
 
-        intervenciones_con_detalles = self.intervencion_ids.filtered(lambda x: x.detalle_ids)
-        if not intervenciones_con_detalles:
+        # Filtrar solo intervenciones que tienen detalles Y cuya acción es 'cambiado'
+        intervenciones_cambio = self.intervencion_ids.filtered(
+            lambda x: x.detalle_ids and x.accion == 'cambiado'
+        )
+        
+        if not intervenciones_cambio:
             return ""
 
         html_parts = []
         
-        # Solo incluir componentes que están en cambio_inmediato
-        f = self._rep__collect_findings()
-        componentes_requieren_cambio = set(f['cambio_inmediato'])
-        
-        for intervencion in intervenciones_con_detalles:
+        for intervencion in intervenciones_cambio:
             # Obtener nombre del componente
             codigo = intervencion.componente_code if intervencion.componente_code else intervencion.componente
             componente_nombre = self._get_component_display_name(codigo)
-            
-            # ✅ SOLO mostrar si el componente requiere cambio
-            if componente_nombre not in componentes_requieren_cambio:
-                continue
             
             # Obtener subpartes
             subpartes = [d.subparte_id.name for d in intervencion.detalle_ids if d.subparte_id]
