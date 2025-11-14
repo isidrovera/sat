@@ -1,30 +1,58 @@
 # -*- coding: utf-8 -*-
+
+import json
 import logging
 
-from odoo import http, fields, _
+from odoo import http, fields
 from odoo.http import request
 
 _logger = logging.getLogger(__name__)
 
 
-class SatApi(http.Controller):
+def _json_response(payload, status=200):
+    """Helper para devolver JSON plano (sin jsonrpc)."""
+    body = json.dumps(payload, ensure_ascii=False)
+    return request.make_response(
+        body,
+        headers=[("Content-Type", "application/json")],
+        status=status,
+    )
 
-    @http.route('/sat/api/checkin', type='http', auth='public', methods=['POST'], csrf=False)
+
+class SatApiController(http.Controller):
+
+    @http.route(
+        "/sat/api/checkin",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+    )
     def sat_checkin(self, **kwargs):
         """
-        Endpoint usado por el scanner externo.
+        Endpoint de check de ingreso para el scanner.
 
-        Espera JSON como:
+        Espera un JSON en el body, por ejemplo:
+
+        LOOKUP:
         {
           "serial": "2RK07735",
-          "source": "qr" | "ocr" | "otro",
+          "source": "qr" | "ocr" | "...",
           "raw_value": "2RK07735",
-          "action": "lookup" | "confirm",
-          "status": "ok" | "obs",        # solo si action == "confirm"
-          "observation": "texto opcional" # solo si action == "confirm"
+          "action": "lookup"
+        }
+
+        CONFIRM:
+        {
+          "serial": "2RK07735",
+          "source": "qr" | "ocr" | "...",
+          "raw_value": "2RK07735",
+          "action": "confirm",
+          "status": "ok" | "obs" | "rechazado",
+          "observation": "texto opcional"
         }
         """
-        # -------- leer JSON crudo del body --------
+        # ---------------- Leer JSON del body ----------------
         try:
             payload = request.httprequest.get_json(force=True, silent=True) or {}
         except Exception:
@@ -32,121 +60,151 @@ class SatApi(http.Controller):
 
         _logger.info("sat_checkin payload: %s", payload)
 
-        serial = (payload.get('serial') or '').strip()
-        source = (payload.get('source') or '').strip().lower() or 'unknown'
-        raw_value = (payload.get('raw_value') or '').strip()
-        action = (payload.get('action') or 'lookup').strip().lower()
-        status = (payload.get('status') or '').strip().lower()
-        observation = (payload.get('observation') or '').strip()
+        serial = (payload.get("serial") or "").strip()
+        source = (payload.get("source") or "qr").strip().lower()
+        raw_value = (payload.get("raw_value") or "").strip()
+        action = (payload.get("action") or "lookup").strip().lower()
 
-        # -------- validaciones básicas --------
         if not serial:
-            return request.make_json_response({
-                "ok": False,
-                "code": "missing_serial",
-                "message": _("No se recibió número de serie.")
-            })
-
-        Sat = request.env['sat.sat'].sudo()
-        rec = Sat.search([('serie_id', '=', serial)], limit=1)
-
-        if not rec:
-            return request.make_json_response({
-                "ok": False,
-                "code": "not_found",
-                "message": _("No se encontró equipo con esa serie."),
-                "serial": serial,
-                "raw_value": raw_value,
-                "source": source,
-            })
-
-        # -------- helper para armar ficha de respuesta --------
-        def _record_data(r):
-            return {
-                "id": r.id,
-                "serie": r.serie_id,
-                "modelo": r.name.name if r.name else "",
-                "marca": r.marca or "",
-                "tipo_maquina": r.tipo_maquina or "",
-                "tipo": r.tipo_id or "",
-                "contometro": r.contometro or "",
-                "estado_ventas": r.estado_ventas_id or "",
-                "disponibilidad": r.disponibilidad_id or "",
-                "ubicacion": r.ubicacion_id or "",
-                "check_ingreso": bool(r.check_ingreso),
-                "ingreso_estado": r.ingreso_estado or "",
-                "ingreso_fecha": r.ingreso_fecha and fields.Datetime.to_string(r.ingreso_fecha) or "",
-                "ingreso_fuente": r.ingreso_fuente or "",
-            }
-
-        # -------- sólo consulta (lookup) --------
-        if action == 'lookup':
-            return request.make_json_response({
-                "ok": True,
-                "code": "lookup_ok",
-                "message": _("Serie encontrada."),
-                "serial": serial,
-                "raw_value": raw_value,
-                "source": source,
-                "record": _record_data(rec),
-            })
-
-        # -------- confirmación de ingreso (confirm) --------
-        if action == 'confirm':
-            if status not in ('ok', 'obs'):
-                return request.make_json_response({
+            return _json_response(
+                {
                     "ok": False,
-                    "code": "invalid_status",
-                    "message": _("El estado de confirmación debe ser 'ok' o 'obs'."),
-                })
+                    "code": "missing_serial",
+                    "message": "No se recibió número de serie.",
+                },
+                status=400,
+            )
+
+        # ---------------- Buscar máquina por serie ----------------
+        Sat = request.env["sat.sat"].sudo()
+        record = Sat.search([("serie_id", "=", serial)], limit=1)
+
+        if not record:
+            return _json_response(
+                {
+                    "ok": False,
+                    "code": "serial_not_found",
+                    "message": "Serie no encontrada.",
+                    "serial": serial,
+                    "raw_value": raw_value,
+                    "source": source,
+                },
+                status=200,
+            )
+
+        # Info básica del registro para devolver al frontend
+        record_data = {
+            "id": record.id,
+            "serie": record.serie_id,
+            "modelo": record.name.name if record.name else "",
+            "marca": record.marca or "",
+            "tipo_maquina": record.tipo_maquina or "",
+            "tipo": record.tipo_id or "",
+            "contometro": record.contometro or "",
+            "estado_ventas": record.estado_ventas_id or "",
+            "disponibilidad": record.disponibilidad_id or "",
+            "ubicacion": record.ubicacion_id or "",
+            # nuevos campos de ingreso
+            "check_ingreso": bool(record.check_ingreso),
+            "ingreso_estado": record.ingreso_estado or "",
+            "ingreso_fecha": record.ingreso_fecha
+            and fields.Datetime.to_string(record.ingreso_fecha)
+            or "",
+            "ingreso_fuente": record.ingreso_fuente or "",
+        }
+
+        # ---------------- Acción: solo consulta (lookup) ----------------
+        if action == "lookup":
+            return _json_response(
+                {
+                    "ok": True,
+                    "code": "lookup_ok",
+                    "message": "Serie encontrada.",
+                    "serial": serial,
+                    "raw_value": raw_value,
+                    "source": source,
+                    "record": record_data,
+                },
+                status=200,
+            )
+
+        # ---------------- Acción: confirmación de ingreso ----------------
+        if action == "confirm":
+            status_flag = (payload.get("status") or "ok").strip().lower()
+            observation = (payload.get("observation") or "").strip()
 
             vals = {
                 "check_ingreso": True,
-                "ingreso_estado": status,
                 "ingreso_fecha": fields.Datetime.now(),
+                "ingreso_fuente": {
+                    "qr": "QR (código)",
+                    "ocr": "OCR (foto)",
+                }.get(source, "Otro"),
             }
 
-            # fuente de ingreso si coincide con alguna conocida
-            if source in ('qr', 'ocr', 'manual'):
-                vals["ingreso_fuente"] = source
+            # 1) OK sin observaciones
+            if status_flag == "ok" and not observation:
+                vals["ingreso_estado"] = "ok_no_obs"
 
-            # si viene observación y status = 'obs', la metemos en descripcion
-            if status == 'obs' and observation:
-                if rec.descripcion:
-                    nueva_desc = "%s\n\nIngreso scanner (%s): %s" % (
-                        rec.descripcion,
-                        (source or 'scanner').upper(),
-                        observation,
-                    )
+            # 2) OK con observaciones (status=ok u obs + texto)
+            elif status_flag in ("ok", "obs") and observation:
+                vals["ingreso_estado"] = "ok_obs"
+
+                # Armamos una sola línea limpia para anexar a descripción
+                tz_dt = fields.Datetime.context_timestamp(
+                    record, fields.Datetime.now()
+                )
+                stamp = tz_dt.strftime("%d/%m/%Y %H:%M")
+                prefix = f"[Ingreso scanner {source.upper()} {stamp}] "
+                new_line = prefix + observation
+
+                desc_old = (record.descripcion or "").strip()
+                if desc_old:
+                    desc_new = desc_old + "\n\n" + new_line
                 else:
-                    nueva_desc = "Ingreso scanner (%s): %s" % (
-                        (source or 'scanner').upper(),
-                        observation,
-                    )
-                vals["descripcion"] = nueva_desc
+                    desc_new = new_line
 
-            rec.write(vals)
+                vals["descripcion"] = desc_new
 
-            # mensaje para chatter
-            msg = _("Ingreso confirmado vía scanner (estado: %s).") % (status.upper(),)
-            if status == 'obs' and observation:
-                msg += _("<br/>Observación: %s") % observation
-            rec.message_post(body=msg)
+            # 3) Posible futuro estado “rechazado” u otro
+            else:
+                vals["ingreso_estado"] = "rechazado"
 
-            return request.make_json_response({
-                "ok": True,
-                "code": "confirm_ok",
-                "message": _("Ingreso registrado correctamente.") if status == 'ok'
-                           else _("Ingreso registrado con observación."),
-                "serial": serial,
-                "raw_value": raw_value,
-                "source": source,
-                "record": _record_data(rec),
-            })
+            # Guardamos cambios
+            record.write(vals)
 
-        # -------- acción desconocida --------
-        return request.make_json_response({
-            "ok": False,
-            "code": "invalid_action",
-            "message": _("Acción no soportada: %s") % action,
-        })
+            # refrescamos algunos campos en el dict de respuesta
+            record_data.update(
+                {
+                    "check_ingreso": bool(record.check_ingreso),
+                    "ingreso_estado": record.ingreso_estado or "",
+                    "ingreso_fecha": record.ingreso_fecha
+                    and fields.Datetime.to_string(record.ingreso_fecha)
+                    or "",
+                    "ingreso_fuente": record.ingreso_fuente or "",
+                    "descripcion": record.descripcion or "",
+                }
+            )
+
+            return _json_response(
+                {
+                    "ok": True,
+                    "code": "confirm_ok",
+                    "message": "Check de ingreso registrado correctamente.",
+                    "serial": serial,
+                    "raw_value": raw_value,
+                    "source": source,
+                    "record": record_data,
+                },
+                status=200,
+            )
+
+        # ---------------- Acción desconocida ----------------
+        return _json_response(
+            {
+                "ok": False,
+                "code": "invalid_action",
+                "message": "Acción no soportada. Usa 'lookup' o 'confirm'.",
+            },
+            status=400,
+        )

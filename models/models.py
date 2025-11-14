@@ -253,15 +253,13 @@ class SatSat(models.Model):
         help='Indica si el equipo ya fue ingresado/descargado mediante el scanner.'
     )
 
-    ingreso_estado = fields.Selection(
-        [
-            ('ok', 'OK (sin observaciones)'),
-            ('obs', 'Con observaciones'),
-        ],
-        string='Estado de ingreso',
-        tracking=True,
-        help='Resultado del check de ingreso realizado vía scanner.'
-    )
+    ingreso_estado = fields.Selection([
+        ('none', 'Sin check'),
+        ('ok_no_obs', 'OK (sin observaciones)'),
+        ('ok_obs', 'OK (con observaciones)'),
+        ('rechazado', 'Rechazado'),
+    ], string='Estado de ingreso', default='none', tracking=True)
+
 
     ingreso_fecha = fields.Datetime(
         string='Fecha de ingreso',
