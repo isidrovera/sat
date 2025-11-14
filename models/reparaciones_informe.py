@@ -300,9 +300,9 @@ class ReparacionesInforme(models.Model):
         
         # Conclusión
         if calidad == 'mala':
-            html_parts.append('<p>La unidad requiere inversión inmediata en repuestos antes de entrega.</p>')
+            html_parts.append('<p>La unidad requiere inversión inmediata en repuestos.</p>')
         elif calidad == 'regular':
-            html_parts.append('<p>La unidad está operativa pero se recomienda realizar los cambios preventivos antes de entrega.</p>')
+            html_parts.append('<p>La unidad está operativa pero se recomienda realizar los cambios.</p>')
         else:
             html_parts.append('<p>La unidad está lista para entrega con mantenimiento estándar.</p>')
 

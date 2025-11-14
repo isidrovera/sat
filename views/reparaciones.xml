@@ -131,9 +131,9 @@
               <!-- PESTAÑA: INFORME TÉCNICO -->
               <page string="Informe Técnico">
                 
-                <group string="📊 Resultado de Evaluación"
+                <group 
                 >
-                <group string="📄 Informe Generado">
+                <group >
                   <field name="informe"
                     widget="html"
                     readonly="0"
@@ -214,7 +214,7 @@
   <field name="evaluacion_ids" nolabel="1">
     <list editable="bottom" 
           create="false" 
-          delete="false"
+          delete="true"
           decoration-success="estado_id"
           decoration-warning="not estado_id">
       
@@ -266,7 +266,7 @@
   <field name="accesorio_eval_ids" nolabel="1">
     <list editable="bottom" 
           create="false"
-          delete="false"
+          delete="true"
           decoration-success="estado_id"
           decoration-warning="not estado_id">
       
