@@ -1067,7 +1067,7 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
             'target': 'new',
             'context': {'from_generar_informe': True},
         }
-        def _buscar_componentes_modelo_por_evaluacion(self, modelo_maquina, comp_info):
+    def _buscar_componentes_modelo_por_evaluacion(self, modelo_maquina, comp_info):
         """
         Busca componentes del catálogo para poblar el wizard de subpartes con
         una estrategia de fallbacks:
