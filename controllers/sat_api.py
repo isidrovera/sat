@@ -1,6 +1,3 @@
-# sat/controllers/sat_api.py
-# -*- coding: utf-8 -*-
-
 from odoo import http, fields
 from odoo.http import request
 import logging
@@ -9,30 +6,6 @@ _logger = logging.getLogger(__name__)
 
 
 class SatApiController(http.Controller):
-    """
-    API JSON para check de ingreso de máquinas.
-
-    Flujo:
-    1) LOOKUP (solo validar serie y devolver datos)
-       POST /sat/api/checkin
-       {
-         "serial": "ABC123",
-         "source": "qr" | "ocr",
-         "raw_value": "texto completo leído",
-         "action": "lookup"
-       }
-
-    2) CONFIRM (guardar resultado de ingreso)
-       POST /sat/api/checkin
-       {
-         "serial": "ABC123",
-         "source": "qr" | "ocr",
-         "raw_value": "texto completo leído",
-         "action": "confirm",
-         "status": "ok" | "obs",
-         "observation": "texto libre (opcional si status=ok, recomendado si status=obs)"
-       }
-    """
 
     @http.route('/sat/api/checkin', type='json', auth='public', methods=['POST'], csrf=False)
     def sat_checkin(self, **kw):
@@ -42,7 +15,7 @@ class SatApiController(http.Controller):
         source = (payload.get('source') or 'unknown').strip()
         raw_value = (payload.get('raw_value') or serial).strip()
         action = (payload.get('action') or 'lookup').strip().lower()
-        status = (payload.get('status') or '').strip().lower()  # ok | obs
+        status = (payload.get('status') or '').strip().lower()
         observation = (payload.get('observation') or '').strip()
 
         if not serial:
@@ -64,21 +37,20 @@ class SatApiController(http.Controller):
                 'raw_value': raw_value,
             }
 
-        # ----- Datos básicos de la máquina -----
         record_data = {
             'id': rec.id,
             'serie': rec.serie_id,
             'modelo': rec.name.name if rec.name else '',
             'marca': rec.marca or '',
             'tipo_maquina': rec.tipo_maquina or '',
-            'tipo': rec.tipo_id or '',  # color / monocromatica
+            'tipo': rec.tipo_id or '',
             'contometro': rec.contometro or '',
             'estado_ventas': rec.estado_ventas_id or '',
             'disponibilidad': rec.disponibilidad_id or '',
             'ubicacion': rec.ubicacion_id or '',
         }
 
-        # ====== 1) SOLO CONSULTA (LOOKUP) ======
+        # Solo lookup (consulta)
         if action == 'lookup' or not status:
             return {
                 'ok': True,
@@ -90,24 +62,10 @@ class SatApiController(http.Controller):
                 'record': record_data,
             }
 
-        # ====== 2) CONFIRMACIÓN / REGISTRO DE INGRESO (CONFIRM) ======
-        # Validaciones básicas de estado (tú puedes reforzar más lógica aquí)
-        if rec.estado_ventas_id == 'entregada':
-            return {
-                'ok': False,
-                'code': 'already_delivered',
-                'message': 'La máquina ya está marcada como entregada. No se puede registrar ingreso.',
-                'serial': serial,
-                'record': record_data,
-            }
-
-        # Fecha/hora contextualizada según zona horaria de la compañía / usuario
-        # (si quieres forzar Lima, puedes usar pytz como ya haces en el modelo)
+        # --- confirmación (aquí va la lógica de check-in) ---
         dt_now = fields.Datetime.now()
         dt_str = fields.Datetime.to_string(dt_now)
 
-        # Armar texto para el chatter
-        # status: ok | obs
         if status == 'ok':
             resumen = "Check de ingreso: OK"
         elif status == 'obs':
@@ -125,20 +83,17 @@ class SatApiController(http.Controller):
         if observation:
             detalle += f"<br/><b>Observación:</b> {observation}"
 
-        # Registrar en chatter
         rec.message_post(
             body=detalle,
             message_type='comment',
             subtype_xmlid='mail.mt_note',
         )
 
-        # Si quieres, guardar la observación en el campo descripcion
-        # (solo si hay observation y status = 'obs')
         if status == 'obs' and observation:
             try:
-                rec.write({
+                rec.sudo().write({
                     'descripcion': (rec.descripcion or '') + "\n[Check ingreso] " + observation,
-                    'activador': 'si',  # para que se pinte el icono rojo
+                    'activador': 'si',
                 })
             except Exception as e:
                 _logger.error("Error guardando observación de ingreso en descripcion: %s", e)
