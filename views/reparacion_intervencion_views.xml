@@ -37,7 +37,7 @@
     <search string="Buscar Intervenciones">
       <!-- Campos buscables -->
       <field name="reparacion_id"/>
-      <field name="componente"/>
+      <field name="componente_display"/>
       <field name="accion"/>
       <field name="observacion"/>
 

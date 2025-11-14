@@ -77,7 +77,24 @@ class ReparacionIntervencion(models.Model):
         string='Componente',
         required=True,
     )
-
+    componente_display = fields.Char(
+        string='Nombre del Componente',
+        compute='_compute_componente_display',
+        store=True,
+        help='Nombre amigable del componente basado en componente_code'
+    )
+    @api.depends('componente_code', 'componente')
+    def _compute_componente_display(self):
+        """Calcula el nombre amigable del componente"""
+        for rec in self:
+            if rec.componente_code:
+                # Usar el método de reparaciones para obtener el nombre
+                nombre = rec.reparacion_id._get_component_display_name(rec.componente_code)
+                rec.componente_display = nombre
+            else:
+                # Fallback al componente Selection si no hay code
+                comp_dict = dict(ReparacionSubparte.COMPONENTE)
+                rec.componente_display = comp_dict.get(rec.componente, rec.componente or 'Sin definir')
     # ⚠️ Campo NUEVO dinámico para código técnico interno
     componente_code = fields.Char(
         string='Código componente',
