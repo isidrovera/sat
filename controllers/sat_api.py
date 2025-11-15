@@ -37,7 +37,7 @@ class SatApiController(http.Controller):
         LOOKUP:
         {
           "serial": "2RK07735",
-          "source": "qr" | "ocr" | "...",
+          "source": "qr" | "ocr" | "manual",
           "raw_value": "2RK07735",
           "action": "lookup"
         }
@@ -45,7 +45,7 @@ class SatApiController(http.Controller):
         CONFIRM:
         {
           "serial": "2RK07735",
-          "source": "qr" | "ocr" | "...",
+          "source": "qr" | "ocr" | "manual",
           "raw_value": "2RK07735",
           "action": "confirm",
           "status": "ok" | "obs" | "rechazado",
@@ -92,6 +92,10 @@ class SatApiController(http.Controller):
                 status=200,
             )
 
+        # Mapeo de selección para mostrar texto legible
+        ingreso_fuente_selection = dict(record._fields["ingreso_fuente"].selection)
+        ingreso_fuente_display = ingreso_fuente_selection.get(record.ingreso_fuente, "")
+
         # Info básica del registro para devolver al frontend
         record_data = {
             "id": record.id,
@@ -111,6 +115,7 @@ class SatApiController(http.Controller):
             and fields.Datetime.to_string(record.ingreso_fecha)
             or "",
             "ingreso_fuente": record.ingreso_fuente or "",
+            "ingreso_fuente_display": ingreso_fuente_display,
         }
 
         # ---------------- Acción: solo consulta (lookup) ----------------
@@ -136,11 +141,12 @@ class SatApiController(http.Controller):
             vals = {
                 "check_ingreso": True,
                 "ingreso_fecha": fields.Datetime.now(),
-                "ingreso_fuente": {
-                    "qr": "QR (código)",
-                    "ocr": "OCR (foto)",
-                }.get(source, "Otro"),
             }
+
+            # Asignar ingreso_fuente usando SIEMPRE el valor técnico de la selección
+            # permitidos: 'qr', 'ocr', 'manual'
+            if source in ("qr", "ocr", "manual"):
+                vals["ingreso_fuente"] = source
 
             # 1) OK sin observaciones
             if status_flag == "ok" and not observation:
@@ -173,6 +179,11 @@ class SatApiController(http.Controller):
             # Guardamos cambios
             record.write(vals)
 
+            # Recalcular display de ingreso_fuente después del write
+            ingreso_fuente_display = ingreso_fuente_selection.get(
+                record.ingreso_fuente, ""
+            )
+
             # refrescamos algunos campos en el dict de respuesta
             record_data.update(
                 {
@@ -182,6 +193,7 @@ class SatApiController(http.Controller):
                     and fields.Datetime.to_string(record.ingreso_fecha)
                     or "",
                     "ingreso_fuente": record.ingreso_fuente or "",
+                    "ingreso_fuente_display": ingreso_fuente_display,
                     "descripcion": record.descripcion or "",
                 }
             )
