@@ -308,17 +308,26 @@ def ensure_brand(env, brand_name):
 
 
 def get_default_tipo_maquina(env):
-    """
-    Obtiene el tipo de máquina por defecto para SNMP.
-    Configurar en Parámetros del sistema:
-      - Clave: snmp.default_tipo_maquina_id
-      - Valor: ID del tipo (ej. Fotocopiadora)
+    """Obtiene el tipo de máquina por defecto.
+
+    1) Primero intenta leer el parámetro snmp.default_tipo_maquina_id
+    2) Si no existe o no es válido, busca un tipo de máquina cuyo nombre contenga 'Fotocopiadora'
     """
     param = env['ir.config_parameter'].sudo().get_param('snmp.default_tipo_maquina_id')
     try:
-        return int(param) if param else None
+        if param:
+            tipo_id = int(param)
+            if env['tipo.maquina'].sudo().browse(tipo_id).exists():
+                return tipo_id
     except Exception:
-        return None
+        pass
+
+    # Fallback: buscar tipo 'Fotocopiadora'
+    tipo = env['tipo.maquina'].sudo().search([('name', 'ilike', 'fotocopiadora')], limit=1)
+    if tipo:
+        return tipo.id
+
+    return None
 
 
 def get_default_precio(env):
@@ -366,23 +375,47 @@ def build_canon_commercial_name(model_snmp, current_model_name, tipo_color_snmp,
 def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snmp, commercial_name=None):
     """
     Busca modelo con la siguiente lógica:
-    1. EXACTO: Busca por nombre comercial (si hay) o SNMP
-    2. SIMILAR: Misma marca + tipo + núcleo → si Canon, forza renombrar al comercial
-    3. CREAR: Si no encuentra, crea modelo nuevo
+    1. EXACTO: 
+       - Si hay nombre comercial (Canon DX), buscar primero commercial_name
+       - Luego buscar el nombre exacto que envía SNMP
+    2. SIMILAR: Busca por núcleo + marca + color, si encuentra UNO que coincide 
+       con buen score, lo MODIFICA (renombra al nombre comercial o al SNMP)
+    3. CREAR: Si no encuentra ninguno, crea nuevo
+
+    Retorna: (modelo, acción, modificado)
+    acción ∈ {'exact', 'updated', 'created', 'failed'}
+    modificado = True si se renombró el modelo existente
     """
     Mod = env['modelo.maquina'].sudo()
 
-    effective_name = commercial_name or model_snmp
+    # ==========================
+    # PASO 1: BÚSQUEDA EXACTA
+    # ==========================
+    # 1.1 Primero intentar con nombre comercial (si existe)
+    if commercial_name:
+        _logger.info("[SNMP Match] Paso 1A: Búsqueda EXACTA de comercial '%s'", commercial_name)
+        exact_commercial = Mod.search([('name', '=ilike', commercial_name)], limit=1)
+        if exact_commercial:
+            _logger.info(
+                "[SNMP Match] ✅ Modelo EXACTO (comercial) encontrado: %s (ID: %s)",
+                exact_commercial.name, exact_commercial.id
+            )
+            return exact_commercial, 'exact', False
 
-    # ============ PASO 1: Búsqueda EXACTA ============
-    _logger.info("[SNMP Match] Paso 1: Búsqueda EXACTA de '%s'", effective_name)
-    exact = Mod.search([('name', '=ilike', effective_name)], limit=1)
+    # 1.2 Luego intentar con el nombre crudo que envía SNMP
+    _logger.info("[SNMP Match] Paso 1B: Búsqueda EXACTA de '%s'", model_snmp)
+    exact = Mod.search([('name', '=ilike', model_snmp)], limit=1)
 
     if exact:
-        _logger.info("[SNMP Match] ✅ Modelo EXACTO encontrado: %s (ID: %s)", exact.name, exact.id)
+        _logger.info(
+            "[SNMP Match] ✅ Modelo EXACTO encontrado: %s (ID: %s)",
+            exact.name, exact.id
+        )
         return exact, 'exact', False
 
-    # ============ PASO 2: Búsqueda SIMILAR ============
+    # ==========================
+    # PASO 2: BÚSQUEDA SIMILAR
+    # ==========================
     _logger.info("[SNMP Match] Paso 2: Búsqueda SIMILAR (para modificar)")
 
     domain = []
@@ -392,7 +425,10 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
         brand_obj = env['marca.marca'].sudo().search([('name', '=ilike', brand_name)], limit=1)
         if brand_obj:
             domain.append(('marca_id', '=', brand_obj.id))
-            _logger.info("[SNMP Match] Filtrando por marca: %s (ID: %s)", brand_obj.name, brand_obj.id)
+            _logger.info(
+                "[SNMP Match] Filtrando por marca: %s (ID: %s)",
+                brand_obj.name, brand_obj.id
+            )
 
     domain.append(('tipo_id', '=', tipo_color_snmp))
     _logger.info("[SNMP Match] Filtrando por tipo: %s", tipo_color_snmp)
@@ -410,8 +446,10 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
             continue
 
         score = calculate_similarity_score(model_snmp, candidate.name, brand_name)
-
-        _logger.debug("[SNMP Match] Evaluando: %s | Score: %.3f", candidate.name, score)
+        _logger.debug(
+            "[SNMP Match] Evaluando: %s | Score: %.3f",
+            candidate.name, score
+        )
 
         if score > best_score:
             best_score = score
@@ -419,67 +457,38 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
 
     THRESHOLD_UPDATE = 0.85
 
-    # === Caso especial CANON: si hay nombre comercial, se fuerza update ===
-    if best_match and commercial_name and (brand_name or '').upper() == 'CANON':
-        _logger.info(
-            "[SNMP Match] ✅ Canon: actualizando modelo '%s' → '%s' (Score: %.3f, núcleo OK)",
-            best_match.name, effective_name, best_score
-        )
-        try:
-            nombre_anterior = best_match.name
-            best_match.sudo().write({'name': effective_name})
-            _logger.info("[SNMP Match] ✅ Modelo ACTUALIZADO exitosamente (Canon/comercial)")
-
-            try:
-                Sat = env['sat.sat'].sudo()
-                equipos = Sat.search([('name', '=', best_match.id)])
-                _logger.info("[SNMP Match] Notificando a %s equipos sobre cambio de nombre", len(equipos))
-
-                for equipo in equipos:
-                    try:
-                        equipo.message_post(
-                            body=_(
-                                "📝 <b>Modelo actualizado automáticamente por SNMP</b><br/>"
-                                "Nombre anterior: <b>%s</b><br/>"
-                                "Nombre nuevo: <b>%s</b><br/>"
-                                "Razón: Coincidencia de núcleo y marca (Canon DX)"
-                            ) % (nombre_anterior, effective_name)
-                        )
-                    except Exception as e_msg:
-                        _logger.warning(
-                            "[SNMP Match] No se pudo notificar a equipo %s: %s",
-                            equipo.id, e_msg
-                        )
-            except Exception as e_equipos:
-                _logger.warning("[SNMP Match] No se pudo notificar cambios a equipos: %s", e_equipos)
-
-            return best_match, 'updated', True
-
-        except Exception as e:
-            _logger.error("[SNMP Match] ❌ Error modificando modelo (Canon): %s", e)
-            _logger.exception("[SNMP Match] Traceback:")
-            return best_match, 'exact', False
-
-    # === Caso general (otras marcas) ===
     if best_match and best_score >= THRESHOLD_UPDATE:
         _logger.info(
             "[SNMP Match] ✅ Modelo SIMILAR encontrado: %s (Score: %.3f)",
             best_match.name, best_score
         )
+
+        # Decidir nombre destino:
+        #   - Preferimos nombre comercial si existe
+        #   - Si no, usamos el nombre tal cual llega de SNMP
+        new_name = commercial_name or model_snmp
+        if best_match.name == new_name:
+            _logger.info("[SNMP Match] ℹ️ El modelo ya tiene el nombre esperado: %s", new_name)
+            return best_match, 'exact', False
+
         _logger.info(
             "[SNMP Match] 🔄 MODIFICANDO modelo de '%s' a '%s'",
-            best_match.name, effective_name
+            best_match.name, new_name
         )
 
         try:
             nombre_anterior = best_match.name
-            best_match.sudo().write({'name': effective_name})
+            best_match.sudo().write({'name': new_name})
             _logger.info("[SNMP Match] ✅ Modelo ACTUALIZADO exitosamente")
 
+            # Notificar a equipos sat.sat que usan este modelo
             try:
                 Sat = env['sat.sat'].sudo()
                 equipos = Sat.search([('name', '=', best_match.id)])
-                _logger.info("[SNMP Match] Notificando a %s equipos sobre el cambio de nombre", len(equipos))
+                _logger.info(
+                    "[SNMP Match] Notificando a %s equipos sobre el cambio de nombre",
+                    len(equipos)
+                )
 
                 for equipo in equipos:
                     try:
@@ -489,7 +498,7 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
                                 "Nombre anterior: <b>%s</b><br/>"
                                 "Nombre nuevo: <b>%s</b><br/>"
                                 "Razón: Coincidencia de %.1f%% con datos SNMP"
-                            ) % (nombre_anterior, effective_name, best_score * 100)
+                            ) % (nombre_anterior, new_name, best_score * 100)
                         )
                     except Exception as e_msg:
                         _logger.warning(
@@ -497,7 +506,10 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
                             equipo.id, e_msg
                         )
             except Exception as e_equipos:
-                _logger.warning("[SNMP Match] No se pudo notificar cambios a equipos: %s", e_equipos)
+                _logger.warning(
+                    "[SNMP Match] No se pudo notificar cambios a equipos: %s",
+                    e_equipos
+                )
 
             return best_match, 'updated', True
 
@@ -512,7 +524,9 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
             best_match.name, best_score, THRESHOLD_UPDATE
         )
 
-    # ============ PASO 3: CREAR ============
+    # ==========================
+    # PASO 3: CREAR NUEVO MODELO
+    # ==========================
     _logger.info("[SNMP Match] Paso 3: Intentando CREAR nuevo modelo")
 
     brand_id = ensure_brand(env, brand_name) if brand_name else False
@@ -521,12 +535,15 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
 
     if not tipo_maquina_id:
         _logger.error(
-            "[SNMP Match] ❌ Falta 'snmp.default_tipo_maquina_id' - no se puede crear"
+            "[SNMP Match] ❌ Falta tipo de máquina por defecto "
+            "(parámetro 'snmp.default_tipo_maquina_id' o tipo 'Fotocopiadora') - no se puede crear"
         )
         return None, 'failed', False
 
+    nombre_creacion = commercial_name or model_snmp
+
     vals = {
-        'name': effective_name,
+        'name': nombre_creacion,
         'marca_id': brand_id or False,
         'tipo_id': tipo_color_snmp,
         'precio_venta': precio,
@@ -535,7 +552,10 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
 
     try:
         created = Mod.create(vals)
-        _logger.info("[SNMP Match] ✅ Modelo CREADO: %s (ID: %s)", created.name, created.id)
+        _logger.info(
+            "[SNMP Match] ✅ Modelo CREADO: %s (ID: %s)",
+            created.name, created.id
+        )
         return created, 'created', False
     except Exception as e:
         _logger.error("[SNMP Match] ❌ Error creando modelo: %s", e)
@@ -551,6 +571,9 @@ class SNMPPublicController(http.Controller):
         Endpoint público para recibir datos SNMP.
         Espera JSON con: serial, model, brand, total_counter
         """
+        # ==========================
+        # 0) Parseo del payload
+        # ==========================
         try:
             if hasattr(request, 'get_json_data'):
                 payload = request.get_json_data()
@@ -573,7 +596,7 @@ class SNMPPublicController(http.Controller):
         brand = _norm(payload.get('brand'))
         total_counter = payload.get('total_counter')
 
-        # Limpiar marca del modelo
+        # ✅ Limpiar marca del modelo
         model_snmp = clean_brand_from_model(model_snmp_raw, brand)
 
         if model_snmp != model_snmp_raw:
@@ -593,7 +616,9 @@ class SNMPPublicController(http.Controller):
 
         Sat = request.env['sat.sat'].sudo()
 
+        # ==========================
         # 1) Buscar equipo por serie
+        # ==========================
         _logger.info("[SNMP] Buscando equipo con serie: %s", serial)
         sat = Sat.search([('serie_id', '=', serial)], limit=1)
 
@@ -601,10 +626,18 @@ class SNMPPublicController(http.Controller):
             _logger.warning("[SNMP] ❌ Serie '%s' NO encontrada", serial)
             return {'ok': True, 'skipped': 'sat.sat no encontrado por serie'}
 
-        _logger.info("[SNMP] ✅ Equipo encontrado: %s (ID: %s)", sat.display_name, sat.id)
-        _logger.info("[SNMP] Modelo actual: %s", sat.name.name if sat.name else 'SIN MODELO')
+        _logger.info(
+            "[SNMP] ✅ Equipo encontrado: %s (ID: %s)",
+            sat.display_name, sat.id
+        )
+        _logger.info(
+            "[SNMP] Modelo actual: %s",
+            sat.name.name if sat.name else 'SIN MODELO'
+        )
 
+        # ==========================
         # 2) Parsear modelo SNMP
+        # ==========================
         _logger.info("[SNMP] Parseando modelo SNMP: %s", model_snmp)
         fam_snmp, core_snmp, var_snmp = parse_model(model_snmp)
 
@@ -613,13 +646,19 @@ class SNMPPublicController(http.Controller):
         else:
             core_cur = None
 
+        # ==========================
         # 3) Validar núcleo
+        # ==========================
         if not core_snmp:
-            _logger.warning("[SNMP] ⚠️ No se pudo extraer núcleo: %s", model_snmp)
+            _logger.warning(
+                "[SNMP] ⚠️ No se pudo extraer núcleo: %s",
+                model_snmp
+            )
             self._safe_update_counters(sat, total_counter)
             sat.message_post(
-                body=_("SNMP recibido sin núcleo identificable. Modelo: %s") %
-                (model_snmp or '—')
+                body=_(
+                    "SNMP recibido sin núcleo identificable. Modelo: %s"
+                ) % (model_snmp or '—')
             )
             return {
                 'ok': True,
@@ -627,26 +666,41 @@ class SNMPPublicController(http.Controller):
                 'note': 'modelo no parseable'
             }
 
-        _logger.info("[SNMP] Núcleo SNMP: %s | Núcleo actual: %s", core_snmp, core_cur or 'N/A')
+        _logger.info(
+            "[SNMP] Núcleo SNMP: %s | Núcleo actual: %s",
+            core_snmp, core_cur or 'N/A'
+        )
 
+        # ==========================
         # 4) Detectar tipo de color
+        # ==========================
         tipo_color_snmp = infer_tipo_color(model_snmp)
         _logger.info("[SNMP] Tipo detectado: %s", tipo_color_snmp.upper())
 
-        # 4.1) Nombre comercial Canon (si aplica)
+        # ==========================
+        # 4.1) Canon: generar nombre comercial (DX)
+        # ==========================
         commercial_name = None
-        if (brand or '').upper() == 'CANON':
-            current_model_name = sat.name.name if sat.name else None
-            commercial_name = build_canon_commercial_name(
-                model_snmp=model_snmp,
-                current_model_name=current_model_name,
-                tipo_color_snmp=tipo_color_snmp,
-                core_snmp=core_snmp,
-            )
-            if commercial_name:
-                _logger.info("[SNMP Canon] Nombre comercial preferido: %s", commercial_name)
+        brand_upper = (brand or '').upper()
 
+        if brand_upper == 'CANON' and core_snmp:
+            # Solo agregamos DX si el modelo actual en SAT ya tenía DX
+            has_dx_current = bool(sat.name and sat.name.name and 'DX' in sat.name.name.upper())
+
+            if has_dx_current:
+                if tipo_color_snmp == 'color':
+                    commercial_name = f"iR-ADV DX C{core_snmp}"
+                else:
+                    commercial_name = f"iR-ADV DX {core_snmp}"
+
+                _logger.info(
+                    "[SNMP Canon] Nombre comercial sugerido: %s",
+                    commercial_name
+                )
+
+        # ==========================
         # 5) Verificar mismatch de núcleo
+        # ==========================
         if sat.name and core_cur and (core_cur != core_snmp):
             _logger.warning("[SNMP] 🚨 MISMATCH DE NÚCLEO!")
             _logger.warning(
@@ -654,17 +708,73 @@ class SNMPPublicController(http.Controller):
                 sat.name.name, core_cur, model_snmp, core_snmp
             )
 
+            # 5.1) Actualizar contador igual
             self._safe_update_counters(sat, total_counter)
-            self._notify_core_mismatch(sat, model_snmp, sat.name.name)
+
+            # 5.2) Intentar ENCONTRAR/CREAR el modelo correcto igual que en el flujo normal
+            target_model, action, modified = find_and_update_model(
+                request.env,
+                model_snmp=model_snmp,
+                brand_name=brand,
+                core_snmp=core_snmp,
+                tipo_color_snmp=tipo_color_snmp,
+                commercial_name=commercial_name,
+            )
+
+            new_model_name = None
+            previous_model_name = sat.name.name if sat.name else 'Sin modelo'
+
+            if target_model:
+                # Si el modelo objetivo es distinto, CAMBIAR el modelo en el SAT
+                if not sat.name or sat.name.id != target_model.id:
+                    sat.write({'name': target_model.id})
+                    new_model_name = target_model.name
+
+                    sat.message_post(
+                        body=_(
+                            "⚠️ <b>Modelo cambiado automáticamente por SNMP (mismatch de núcleo)</b><br/>"
+                            "Modelo anterior: <b>%s</b><br/>"
+                            "Modelo nuevo: <b>%s</b><br/>"
+                            "Origen: SNMP (%s)"
+                        ) % (previous_model_name, new_model_name, model_snmp)
+                    )
+
+                    _logger.info(
+                        "[SNMP] ✅ Modelo corregido por mismatch: %s → %s",
+                        previous_model_name, new_model_name
+                    )
+                else:
+                    new_model_name = target_model.name
+                    _logger.info(
+                        "[SNMP] ℹ️ Mismatch pero el SAT ya tenía el modelo destino: %s",
+                        new_model_name
+                    )
+            else:
+                _logger.warning(
+                    "[SNMP] ⚠️ Mismatch de núcleo pero no se pudo determinar/crear modelo destino"
+                )
+
+            # 5.3) Notificar por plantilla (sat.sat) incluyendo modelo nuevo si lo hay
+            self._notify_core_mismatch(
+                sat,
+                snmp_model=model_snmp,
+                current_model=previous_model_name,
+                new_model=new_model_name,
+            )
 
             return {
                 'ok': True,
                 'warning': 'core_mismatch',
-                'current_model': sat.name.name,
-                'snmp_model': model_snmp
+                'current_model': previous_model_name,
+                'snmp_model': model_snmp,
+                'assigned_model': new_model_name,
+                'action': action if target_model else 'none',
+                'modified_model_registry': modified if target_model else False,
             }
 
-        # 6) Buscar/Actualizar/Crear modelo
+        # ==========================
+        # 6) Buscar/Actualizar/Crear modelo (flujo normal)
+        # ==========================
         target_model, action, modified = find_and_update_model(
             request.env,
             model_snmp=model_snmp,
@@ -684,12 +794,19 @@ class SNMPPublicController(http.Controller):
                 'note': 'pendiente de creación manual'
             }
 
+        # ==========================
         # 7) Actualizar contador
+        # ==========================
         self._safe_update_counters(sat, total_counter)
 
+        # ==========================
         # 8) Asignar modelo al equipo si es necesario
+        # ==========================
         if sat.name and sat.name.id == target_model.id:
-            _logger.info("[SNMP] ℹ️ Modelo ya asignado: %s", target_model.name)
+            _logger.info(
+                "[SNMP] ℹ️ Modelo ya asignado: %s",
+                target_model.name
+            )
             return {
                 'ok': True,
                 'assigned': 'unchanged',
@@ -700,7 +817,10 @@ class SNMPPublicController(http.Controller):
 
         modelo_anterior = sat.name.name if sat.name else 'Sin modelo'
         sat.write({'name': target_model.id})
-        _logger.info("[SNMP] ✅ Modelo ASIGNADO: %s -> %s", modelo_anterior, target_model.name)
+        _logger.info(
+            "[SNMP] ✅ Modelo ASIGNADO: %s -> %s",
+            modelo_anterior, target_model.name
+        )
 
         msg_action = {
             'exact': 'encontrado exacto',
@@ -711,7 +831,11 @@ class SNMPPublicController(http.Controller):
         sat.message_post(
             body=_(
                 "Modelo %s por SNMP: <b>%s</b> (desde: %s)"
-            ) % (msg_action.get(action, action), target_model.name, modelo_anterior)
+            ) % (
+                msg_action.get(action, action),
+                target_model.name,
+                modelo_anterior
+            )
         )
 
         _logger.info("=" * 80)
@@ -801,15 +925,32 @@ class SNMPPublicController(http.Controller):
             _logger.error("[SNMP] ❌ Error actualizando contador: %s", e)
             _logger.exception("[SNMP] Traceback:")
 
-    def _notify_core_mismatch(self, sat, snmp_model, current_model):
+    def _notify_core_mismatch(self, sat, snmp_model, current_model, new_model=None):
         """Notifica diferencia de núcleo/modelo usando método del modelo sat.sat."""
         try:
+            # Intento con firma extendida (con modelo nuevo)
             sat.notify_snmp_model_mismatch(
                 snmp_model=snmp_model,
                 current_model=current_model,
+                new_model=new_model,
             )
+        except TypeError:
+            # Compatibilidad: si el método definido en sat.sat no acepta new_model
+            try:
+                sat.notify_snmp_model_mismatch(
+                    snmp_model=snmp_model,
+                    current_model=current_model,
+                )
+            except Exception as e:
+                _logger.error(
+                    "[SNMP] Error notificando diferencia de modelo (sin new_model): %s",
+                    e
+                )
         except Exception as e:
-            _logger.error("[SNMP] Error notificando diferencia de modelo: %s", e)
+            _logger.error(
+                "[SNMP] Error notificando diferencia de modelo: %s",
+                e
+            )
 
     def _suggest_model(self, sat, snmp_model):
         """Crea sugerencia de modelo (chatter + correo por plantilla)."""
