@@ -18,13 +18,13 @@
                 help="Crea una nueva orden de reparación para esta máquina. Asegúrese de haber registrado correctamente las observaciones del equipo." 
                 groups="base.group_system" />
             <button name="action_print_reparacion_pdf"
-        type="action"
+        type="object"
         string="Imprimir reparación"
         class="btn-primary"
         invisible="reparaciones_count == 0"/>
 
 <button name="action_open_reparacion_gallery"
-        type="action"
+        type="object"
         string="Ver fotos reparación"
         class="btn-secondary"
         invisible="reparaciones_count == 0"/>
