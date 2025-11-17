@@ -394,27 +394,67 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
         """Envía un mensaje de WhatsApp con o sin archivo adjunto utilizando la API externa."""
         _logger.debug(f"Enviando mensaje a {phone} con contenido: {message} y archivo: {file_url}")
         
-        url = 'https://whatsapp.andessolutioncopiers.com/api/message'
-        data = {
-            'phone': phone,
-            'message': message
-        }
-        if file_url:
-            data['file_url'] = file_url
-        headers = {'Content-Type': 'application/json'}
-        response = requests.post(url, headers=headers, json=data)
-
-        _logger.debug(f"Código de estado: {response.status_code}")
-        _logger.debug(f"Respuesta de la API: {response.text}")
-
         try:
-            response_json = response.json()
-            _logger.debug(f"Respuesta JSON: {response_json}")
-            return response_json
-        except json.JSONDecodeError as e:
-            error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
-            _logger.error(error_msg)
-            return {"error": error_msg}
+            # Si hay archivo, usar endpoint de media
+            if file_url:
+                url = 'https://boot.andessolutioncopiers.com/api/send-media'
+                data = {
+                    'to': phone,
+                    'caption': message,
+                    'url': file_url
+                }
+            else:
+                # Sin archivo, usar endpoint de texto
+                url = 'https://boot.andessolutioncopiers.com/api/send-message'
+                data = {
+                    'to': phone,
+                    'message': message
+                }
+            
+            headers = {
+                'Content-Type': 'application/json',
+                'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+            }
+            
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            
+            _logger.debug(f"Código de estado: {response.status_code}")
+            _logger.debug(f"Respuesta de la API: {response.text}")
+            
+            try:
+                response_json = response.json()
+                _logger.debug(f"Respuesta JSON: {response_json}")
+                
+                # Validar respuesta exitosa
+                if response.status_code == 200 and response_json.get('success'):
+                    _logger.info(f"✅ Mensaje enviado exitosamente a {phone}")
+                    return response_json
+                else:
+                    error_msg = response_json.get('error', 'Error desconocido')
+                    _logger.error(f"❌ Error en API: {error_msg}")
+                    return {"error": error_msg, "success": False}
+                    
+            except json.JSONDecodeError as e:
+                error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
+                _logger.error(error_msg)
+                _logger.error(f"Respuesta raw: {response.text}")
+                return {"error": error_msg, "success": False}
+                
+        except requests.exceptions.Timeout:
+            error_msg = f"Timeout al enviar mensaje a {phone}"
+            _logger.error(f"❌ {error_msg}")
+            return {"error": error_msg, "success": False}
+            
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Error de red al enviar mensaje: {str(e)}"
+            _logger.error(f"❌ {error_msg}")
+            return {"error": error_msg, "success": False}
+            
+        except Exception as e:
+            error_msg = f"Error inesperado: {str(e)}"
+            _logger.error(f"❌ {error_msg}")
+            return {"error": error_msg, "success": False}
+
 
     
 

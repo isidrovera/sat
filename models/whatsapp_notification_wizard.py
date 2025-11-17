@@ -64,26 +64,36 @@ class WhatsappNotificationWizard(models.TransientModel):
         grupos = []
         
         try:
-            url = 'http://51.222.13.19:3005/api/groups'
-            response = requests.get(url, timeout=10)
+            url = 'https://boot.andessolutioncopiers.com/api/groups'
+            headers = {
+                'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
+                
                 if data.get('success') and data.get('data'):
                     for grupo in data['data']:
-                        grupos.append((grupo['id'], grupo['name']))
+                        grupos.append((grupo['id'], grupo['name']))  # Solo nombre
                     
-                    # Ordenar alfabéticamente por nombre
                     grupos.sort(key=lambda x: x[1])
                     
-                    _logger.info(f"Grupos obtenidos: {len(grupos)}")
+                    _logger.info(f"✅ Grupos obtenidos: {len(grupos)}")
                     return grupos
+                else:
+                    return [('', 'No hay grupos disponibles')]
             
-            _logger.warning("No se pudieron obtener los grupos de WhatsApp desde la API")
-            return [('', 'No hay grupos disponibles')]
+            elif response.status_code == 401:
+                _logger.error("❌ Error de autenticación")
+                return [('', 'Error de autenticación')]
+            
+            else:
+                return [('', 'Error al cargar grupos')]
             
         except Exception as e:
-            _logger.error(f"Error al obtener grupos de WhatsApp: {str(e)}")
+            _logger.exception(f"💥 Error al obtener grupos: {str(e)}")
             return [('', 'Error al cargar grupos')]
 
     @api.onchange('cliente_solicita_toner')
@@ -160,77 +170,103 @@ class WhatsappNotificationWizard(models.TransientModel):
         mensaje = self._generar_mensaje_notificacion()
         
         try:
-            url = 'https://whatsapp.andessolutioncopiers.com/api/message'
+            url = 'https://boot.andessolutioncopiers.com/api/send-message'
             data = {
-                'phone': self.grupo_seleccionado,
-                'message': mensaje,
-                'type': 'text'
+                'to': self.grupo_seleccionado,
+                'message': mensaje
             }
-            headers = {'Content-Type': 'application/json'}
+            headers = {
+                'Content-Type': 'application/json',
+                'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+            }
             
             _logger.info(f"Enviando notificación WhatsApp al grupo: {self.grupo_seleccionado}")
             response = requests.post(url, headers=headers, json=data, timeout=30)
             
             _logger.info(f"Respuesta API WhatsApp - Código: {response.status_code}")
+            _logger.info(f"Respuesta API WhatsApp - Body: {response.text}")
             
             # Verificar diferentes escenarios de respuesta
             if response.status_code == 200:
                 try:
                     response_data = response.json()
                     if response_data.get('success'):
-                        _logger.info(f"✅ Notificación enviada exitosamente al grupo {self.grupo_seleccionado}")
+                        message_id = response_data.get('data', {}).get('messageId')
+                        _logger.info(f"✅ Notificación enviada exitosamente al grupo {self.grupo_seleccionado} - MessageId: {message_id}")
                         return True
                     else:
-                        error_msg = response_data.get('message', 'Error desconocido en la respuesta')
-                        _logger.warning(f"⚠️ API responde con success=false: {error_msg}")
-                        # Asumir que se envió si no hay error crítico
-                        if 'error' not in error_msg.lower():
-                            _logger.info("📤 Asumiendo envío exitoso a pesar de success=false")
-                            return True
-                        else:
-                            raise UserError(f"Error al enviar notificación: {error_msg}")
-                except ValueError:
-                    # Si no puede parsear JSON, pero código 200, asumir éxito
-                    _logger.warning("⚠️ Respuesta 200 pero sin JSON válido - asumiendo éxito")
-                    return True
+                        error_msg = response_data.get('error', 'Error desconocido en la respuesta')
+                        _logger.error(f"❌ API responde con success=false: {error_msg}")
+                        raise UserError(f"Error al enviar notificación: {error_msg}")
+                        
+                except ValueError as e:
+                    # Si no puede parsear JSON
+                    _logger.error(f"❌ Respuesta 200 pero sin JSON válido: {str(e)}")
+                    _logger.error(f"Respuesta raw: {response.text}")
+                    raise UserError("Error al procesar respuesta de WhatsApp API")
                     
-            elif response.status_code == 500:
-                # Error 500 puede ser temporal pero el mensaje podría haberse enviado
-                _logger.warning(f"⚠️ Error 500 del servidor API - verificando si se envió el mensaje")
+            elif response.status_code == 400:
+                # Error de validación (teléfono inválido, mensaje vacío, etc.)
                 try:
                     response_data = response.json()
-                    # Si hay alguna indicación de éxito parcial, continuar
-                    if 'sent' in str(response_data).lower() or 'delivered' in str(response_data).lower():
-                        _logger.info("📤 Error 500 pero mensaje parece haberse enviado")
-                        return True
+                    error_msg = response_data.get('error', 'Error de validación')
+                    _logger.error(f"❌ Error 400 - Validación: {error_msg}")
+                    raise UserError(f"Error de validación: {error_msg}")
+                except ValueError:
+                    _logger.error(f"❌ Error 400 sin JSON: {response.text}")
+                    raise UserError("Error de validación al enviar notificación")
+                    
+            elif response.status_code == 401:
+                # Error de autenticación
+                _logger.error("🔐 Error 401 - API Key inválida o expirada")
+                raise UserError("Error de autenticación con WhatsApp API. Verifique la API Key.")
+                
+            elif response.status_code == 500:
+                # Error del servidor
+                _logger.error(f"💥 Error 500 del servidor API: {response.text}")
+                try:
+                    response_data = response.json()
+                    error_details = response_data.get('details', 'Error interno del servidor')
+                    _logger.error(f"Detalles del error: {error_details}")
                 except:
                     pass
                 
-                # Dar opción al usuario
-                _logger.warning("⚠️ Error 500 - El mensaje podría haberse enviado. Continuando con precaución.")
-                return True  # Asumir éxito para no bloquear el flujo
+                raise UserError("Error interno del servidor WhatsApp. Por favor, intente nuevamente en unos minutos.")
                 
+            elif response.status_code == 501:
+                # Funcionalidad no implementada (ej: envío por URL)
+                try:
+                    response_data = response.json()
+                    error_msg = response_data.get('error', 'Funcionalidad no implementada')
+                    _logger.error(f"❌ Error 501: {error_msg}")
+                    raise UserError(f"Funcionalidad no disponible: {error_msg}")
+                except ValueError:
+                    raise UserError("Funcionalidad no implementada en el servidor")
+                    
             else:
-                _logger.error(f"❌ Error HTTP al enviar notificación: {response.status_code}")
+                _logger.error(f"❌ Error HTTP inesperado al enviar notificación: {response.status_code}")
+                _logger.error(f"Respuesta: {response.text}")
                 raise UserError(f"Error de conexión HTTP: {response.status_code}")
                     
         except requests.exceptions.Timeout:
-            _logger.error("⏰ Timeout al enviar notificación WhatsApp")
-            raise UserError("Tiempo de espera agotado al enviar la notificación")
-        except requests.exceptions.ConnectionError:
-            _logger.error("🌐 Error de conexión al enviar notificación WhatsApp")
-            raise UserError("Error de conexión con el servicio de WhatsApp")
+            _logger.error("⏰ Timeout al enviar notificación WhatsApp (30s)")
+            raise UserError("Tiempo de espera agotado al enviar la notificación. El servidor tardó más de 30 segundos en responder.")
+            
+        except requests.exceptions.ConnectionError as e:
+            _logger.error(f"🌐 Error de conexión al enviar notificación WhatsApp: {str(e)}")
+            raise UserError("Error de conexión con el servicio de WhatsApp. Verifique su conexión a internet o que el servidor esté disponible.")
+            
         except requests.exceptions.RequestException as e:
             _logger.error(f"🔌 Error de red al enviar notificación WhatsApp: {str(e)}")
             raise UserError(f"Error de red: {str(e)}")
+            
         except UserError:
             # Re-lanzar errores de usuario sin modificar
             raise
+            
         except Exception as e:
-            _logger.error(f"💥 Error inesperado al enviar notificación WhatsApp: {str(e)}")
-            # Para errores inesperados, asumir que se envió y continuar
-            _logger.warning("🔄 Continuando con el proceso a pesar del error inesperado")
-            return True
+            _logger.exception(f"💥 Error inesperado al enviar notificación WhatsApp: {str(e)}")
+            raise UserError(f"Error inesperado al enviar notificación: {str(e)}")
 
     # ==============================================================================
     # EXTENSIÓN DEL WIZARD PARA MANEJO MASIVO

@@ -520,20 +520,26 @@ Recibirá confirmación de la fecha de entrega.
         try:
             _logger.debug(f"Enviando mensaje de WhatsApp para tóner a {phone} con contenido: {message}")
             
-            url = 'https://whatsapp.andessolutioncopiers.com/api/message'
+            # ✅ Nueva API
+            url = 'https://boot.andessolutioncopiers.com/api/send-message'
             data = {
-                'phone': phone,
-                'message': message,
-                'type': 'text'  # ✅ AGREGAR tipo de mensaje
+                'to': phone,
+                'message': message
             }
-            headers = {'Content-Type': 'application/json'}
+            headers = {
+                'Content-Type': 'application/json',
+                'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+            }
+            
             response = requests.post(url, headers=headers, json=data, timeout=30)
-
             _logger.debug(f"Código de estado: {response.status_code}")
             _logger.debug(f"Respuesta de la API: {response.text}")
             
-            return response.status_code == 200
+            if response.status_code == 200:
+                response_data = response.json()
+                return response_data.get('success', False)
+            return False
             
         except Exception as e:
             _logger.error(f"Error enviando mensaje de WhatsApp para tóner: {str(e)}")
-            return F
+            return False

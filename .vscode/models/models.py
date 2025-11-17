@@ -529,19 +529,40 @@ Modificado por: {user_name}"""
             self.enviar_mensaje_whatsapp(numero, mensaje)
 
     def enviar_mensaje_whatsapp(self, phone, message):
-        url = 'https://whatsapp.andessolutioncopiers.com/api/message'
+        """Envía un mensaje de WhatsApp a un número o grupo."""
+        url = 'https://boot.andessolutioncopiers.com/api/send-message'
         data = {
-            'phone': phone,
+            'to': phone,
             'message': message
         }
-        headers = {'Content-Type': 'application/json'}
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+        }
+        
         try:
-            response = requests.post(url, headers=headers, json=data, timeout=10)
+            response = requests.post(url, headers=headers, json=data, timeout=30)
             response.raise_for_status()
-            _logger.info(f"Mensaje enviado exitosamente a {phone}")
+            
+            # Verificar respuesta exitosa
+            response_data = response.json()
+            if response_data.get('success'):
+                _logger.info(f"✅ Mensaje enviado exitosamente a {phone}")
+                return True
+            else:
+                error_msg = response_data.get('error', 'Error desconocido')
+                _logger.error(f"❌ Error en API al enviar a {phone}: {error_msg}")
+                return False
+                
+        except requests.exceptions.Timeout:
+            _logger.error(f"❌ Timeout al enviar mensaje de WhatsApp a {phone}")
+            return False
         except requests.exceptions.RequestException as e:
-            _logger.error(f"Error al enviar mensaje de WhatsApp a {phone}: {e}")
-
+            _logger.error(f"❌ Error al enviar mensaje de WhatsApp a {phone}: {e}")
+            return False
+        except Exception as e:
+            _logger.error(f"❌ Error inesperado al enviar WhatsApp a {phone}: {e}")
+            return False
     def crear_url_cambio_ubicacion(self, record):
         """Genera una URL única para el cambio de ubicación, incluyendo un token."""
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')

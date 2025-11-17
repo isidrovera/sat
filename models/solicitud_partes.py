@@ -460,17 +460,38 @@ Confirma el retiro desde el sistema."""
     
     def send_whatsapp_message(self, phone, message):
         """Envía WhatsApp usando API externa"""
-        url = 'https://whatsapp.andessolutioncopiers.com/api/message'
-        data = {'phone': phone, 'message': message}
-        headers = {'Content-Type': 'application/json'}
+        url = 'https://boot.andessolutioncopiers.com/api/send-message'
+        data = {
+            'to': phone,
+            'message': message
+        }
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+        }
         
         try:
-            response = requests.post(url, headers=headers, json=data, timeout=10)
+            response = requests.post(url, headers=headers, json=data, timeout=30)
             _logger.info(f"WhatsApp - Status: {response.status_code}")
-            return response.json()
+            
+            response_json = response.json()
+            
+            if response.status_code == 200 and response_json.get('success'):
+                _logger.info(f"✅ WhatsApp enviado exitosamente a {phone}")
+                return response_json
+            else:
+                error_msg = response_json.get('error', 'Error desconocido')
+                _logger.error(f"❌ Error en API WhatsApp: {error_msg}")
+                return {"error": error_msg, "success": False}
+                
+        except requests.exceptions.Timeout:
+            error_msg = f"Timeout al enviar WhatsApp a {phone}"
+            _logger.error(f"❌ {error_msg}")
+            return {"error": error_msg, "success": False}
+            
         except Exception as e:
-            _logger.error(f"Error WhatsApp: {str(e)}")
-            return {"error": str(e)}
+            _logger.error(f"❌ Error WhatsApp: {str(e)}")
+            return {"error": str(e), "success": False}
     
     def action_check_reposiciones_pendientes(self):
         """Verifica reposiciones pendientes (cron job)"""

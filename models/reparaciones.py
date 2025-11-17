@@ -1694,26 +1694,55 @@ class CopierPartsRequest(models.Model):
 
     def send_whatsapp_message(self, phone, message):
         """Envía un mensaje de WhatsApp utilizando la API externa."""
-        url = 'https://whatsapp.andessolutioncopiers.com/api/message'
+        url = 'https://boot.andessolutioncopiers.com/api/send-message'
         data = {
-            'phone': phone,
+            'to': phone,
             'message': message
         }
-        headers = {'Content-Type': 'application/json'}
-        response = requests.post(url, headers=headers, json=data)
-
-        _logger.info("Código de estado: %s", response.status_code)
-        _logger.info("Respuesta de la API: %s", response.text)
-
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+        }
+        
         try:
-            response_json = response.json()
-            _logger.info("Respuesta JSON: %s", response_json)
-            return response_json
-        except json.JSONDecodeError as e:
-            error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
-            _logger.error(error_msg)
-            return {"error": error_msg}
-
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            
+            _logger.info("Código de estado: %s", response.status_code)
+            _logger.info("Respuesta de la API: %s", response.text)
+            
+            try:
+                response_json = response.json()
+                _logger.info("Respuesta JSON: %s", response_json)
+                
+                # Validar respuesta exitosa
+                if response.status_code == 200 and response_json.get('success'):
+                    _logger.info("✅ Mensaje enviado exitosamente a %s", phone)
+                    return response_json
+                else:
+                    error_msg = response_json.get('error', 'Error desconocido')
+                    _logger.error("❌ Error en API: %s", error_msg)
+                    return {"error": error_msg, "success": False}
+                    
+            except json.JSONDecodeError as e:
+                error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
+                _logger.error(error_msg)
+                _logger.error("Respuesta raw: %s", response.text)
+                return {"error": error_msg, "success": False}
+                
+        except requests.exceptions.Timeout:
+            error_msg = f"Timeout al enviar mensaje a {phone}"
+            _logger.error("❌ %s", error_msg)
+            return {"error": error_msg, "success": False}
+            
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Error de red al enviar mensaje: {str(e)}"
+            _logger.error("❌ %s", error_msg)
+            return {"error": error_msg, "success": False}
+            
+        except Exception as e:
+            error_msg = f"Error inesperado: {str(e)}"
+            _logger.error("❌ %s", error_msg)
+            return {"error": error_msg, "success": False}
     def _get_whatsapp_message_creation(self):
         """Genera el mensaje de WhatsApp para la creación de solicitud"""
         return f"""Nueva solicitud de partes #{self.name}

@@ -23,7 +23,7 @@
 
   <!-- Sistema de tóner / Botella + mecanismo -->
   <record id="comp_tipo_toner_system" model="componente.tipo">
-    <field name="name">Sistema de tóner / Suministro</field>
+    <field name="name">Tóner / Suministro</field>
     <field name="code">TONER_SYSTEM</field>
     <field name="is_color_sensitive">1</field>
   </record>

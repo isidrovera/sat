@@ -350,31 +350,41 @@ class UnidadAlquiler(models.Model):
             return False
             
         try:
-            url = 'https://whatsapp.andessolutioncopiers.com/api/message'
+            # ✅ Nueva API
+            url = 'https://boot.andessolutioncopiers.com/api/send-message'
             data = {
-                'phone': phone,  # Funciona para ambos: "51999999999" o "51990649502-1484267115@g.us"
-                'message': message,
-                'type': 'text'  # ✅ AGREGAR este campo
+                'to': phone,  # Funciona para ambos: "51999999999" o "51990649502-1484267115@g.us"
+                'message': message
             }
-            headers = {'Content-Type': 'application/json'}
+            headers = {
+                'Content-Type': 'application/json',
+                'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+            }
             
             response = requests.post(url, headers=headers, json=data, timeout=30)
             
             if response.status_code == 200:
                 response_data = response.json()
-                # ✅ VERIFICAR respuesta de tu API
+                # ✅ Verificar respuesta de la API
                 if response_data.get('success'):
-                    _logger.info(f"Notificación enviada exitosamente a {phone}")
+                    _logger.info(f"✅ Notificación enviada exitosamente a {phone}")
                     return True
                 else:
-                    _logger.error(f"Error en API: {response_data.get('message')} para {phone}")
+                    error_msg = response_data.get('error', 'Error desconocido')
+                    _logger.error(f"❌ Error en API: {error_msg} para {phone}")
                     return False
             else:
-                _logger.error(f"Error HTTP al enviar a {phone}: {response.status_code}")
+                _logger.error(f"❌ Error HTTP al enviar a {phone}: {response.status_code} - {response.text}")
                 return False
                 
+        except requests.exceptions.Timeout:
+            _logger.error(f"❌ Timeout al enviar notificación WhatsApp a {phone}")
+            return False
+        except requests.exceptions.RequestException as e:
+            _logger.error(f"❌ Error de red al enviar notificación WhatsApp: {str(e)}")
+            return False
         except Exception as e:
-            _logger.error(f"Error al enviar notificación WhatsApp: {str(e)}")
+            _logger.error(f"❌ Error inesperado al enviar notificación WhatsApp: {str(e)}")
             return False
      # Reemplazar los campos Char por estos:
 
@@ -393,23 +403,26 @@ class UnidadAlquiler(models.Model):
     def _get_grupos_whatsapp(self):
         """Obtiene la lista de grupos de WhatsApp desde la API"""
         try:
-            url = 'http://51.222.13.19:3005/api/groups'
-            response = requests.get(url, timeout=10)
+            url = 'https://boot.andessolutioncopiers.com/api/groups'
+            headers = {
+                'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 if data.get('success') and data.get('data'):
                     grupos = []
                     for grupo in data['data']:
-                        # CLAVE: (ID, NOMBRE) - Guarda ID pero muestra NOMBRE
-                        grupos.append((grupo['id'], grupo['name']))
+                        grupos.append((
+                            grupo['id'], 
+                            f"{grupo['name']} ({grupo.get('participants', 0)} miembros)"
+                        ))
                     return grupos
-            
-            _logger.warning("No se pudieron obtener los grupos de WhatsApp")
-            return [('', 'No hay grupos disponibles')]
-            
+            return [('', 'Error al cargar grupos')]
         except Exception as e:
-            _logger.error(f"Error al obtener grupos de WhatsApp: {str(e)}")
+            _logger.exception(f"Error al obtener grupos: {str(e)}")
             return [('', 'Error al cargar grupos')]
     def action_refresh_grupos(self):
         """Refresca la lista de grupos disponibles"""
@@ -836,93 +849,303 @@ class UnidadAlquiler(models.Model):
         return resultado
 
     def write(self, vals):
-        """Sobrescribir write para sincronizar estado de bloqueo entre equipos del mismo cliente"""
-        
-        # Ejecutar el write original primero
-        res = super(UnidadAlquiler, self).write(vals)
-        
-        # Sincronizar estado de bloqueo entre equipos del mismo cliente
-        if 'estado_bloqueo' in vals:
-            for record in self:
-                if record.cliente_id:
-                    # Log para debugging
-                    _logger.info(f"SINCRONIZACIÓN INICIADA para equipo {record.serie} del cliente {record.cliente_id.name}")
-                    
-                    # Buscar otros equipos del mismo cliente (excluyendo el actual)
-                    otros_equipos = self.search([
-                        ('id', '!=', record.id),
-                        ('cliente_id', '=', record.cliente_id.id),
-                        ('estado_alquiler_id', '=', 'alquilada')  # Solo equipos alquilados
-                    ])
-                    
-                    _logger.info(f"Equipos encontrados para sincronizar: {len(otros_equipos)} - Series: {otros_equipos.mapped('serie')}")
-                    
-                    if otros_equipos:
-                        # Preparar valores para actualización
-                        update_vals = {
-                            'estado_bloqueo': vals.get('estado_bloqueo'),
-                            'notificado_bloqueo': False,
-                            'notificado_desbloqueo': False
-                        }
-                        
-                        # Agregar campos adicionales según el estado
-                        if vals.get('estado_bloqueo') in ['suspendido', 'bloqueado']:
-                            update_vals.update({
-                                'motivo_bloqueo': vals.get('motivo_bloqueo', record.motivo_bloqueo),
-                                'fecha_bloqueo': vals.get('fecha_bloqueo', record.fecha_bloqueo),
-                                'usuario_bloqueo': vals.get('usuario_bloqueo', record.usuario_bloqueo),
-                            })
-                        elif vals.get('estado_bloqueo') == 'activo':
-                            update_vals.update({
-                                'fecha_desbloqueo': vals.get('fecha_desbloqueo', record.fecha_desbloqueo),
-                                'motivo_bloqueo': False,
-                                'observaciones_bloqueo': False,
-                                'acceso_remoto_disponible': True,
-                            })
-                        
-                        # Log de valores que se van a actualizar
-                        _logger.info(f"Valores a actualizar: {update_vals}")
-                        
-                        try:
-                            # OPCIÓN 1: Usar write() normal (recomendado para mantener consistencia)
-                            # Temporalmente desactivar la sincronización para evitar recursión
-                            context_sin_sync = dict(self.env.context, skip_sync=True)
-                            otros_equipos.with_context(context_sin_sync).write(update_vals)
-                            
-                            # Invalidar cache para reflejar cambios
-                            otros_equipos.invalidate_cache()
-                            
-                            _logger.info(f"✅ ÉXITO: Actualización completada para {len(otros_equipos)} equipos")
-                            
-                            # Log para auditoría en el equipo original
-                            estado_nombre = dict(self._fields['estado_bloqueo'].selection).get(vals.get('estado_bloqueo'))
+        estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
+        estados_problema = ['con_problemas', 'de_partes']
+        estado_final_no_notificar = 'entregada'
+
+        tipo_revision_modificado = 'tipo_revision' in vals
+        prioridad_modificada = 'prioridad' in vals
+
+        isidro_partner_id = self.get_isidro_partner_id()
+
+        # 📌 Snapshot ANTES de escribir, para detectar cambios de modelo/tipo/contómetro
+        cambios_previos = {}
+        for record in self:
+            cambios_previos[record.id] = {
+                'modelo_anterior': record.name.name if record.name else '',
+                'tipo_anterior': record.tipo_id,
+                'contometro_anterior': record.contometro or '0',
+            }
+
+        for record in self:
+            estado_actual = record.estado_ventas_id
+            nuevo_estado = vals.get('estado_ventas_id', estado_actual)
+
+            _logger.debug(
+                f"Inicio de write para ID {record.id}. "
+                f"Estado actual: {estado_actual}, Nuevo estado: {nuevo_estado}, Valores: {vals}"
+            )
+
+            # Primera parte: Manejo de tipo_revision y prioridad
+            if estado_actual in estados_permitidos_para_cambio:
+                if tipo_revision_modificado or prioridad_modificada:
+                    if vals.get('tipo_revision') or vals.get('prioridad'):
+                        vals['estado_ventas_id'] = 'para_revision'
+                        # Convertir la hora UTC a hora de Perú al guardar
+                        utc_now = datetime.utcnow()
+                        peru_tz = pytz.timezone('America/Lima')
+                        peru_dt = pytz.utc.localize(utc_now).astimezone(peru_tz)
+                        vals['fecha_para_revision'] = peru_dt.astimezone(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S')
+
+                        _logger.info(
+                            f"Estado cambiado a 'para_revision' para ID {record.id} "
+                            f"por modificación en tipo_revision o prioridad."
+                        )
+
+                        if isidro_partner_id:
+                            user_name = self.env.user.name
+                            record_name = record.name.name
+                            serie = record.serie_id
+                            message = f"""Se ha colocado una nueva máquina para revisión.
+
+Detalles del equipo:
+- Nombre: {record_name}
+- Serie: {serie}
+- Fecha de registro: {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)
+
+Modificado por: {user_name}"""
                             record.message_post(
-                                body=f"🔄 <b>Sincronización automática:</b><br/>"
-                                    f"Estado '{estado_nombre}' aplicado automáticamente a {len(otros_equipos)} equipos adicionales del cliente <b>{record.cliente_id.name}</b><br/>"
-                                    f"<small>Series afectadas: {', '.join(otros_equipos.mapped('serie'))}</small>",
-                                message_type='notification'
-                            )
-                            
-                            # Log en cada equipo sincronizado
-                            for equipo in otros_equipos:
-                                equipo.message_post(
-                                    body=f"🔄 <b>Estado sincronizado automáticamente</b><br/>"
-                                        f"Nuevo estado: <span class='badge badge-info'>{estado_nombre}</span><br/>"
-                                        f"Origen: Equipo {record.serie} del mismo cliente<br/>"
-                                        f"Usuario: {self.env.user.name}",
-                                    message_type='notification'
-                                )
-                                
-                        except Exception as e:
-                            _logger.error(f"❌ ERROR en sincronización: {str(e)}")
-                            # Continuar con el proceso aunque falle la sincronización
-                            record.message_post(
-                                body=f"⚠️ <b>Error en sincronización automática:</b><br/>"
-                                    f"No se pudo sincronizar con otros equipos del cliente.<br/>"
-                                    f"Error: {str(e)}",
-                                message_type='notification'
+                                body=message,
+                                partner_ids=[isidro_partner_id],
+                                subtype='mail.mt_comment',
                             )
                     else:
-                        _logger.info("No se encontraron otros equipos para sincronizar")
-        
-        return res
+                        vals['estado_ventas_id'] = 'sin_revisar'
+                        vals['fecha_para_revision'] = None
+                        _logger.info(
+                            f"Estado regresado a 'sin_revisar' para ID {record.id}."
+                        )
+
+            # Segunda parte: Manejo de estados de problema y notificaciones
+            if 'estado_ventas_id' in vals:
+                nuevo_estado = vals['estado_ventas_id']
+
+                # Si cambia a estado de problema
+                if nuevo_estado in estados_problema:
+                    _logger.debug(
+                        f"Cambiando a estado de problema para ID {record.id}. "
+                        f"Ejecutando super().write()."
+                    )
+                    result = super(SatSat, self).write(vals)
+
+                    try:
+                        record.enviar_mensaje_problema_asesora()
+                        _logger.info(
+                            f"Notificación de problema enviada para ID {record.id}."
+                        )
+                    except Exception as e:
+                        _logger.error(
+                            f"Error al enviar notificaciones para ID {record.id}: {e}"
+                        )
+
+                    return result
+
+                # Si cambia de un estado problemático a otro no problemático
+                elif estado_actual in estados_problema and nuevo_estado not in estados_problema:
+                    _logger.debug(
+                        f"Saliendo de estado de problema para ID {record.id}. "
+                        f"Limpiando descripción."
+                    )
+                    vals['descripcion'] = False
+                    vals['activador'] = 'no'
+                    message = _(
+                        "Se limpió la descripción al cambiar el estado de '%s' a '%s'"
+                    ) % (estado_actual, nuevo_estado)
+                    record.message_post(body=message)
+
+                # Nueva lógica: Enviar notificación de disponibilidad si aplica
+                if estado_actual in estados_problema and nuevo_estado != estado_final_no_notificar:
+                    _logger.debug(
+                        f"Enviando notificación de disponibilidad para ID {record.id}."
+                    )
+                    try:
+                        record.enviar_notificacion_disponibilidad()
+                        _logger.info(
+                            f"Notificación de disponibilidad enviada para ID {record.id}."
+                        )
+                    except Exception as e:
+                        _logger.error(
+                            f"Error al enviar notificación de disponibilidad para ID {record.id}: {e}"
+                        )
+
+        # Ejecutar la escritura final después de todas las validaciones y notificaciones
+        _logger.debug(f"Finalizando write para registros {self.ids} con valores: {vals}")
+        result = super(SatSat, self).write(vals)
+
+        # 🔍 Después de escribir, revisar anomalías de modelo y contómetro
+        for record in self:
+            prev = cambios_previos.get(record.id) or {}
+            modelo_anterior = prev.get('modelo_anterior', '')
+            tipo_anterior = prev.get('tipo_anterior')
+            contometro_anterior = prev.get('contometro_anterior', '0')
+
+            modelo_nuevo = record.name.name if record.name else ''
+            tipo_nuevo = record.tipo_id
+            contometro_nuevo = record.contometro or '0'
+
+            # 1) Cambios raros de modelo (velocidad / color)
+            self._check_model_anomalies(
+                record,
+                modelo_anterior,
+                modelo_nuevo,
+                tipo_anterior,
+                tipo_nuevo,
+            )
+
+            # 2) Saltos raros de contómetro
+            self._check_counter_anomalies(
+                record,
+                contometro_anterior,
+                contometro_nuevo,
+            )
+
+        return result
+    def _check_model_anomalies(self, record, modelo_anterior, modelo_nuevo, tipo_anterior, tipo_nuevo):
+        """
+        Detecta casos como:
+        - Canon 4525  -> 4535 (cambio de velocidad dentro misma familia)
+        - bizhub 364e -> bizhub C364e (cambio de mono a color)
+        y genera:
+        - mensaje en chatter
+        - correo usando plantilla: sat.email_template_snmp_model_change
+        """
+        # Si no cambió el modelo, no hacemos nada
+        if not modelo_anterior or not modelo_nuevo or modelo_anterior == modelo_nuevo:
+            return
+
+        # Extraer último bloque numérico de cada modelo (núcleo de velocidad)
+        def _get_core_digits(text):
+            nums = re.findall(r'\d+', text or '')
+            return nums[-1] if nums else None
+
+        core_old = _get_core_digits(modelo_anterior)
+        core_new = _get_core_digits(modelo_nuevo)
+
+        posible_cambio_velocidad = False
+        detalle_velocidad = ""
+
+        if core_old and core_new and core_old != core_new:
+            try:
+                if len(core_old) == len(core_new):
+                    # caso típico 4525 -> 4535
+                    if len(core_old) == 4 and core_old[:2] == core_new[:2]:
+                        posible_cambio_velocidad = True
+                        detalle_velocidad = f"{core_old[-2:]} → {core_new[-2:]}"
+                    else:
+                        posible_cambio_velocidad = True
+                        detalle_velocidad = f"{core_old} → {core_new}"
+            except Exception:
+                pass
+
+        # Cambio de tipo (color/mono)
+        cambio_tipo = False
+        if tipo_anterior and tipo_nuevo and tipo_anterior != tipo_nuevo:
+            cambio_tipo = True
+
+        # Si no hay nada relevante, salir
+        if not posible_cambio_velocidad and not cambio_tipo:
+            return
+
+        isidro_partner_id = record.get_isidro_partner_id()
+        url = record.generate_record_url(record)
+
+        # 🔹 Mensaje en chatter con todos los detalles
+        lineas = [
+            "Se detectó una actualización relevante del modelo (posiblemente por SNMP o edición manual):",
+            f"• Modelo anterior: <b>{modelo_anterior}</b>",
+            f"• Modelo nuevo: <b>{modelo_nuevo}</b>",
+        ]
+
+        if posible_cambio_velocidad:
+            lineas.append(f"• Posible cambio de velocidad (núcleo): <b>{detalle_velocidad}</b>")
+
+        if cambio_tipo:
+            sel_tipo = dict(record._fields['tipo_id'].selection)
+            txt_old = sel_tipo.get(tipo_anterior, tipo_anterior)
+            txt_new = sel_tipo.get(tipo_nuevo, tipo_nuevo)
+            lineas.append(f"• Cambio de tipo: <b>{txt_old}</b> → <b>{txt_new}</b>")
+
+        lineas.append(f"• Equipo: <b>{record.name.name if record.name else ''}</b> / Serie: <b>{record.serie_id}</b>")
+        lineas.append(f"• Enlace al equipo: {url}")
+
+        body = "<br/>".join(lineas)
+
+        record.message_post(
+            body=body,
+            subtype_xmlid='mail.mt_note',
+            partner_ids=[isidro_partner_id] if isidro_partner_id else None,
+        )
+
+        # 🔹 Envío de correo usando plantilla
+        template = record.env.ref('sat.email_template_snmp_model_change', raise_if_not_found=False)
+        if template:
+            try:
+                template.sudo().send_mail(record.id, force_send=True)
+            except Exception as e:
+                _logger.error(f"[SNMP Model Alert] Error al enviar correo de cambio de modelo para ID {record.id}: {e}")
+    def _check_counter_anomalies(self, record, contometro_anterior, contometro_nuevo):
+        """
+        Detecta variaciones sospechosas en el contómetro, por ejemplo:
+        - 2,000  → 20,000  (x10)
+        - 2,000  → 2,000,000 (muchos más dígitos)
+        y NO molesta si es algo normal, como:
+        - 40,000 → 42,000
+        Luego:
+        - registra detalle en chatter
+        - envía correo usando plantilla: sat.email_template_snmp_counter_anomaly
+        """
+
+        # Limpiar a solo dígitos
+        old_digits = re.sub(r'[^\d]', '', contometro_anterior or '') or '0'
+        new_digits = re.sub(r'[^\d]', '', contometro_nuevo or '') or '0'
+
+        try:
+            old_val = int(old_digits)
+            new_val = int(new_digits)
+        except Exception:
+            return
+
+        # Si alguno es cero o el nuevo es menor, no analizamos aquí
+        if old_val <= 0 or new_val <= 0 or new_val <= old_val:
+            return
+
+        digit_diff = abs(len(str(old_val)) - len(str(new_val)))
+        ratio = new_val / float(old_val) if old_val else 0.0
+
+        # Reglas:
+        # - muchos más dígitos (ej: 4 → 7)
+        # - o incremento >= x10 del valor anterior
+        if digit_diff < 2 and ratio < 10.0:
+            # incremento normal, no avisamos
+            return
+
+        incremento = new_val - old_val
+        isidro_partner_id = record.get_isidro_partner_id()
+        url = record.generate_record_url(record)
+
+        # 🔹 Detalle completo en chatter
+        lineas = [
+            "⚠️ Se detectó una variación inusual en el contómetro:",
+            f"• Valor anterior: <b>{old_val:,}</b>",
+            f"• Valor nuevo: <b>{new_val:,}</b>",
+            f"• Incremento: <b>{incremento:,}</b>",
+            f"• Multiplicador aproximado: <b>x{ratio:.1f}</b>",
+            f"• Equipo: <b>{record.name.name if record.name else ''}</b> / Serie: <b>{record.serie_id}</b>",
+            f"• Enlace al equipo: {url}",
+        ]
+
+        body = "<br/>".join(lineas)
+
+        record.message_post(
+            body=body,
+            subtype_xmlid='mail.mt_note',
+            partner_ids=[isidro_partner_id] if isidro_partner_id else None,
+        )
+
+        # 🔹 Envío de correo usando plantilla
+        template = record.env.ref('sat.email_template_snmp_counter_anomaly', raise_if_not_found=False)
+        if template:
+            try:
+                template.sudo().send_mail(record.id, force_send=True)
+            except Exception as e:
+                _logger.error(f"[SNMP Counter Alert] Error al enviar correo de anomalía de contometro para ID {record.id}: {e}")

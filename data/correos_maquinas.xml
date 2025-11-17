@@ -228,7 +228,149 @@
     </body>
     </html>
         ]]></field>
-        </record>   
+        </record> 
+        <!-- ⚠️ Cambio de modelo / tipo detectado por SNMP -->
+        <record id="email_template_snmp_model_change" model="mail.template">
+            <field name="name">⚠️ SNMP - Cambio relevante de modelo</field>
+            <field name="model_id" ref="model_sat_sat"/>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">verapolo@icloud.com</field>
+            <field name="email_cc"></field>
+            <field name="subject">
+                <![CDATA[⚠️ Cambio de modelo detectado: {{ object.name.name }} / {{ object.serie_id }}]]>
+            </field>
+            <field name="auto_delete" eval="True"/>
+
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif;">
+    <div style="max-width:700px;margin:0 auto;padding:20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color:#ff6f61;padding:20px;text-align:center;">
+            <div style="color:#ffffff;font-size:22px;font-weight:bold;">
+                ⚠️ Cambio relevante de modelo detectado
+            </div>
+        </div>
+
+        <!-- Contenido -->
+        <div style="background-color:#ffffff;padding:20px;border:1px solid #e2e8f0;">
+            <p>Estimado equipo,</p>
+            <p>
+                El sistema SNMP ha detectado un <strong>cambio relevante en el modelo</strong> 
+                o en el tipo (color / monocromática) de la siguiente máquina:
+            </p>
+
+            <div style="margin:15px 0;padding:15px;background-color:#f9f9f9;border:1px solid #dddddd;">
+                <p><strong>Marca:</strong> <span><t t-out="object.marca"/></span></p>
+                <p><strong>Modelo actual:</strong> <span><t t-out="object.name.name"/></span></p>
+                <p><strong>Serie:</strong> <span><t t-out="object.serie_id"/></span></p>
+                <p><strong>Contómetro actual:</strong> <span><t t-out="object.contometro"/></span></p>
+            </div>
+
+            <p style="margin-top:15px;">
+                El detalle exacto del cambio (modelo anterior, modelo nuevo, posible cambio de velocidad o tipo)
+                se ha registrado en el <strong>chatter del equipo</strong>.
+            </p>
+
+            <p style="margin-top:10px;">
+                Por favor, revisar y confirmar que la información de catálogo, velocidad y tipo sea coherente 
+                antes de usar esta máquina para cotizaciones o ventas.
+            </p>
+
+            <!-- Botón -->
+            <div style="text-align:center;margin:30px 0 10px 0;">
+                <a t-att-href="object.generate_record_url(object)"
+                   style="background-color:#ff6f61;color:#ffffff;padding:12px 25px;
+                          text-decoration:none;display:inline-block;border-radius:4px;">
+                    Ver máquina en Odoo
+                </a>
+            </div>
+
+            <div style="margin-top:20px;font-size:12px;color:#777777;border-top:1px solid #eeeeee;padding-top:10px;">
+                Este mensaje se generó automáticamente a partir de datos SNMP y cambios en el registro de máquina.
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+
+        <!-- ⚠️ Anomalía fuerte en contometro -->
+        <record id="email_template_snmp_counter_anomaly" model="mail.template">
+            <field name="name">⚠️ SNMP - Anomalía de contometro</field>
+            <field name="model_id" ref="model_sat_sat"/>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">verapolo@icloud.com</field>
+            <field name="email_cc"></field>
+            <field name="subject">
+                <![CDATA[⚠️ Anomalía de contometro: {{ object.name.name }} / {{ object.serie_id }}]]>
+            </field>
+            <field name="auto_delete" eval="True"/>
+
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif;">
+    <div style="max-width:700px;margin:0 auto;padding:20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color:#ed8936;padding:20px;text-align:center;">
+            <div style="color:#ffffff;font-size:22px;font-weight:bold;">
+                ⚠️ Anomalía detectada en contometro
+            </div>
+        </div>
+
+        <!-- Contenido -->
+        <div style="background-color:#ffffff;padding:20px;border:1px solid #e2e8f0;">
+            <p>Estimado equipo,</p>
+            <p>
+                El sistema ha detectado un <strong>salto inusual en el contometro</strong> de la siguiente máquina.
+            </p>
+
+            <div style="margin:15px 0;padding:15px;background-color:#f9f9f9;border:1px solid #dddddd;">
+                <p><strong>Marca:</strong> <span><t t-out="object.marca"/></span></p>
+                <p><strong>Modelo:</strong> <span><t t-out="object.name.name"/></span></p>
+                <p><strong>Serie:</strong> <span><t t-out="object.serie_id"/></span></p>
+                <p><strong>Contometro actual:</strong> <span><t t-out="object.contometro"/></span></p>
+            </div>
+
+            <p style="margin-top:15px;">
+                Los valores detallados (contometro anterior, nuevo, incremento y factor de multiplicación)
+                están registrados en el <strong>chatter del equipo</strong>.
+            </p>
+
+            <p style="margin-top:10px;">
+                Se recomienda revisar físicamente el equipo y validar la coherencia de los contadores 
+                antes de cerrar ventas, garantías o informes finales.
+            </p>
+
+            <!-- Botón -->
+            <div style="text-align:center;margin:30px 0 10px 0;">
+                <a t-att-href="object.generate_record_url(object)"
+                   style="background-color:#ed8936;color:#ffffff;padding:12px 25px;
+                          text-decoration:none;display:inline-block;border-radius:4px;">
+                    Ver máquina en Odoo
+                </a>
+            </div>
+
+            <div style="margin-top:20px;font-size:12px;color:#777777;border-top:1px solid #eeeeee;padding-top:10px;">
+                Este mensaje se generó automáticamente a partir de datos SNMP y cambios en el registro de máquina.
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>  
     </data>
 </odoo>
    

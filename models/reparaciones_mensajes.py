@@ -44,26 +44,56 @@ class ReparacionesMensajes(models.Model):
 
     def send_whatsapp_message(self, phone, message):
         """Envía un mensaje de WhatsApp utilizando la API externa."""
-        url = 'https://whatsapp.andessolutioncopiers.com/api/message'
+        url = 'https://boot.andessolutioncopiers.com/api/send-message'
         data = {
-            'phone': phone,
+            'to': phone,
             'message': message
         }
-        headers = {'Content-Type': 'application/json'}
-        response = requests.post(url, headers=headers, json=data)
-
-        print("Código de estado:", response.status_code)
-        print("Respuesta de la API:", response.text)
-
-        # Verificar si la respuesta contiene un cuerpo JSON válido
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+        }
+        
         try:
-            response_json = response.json()
-            print("Respuesta JSON:", response_json)
-            return response_json
-        except json.JSONDecodeError as e:
-            error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
-            print(error_msg)
-            return {"error": error_msg}  # Devuelve un diccionario con la clave 'error' y el mensaje de error como valor
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            
+            print("Código de estado:", response.status_code)
+            print("Respuesta de la API:", response.text)
+            
+            # Verificar si la respuesta contiene un cuerpo JSON válido
+            try:
+                response_json = response.json()
+                print("Respuesta JSON:", response_json)
+                
+                # Validar respuesta exitosa
+                if response.status_code == 200 and response_json.get('success'):
+                    print(f"✅ Mensaje enviado exitosamente a {phone}")
+                    return response_json
+                else:
+                    error_msg = response_json.get('error', 'Error desconocido')
+                    print(f"❌ Error en API: {error_msg}")
+                    return {"error": error_msg, "success": False}
+                    
+            except json.JSONDecodeError as e:
+                error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
+                print(error_msg)
+                print("Respuesta raw:", response.text)
+                return {"error": error_msg, "success": False}
+                
+        except requests.exceptions.Timeout:
+            error_msg = f"Timeout al enviar mensaje a {phone}"
+            print(f"❌ {error_msg}")
+            return {"error": error_msg, "success": False}
+            
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Error de red al enviar mensaje: {str(e)}"
+            print(f"❌ {error_msg}")
+            return {"error": error_msg, "success": False}
+            
+        except Exception as e:
+            error_msg = f"Error inesperado: {str(e)}"
+            print(f"❌ {error_msg}")
+            return {"error": error_msg, "success": False}
     def get_selection_labels(self):
         selection_labels = {}
         for field_name, field in self._fields.items():
