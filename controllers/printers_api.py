@@ -301,24 +301,29 @@ def find_logistics_user(env):
     return usr
 
 def ensure_brand(env, brand_name):
-    """Asegura (o crea) la marca."""
+    """Asegura (o crea) la marca usando sudo(), porque viene de un endpoint público/portal."""
     if not brand_name:
         return False
-    
-    Marca = env['marca.marca']
-    brand = Marca.search([('name', '=ilike', brand_name.strip())], limit=1)
-    
+
+    Marca = env['marca.marca'].sudo()
+    clean_name = brand_name.strip()
+
+    # Buscar marca existente (case-insensitive)
+    brand = Marca.search([('name', '=ilike', clean_name)], limit=1)
+
     if brand:
         _logger.info("[SNMP] Marca existente: %s (ID: %s)", brand.name, brand.id)
         return brand.id
-    
+
+    # Crear nueva marca si no existe
     try:
-        brand = Marca.create({'name': brand_name.strip()})
+        brand = Marca.create({'name': clean_name})
         _logger.info("[SNMP] Marca CREADA: %s (ID: %s)", brand.name, brand.id)
         return brand.id
     except Exception as e:
-        _logger.error("[SNMP] Error creando marca '%s': %s", brand_name, e)
+        _logger.error("[SNMP] Error creando marca '%s': %s", clean_name, e)
         return False
+
 
 def get_default_tipo_maquina(env):
     """Obtiene el tipo de máquina por defecto."""
