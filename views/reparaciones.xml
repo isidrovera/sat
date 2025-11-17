@@ -47,6 +47,12 @@
               icon="fa-camera"
               decoration-info="estado_id in ('en_revision', 'para_revision', 'finalizado', 'entregada')"
               invisible="estado_id not in ('en_revision', 'para_revision', 'finalizado', 'entregada')" />
+              <button name="action_print_reparacion_pdf"
+        type="action"
+        string="Imprimir PDF"
+        class="btn-primary"
+        />
+
             <field name="estado_id" widget="statusbar" statusbar_visible="true" />
             <button
               name="action_request_parts"

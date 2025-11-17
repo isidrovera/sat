@@ -29,7 +29,14 @@ class Reparaciones(models.Model):
                        copy=False, readonly=True, required=True, tracking=True)
     fotos_ids = fields.One2many('reparaciones.foto', 'reparacion_id', string='Galería de Fotos')
     foto_galeria_nombre = fields.Char(string='Nombre de Carpeta')
-
+    def action_print_reparacion_pdf(self):
+        """Imprimir / descargar el PDF de la reparación"""
+        self.ensure_one()
+        try:
+            report = self.env.ref('sat.action_report_reparaciones_ventas')
+        except ValueError:
+            raise UserError(_("No se encontró la acción de reporte 'sat.action_report_reparaciones_ventas'."))
+        return report.report_action(self)
     @api.model_create_multi
     def create(self, vals_list):
         """ Crea una secuencia para el modelo de reparaciones y gestiona la creación de carpetas en pCloud """

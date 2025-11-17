@@ -865,3 +865,37 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro
             }
         }
 
+    def _get_main_reparacion(self):
+        """Devuelve la reparación principal para esta máquina.
+           Prioriza `reparacion_id` y si no, la última reparación creada."""
+        self.ensure_one()
+        reparacion = self.reparacion_id
+        if not reparacion and self.reparaciones_ids:
+            # Tomar la última reparación (por create_date)
+            reparacion = self.reparaciones_ids.sorted(lambda r: r.create_date or r.id, reverse=True)[0]
+        return reparacion
+
+    def action_print_reparacion_pdf(self):
+        """Imprimir / descargar el PDF de la reparación desde la máquina."""
+        self.ensure_one()
+        reparacion = self._get_main_reparacion()
+        if not reparacion:
+            raise UserError(_("Esta máquina no tiene ninguna reparación registrada."))
+
+        try:
+            report = self.env.ref('sat.action_report_reparaciones_ventas')
+        except ValueError:
+            raise UserError(_("No se encontró la acción de reporte 'sat.action_report_reparaciones_ventas'."))
+
+        # Imprime el PDF de esa reparación
+        return report.report_action(reparacion)
+
+    def action_open_reparacion_gallery(self):
+        """Abrir directamente la galería de fotos de la reparación desde la máquina."""
+        self.ensure_one()
+        reparacion = self._get_main_reparacion()
+        if not reparacion:
+            raise UserError(_("Esta máquina no tiene ninguna reparación registrada."))
+
+        # Reusa la acción ya definida en reparaciones.reparaciones
+        return reparacion.action_open_gallery()
