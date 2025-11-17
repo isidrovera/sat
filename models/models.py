@@ -842,7 +842,7 @@ Modificado por: {user_name}"""
         self.message_post(body=body)
 
         self._send_snmp_mail(
-            'sat.email_template_snmp_model_mismatch',
+            'sat.email_template_snmp_model_change',
             {
                 'snmp_current_model': current_model,
                 'snmp_detected_model': snmp_model,
