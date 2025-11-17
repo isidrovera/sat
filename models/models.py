@@ -554,7 +554,7 @@ class SatSat(models.Model):
                 nuevo_estado = vals['estado_ventas_id']
 
                 # Si cambia a estado de problema
-                if nuevo_estado in estados_problema:
+                if nuevo_estado en estados_problema:
                     _logger.debug(
                         f"Cambiando a estado de problema para ID {record.id}. "
                         f"Ejecutando super().write()."
@@ -646,7 +646,7 @@ class SatSat(models.Model):
                     except Exception as e:
                         _logger.error(f"Error notificando cambio de modelo SNMP: {e}")
 
-                # 3B) Si cambió el contómetro de forma significativa
+                # 3B) ✅ SOLO notificar contador si hay ANOMALÍA, no cambio normal
                 if contometro_anterior != contometro_nuevo:
                     try:
                         old_digits = re.sub(r'[^\d]', '', contometro_anterior or '0')
@@ -655,15 +655,66 @@ class SatSat(models.Model):
                         old_val = int(old_digits) if old_digits else 0
                         new_val = int(new_digits) if new_digits else 0
                         
-                        if old_val > 0 and new_val > 0:
+                        # ✅ SOLO notificar si es cambio anormal
+                        if self._is_counter_anomaly(old_val, new_val):
                             record.notify_snmp_counter_update(
                                 previous_counter=old_val,
                                 new_counter=new_val
+                            )
+                        else:
+                            _logger.debug(
+                                f"[SNMP] Cambio normal de contador {old_val} → {new_val}, no se notifica"
                             )
                     except Exception as e:
                         _logger.error(f"Error notificando cambio de contador SNMP: {e}")
 
         return result
+
+    def _is_counter_anomaly(self, old_val, new_val):
+        """
+        Determina si un cambio de contador es una anomalía que debe notificarse.
+        
+        ANOMALÍAS:
+        - Contador decrece (ej: 10,000 → 5,000)
+        - Salto x10 o mayor (ej: 10,000 → 100,000)
+        - Diferencia de 2+ dígitos (ej: 545 → 152,128)
+        
+        NO ES ANOMALÍA (cambio normal):
+        - Incremento normal < x10 (ej: 40,000 → 42,000)
+        - Mismo número de dígitos y cambio razonable
+        """
+        # Si alguno es cero, no evaluamos
+        if old_val <= 0 or new_val <= 0:
+            return False
+        
+        # 1) Contador DECRECIÓ - SIEMPRE es anomalía
+        if new_val < old_val:
+            _logger.info(
+                f"[SNMP Anomaly] Contador decreció: {old_val:,} → {new_val:,}"
+            )
+            return True
+        
+        # 2) Diferencia de dígitos >= 2 (ej: 545 → 152,128)
+        digit_diff = abs(len(str(old_val)) - len(str(new_val)))
+        if digit_diff >= 2:
+            _logger.info(
+                f"[SNMP Anomaly] Diferencia de {digit_diff} dígitos: {old_val:,} → {new_val:,}"
+            )
+            return True
+        
+        # 3) Incremento x10 o mayor
+        ratio = new_val / float(old_val) if old_val > 0 else 0.0
+        if ratio >= 10.0:
+            _logger.info(
+                f"[SNMP Anomaly] Salto x{ratio:.1f}: {old_val:,} → {new_val:,}"
+            )
+            return True
+        
+        # 4) Cambio normal (ej: 40,000 → 42,000)
+        _logger.debug(
+            f"[SNMP Normal] Cambio normal de contador: {old_val:,} → {new_val:,} (x{ratio:.2f})"
+        )
+        return False
 
     def _check_model_anomalies(self, record, modelo_anterior, modelo_nuevo, tipo_anterior, tipo_nuevo):
         """
@@ -758,33 +809,36 @@ class SatSat(models.Model):
         except Exception:
             return
 
-        # Si alguno es cero o el nuevo es menor, no analizamos aquí (ya tienes lógica SNMP aparte)
-        if old_val <= 0 or new_val <= 0 or new_val <= old_val:
-            return
-
-        digit_diff = abs(len(str(old_val)) - len(str(new_val)))
-        ratio = new_val / float(old_val) if old_val else 0.0
-
-        # Reglas:
-        # - muchos más dígitos (ej: 4 -> 7)
-        # - o incremento >= x10 del valor anterior
-        if digit_diff < 2 and ratio < 10.0:
-            # incremento normal, no avisamos
+        # Usar el mismo método de detección de anomalía
+        if not record._is_counter_anomaly(old_val, new_val):
             return
 
         incremento = new_val - old_val
         isidro_partner_id = record.get_isidro_partner_id()
         url = record.generate_record_url(record)
 
-        lineas = [
-            "⚠️ Se detectó una variación inusual en el contómetro:",
-            f"• Valor anterior: <b>{old_val:,}</b>",
-            f"• Valor nuevo: <b>{new_val:,}</b>",
-            f"• Incremento: <b>{incremento:,}</b>",
-            f"• Multiplicador aproximado: <b>x{ratio:.1f}</b>",
-            f"• Equipo: <b>{record.name.name if record.name else ''}</b> / Serie: <b>{record.serie_id}</b>",
-            f"• Enlace al equipo: {url}",
-        ]
+        if new_val < old_val:
+            # Decremento
+            lineas = [
+                "⚠️ Se detectó que el contómetro DECRECIÓ:",
+                f"• Valor anterior: <b>{old_val:,}</b>",
+                f"• Valor nuevo: <b>{new_val:,}</b>",
+                f"• Diferencia: <b>{incremento:,}</b>",
+                f"• Equipo: <b>{record.name.name if record.name else ''}</b> / Serie: <b>{record.serie_id}</b>",
+                f"• Enlace al equipo: {url}",
+            ]
+        else:
+            # Salto grande
+            ratio = new_val / float(old_val) if old_val else 0.0
+            lineas = [
+                "⚠️ Se detectó una variación inusual en el contómetro:",
+                f"• Valor anterior: <b>{old_val:,}</b>",
+                f"• Valor nuevo: <b>{new_val:,}</b>",
+                f"• Incremento: <b>{incremento:,}</b>",
+                f"• Multiplicador aproximado: <b>x{ratio:.1f}</b>",
+                f"• Equipo: <b>{record.name.name if record.name else ''}</b> / Serie: <b>{record.serie_id}</b>",
+                f"• Enlace al equipo: {url}",
+            ]
 
         body = "<br/>".join(lineas)
 
@@ -794,6 +848,12 @@ class SatSat(models.Model):
             partner_ids=[isidro_partner_id] if isidro_partner_id else None,
         )
 
+
+
+
+    
+
+    
     # =========================
     #  NOTIFICACIONES SNMP
     # =========================
