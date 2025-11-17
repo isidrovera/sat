@@ -664,50 +664,20 @@ class SNMPPublicController(http.Controller):
             _logger.exception("[SNMP] Traceback:")
 
     def _notify_core_mismatch(self, sat, snmp_model, current_model):
-        """Notifica diferencia de núcleo"""
+        """Notifica diferencia de núcleo/modelo usando chatter + plantilla de correo."""
         try:
-            sat.message_post(
-                body=_("⚠️ <b>Diferencia de núcleo detectada</b><br/>"
-                       "Detectado: <b>%s</b><br/>"
-                       "Actual: <b>%s</b>")
-                     % (snmp_model, current_model))
+            # Delega toda la lógica de notificación al modelo sat.sat
+            sat.notify_snmp_model_mismatch(
+                snmp_model=snmp_model,
+                current_model=current_model,
+            )
         except Exception as e:
-            _logger.error("[SNMP] Error en chatter: %s", e)
-        
-        usr = find_logistics_user(request.env)
-        if usr:
-            try:
-                request.env['mail.activity'].sudo().create({
-                    'res_model_id': request.env['ir.model']._get_id('sat.sat'),
-                    'res_id': sat.id,
-                    'user_id': usr.id,
-                    'summary': _("Revisar cambio de modelo (núcleo distinto)"),
-                    'note': _("SNMP detectó: <b>%s</b><br/>Actual: <b>%s</b>") 
-                           % (snmp_model, current_model),
-                    'activity_type_id': request.env.ref('mail.mail_activity_data_todo').id,
-                })
-            except Exception as e:
-                _logger.error("[SNMP] Error creando actividad: %s", e)
+            _logger.error("[SNMP] Error notificando diferencia de modelo: %s", e)
+
 
     def _suggest_model(self, sat, snmp_model):
-        """Crea sugerencia de modelo"""
+        """Crea sugerencia de modelo (chatter + correo por plantilla)."""
         try:
-            sat.message_post(
-                body=_("💡 <b>Sugerencia de modelo SNMP</b><br/>"
-                       "Detectado: <b>%s</b>") % snmp_model)
+            sat.notify_snmp_model_suggestion(snmp_model)
         except Exception as e:
-            _logger.error("[SNMP] Error en sugerencia: %s", e)
-        
-        usr = find_logistics_user(request.env)
-        if usr:
-            try:
-                request.env['mail.activity'].sudo().create({
-                    'res_model_id': request.env['ir.model']._get_id('sat.sat'),
-                    'res_id': sat.id,
-                    'user_id': usr.id,
-                    'summary': _("Crear modelo sugerido por SNMP"),
-                    'note': _("SNMP sugiere: <b>%s</b>") % snmp_model,
-                    'activity_type_id': request.env.ref('mail.mail_activity_data_todo').id,
-                })
-            except Exception as e:
-                _logger.error("[SNMP] Error creando actividad: %s", e)
+            _logger.error("[SNMP] Error en sugerencia de modelo SNMP: %s", e)

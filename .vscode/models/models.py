@@ -430,11 +430,23 @@ class SatSat(models.Model):
 
         isidro_partner_id = self.get_isidro_partner_id()
 
+        # 📌 Snapshot ANTES de escribir, para detectar cambios de modelo/tipo/contómetro
+        cambios_previos = {}
+        for record in self:
+            cambios_previos[record.id] = {
+                'modelo_anterior': record.name.name if record.name else '',
+                'tipo_anterior': record.tipo_id,
+                'contometro_anterior': record.contometro or '0',
+            }
+
         for record in self:
             estado_actual = record.estado_ventas_id
             nuevo_estado = vals.get('estado_ventas_id', estado_actual)
 
-            _logger.debug(f"Inicio de write para ID {record.id}. Estado actual: {estado_actual}, Nuevo estado: {nuevo_estado}, Valores: {vals}")
+            _logger.debug(
+                f"Inicio de write para ID {record.id}. "
+                f"Estado actual: {estado_actual}, Nuevo estado: {nuevo_estado}, Valores: {vals}"
+            )
 
             # Primera parte: Manejo de tipo_revision y prioridad
             if estado_actual in estados_permitidos_para_cambio:
@@ -446,8 +458,11 @@ class SatSat(models.Model):
                         peru_tz = pytz.timezone('America/Lima')
                         peru_dt = pytz.utc.localize(utc_now).astimezone(peru_tz)
                         vals['fecha_para_revision'] = peru_dt.astimezone(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S')
-                        
-                        _logger.info(f"Estado cambiado a 'para_revision' para ID {record.id} por modificación en tipo_revision o prioridad.")
+
+                        _logger.info(
+                            f"Estado cambiado a 'para_revision' para ID {record.id} "
+                            f"por modificación en tipo_revision o prioridad."
+                        )
 
                         if isidro_partner_id:
                             user_name = self.env.user.name
@@ -469,7 +484,9 @@ Modificado por: {user_name}"""
                     else:
                         vals['estado_ventas_id'] = 'sin_revisar'
                         vals['fecha_para_revision'] = None
-                        _logger.info(f"Estado regresado a 'sin_revisar' para ID {record.id}.")
+                        _logger.info(
+                            f"Estado regresado a 'sin_revisar' para ID {record.id}."
+                        )
 
             # Segunda parte: Manejo de estados de problema y notificaciones
             if 'estado_ventas_id' in vals:
@@ -477,20 +494,30 @@ Modificado por: {user_name}"""
 
                 # Si cambia a estado de problema
                 if nuevo_estado in estados_problema:
-                    _logger.debug(f"Cambiando a estado de problema para ID {record.id}. Ejecutando super().write().")
+                    _logger.debug(
+                        f"Cambiando a estado de problema para ID {record.id}. "
+                        f"Ejecutando super().write()."
+                    )
                     result = super(SatSat, self).write(vals)
 
                     try:
                         record.enviar_mensaje_problema_asesora()
-                        _logger.info(f"Notificación de problema enviada para ID {record.id}.")
+                        _logger.info(
+                            f"Notificación de problema enviada para ID {record.id}."
+                        )
                     except Exception as e:
-                        _logger.error(f"Error al enviar notificaciones para ID {record.id}: {e}")
+                        _logger.error(
+                            f"Error al enviar notificaciones para ID {record.id}: {e}"
+                        )
 
                     return result
 
                 # Si cambia de un estado problemático a otro no problemático
                 elif estado_actual in estados_problema and nuevo_estado not in estados_problema:
-                    _logger.debug(f"Saliendo de estado de problema para ID {record.id}. Limpiando descripción.")
+                    _logger.debug(
+                        f"Saliendo de estado de problema para ID {record.id}. "
+                        f"Limpiando descripción."
+                    )
                     vals['descripcion'] = False
                     vals['activador'] = 'no'
                     message = _(
@@ -500,16 +527,182 @@ Modificado por: {user_name}"""
 
                 # Nueva lógica: Enviar notificación de disponibilidad si aplica
                 if estado_actual in estados_problema and nuevo_estado != estado_final_no_notificar:
-                    _logger.debug(f"Enviando notificación de disponibilidad para ID {record.id}.")
+                    _logger.debug(
+                        f"Enviando notificación de disponibilidad para ID {record.id}."
+                    )
                     try:
                         record.enviar_notificacion_disponibilidad()
-                        _logger.info(f"Notificación de disponibilidad enviada para ID {record.id}.")
+                        _logger.info(
+                            f"Notificación de disponibilidad enviada para ID {record.id}."
+                        )
                     except Exception as e:
-                        _logger.error(f"Error al enviar notificación de disponibilidad para ID {record.id}: {e}")
+                        _logger.error(
+                            f"Error al enviar notificación de disponibilidad para ID {record.id}: {e}"
+                        )
 
         # Ejecutar la escritura final después de todas las validaciones y notificaciones
-        _logger.debug(f"Finalizando write para ID {record.id} con valores: {vals}")
-        return super(SatSat, self).write(vals)
+        _logger.debug(f"Finalizando write para registros {self.ids} con valores: {vals}")
+        result = super(SatSat, self).write(vals)
+
+        # 🔍 Después de escribir, revisar anomalías de modelo y contómetro
+        for record in self:
+            prev = cambios_previos.get(record.id) or {}
+            modelo_anterior = prev.get('modelo_anterior', '')
+            tipo_anterior = prev.get('tipo_anterior')
+            contometro_anterior = prev.get('contometro_anterior', '0')
+
+            modelo_nuevo = record.name.name if record.name else ''
+            tipo_nuevo = record.tipo_id
+            contometro_nuevo = record.contometro or '0'
+
+            # 1) Cambios raros de modelo (velocidad / color)
+            self._check_model_anomalies(
+                record,
+                modelo_anterior,
+                modelo_nuevo,
+                tipo_anterior,
+                tipo_nuevo,
+            )
+
+            # 2) Saltos raros de contómetro
+            self._check_counter_anomalies(
+                record,
+                contometro_anterior,
+                contometro_nuevo,
+            )
+
+        return result
+    
+    def _check_model_anomalies(self, record, modelo_anterior, modelo_nuevo, tipo_anterior, tipo_nuevo):
+        """
+        Detecta casos como:
+        - Canon 4525  -> 4525/4535 (cambio de velocidad dentro misma familia)
+        - bizhub 364e -> bizhub C364e (cambio de mono a color)
+        y avisa por chatter/correo (a Isidro).
+        """
+        # Si no cambió el modelo, no hacemos nada
+        if not modelo_anterior or not modelo_nuevo or modelo_anterior == modelo_nuevo:
+            return
+
+        # Extraer último bloque numérico de cada modelo (núcleo de velocidad)
+        def _get_core_digits(text):
+            nums = re.findall(r'\d+', text or '')
+            return nums[-1] if nums else None
+
+        core_old = _get_core_digits(modelo_anterior)
+        core_new = _get_core_digits(modelo_nuevo)
+
+        posible_cambio_velocidad = False
+        detalle_velocidad = ""
+
+        if core_old and core_new and core_old != core_new:
+            # Caso típico: 4525 -> 4535 (mismo largo y primeros dígitos iguales)
+            try:
+                if len(core_old) == len(core_new):
+                    if len(core_old) == 4 and core_old[:2] == core_new[:2]:
+                        posible_cambio_velocidad = True
+                        detalle_velocidad = f"{core_old[-2:]} → {core_new[-2:]}"
+                    else:
+                        # fallback: cualquier cambio de núcleo con mismo largo
+                        posible_cambio_velocidad = True
+                        detalle_velocidad = f"{core_old} → {core_new}"
+            except Exception:
+                pass
+
+        # Cambio de tipo (color/mono)
+        cambio_tipo = False
+        if tipo_anterior and tipo_nuevo and tipo_anterior != tipo_nuevo:
+            cambio_tipo = True
+
+        # Si no hay nada relevante, salir
+        if not posible_cambio_velocidad and not cambio_tipo:
+            return
+
+        isidro_partner_id = record.get_isidro_partner_id()
+        url = record.generate_record_url(record)
+
+        lineas = [
+            "Se detectó una actualización relevante del modelo (posiblemente por SNMP o edición manual):",
+            f"• Modelo anterior: <b>{modelo_anterior}</b>",
+            f"• Modelo nuevo: <b>{modelo_nuevo}</b>",
+        ]
+
+        if posible_cambio_velocidad:
+            lineas.append(f"• Posible cambio de velocidad (núcleo): <b>{detalle_velocidad}</b>")
+
+        if cambio_tipo:
+            sel_tipo = dict(record._fields['tipo_id'].selection)
+            txt_old = sel_tipo.get(tipo_anterior, tipo_anterior)
+            txt_new = sel_tipo.get(tipo_nuevo, tipo_nuevo)
+            lineas.append(f"• Cambio de tipo: <b>{txt_old}</b> → <b>{txt_new}</b>")
+
+        lineas.append(f"• Equipo: <b>{record.name.name if record.name else ''}</b> / Serie: <b>{record.serie_id}</b>")
+        lineas.append(f"• Enlace al equipo: {url}")
+
+        body = "<br/>".join(lineas)
+
+        record.message_post(
+            body=body,
+            subtype_xmlid='mail.mt_note',
+            partner_ids=[isidro_partner_id] if isidro_partner_id else None,
+        )
+
+    def _check_counter_anomalies(self, record, contometro_anterior, contometro_nuevo):
+        """
+        Detecta variaciones sospechosas en el contómetro, por ejemplo:
+        - 2,000  → 20,000  (x10)
+        - 2,000  → 2,000,000 (muchos más dígitos)
+        y NO molesta si es algo normal, como:
+        - 40,000 → 42,000
+        """
+
+        # Limpiar a solo dígitos
+        old_digits = re.sub(r'[^\d]', '', contometro_anterior or '') or '0'
+        new_digits = re.sub(r'[^\d]', '', contometro_nuevo or '') or '0'
+
+        try:
+            old_val = int(old_digits)
+            new_val = int(new_digits)
+        except Exception:
+            return
+
+        # Si alguno es cero o el nuevo es menor, no analizamos aquí (ya tienes lógica SNMP aparte)
+        if old_val <= 0 or new_val <= 0 or new_val <= old_val:
+            return
+
+        digit_diff = abs(len(str(old_val)) - len(str(new_val)))
+        ratio = new_val / float(old_val) if old_val else 0.0
+
+        # Reglas:
+        # - muchos más dígitos (ej: 4 -> 7)
+        # - o incremento >= x10 del valor anterior
+        if digit_diff < 2 and ratio < 10.0:
+            # incremento normal, no avisamos
+            return
+
+        incremento = new_val - old_val
+        isidro_partner_id = record.get_isidro_partner_id()
+        url = record.generate_record_url(record)
+
+        lineas = [
+            "⚠️ Se detectó una variación inusual en el contómetro:",
+            f"• Valor anterior: <b>{old_val:,}</b>",
+            f"• Valor nuevo: <b>{new_val:,}</b>",
+            f"• Incremento: <b>{incremento:,}</b>",
+            f"• Multiplicador aproximado: <b>x{ratio:.1f}</b>",
+            f"• Equipo: <b>{record.name.name if record.name else ''}</b> / Serie: <b>{record.serie_id}</b>",
+            f"• Enlace al equipo: {url}",
+        ]
+
+        body = "<br/>".join(lineas)
+
+        record.message_post(
+            body=body,
+            subtype_xmlid='mail.mt_note',
+            partner_ids=[isidro_partner_id] if isidro_partner_id else None,
+        )
+
+
     @api.onchange('disponibilidad_id', 'ubicacion_id')
     def _onchange_disponibilidad_ubicacion(self):
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
