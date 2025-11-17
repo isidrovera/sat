@@ -549,29 +549,22 @@ class SatSat(models.Model):
                             f"Estado regresado a 'sin_revisar' para ID {record.id}."
                         )
 
-            # Segunda parte: Manejo de estados de problema y notificaciones
+        # Segunda parte: Manejo de estados de problema y notificaciones
+        # ⚠️ IMPORTANTE: Este bloque NO debe tener early return para estados problemáticos
+        need_problem_notification = False
+        need_availability_notification = False
+        
+        for record in self:
             if 'estado_ventas_id' in vals:
+                estado_actual = record.estado_ventas_id
                 nuevo_estado = vals['estado_ventas_id']
 
                 # Si cambia a estado de problema
-                if nuevo_estado en estados_problema:
+                if nuevo_estado in estados_problema:
                     _logger.debug(
-                        f"Cambiando a estado de problema para ID {record.id}. "
-                        f"Ejecutando super().write()."
+                        f"Cambiando a estado de problema para ID {record.id}."
                     )
-                    result = super(SatSat, self).write(vals)
-
-                    try:
-                        record.enviar_mensaje_problema_asesora()
-                        _logger.info(
-                            f"Notificación de problema enviada para ID {record.id}."
-                        )
-                    except Exception as e:
-                        _logger.error(
-                            f"Error al enviar notificaciones para ID {record.id}: {e}"
-                        )
-
-                    return result
+                    need_problem_notification = True
 
                 # Si cambia de un estado problemático a otro no problemático
                 elif estado_actual in estados_problema and nuevo_estado not in estados_problema:
@@ -581,32 +574,43 @@ class SatSat(models.Model):
                     )
                     vals['descripcion'] = False
                     vals['activador'] = 'no'
+
+                # Verificar si necesita notificación de disponibilidad
+                if estado_actual in estados_problema and nuevo_estado != estado_final_no_notificar:
+                    need_availability_notification = True
+
+        # Ejecutar la escritura final después de todas las validaciones
+        _logger.debug(f"Finalizando write para registros {self.ids} con valores: {vals}")
+        result = super(SatSat, self).write(vals)
+
+        # ✅ DESPUÉS del super().write() hacer las notificaciones y validaciones
+        for record in self:
+            # Notificaciones de estado
+            if need_problem_notification:
+                try:
+                    record.enviar_mensaje_problema_asesora()
+                    _logger.info(f"Notificación de problema enviada para ID {record.id}.")
+                except Exception as e:
+                    _logger.error(f"Error al enviar notificaciones para ID {record.id}: {e}")
+
+            if need_availability_notification:
+                try:
+                    record.enviar_notificacion_disponibilidad()
+                    _logger.info(f"Notificación de disponibilidad enviada para ID {record.id}.")
+                except Exception as e:
+                    _logger.error(f"Error al enviar notificación de disponibilidad para ID {record.id}: {e}")
+
+            # Mensaje de limpieza de descripción si aplica
+            if 'descripcion' in vals and vals.get('descripcion') == False:
+                estado_actual = record.estado_ventas_id
+                nuevo_estado = vals.get('estado_ventas_id', estado_actual)
+                if estado_actual in estados_problema and nuevo_estado not in estados_problema:
                     message = _(
                         "Se limpió la descripción al cambiar el estado de '%s' a '%s'"
                     ) % (estado_actual, nuevo_estado)
                     record.message_post(body=message)
 
-                # Nueva lógica: Enviar notificación de disponibilidad si aplica
-                if estado_actual in estados_problema and nuevo_estado != estado_final_no_notificar:
-                    _logger.debug(
-                        f"Enviando notificación de disponibilidad para ID {record.id}."
-                    )
-                    try:
-                        record.enviar_notificacion_disponibilidad()
-                        _logger.info(
-                            f"Notificación de disponibilidad enviada para ID {record.id}."
-                        )
-                    except Exception as e:
-                        _logger.error(
-                            f"Error al enviar notificación de disponibilidad para ID {record.id}: {e}"
-                        )
-
-        # Ejecutar la escritura final después de todas las validaciones y notificaciones
-        _logger.debug(f"Finalizando write para registros {self.ids} con valores: {vals}")
-        result = super(SatSat, self).write(vals)
-
-        # 🔍 Después de escribir, revisar anomalías de modelo y contómetro
-        for record in self:
+            # 🔍 Revisar anomalías de modelo y contómetro
             prev = cambios_previos.get(record.id) or {}
             modelo_anterior = prev.get('modelo_anterior', '')
             tipo_anterior = prev.get('tipo_anterior')
@@ -619,7 +623,7 @@ class SatSat(models.Model):
             fuente_actual = record.ultima_fuente_actualizacion or ''
 
             # 1) Cambios raros de modelo (velocidad / color)
-            self._check_model_anomalies(
+            record._check_model_anomalies(
                 record,
                 modelo_anterior,
                 modelo_nuevo,
@@ -628,7 +632,7 @@ class SatSat(models.Model):
             )
 
             # 2) Saltos raros de contómetro
-            self._check_counter_anomalies(
+            record._check_counter_anomalies(
                 record,
                 contometro_anterior,
                 contometro_nuevo,
@@ -656,7 +660,7 @@ class SatSat(models.Model):
                         new_val = int(new_digits) if new_digits else 0
                         
                         # ✅ SOLO notificar si es cambio anormal
-                        if self._is_counter_anomaly(old_val, new_val):
+                        if record._is_counter_anomaly(old_val, new_val):
                             record.notify_snmp_counter_update(
                                 previous_counter=old_val,
                                 new_counter=new_val
@@ -847,7 +851,6 @@ class SatSat(models.Model):
             subtype_xmlid='mail.mt_note',
             partner_ids=[isidro_partner_id] if isidro_partner_id else None,
         )
-
 
 
 
