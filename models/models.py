@@ -497,6 +497,7 @@ class SatSat(models.Model):
                 'modelo_anterior': record.name.name if record.name else '',
                 'tipo_anterior': record.tipo_id,
                 'contometro_anterior': record.contometro or '0',
+                'fuente_anterior': record.ultima_fuente_actualizacion or '',
             }
 
         for record in self:
@@ -530,12 +531,12 @@ class SatSat(models.Model):
                             serie = record.serie_id
                             message = f"""Se ha colocado una nueva máquina para revisión.
 
-Detalles del equipo:
-- Nombre: {record_name}
-- Serie: {serie}
-- Fecha de registro: {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)
+    Detalles del equipo:
+    - Nombre: {record_name}
+    - Serie: {serie}
+    - Fecha de registro: {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)
 
-Modificado por: {user_name}"""
+    Modificado por: {user_name}"""
                             record.message_post(
                                 body=message,
                                 partner_ids=[isidro_partner_id],
@@ -610,10 +611,12 @@ Modificado por: {user_name}"""
             modelo_anterior = prev.get('modelo_anterior', '')
             tipo_anterior = prev.get('tipo_anterior')
             contometro_anterior = prev.get('contometro_anterior', '0')
+            fuente_anterior = prev.get('fuente_anterior', '')
 
             modelo_nuevo = record.name.name if record.name else ''
             tipo_nuevo = record.tipo_id
             contometro_nuevo = record.contometro or '0'
+            fuente_actual = record.ultima_fuente_actualizacion or ''
 
             # 1) Cambios raros de modelo (velocidad / color)
             self._check_model_anomalies(
@@ -631,8 +634,37 @@ Modificado por: {user_name}"""
                 contometro_nuevo,
             )
 
+            # 3) 🆕 Notificaciones específicas SNMP si la fuente fue SNMP
+            if fuente_actual == 'snmp':
+                # 3A) Si cambió el modelo
+                if modelo_anterior and modelo_nuevo and modelo_anterior != modelo_nuevo:
+                    try:
+                        record.notify_snmp_model_change(
+                            previous_model=modelo_anterior,
+                            new_model=modelo_nuevo
+                        )
+                    except Exception as e:
+                        _logger.error(f"Error notificando cambio de modelo SNMP: {e}")
+
+                # 3B) Si cambió el contómetro de forma significativa
+                if contometro_anterior != contometro_nuevo:
+                    try:
+                        old_digits = re.sub(r'[^\d]', '', contometro_anterior or '0')
+                        new_digits = re.sub(r'[^\d]', '', contometro_nuevo or '0')
+                        
+                        old_val = int(old_digits) if old_digits else 0
+                        new_val = int(new_digits) if new_digits else 0
+                        
+                        if old_val > 0 and new_val > 0:
+                            record.notify_snmp_counter_update(
+                                previous_counter=old_val,
+                                new_counter=new_val
+                            )
+                    except Exception as e:
+                        _logger.error(f"Error notificando cambio de contador SNMP: {e}")
+
         return result
-    
+
     def _check_model_anomalies(self, record, modelo_anterior, modelo_nuevo, tipo_anterior, tipo_nuevo):
         """
         Detecta casos como:
@@ -761,7 +793,8 @@ Modificado por: {user_name}"""
             subtype_xmlid='mail.mt_note',
             partner_ids=[isidro_partner_id] if isidro_partner_id else None,
         )
-        # =========================
+
+    # =========================
     #  NOTIFICACIONES SNMP
     # =========================
 
@@ -823,20 +856,83 @@ Modificado por: {user_name}"""
             }
         )
 
-    def notify_snmp_model_mismatch(self, snmp_model, current_model):
+    def notify_snmp_model_mismatch(self, snmp_model, current_model, new_model=None):
         """
         Notifica cuando el modelo detectado por SNMP NO coincide con el registrado.
         Ej: MP 3055 vs MP 4055, 4525 vs 4535, etc.
+        
+        Parámetros:
+        - snmp_model: Modelo detectado por SNMP
+        - current_model: Modelo que tenía el equipo antes
+        - new_model: (Opcional) Modelo al que se cambió automáticamente
         """
         self.ensure_one()
 
+        url = self.generate_record_url(self)
+        
+        if new_model and new_model != current_model:
+            # Caso: Se cambió automáticamente el modelo
+            body = _(
+                "⚠️ <b>Modelo cambiado automáticamente por SNMP (mismatch de núcleo)</b><br/>"
+                "• Modelo anterior: <b>%(cur)s</b><br/>"
+                "• Modelo nuevo: <b>%(new)s</b><br/>"
+                "• Detectado por SNMP: <b>%(snmp)s</b><br/>"
+                "• Serie: <b>%(serie)s</b><br/>"
+                "• Enlace: %(url)s"
+            ) % {
+                'cur': current_model or '—',
+                'new': new_model or '—',
+                'snmp': snmp_model or '—',
+                'serie': self.serie_id or '—',
+                'url': url,
+            }
+        else:
+            # Caso: Solo se detectó diferencia, no se cambió
+            body = _(
+                "⚠️ <b>Diferencia de modelo detectada por SNMP</b><br/>"
+                "• Modelo actual: <b>%(cur)s</b><br/>"
+                "• Modelo detectado por SNMP: <b>%(snmp)s</b><br/>"
+                "• Serie: <b>%(serie)s</b><br/>"
+                "• Enlace: %(url)s"
+            ) % {
+                'cur': current_model or '—',
+                'snmp': snmp_model or '—',
+                'serie': self.serie_id or '—',
+                'url': url,
+            }
+
+        self.message_post(body=body)
+
+        self._send_snmp_mail(
+            'sat.email_template_snmp_model_mismatch',
+            {
+                'snmp_current_model': current_model,
+                'snmp_detected_model': snmp_model,
+                'snmp_new_model': new_model,
+                'record_url': url,
+            }
+        )
+
+    def notify_snmp_model_change(self, previous_model, new_model):
+        """
+        Notifica cuando SNMP cambió exitosamente el modelo del equipo.
+        Esto es para cambios normales, no mismatches.
+        """
+        self.ensure_one()
+        
+        url = self.generate_record_url(self)
+        
         body = _(
-            "⚠️ <b>Diferencia de modelo detectada por SNMP</b><br/>"
-            "Modelo actual: <b>%(cur)s</b><br/>"
-            "Modelo SNMP: <b>%(snmp)s</b>"
+            "✅ <b>Modelo actualizado por SNMP</b><br/>"
+            "• Modelo anterior: <b>%(prev)s</b><br/>"
+            "• Modelo nuevo: <b>%(new)s</b><br/>"
+            "• Serie: <b>%(serie)s</b><br/>"
+            "• Enlace: %(url)s"
         ) % {
-            'cur': current_model or '—',
-            'snmp': snmp_model or '—',
+            'prev': previous_model or '—',
+            'new': new_model or '—',
+            'serie': self.serie_id or '—',
+            'url': url,
         }
 
         self.message_post(body=body)
@@ -844,8 +940,66 @@ Modificado por: {user_name}"""
         self._send_snmp_mail(
             'sat.email_template_snmp_model_change',
             {
-                'snmp_current_model': current_model,
-                'snmp_detected_model': snmp_model,
+                'snmp_previous_model': previous_model,
+                'snmp_new_model': new_model,
+                'record_url': url,
+            }
+        )
+
+    def notify_snmp_counter_update(self, previous_counter, new_counter):
+        """
+        Notifica cuando SNMP actualizó el contómetro.
+        Solo notifica si hay cambio significativo (no ruido).
+        """
+        self.ensure_one()
+        
+        # Solo notificar si hay cambio real
+        if previous_counter == new_counter:
+            return
+        
+        url = self.generate_record_url(self)
+        incremento = new_counter - previous_counter
+        
+        # Formatear con comas para mejor lectura
+        prev_formatted = f"{previous_counter:,}"
+        new_formatted = f"{new_counter:,}"
+        inc_formatted = f"{incremento:,}"
+        
+        if incremento < 0:
+            emoji = "⚠️"
+            tipo = "decreció"
+        else:
+            emoji = "✅"
+            tipo = "aumentó"
+        
+        body = _(
+            "%(emoji)s <b>Contómetro %(tipo)s por SNMP</b><br/>"
+            "• Anterior: <b>%(prev)s</b><br/>"
+            "• Nuevo: <b>%(new)s</b><br/>"
+            "• Cambio: <b>%(inc)s</b><br/>"
+            "• Modelo: <b>%(model)s</b><br/>"
+            "• Serie: <b>%(serie)s</b><br/>"
+            "• Enlace: %(url)s"
+        ) % {
+            'emoji': emoji,
+            'tipo': tipo,
+            'prev': prev_formatted,
+            'new': new_formatted,
+            'inc': inc_formatted,
+            'model': self.name.name if self.name else '—',
+            'serie': self.serie_id or '—',
+            'url': url,
+        }
+
+        self.message_post(body=body)
+
+        self._send_snmp_mail(
+            'sat.email_template_snmp_counter_update',
+            {
+                'snmp_previous_counter': prev_formatted,
+                'snmp_new_counter': new_formatted,
+                'snmp_increment': inc_formatted,
+                'record_url': url,
             }
         )
 
@@ -856,10 +1010,18 @@ Modificado por: {user_name}"""
         """
         self.ensure_one()
 
+        url = self.generate_record_url(self)
+
         body = _(
             "💡 <b>Sugerencia de modelo detectada por SNMP</b><br/>"
-            "Modelo sugerido: <b>%s</b>"
-        ) % (snmp_model or '—')
+            "• Modelo sugerido: <b>%(snmp)s</b><br/>"
+            "• Serie: <b>%(serie)s</b><br/>"
+            "• Enlace: %(url)s"
+        ) % {
+            'snmp': snmp_model or '—',
+            'serie': self.serie_id or '—',
+            'url': url,
+        }
 
         self.message_post(body=body)
 
@@ -867,9 +1029,9 @@ Modificado por: {user_name}"""
             'sat.email_template_snmp_model_suggestion',
             {
                 'snmp_suggested_model': snmp_model,
+                'record_url': url,
             }
         )
-
 
     def enviar_mensaje_problema_asesora(self):
         """Envía mensaje WhatsApp (si hay cliente y asesora) y siempre intenta enviar correo electrónico."""

@@ -229,19 +229,19 @@
     </html>
         ]]></field>
         </record> 
-        <!-- ⚠️ Cambio de modelo / tipo detectado por SNMP -->
-        <record id="email_template_snmp_model_change" model="mail.template">
-            <field name="name">⚠️ SNMP - Cambio relevante de modelo</field>
-            <field name="model_id" ref="model_sat_sat"/>
-            <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">verapolo@icloud.com</field>
-            <field name="email_cc"></field>
-            <field name="subject">
-                <![CDATA[⚠️ Cambio de modelo detectado: {{ object.name.name }} / {{ object.serie_id }}]]>
-            </field>
-            <field name="auto_delete" eval="True"/>
+        <!-- 1️⃣ CAMBIO AUTOMÁTICO DE MODELO POR MISMATCH DE NÚCLEO -->
+<record id="email_template_snmp_model_mismatch" model="mail.template">
+    <field name="name">🚨 SNMP - Mismatch de modelo (cambio automático)</field>
+    <field name="model_id" ref="model_sat_sat"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">verapolo@icloud.com</field>
+    <field name="email_cc"></field>
+    <field name="subject">
+        <![CDATA[🚨 Modelo cambiado automáticamente por SNMP: {{ object.serie_id }}]]>
+    </field>
+    <field name="auto_delete" eval="True"/>
 
-            <field name="body_html"><![CDATA[
+    <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
 <head>
@@ -251,69 +251,150 @@
     <div style="max-width:700px;margin:0 auto;padding:20px;">
         
         <!-- Encabezado -->
-        <div style="background-color:#ff6f61;padding:20px;text-align:center;">
-            <div style="color:#ffffff;font-size:22px;font-weight:bold;">
-                ⚠️ Cambio relevante de modelo detectado
+        <div style="background-color:#dc2626;padding:20px;text-align:center;">
+            <div style="color:#ffffff;font-size:24px;font-weight:bold;">
+                🚨 Mismatch de modelo detectado
+            </div>
+            <div style="color:#fee2e2;font-size:14px;margin-top:8px;">
+                El modelo se cambió automáticamente
             </div>
         </div>
 
         <!-- Contenido -->
         <div style="background-color:#ffffff;padding:20px;border:1px solid #e2e8f0;">
-            <p>Estimado equipo,</p>
-            <p>
-                El sistema SNMP ha detectado un <strong>cambio relevante en el modelo</strong> 
-                o en el tipo (color / monocromática) de la siguiente máquina:
+            <p style="font-size:16px;color:#333333;">
+                <strong>Estimado equipo de Logística/Gerencia,</strong>
+            </p>
+            
+            <p style="margin-top:15px;color:#555555;">
+                El sistema SNMP detectó que el <strong>núcleo del modelo NO coincide</strong> 
+                con lo registrado en el sistema. El modelo se actualizó automáticamente.
             </p>
 
-            <div style="margin:15px 0;padding:15px;background-color:#f9f9f9;border:1px solid #dddddd;">
-                <p><strong>Marca:</strong> <span><t t-out="object.marca"/></span></p>
-                <p><strong>Modelo actual:</strong> <span><t t-out="object.name.name"/></span></p>
-                <p><strong>Serie:</strong> <span><t t-out="object.serie_id"/></span></p>
-                <p><strong>Contómetro actual:</strong> <span><t t-out="object.contometro"/></span></p>
+            <!-- Información del equipo -->
+            <div style="margin:20px 0;padding:20px;background-color:#fef2f2;border-left:4px solid #dc2626;">
+                <h3 style="margin:0 0 15px 0;color:#dc2626;font-size:18px;">📋 Información del Equipo</h3>
+                
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr>
+                        <td style="padding:8px 0;color:#666;width:40%;"><strong>Marca:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.marca"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Serie:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.serie_id"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Cliente/Ubicación:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.cliente_id.name or 'N/A'"/></td>
+                    </tr>
+                </table>
             </div>
 
-            <p style="margin-top:15px;">
-                El detalle exacto del cambio (modelo anterior, modelo nuevo, posible cambio de velocidad o tipo)
-                se ha registrado en el <strong>chatter del equipo</strong>.
-            </p>
+            <!-- Cambios detectados -->
+            <div style="margin:20px 0;padding:20px;background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;">
+                <h3 style="margin:0 0 15px 0;color:#111827;font-size:18px;">🔄 Cambios Detectados</h3>
+                
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background-color:#fee2e2;">
+                        <td style="padding:12px;border:1px solid #fecaca;font-weight:bold;width:40%;">Modelo Anterior:</td>
+                        <td style="padding:12px;border:1px solid #fecaca;color:#dc2626;font-size:16px;font-weight:bold;">
+                            <t t-out="ctx.get('snmp_current_model', '—')"/>
+                        </td>
+                    </tr>
+                    <tr style="background-color:#dcfce7;">
+                        <td style="padding:12px;border:1px solid #bbf7d0;font-weight:bold;">Modelo Nuevo:</td>
+                        <td style="padding:12px;border:1px solid #bbf7d0;color:#16a34a;font-size:16px;font-weight:bold;">
+                            <t t-out="ctx.get('snmp_new_model', '—')"/>
+                        </td>
+                    </tr>
+                    <tr style="background-color:#fef3c7;">
+                        <td style="padding:12px;border:1px solid #fde68a;font-weight:bold;">Detectado por SNMP:</td>
+                        <td style="padding:12px;border:1px solid #fde68a;color:#ca8a04;font-weight:bold;">
+                            <t t-out="ctx.get('snmp_detected_model', '—')"/>
+                        </td>
+                    </tr>
+                </table>
+            </div>
 
-            <p style="margin-top:10px;">
-                Por favor, revisar y confirmar que la información de catálogo, velocidad y tipo sea coherente 
-                antes de usar esta máquina para cotizaciones o ventas.
-            </p>
+            <!-- Razón del cambio -->
+            <div style="margin:20px 0;padding:15px;background-color:#fffbeb;border-left:4px solid #f59e0b;">
+                <p style="margin:0;color:#92400e;font-size:14px;">
+                    <strong>⚠️ Motivo:</strong> El núcleo del modelo (velocidad) detectado por SNMP 
+                    no coincide con el modelo registrado. Esto puede indicar:
+                </p>
+                <ul style="margin:10px 0 0 20px;color:#92400e;font-size:14px;">
+                    <li>Cambio de equipo físico</li>
+                    <li>Error en el registro inicial</li>
+                    <li>Proveedor entregó modelo diferente al cotizado</li>
+                </ul>
+            </div>
+
+            <!-- Acciones recomendadas -->
+            <div style="margin:20px 0;padding:15px;background-color:#eff6ff;border-left:4px solid #3b82f6;">
+                <p style="margin:0 0 10px 0;color:#1e40af;font-weight:bold;">📌 Acciones Recomendadas:</p>
+                <ol style="margin:5px 0 0 20px;color:#1e3a8a;font-size:14px;line-height:1.6;">
+                    <li><strong>Verificar físicamente</strong> el equipo y su placa de serie</li>
+                    <li><strong>Revisar documentos del proveedor</strong> (guía, factura, garantía)</li>
+                    <li><strong>Contactar al proveedor</strong> si hubo cambio no autorizado</li>
+                    <li><strong>Actualizar cotizaciones/contratos</strong> si aplica</li>
+                </ol>
+            </div>
+
+            <!-- Información adicional -->
+            <div style="margin:20px 0;padding:15px;background-color:#f3f4f6;border-radius:6px;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <tr>
+                        <td style="padding:5px 0;color:#666;width:40%;"><strong>Contómetro actual:</strong></td>
+                        <td style="padding:5px 0;color:#333;"><t t-out="object.contometro or '0'"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;color:#666;"><strong>Estado:</strong></td>
+                        <td style="padding:5px 0;color:#333;"><t t-out="object.estado_ventas_id or 'N/A'"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;color:#666;"><strong>Última actualización SNMP:</strong></td>
+                        <td style="padding:5px 0;color:#333;">
+                            <t t-out="object.ultima_actualizacion_snmp or 'N/A'"/>
+                        </td>
+                    </tr>
+                </table>
+            </div>
 
             <!-- Botón -->
             <div style="text-align:center;margin:30px 0 10px 0;">
-                <a t-att-href="object.generate_record_url(object)"
-                   style="background-color:#ff6f61;color:#ffffff;padding:12px 25px;
-                          text-decoration:none;display:inline-block;border-radius:4px;">
-                    Ver máquina en Odoo
+                <a t-att-href="ctx.get('record_url', '#')"
+                   style="background-color:#dc2626;color:#ffffff;padding:14px 30px;
+                          text-decoration:none;display:inline-block;border-radius:6px;
+                          font-weight:bold;font-size:15px;">
+                    🔍 Ver Equipo en Odoo
                 </a>
             </div>
 
-            <div style="margin-top:20px;font-size:12px;color:#777777;border-top:1px solid #eeeeee;padding-top:10px;">
-                Este mensaje se generó automáticamente a partir de datos SNMP y cambios en el registro de máquina.
+            <div style="margin-top:25px;font-size:12px;color:#999999;border-top:1px solid #e5e7eb;padding-top:15px;text-align:center;">
+                Este correo se generó automáticamente desde el sistema SNMP.<br/>
+                Para reclamaciones al proveedor, adjunte este correo como evidencia del cambio detectado.
             </div>
         </div>
     </div>
 </body>
 </html>
-            ]]></field>
-        </record>
+    ]]></field>
+</record>
 
-        <!-- ⚠️ Anomalía fuerte en contometro -->
-        <record id="email_template_snmp_counter_anomaly" model="mail.template">
-            <field name="name">⚠️ SNMP - Anomalía de contometro</field>
-            <field name="model_id" ref="model_sat_sat"/>
-            <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">verapolo@icloud.com</field>
-            <field name="email_cc"></field>
-            <field name="subject">
-                <![CDATA[⚠️ Anomalía de contometro: {{ object.name.name }} / {{ object.serie_id }}]]>
-            </field>
-            <field name="auto_delete" eval="True"/>
+<!-- 2️⃣ CAMBIO NORMAL DE MODELO POR SNMP -->
+<record id="email_template_snmp_model_change" model="mail.template">
+    <field name="name">✅ SNMP - Actualización de modelo</field>
+    <field name="model_id" ref="model_sat_sat"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">verapolo@icloud.com</field>
+    <field name="email_cc"></field>
+    <field name="subject">
+        <![CDATA[✅ Modelo actualizado por SNMP: {{ object.serie_id }}]]>
+    </field>
+    <field name="auto_delete" eval="True"/>
 
-            <field name="body_html"><![CDATA[
+    <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
 <head>
@@ -323,54 +404,516 @@
     <div style="max-width:700px;margin:0 auto;padding:20px;">
         
         <!-- Encabezado -->
-        <div style="background-color:#ed8936;padding:20px;text-align:center;">
-            <div style="color:#ffffff;font-size:22px;font-weight:bold;">
-                ⚠️ Anomalía detectada en contometro
+        <div style="background-color:#16a34a;padding:20px;text-align:center;">
+            <div style="color:#ffffff;font-size:24px;font-weight:bold;">
+                ✅ Modelo actualizado correctamente
+            </div>
+            <div style="color:#dcfce7;font-size:14px;margin-top:8px;">
+                Actualización automática por SNMP
             </div>
         </div>
 
         <!-- Contenido -->
         <div style="background-color:#ffffff;padding:20px;border:1px solid #e2e8f0;">
-            <p>Estimado equipo,</p>
-            <p>
-                El sistema ha detectado un <strong>salto inusual en el contometro</strong> de la siguiente máquina.
+            <p style="font-size:16px;color:#333333;">
+                <strong>Estimado equipo,</strong>
+            </p>
+            
+            <p style="margin-top:15px;color:#555555;">
+                El sistema SNMP detectó y actualizó automáticamente el modelo de este equipo 
+                con la información más reciente.
             </p>
 
-            <div style="margin:15px 0;padding:15px;background-color:#f9f9f9;border:1px solid #dddddd;">
-                <p><strong>Marca:</strong> <span><t t-out="object.marca"/></span></p>
-                <p><strong>Modelo:</strong> <span><t t-out="object.name.name"/></span></p>
-                <p><strong>Serie:</strong> <span><t t-out="object.serie_id"/></span></p>
-                <p><strong>Contometro actual:</strong> <span><t t-out="object.contometro"/></span></p>
+            <!-- Información del equipo -->
+            <div style="margin:20px 0;padding:20px;background-color:#f0fdf4;border-left:4px solid #16a34a;">
+                <h3 style="margin:0 0 15px 0;color:#16a34a;font-size:18px;">📋 Información del Equipo</h3>
+                
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr>
+                        <td style="padding:8px 0;color:#666;width:40%;"><strong>Marca:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.marca"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Serie:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.serie_id"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Cliente/Ubicación:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.cliente_id.name or 'N/A'"/></td>
+                    </tr>
+                </table>
             </div>
 
-            <p style="margin-top:15px;">
-                Los valores detallados (contometro anterior, nuevo, incremento y factor de multiplicación)
-                están registrados en el <strong>chatter del equipo</strong>.
-            </p>
+            <!-- Cambios -->
+            <div style="margin:20px 0;padding:20px;background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;">
+                <h3 style="margin:0 0 15px 0;color:#111827;font-size:18px;">🔄 Actualización</h3>
+                
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background-color:#fee2e2;">
+                        <td style="padding:12px;border:1px solid #fecaca;font-weight:bold;width:40%;">Modelo Anterior:</td>
+                        <td style="padding:12px;border:1px solid #fecaca;color:#991b1b;font-size:16px;font-weight:bold;">
+                            <t t-out="ctx.get('snmp_previous_model', '—')"/>
+                        </td>
+                    </tr>
+                    <tr style="background-color:#dcfce7;">
+                        <td style="padding:12px;border:1px solid #bbf7d0;font-weight:bold;">Modelo Nuevo:</td>
+                        <td style="padding:12px;border:1px solid #bbf7d0;color:#16a34a;font-size:16px;font-weight:bold;">
+                            <t t-out="ctx.get('snmp_new_model', '—')"/>
+                        </td>
+                    </tr>
+                </table>
+            </div>
 
-            <p style="margin-top:10px;">
-                Se recomienda revisar físicamente el equipo y validar la coherencia de los contadores 
-                antes de cerrar ventas, garantías o informes finales.
-            </p>
+            <!-- Razón -->
+            <div style="margin:20px 0;padding:15px;background-color:#eff6ff;border-left:4px solid #3b82f6;">
+                <p style="margin:0;color:#1e40af;font-size:14px;">
+                    <strong>ℹ️ Motivo:</strong> El sistema SNMP obtuvo información más precisa del equipo 
+                    y actualizó automáticamente el registro para mantener la base de datos sincronizada.
+                </p>
+            </div>
+
+            <!-- Información adicional -->
+            <div style="margin:20px 0;padding:15px;background-color:#f3f4f6;border-radius:6px;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <tr>
+                        <td style="padding:5px 0;color:#666;width:40%;"><strong>Contómetro actual:</strong></td>
+                        <td style="padding:5px 0;color:#333;"><t t-out="object.contometro or '0'"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;color:#666;"><strong>Estado:</strong></td>
+                        <td style="padding:5px 0;color:#333;"><t t-out="object.estado_ventas_id or 'N/A'"/></td>
+                    </tr>
+                </table>
+            </div>
 
             <!-- Botón -->
             <div style="text-align:center;margin:30px 0 10px 0;">
-                <a t-att-href="object.generate_record_url(object)"
-                   style="background-color:#ed8936;color:#ffffff;padding:12px 25px;
-                          text-decoration:none;display:inline-block;border-radius:4px;">
-                    Ver máquina en Odoo
+                <a t-att-href="ctx.get('record_url', '#')"
+                   style="background-color:#16a34a;color:#ffffff;padding:14px 30px;
+                          text-decoration:none;display:inline-block;border-radius:6px;
+                          font-weight:bold;font-size:15px;">
+                    🔍 Ver Equipo en Odoo
                 </a>
             </div>
 
-            <div style="margin-top:20px;font-size:12px;color:#777777;border-top:1px solid #eeeeee;padding-top:10px;">
-                Este mensaje se generó automáticamente a partir de datos SNMP y cambios en el registro de máquina.
+            <div style="margin-top:25px;font-size:12px;color:#999999;border-top:1px solid #e5e7eb;padding-top:15px;text-align:center;">
+                Este correo se generó automáticamente desde el sistema SNMP.
             </div>
         </div>
     </div>
 </body>
 </html>
-            ]]></field>
-        </record>  
+    ]]></field>
+</record>
+
+<!-- 3️⃣ ACTUALIZACIÓN DE CONTÓMETRO -->
+<record id="email_template_snmp_counter_update" model="mail.template">
+    <field name="name">📊 SNMP - Actualización de contómetro</field>
+    <field name="model_id" ref="model_sat_sat"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">verapolo@icloud.com</field>
+    <field name="email_cc"></field>
+    <field name="subject">
+        <![CDATA[📊 Contómetro actualizado: {{ object.serie_id }}]]>
+    </field>
+    <field name="auto_delete" eval="True"/>
+
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif;">
+    <div style="max-width:700px;margin:0 auto;padding:20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color:#0891b2;padding:20px;text-align:center;">
+            <div style="color:#ffffff;font-size:24px;font-weight:bold;">
+                📊 Contómetro actualizado
+            </div>
+            <div style="color:#cffafe;font-size:14px;margin-top:8px;">
+                Actualización automática por SNMP
+            </div>
+        </div>
+
+        <!-- Contenido -->
+        <div style="background-color:#ffffff;padding:20px;border:1px solid #e2e8f0;">
+            <p style="font-size:16px;color:#333333;">
+                <strong>Estimado equipo,</strong>
+            </p>
+            
+            <p style="margin-top:15px;color:#555555;">
+                El sistema SNMP ha actualizado el contómetro del siguiente equipo:
+            </p>
+
+            <!-- Información del equipo -->
+            <div style="margin:20px 0;padding:20px;background-color:#ecfeff;border-left:4px solid #0891b2;">
+                <h3 style="margin:0 0 15px 0;color:#0891b2;font-size:18px;">📋 Información del Equipo</h3>
+                
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr>
+                        <td style="padding:8px 0;color:#666;width:40%;"><strong>Marca:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.marca"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Modelo:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.name.name"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Serie:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.serie_id"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Cliente/Ubicación:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.cliente_id.name or 'N/A'"/></td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Cambios de contador -->
+            <div style="margin:20px 0;padding:20px;background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;">
+                <h3 style="margin:0 0 15px 0;color:#111827;font-size:18px;">📈 Actualización del Contador</h3>
+                
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background-color:#fee2e2;">
+                        <td style="padding:12px;border:1px solid #fecaca;font-weight:bold;width:40%;">Contador Anterior:</td>
+                        <td style="padding:12px;border:1px solid #fecaca;color:#991b1b;font-size:18px;font-weight:bold;font-family:monospace;">
+                            <t t-out="ctx.get('snmp_previous_counter', '—')"/>
+                        </td>
+                    </tr>
+                    <tr style="background-color:#dcfce7;">
+                        <td style="padding:12px;border:1px solid #bbf7d0;font-weight:bold;">Contador Nuevo:</td>
+                        <td style="padding:12px;border:1px solid #bbf7d0;color:#16a34a;font-size:18px;font-weight:bold;font-family:monospace;">
+                            <t t-out="ctx.get('snmp_new_counter', '—')"/>
+                        </td>
+                    </tr>
+                    <tr style="background-color:#dbeafe;">
+                        <td style="padding:12px;border:1px solid #bfdbfe;font-weight:bold;">Incremento:</td>
+                        <td style="padding:12px;border:1px solid #bfdbfe;color:#1e40af;font-size:18px;font-weight:bold;font-family:monospace;">
+                            + <t t-out="ctx.get('snmp_increment', '—')"/>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Razón -->
+            <div style="margin:20px 0;padding:15px;background-color:#eff6ff;border-left:4px solid #3b82f6;">
+                <p style="margin:0;color:#1e40af;font-size:14px;">
+                    <strong>ℹ️ Motivo:</strong> Actualización automática del contador de copias 
+                    basada en lectura directa SNMP del equipo.
+                </p>
+            </div>
+
+            <!-- Información adicional -->
+            <div style="margin:20px 0;padding:15px;background-color:#f3f4f6;border-radius:6px;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <tr>
+                        <td style="padding:5px 0;color:#666;width:40%;"><strong>Estado:</strong></td>
+                        <td style="padding:5px 0;color:#333;"><t t-out="object.estado_ventas_id or 'N/A'"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;color:#666;"><strong>Última actualización:</strong></td>
+                        <td style="padding:5px 0;color:#333;">
+                            <t t-out="object.ultima_actualizacion_snmp or 'N/A'"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;color:#666;"><strong>Total actualizaciones:</strong></td>
+                        <td style="padding:5px 0;color:#333;">
+                            <t t-out="object.total_actualizaciones_snmp or '0'"/>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Botón -->
+            <div style="text-align:center;margin:30px 0 10px 0;">
+                <a t-att-href="ctx.get('record_url', '#')"
+                   style="background-color:#0891b2;color:#ffffff;padding:14px 30px;
+                          text-decoration:none;display:inline-block;border-radius:6px;
+                          font-weight:bold;font-size:15px;">
+                    🔍 Ver Equipo en Odoo
+                </a>
+            </div>
+
+            <div style="margin-top:25px;font-size:12px;color:#999999;border-top:1px solid #e5e7eb;padding-top:15px;text-align:center;">
+                Este correo se generó automáticamente desde el sistema SNMP.
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+    ]]></field>
+</record>
+
+<!-- 4️⃣ ANOMALÍA DE CONTÓMETRO (Decremento o salto grande) -->
+<record id="email_template_snmp_counter_anomaly" model="mail.template">
+    <field name="name">⚠️ SNMP - Anomalía de contómetro</field>
+    <field name="model_id" ref="model_sat_sat"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">verapolo@icloud.com</field>
+    <field name="email_cc"></field>
+    <field name="subject">
+        <![CDATA[⚠️ Anomalía en contómetro: {{ object.serie_id }}]]>
+    </field>
+    <field name="auto_delete" eval="True"/>
+
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif;">
+    <div style="max-width:700px;margin:0 auto;padding:20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color:#ea580c;padding:20px;text-align:center;">
+            <div style="color:#ffffff;font-size:24px;font-weight:bold;">
+                ⚠️ Anomalía detectada en contómetro
+            </div>
+            <div style="color:#fed7aa;font-size:14px;margin-top:8px;">
+                Requiere verificación inmediata
+            </div>
+        </div>
+
+        <!-- Contenido -->
+        <div style="background-color:#ffffff;padding:20px;border:1px solid #e2e8f0;">
+            <p style="font-size:16px;color:#333333;">
+                <strong>Estimado equipo de Logística/Gerencia,</strong>
+            </p>
+            
+            <p style="margin-top:15px;color:#555555;">
+                El sistema SNMP detectó una <strong>variación anormal en el contómetro</strong> 
+                que requiere verificación inmediata.
+            </p>
+
+            <!-- Información del equipo -->
+            <div style="margin:20px 0;padding:20px;background-color:#fff7ed;border-left:4px solid #ea580c;">
+                <h3 style="margin:0 0 15px 0;color:#ea580c;font-size:18px;">📋 Información del Equipo</h3>
+                
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr>
+                        <td style="padding:8px 0;color:#666;width:40%;"><strong>Marca:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.marca"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Modelo:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.name.name"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Serie:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.serie_id"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Cliente/Ubicación:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.cliente_id.name or 'N/A'"/></td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Anomalía detectada -->
+            <div style="margin:20px 0;padding:20px;background-color:#fef2f2;border:2px solid #dc2626;border-radius:6px;">
+                <h3 style="margin:0 0 15px 0;color:#dc2626;font-size:18px;">🚨 Anomalía Detectada</h3>
+                
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background-color:#ffffff;">
+                        <td style="padding:12px;border:1px solid #fecaca;font-weight:bold;width:40%;">Contador Anterior:</td>
+                        <td style="padding:12px;border:1px solid #fecaca;color:#991b1b;font-size:18px;font-weight:bold;font-family:monospace;">
+                            <t t-out="ctx.get('snmp_old_counter', '—')"/>
+                        </td>
+                    </tr>
+                    <tr style="background-color:#ffffff;">
+                        <td style="padding:12px;border:1px solid #fecaca;font-weight:bold;">Contador Nuevo:</td>
+                        <td style="padding:12px;border:1px solid #fecaca;color:#dc2626;font-size:18px;font-weight:bold;font-family:monospace;">
+                            <t t-out="ctx.get('snmp_new_counter', '—')"/>
+                        </td>
+                    </tr>
+                    <tr style="background-color:#fef2f2;">
+                        <td style="padding:12px;border:1px solid #fecaca;font-weight:bold;">Tipo de Anomalía:</td>
+                        <td style="padding:12px;border:1px solid #fecaca;color:#7f1d1d;font-size:16px;font-weight:bold;">
+                            <t t-if="ctx.get('snmp_reason') == 'decremento'">
+                                ⬇️ CONTADOR DECRECIÓ
+                            </t>
+                            <t t-else="">
+                                ⬆️ SALTO INUSUALMENTE GRANDE
+                            </t>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Posibles causas -->
+            <div style="margin:20px 0;padding:15px;background-color:#fffbeb;border-left:4px solid #f59e0b;">
+                <p style="margin:0 0 10px 0;color:#92400e;font-weight:bold;">⚠️ Posibles Causas:</p>
+                <ul style="margin:5px 0 0 20px;color:#92400e;font-size:14px;line-height:1.6;">
+                    <li><strong>Cambio físico del equipo</strong> (reemplazo no notificado)</li>
+                    <li><strong>Reseteo de contador</strong> (mantenimiento o manipulación)</li>
+                    <li><strong>Error en la lectura SNMP</strong> (poco probable pero posible)</li>
+                    <li><strong>Proveedor entregó equipo diferente</strong> al registrado</li>
+                </ul>
+            </div>
+
+            <!-- Acciones requeridas -->
+            <div style="margin:20px 0;padding:15px;background-color:#fef2f2;border-left:4px solid #dc2626;">
+                <p style="margin:0 0 10px 0;color:#991b1b;font-weight:bold;">🔴 Acciones Requeridas Urgentemente:</p>
+                <ol style="margin:5px 0 0 20px;color:#7f1d1d;font-size:14px;line-height:1.6;">
+                    <li><strong>Verificar físicamente el equipo</strong> (serie, modelo, placa)</li>
+                    <li><strong>Revisar el contador directamente</strong> en el panel del equipo</li>
+                    <li><strong>Contactar al proveedor</strong> para aclaración</li>
+                    <li><strong>Revisar documentación</strong> (guías, facturas, garantías)</li>
+                    <li><strong>Si hubo cambio no autorizado:</strong> reclamar formalmente al proveedor</li>
+                </ol>
+            </div>
+
+            <!-- Información adicional -->
+            <div style="margin:20px 0;padding:15px;background-color:#f3f4f6;border-radius:6px;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <tr>
+                        <td style="padding:5px 0;color:#666;width:40%;"><strong>Estado actual:</strong></td>
+                        <td style="padding:5px 0;color:#333;"><t t-out="object.estado_ventas_id or 'N/A'"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;color:#666;"><strong>Última actualización SNMP:</strong></td>
+                        <td style="padding:5px 0;color:#333;">
+                            <t t-out="object.ultima_actualizacion_snmp or 'N/A'"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;color:#666;"><strong>Contador antes de SNMP:</strong></td>
+                        <td style="padding:5px 0;color:#333;">
+                            <t t-out="object.contador_antes_snmp or 'N/A'"/>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Botón -->
+            <div style="text-align:center;margin:30px 0 10px 0;">
+                <a t-att-href="object.generate_record_url(object)"
+                   style="background-color:#dc2626;color:#ffffff;padding:14px 30px;
+                          text-decoration:none;display:inline-block;border-radius:6px;
+                          font-weight:bold;font-size:15px;">
+                    🔍 Ver Equipo en Odoo (URGENTE)
+                </a>
+            </div>
+
+            <div style="margin-top:25px;font-size:12px;color:#999999;border-top:1px solid #e5e7eb;padding-top:15px;text-align:center;">
+                <strong>⚠️ Este correo requiere acción inmediata.</strong><br/>
+                Adjunte este correo como evidencia para reclamos al proveedor si es necesario.
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+    ]]></field>
+</record>
+
+<!-- 5️⃣ SUGERENCIA DE MODELO NUEVO -->
+<record id="email_template_snmp_model_suggestion" model="mail.template">
+    <field name="name">💡 SNMP - Sugerencia de modelo nuevo</field>
+    <field name="model_id" ref="model_sat_sat"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">verapolo@icloud.com</field>
+    <field name="email_cc"></field>
+    <field name="subject">
+        <![CDATA[💡 Modelo sugerido por SNMP: {{ object.serie_id }}]]>
+    </field>
+    <field name="auto_delete" eval="True"/>
+
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif;">
+    <div style="max-width:700px;margin:0 auto;padding:20px;">
+        
+        <!-- Encabezado -->
+        <div style="background-color:#8b5cf6;padding:20px;text-align:center;">
+            <div style="color:#ffffff;font-size:24px;font-weight:bold;">
+                💡 Sugerencia de modelo nuevo
+            </div>
+            <div style="color:#ede9fe;font-size:14px;margin-top:8px;">
+                Modelo detectado por SNMP no registrado
+            </div>
+        </div>
+
+        <!-- Contenido -->
+        <div style="background-color:#ffffff;padding:20px;border:1px solid #e2e8f0;">
+            <p style="font-size:16px;color:#333333;">
+                <strong>Estimado equipo,</strong>
+            </p>
+            
+            <p style="margin-top:15px;color:#555555;">
+                El sistema SNMP detectó un modelo que <strong>no está registrado</strong> 
+                en el catálogo. Se requiere crear este modelo manualmente.
+            </p>
+
+            <!-- Información del equipo -->
+            <div style="margin:20px 0;padding:20px;background-color:#faf5ff;border-left:4px solid #8b5cf6;">
+                <h3 style="margin:0 0 15px 0;color:#8b5cf6;font-size:18px;">📋 Información del Equipo</h3>
+                
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr>
+                        <td style="padding:8px 0;color:#666;width:40%;"><strong>Marca:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.marca"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Serie:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.serie_id"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Modelo actual:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.name.name if object.name else 'SIN MODELO'"/></td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Modelo sugerido -->
+            <div style="margin:20px 0;padding:20px;background-color:#dbeafe;border:2px solid #3b82f6;border-radius:6px;text-align:center;">
+                <p style="margin:0 0 10px 0;color:#1e40af;font-weight:bold;font-size:16px;">
+                    📝 Modelo Sugerido por SNMP:
+                </p>
+                <div style="background-color:#ffffff;padding:15px;border-radius:4px;margin-top:10px;">
+                    <span style="font-size:24px;font-weight:bold;color:#1e40af;">
+                        <t t-out="ctx.get('snmp_suggested_model', '—')"/>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Acción requerida -->
+            <div style="margin:20px 0;padding:15px;background-color:#eff6ff;border-left:4px solid #3b82f6;">
+                <p style="margin:0 0 10px 0;color:#1e40af;font-weight:bold;">📌 Acción Requerida:</p>
+                <ol style="margin:5px 0 0 20px;color:#1e3a8a;font-size:14px;line-height:1.6;">
+                    <li><strong>Crear el modelo</strong> en el catálogo de Odoo</li>
+                    <li><strong>Configurar correctamente:</strong> marca, tipo (color/mono), velocidad, precio</li>
+                    <li><strong>Asignar el modelo</strong> a este equipo</li>
+                    <li><strong>Verificar físicamente</strong> que la información sea correcta</li>
+                </ol>
+            </div>
+
+            <!-- Botón -->
+            <div style="text-align:center;margin:30px 0 10px 0;">
+                <a t-att-href="ctx.get('record_url', '#')"
+                   style="background-color:#8b5cf6;color:#ffffff;padding:14px 30px;
+                          text-decoration:none;display:inline-block;border-radius:6px;
+                          font-weight:bold;font-size:15px;">
+                    🔍 Ver Equipo en Odoo
+                </a>
+            </div>
+
+            <div style="margin-top:25px;font-size:12px;color:#999999;border-top:1px solid #e5e7eb;padding-top:15px;text-align:center;">
+                Este correo se generó automáticamente desde el sistema SNMP.
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+    ]]></field>
+</record>
     </data>
 </odoo>
    
