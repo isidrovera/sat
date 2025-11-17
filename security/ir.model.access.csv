@@ -71,7 +71,7 @@ access_reparacion_autenticacion_wizard_portal,reparacion_autenticacion_wizard.po
 access_tipo_maquina_portal,tipo_maquina.portal_access,model_tipo_maquina,base.group_portal,1,0,0,0
 access_ajustes_ajustes_portal,ajustes_ajustes.portal_access,model_ajustes_ajustes,base.group_portal,1,0,0,0
 access_modelo_maquina_portal,modelo_maquina.portal_access,model_modelo_maquina,base.group_portal,1,0,0,0
-access_marca_marca_portal,marca_marca.portal_access,model_marca_marca,base.group_portal,1,0,0,0
+access_marca_marca_portal,marca_marca.portal_access,model_marca_marca,base.group_portal,1,1,1,0
 access_repuestos_alquiler_portal,repuestos_alquiler.portal_access,model_repuestos_alquiler,base.group_portal,1,0,0,0
 access_fallas_portal,fallas.portal_access,model_fallas,base.group_portal,1,0,0,0
 access_informes_portal,informes.portal_access,model_informes,base.group_portal,1,0,0,0
