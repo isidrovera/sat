@@ -534,24 +534,69 @@ class SatSat(models.Model):
             and r.fecha_para_revision < self.fecha_para_revision
         )
 
-        # 6) Armar lista (Cliente – Modelo – Serie)
-        lineas = []
-        max_items = 5  # mostrar como máximo 5 equipos
+        # 6) Construir "tabla" para el POPUP (texto plano)
+        lineas_text = []
+        max_items = 5  # máximo que mostramos en detalle
 
-        for idx, rec in enumerate(ahead[:max_items], start=1):
-            cliente = rec.cliente_id.name or "Sin cliente"
-            modelo = rec.name.name if rec.name else "Sin modelo"
-            serie = rec.serie_id or "Sin serie"
-            lineas.append(f"({idx}) {cliente} – {modelo} – Serie: {serie}")
+        if ahead:
+            # Cabecera tipo tabla
+            lineas_text.append("N°  | Cliente                      | Modelo              | Serie")
+            lineas_text.append("----+-----------------------------+---------------------+------------------------")
 
-        # Si hay más de 5, agregar resumen
-        if len(ahead) > max_items:
-            restantes = len(ahead) - max_items
-            lineas.append(f"... y {restantes} máquina(s) más por delante.")
+            for idx, rec in enumerate(ahead[:max_items], start=1):
+                cliente = (rec.cliente_id.name or "Sin cliente")[:27]
+                modelo = (rec.name.name if rec.name else "Sin modelo")[:19]
+                serie = (rec.serie_id or "Sin serie")[:22]
 
-        # 7) Texto plano para la NOTIFICACIÓN
-        detalle_cola_text = "\n".join(lineas) if lineas else "No hay máquinas antes que esta."
+                lineas_text.append(
+                    f"{idx:>2}  | {cliente:<27} | {modelo:<19} | {serie:<22}"
+                )
 
+            if len(ahead) > max_items:
+                restantes = len(ahead) - max_items
+                lineas_text.append(f"... y {restantes} máquina(s) más por delante.")
+        else:
+            lineas_text.append("No hay máquinas antes que esta.")
+
+        detalle_cola_text = "\n".join(lineas_text)
+
+        # 7) Construir tabla HTML para el CHATTER
+        if ahead:
+            rows_html = ""
+            for idx, rec in enumerate(ahead[:max_items], start=1):
+                cliente = rec.cliente_id.name or "Sin cliente"
+                modelo = rec.name.name if rec.name else "Sin modelo"
+                serie = rec.serie_id or "Sin serie"
+                rows_html += (
+                    "<tr>"
+                    f"<td>{idx}</td>"
+                    f"<td>{cliente}</td>"
+                    f"<td>{modelo}</td>"
+                    f"<td>{serie}</td>"
+                    "</tr>"
+                )
+            if len(ahead) > max_items:
+                restantes = len(ahead) - max_items
+                rows_html += (
+                    f"<tr><td colspan='4'>… y {restantes} máquina(s) más por delante.</td></tr>"
+                )
+
+            detalle_cola_html = (
+                "<table border='1' cellspacing='0' cellpadding='3'>"
+                "<thead>"
+                "<tr>"
+                "<th>N°</th><th>Cliente</th><th>Modelo</th><th>Serie</th>"
+                "</tr>"
+                "</thead>"
+                "<tbody>"
+                f"{rows_html}"
+                "</tbody>"
+                "</table>"
+            )
+        else:
+            detalle_cola_html = "No hay máquinas antes que esta."
+
+        # 8) Mensaje para la NOTIFICACIÓN (texto plano)
         mensaje_notificacion = (
             "La máquina ha sido colocada en la cola de revisión.\n\n"
             "Máquinas antes que esta:\n"
@@ -559,14 +604,7 @@ class SatSat(models.Model):
             f"Puesto actual: {puesto}"
         )
 
-        # 8) HTML para el CHATTER
-        if lineas:
-            detalle_cola_html = "<br/>".join(
-                [f"• {linea}" for linea in lineas]
-            )
-        else:
-            detalle_cola_html = "No hay máquinas antes que esta."
-
+        # 9) Mensaje para el CHATTER (HTML)
         isidro_partner_id = self.get_isidro_partner_id()
         mensaje_chatter = (
             f"<p><b>Puesto actual:</b> {puesto}</p>"
@@ -579,15 +617,15 @@ class SatSat(models.Model):
             subtype_xmlid='mail.mt_comment',
         )
 
-        # 9) Notificación visual (TEXTO PLANO, SIN HTML)
+        # 10) Notificación visual (texto plano, no sticky -> se cierra sola tras unos segundos)
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
                 'title': "Máquina en revisión",
-                'message': mensaje_notificacion,  # aquí va solo texto con \n
+                'message': mensaje_notificacion,
                 'type': 'success',
-                'sticky': True,
+                'sticky': False,  # no pegajosa: Odoo la cierra solo (no podemos fijar exactamente 10s desde Python)
             }
         }
 
