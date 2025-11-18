@@ -516,9 +516,6 @@ class SatSat(models.Model):
             'fecha_para_revision': fecha_str,
         })
 
-        # Asegurar valores frescos del propio registro
-        self.invalidate_cache(['fecha_para_revision', 'estado_ventas_id'])
-
         # 3) Obtener cola completa (para_revision + en_revision) ordenada
         domain = [
             ('estado_ventas_id', 'in', ['para_revision', 'en_revision']),
@@ -563,9 +560,12 @@ class SatSat(models.Model):
         )
 
         # 8) HTML para el CHATTER
-        detalle_cola_html = "<br/>".join(
-            [f"• {linea}" for linea in lineas]
-        ) if lineas else "No hay máquinas antes que esta."
+        if lineas:
+            detalle_cola_html = "<br/>".join(
+                [f"• {linea}" for linea in lineas]
+            )
+        else:
+            detalle_cola_html = "No hay máquinas antes que esta."
 
         isidro_partner_id = self.get_isidro_partner_id()
         mensaje_chatter = (
@@ -585,7 +585,7 @@ class SatSat(models.Model):
             'tag': 'display_notification',
             'params': {
                 'title': "Máquina en revisión",
-                'message': mensaje_notificacion,  # <-- aquí ya NO hay <p> ni <br/>
+                'message': mensaje_notificacion,  # aquí va solo texto con \n
                 'type': 'success',
                 'sticky': True,
             }
