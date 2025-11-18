@@ -548,28 +548,28 @@ class SatSat(models.Model):
             lineas.append(f"… y {restantes} máquina(s) más por delante.")
 
         # Construir mensaje final
+                # Construir el mensaje HTML bonito
         detalle_cola = "<br/>".join(lineas) if lineas else "No hay máquinas antes que esta."
 
         mensaje_notificacion = (
-            f"La máquina ha sido colocada en la cola de revisión.<br/>"
-            f"<br/>"
-            f"<b>Máquinas antes que esta:</b><br/>{detalle_cola}<br/><br/>"
-            f"<b>Puesto actual:</b> {puesto}"
+            f"<p>La máquina ha sido colocada en la cola de revisión.</p>"
+            f"<p><b>Máquinas antes que esta:</b><br/>{detalle_cola}</p>"
+            f"<p><b>Puesto actual:</b> {puesto}</p>"
         )
 
-        # Registrar en chatter
-        isidro_partner_id = self.get_isidro_partner_id()
-        mensaje_chatter = f"""Se colocó máquina en revisión.<br/><br/>
-<b>Puesto actual:</b> {puesto}<br/>
-<b>Máquinas por delante:</b><br/>{detalle_cola}
-"""
+        # Registrar en chatter con HTML bonito
+        mensaje_chatter = (
+            f"<p><b>Puesto actual:</b> {puesto}</p>"
+            f"<p><b>Máquinas por delante:</b><br/>{detalle_cola}</p>"
+        )
+
         self.message_post(
             body=mensaje_chatter,
             partner_ids=[isidro_partner_id] if isidro_partner_id else None,
             subtype_xmlid='mail.mt_comment',
         )
 
-        # Notificación visual al usuario
+        # Notificación HTML limpia en Odoo 18
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
@@ -580,6 +580,7 @@ class SatSat(models.Model):
                 'sticky': True,
             }
         }
+
 
 
     def action_quitar_de_revision(self):
