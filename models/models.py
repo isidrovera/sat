@@ -499,34 +499,35 @@ class SatSat(models.Model):
             record.posicion_cola = posicion
     def action_colocar_en_revision(self):
         """
-        Coloca la(s) máquina(s) en estado 'para_revision',
-        registra fecha_para_revision y muestra el puesto en cola.
+        Coloca la máquina en estado 'para_revision',
+        registra fecha_para_revision (en UTC, naïve para Odoo)
+        y muestra el puesto en cola.
         """
-        self.ensure_one()  # normalmente usarás el botón en un registro
+        self.ensure_one()
 
-        # Validar que tenga tipo_revision y prioridad definidos (opcional pero útil)
-        if not self.tipo_revision or not self.prioridad:
-            raise ValidationError(_(
-                "Debe seleccionar 'Tipo de revisión' y 'Prioridad' antes de colocar la máquina en revisión."
-            ))
+        # Ya NO obligamos a tener tipo_revision/prioridad
+        # Son completamente opcionales ahora.
 
-        # Fecha/hora Lima
+        # Fecha/hora Lima usando tu helper
         peru_dt = self._get_peru_datetime()
+        # Convertimos a UTC
         utc_dt = peru_dt.astimezone(pytz.utc)
+        # Odoo quiere datetime naive o string sin tz -> usamos string como en tu write anterior
+        fecha_str = utc_dt.strftime('%Y-%m-%d %H:%M:%S')
 
         # Cambiar estado y fecha
         self.write({
             'estado_ventas_id': 'para_revision',
-            'fecha_para_revision': utc_dt,
+            'fecha_para_revision': fecha_str,
         })
 
-        # Recalcular puesto en cola (usa el compute)
+        # Recalcular puesto en cola
         self._compute_posicion_cola()
         puesto = self.posicion_cola or 1
 
-        # Notificación en chatter
+        # Notificación en chatter (similar a lo que tenías en write)
         isidro_partner_id = self.get_isidro_partner_id()
-        mensaje_chatter = f"""Se ha colocado una máquina para revisión.
+        mensaje_chatter = f"""Se ha colocado una nueva máquina para revisión.
 
 Detalles del equipo:
 - Modelo: {self.name.name if self.name else ''}
@@ -542,7 +543,7 @@ Modificado por: {self.env.user.name}
             subtype_xmlid='mail.mt_comment',
         )
 
-        # Notificación en pantalla
+        # Notificación visual al usuario
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
@@ -556,6 +557,7 @@ Modificado por: {self.env.user.name}
                 'sticky': False,
             }
         }
+
     def action_quitar_de_revision(self):
         """
         Quita la(s) máquina(s) de la cola de revisión,
