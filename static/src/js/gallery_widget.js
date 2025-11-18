@@ -46,44 +46,61 @@ class GalleryWidget extends Component {
     }
 
     async loadPhotos(isInitial = false) {
-        try {
-            this.state.isLoading = true;
-            this.state.error = null;
+    try {
+        // Verificar si el componente fue destruido antes de comenzar
+        if (this.__owl__.status === 5) { // 5 = DESTROYED
+            return;
+        }
 
-            const photos = await this.orm.call(
-                'reparaciones.foto',
-                'get_photos_preview',
-                [[this.props.record.resId]],
-                {
-                    context: {
-                        ...this.env.context,
-                        retry_count: this.state.retryCount
-                    }
+        this.state.isLoading = true;
+        this.state.error = null;
+
+        const photos = await this.orm.call(
+            'reparaciones.foto',
+            'get_photos_preview',
+            [[this.props.record.resId]],
+            {
+                context: {
+                    ...this.env.context,
+                    retry_count: this.state.retryCount
                 }
-            );
+            }
+        );
 
-            if (photos && photos.length > 0) {
-                this.state.photos = photos;
-                this.state.retryCount = 0;
-            } else if (isInitial && this.state.retryCount < 3) {
-                // Reintentar la carga inicial hasta 3 veces
-                this.state.retryCount++;
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                await this.loadPhotos(true);
-            }
-        } catch (error) {
-            console.error('Error al cargar fotos:', error);
-            this.state.error = "Error al cargar las fotos";
-            if (isInitial && this.state.retryCount < 3) {
-                this.state.retryCount++;
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                await this.loadPhotos(true);
-            }
-        } finally {
+        // Verificar nuevamente después de la operación asíncrona
+        if (this.__owl__.status === 5) {
+            return;
+        }
+
+        if (photos && photos.length > 0) {
+            this.state.photos = photos;
+            this.state.retryCount = 0;
+        } else if (isInitial && this.state.retryCount < 3) {
+            // Reintentar la carga inicial hasta 3 veces
+            this.state.retryCount++;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await this.loadPhotos(true);
+        }
+    } catch (error) {
+        // Ignorar errores si el componente fue destruido
+        if (this.__owl__.status === 5 || error.message === 'Component is destroyed') {
+            return;
+        }
+        
+        console.error('Error al cargar fotos:', error);
+        this.state.error = "Error al cargar las fotos";
+        if (isInitial && this.state.retryCount < 3) {
+            this.state.retryCount++;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await this.loadPhotos(true);
+        }
+    } finally {
+        // Solo actualizar estado si el componente sigue vivo
+        if (this.__owl__.status !== 5) {
             this.state.isLoading = false;
         }
     }
-
+}
     async uploadPhotos(ev) {
         const files = Array.from(ev.target.files || []);
         if (!files.length) return;

@@ -306,29 +306,7 @@
 </page>
 
               <page string="Detalle de falla proveedor">
-                <div
-                  style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #dc3545; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #dc3545;">
-                    <i class="fa fa-exclamation-triangle"></i> Fallas Reportadas por Proveedor </h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
-                    En esta sección se documentan los problemas reportados originalmente por el
-                    proveedor:
-                  </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li>
-                      <b>Descripción original:</b> Transcriba exactamente la descripción de falla
-                      proporcionada por el proveedor. </li>
-                    <li>
-                      <b>Evidencia recibida:</b> Adjunte las fotografías o documentación
-                      proporcionada por el proveedor. </li>
-                    <li>
-                      <b>Correlación:</b> Después del diagnóstico, indique si la falla reportada
-                      coincide con lo encontrado. </li>
-                  </ul>
-                  <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Nota importante:</b> Esta información es fundamental para análisis de
-                    garantía y reclamos al proveedor. Sea preciso y objetivo en la documentación. </p>
-                </div>
+                
                 <group>
                   <group>
                     <field name="falla_proveedor"
@@ -337,45 +315,13 @@
                   </group>
                   <group>
                     <field name="foto_problema" widget="image" />
-                    <div
-                      style="font-size: 13px; color: #6c757d; margin-top: 10px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
-                      <b>Instrucciones para documentación fotográfica:</b>
-                      <ul style="margin-top: 5px; margin-bottom: 0;">
-                        <li>Adjunte las fotos originales proporcionadas por el proveedor</li>
-                        <li>No modifique ni edite las imágenes originales</li>
-                        <li>Si toma fotos adicionales, indíquelo claramente en el informe</li>
-                        <li>Para comparativas, use la galería de fotos separada</li>
-                      </ul>
-                    </div>
+                    
                   </group>
                 </group>
               </page>
               <!-- PESTAÑA: DETALLE FALLA VENTAS -->
               <page string="Detalle falla ventas">
-                <div
-                  style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #ffc107; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #ffc107;">
-                    <i class="fa fa-store"></i> Fallas Reportadas por Ventas </h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
-                    Documente aquí los problemas o condiciones especiales reportados por el
-                    departamento de ventas:
-                  </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li>
-                      <b>Contexto comercial:</b> Incluya información sobre el contexto de venta
-                      (demo, exhibición, venta regular). </li>
-                    <li>
-                      <b>Compromisos comerciales:</b> Documente cualquier compromiso hecho al
-                      cliente sobre la reparación. </li>
-                    <li>
-                      <b>Expectativas de tiempo:</b> Si hay plazos comerciales comprometidos,
-                      indíquelos claramente. </li>
-                  </ul>
-                  <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Importante para coordinación:</b> Esta información ayuda a priorizar y
-                    coordinar con el área comercial. La comunicación clara entre técnica y ventas es
-                    esencial para la satisfacción del cliente. </p>
-                </div>
+                
                 <group>
                   <group>
                     <field name="falla_ventas"
@@ -383,25 +329,7 @@
                       style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #fffbf0;" />
                   </group>
                   <group>
-                    <div
-                      style="border: 1px solid #ffeeba; background-color: #fff3cd; padding: 15px; border-radius: 6px; margin-top: 10px;">
-                      <h5 style="color: #856404; font-size: 14px; margin-top: 0;">
-                        <i class="fa fa-exchange-alt"></i> Proceso de Coordinación Técnica-Ventas </h5>
-                      <ol style="margin-bottom: 0; font-size: 13px; padding-left: 20px;">
-                        <li style="margin-bottom: 5px;">
-                          <b>Validación técnica:</b> El departamento técnico debe validar si los
-                          compromisos de ventas son factibles. </li>
-                        <li style="margin-bottom: 5px;">
-                          <b>Comunicación de hallazgos:</b> Cualquier discrepancia entre lo ofrecido
-                          y lo factible debe comunicarse inmediatamente. </li>
-                        <li style="margin-bottom: 5px;">
-                          <b>Actualización de tiempos:</b> Mantener informado al equipo de ventas
-                          sobre los plazos reales de reparación. </li>
-                        <li>
-                          <b>Documentación final:</b> Al completar la reparación, documentar
-                          claramente lo que se reparó para facilitar la comunicación con el cliente. </li>
-                      </ol>
-                    </div>
+                    
                   </group>
                 </group>
               </page>

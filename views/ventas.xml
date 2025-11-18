@@ -86,10 +86,7 @@
             <!-- GRUPOS DE DATOS: Mejorando presentación visual e instrucciones -->
             <group>
               <group string="Datos del Equipo" style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; border-left: 4px solid #007bff;">
-                <div style="margin-bottom: 15px; font-size: 13px; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;">
-                  <i class="fa fa-clipboard-check"></i> <b>Instrucciones:</b> Verifique que todos los datos técnicos coincidan con los físicos del equipo.
-                  Si detecta discrepancias entre la información registrada y la máquina física, reporte inmediatamente al área técnica.
-                </div>
+                
                 
                 <field name="tipo_maquina" help="Seleccione el tipo de equipo (fotocopiadora, impresora, multifuncional, etc.)"/>
                 <field name="marca" help="Marca del fabricante del equipo"/>
@@ -99,51 +96,33 @@
                 <field name="ubicacion_id" help="Ubicación física actual del equipo dentro de las instalaciones."/>
                 <field name="fecha_separacion" invisible="disponibilidad_id == 'disponible'" readonly="1" help="Fecha en que se realizó la separación del equipo. Campo automático."/>
                 
-                <div style="margin-top: 10px; font-size: 12px; background-color: #e9ecef; padding: 8px; border-radius: 4px;">
-                  <i class="fa fa-exclamation-triangle" style="color: #fd7e14;"></i> <b>Nota:</b> Verifique siempre que el número
-                  de serie coincida exactamente con el equipo físico. Las discrepancias pueden causar problemas legales o de inventario.
-                </div>
+                
               </group>
 
               <group string="Datos de Importación" style="background-color: #e8f4f8; border-radius: 8px; padding: 15px; border-left: 4px solid #17a2b8;">
-                <div style="margin-bottom: 15px; font-size: 13px; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;">
-                  <i class="fa fa-ship"></i> <b>Instrucciones:</b> Esta información es crítica para trazabilidad legal y contable.
-                  Todos los campos deben completarse con la documentación oficial de importación.
-                </div>
+                
                 
                 <field name="proveedor_id" domain="[('tipo_cliente', '=', 'proveedor')]" options="{'no_create': True}" 
                     help="Proveedor internacional que suministró el equipo. Si no aparece en la lista, contacte al departamento de compras."/>
                 <field name="importacion" help="Número o referencia del lote de importación. Este dato es fundamental para trazabilidad aduanera."/>
                 <field name="invoice" help="Número de factura internacional de compra. Documento requerido para garantía del fabricante."/>
                 
-                <div style="margin-top: 10px; font-size: 12px; background-color: #e9ecef; padding: 8px; border-radius: 4px;">
-                  <i class="fa fa-file-text" style="color: #17a2b8;"></i> <b>Documentación:</b> Asegúrese de que todos los documentos
-                  de importación estén adjuntos en la sección de chatter para consulta futura.
-                </div>
+               
               </group>
               
               <group string="Datos para revisión" style="background-color: #fff8f8; border-radius: 8px; padding: 15px; border-left: 4px solid #dc3545;">
-                <div style="margin-bottom: 15px; font-size: 13px; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;">
-                  <i class="fa fa-search"></i> <b>Instrucciones:</b> Establezca el tipo de revisión técnica requerida y la prioridad.
-                  Estos campos determinan cómo el departamento técnico programará la atención del equipo.
-                </div>
+                
                 
                 <field name="tipo_revision" widget="kanban_label_selection" options="{'classes': {'draft': 'default', 'done': 'success'}}" 
                     help="Seleccione el tipo de revisión técnica necesaria. 'Draft' para pendiente, 'Done' para completada."/>
                 <field name="prioridad" widget="selection" 
                     help="Establezca la prioridad de atención técnica. Alta prioridad implica atención inmediata para equipos críticos o con cliente en espera."/>
                 
-                <div style="margin-top: 10px; font-size: 12px; background-color: #f8d7da; padding: 8px; border-radius: 4px;">
-                  <i class="fa fa-clock-o" style="color: #dc3545;"></i> <b>Tiempo de respuesta:</b> Alta prioridad: 24h, Media: 48h, Baja: 72h.
-                  El incumplimiento de estos tiempos debe ser reportado a la gerencia técnica.
-                </div>
+               
               </group>
 
               <group string="Notificar" style="background-color: #f0f9e8; border-radius: 8px; padding: 15px; border-left: 4px solid #28a745;">
-                <div style="margin-bottom: 15px; font-size: 13px; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;">
-                  <i class="fa fa-bell"></i> <b>Instrucciones:</b> Configure las notificaciones y asignaciones para el seguimiento del equipo.
-                  Estos campos determinan quién recibe alertas y es responsable del proceso.
-                </div>
+               
                 
                 <field name="trabajadores_id" widget="many2one_avatar" 
                     help="Técnico o trabajador asignado como responsable principal de este equipo. Recibirá todas las notificaciones relevantes."/>
@@ -154,31 +133,14 @@
                 <field name="autorizacion_cambio_digitos" 
                     help="Marque esta casilla si se ha autorizado modificación de dígitos o configuración especial del equipo."/>
                 
-                <div style="margin-top: 10px; font-size: 12px; background-color: #d4edda; padding: 8px; border-radius: 4px;">
-                  <i class="fa fa-user-circle" style="color: #28a745;"></i> <b>Asignación:</b> El técnico responsable debe
-                  confirmar la recepción de la asignación dentro de las 4 horas siguientes a su notificación.
-                </div>
+                
               </group>
             </group>
 
             <!-- PESTAÑAS: Con instrucciones mejoradas -->
             <notebook>
               <page string="Observaciones del equipo">
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #17a2b8; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #17a2b8;"><i class="fa fa-info-circle"></i> Instrucciones para Observaciones</h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
-                    En esta sección debe documentar detalladamente:
-                  </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li><b>Problemas técnicos:</b> Describa cualquier falla, mal funcionamiento o comportamiento anormal.</li>
-                    <li><b>Condiciones físicas:</b> Reporte daños estéticos, piezas faltantes o desgaste visible.</li>
-                    <li><b>Requisitos especiales:</b> Indique si el equipo requiere configuraciones especiales o partes no estándar.</li>
-                    <li><b>Historial relevante:</b> Mencione problemas recurrentes o reparaciones anteriores importantes.</li>
-                  </ul>
-                  <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Nota:</b> Las observaciones claras y completas facilitan la correcta valoración técnica y comercial del equipo.
-                  </p>
-                </div>
+                
                 
                 <group>
                   <group>
@@ -189,35 +151,12 @@
                     <field name="activador" class="oe_form_field_bottom_separator" invisible="1" />
                     <label for="foto_problema" style="font-weight: bold; display: block; margin-bottom: 5px;">Evidencia Fotográfica:</label>
                     <field name="foto_problema" widget="image"/>
-                    <div style="font-size: 13px; color: #6c757d; margin-top: 10px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
-                      <b>Recomendaciones para fotos:</b>
-                      <ul style="margin-top: 5px; margin-bottom: 0;">
-                        <li>Capture claramente el número de serie</li>
-                        <li>Muestre el panel de control y lecturas</li>
-                        <li>Fotografíe todas las áreas dañadas</li>
-                        <li>Incluya una imagen de muestra si hay problemas de calidad de impresión</li>
-                      </ul>
-                    </div>
+                   
                   </group>
                 </group>
               </page>
 
               <page string="Precios">
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #28a745; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #28a745;"><i class="fa fa-money-bill"></i> Instrucciones para Gestión de Precios</h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
-                    La información financiera en esta sección es crítica para los procesos comerciales y contables:
-                  </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li><b>Precio de venta:</b> Debe reflejar el valor actualizado según política comercial vigente.</li>
-                    <li><b>Moneda:</b> Seleccione la moneda correcta según el mercado objetivo del equipo.</li>
-                    <li><b>Precio de compra:</b> Información confidencial visible solo para roles autorizados.</li>
-                  </ul>
-                  <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Importante:</b> Toda modificación de precios queda registrada en el historial del sistema.
-                    Los precios deben ser validados por el departamento comercial antes de presentarlos al cliente.
-                  </p>
-                </div>
                 
                 <group>
                   <group style="background-color: #f8fffa; border-radius: 6px; padding: 10px;">
@@ -225,66 +164,32 @@
                         groups="base.group_system, sat.Sat_ventas_group_user"
                         style="font-size: 18px; font-weight: bold; color: #28a745;" />
                     <field name="currency_id" string="Tipo de moneda" />
-                    <div style="font-size: 12px; color: #6c757d; margin-top: 8px;">
-                      <i class="fa fa-info-circle"></i> El precio de venta debe incluir todos los costos asociados
-                      (importación, impuestos, garantía, etc.) según la política comercial actual.
-                    </div>
+                    
                   </group>
                   <group style="background-color: #fff8f8; border-radius: 6px; padding: 10px;" groups="base.group_system, sat_jefes_group_user">
                     <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}" 
                         groups="base.group_system, sat_jefes_group_user"
                         style="font-size: 16px; color: #dc3545;" />
-                    <div style="font-size: 12px; color: #6c757d; margin-top: 8px; border-top: 1px dotted #ddd; padding-top: 8px;">
-                      <i class="fa fa-lock"></i> <b>Confidencial:</b> Esta información es restringida y solo visible para administradores y jefes.
-                      No comparta estos valores con distribuidores o clientes.
-                    </div>
+                    
                   </group>
                 </group>
               </page>
 
               <page string="Logística">
-                <div style="margin: 10px 0; padding: 12px; background-color: #f8f9fa; border-left: 4px solid #fd7e14; border-radius: 4px;">
-                  <h4 style="margin-top: 0; font-size: 16px; color: #fd7e14;"><i class="fa fa-truck"></i> Instrucciones para Gestión Logística</h4>
-                  <p style="margin-bottom: 5px; font-size: 13px;">
-                    Esta sección gestiona la documentación comercial y logística para equipos en proceso de venta o entrega:
-                  </p>
-                  <ul style="margin-bottom: 0; font-size: 13px;">
-                    <li><b>Factura de venta:</b> Registre el número de factura comercial emitida al cliente.</li>
-                    <li><b>Fecha de entrega:</b> Programe o registre la fecha real de entrega al cliente final.</li>
-                  </ul>
-                  <p style="margin-top: 8px; font-size: 13px; font-style: italic;">
-                    <b>Proceso completo:</b> Para equipos vendidos, asegúrese de completar esta sección y verificar
-                    que toda la documentación esté correctamente registrada antes de autorizar la salida física.
-                  </p>
-                </div>
+                
                 
                 <group>
                   <group style="background-color: #fff9f0; border-radius: 6px; padding: 10px;">
                     <field name="factura_venta" placeholder="Ej: F001-00012345" />
-                    <div style="font-size: 12px; color: #6c757d; margin-top: 8px;">
-                      <i class="fa fa-file-text"></i> Ingrese el número completo de la factura emitida al cliente.
-                      Este campo es obligatorio para equipos vendidos y en proceso de despacho.
-                    </div>
+                   
                   </group>
                   <group style="background-color: #fff9f0; border-radius: 6px; padding: 10px;">
                     <field name="fecha_entrega" />
-                    <div style="font-size: 12px; color: #6c757d; margin-top: 8px;">
-                      <i class="fa fa-calendar"></i> Fecha programada o ejecutada de entrega física al cliente.
-                      Las entregas deben programarse con mínimo 24 horas de anticipación.
-                    </div>
+                   
                   </group>
                 </group>
                 
-                <div style="margin-top: 20px; padding: 15px; background-color: #fffbf0; border: 1px solid #ffeeba; border-radius: 6px;">
-                  <h5 style="margin-top: 0; color: #856404; font-size: 15px;"><i class="fa fa-clipboard-list"></i> Protocolo de Entrega</h5>
-                  <ol style="margin-bottom: 0; padding-left: 25px;">
-                    <li style="margin-bottom: 8px;"><b>Verificación técnica:</b> Confirme que la máquina ha pasado todas las pruebas técnicas antes de programar entrega.</li>
-                    <li style="margin-bottom: 8px;"><b>Documentación:</b> Prepare ficha técnica, manual de usuario y certificado de garantía para entregar junto con el equipo.</li>
-                    <li style="margin-bottom: 8px;"><b>Coordinación:</b> Si la máquina está en almacén, notifique con 24h de anticipación para asegurar disponibilidad.</li>
-                    <li style="margin-bottom: 8px;"><b>Insumos:</b> Verifique que todos los insumos iniciales (tóner, tambor, etc.) estén incluidos según lo acordado.</li>
-                    <li><b>Confirmación:</b> Una vez entregado, registre la conformidad del cliente en el sistema dentro de las 24 horas siguientes.</li>
-                  </ol>
-                </div>
+                
               </page>
               <page string="Ingreso scanner">
                     <group>
