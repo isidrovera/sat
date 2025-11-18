@@ -48,7 +48,7 @@ class GalleryWidget extends Component {
     async loadPhotos(isInitial = false) {
     try {
         // Verificar si el componente fue destruido antes de comenzar
-        if (this.__owl__.status === 5) { // 5 = DESTROYED
+        if (this.__owl__ && this.__owl__.status === 5) { // 5 = DESTROYED
             return;
         }
 
@@ -68,7 +68,7 @@ class GalleryWidget extends Component {
         );
 
         // Verificar nuevamente después de la operación asíncrona
-        if (this.__owl__.status === 5) {
+        if (this.__owl__ && this.__owl__.status === 5) {
             return;
         }
 
@@ -79,24 +79,41 @@ class GalleryWidget extends Component {
             // Reintentar la carga inicial hasta 3 veces
             this.state.retryCount++;
             await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Verificar antes de reintentar
+            if (this.__owl__ && this.__owl__.status === 5) {
+                return;
+            }
+            
             await this.loadPhotos(true);
         }
     } catch (error) {
         // Ignorar errores si el componente fue destruido
-        if (this.__owl__.status === 5 || error.message === 'Component is destroyed') {
+        if (this.__owl__ && this.__owl__.status === 5) {
+            return;
+        }
+        
+        if (error.message && error.message.includes('Component is destroyed')) {
             return;
         }
         
         console.error('Error al cargar fotos:', error);
         this.state.error = "Error al cargar las fotos";
+        
         if (isInitial && this.state.retryCount < 3) {
             this.state.retryCount++;
             await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Verificar antes de reintentar
+            if (this.__owl__ && this.__owl__.status === 5) {
+                return;
+            }
+            
             await this.loadPhotos(true);
         }
     } finally {
         // Solo actualizar estado si el componente sigue vivo
-        if (this.__owl__.status !== 5) {
+        if (this.__owl__ && this.__owl__.status !== 5) {
             this.state.isLoading = false;
         }
     }
