@@ -19,11 +19,14 @@
             <button name="action_print_reparacion_pdf"
         type="object"
         string="Imprimir reparación"
+        icon="fa-print"
         class="btn-primary"
         invisible="reparaciones_count == 0"/>
-            <button name="action_open_reparacion_gallery"
+
+<button name="action_open_reparacion_gallery"
         type="object"
         string="Ver fotos reparación"
+        icon="fa-images"
         class="btn-secondary"
         invisible="reparaciones_count == 0"/>
             <!--<button name="action_crear_reparaciones" string="Crear Reparaciones Masivas" 
